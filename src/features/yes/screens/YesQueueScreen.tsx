@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useViewer } from '@/shared/auth/useViewer';
 import './yes.css';
 import { useNow } from '@/shared/lib/useNow';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -8,7 +9,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
 import { FailureBanner } from '../components/FailureBanner';
 import { SignInNotice } from '../components/SignInNotice';
-import { useApprovalsQueue, useViewer } from '../useYes';
+import { useApprovalsQueue } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {
   const { t } = useTranslation();

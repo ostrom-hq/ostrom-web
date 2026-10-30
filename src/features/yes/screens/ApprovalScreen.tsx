@@ -3,6 +3,7 @@ import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { type Viewer, useViewer } from '@/shared/auth/useViewer';
 import './yes.css';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -15,13 +16,7 @@ import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
 import { FailureBanner } from '../components/FailureBanner';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
-import {
-  type AnswerViewModel,
-  type ViewerViewModel,
-  useAnswerApproval,
-  useShownApproval,
-  useViewer,
-} from '../useYes';
+import { type AnswerViewModel, useAnswerApproval, useShownApproval } from '../useYes';
 
 const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   'waiting-you': 'signal',
@@ -77,7 +72,7 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
 
 interface ApprovalDetailProps {
   readonly approval: Approval;
-  readonly viewer: ViewerViewModel;
+  readonly viewer: Viewer;
   readonly answer: AnswerViewModel;
 }
 

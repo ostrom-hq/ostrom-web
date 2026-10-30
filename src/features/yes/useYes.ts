@@ -3,7 +3,6 @@ import {
   answerApprovalMutation,
   getApprovalOptions,
   getApprovalQueryKey,
-  getMeOptions,
   listApprovalsOptions,
   listApprovalsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -12,7 +11,6 @@ import type {
   ApprovalAnswer,
   ApprovalStatus,
   ListApprovalsResponse,
-  Me,
   Receipt,
 } from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -22,7 +20,6 @@ import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { meOf } from '@/shared/auth/me';
 import { stillOpen } from './model';
 import { useArrivals } from './useArrivals';
 
@@ -30,24 +27,6 @@ import { useArrivals } from './useArrivals';
 export const POLL_MS = 2_000;
 const DECIDED_POLL_MS = 10_000;
 const DECIDED_SHOWN = 10;
-
-/** "Maya Lind (maya)", or the login alone: who an approval from this browser is signed as. */
-export function viewerName(me: Me | undefined): string | undefined {
-  if (me === undefined) return undefined;
-  const name = me.member?.name;
-  return name === undefined || name === '' ? me.dev.login : `${name} (${me.dev.login})`;
-}
-
-export interface ViewerViewModel {
-  readonly login: string | undefined;
-  readonly name: string | undefined;
-}
-
-export function useViewer(): ViewerViewModel {
-  const query = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
-  const me = meOf(query.data);
-  return { login: me?.dev.login, name: viewerName(me) };
-}
 
 export interface QueueViewModel {
   readonly waiting: readonly Approval[] | undefined;

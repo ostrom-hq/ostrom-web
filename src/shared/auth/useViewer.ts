@@ -3,10 +3,12 @@ import { getMeOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { MemberRole } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { ready } from '@/shared/api/ready';
-import { meOf } from './me';
+import { meOf, viewerName } from './me';
 
 export interface Viewer {
   readonly login: string | undefined;
+  /** "Maya Lind (maya)", or the login alone. */
+  readonly name: string | undefined;
   readonly role: MemberRole | undefined;
   /** Owners and admins change the organization (members, rules, tools); everyone else reads. */
   readonly canManage: boolean;
@@ -17,5 +19,10 @@ export function useViewer(): Viewer {
   const query = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
   const me = meOf(query.data);
   const role = me?.member?.role;
-  return { login: me?.dev.login, role, canManage: role === 'owner' || role === 'admin' };
+  return {
+    login: me?.dev.login,
+    name: viewerName(me),
+    role,
+    canManage: role === 'owner' || role === 'admin',
+  };
 }
