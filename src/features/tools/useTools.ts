@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
+import { ready } from '@/shared/api/ready';
 
 export interface McpViewModel {
   readonly servers: readonly McpServer[] | undefined;
@@ -31,10 +32,10 @@ export interface McpViewModel {
 }
 
 export function useMcp(): McpViewModel {
-  const servers = useQuery(listMcpServersOptions());
-  const secrets = useQuery(listSecretsOptions());
-  const usage = useQuery(getMcpUsageOptions());
-  const calls = useQuery(listMcpCallsOptions());
+  const servers = useQuery(ready(listMcpServersOptions()));
+  const secrets = useQuery(ready(listSecretsOptions()));
+  const usage = useQuery(ready(getMcpUsageOptions()));
+  const calls = useQuery(ready(listMcpCallsOptions()));
   const viewer = useViewer();
   return {
     servers: servers.data?.items,
@@ -124,7 +125,7 @@ export interface SecretsViewModel {
 }
 
 export function useSecrets(): SecretsViewModel {
-  const secrets = useQuery(listSecretsOptions());
+  const secrets = useQuery(ready(listSecretsOptions()));
   const viewer = useViewer();
   return { secrets: secrets.data?.items, failure: failureOf(secrets.error), canManage: viewer.canManage };
 }
