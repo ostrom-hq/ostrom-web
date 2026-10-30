@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server } = setupMockApp();
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 beforeEach(() => {
   // Only the clock: React Query, MSW and Testing Library keep their real timers.
