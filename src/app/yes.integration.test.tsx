@@ -15,7 +15,11 @@ import { useAuthStore } from '@/shared/auth/authStore';
 
 const { server, db } = createMockServer();
 const SLOW = { timeout: 4_000 };
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
