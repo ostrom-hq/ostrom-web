@@ -7,6 +7,6 @@
     }
   ],
   "allowed": ["LicenseRef-Ostrom-Enterprise"],
-  "exclude": [],
+  "exclude": ["gen/*", "public/mockServiceWorker.js"],
   "scope": "added"
 }
