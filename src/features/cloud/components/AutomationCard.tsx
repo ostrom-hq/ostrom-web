@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
-import { isCloudAgent, isWebhook, RUN_TONES } from '../model';
+import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
 import { useAutomationRuns } from '../useCloud';
 import { SecretOnce } from './SecretOnce';
 
@@ -38,13 +38,21 @@ function Runs({ id, now }: { readonly id: string; readonly now: Date }): ReactEl
           <span className="o-row__main">
             <span className="o-row__title">
               {t('automations.runs.line', {
-                when: formatRelative(run.startedAt, now, i18n.language),
+                when: formatRelative(run.createdAt, now, i18n.language),
                 source: run.source,
               })}
             </span>
-            {run.failure === undefined ? null : <span className="o-row__meta">{run.failure}</span>}
+            {run.reason === undefined || run.reason === null ? null : (
+              <span className="o-row__meta">
+                {isKnownRunReason(run.reason) ? t(`automations.runReason.${run.reason}`) : run.reason}
+              </span>
+            )}
           </span>
-          <Badge tone={RUN_TONES[run.status]}>{t(`automations.runStatus.${run.status}`)}</Badge>
+          {isKnownRunStatus(run.status) ? (
+            <Badge tone={RUN_TONES[run.status]}>{t(`automations.runStatus.${run.status}`)}</Badge>
+          ) : (
+            <Badge tone="neutral">{run.status}</Badge>
+          )}
         </li>
       ))}
     </ul>

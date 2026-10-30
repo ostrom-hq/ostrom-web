@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Automation, CloudSession, RunStatus } from '@gen/api/types.gen';
+import type { Automation, AutomationDryRun, AutomationRun, CloudSession } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 export const CLOUD_AGENTS = ['claude-code', 'codex'] as const;
@@ -30,14 +30,39 @@ export function sessionTone(status: string): BadgeTone {
   return 'neutral';
 }
 
-export const RUN_TONES: Readonly<Record<RunStatus, BadgeTone>> = {
+/** The run states the contract names, with their tone; any other is shown as the server wrote it. */
+export const RUN_TONES = {
   queued: 'warning',
-  running: 'success',
-  waiting: 'warning',
-  succeeded: 'neutral',
+  started: 'success',
   failed: 'danger',
-  cancelled: 'neutral',
-};
+  invalid_payload: 'danger',
+  skipped_overlap: 'neutral',
+  skipped_budget: 'warning',
+} as const satisfies Readonly<Record<string, BadgeTone>>;
+export type KnownRunStatus = keyof typeof RUN_TONES;
+
+export function isKnownRunStatus(value: string): value is KnownRunStatus {
+  return Object.hasOwn(RUN_TONES, value);
+}
+
+/** The reasons of a failed run the console has words for; the contract keeps the list open. */
+export const RUN_REASONS = ['cloud_session_limit', 'cloud_hours_exhausted', 'owner_unavailable'] as const;
+export type KnownRunReason = (typeof RUN_REASONS)[number];
+
+export function isKnownRunReason(value: string): value is KnownRunReason {
+  return RUN_REASONS.some((reason) => reason === value);
+}
+
+/** An idempotency key for one gesture, from the random source every context has (randomUUID needs https). */
+export function idempotencyKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** A dry run answers what it would do; a real run answers with the run it queued. */
+export function isDryRun(answer: AutomationRun | AutomationDryRun): answer is AutomationDryRun {
+  return 'renderedPrompt' in answer;
+}
 
 /** Who may stop a session or change an automation: its owner, or an owner or admin of the organization. */
 export function mayChange(owner: string, viewer: string | undefined, canManage: boolean): boolean {

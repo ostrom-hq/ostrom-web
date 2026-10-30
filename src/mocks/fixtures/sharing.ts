@@ -39,11 +39,24 @@ const versions: Record<string, ArtifactVersion[]> = {
     {
       number: 3,
       files: ['index.html', 'chart.svg', 'data.json'],
+      entry: 'index.html',
       createdAt: '2026-10-29T18:40:00.000Z',
       createdBy: 'maya',
     },
-    { number: 2, files: ['index.html'], createdAt: '2026-10-28T11:00:00.000Z', createdBy: 'theo' },
-    { number: 1, files: ['index.html'], createdAt: '2026-10-27T09:00:00.000Z', createdBy: 'maya' },
+    {
+      number: 2,
+      files: ['index.html'],
+      entry: 'index.html',
+      createdAt: '2026-10-28T11:00:00.000Z',
+      createdBy: 'theo',
+    },
+    {
+      number: 1,
+      files: ['index.html'],
+      entry: 'index.html',
+      createdAt: '2026-10-27T09:00:00.000Z',
+      createdBy: 'maya',
+    },
   ],
 };
 

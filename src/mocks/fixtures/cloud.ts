@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Automation, CloudSession, Runner, WorkflowRun } from '@gen/api/types.gen';
+import type { Automation, AutomationRun, CloudSession, Runner } from '@gen/api/types.gen';
 
 const sessions: CloudSession[] = [
   {
@@ -91,31 +91,30 @@ const automations: Automation[] = [
   },
 ];
 
-const runs: WorkflowRun[] = [
+const runs: AutomationRun[] = [
   {
     id: 'run-88',
-    workflowId: 'wf-nightly',
-    workflowName: 'Nightly dependency upgrades',
-    workflowVersion: 4,
-    status: 'succeeded',
-    startedBy: 'automation',
-    source: 'cron',
     automationId: 'au-nightly',
-    startedAt: '2026-10-30T02:00:00.000Z',
-    endedAt: '2026-10-30T02:31:00.000Z',
+    source: 'cron',
+    status: 'started',
+    version: 4,
+    sessionId: 'cs-88',
+    problems: [],
+    slotAt: '2026-10-30T02:00:00.000Z',
+    createdAt: '2026-10-30T02:00:00.000Z',
+    updatedAt: '2026-10-30T02:00:05.000Z',
   },
   {
     id: 'run-81',
-    workflowId: 'wf-nightly',
-    workflowName: 'Nightly dependency upgrades',
-    workflowVersion: 3,
-    status: 'failed',
-    startedBy: 'automation',
-    source: 'cron',
     automationId: 'au-nightly',
-    failure: 'pnpm install failed: the lockfile is out of date',
-    startedAt: '2026-10-29T02:00:00.000Z',
-    endedAt: '2026-10-29T02:04:00.000Z',
+    source: 'cron',
+    status: 'failed',
+    version: 3,
+    reason: 'cloud_hours_exhausted',
+    problems: [],
+    slotAt: '2026-10-29T02:00:00.000Z',
+    createdAt: '2026-10-29T02:00:00.000Z',
+    updatedAt: '2026-10-29T02:00:02.000Z',
   },
 ];
 
@@ -128,6 +127,6 @@ export function initialRunners(): Runner[] {
 export function initialAutomations(): Automation[] {
   return structuredClone(automations);
 }
-export function initialAutomationRuns(): WorkflowRun[] {
+export function initialAutomationRuns(): AutomationRun[] {
   return structuredClone(runs);
 }

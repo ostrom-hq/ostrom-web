@@ -93,7 +93,7 @@ export function useApprovalsQueue(): QueueViewModel {
   );
   const decided = useQueries({
     queries: DECIDED_STATUSES.map((status) =>
-      ready(listApprovalsOptions({ query: { status } }), {
+      ready(listApprovalsOptions({ query: { status: [status] } }), {
         refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
       }),
     ),
@@ -212,7 +212,7 @@ export function useAnswerApproval(id: string): AnswerViewModel {
   const answer = useCallback(
     (approval: Approval, value: ApprovalAnswer, comment?: string) => {
       const body = { answer: value, shownDigest: approval.shownDigest };
-      mutate({ path: { id }, body: comment === undefined ? body : { ...body, comment } });
+      mutate({ path: { id }, body: comment === undefined ? body : { ...body, note: comment } });
     },
     [id, mutate],
   );
@@ -225,6 +225,6 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     changed,
     failure: refusal === undefined && !changed ? failureOf(mutation.error) : undefined,
     receipt: mutation.data?.receipt,
-    comment: mutation.isSuccess ? mutation.variables.body.comment : undefined,
+    comment: mutation.isSuccess ? mutation.variables.body.note : undefined,
   };
 }

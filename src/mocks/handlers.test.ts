@@ -95,7 +95,10 @@ describe('mock API', () => {
 
   it('lists what waits for the caller, by status, or everything', async () => {
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
-    const approved = await listApprovals({ query: { status: 'approved' }, throwOnError: true });
+    const approved = await listApprovals({ query: { status: ['approved'] }, throwOnError: true });
+    const decided = await fetch('http://ostrom.test/api/v1/approvals?status=approved,rejected,expired');
+    const body: unknown = await decided.json();
+    expect(body).toMatchObject({ items: [{ id: 'apr-migration-7' }] });
     const all = await listApprovals({ throwOnError: true });
     expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-merge-412', 'apr-deploy-88']);
     expect(approved.data.items.map((approval) => approval.id)).toEqual(['apr-migration-7']);
@@ -136,7 +139,7 @@ describe('mock API', () => {
     server.use(...createHandlers(db, () => NOW));
     const { data } = await answerApproval({
       ...merge,
-      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e', comment: 'Wait for the migration.' },
+      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e', note: 'Wait for the migration.' },
       throwOnError: true,
     });
     expect([data.approval.status, data.approval.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
@@ -584,6 +587,11 @@ describe('mock MCP servers and secrets', () => {
     });
     expect(saved.data.enabled).toBe(false);
     expect(saved.data).not.toHaveProperty('tools');
+    const plain = await createMcpServer({
+      body: { name: 'plain', url: notion.url, transport: 'http', enabled: true, scope: 'org' },
+      throwOnError: true,
+    });
+    expect(plain.data).not.toHaveProperty('secretNames');
     const listed = await saveMcpServer({
       path: { name: 'notion' },
       body: { ...notion, tools: ['search'] },
@@ -741,7 +749,7 @@ describe('mock cloud agents and automations', () => {
     );
   };
 
-  it('starts a cloud session as the viewer, queued, and refuses one without a prompt or a known agent', async () => {
+  it('starts a cloud session as the viewer, queued, interactive without a prompt, and refuses an unknown agent', async () => {
     const started = await createCloudSession({
       body: { agent: 'codex', prompt: 'Fix it', name: '  Fix  ', model: 'gpt-6' },
       throwOnError: true,
@@ -758,11 +766,10 @@ describe('mock cloud agents and automations', () => {
       throwOnError: true,
     });
     expect(bare.data.name).toBeUndefined();
-    expect(
-      await statusOf(async () =>
-        createCloudSession({ body: { agent: 'codex', prompt: ' ' }, throwOnError: true }),
-      ),
-    ).toBe(400);
+    const interactive = await createCloudSession({ body: { agent: 'codex' }, throwOnError: true });
+    expect(interactive.data.status).toBe('queued');
+    const bad = await fetch('http://ostrom.test/api/v1/cloud/sessions', { method: 'POST', body: '{}' });
+    expect(bad.status).toBe(400);
     expect(
       await statusOf(async () =>
         createCloudSession({ body: { agent: 'gemini', prompt: 'x' }, throwOnError: true }),
@@ -770,8 +777,8 @@ describe('mock cloud agents and automations', () => {
     ).toBe(400);
     expect(
       (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
-    ).toHaveLength(3);
-    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(6);
+    ).toHaveLength(4);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(7);
   });
 
   it('stops a live session for its owner or a manager, not an ended one or another member', async () => {
@@ -820,17 +827,53 @@ describe('mock cloud agents and automations', () => {
   });
 
   it('runs an automation now or dry, keeping only the real run', async () => {
+    const once = { 'Idempotency-Key': 'key-1' };
     const dry = await testAutomation({
       path: { id: 'au-sentry' },
       body: { dryRun: true },
       throwOnError: true,
     });
-    expect(dry.data).toMatchObject({ status: 'succeeded', source: 'dry-run', workflowId: 'wf-backend' });
-    const real = await testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true });
-    expect(real.data).toMatchObject({ status: 'queued', source: 'manual', workflowId: 'wf-au-nightly' });
+    expect(dry.data).toEqual({ renderedPrompt: '', variables: [], problems: [], nextRuns: [] });
+    const misfit = await testAutomation({
+      path: { id: 'au-nightly' },
+      body: { dryRun: true, payload: { issue: { id: 7 } } },
+      throwOnError: true,
+    });
+    expect(misfit.data).toMatchObject({
+      renderedPrompt: 'Upgrade the dependencies that have a patch release and open one PR.',
+      problems: [{ path: '$', rule: 'not_scalar' }],
+    });
+    expect(
+      await statusOf(async () =>
+        testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true }),
+      ),
+    ).toBe(400);
+    const real = await testAutomation({
+      path: { id: 'au-nightly' },
+      body: {},
+      headers: once,
+      throwOnError: true,
+    });
+    expect(real.response.status).toBe(202);
+    expect(real.data).toMatchObject({
+      status: 'queued',
+      source: 'test',
+      automationId: 'au-nightly',
+      version: 4,
+    });
+    expect(db.automationRuns).toHaveLength(3);
+    const replay = await testAutomation({
+      path: { id: 'au-nightly' },
+      body: {},
+      headers: once,
+      throwOnError: true,
+    });
+    expect(replay.data).toEqual(real.data);
     expect(db.automationRuns).toHaveLength(3);
     expect(
-      await statusOf(async () => testAutomation({ path: { id: 'nope' }, body: {}, throwOnError: true })),
+      await statusOf(async () =>
+        testAutomation({ path: { id: 'nope' }, body: {}, headers: once, throwOnError: true }),
+      ),
     ).toBe(404);
     const bad = await fetch('http://ostrom.test/api/v1/automations/au-nightly/run', {
       method: 'POST',

@@ -86,6 +86,20 @@ export const en = {
       expires: 'Expires {{when}}',
       changes: 'Changes',
       commit: 'Commit {{sha}}',
+      action: 'What it lets through',
+      kind: {
+        push: 'Push to {{ref}} on {{repo}}',
+        merge: 'Merge into {{ref}} on {{repo}}',
+        deploy: 'Deploy {{ref}} of {{repo}}',
+        tool: 'A tool call on {{repo}}',
+        other: '{{ref}} on {{repo}}',
+      },
+      range: '{{base}} → {{head}}',
+      highRisk: 'High risk',
+      highRiskHint: 'Read the whole change before you approve: this yes is the costliest to undo.',
+      diff_one: '{{count}} file · +{{additions}} −{{deletions}}',
+      diff_other: '{{count}} files · +{{additions}} −{{deletions}}',
+      truncated: 'The diff is too large to show in full: open the commits.',
       newer: 'This request changed while you were reading it. You still see the version you opened.',
       readNewer: 'Show the new version',
       checks: 'Checks',
@@ -116,8 +130,15 @@ export const en = {
       key: 'Key',
     },
     act: {
-      // The title says what will happen; the verb waits for a typed action in the contract (see .coord/QUESTIONS.md).
+      // Without a typed action the title says what will happen, and the button says no more.
       approve: 'Approve',
+      approveKind: {
+        push: 'Approve push',
+        merge: 'Approve merge',
+        deploy: 'Approve deployment',
+        tool: 'Approve tool call',
+        other: 'Approve',
+      },
       approving: 'Approving…',
       decline: 'Decline & tell the agent…',
       declineLabel: 'What should the agent do instead?',
@@ -566,8 +587,10 @@ export const en = {
     },
     started: {
       tag: 'Started',
-      real: '{{name}} is queued ({{id}}).',
-      dry: 'Dry run of {{name}}: the trigger and inputs are valid, nothing ran.',
+      real: 'The run is queued ({{id}}).',
+      dry: 'Dry run: the trigger and inputs are valid, nothing ran.',
+      dryProblems_one: 'Dry run: {{count}} input does not fit, nothing ran.',
+      dryProblems_other: 'Dry run: {{count}} inputs do not fit, nothing ran.',
     },
     secret: {
       tag: 'Shown once',
@@ -585,11 +608,16 @@ export const en = {
     },
     runStatus: {
       queued: 'Queued',
-      running: 'Running',
-      waiting: 'Waiting',
-      succeeded: 'Succeeded',
+      started: 'Started',
       failed: 'Failed',
-      cancelled: 'Cancelled',
+      invalid_payload: 'Payload refused',
+      skipped_overlap: 'Skipped: still running',
+      skipped_budget: 'Skipped: over budget',
+    },
+    runReason: {
+      cloud_session_limit: 'Too many cloud agents at once for the plan.',
+      cloud_hours_exhausted: 'The plan’s agent hours are used up for this period.',
+      owner_unavailable: 'Its owner can no longer run agents here.',
     },
   },
   sharing: {

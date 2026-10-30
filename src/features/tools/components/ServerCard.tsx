@@ -41,7 +41,7 @@ export function ServerCard({ server, calls, missing, busy, actions }: ServerCard
           server.tools === undefined || server.tools.length === 0
             ? undefined
             : t('tools.mcp.tools', { list: server.tools.join(', ') }),
-          server.secretNames.length === 0
+          server.secretNames === undefined || server.secretNames.length === 0
             ? t('tools.mcp.noSecret')
             : t('tools.mcp.uses', { list: server.secretNames.join(', ') }),
         ]

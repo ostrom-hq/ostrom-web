@@ -181,6 +181,43 @@ describe('the queue', () => {
 });
 
 describe('a request', () => {
+  it('says what a yes lets through: the action, its commits, the size of the change', async () => {
+    visit('/yes/apr-merge-412');
+    const action = await screen.findByRole('region', { name: 'What it lets through' });
+    expect(action).toHaveTextContent('Merge into main on acme/billing-api');
+    expect(action).toHaveTextContent('1b2c3d4 → 9c1e4b2 · 3 files · +42 −7');
+    expect(within(action).queryByText('High risk')).toBeNull();
+    expect(within(action).queryByText(/too large/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
+  });
+
+  it('marks a high-risk action and a diff too large to show', async () => {
+    visit('/yes/apr-deploy-88');
+    const action = await screen.findByRole('region', { name: 'What it lets through' });
+    expect(action).toHaveTextContent('Deploy production of acme/billing-api');
+    expect(action).toHaveTextContent('a91d0e4 · 1 file · +1 −1');
+    expect(within(action).getByText('High risk')).toBeInTheDocument();
+    expect(within(action).getByText(/costliest to undo/)).toBeInTheDocument();
+    expect(within(action).getByText(/too large to show in full/)).toBeInTheDocument();
+  });
+
+  it.each([
+    ['push', 'Push to main on acme/api', 'Approve push'],
+    ['tool', 'A tool call on acme/api', 'Approve tool call'],
+    ['other', 'main on acme/api', 'Approve'],
+  ] as const)('names a %s action and its verb, without a diff size', async (kind, line, verb) => {
+    addApproval({
+      ...bare,
+      id: `apr-${kind}`,
+      action: { kind, repo: 'acme/api', ref: 'main', headSha: 'f00dfeed00', risk: 'low' },
+    });
+    visit(`/yes/apr-${kind}`);
+    const action = await screen.findByRole('region', { name: 'What it lets through' });
+    expect(action).toHaveTextContent(line);
+    expect(action).not.toHaveTextContent('file');
+    expect(await screen.findByRole('button', { name: verb })).toBeInTheDocument();
+  });
+
   it('signs in from a link to one request, wipes the token and shows that request', async () => {
     const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
     expect(
@@ -227,7 +264,7 @@ describe('a request', () => {
     const sections = ['Changes', 'Checks', 'Who asks', 'Why you are asked'].map((name) =>
       screen.getByRole('heading', { name }),
     );
-    const approve = screen.getByRole('button', { name: 'Approve' });
+    const approve = screen.getByRole('button', { name: /^Approve/ });
     expectInOrder([title, ...sections, approve]);
     expect(approve).toHaveAttribute('data-approval', 'approve');
     expect(screen.getByText('Waiting for you')).toHaveAttribute('data-approval', 'waiting');
@@ -257,14 +294,14 @@ describe('a request', () => {
       'href',
       '/receipts/rcpt-apr-merge-412',
     );
-    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Approve/ })).toBeNull();
   });
 
   it('says it approves while the answer is on its way', async () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/approvals/:id/answer', async () => delay('infinite')));
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     expect(await screen.findByRole('button', { name: 'Approving…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Decline & tell the agent…' })).toBeDisabled();
   });
@@ -276,7 +313,7 @@ describe('a request', () => {
     expect(screen.getByText(/If someone else can approve it, Ostrom will ask them/)).toBeInTheDocument();
     expect(screen.getByText('failed')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Approve' }));
+    await user.click(screen.getByRole('button', { name: /^Approve/ }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Not allowed');
     expect(alert).toHaveTextContent('You asked for this: samir has to approve it.');
@@ -311,7 +348,7 @@ describe('a request', () => {
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Decline & tell the agent…' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Approve/ })).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
@@ -319,7 +356,7 @@ describe('a request', () => {
     const user = userEvent.setup();
     db.approvers['apr-deploy-88'] = ['maya'];
     visit('/yes/apr-deploy-88');
-    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent('Self-approved');
     expect(decision).toHaveTextContent('maya asked for this and was the only approver: the receipt says so.');
@@ -328,7 +365,7 @@ describe('a request', () => {
   it('reloads a request that changed since it was opened, and asks to read it again', async () => {
     const user = userEvent.setup();
     visit('/yes/apr-merge-412');
-    const approve = await screen.findByRole('button', { name: 'Approve' });
+    const approve = await screen.findByRole('button', { name: /^Approve/ });
     db.approvals = db.approvals.map((item) =>
       item.id === 'apr-merge-412'
         ? { ...item, title: 'Merge PR #412 into main (rebased)', shownDigest: 'sha256:new' }
@@ -349,7 +386,7 @@ describe('a request', () => {
       ),
     );
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Error');
     expect(screen.getByRole('alert')).toHaveTextContent('down');
   });
@@ -364,7 +401,7 @@ describe('a request', () => {
     expect(screen.getByText('someone')).toBeInTheDocument();
     expect(screen.queryByText(/^Workflow /)).toBeNull();
     expect(screen.queryByText(/You approve as/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Approve/ })).toBeInTheDocument();
     expect(screen.getByText('sha256:bare')).toBeInTheDocument();
   });
 
@@ -377,7 +414,7 @@ describe('a request', () => {
     expect(screen.getByText('skipped')).toBeInTheDocument();
     expect(screen.getByText('clean')).toBeInTheDocument();
     expect(screen.getByText('task-9')).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /^Approve/ })).toBeInTheDocument();
   });
 
   it('reads evidence without any check', async () => {
@@ -447,11 +484,12 @@ describe('a request', () => {
             createdAt: '2026-10-30T08:00:00.000Z',
             signature: 'ed25519;sig=x',
           },
+          you: { login: 'maya', self: false, canApprove: false },
         });
       }),
     );
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent(/someone approved: Run a script · /);
     await user.click(within(decision).getByText('Verify the receipt'));
@@ -538,7 +576,7 @@ describe('safety of what the server and links bring', () => {
   it('starts a new page for another request: nothing of the previous answer carries over', async () => {
     const user = userEvent.setup();
     const router = visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     expect(await screen.findByRole('region', { name: 'Decision' })).toBeInTheDocument();
     await router.navigate({ to: '/yes/$approvalId', params: { approvalId: 'apr-migration-7' } });
     const decision = await screen.findByRole('region', { name: 'Decision' });

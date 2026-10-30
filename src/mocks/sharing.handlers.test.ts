@@ -61,37 +61,39 @@ describe('mock artifacts', () => {
   });
 
   it('shares with a member once, stops sharing, and lets only the owner do either', async () => {
-    await shareArtifact({ path: { id: 'art-7', login: 'samir' }, throwOnError: true });
-    await shareArtifact({ path: { id: 'art-7', login: 'samir' }, throwOnError: true });
+    await shareArtifact({ path: { id: 'art-7', memberId: 'samir' }, throwOnError: true });
+    await shareArtifact({ path: { id: 'art-7', memberId: 'samir' }, throwOnError: true });
     expect(db.artifactMembers['art-7']).toEqual(['maya', 'theo', 'samir']);
-    await unshareArtifact({ path: { id: 'art-7', login: 'theo' }, throwOnError: true });
+    await unshareArtifact({ path: { id: 'art-7', memberId: 'theo' }, throwOnError: true });
     expect(db.artifactMembers['art-7']).toEqual(['maya', 'samir']);
-    await shareArtifact({ path: { id: 'art-2', login: 'theo' }, throwOnError: true });
+    await shareArtifact({ path: { id: 'art-2', memberId: 'theo' }, throwOnError: true });
     expect(db.artifactMembers['art-2']).toEqual(['theo']);
     delete db.artifactMembers['art-2'];
-    await unshareArtifact({ path: { id: 'art-2', login: 'theo' }, throwOnError: true });
+    await unshareArtifact({ path: { id: 'art-2', memberId: 'theo' }, throwOnError: true });
     expect(db.artifactMembers['art-2']).toEqual([]);
     expect(
       await statusOf(async () =>
-        shareArtifact({ path: { id: 'art-5', login: 'samir' }, throwOnError: true }),
+        shareArtifact({ path: { id: 'art-5', memberId: 'samir' }, throwOnError: true }),
       ),
     ).toBe(403);
     expect(
       await statusOf(async () =>
-        unshareArtifact({ path: { id: 'art-5', login: 'theo' }, throwOnError: true }),
+        unshareArtifact({ path: { id: 'art-5', memberId: 'theo' }, throwOnError: true }),
       ),
     ).toBe(403);
     expect(
       await statusOf(async () =>
-        shareArtifact({ path: { id: 'art-7', login: 'nobody' }, throwOnError: true }),
+        shareArtifact({ path: { id: 'art-7', memberId: 'nobody' }, throwOnError: true }),
       ),
     ).toBe(404);
     expect(
-      await statusOf(async () => shareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true })),
+      await statusOf(async () =>
+        shareArtifact({ path: { id: 'art-9', memberId: 'theo' }, throwOnError: true }),
+      ),
     ).toBe(404);
     expect(
       await statusOf(async () =>
-        unshareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true }),
+        unshareArtifact({ path: { id: 'art-9', memberId: 'theo' }, throwOnError: true }),
       ),
     ).toBe(404);
   });

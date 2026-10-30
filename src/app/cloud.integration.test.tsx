@@ -245,10 +245,12 @@ describe('the automations', () => {
     const nightly = await card('Nightly dependency upgrades');
     await user.click(within(nightly).getByRole('button', { name: 'Show the runs' }));
     expect(await within(nightly).findAllByRole('listitem')).toHaveLength(2);
-    expect(within(nightly).getByText('pnpm install failed: the lockfile is out of date')).toBeInTheDocument();
-    expect(within(nightly).getByText('Succeeded')).toBeInTheDocument();
+    expect(
+      within(nightly).getByText('The plan’s agent hours are used up for this period.'),
+    ).toBeInTheDocument();
+    expect(within(nightly).getByText('Started')).toBeInTheDocument();
     await user.click(within(nightly).getByRole('button', { name: 'Run now' }));
-    expect(await screen.findByText('Nightly dependency upgrades is queued (run-102).')).toBeInTheDocument();
+    expect(await screen.findByText('The run is queued (run-102).')).toBeInTheDocument();
     expect(await within(nightly).findAllByRole('listitem')).toHaveLength(3);
     await user.click(within(nightly).getByRole('button', { name: 'Hide the runs' }));
     expect(within(nightly).queryByRole('listitem')).toBeNull();
@@ -258,9 +260,48 @@ describe('the automations', () => {
     const user = userEvent.setup();
     visit('/automations');
     await user.click(within(await card('Triage new Sentry issues')).getByRole('button', { name: 'Dry run' }));
-    expect(
-      await screen.findByText(/Dry run of Triage new Sentry issues: the trigger and inputs are valid/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Dry run: the trigger and inputs are valid/)).toBeInTheDocument();
+  });
+
+  it('says how many inputs of a dry run do not fit, and shows a run state and a reason it has no word for as is', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/automations/:id/run', () =>
+        HttpResponse.json({
+          renderedPrompt: 'x',
+          variables: [],
+          problems: [
+            { path: 'issue.id', rule: 'required' },
+            { path: 'issue.title', rule: 'max_length' },
+          ],
+          nextRuns: [],
+        }),
+      ),
+      http.get('*/api/v1/automations/:id/runs', () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 'run-9',
+              automationId: 'au-sentry',
+              source: 'webhook',
+              status: 'paused_by_owner',
+              version: 1,
+              reason: 'quota_frozen',
+              problems: [],
+              createdAt: '2026-10-30T07:00:00.000Z',
+              updatedAt: '2026-10-30T07:00:00.000Z',
+            },
+          ],
+        }),
+      ),
+    );
+    visit('/automations');
+    const sentry = await card('Triage new Sentry issues');
+    await user.click(within(sentry).getByRole('button', { name: 'Dry run' }));
+    expect(await screen.findByText('Dry run: 2 inputs do not fit, nothing ran.')).toBeInTheDocument();
+    await user.click(within(sentry).getByRole('button', { name: 'Show the runs' }));
+    expect(await within(sentry).findByText('paused_by_owner')).toBeInTheDocument();
+    expect(within(sentry).getByText('quota_frozen')).toBeInTheDocument();
   });
 
   it('says when an automation has no run yet', async () => {
