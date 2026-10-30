@@ -76,6 +76,8 @@ describe('the organization the console acts in', () => {
     const list = within(picker).getByRole('list', { name: 'Your organizations' });
     expect(within(list).getByRole('button', { name: 'Globex' })).toHaveAttribute('aria-current', 'true');
     expect(within(list).getByRole('button', { name: 'Acme' })).not.toHaveAttribute('aria-current');
+    await user.keyboard('a');
+    expect(screen.getByRole('dialog', { name: 'Which organization?' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.querySelector('[inert]')).toBeNull();
@@ -130,15 +132,17 @@ describe('the organization the console acts in', () => {
     expect(within(picker).getByRole('button', { name: 'Acme' })).toHaveAttribute('aria-current', 'true');
   });
 
-  it('asks once a second organization appears beside the only one', async () => {
+  it('lists a second organization beside the only one the next time, without interrupting', async () => {
+    const user = userEvent.setup();
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
     // Invited to Globex meanwhile; the list is read again (here, by opening the console afresh in the same session).
     db.otherOrganizations = [globex];
     cleanup();
     visit('/artifacts');
-    expect(await screen.findByRole('dialog', { name: 'Which organization?' })).toBeInTheDocument();
-    expect(useOrgStore.getState().current).toBe(db.organization.id);
+    await user.click(await screen.findByRole('button', { name: 'Organization: Acme. Switch' }));
+    const picker = screen.getByRole('dialog', { name: 'Which organization?' });
+    expect(await within(picker).findByRole('button', { name: 'Globex' })).toBeInTheDocument();
   });
 
   it('never sends another account the organization chosen before in this browser', async () => {
@@ -146,7 +150,7 @@ describe('the organization the console acts in', () => {
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
     // Taken as Maya's only organization, for this session: Lena's choice is gone.
-    expect(useOrgStore.getState().owner).toBe('maya');
+    expect(useOrgStore.getState().owner).toBeUndefined();
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
   });
 

@@ -25,10 +25,24 @@ describe('readStoredId', () => {
 describe('useOrgStore', () => {
   it('acts in the only organization without keeping it or reading anything again', () => {
     const before = useOrgStore.getState().generation;
-    useOrgStore.getState().only('org-acme', 'maya');
+    useOrgStore.getState().open();
+    useOrgStore.getState().only('org-acme');
     const state = useOrgStore.getState();
-    expect([state.current, state.owner, state.generation]).toEqual(['org-acme', 'maya', before]);
+    expect([state.current, state.owner, state.generation, state.picking]).toEqual([
+      'org-acme',
+      undefined,
+      before,
+      false,
+    ]);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
+  });
+
+  it('keeps the picker open on the only organization left when the last choice is gone, until it is closed', () => {
+    useOrgStore.getState().forget('unknown');
+    useOrgStore.getState().only('org-acme');
+    expect([useOrgStore.getState().picking, useOrgStore.getState().unknown]).toEqual([true, true]);
+    useOrgStore.getState().close();
+    expect([useOrgStore.getState().picking, useOrgStore.getState().unknown]).toEqual([false, false]);
   });
 
   it('keeps a choice with whose it is, and reads everything again only when it changes', () => {
@@ -79,7 +93,7 @@ describe('useOrgStore', () => {
 
   it('goes back to what is kept when someone signs in or out, without reading anything again itself', () => {
     useOrgStore.getState().choose('org-globex', 'maya');
-    useOrgStore.getState().only('org-acme', 'lena');
+    useOrgStore.getState().only('org-acme');
     useOrgStore.getState().ask();
     useOrgStore.getState().close();
     const before = useOrgStore.getState().generation;

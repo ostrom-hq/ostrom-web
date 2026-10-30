@@ -833,7 +833,7 @@ export const en = {
       known: 'Your organizations',
       notNow: 'Not now',
       problemTag: 'Check',
-      unknown: 'You are no longer a member of the organization chosen last. Choose another one.',
+      unknown: 'You are no longer a member of the organization chosen last.',
       failed: 'Your organizations could not be read.',
       retry: 'Try again',
       none: 'You are not a member of any organization yet. Ask an owner to invite you.',

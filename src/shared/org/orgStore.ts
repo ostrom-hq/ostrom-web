@@ -25,10 +25,11 @@ export function readStoredId(storage: Pick<SafeStorage, 'getItem'>, key: string)
  */
 export interface OrgState {
   readonly current: string | undefined;
-  /** Whose choice `current` is: kept with it, so another account is never sent someone else's. */
+  /**
+   * Whose choice `current` is, kept with it so another account is never sent someone else's; none for the only
+   * organization taken without asking (a sign-in or sign-out drops that one, `signedInOrOut`).
+   */
   readonly owner: string | undefined;
-  /** `current` was chosen by the person, not taken because it was their only one. */
-  readonly chosen: boolean;
   /** The organization must be chosen: several to choose from, or the server refused a call for want of one. */
   readonly asked: boolean;
   readonly picking: boolean;
@@ -39,7 +40,7 @@ export interface OrgState {
   /** Bumped when what was read belongs to another organization, or to none: everything is read again. */
   readonly generation: number;
   /** The only organization of the person, acted in for this session without asking. */
-  readonly only: (id: string, login: string) => void;
+  readonly only: (id: string) => void;
   /** The person's choice, kept with their login. */
   readonly choose: (id: string, login: string) => void;
   /** The person has to choose: the picker opens unless they closed it. */
@@ -52,12 +53,10 @@ export interface OrgState {
   readonly signedInOrOut: () => void;
 }
 
-function kept(): Pick<OrgState, 'current' | 'owner' | 'chosen'> {
-  const current = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
+function kept(): Pick<OrgState, 'current' | 'owner'> {
   return {
-    current,
+    current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
     owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
-    chosen: current !== undefined,
   };
 }
 
@@ -68,10 +67,10 @@ export const useOrgStore = create<OrgState>()((set) => ({
   dismissed: false,
   unknown: false,
   generation: 0,
-  only: (id, login) => {
-    // What was read before, without the header, was read in this same organization: nothing to read again.
-    // A picker opened to say the last choice is gone stays open, with this organization in it.
-    set({ current: id, owner: login, chosen: false, asked: false });
+  only: (id) => {
+    // What was read before, without the header, was read in this same organization: nothing to read again. A picker
+    // opened to say the last choice is gone stays open, with this organization in it; any other closes.
+    set((state) => ({ current: id, owner: undefined, asked: false, picking: state.unknown }));
   },
   choose: (id, login) => {
     safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
@@ -79,7 +78,6 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set((state) => ({
       current: id,
       owner: login,
-      chosen: true,
       asked: false,
       picking: false,
       dismissed: false,
@@ -94,7 +92,7 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set({ picking: true });
   },
   close: () => {
-    set({ picking: false, dismissed: true });
+    set({ picking: false, dismissed: true, unknown: false });
   },
   forget: (reason) => {
     safeLocalStorage.removeItem(ORG_STORAGE_KEY);
@@ -102,7 +100,6 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set((state) => ({
       current: undefined,
       owner: undefined,
-      chosen: false,
       asked: false,
       picking: reason === 'unknown',
       dismissed: false,

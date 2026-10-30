@@ -47,30 +47,28 @@ export function useOrgPicker(): OrgPickerViewModel {
     ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: login !== undefined }),
   );
   const organizations = list.data?.items;
-  const { current, owner, chosen, asked, picking, unknown, choose, only, ask, forget, open, close } =
-    useOrgStore(
-      useShallow((state) => ({
-        current: state.current,
-        owner: state.owner,
-        chosen: state.chosen,
-        asked: state.asked,
-        picking: state.picking,
-        unknown: state.unknown,
-        choose: state.choose,
-        only: state.only,
-        ask: state.ask,
-        forget: state.forget,
-        open: state.open,
-        close: state.close,
-      })),
-    );
+  const { current, owner, asked, picking, unknown, choose, only, ask, forget, open, close } = useOrgStore(
+    useShallow((state) => ({
+      current: state.current,
+      owner: state.owner,
+      asked: state.asked,
+      picking: state.picking,
+      unknown: state.unknown,
+      choose: state.choose,
+      only: state.only,
+      ask: state.ask,
+      forget: state.forget,
+      open: state.open,
+      close: state.close,
+    })),
+  );
   useEffect(() => {
     if (login === undefined || organizations === undefined) return;
-    const step = nextStep({ current, owner, chosen, login, organizations });
+    const step = nextStep({ current, owner, login, organizations });
     if (step.kind === 'forget') forget(step.reason);
-    else if (step.kind === 'only') only(step.id, login);
+    else if (step.kind === 'only') only(step.id);
     else if (step.kind === 'ask') ask();
-  }, [login, organizations, current, owner, chosen, only, ask, forget]);
+  }, [login, organizations, current, owner, only, ask, forget]);
   const options = useMemo(
     () =>
       login === undefined || organizations === undefined

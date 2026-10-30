@@ -5,6 +5,7 @@ import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
+import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { useOrgStore } from '@/shared/org/orgStore';
 
@@ -36,6 +37,8 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
     () =>
       useOrgStore.subscribe((org, previous) => {
         if (org.generation === previous.generation) return;
+        // Another organization has another queue: nothing in it is new because of what the other one showed.
+        resetArrivals();
         const kept = new Set([hashKey(getMeQueryKey()), hashKey(listMyOrganizationsQueryKey())]);
         void queryClient.resetQueries({ predicate: (query) => !kept.has(query.queryHash) });
       }),
