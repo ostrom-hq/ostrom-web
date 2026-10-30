@@ -16,9 +16,11 @@ import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { RulesScreen } from '@/features/rules';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
+import { SettingsScreen } from '@/features/settings';
 import { AccountsScreen, ArtifactsScreen } from '@/features/sharing';
 import { EmailLinkScreen, fragmentValue, SignInScreen, useEmailLinkStore } from '@/features/signin';
 import { SpendScreen } from '@/features/spend';
+import { TokensScreen } from '@/features/tokens';
 import { BillingScreen } from '@/features/billing';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
@@ -139,6 +141,16 @@ const billingRoute = createRoute({
   path: '/billing',
   component: BillingScreen,
 });
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/settings',
+  component: SettingsScreen,
+});
+const tokensRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tokens',
+  component: TokensScreen,
+});
 const cloudRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cloud', component: CloudScreen });
 const automationsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -215,6 +227,8 @@ export const routeTree = rootRoute.addChildren([
   secretsRoute,
   spendRoute,
   billingRoute,
+  settingsRoute,
+  tokensRoute,
   cloudRoute,
   automationsRoute,
   artifactsRoute,

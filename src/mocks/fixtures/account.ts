@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { AuthSession, Token } from '@gen/api/types.gen';
+
+/** Maya's sessions: this browser, her phone and a laptop left signed in. */
+export function initialAuthSessions(): AuthSession[] {
+  return [
+    {
+      id: 'ses-browser',
+      createdAt: '2026-10-30T08:12:00Z',
+      lastSeenAt: '2026-10-30T09:40:00Z',
+      device: 'Firefox on macOS',
+      current: true,
+    },
+    {
+      id: 'ses-phone',
+      createdAt: '2026-10-28T19:03:00Z',
+      lastSeenAt: '2026-10-30T07:55:00Z',
+      device: 'Ostrom on iPhone',
+      current: false,
+    },
+    { id: 'ses-laptop', createdAt: '2026-10-02T10:20:00Z', current: false },
+  ];
+}
+
+/** Maya's live tokens, newest first: a CI token that expires, and the CLI's own. */
+export function initialTokens(): Token[] {
+  return [
+    {
+      id: 'tok-2',
+      name: 'GitHub Actions',
+      kind: 'personal',
+      scopes: ['receipts:read', 'workflows:read'],
+      hint: 'osp_7Hq2',
+      createdAt: '2026-10-20T09:00:00Z',
+      expiresAt: '2026-11-19T09:00:00Z',
+      lastUsedAt: '2026-10-30T06:05:00Z',
+    },
+    {
+      id: 'tok-1',
+      name: 'ostrom on maya-mbp',
+      kind: 'cli',
+      scopes: ['profile:read', 'orgs:read', 'workflows:read', 'sessions:write'],
+      hint: 'osc_Pk9d',
+      createdAt: '2026-10-01T14:30:00Z',
+      expiresAt: null,
+      lastUsedAt: null,
+    },
+  ];
+}
