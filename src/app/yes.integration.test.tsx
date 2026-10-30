@@ -341,6 +341,14 @@ describe('a request', () => {
     expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 
+  it('reads evidence without any check', async () => {
+    addApproval({ ...bare, id: 'apr-evidence', evidence: [{ label: 'Plan', value: 'two files' }] });
+    visit('/yes/apr-evidence');
+    expect(await screen.findByText('two files')).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: /check/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Checks' })).toBeInTheDocument();
+  });
+
   it('shows a decided request without its receipt, from the list', async () => {
     visit('/yes/apr-migration-7');
     const decision = await screen.findByRole('region', { name: 'Decision' });
