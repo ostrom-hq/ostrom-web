@@ -12,10 +12,19 @@ import { zAnalysisState } from '@gen/api/zod.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
-import { type AnalysisStage, type InstallOutcome, installUrl, reposShown, stageOf } from './model';
+import {
+  type AnalysisRunStage,
+  type AnalysisStage,
+  type InstallOutcome,
+  installUrl,
+  reposShown,
+  safeAppPage,
+  stageOf,
+} from './model';
 
 /** A running analysis is read again this often. */
 export const ANALYSIS_POLL_MS = 2_000;
@@ -30,8 +39,8 @@ export interface GithubApp {
 export interface Analysis {
   readonly state: AnalysisState;
   readonly stage: AnalysisStage;
-  /** Starts a run, or restarts a failed one; none for anyone but an owner or an admin. */
-  readonly run: (() => void) | undefined;
+  /** Starts a run, or restarts a failed one; none while one runs, nor for anyone but an owner or an admin. */
+  readonly run: { readonly from: AnalysisRunStage; readonly go: () => void } | undefined;
   readonly starting: boolean;
   readonly failure: Error | undefined;
 }
@@ -49,9 +58,11 @@ export interface GithubViewModel {
   readonly query: string;
   readonly setQuery: (query: string) => void;
   readonly shown: readonly Repo[];
-  /** The analysis of the rules; undefined until read, or when the server does not serve it. */
+  /** The analysis of the rules; undefined until read. */
   readonly analysis: Analysis | undefined;
   readonly analysisFailure: Error | undefined;
+  /** False when the server does not serve the analysis yet (404, 501): nothing to show, and nothing went wrong. */
+  readonly analysisServed: boolean;
 }
 
 /** The organization's GitHub App, the repositories it governs, and the analysis that proposes their rules. */
@@ -70,11 +81,13 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
       },
     }),
   );
-  const onSuccess = async (): Promise<void> => {
+  // Read the state again after any answer: a refusal (a run another admin started, one that ended in another tab)
+  // means the page is behind.
+  const onSettled = async (): Promise<void> => {
     await queryClient.invalidateQueries({ queryKey: getAnalysisStateQueryKey() });
   };
-  const start = useMutation({ ...startAnalysisMutation(), onSuccess });
-  const restart = useMutation({ ...restartAnalysisMutation(), onSuccess });
+  const start = useMutation({ ...startAnalysisMutation(), onSettled });
+  const restart = useMutation({ ...restartAnalysisMutation(), onSettled });
   const [query, setQuery] = useState('');
   const items = repos.data?.items;
   const shown = useMemo(() => reposShown(items ?? [], query), [items, query]);
@@ -82,14 +95,19 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
   let analysis: Analysis | undefined;
   if (state.data !== undefined) {
     const stage = stageOf(state.data);
-    const go = stage === 'failed' ? restart : start;
     analysis = {
       state: state.data,
       stage,
       run:
         manager && stage !== 'running'
-          ? () => {
-              go.mutate({});
+          ? {
+              from: stage,
+              go: () => {
+                // Only the last attempt speaks: an older refusal of the other call never stays on screen.
+                const [used, other] = stage === 'failed' ? [restart, start] : [start, restart];
+                other.reset();
+                used.mutate({});
+              },
             }
           : undefined,
       starting: start.isPending || restart.isPending,
@@ -100,7 +118,7 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     app:
       app.data === undefined
         ? undefined
-        : { installed: app.data.installed, slug: app.data.slug, page: app.data.htmlUrl },
+        : { installed: app.data.installed, slug: app.data.slug, page: safeAppPage(app.data.htmlUrl) },
     appFailure: failureOf(app.error),
     install: manager ? installUrl(org) : undefined,
     repos: items,
@@ -111,7 +129,13 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     shown,
     analysis,
     analysisFailure: failureOf(state.error),
+    analysisServed: !(isApiFailure(state.error) && unserved(state.error.status)),
   };
+}
+
+/** A route the server does not serve yet answers 404, or 501 from a server that knows it but has no engine behind. */
+function unserved(status: number | undefined): boolean {
+  return status === 404 || status === 501;
 }
 
 /**

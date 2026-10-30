@@ -9,7 +9,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, Facts, LoadState, Screen } from '@/shared/ui/Screen';
-import { type InstallOutcome, installErrorOf } from '../model';
+import { type InstallOutcome, installErrorOf, readableDate } from '../model';
 import { type Analysis, type GithubViewModel, useGithub, useInstallOutcome } from '../useGithub';
 import './github.css';
 
@@ -40,7 +40,8 @@ function GithubPage({
   const view = useGithub(org.id, role);
   return (
     <Screen title={t('github.title')} lead={t('github.lead')}>
-      {outcome.installed ? (
+      {/* Said only once the server agrees: a link alone never claims an installation. */}
+      {outcome.installed && view.app?.installed === true ? (
         <Banner tone="info" tag={t('github.back.installedTag')} live>
           {t('github.back.installed')}
         </Banner>
@@ -108,6 +109,7 @@ const SEARCH_FROM = 6;
 function Repositories({ view }: { readonly view: GithubViewModel }): ReactElement {
   const { t } = useTranslation();
   const searchId = useId();
+  const hintId = useId();
   return (
     <section aria-labelledby="gh-repos" className="o-stack">
       <h2 id="gh-repos" className="o-label">
@@ -124,7 +126,7 @@ function Repositories({ view }: { readonly view: GithubViewModel }): ReactElemen
                   ? t('github.repos.leadMore', { count: repos.length })
                   : t('github.repos.lead', { count: repos.length })}
               </p>
-              {repos.length >= SEARCH_FROM ? (
+              {repos.length >= SEARCH_FROM || view.more ? (
                 <div className="o-stack o-gh__search">
                   <label htmlFor={searchId} className="o-field-label">
                     {t('github.repos.search')}
@@ -134,10 +136,16 @@ function Repositories({ view }: { readonly view: GithubViewModel }): ReactElemen
                     className="o-input"
                     type="search"
                     value={view.query}
+                    aria-describedby={view.more ? hintId : undefined}
                     onChange={(event) => {
                       view.setQuery(event.target.value);
                     }}
                   />
+                  {view.more ? (
+                    <span id={hintId} className="o-row__meta">
+                      {t('github.repos.searchFirst')}
+                    </span>
+                  ) : null}
                 </div>
               ) : null}
               {view.shown.length === 0 ? (
@@ -164,14 +172,8 @@ function RepoRow({ repo }: { readonly repo: Repo }): ReactElement {
   const facts: string[] = [];
   if (repo.language !== undefined) facts.push(repo.language);
   facts.push(t('github.repos.branch', { branch: repo.defaultBranch }));
-  if (repo.pushedAt !== undefined) {
-    const date = new Date(repo.pushedAt).toLocaleDateString(i18n.language, {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-    facts.push(t('github.repos.pushed', { date }));
-  }
+  const pushed = repo.pushedAt === undefined ? undefined : readableDate(repo.pushedAt, i18n.language);
+  if (pushed !== undefined) facts.push(t('github.repos.pushed', { date: pushed }));
   if (repo.owners !== undefined && repo.owners.length > 0)
     facts.push(t('github.repos.owners', { teams: repo.owners.join(', ') }));
   return (
@@ -195,13 +197,13 @@ function RepoRow({ repo }: { readonly repo: Repo }): ReactElement {
 function AnalysisSection({ view }: { readonly view: GithubViewModel }): ReactElement | null {
   const { t } = useTranslation();
   // A server that does not serve the analysis yet: nothing to start, and nothing went wrong.
-  if (view.analysis === undefined && view.analysisFailure !== undefined) return null;
+  if (!view.analysisServed) return null;
   return (
     <section aria-labelledby="gh-analysis" className="o-card o-section o-stack">
       <h2 id="gh-analysis" className="o-label">
         {t('github.analysis.title')}
       </h2>
-      <LoadState data={view.analysis} failure={undefined} rows={2}>
+      <LoadState data={view.analysis} failure={view.analysisFailure} rows={2}>
         {(analysis) => <AnalysisBody analysis={analysis} />}
       </LoadState>
     </section>
@@ -228,8 +230,8 @@ function AnalysisBody({ analysis }: { readonly analysis: Analysis }): ReactEleme
       {stage === 'ready' ? (
         <p className="o-row__meta o-gh__wrap">
           {t('github.analysis.found', {
-            rules: state.rules.length,
-            workflows: state.workflows.length,
+            rules: t('github.analysis.rules', { count: state.rules.length }),
+            workflows: t('github.analysis.workflows', { count: state.workflows.length }),
           })}
         </p>
       ) : null}
@@ -250,8 +252,8 @@ function AnalysisBody({ analysis }: { readonly analysis: Analysis }): ReactEleme
           </Link>
         ) : null}
         {analysis.run === undefined ? null : (
-          <Button onClick={analysis.run} disabled={analysis.starting}>
-            {analysis.starting ? t('github.analysis.starting') : t(`github.analysis.run.${stage}`)}
+          <Button onClick={analysis.run.go} disabled={analysis.starting}>
+            {analysis.starting ? t('github.analysis.starting') : t(`github.analysis.run.${analysis.run.from}`)}
           </Button>
         )}
       </div>

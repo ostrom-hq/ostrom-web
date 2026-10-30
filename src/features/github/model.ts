@@ -2,6 +2,7 @@
 import type { Repo } from '@gen/api/types.gen';
 import { z } from 'zod';
 import { apiUrl } from '@/shared/api/apiClient';
+import { safeHref } from '@/shared/lib/safeHref';
 
 /**
  * What GitHub's install brings back, through the server's callback: `/github?installed=1`, or
@@ -10,7 +11,8 @@ import { apiUrl } from '@/shared/api/apiClient';
 export const githubSearchSchema = z.object({
   installed: z
     .unknown()
-    .transform(() => true as const)
+    // `1` as the server sends it; `true` once read, as the router validates its own output again.
+    .transform((value) => value === 1 || value === '1' || value === true)
     .optional(),
   error: z
     .unknown()
@@ -54,6 +56,9 @@ export function reposShown(repos: readonly Repo[], query: string): Repo[] {
  */
 export type AnalysisStage = 'never' | 'running' | 'ready' | 'failed';
 
+/** The stages a run can start from: none while one runs. */
+export type AnalysisRunStage = Exclude<AnalysisStage, 'running'>;
+
 export function stageOf(state: { readonly phase?: string | undefined }): AnalysisStage {
   switch (state.phase) {
     case undefined:
@@ -74,4 +79,17 @@ export function stageOf(state: { readonly phase?: string | undefined }): Analysi
  */
 export function installUrl(org: string): string {
   return `${apiUrl('/api/v1/github/app/install/start')}?${new URLSearchParams({ org }).toString()}`;
+}
+
+/** The App's page on GitHub, only when it is an https link: the server's word is still outside data. */
+export function safeAppPage(url: string | undefined): string | undefined {
+  const href = safeHref(url);
+  return href?.startsWith('https:') === true ? href : undefined;
+}
+
+/** A date people read ("Oct 29, 2026"), or nothing when the server sent no valid date. */
+export function readableDate(iso: string, language: string): string | undefined {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
 }

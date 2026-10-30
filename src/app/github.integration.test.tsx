@@ -79,9 +79,21 @@ describe('the GitHub screen', () => {
     expect(screen.queryByRole('list', { name: 'Governed repositories' })).toBeNull();
   });
 
-  it('shows a few repositories without a filter, and says when the server holds more', async () => {
-    // An empty description shows no line.
-    db.repos[ACME] = [{ name: 'solo', description: '', defaultBranch: 'main', archived: false }];
+  it('shows a few repositories without a filter', async () => {
+    // An empty description shows no line; a push date that is not one shows nothing.
+    db.repos[ACME] = [
+      { name: 'solo', description: '', defaultBranch: 'main', archived: false, pushedAt: 'not a date' },
+    ];
+    visit('/github');
+    const list = await repoList();
+    expect(screen.getByText('The app reads 1 repository.')).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(rowOf(list, 'solo')).toHaveTextContent('branch main');
+    expect(rowOf(list, 'solo')).not.toHaveTextContent('pushed');
+  });
+
+  it('says when the server holds more, and that the search reads the ones shown only', async () => {
+    db.repos[ACME] = [{ name: 'solo', defaultBranch: 'main', archived: false }];
     server.use(
       http.get('*/api/v1/repos', () =>
         HttpResponse.json({ items: (db.repos[ACME] ?? []).slice(0, 1), next: 'b' }),
@@ -92,7 +104,9 @@ describe('the GitHub screen', () => {
     expect(
       screen.getByText('The app reads more than 1 repository; the first are shown.'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.getByRole('searchbox', { name: 'Find a repository' })).toHaveAccessibleDescription(
+      'The search reads the repositories shown only.',
+    );
   });
 
   it('says when the app was given no repository', async () => {
@@ -129,6 +143,17 @@ describe('the GitHub screen', () => {
   it('shows the app without its page when the server gives none', async () => {
     server.use(
       http.get('*/api/v1/github/app', () => HttpResponse.json({ installed: false, slug: 'ostrom' })),
+    );
+    visit('/github');
+    expect(await screen.findByText('ostrom')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'ostrom' })).toBeNull();
+  });
+
+  it('links the app page only over https', async () => {
+    server.use(
+      http.get('*/api/v1/github/app', () =>
+        HttpResponse.json({ installed: false, slug: 'ostrom', htmlUrl: 'javascript:alert(1)' }),
+      ),
     );
     visit('/github');
     expect(await screen.findByText('ostrom')).toBeInTheDocument();
@@ -172,6 +197,31 @@ describe('coming back from GitHub', () => {
     expect(screen.getByText('The GitHub App is installed. Its repositories show below.')).toBeInTheDocument();
   });
 
+  it('says nothing of an installation the server does not know, nor of a link that says none', async () => {
+    db.githubInstalled[ACME] = false;
+    const router = visit('/github?installed=1');
+    expect(await screen.findByText('Not installed')).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(router.state.location.searchStr).toBe('');
+    });
+    expect(screen.queryByText(/^The GitHub App is installed/)).toBeNull();
+  });
+
+  it('reads installed=0 as nothing, and cleans the address', async () => {
+    const router = visit('/github?installed=0');
+    await repoList();
+    await vi.waitFor(() => {
+      expect(router.state.location.searchStr).toBe('');
+    });
+    expect(screen.queryByText(/^The GitHub App is installed/)).toBeNull();
+  });
+
+  it('tags an unfinished visit to GitHub as such, the app installed or not', async () => {
+    visit('/github?error=denied');
+    expect(await screen.findByText('Not finished')).toBeInTheDocument();
+    expect(await screen.findByText('Installed')).toBeInTheDocument();
+  });
+
   it.each([
     ['denied', 'The installation was cancelled on GitHub.'],
     ['expired', 'The installation took too long. Start it again.'],
@@ -207,6 +257,43 @@ describe('the analysis of the rules', () => {
     expect(
       await within(section).findByRole('progressbar', { name: 'Analysis 40 % done' }, { timeout: 4000 }),
     ).toBeInTheDocument();
+  });
+
+  it('counts one rule and one workflow as such', async () => {
+    db.analyses[ACME] = { phase: 'ready', progress: 1, fails: false };
+    db.rules = db.rules.slice(0, 1);
+    db.workflows = db.workflows.slice(0, 1);
+    visit('/github');
+    expect(await within(await analysis()).findByText('1 rule and 1 workflow proposed.')).toBeInTheDocument();
+  });
+
+  it('reads the state again when a start is refused, as the page was behind', async () => {
+    const user = userEvent.setup();
+    visit('/github');
+    const section = await analysis();
+    const button = await within(section).findByRole('button', { name: 'Analyse the repositories' });
+    // Another admin started a run meanwhile.
+    db.analyses[ACME] = { phase: 'connect', progress: 0.05, fails: false };
+    await user.click(button);
+    expect(await within(section).findByText('An analysis is running.')).toBeInTheDocument();
+    expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+  });
+
+  it('forgets an older refusal once another attempt starts', async () => {
+    const user = userEvent.setup();
+    visit('/github');
+    const section = await analysis();
+    const button = await within(section).findByRole('button', { name: 'Analyse the repositories' });
+    // A run failed meanwhile: the start is refused, the page learns it failed, and the restart goes through.
+    db.analyses[ACME] = { phase: 'failed', progress: 1, fails: true };
+    server.use(
+      http.post('*/api/v1/analysis/start', () => refuse(409, 'Restart the failed one.'), { once: true }),
+    );
+    await user.click(button);
+    expect(await within(section).findByText('Restart the failed one.')).toBeInTheDocument();
+    await user.click(await within(section).findByRole('button', { name: 'Start again' }));
+    expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+    expect(within(section).queryByText('Restart the failed one.')).toBeNull();
   });
 
   it('says what the last analysis proposed, and analyses again', async () => {
@@ -254,11 +341,20 @@ describe('the analysis of the rules', () => {
     expect(await within(section).findByText('An analysis is running.')).toBeInTheDocument();
   });
 
-  it('shows nothing of an analysis the server does not serve yet, and no error', async () => {
-    server.use(http.get('*/api/v1/analysis/state', () => refuse(404, 'not served')));
+  it.each([404, 501])(
+    'shows nothing of an analysis the server does not serve yet (%i), and no error',
+    async (status) => {
+      server.use(http.get('*/api/v1/analysis/state', () => refuse(status, 'not served')));
+      visit('/github');
+      await repoList();
+      expect(screen.queryByRole('heading', { name: 'Rules from your repositories' })).toBeNull();
+      expect(screen.queryByText('not served')).toBeNull();
+    },
+  );
+
+  it('says why the analysis was not read', async () => {
+    server.use(http.get('*/api/v1/analysis/state', () => refuse(500, 'analysis is down')));
     visit('/github');
-    await repoList();
-    expect(screen.queryByRole('heading', { name: 'Rules from your repositories' })).toBeNull();
-    expect(screen.queryByText('not served')).toBeNull();
+    expect(await within(await analysis()).findByText('analysis is down')).toBeInTheDocument();
   });
 });
