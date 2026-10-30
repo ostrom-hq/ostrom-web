@@ -216,6 +216,8 @@ describe('a request', () => {
     expect(action).toHaveTextContent(line);
     expect(action).not.toHaveTextContent('file');
     expect(await screen.findByRole('button', { name: verb })).toBeInTheDocument();
+  });
+
   it('signs in from a link to one request, wipes the token and shows that request', async () => {
     const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
     expect(
