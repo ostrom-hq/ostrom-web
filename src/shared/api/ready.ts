@@ -14,6 +14,10 @@ export type ReadyQuery<Options extends { readonly queryFn?: unknown }> = Omit<Op
   readonly queryFn: NonNullable<Options['queryFn']>;
 };
 
+function isPresent<T>(value: T): value is NonNullable<T> {
+  return value !== undefined && value !== null;
+}
+
 /**
  * A generated query ready for `useQuery`, with the screen's tuning.
  *
@@ -26,6 +30,6 @@ export function ready<Options extends { readonly queryFn?: unknown }>(
   tuning: QueryTuning = {},
 ): ReadyQuery<Options> {
   const { queryFn } = options;
-  if (queryFn === undefined) throw new Error('a generated query always carries its query function');
+  if (!isPresent(queryFn)) throw new Error('a generated query always carries its query function');
   return { ...options, ...tuning, queryFn };
 }

@@ -1,8 +1,71 @@
-# ostrom-web
+<p align="center">
+  <a href="https://ostrom.run">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset=".github/assets/banner-dark.svg">
+      <img alt="Ostrom. Agents propose. Your team decides." src=".github/assets/banner-light.svg" width="100%">
+    </picture>
+  </a>
+</p>
 
-The Ostrom web console: React 19 + TypeScript (strictest settings), Vite, TanStack Router and Query,
-Zustand, zod at the boundaries, Vitest + Testing Library, Playwright. AGPL-3.0, with `ee/` under the
-Ostrom Enterprise License ([`LICENSING.md`](LICENSING.md)).
+<p align="center">
+  <strong>Ostrom runs a company's AI coding agents in the cloud and makes them follow the team's rules.</strong><br>
+  Every change they make leaves a receipt, and the few that matter wait for a person's yes.
+</p>
+
+<p align="center">
+  <a href="https://ostrom.run">Website</a> ·
+  <a href="https://ostrom.run/docs">Docs</a> ·
+  <a href="https://github.com/ostrom-hq/ostrom-web/discussions">Discussions</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a> ·
+  <a href="SECURITY.md">Security</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/ostrom-hq/ostrom-web/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/ostrom-hq/ostrom-web/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="CONTRIBUTING.md#tests-the-bar"><img alt="Coverage: 100% enforced" src="https://img.shields.io/badge/coverage-100%25%20enforced-8E1B3A"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20ee-8E1B3A"></a>
+  <a href="CHANGELOG.md"><img alt="Version: pre-1.0" src="https://img.shields.io/badge/version-pre--1.0-44393C"></a>
+</p>
+
+## What this is
+
+The Ostrom web console, in the cloud or self-hosted: see every agent session, write
+the rules your agents follow, answer the gates that wait for a person, and read the receipt of every change. React 19
+and TypeScript at the strictest settings, Vite, TanStack Router and Query, Zustand, zod at every boundary.
+
+## Quick start
+
+```sh
+git clone https://github.com/ostrom-hq/ostrom-web.git && cd ostrom-web
+pnpm install
+VITE_MOCKS=true pnpm dev   # http://localhost:5173, the API served by MSW: no server needed
+```
+
+## How it fits
+
+```mermaid
+flowchart LR
+  dev(["Developer"]) --> cli["ostrom CLI"]
+  cli -- "launches, under the rules" --> agent[["Coding agent<br/>Claude Code, Codex, ..."]]
+  agent -. "every action, through hooks" .-> cli
+  cli -- "sessions, gate requests" --> server["Ostrom server"]
+  server --- db[("PostgreSQL")]
+  server -- "reads the diff, runs checks" --> gh["GitHub"]
+  server -- "a yes is needed" --> person(["Approver"])
+  person --> web["Web console"] & app["Mobile app"]
+  web & app -- "API" --> server
+  server -- "signed receipt" --> receipt[/"Receipt"/]
+  core{{"ostrom-core<br/>contract, workflow model, receipts"}} -.- cli & server & web & app
+  helm["Helm chart"] -. "deploys" .-> server
+  classDef here fill:#8E1B3A,stroke:#8E1B3A,color:#FFFFFF
+  class web here
+```
+
+## Status
+
+Ostrom is before its first public release. The console is being built: the application shell, the strict toolchain
+and the typed API client come first, the screens follow the server routes as they land. Screens that are not built
+yet are not shown.
 
 ## Commands
 
@@ -52,3 +115,26 @@ Rules enforced by the toolchain, not by review:
 - Data crossing a boundary (API, `localStorage`, URL) is parsed with zod before the app trusts it.
 - Patterns: custom hooks are the ViewModels of screens, Zustand holds local state, TanStack Query holds
   server state. Every string goes through i18n (`en` is the source, `fr` must have the same shape).
+
+## Repositories
+
+| Repository                                                  | What it is                                                                         | License       |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------- |
+| [ostrom-core](https://github.com/ostrom-hq/ostrom-core)     | Shared Kotlin Multiplatform library: API contract, workflow model, signed receipts | Apache-2.0    |
+| [ostrom-cli](https://github.com/ostrom-hq/ostrom-cli)       | The `ostrom` command line: runs coding agents under the team's rules               | Apache-2.0    |
+| [ostrom-server](https://github.com/ostrom-hq/ostrom-server) | The server: gates, receipts, policies, the API                                     | AGPL-3.0 + ee |
+| **ostrom-web** (this one)                                   | The web console                                                                    | AGPL-3.0 + ee |
+| [ostrom-app](https://github.com/ostrom-hq/ostrom-app)       | The iOS and Android app                                                            | AGPL-3.0 + ee |
+| [ostrom-e2e](https://github.com/ostrom-hq/ostrom-e2e)       | Full-stack end-to-end and load tests                                               | Apache-2.0    |
+| [ostrom-site](https://github.com/ostrom-hq/ostrom-site)     | ostrom.run: website, documentation, blog                                           | Apache-2.0    |
+| [ostrom-helm](https://github.com/ostrom-hq/ostrom-helm)     | Helm chart and Docker Compose for self-hosting                                     | AGPL-3.0      |
+
+## Contributing
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) (setup, tests, Conventional Commits, DCO), the
+[Code of Conduct](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) to report a vulnerability privately. Questions
+go to [Discussions](https://github.com/ostrom-hq/ostrom-web/discussions); help options are in [SUPPORT.md](SUPPORT.md).
+
+## License
+
+GNU Affero General Public License v3.0 ([LICENSE](LICENSE)), except the `ee/` directory, under the Ostrom Enterprise License ([ee/LICENSE](ee/LICENSE)): you can read, modify and test that code, and running it in production needs an Ostrom Enterprise subscription. Details in [LICENSING.md](LICENSING.md).

@@ -22,6 +22,10 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The merge commit and its base: enough to tell whether the pull request touches the console image.
+          fetch-depth: 2
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
         with:
@@ -44,6 +48,21 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end journeys (Playwright, desktop and mobile)
         run: pnpm e2e
+      # The image is built and pushed by image.yml on main; a pull request that changes what goes into it proves it here,
+      # in this one job: security headers (S2-09), read-only root, API proxy, runtime settings.
+      - name: Does this pull request change the console image?
+        id: image
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only HEAD^1 HEAD \
+            | grep -Eq '^(Dockerfile|\.dockerignore|docker/|index\.html|public/|vite\.config\.ts|package\.json|pnpm-lock\.yaml)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Console image smoke test (security headers, read-only root, API proxied, runtime settings)
+        if: steps.image.outputs.changed == 'true'
+        run: |
+          docker build --tag ostrom-web:ci .
+          ./docker/smoke-test.sh ostrom-web:ci
       - if: failure()
         uses: actions/upload-artifact@v5
         with:
