@@ -26,7 +26,7 @@ import type {
   UpdateSharedAccountData,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
@@ -47,25 +47,35 @@ export function useArtifacts(): ArtifactsViewModel {
 export interface ArtifactDetailViewModel {
   readonly versions: readonly ArtifactVersion[] | undefined;
   readonly readers: readonly string[] | undefined;
-  /** The organization's members, to pick a new reader from. */
+  /** The organization's members, to pick a new reader from: asked for its owner only, never in the way. */
   readonly members: readonly Member[] | undefined;
   readonly failure: Error | undefined;
 }
 
-export function useArtifactDetail(id: string): ArtifactDetailViewModel {
+/** Newest first, whatever order the server sends. */
+export function newestFirst(versions: readonly ArtifactVersion[]): ArtifactVersion[] {
+  return [...versions].sort((a, b) => b.number - a.number);
+}
+
+export function useArtifactDetail(id: string, owner: boolean): ArtifactDetailViewModel {
   const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
   const readers = useQuery(ready(listArtifactMembersOptions({ path: { id } })));
-  const members = useQuery(ready(listMembersOptions()));
+  const members = useQuery({ ...ready(listMembersOptions(), { staleTime: 60_000 }), enabled: owner });
+  const sorted = useMemo(
+    () => (versions.data === undefined ? undefined : newestFirst(versions.data.items)),
+    [versions.data],
+  );
   return {
-    versions: versions.data?.items,
+    versions: sorted,
     readers: readers.data?.members,
     members: members.data?.items,
-    failure: failureOf(versions.error ?? readers.error ?? members.error),
+    failure: failureOf(versions.error ?? readers.error),
   };
 }
 
 export interface ArtifactChangeViewModel {
-  readonly share: (id: string, login: string) => void;
+  /** `onDone` runs once the server took it: the picker clears then, not before. */
+  readonly share: (id: string, login: string, onDone: () => void) => void;
   readonly unshare: (id: string, login: string) => void;
   readonly remove: (id: string) => void;
   /** The artifact being changed. */
@@ -75,9 +85,13 @@ export interface ArtifactChangeViewModel {
 
 export function useArtifactChange(): ArtifactChangeViewModel {
   const queryClient = useQueryClient();
+  // The readers change, and the server may change the artifact's access with them (its badge on the list).
   const refreshReaders = useCallback(
     async (id: string) => {
-      await queryClient.invalidateQueries({ queryKey: listArtifactMembersQueryKey({ path: { id } }) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listArtifactMembersQueryKey({ path: { id } }) }),
+        queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() }),
+      ]);
     },
     [queryClient],
   );
@@ -103,10 +117,10 @@ export function useArtifactChange(): ArtifactChangeViewModel {
   const { mutate: unshareMutate, reset: resetUnshare } = unshared;
   const { mutate: dropMutate, reset: resetDrop } = dropped;
   const share = useCallback(
-    (id: string, login: string) => {
+    (id: string, login: string, onDone: () => void) => {
       resetUnshare();
       resetDrop();
-      shareMutate({ path: { id, login } });
+      shareMutate({ path: { id, login } }, { onSuccess: onDone });
     },
     [shareMutate, resetUnshare, resetDrop],
   );
@@ -160,7 +174,8 @@ export function useAccounts(): AccountsViewModel {
     accounts: accounts.data?.items,
     secrets: secrets.data?.items,
     members: members.data?.items,
-    failure: failureOf(accounts.error),
+    // Without the secrets or the members the form to share a subscription cannot show: say why.
+    failure: failureOf(accounts.error ?? secrets.error ?? members.error),
     login: viewer.login,
   };
 }

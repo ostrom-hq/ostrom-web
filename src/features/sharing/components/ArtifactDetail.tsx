@@ -16,14 +16,14 @@ export interface ArtifactDetailProps {
 /** Its versions, newest first, and who reads it: the readers are listed only when it is shared with people. */
 export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const detail = useArtifactDetail(artifact.id);
+  const detail = useArtifactDetail(artifact.id, change !== undefined);
   const [reader, setReader] = useState('');
   const readerId = useId();
   if (detail.failure !== undefined) return <p className="o-row__meta">{detail.failure.message}</p>;
-  if (detail.versions === undefined || detail.readers === undefined || detail.members === undefined)
+  if (detail.versions === undefined || detail.readers === undefined)
     return <p className="o-row__meta">{t('sharing.artifacts.loading')}</p>;
   const readers = detail.readers;
-  const candidates = detail.members.filter(
+  const candidates = (detail.members ?? []).filter(
     (member) => member.login !== artifact.owner && !readers.includes(member.login),
   );
   const busy = change?.pending === artifact.id;
@@ -87,8 +87,9 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
               className="o-inline"
               onSubmit={(event) => {
                 event.preventDefault();
-                change.share(artifact.id, reader);
-                setReader('');
+                change.share(artifact.id, reader, () => {
+                  setReader('');
+                });
               }}
             >
               <label htmlFor={readerId} className="o-field-label">

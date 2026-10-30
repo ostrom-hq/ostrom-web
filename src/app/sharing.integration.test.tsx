@@ -141,6 +141,33 @@ describe('the artifacts', () => {
     expect(within(checklist).queryByRole('combobox')).toBeNull();
   });
 
+  it('opens someone else’s artifact even when the members cannot be read, versions newest first', async () => {
+    const user = userEvent.setup();
+    db.artifactVersions['art-5'] = [...(db.artifactVersions['art-7'] ?? [])].reverse();
+    server.use(http.get('*/api/v1/members', refuse('members are private')));
+    visit('/artifacts');
+    const checklist = await findCard('Release checklist');
+    await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
+    const versions = await within(checklist).findAllByRole('listitem');
+    expect(versions).toHaveLength(3);
+    expect(versions[0]).toHaveTextContent(/^Version 3/);
+    expect(versions[2]).toHaveTextContent(/^Version 1/);
+    expect(within(checklist).queryByText('members are private')).toBeNull();
+  });
+
+  it('keeps the picked reader when the share is refused', async () => {
+    const user = userEvent.setup();
+    server.use(http.put('*/api/v1/artifacts/:id/members/:login', refuse('samir cannot read it')));
+    visit('/artifacts');
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    const reader = await within(study).findByRole('combobox', { name: 'Add a reader' });
+    await user.selectOptions(reader, 'samir');
+    await user.click(within(study).getByRole('button', { name: 'Share' }));
+    expect(await screen.findByText('samir cannot read it')).toBeInTheDocument();
+    expect(reader).toHaveValue('samir');
+  });
+
   it('says what failed while loading the detail', async () => {
     const user = userEvent.setup();
     server.use(
@@ -218,6 +245,12 @@ describe('the shared subscriptions', () => {
     expect(odd).toHaveTextContent('mistral · by theo');
     expect(odd).toHaveTextContent('Lent to nobody yet');
     expect(await findCard('Old')).toHaveTextContent('Sign-in expired');
+  });
+
+  it('says why the form to share a subscription is missing', async () => {
+    server.use(http.get('*/api/v1/secrets', refuse('secrets are locked')));
+    visit('/accounts');
+    expect(await screen.findByText('secrets are locked')).toBeInTheDocument();
   });
 
   it('says when nothing is shared', async () => {
