@@ -1,21 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { listWorkflowsOptions } from '@gen/api/@tanstack/react-query.gen';
-import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { failureOf } from '@/shared/api/failureOf';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { approvalSteps, STATUS_TONES } from '../model';
-import { ready } from '@/shared/api/ready';
+import { useWorkflows } from '../useWorkflows';
 
 export function WorkflowsScreen(): ReactElement {
   const { t } = useTranslation();
-  const query = useQuery(ready(listWorkflowsOptions()));
+  const { workflows, failure } = useWorkflows();
   return (
     <Screen title={t('workflows.title')} lead={t('workflows.lead')}>
-      <LoadState data={query.data?.items} failure={failureOf(query.error)}>
+      <LoadState data={workflows} failure={failure}>
         {(workflows) =>
           workflows.length === 0 ? (
             <p className="o-empty">{t('workflows.empty')}</p>

@@ -40,7 +40,7 @@ export function useApprovers(): ApproversViewModel {
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
     points,
-    failure: failureOf(workflows.error),
+    failure: failureOf(workflows.error ?? members.error),
     nameOf,
   };
 }
