@@ -9,6 +9,7 @@ import {
   handleGetReceipt,
   handleGetReceiptBundle,
   handleGetSession,
+  handleGetWorkflow,
   handleInviteMembers,
   handleListApprovals,
   handleListDecisions,
@@ -337,6 +338,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({
         items: db.workflows.filter((workflow) => status === null || workflow.status === status),
       });
+    }),
+    handleGetWorkflow(({ params }) => {
+      const workflow = db.workflows.find((item) => item.id === params.id);
+      return workflow === undefined
+        ? refusal(404, 'not_found', 'workflow not found')
+        : HttpResponse.json(workflow);
     }),
     handleGetGatePolicy(() => HttpResponse.json({ selfApproval: db.selfApproval })),
     handleSetGatePolicy(async ({ request }) => {

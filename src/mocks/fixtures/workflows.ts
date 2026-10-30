@@ -15,7 +15,14 @@ const workflows: Workflow[] = [
     start: 'n-start',
     nodes: [
       { id: 'n-start', kind: 'trigger', label: 'A branch is pushed' },
-      { id: 'n-tests', kind: 'check', label: 'Tests pass', ruleIds: ['R-3'] },
+      {
+        id: 'n-tests',
+        kind: 'check',
+        label: 'Tests pass',
+        detail: 'pnpm test on the pushed commit',
+        ruleIds: ['R-3'],
+      },
+      { id: 'n-fix', kind: 'agent', label: 'The agent fixes the failing tests' },
       {
         id: 'n-merge',
         kind: 'gate',
@@ -52,7 +59,9 @@ const workflows: Workflow[] = [
     ],
     edges: [
       { from: 'n-start', to: 'n-tests' },
-      { from: 'n-tests', to: 'n-merge' },
+      { from: 'n-tests', to: 'n-merge', on: 'success' },
+      { from: 'n-tests', to: 'n-fix', on: 'failure', label: 'Tests fail' },
+      { from: 'n-fix', to: 'n-tests' },
       { from: 'n-merge', to: 'n-deploy' },
       { from: 'n-deploy', to: null },
     ],

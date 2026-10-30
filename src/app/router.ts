@@ -13,6 +13,7 @@ import { DecisionsScreen } from '@/features/decisions';
 import { HomeScreen } from '@/features/home';
 import { MembersScreen } from '@/features/members';
 import { RulesScreen } from '@/features/rules';
+import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -79,6 +80,16 @@ const decisionsRoute = createRoute({
   path: '/decisions',
   component: DecisionsScreen,
 });
+const workflowsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows',
+  component: WorkflowsScreen,
+});
+const workflowRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows/$workflowId',
+  component: WorkflowScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -102,6 +113,8 @@ export const routeTree = rootRoute.addChildren([
   approversRoute,
   rulesRoute,
   decisionsRoute,
+  workflowsRoute,
+  workflowRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>

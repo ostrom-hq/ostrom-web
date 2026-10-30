@@ -9,6 +9,7 @@ import {
   getReceipt,
   getReceiptBundle,
   getSession,
+  getWorkflow,
   inviteMembers,
   listApprovals,
   listDecisions,
@@ -395,6 +396,14 @@ describe('mock organization', () => {
 });
 
 describe('mock workflows and policy', () => {
+  it('serves one workflow, or says it does not exist', async () => {
+    expect((await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data.name).toBe(
+      'Backend changes',
+    );
+    const missing = await failureOf(async () => getWorkflow({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+  });
+
   it('lists workflows, by status', async () => {
     const all = await listWorkflows({ throwOnError: true });
     const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
