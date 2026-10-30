@@ -17,7 +17,8 @@ export function formatMinor(amount: number, currency: string, locale: string): s
     // A currency code the browser does not know: the amount in hundredths, with the code as the server wrote it.
     return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2 }).format(amount / 100)} ${currency}`;
   }
-  const digits = format.resolvedOptions().maximumFractionDigits ?? 2;
+  // The currency's minor digits, as the format writes them: two for dollars, none for yen.
+  const digits = format.formatToParts(1).find((part) => part.type === 'fraction')?.value.length ?? 0;
   return format.format(amount / 10 ** digits);
 }
 
