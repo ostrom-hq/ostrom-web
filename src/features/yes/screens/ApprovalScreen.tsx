@@ -46,9 +46,10 @@ export function ApprovalScreen(): ReactElement {
 
 function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactElement {
   const { t } = useTranslation();
-  const { approval, failure, newer, readNewer } = useShownApproval(approvalId);
-  const viewer = useViewer();
   const answer = useAnswerApproval(approvalId);
+  // The server refused the answer because the request changed: the page shows the new version at once.
+  const { approval, failure, newer, readNewer } = useShownApproval(approvalId, answer.changed);
+  const viewer = useViewer();
   return (
     <div className="ys-page ys-page--detail">
       <Link to="/yes" className="ys-back">
