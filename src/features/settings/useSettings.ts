@@ -8,8 +8,8 @@ import {
   listOrgsQueryKey,
   logoutEverywhereMutation,
   renameOrgMutation,
-  revokeAuthSessionMutation,
 } from '@gen/api/@tanstack/react-query.gen';
+import { revokeAuthSession } from '@gen/api/sdk.gen';
 import type { AuthSession, OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
@@ -141,14 +141,14 @@ export function useSessionActions(): SessionActionsViewModel {
   const relist = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() });
   }, [queryClient]);
-  // A revocation stays pending until the list is read again, so its row never offers it twice. Ending the session
-  // this browser holds (as the list says) signs it out, without reading the list again with a dead cookie.
+  // A revocation stays pending until the list is read again, so its row never offers it twice. Whether it ends this
+  // browser's session is fixed when it is asked: that one signs out, without reading the list with a dead cookie.
   const revocation = useMutation({
-    ...revokeAuthSessionMutation(),
-    onSuccess: async (_data, variables) => {
-      const sessions = queryClient.getQueryData(listAuthSessionsQueryKey())?.items ?? [];
-      const here = sessions.some((session) => session.id === variables.path.id && session.current);
-      await (here ? signedOut() : relist());
+    mutationFn: async ({ session }: { readonly session: AuthSession }) => {
+      await revokeAuthSession({ path: { id: session.id }, throwOnError: true });
+    },
+    onSuccess: async (_data, { session }) => {
+      await (session.current ? signedOut() : relist());
     },
     onError: relist,
   });
@@ -158,7 +158,7 @@ export function useSessionActions(): SessionActionsViewModel {
   const revoke = useCallback(
     (session: AuthSession) => {
       resetEverywhere();
-      revokeMutate({ path: { id: session.id } });
+      revokeMutate({ session });
     },
     [revokeMutate, resetEverywhere],
   );
@@ -168,7 +168,7 @@ export function useSessionActions(): SessionActionsViewModel {
   }, [everywhereMutate, resetRevocation]);
   return {
     revoke,
-    revoking: revocation.isPending ? revocation.variables.path.id : undefined,
+    revoking: revocation.isPending ? revocation.variables.session.id : undefined,
     signOutEverywhere,
     signingOut: everywhere.isPending,
     failure: failureOf(revocation.error ?? everywhere.error),

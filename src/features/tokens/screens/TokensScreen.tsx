@@ -15,10 +15,13 @@ export function TokensScreen(): ReactElement {
   const view = useTokens();
   const create = useCreateToken();
   const actions = useTokenActions();
-  // One secret at a time: while one is on its way or on screen, nothing else on the page changes a token, so it is
-  // never lost under another nor shown for a token already revoked.
+  // One change at a time, and one secret: while a token is being created, replaced or revoked, or a secret is on
+  // screen, nothing else on the page changes a token, so a secret is never lost nor shown for a revoked token.
   const locked =
-    create.creating || create.created !== undefined || actions.rotating || actions.rotated !== undefined;
+    create.creating ||
+    create.created !== undefined ||
+    actions.busy !== undefined ||
+    actions.rotated !== undefined;
   return (
     <Screen
       title={t('tokens.title')}

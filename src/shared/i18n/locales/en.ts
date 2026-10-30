@@ -853,6 +853,7 @@ export const en = {
       saving: 'Saving…',
       problem: {
         empty: 'A name is needed.',
+        long: 'A name has at most 100 characters.',
         control: 'A name cannot hold tabs, line breaks or other control characters.',
       },
       slug: 'Short name',

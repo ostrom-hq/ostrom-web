@@ -872,6 +872,7 @@ export const fr = {
       saving: 'Enregistrement…',
       problem: {
         empty: 'Il faut un nom.',
+        long: 'Un nom fait au plus 100 caractères.',
         control:
           'Un nom ne peut contenir ni tabulation, ni retour à la ligne, ni autre caractère de contrôle.',
       },

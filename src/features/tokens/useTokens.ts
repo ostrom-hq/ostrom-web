@@ -87,8 +87,6 @@ export interface TokenActionsViewModel {
   readonly busy: string | undefined;
   /** The token a replacement just issued, with its new secret. */
   readonly rotated: CreatedToken | undefined;
-  /** A replacement is on its way. */
-  readonly rotating: boolean;
   readonly failure: Error | undefined;
   readonly dismiss: () => void;
 }
@@ -105,13 +103,14 @@ export function useTokenActions(): TokenActionsViewModel {
   });
   const { mutate: revokeMutate, reset: resetRevocation } = revocation;
   const { mutate: rotateMutate, reset: resetRotation } = rotation;
-  // Nothing is revoked while a replaced secret is on screen (the page waits): only a failed replacement is cleared.
+  // Only a failed replacement is cleared: a replaced secret, shown once, is never wiped from here.
+  const rotationFailed = rotation.isError;
   const revoke = useCallback(
     (id: string) => {
-      resetRotation();
+      if (rotationFailed) resetRotation();
       revokeMutate({ path: { id } });
     },
-    [revokeMutate, resetRotation],
+    [revokeMutate, resetRotation, rotationFailed],
   );
   const rotate = useCallback(
     (id: string) => {
@@ -128,7 +127,6 @@ export function useTokenActions(): TokenActionsViewModel {
     rotate,
     busy,
     rotated: rotation.data,
-    rotating: rotation.isPending,
     failure: failureOf(revocation.error ?? rotation.error),
     dismiss: resetRotation,
   };

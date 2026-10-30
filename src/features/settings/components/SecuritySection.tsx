@@ -58,7 +58,7 @@ export function SecuritySection({ view, actions }: SecuritySectionProps): ReactE
           label={t('settings.sessions.everywhere')}
           confirm={t('settings.sessions.everywhereConfirm')}
           keep={t('settings.sessions.keep')}
-          disabled={actions.signingOut}
+          disabled={actions.revoking !== undefined || actions.signingOut}
           onConfirm={actions.signOutEverywhere}
         />
       </span>
