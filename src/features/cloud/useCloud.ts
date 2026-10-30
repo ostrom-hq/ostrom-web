@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
+import { tuned } from '@/shared/api/tuned';
 import { useViewer } from '@/shared/auth/useViewer';
 import type { CloudAgent } from './model';
 
@@ -34,7 +35,9 @@ export interface CloudViewModel {
 
 /** Sessions move on their own (queued, running, ended): the list follows them every ten seconds. */
 export function useCloud(): CloudViewModel {
-  const sessions = useQuery({ ...listCloudSessionsOptions(), refetchInterval: pollUnlessRefused(POLL_MS) });
+  const sessions = useQuery(
+    tuned(listCloudSessionsOptions(), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+  );
   const runners = useQuery(listRunnersOptions());
   const viewer = useViewer();
   return {
