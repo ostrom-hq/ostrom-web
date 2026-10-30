@@ -1,0 +1,49 @@
+.o-mark {
+  color: var(--signal);
+  flex: none;
+}
+
+.o-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--dur) var(--ease-snap),
+    border-color var(--dur) var(--ease-snap);
+}
+.o-btn:hover {
+  border-color: var(--text-muted);
+}
+.o-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.o-btn--primary {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--on-signal);
+}
+.o-btn--primary:hover {
+  background: var(--signal-hover);
+  border-color: var(--signal-hover);
+}
+.o-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+.o-btn--danger {
+  background: var(--danger-tint);
+  border-color: var(--danger);
+  color: var(--danger);
+}
