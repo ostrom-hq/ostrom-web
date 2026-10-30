@@ -6,6 +6,8 @@ export interface QueryTuning {
   readonly refetchInterval?:
     number | ((query: { readonly state: { readonly error: unknown } }) => number | false);
   readonly enabled?: boolean;
+  /** `keepPreviousData`: the last answer stays on screen while the next one loads. */
+  readonly placeholderData?: <T>(previous: T | undefined) => T | undefined;
 }
 
 /**
