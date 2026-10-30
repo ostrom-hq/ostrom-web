@@ -42,7 +42,9 @@ describe('byPerson', () => {
   });
 
   it('orders people with as many gates by login', () => {
-    const people = byPerson(approvalPoints([workflow('c', [{ id: 'g', kind: 'gate', label: 'X', approvers: ['zed', 'amy'] }])]));
+    const people = byPerson(
+      approvalPoints([workflow('c', [{ id: 'g', kind: 'gate', label: 'X', approvers: ['zed', 'amy'] }])]),
+    );
     expect(people.map((person) => person.login)).toEqual(['amy', 'zed']);
   });
 });
@@ -53,10 +55,10 @@ describe('unanswerable and the policy', () => {
   });
 
   it('knows the two self-approval policies', () => {
-    expect([isSelfApprovalPolicy('never'), isSelfApprovalPolicy('sole-approver'), isSelfApprovalPolicy('x')]).toEqual([
-      true,
-      true,
-      false,
-    ]);
+    expect([
+      isSelfApprovalPolicy('never'),
+      isSelfApprovalPolicy('sole-approver'),
+      isSelfApprovalPolicy('x'),
+    ]).toEqual([true, true, false]);
   });
 });

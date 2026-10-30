@@ -6,7 +6,13 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
-import { type ApprovalPoint, isSelfApprovalPolicy, SELF_APPROVAL_POLICIES, unanswerable } from '../model';
+import {
+  type ApprovalPoint,
+  byPerson,
+  isSelfApprovalPolicy,
+  SELF_APPROVAL_POLICIES,
+  unanswerable,
+} from '../model';
 import { type PolicyViewModel, useApprovers, useSelfApprovalPolicy } from '../useApprovers';
 
 function PointRow({
@@ -88,13 +94,17 @@ export function ApproversScreen(): ReactElement {
       <LoadState data={view.points} failure={view.failure}>
         {(points) => {
           const stuck = unanswerable(points);
+          const people = byPerson(points);
           return points.length === 0 ? (
             <p className="o-empty">{t('approvers.empty')}</p>
           ) : (
             <>
               {stuck.length === 0 ? null : (
                 <Banner tone="warning" tag={t('approvers.stuck.tag')}>
-                  {t('approvers.stuck.text', { count: stuck.length, list: stuck.map((p) => p.label).join(', ') })}
+                  {t('approvers.stuck.text', {
+                    count: stuck.length,
+                    list: stuck.map((p) => p.label).join(', '),
+                  })}
                 </Banner>
               )}
               <section aria-labelledby="ap-gates" className="o-stack">
@@ -109,13 +119,13 @@ export function ApproversScreen(): ReactElement {
                   ))}
                 </ul>
               </section>
-              {view.people === undefined || view.people.length === 0 ? null : (
+              {people.length === 0 ? null : (
                 <section aria-labelledby="ap-people" className="o-stack">
                   <h2 id="ap-people" className="o-label">
                     {t('approvers.people.title')}
                   </h2>
                   <ul className="o-card o-rows">
-                    {view.people.map((person) => (
+                    {people.map((person) => (
                       <li key={person.login}>
                         <div className="o-row">
                           <Avatar login={person.login} size={32} />

@@ -190,7 +190,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!approvers.includes(me.dev.login))
         return refusal(403, 'not_an_approver', 'you cannot answer this approval');
       const refused =
-        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval) : undefined;
+        body.data.answer === 'approve'
+          ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval)
+          : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
@@ -229,13 +231,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');
-      return HttpResponse.json({ items: db.workflows.filter((workflow) => status === null || workflow.status === status) });
+      return HttpResponse.json({
+        items: db.workflows.filter((workflow) => status === null || workflow.status === status),
+      });
     }),
     handleGetGatePolicy(() => HttpResponse.json({ selfApproval: db.selfApproval })),
     handleSetGatePolicy(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set the policy');
       const body = zPolicy.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'selfApproval must be sole-approver or never');
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'selfApproval must be sole-approver or never');
       db.selfApproval = body.data.selfApproval;
       return HttpResponse.json({ selfApproval: db.selfApproval });
     }),

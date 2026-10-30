@@ -248,14 +248,15 @@ export const fr = {
   approvers: {
     title: 'Qui approuve quoi',
     lead: 'Chaque endroit où un agent s’arrête pour une personne, et qui peut y dire oui.',
-    empty: 'Aucun workflow n’a encore de porte.',
+    empty: 'Aucun workflow ne demande encore d’approbation.',
     stuck: {
       tag: 'Bloqué',
       text_one: 'Personne ne peut approuver {{list}} : un agent qui y arrive attend pour toujours.',
-      text_other: 'Personne ne peut approuver {{count}} portes ({{list}}) : un agent qui y arrive attend pour toujours.',
+      text_other:
+        'Personne ne peut approuver {{count}} étapes ({{list}}) : un agent qui y arrive attend pour toujours.',
     },
-    gates: { title: 'Par porte' },
-    people: { title: 'Par personne', count_one: '{{count}} porte', count_other: '{{count}} portes' },
+    gates: { title: 'Par étape' },
+    people: { title: 'Par personne', count_one: '{{count}} étape', count_other: '{{count}} étapes' },
     point: { nobody: 'Personne', hours: 'de {{hours}}', days: 'le {{days}}' },
     policy: {
       title: 'Quand le demandeur est approbateur',

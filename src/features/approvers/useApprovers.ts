@@ -10,11 +10,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { type ApprovalPoint, approvalPoints, byPerson, type PersonApprovals, type SelfApprovalPolicy } from './model';
+import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 
 export interface ApproversViewModel {
   readonly points: readonly ApprovalPoint[] | undefined;
-  readonly people: readonly PersonApprovals[] | undefined;
   readonly failure: Error | undefined;
   /** A login with the name the organization knows, or the login alone. */
   readonly nameOf: (login: string) => string;
@@ -28,13 +27,18 @@ export function useApprovers(): ApproversViewModel {
     [workflows.data],
   );
   const names = useMemo(
-    () => new Map((members.data?.items ?? []).map((member) => [member.login, member.name ?? member.login])),
+    () =>
+      new Map(
+        (members.data?.items ?? []).map((member) => [
+          member.login,
+          member.name === undefined || member.name === '' ? member.login : member.name,
+        ]),
+      ),
     [members.data],
   );
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
     points,
-    people: points === undefined ? undefined : byPerson(points),
     failure: failureOf(workflows.error),
     nameOf,
   };

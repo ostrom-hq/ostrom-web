@@ -241,14 +241,14 @@ export const en = {
   approvers: {
     title: 'Who approves what',
     lead: 'Every place an agent stops for a person, and who may say yes there.',
-    empty: 'No workflow has a gate yet.',
+    empty: 'No workflow asks for an approval yet.',
     stuck: {
       tag: 'Blocked',
       text_one: 'Nobody may approve {{list}}: an agent that reaches it waits for good.',
-      text_other: 'Nobody may approve {{count}} gates ({{list}}): an agent that reaches one waits for good.',
+      text_other: 'Nobody may approve {{count}} steps ({{list}}): an agent that reaches one waits for good.',
     },
-    gates: { title: 'By gate' },
-    people: { title: 'By person', count_one: '{{count}} gate', count_other: '{{count}} gates' },
+    gates: { title: 'By step' },
+    people: { title: 'By person', count_one: '{{count}} step', count_other: '{{count}} steps' },
     point: { nobody: 'Nobody', hours: 'from {{hours}}', days: 'on {{days}}' },
     policy: {
       title: 'When the asker is an approver',

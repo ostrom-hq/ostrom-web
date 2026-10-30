@@ -23,7 +23,14 @@ const workflows: Workflow[] = [
         owner: 'billing-owners',
         approvers: ['maya', 'samir'],
         approverReason: 'Owners of acme/billing-api',
-        actions: [{ class: 'merge-main', label: 'Merge into main', patterns: ['gh pr merge'], repos: ['acme/billing-api'] }],
+        actions: [
+          {
+            class: 'merge-main',
+            label: 'Merge into main',
+            patterns: ['gh pr merge'],
+            repos: ['acme/billing-api'],
+          },
+        ],
         ruleIds: ['R-12'],
       },
       {
@@ -34,7 +41,12 @@ const workflows: Workflow[] = [
         approvers: ['samir'],
         when: { hours: '09:00-18:00', days: 'mon-fri', risk: 'high' },
         actions: [
-          { class: 'deploy', label: 'Deploy', patterns: ['helm upgrade', 'kubectl apply'], repos: ['acme/billing-api'] },
+          {
+            class: 'deploy',
+            label: 'Deploy',
+            patterns: ['helm upgrade', 'kubectl apply'],
+            repos: ['acme/billing-api'],
+          },
         ],
       },
     ],

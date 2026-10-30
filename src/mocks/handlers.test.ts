@@ -233,7 +233,9 @@ describe('selfApprovalRefusal', () => {
   });
 
   it('refuses the asker even as the only approver when the policy says never', () => {
-    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya', 'never')).toMatch(/never lets the asker/);
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya', 'never')).toMatch(
+      /never lets the asker/,
+    );
     expect(selfApprovalRefusal(fixture('apr-merge-412'), ['maya'], 'maya', 'never')).toBeUndefined();
   });
 
@@ -400,10 +402,16 @@ describe('mock workflows and policy', () => {
     expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('sole-approver');
     const set = await setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true });
     expect(set.data.selfApproval).toBe('never');
-    const bad = await failureOf(async () => setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }));
+    const bad = await failureOf(async () =>
+      setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }),
+    );
     expect(isApiFailure(bad) && bad.status).toBe(400);
-    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
-    const refused = await failureOf(async () => setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true }));
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    const refused = await failureOf(async () =>
+      setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true }),
+    );
     expect(isApiFailure(refused) && refused.status).toBe(403);
   });
 });
