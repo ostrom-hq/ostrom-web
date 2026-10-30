@@ -1,23 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { apiUrl } from '@/shared/api/apiClient';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { askedByViewer } from '../model';
+import { askedByViewer, reauthProvider } from '../model';
 import type { AnswerViewModel } from '../useYes';
 
 export interface DecisionBarProps {
   readonly approval: Approval;
   readonly viewer: string | undefined;
   readonly viewerName: string | undefined;
+  /** How the viewer signed in: signing in again for a yes goes the same way. */
+  readonly via: string | undefined;
   readonly answer: AnswerViewModel;
 }
 
 /** Under the thumb on a phone. Approving is one click on the proof above; declining always says why. */
-export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBarProps): ReactElement {
+export function DecisionBar({ approval, viewer, viewerName, via, answer }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
-  const { sending, refusal, changed, failure } = answer;
+  const { sending, refusal, stepUp, changed, failure } = answer;
+  const back = `/yes/${approval.id}`;
+  const provider = reauthProvider(via);
   const [declining, setDeclining] = useState(false);
   const [comment, setComment] = useState('');
   const commentId = useId();
@@ -35,6 +41,22 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
           {refusal}
         </Banner>
       )}
+      {refusal !== undefined && stepUp ? (
+        <div>
+          {provider === undefined ? (
+            <Link to="/signin" search={{ redirect: back }} className="o-btn o-btn--secondary o-btn--md">
+              {t('yes.act.signInAgain')}
+            </Link>
+          ) : (
+            <a
+              className="o-btn o-btn--secondary o-btn--md"
+              href={apiUrl(`/api/v1/auth/${provider}/start`, { reauth: 'true', redirect: back })}
+            >
+              {t('yes.act.signInAgain')}
+            </a>
+          )}
+        </div>
+      ) : null}
       {failure === undefined ? null : (
         <Banner tone="danger" tag={t('yes.act.errorTag')} live>
           {failure.message}

@@ -230,7 +230,13 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
       </details>
 
       {approval.status === 'pending' ? (
-        <DecisionBar approval={approval} viewer={viewer.login} viewerName={viewer.name} answer={answer} />
+        <DecisionBar
+          approval={approval}
+          viewer={viewer.login}
+          viewerName={viewer.name}
+          via={viewer.via}
+          answer={answer}
+        />
       ) : (
         <DecisionCard approval={approval} receipt={answer.receipt} comment={answer.comment} />
       )}

@@ -45,3 +45,11 @@ export function stillOpen(data: unknown): boolean {
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
+
+/** The providers whose sign-in the server restarts with `reauth=true`; any other way signs in through the form. */
+const REAUTH_PROVIDERS: ReadonlySet<string> = new Set(['github', 'google']);
+
+/** Whether signing in again for this request goes through a provider (a server link) or the sign-in form. */
+export function reauthProvider(via: string | undefined): string | undefined {
+  return via !== undefined && REAUTH_PROVIDERS.has(via) ? via : undefined;
+}

@@ -150,6 +150,7 @@ export const fr = {
       cancel: 'Annuler',
       signedAs: 'Tu approuves en tant que {{name}}.',
       refusedTag: 'Non autorisé',
+      signInAgain: 'Se reconnecter',
       youAskedTag: 'Ta demande',
       youAsked:
         'Tu as fait cette demande. Si quelqu’un d’autre peut l’approuver, Ostrom le lui demande ; si tu es le seul approbateur, le reçu dira que tu as approuvé ta propre demande.',
