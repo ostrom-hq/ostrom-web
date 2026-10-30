@@ -165,7 +165,7 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
 }
 
 /** A random UUID v4 from `crypto.getRandomValues`, which, unlike `randomUUID`, also exists over plain http. */
-export function randomId(random: (bytes: Uint8Array) => Uint8Array): string {
+export function randomId(random: (bytes: Uint8Array<ArrayBuffer>) => Uint8Array<ArrayBuffer>): string {
   const hex = Array.from(random(new Uint8Array(16)), (byte, index) => {
     // The version (4) and variant (10xx) bits of RFC 9562.
     if (index === VERSION_BYTE) return (byte & 0x0f) | 0x40;
