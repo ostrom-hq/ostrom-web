@@ -21,19 +21,39 @@ function parseJson(raw: string): unknown {
   }
 }
 
+/** A choice and when it was made; `at` is null when nothing is decided. */
+export interface Choice {
+  readonly status: ConsentStatus;
+  readonly at: number | null;
+}
+
+const NOT_ASKED: Choice = { status: 'unknown', at: null };
+
 /** Storage is a trust boundary: anything unreadable, expired or from the future is "not asked yet". */
-export function readConsent(storage: Pick<SafeStorage, 'getItem'>, now: number): ConsentStatus {
+export function readChoice(storage: Pick<SafeStorage, 'getItem'>, now: number): Choice {
   const raw = storage.getItem(CONSENT_STORAGE_KEY);
-  if (raw === null) return 'unknown';
+  if (raw === null) return NOT_ASKED;
   const parsed = storedConsentSchema.safeParse(parseJson(raw));
-  if (!parsed.success) return 'unknown';
-  const age = now - parsed.data.at;
-  if (age < 0 || age > CONSENT_MAX_AGE_MS) return 'unknown';
-  return parsed.data.analytics ? 'granted' : 'denied';
+  if (!parsed.success) return NOT_ASKED;
+  const { analytics, at } = parsed.data;
+  if (isExpired(at, now)) return NOT_ASKED;
+  return { status: analytics ? 'granted' : 'denied', at };
+}
+
+/** The stored choice, or "not asked yet". */
+export function readConsent(storage: Pick<SafeStorage, 'getItem'>, now: number): ConsentStatus {
+  return readChoice(storage, now).status;
+}
+
+function isExpired(at: number, now: number): boolean {
+  const age = now - at;
+  return age < 0 || age > CONSENT_MAX_AGE_MS;
 }
 
 export interface ConsentState {
   readonly status: ConsentStatus;
+  /** When the choice was made; null when not asked yet. */
+  readonly decidedAt: number | null;
   /** True when the person asked for the banner again: it then takes the focus. */
   readonly reopened: boolean;
   /** Records the choice; Accept and Refuse are equal choices. */
@@ -43,27 +63,42 @@ export interface ConsentState {
    * was given, and stays withdrawn after a reload until the person chooses again.
    */
   readonly reopen: () => void;
-  /** Reads the stored choice again: a choice made in another tab, a choice that expired while the tab was open. */
+  /** Reads the stored choice again: a choice made in another tab. */
   readonly sync: () => void;
+  /**
+   * The choice in force now: one that expired while the tab was open is dropped here, and the banner shows again.
+   * The choice lives in memory too, so that it holds for the session when storage is blocked.
+   */
+  readonly current: () => ConsentStatus;
 }
 
 export function createConsentStore(
   storage: SafeStorage,
   now: () => number,
 ): UseBoundStore<StoreApi<ConsentState>> {
-  return create<ConsentState>()((set) => ({
-    status: readConsent(storage, now()),
+  const initial = readChoice(storage, now());
+  return create<ConsentState>()((set, get) => ({
+    status: initial.status,
+    decidedAt: initial.at,
     reopened: false,
     decide: (analytics) => {
-      storage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics, at: now() }));
-      set({ status: analytics ? 'granted' : 'denied', reopened: false });
+      const at = now();
+      storage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics, at }));
+      set({ status: analytics ? 'granted' : 'denied', decidedAt: at, reopened: false });
     },
     reopen: () => {
       storage.removeItem(CONSENT_STORAGE_KEY);
-      set({ status: 'unknown', reopened: true });
+      set({ status: 'unknown', decidedAt: null, reopened: true });
     },
     sync: () => {
-      set({ status: readConsent(storage, now()) });
+      const stored = readChoice(storage, now());
+      set({ status: stored.status, decidedAt: stored.at });
+    },
+    current: () => {
+      const { status, decidedAt } = get();
+      if (decidedAt === null || !isExpired(decidedAt, now())) return status;
+      set({ status: 'unknown', decidedAt: null });
+      return 'unknown';
     },
   }));
 }

@@ -51,9 +51,12 @@ interface QueuedEvent {
   readonly properties: Readonly<Record<string, unknown>>;
 }
 
-/** The path of a URL or path, without query string or fragment. */
+/**
+ * The path of a URL or path, without scheme and host, query string or fragment. A route never carries a secret in its
+ * path segments: a magic link's token is in the query string.
+ */
 export function pathOnly(path: string): string {
-  const bare = path.replace(/[?#].*$/, '');
+  const bare = path.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '').replace(/[?#].*$/, '');
   return bare === '' ? '/' : bare;
 }
 
@@ -77,9 +80,12 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
   const enabled = (): boolean => config !== null && options.consent() === 'granted';
 
   const anonymousId = (): string => {
-    anonId ??= storage.getItem(ANONYMOUS_ID_KEY) ?? options.newId();
-    storage.setItem(ANONYMOUS_ID_KEY, anonId);
-    return anonId;
+    if (anonId !== undefined) return anonId;
+    const stored = storage.getItem(ANONYMOUS_ID_KEY);
+    const id = stored ?? options.newId();
+    if (stored === null) storage.setItem(ANONYMOUS_ID_KEY, id);
+    anonId = id;
+    return id;
   };
 
   const flush = (): void => {

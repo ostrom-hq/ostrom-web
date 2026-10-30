@@ -44,8 +44,8 @@ export function ConsentBanner({
       <div className="o-consent__actions">
         <Button
           onClick={() => {
-            decide(false);
             analytics.forget();
+            decide(false);
           }}
         >
           {t('consent.refuse')}
@@ -78,8 +78,8 @@ export function PrivacyChoices({ analytics, configured }: PrivacyChoicesProps): 
       type="button"
       className="o-linkbtn"
       onClick={() => {
-        reopen();
         analytics.forget();
+        reopen();
       }}
     >
       {t('consent.manage')}

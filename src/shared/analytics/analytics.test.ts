@@ -237,6 +237,8 @@ describe('pathOnly', () => {
     expect(pathOnly('/a/b?c=d')).toBe('/a/b');
     expect(pathOnly('?only=query')).toBe('/');
     expect(pathOnly('/x#y')).toBe('/x');
+    expect(pathOnly('https://app.ostrom.run/a/b?token=secret')).toBe('/a/b');
+    expect(pathOnly('https://app.ostrom.run')).toBe('/');
   });
 });
 

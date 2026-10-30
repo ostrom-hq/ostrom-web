@@ -1,6 +1,6 @@
 import { analytics, analyticsConfig, browserAnalyticsOptions, PRIVACY_URL } from '@/shared/analytics';
 import { createAnalytics, FLUSH_DELAY_MS } from '@/shared/analytics/analytics';
-import { CONSENT_STORAGE_KEY, useConsentStore } from '@/shared/analytics/consent';
+import { CONSENT_MAX_AGE_MS, CONSENT_STORAGE_KEY, useConsentStore } from '@/shared/analytics/consent';
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -10,17 +10,21 @@ describe('the console analytics', () => {
     expect(PRIVACY_URL).toBe('https://ostrom.run/privacy');
   });
 
-  it('follow a choice made in another tab', () => {
-    window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics: false, at: Date.now() }));
+  it('follow a choice made in another tab, and forget this tab's browser id on a withdrawal', () => {
+    const forget = vi.spyOn(analytics, 'forget');
+    window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics: true, at: Date.now() }));
     window.dispatchEvent(new StorageEvent('storage', { key: 'ostrom.theme' }));
     expect(useConsentStore.getState().status).toBe('unknown');
 
     window.dispatchEvent(new StorageEvent('storage', { key: CONSENT_STORAGE_KEY }));
-    expect(useConsentStore.getState().status).toBe('denied');
+    expect(useConsentStore.getState().status).toBe('granted');
+    expect(forget).not.toHaveBeenCalled();
 
     window.localStorage.clear();
     window.dispatchEvent(new StorageEvent('storage', { key: null }));
     expect(useConsentStore.getState().status).toBe('unknown');
+    expect(forget).toHaveBeenCalledTimes(1);
+    forget.mockRestore();
   });
 
   it('flush when the tab is hidden, not when it shows again', () => {
@@ -41,7 +45,7 @@ describe('browserAnalyticsOptions', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
-    useConsentStore.setState({ status: 'unknown' });
+    useConsentStore.setState({ status: 'unknown', decidedAt: null });
     window.localStorage.clear();
   });
 
@@ -68,12 +72,11 @@ describe('browserAnalyticsOptions', () => {
     client.forget();
   });
 
-  it('stops when the stored yes expired while the tab was open', () => {
-    useConsentStore.setState({ status: 'granted' });
+  it('stops when the yes expired while the tab was open', () => {
+    useConsentStore.setState({ status: 'granted', decidedAt: Date.now() - CONSENT_MAX_AGE_MS - 1 });
     const options = browserAnalyticsOptions({ key: 'phc_k', host: 'https://ph.example' });
-    expect(options.consent()).toBe('unknown');
 
-    useConsentStore.setState({ status: 'denied' });
     expect(options.consent()).toBe('unknown');
+    expect(useConsentStore.getState().status).toBe('unknown');
   });
 });

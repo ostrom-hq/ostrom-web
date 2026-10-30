@@ -6,12 +6,13 @@ import {
   sendWithFetch,
 } from '@/shared/analytics/analytics';
 import { type AnalyticsConfig, readAnalyticsConfig, readPrivacyUrl } from '@/shared/analytics/config';
-import { CONSENT_STORAGE_KEY, readConsent, useConsentStore } from '@/shared/analytics/consent';
+import { CONSENT_STORAGE_KEY, useConsentStore } from '@/shared/analytics/consent';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 
 export { type Analytics, type PropertyValue, pathOnly } from '@/shared/analytics/analytics';
 export { ConsentBanner, PrivacyChoices } from '@/shared/analytics/ConsentBanner';
 export { useConsentStore, type ConsentStatus } from '@/shared/analytics/consent';
+export { usePageViews } from '@/shared/analytics/usePageViews';
 
 /*
  * `window.__OSTROM_CONFIG__` comes from `/config.js`, a classic script that index.html loads before this module: the
@@ -32,9 +33,8 @@ export const analyticsConfig: AnalyticsConfig | null = readAnalyticsConfig(
 export function browserAnalyticsOptions(config: AnalyticsConfig | null): AnalyticsOptions {
   return {
     config,
-    // The stored choice is read again on each event: a yes that expires while the tab is open stops there.
-    consent: () =>
-      useConsentStore.getState().status === 'granted' ? readConsent(safeLocalStorage, Date.now()) : 'unknown',
+    // Checked on each event: a yes that expires while the tab is open stops there, and the banner shows again.
+    consent: () => useConsentStore.getState().current(),
     storage: safeLocalStorage,
     send: sendWithFetch,
     schedule: (task, delayMs) => {
@@ -50,9 +50,12 @@ export function browserAnalyticsOptions(config: AnalyticsConfig | null): Analyti
 /** The console's analytics; events follow ostrom-core `docs/telemetry.md`. */
 export const analytics: Analytics = createAnalytics(browserAnalyticsOptions(analyticsConfig));
 
-// A choice made in another tab applies here too.
+// A choice made in another tab applies here too; a withdrawal there also forgets this tab's browser id.
 window.addEventListener('storage', (event) => {
-  if (event.key === CONSENT_STORAGE_KEY || event.key === null) useConsentStore.getState().sync();
+  if (event.key !== CONSENT_STORAGE_KEY && event.key !== null) return;
+  const store = useConsentStore.getState();
+  store.sync();
+  if (useConsentStore.getState().status !== 'granted') analytics.forget();
 });
 
 // The last events leave when the tab is hidden or closed.

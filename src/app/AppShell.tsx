@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
-import { type ReactElement, useEffect } from 'react';
+import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   analytics,
@@ -8,6 +8,7 @@ import {
   PRIVACY_URL,
   PrivacyChoices,
   useConsentStore,
+  usePageViews,
 } from '@/shared/analytics';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
@@ -18,10 +19,7 @@ export function AppShell(): ReactElement {
   useApplyTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const consent = useConsentStore((state) => state.status);
-  // A page view per route, and one for the current page right after a yes.
-  useEffect(() => {
-    analytics.pageview(pathname);
-  }, [pathname, consent]);
+  usePageViews(analytics, pathname, consent);
   return (
     <div className="o-shell">
       <a className="o-skip" href="#main">
