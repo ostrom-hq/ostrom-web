@@ -16,14 +16,17 @@ export function SecretOnce({ name, value }: { readonly name: string; readonly va
         <span className="o-inline">
           <Button
             onClick={() => {
-              navigator.clipboard.writeText(value).then(
-                () => {
+              const failed = (): void => {
+                setCopied('no');
+              };
+              // Without a secure context the Clipboard API is missing and throws at once, not in the promise.
+              try {
+                navigator.clipboard.writeText(value).then(() => {
                   setCopied('yes');
-                },
-                () => {
-                  setCopied('no');
-                },
-              );
+                }, failed);
+              } catch {
+                failed();
+              }
             }}
           >
             {t('automations.secret.copy')}

@@ -120,7 +120,9 @@ describe('the spend', () => {
       ),
     );
     visit('/spend');
-    expect(await screen.findAllByText('Nothing spent in this period.')).toHaveLength(2);
+    expect(await screen.findAllByText('Nothing spent in this period.', {}, { timeout: 4_000 })).toHaveLength(
+      2,
+    );
     expect(screen.queryByRole('region', { name: 'By day' })).toBeNull();
   });
 

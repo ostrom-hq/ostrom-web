@@ -18,7 +18,10 @@ export function useSessionList(): SessionListViewModel {
   const open = useQuery(
     ready(listSessionsOptions({ query: { open: true } }), { refetchInterval: SESSIONS_POLL_MS }),
   );
-  const ended = useQuery(ready(listSessionsOptions({ query: { open: false } })));
+  // A session that ends leaves the open list: the ended one follows at the same pace so it shows up there.
+  const ended = useQuery(
+    ready(listSessionsOptions({ query: { open: false } }), { refetchInterval: SESSIONS_POLL_MS }),
+  );
   return { open: open.data?.items, ended: ended.data?.items, failure: failureOf(open.error ?? ended.error) };
 }
 
@@ -28,7 +31,23 @@ export interface SessionViewModel {
   readonly failure: Error | undefined;
 }
 
+/** A session still running, or not loaded yet; an ended one is final, so nobody polls it. */
+export function stillRunning(data: unknown): boolean {
+  if (typeof data !== 'object' || data === null || !('session' in data)) return true;
+  const { session } = data;
+  return !(
+    typeof session === 'object' &&
+    session !== null &&
+    'endedAt' in session &&
+    session.endedAt !== undefined
+  );
+}
+
 export function useSession(id: string): SessionViewModel {
-  const query = useQuery(ready(getSessionOptions({ path: { id } }), { refetchInterval: SESSIONS_POLL_MS }));
+  const query = useQuery(
+    ready(getSessionOptions({ path: { id } }), {
+      refetchInterval: (polled) => (stillRunning(polled.state.data) ? SESSIONS_POLL_MS : false),
+    }),
+  );
   return { session: query.data?.session, receipt: query.data?.receipt, failure: failureOf(query.error) };
 }
