@@ -10,7 +10,7 @@ describe('the console analytics', () => {
     expect(PRIVACY_URL).toBe('https://ostrom.run/privacy');
   });
 
-  it('follow a choice made in another tab, and forget this tab's browser id on a withdrawal', () => {
+  it('follow a choice made in another tab, and forget the browser id of this tab on a withdrawal', () => {
     const forget = vi.spyOn(analytics, 'forget');
     window.localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics: true, at: Date.now() }));
     window.dispatchEvent(new StorageEvent('storage', { key: 'ostrom.theme' }));
