@@ -14,6 +14,14 @@ export const en = {
       body: 'This screen failed to load. The rest of Ostrom keeps working.',
     },
   },
+  consent: {
+    title: 'Usage statistics',
+    body: 'Can we measure how the console is used (pages visited and actions, never what you type) with PostHog, hosted in the EU? Nothing is sent unless you accept, and you can change your mind at any time.',
+    learnMore: 'Privacy policy',
+    accept: 'Accept',
+    refuse: 'Refuse',
+    manage: 'Privacy choices',
+  },
   home: {
     title: 'Every agent change, approved by the right person.',
     lead: 'The Ostrom console is being rebuilt. Screens arrive one by one.',

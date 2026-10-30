@@ -1,6 +1,14 @@
-import { Link, Outlet } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { Link, Outlet, useRouterState } from '@tanstack/react-router';
+import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  analytics,
+  analyticsConfig,
+  ConsentBanner,
+  PRIVACY_URL,
+  PrivacyChoices,
+  useConsentStore,
+} from '@/shared/analytics';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
@@ -8,6 +16,12 @@ import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 export function AppShell(): ReactElement {
   const { t } = useTranslation();
   useApplyTheme();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const consent = useConsentStore((state) => state.status);
+  // A page view per route, and one for the current page right after a yes.
+  useEffect(() => {
+    analytics.pageview(pathname);
+  }, [pathname, consent]);
   return (
     <div className="o-shell">
       <a className="o-skip" href="#main">
@@ -30,6 +44,10 @@ export function AppShell(): ReactElement {
       <main id="main" className="o-main">
         <Outlet />
       </main>
+      <footer className="o-footer">
+        <PrivacyChoices configured={analyticsConfig !== null} />
+      </footer>
+      <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />
     </div>
   );
 }
