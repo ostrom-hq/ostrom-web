@@ -16,6 +16,7 @@ import {
   handleGetApproval,
   handleGetGatePolicy,
   handleExchangeSignInLink,
+  handleGetGithubApp,
   handleGetMe,
   handleGetOrganization,
   handleGetReceipt,
@@ -206,6 +207,7 @@ export function createMockDb(): MockDb {
     invitations: initialInvitations(),
     elsewhere: [invitedOrganization()],
     nextInvitation: 1,
+    githubInstalled: { [initialOrganization().id]: true },
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
@@ -304,6 +306,13 @@ export const MOCK_KEY: PublicKey = {
   alg: 'ed25519',
   publicKeyPem: '-----BEGIN PUBLIC KEY-----\nmock\n-----END PUBLIC KEY-----',
 };
+
+/** A person who just signed up: in no organization, with no shared account, workflow nor rule of their own yet. */
+export function freshAccount(db: MockDb): void {
+  db.noOrganization = true;
+  db.sharedAccounts = [];
+  db.workflows = [];
+}
 
 /** Puts a database back to its first state in place: the running handlers keep their reference. */
 export function resetMockDb(db: MockDb): void {
@@ -920,6 +929,19 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(403, 'forbidden', 'only its owner removes a subscription');
       db.sharedAccounts = db.sharedAccounts.filter((item) => item.id !== params.id);
       return new HttpResponse(null, { status: 204 });
+    }),
+    handleGetGithubApp(({ request }) => {
+      const organization = organizationOf(db, request);
+      return HttpResponse.json(
+        db.githubInstalled[organization.id] === true
+          ? {
+              installed: true,
+              slug: 'ostrom-dev',
+              installationId: 4242,
+              htmlUrl: 'https://github.com/apps/ostrom-dev',
+            }
+          : { installed: false },
+      );
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

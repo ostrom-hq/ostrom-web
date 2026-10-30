@@ -17,7 +17,7 @@ import {
 import { DEMO_INVITATION_TOKEN, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
-import { setDemoRole, slugify } from '@/mocks/orgs';
+import { freeSlug, setDemoRole } from '@/mocks/orgs';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 
@@ -103,7 +103,7 @@ describe('mock organizations', () => {
     expect(db.organization.name).toBe('Wayne');
   });
 
-  it('refuses a missing name, a bad short name and a taken one', async () => {
+  it('refuses a missing name, a bad or taken short name, and numbers a derived one that is taken', async () => {
     expect(await raw('POST', '/orgs', '{}')).toBe(400);
     expect(await raw('POST', '/orgs', JSON.stringify({ name: 'x'.repeat(101) }))).toBe(400);
     expect(await raw('POST', '/orgs', 'not json')).toBe(400);
@@ -111,19 +111,23 @@ describe('mock organizations', () => {
       await failure(async () => createOrg({ body: { name: 'A', slug: 'Bad Slug' }, throwOnError: true })),
     ).toMatchObject({ status: 400 });
     expect(
-      await failure(async () => createOrg({ body: { name: 'Acme' }, throwOnError: true })),
-    ).toMatchObject({
-      status: 409,
-      code: 'slug_taken',
-    });
-    expect(
-      await failure(async () => createOrg({ body: { name: 'Acme Corp' }, throwOnError: true })),
-    ).toMatchObject({ status: 409 });
-    expect(
-      await failure(async () => createOrg({ body: { name: 'Initech' }, throwOnError: true })),
-    ).toMatchObject({
-      status: 409,
-    });
+      await failure(async () => createOrg({ body: { name: 'A', slug: 'acme' }, throwOnError: true })),
+    ).toMatchObject({ status: 409, code: 'slug_taken' });
+    expect((await createOrg({ body: { name: 'Acme' }, throwOnError: true })).data.slug).toBe('acme-2');
+    expect((await createOrg({ body: { name: 'Acme' }, throwOnError: true })).data.slug).toBe('acme-3');
+    expect((await createOrg({ body: { name: 'Acme Corp' }, throwOnError: true })).data.slug).toBe(
+      'acme-corp-2',
+    );
+    expect((await createOrg({ body: { name: 'Initech' }, throwOnError: true })).data.slug).toBe('initech-2');
+  });
+
+  it('numbers a taken short name as the server does: cut to 39 characters, random after 20', () => {
+    const base = 'a'.repeat(38) + 'b';
+    expect(freeSlug(base, new Set([base]))).toBe(`${'a'.repeat(37)}-2`);
+    const dashed = `${'a'.repeat(36)}-bc`;
+    expect(freeSlug(dashed, new Set([dashed]))).toBe(`${'a'.repeat(36)}-2`);
+    const crowded = new Set(['acme', ...Array.from({ length: 19 }, (_, n) => `acme-${String(n + 2)}`)]);
+    expect(freeSlug('acme', crowded)).toMatch(/^acme-[0-9a-f]{8}$/);
   });
 
   it('renames an organization for its owners and admins only', async () => {
@@ -136,11 +140,6 @@ describe('mock organizations', () => {
     expect(await raw('PATCH', '/orgs/nowhere', '{"name":"x"}')).toBe(404);
     setDemoRole(db, 'member');
     expect(await raw('PATCH', `/orgs/${org}`, '{"name":"x"}')).toBe(403);
-  });
-
-  it('turns any name into a short name', () => {
-    expect(slugify('Ça va -- Été!')).toBe('ca-va-ete');
-    expect(slugify(`${'a'.repeat(39)} b`)).toBe('a'.repeat(39));
   });
 });
 
