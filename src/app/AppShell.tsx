@@ -16,11 +16,15 @@ import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 
+const SIGN_IN_PATHS: ReadonlySet<string> = new Set(['/signin', '/auth/email']);
+
 export function AppShell(): ReactElement {
   const { t } = useTranslation();
   useApplyTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const organizationGeneration = useOrgStore((state) => state.generation);
+  // Nobody is signed in yet on these: no organization to show, and no `/me` to ask for it.
+  const signingIn = SIGN_IN_PATHS.has(pathname);
   const consent = useConsentStore((state) => state.status);
   usePageViews(analytics, pathname, consent);
   return (
@@ -56,7 +60,7 @@ export function AppShell(): ReactElement {
           <Link to="/signin">{t('app.nav.signin')}</Link>
         </nav>
         <div className="o-topbar__end">
-          <OrgControls />
+          {signingIn ? null : <OrgControls />}
           <ThemeToggle />
         </div>
       </header>

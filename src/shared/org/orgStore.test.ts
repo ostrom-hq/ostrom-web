@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { ORG_OWNER_STORAGE_KEY, ORG_STORAGE_KEY, readStoredId, useOrgStore } from '@/shared/org/orgStore';
+import {
+  followOtherTab,
+  ORG_OWNER_STORAGE_KEY,
+  ORG_STORAGE_KEY,
+  readStoredId,
+  useOrgStore,
+} from '@/shared/org/orgStore';
 
 function storageWith(value: string | null): { getItem: (key: string) => string | null } {
   return { getItem: (key) => (key === ORG_STORAGE_KEY ? value : null) };
@@ -112,5 +118,30 @@ describe('useOrgStore', () => {
     window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
     useOrgStore.getState().signedInOrOut();
     expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual([undefined, undefined]);
+  });
+
+  it('counts the doubts that send the list to be read again', () => {
+    const before = useOrgStore.getState().doubts;
+    useOrgStore.getState().doubt();
+    expect(useOrgStore.getState().doubts).toBe(before + 1);
+  });
+
+  it('follows a choice made or dropped in another tab, and nothing else stored there', () => {
+    const before = useOrgStore.getState().generation;
+    window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
+    window.localStorage.setItem(ORG_OWNER_STORAGE_KEY, 'maya');
+    followOtherTab(new StorageEvent('storage', { key: 'ostrom.theme' }));
+    expect(useOrgStore.getState().current).toBeUndefined();
+    window.dispatchEvent(new StorageEvent('storage', { key: ORG_STORAGE_KEY }));
+    expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual(['org-globex', 'maya']);
+    expect(useOrgStore.getState().generation).toBe(before + 1);
+    // The same again changes nothing.
+    followOtherTab(new StorageEvent('storage', { key: ORG_OWNER_STORAGE_KEY }));
+    expect(useOrgStore.getState().generation).toBe(before + 1);
+    // Storage cleared in another tab.
+    window.localStorage.clear();
+    followOtherTab(new StorageEvent('storage', { key: null }));
+    expect(useOrgStore.getState().current).toBeUndefined();
+    expect(useOrgStore.getState().generation).toBe(before + 2);
   });
 });

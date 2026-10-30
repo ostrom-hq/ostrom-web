@@ -133,9 +133,14 @@ describe('generated client, configured', () => {
         return HttpResponse.json(me);
       }),
     );
+    const doubts = useOrgStore.getState().doubts;
     await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    // Not found without an organization named: nothing to doubt.
+    expect(useOrgStore.getState().doubts).toBe(doubts);
     useOrgStore.getState().choose('org-acme', 'maya');
     await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    // Not found in the organization named: the person's list is read again.
+    expect(useOrgStore.getState().doubts).toBe(doubts + 1);
     // `/me` acts in no organization: it never carries one, so a stale choice can always be checked.
     await getMe({ throwOnError: true });
     expect(seen).toEqual([null, 'org-acme', null]);

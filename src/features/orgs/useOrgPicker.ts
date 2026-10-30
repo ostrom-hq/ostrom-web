@@ -47,6 +47,11 @@ export function useOrgPicker(): OrgPickerViewModel {
     ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: login !== undefined }),
   );
   const organizations = list.data?.items;
+  const { refetch } = list;
+  const doubts = useOrgStore((state) => state.doubts);
+  useEffect(() => {
+    if (doubts > 0) void refetch();
+  }, [doubts, refetch]);
   const { current, owner, asked, picking, unknown, choose, only, ask, forget, open, close } = useOrgStore(
     useShallow((state) => ({
       current: state.current,

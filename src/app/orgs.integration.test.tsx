@@ -195,4 +195,26 @@ describe('the organization the console acts in', () => {
       await within(picker).findByText(/You are not a member of any organization yet\./),
     ).toBeInTheDocument();
   });
+
+  it('reads the list again when the organization named finds nothing, and says the choice is gone', async () => {
+    db.otherOrganizations = [globex];
+    chosenBefore(globex.id, 'maya');
+    const router = visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    // Removed from Globex meanwhile: the next call in it is not found.
+    db.otherOrganizations = [];
+    await act(async () => {
+      await router.navigate({ to: '/secrets' });
+    });
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
+  });
+
+  it('asks nobody who is signing in who they are', async () => {
+    const asked = watch('/api/v1/auth/me');
+    visit('/signin');
+    expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Organization/ })).toBeNull();
+    expect(asked).toEqual([]);
+  });
 });

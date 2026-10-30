@@ -39,12 +39,16 @@ export interface OrgState {
   readonly unknown: boolean;
   /** Bumped when what was read belongs to another organization, or to none: everything is read again. */
   readonly generation: number;
+  /** Bumped when the server did not find something in the organization named: the person's list is read again. */
+  readonly doubts: number;
   /** The only organization of the person, acted in for this session without asking. */
   readonly only: (id: string) => void;
   /** The person's choice, kept with their login. */
   readonly choose: (id: string, login: string) => void;
   /** The person has to choose: the picker opens unless they closed it. */
   readonly ask: () => void;
+  /** A call in the organization named found nothing: perhaps it is not the person's any more. */
+  readonly doubt: () => void;
   readonly open: () => void;
   readonly close: () => void;
   /** Drops the choice; `unknown` when it is not one of the person's organizations any more, and the picker says so. */
@@ -69,6 +73,7 @@ export const useOrgStore = create<OrgState>()((set) => ({
   dismissed: false,
   unknown: false,
   generation: 0,
+  doubts: 0,
   only: (id) => {
     // What was read before, without the header, was read in this same organization: nothing to read again. A picker
     // opened to say the last choice is gone stays open, with this organization in it; any other closes.
@@ -89,6 +94,9 @@ export const useOrgStore = create<OrgState>()((set) => ({
   },
   ask: () => {
     set((state) => ({ asked: true, picking: state.picking || !state.dismissed }));
+  },
+  doubt: () => {
+    set((state) => ({ doubts: state.doubts + 1 }));
   },
   open: () => {
     set({ picking: true });
@@ -114,3 +122,16 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set({ ...kept(), asked: false, picking: false, dismissed: false, unknown: false });
   },
 }));
+
+/** Another tab chose or dropped an organization: this one follows, and reads everything again if it changed. */
+export function followOtherTab(event: StorageEvent): void {
+  if (event.key !== null && event.key !== ORG_STORAGE_KEY && event.key !== ORG_OWNER_STORAGE_KEY) return;
+  const next = kept();
+  useOrgStore.setState((state) =>
+    next.current === state.current && next.owner === state.owner
+      ? state
+      : { ...next, asked: false, picking: false, unknown: false, generation: state.generation + 1 },
+  );
+}
+
+window.addEventListener('storage', followOtherTab);
