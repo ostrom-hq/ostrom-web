@@ -42,7 +42,8 @@ export function useMcp(): McpViewModel {
     secrets: secrets.data?.items,
     callsByServer: usage.data?.byServer,
     calls: calls.data?.items,
-    failure: failureOf(servers.error),
+    // Missing secrets or usage would read as "nothing missing" and "0 calls": any failed part is said.
+    failure: failureOf(servers.error ?? secrets.error ?? usage.error ?? calls.error),
     canManage: viewer.canManage,
   };
 }
@@ -148,8 +149,9 @@ export function useSecretChange(): SecretChangeViewModel {
   const refresh = useCallback(async () => {
     await invalidate([listSecretsQueryKey()]);
   }, [invalidate]);
-  const created = useMutation({ ...createSecretMutation(), onSuccess: refresh });
-  const rotated = useMutation({ ...rotateSecretMutation(), onSuccess: refresh });
+  // A secret's value rides in the mutation's variables: forgotten as soon as the server took it, and never cached.
+  const created = useMutation({ ...createSecretMutation(), gcTime: 0, onSuccess: refresh });
+  const rotated = useMutation({ ...rotateSecretMutation(), gcTime: 0, onSuccess: refresh });
   const dropped = useMutation({ ...deleteSecretMutation(), onSettled: refresh });
   const { mutate: createMutate, reset: resetCreate } = created;
   const { mutate: rotateMutate, reset: resetRotate } = rotated;
@@ -158,17 +160,33 @@ export function useSecretChange(): SecretChangeViewModel {
     (name: string, value: string, onDone: () => void) => {
       resetRotate();
       resetDrop();
-      createMutate({ body: { name, value } }, { onSuccess: onDone });
+      createMutate(
+        { body: { name, value } },
+        {
+          onSuccess: () => {
+            resetCreate();
+            onDone();
+          },
+        },
+      );
     },
-    [createMutate, resetRotate, resetDrop],
+    [createMutate, resetCreate, resetRotate, resetDrop],
   );
   const rotate = useCallback(
     (name: string, value: string, onDone: () => void) => {
       resetCreate();
       resetDrop();
-      rotateMutate({ path: { name }, body: { name, value } }, { onSuccess: onDone });
+      rotateMutate(
+        { path: { name }, body: { name, value } },
+        {
+          onSuccess: () => {
+            resetRotate();
+            onDone();
+          },
+        },
+      );
     },
-    [rotateMutate, resetCreate, resetDrop],
+    [rotateMutate, resetRotate, resetCreate, resetDrop],
   );
   const remove = useCallback(
     (name: string) => {
