@@ -80,7 +80,7 @@ export function AddServerForm({ change }: { readonly change: McpChangeViewModel 
         />
         {tried && 'problem' in checked ? (
           <Banner tone="warning" tag={t('tools.mcp.add.problemTag')} live>
-            {t(`tools.mcp.add.problem.${checked.problem}`, { detail: checked.detail })}
+            {t(`tools.mcp.add.problem.${checked.problem}`, { detail: checked.detail ?? '' })}
           </Banner>
         ) : null}
         <div className="o-inline">

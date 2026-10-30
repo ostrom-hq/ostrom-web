@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server } = setupMockApp();
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 describe('the workflows', () => {
   it('lists each workflow with its repository, steps, approvals and status, and opens one', async () => {

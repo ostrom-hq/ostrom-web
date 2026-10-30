@@ -184,6 +184,11 @@ const zMcpServerWrite = zMcpServer.extend({
   name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
   url: z.url({ protocol: /^https$/ }),
 });
+/** A parsed write as the contract's server: an absent tool list stays absent, never `undefined`. */
+function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
+  const { tools, ...fields } = write;
+  return tools === undefined ? fields : { ...fields, tools };
+}
 /** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
 const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
 /** A budget names who it limits (no subject for the organization) and at least one positive amount. */
@@ -213,12 +218,17 @@ function mayChange(db: MockDb, automation: Automation): boolean {
   return automation.owner === me.dev.login || canManage(db);
 }
 
-function switchAutomation(db: MockDb, id: string, enabled: boolean): HttpResponse<Automation | ApiError> {
+function switchAutomation(
+  db: MockDb,
+  id: string,
+  enabled: boolean,
+  at: string,
+): HttpResponse<Automation | ApiError> {
   const index = db.automations.findIndex((item) => item.id === id);
   const automation = db.automations[index];
   if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
   if (!mayChange(db, automation)) return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
-  const switched: Automation = { ...automation, enabled, updatedAt: now().toISOString() };
+  const switched: Automation = { ...automation, enabled, updatedAt: at };
   db.automations[index] = switched;
   return HttpResponse.json(switched);
 }
@@ -471,8 +481,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
       if (db.mcpServers.some((server) => server.name === body.data.name))
         return refusal(409, 'already_exists', `an MCP server named ${body.data.name} exists`);
-      db.mcpServers.push(body.data);
-      return HttpResponse.json(body.data, { status: 201 });
+      const created = serverFrom(body.data);
+      db.mcpServers.push(created);
+      return HttpResponse.json(created, { status: 201 });
     }),
     handleSaveMcpServer(async ({ request, params }) => {
       const index = db.mcpServers.findIndex((server) => server.name === params.name);
@@ -480,8 +491,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
       const body = zMcpServerWrite.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
-      db.mcpServers[index] = body.data;
-      return HttpResponse.json(body.data);
+      const saved = serverFrom(body.data);
+      db.mcpServers[index] = saved;
+      return HttpResponse.json(saved);
     }),
     handleDeleteMcpServer(({ params }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
@@ -615,8 +627,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleListRunners(() => HttpResponse.json({ items: db.runners })),
     handleListAutomations(() => HttpResponse.json({ items: db.automations })),
-    handleEnableAutomation(({ params }) => switchAutomation(db, params.id, true)),
-    handleDisableAutomation(({ params }) => switchAutomation(db, params.id, false)),
+    handleEnableAutomation(({ params }) => switchAutomation(db, params.id, true, now().toISOString())),
+    handleDisableAutomation(({ params }) => switchAutomation(db, params.id, false, now().toISOString())),
     handleListAutomationRuns(({ params }) =>
       HttpResponse.json({ items: db.automationRuns.filter((run) => run.automationId === params.id) }),
     ),

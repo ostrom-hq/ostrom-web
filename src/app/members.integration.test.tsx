@@ -5,7 +5,11 @@ import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 function viewerIs(role: 'owner' | 'admin' | 'member'): void {
   db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role } : member));
