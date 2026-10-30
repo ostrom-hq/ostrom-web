@@ -205,7 +205,6 @@
   font-family: var(--font-mono);
 }
 
-
 .ys-kv {
   display: grid;
   grid-template-columns: max-content 1fr;

@@ -17,7 +17,13 @@ describe('failureOf', () => {
 
 describe('refusalOf and changedOf', () => {
   it('read a 403 as a refusal and a shown-digest 409 as a change', () => {
-    const forbidden = new ApiFailure('forbidden', 'samir has to approve it', 403, undefined, 'self_approval_refused');
+    const forbidden = new ApiFailure(
+      'forbidden',
+      'samir has to approve it',
+      403,
+      undefined,
+      'self_approval_refused',
+    );
     const changed = new ApiFailure('conflict', 'changed', 409, undefined, 'shown_digest_mismatch');
     expect([refusalOf(forbidden), changedOf(forbidden)]).toEqual(['samir has to approve it', false]);
     expect([refusalOf(changed), changedOf(changed)]).toEqual([undefined, true]);
@@ -31,9 +37,11 @@ describe('viewerName', () => {
   it('names the person, or falls back to the login', () => {
     expect(viewerName(undefined)).toBeUndefined();
     expect(viewerName(me)).toBe('maya');
-    expect(viewerName({ ...me, member: { login: 'maya', name: '', avatarUrl: '', role: 'approver' } })).toBe('maya');
-    expect(viewerName({ ...me, member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'approver' } })).toBe(
-      'Maya Lind (maya)',
+    expect(viewerName({ ...me, member: { login: 'maya', name: '', avatarUrl: '', role: 'approver' } })).toBe(
+      'maya',
     );
+    expect(
+      viewerName({ ...me, member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'approver' } }),
+    ).toBe('Maya Lind (maya)');
   });
 });

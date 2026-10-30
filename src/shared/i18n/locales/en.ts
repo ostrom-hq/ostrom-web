@@ -77,7 +77,12 @@ export const en = {
       key: 'Key',
     },
     act: {
-      approve: { push: 'Approve push', merge: 'Approve merge', deployment: 'Approve deployment', other: 'Approve' },
+      approve: {
+        push: 'Approve push',
+        merge: 'Approve merge',
+        deployment: 'Approve deployment',
+        other: 'Approve',
+      },
       approving: 'Approving…',
       decline: 'Decline & tell the agent…',
       declineLabel: 'What should the agent do instead?',

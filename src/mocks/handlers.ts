@@ -102,13 +102,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (approval === undefined) return notFound();
       const body = zAnswerApprovalRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'answer must be approve or reject');
-      if (approval.status !== 'pending') return refusal(409, 'already_decided', 'this approval is already decided');
+      if (approval.status !== 'pending')
+        return refusal(409, 'already_decided', 'this approval is already decided');
       if (body.data.shownDigest !== approval.shownDigest) {
         return refusal(409, 'shown_digest_mismatch', 'the approval changed since it was shown');
       }
       const approvers = db.approvers[approval.id] ?? [];
-      if (!approvers.includes(me.dev.login)) return refusal(403, 'not_an_approver', 'you cannot answer this approval');
-      const refused = body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
+      if (!approvers.includes(me.dev.login))
+        return refusal(403, 'not_an_approver', 'you cannot answer this approval');
+      const refused =
+        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);

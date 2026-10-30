@@ -55,7 +55,11 @@ export function ApprovalCard({ approval, viewer, fresh, now }: ApprovalCardProps
           />
         )}
         {approval.expiresAt === undefined ? null : (
-          <time className="ys-chip" dateTime={approval.expiresAt} title={formatAbsolute(approval.expiresAt, i18n.language)}>
+          <time
+            className="ys-chip"
+            dateTime={approval.expiresAt}
+            title={formatAbsolute(approval.expiresAt, i18n.language)}
+          >
             {t('yes.chip.expires', { when: formatRelative(approval.expiresAt, now, i18n.language) })}
           </time>
         )}

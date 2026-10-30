@@ -18,11 +18,17 @@ const TONES: Readonly<Record<Approval['status'], BadgeTone>> = {
   expired: 'neutral',
 };
 
-const LABELS = { pending: 'waiting-you', approved: 'approved', rejected: 'refused', expired: 'expired' } as const;
+const LABELS = {
+  pending: 'waiting-you',
+  approved: 'approved',
+  rejected: 'refused',
+  expired: 'expired',
+} as const;
 
 export function DecidedLine({ approval, now }: DecidedLineProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const when = approval.decidedAt === undefined ? undefined : formatRelative(approval.decidedAt, now, i18n.language);
+  const when =
+    approval.decidedAt === undefined ? undefined : formatRelative(approval.decidedAt, now, i18n.language);
   return (
     <Link to="/yes/$approvalId" params={{ approvalId: approval.id }} className="ys-line">
       <Badge tone={TONES[approval.status]}>{t(`yes.tone.${LABELS[approval.status]}`)}</Badge>
@@ -30,7 +36,9 @@ export function DecidedLine({ approval, now }: DecidedLineProps): ReactElement {
         {approval.selfApproved === true ? <Badge tone="warning">{t('yes.badge.selfApproved')}</Badge> : null}{' '}
         {approval.title}
       </span>
-      <span className="ys-meta">{[approval.decidedBy, when].filter((part) => part !== undefined).join(' · ')}</span>
+      <span className="ys-meta">
+        {[approval.decidedBy, when].filter((part) => part !== undefined).join(' · ')}
+      </span>
     </Link>
   );
 }
