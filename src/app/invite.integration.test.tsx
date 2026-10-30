@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ApiError } from '@gen/api/types.gen';
-import { screen, within } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { INVITE_TOKEN_KEY } from '@/features/onboarding';
@@ -106,19 +106,57 @@ describe('the invitation page', () => {
     expect(screen.getByRole('button', { name: 'Joining…' })).toBeDisabled();
   });
 
-  it('says when the person is already in, and leads to the console', async () => {
+  it('says when the person is already in, forgets the invitation, and opens that organization', async () => {
+    const user = userEvent.setup();
+    // Already a member: Initech is one of the person's organizations.
+    db.otherOrganizations = db.elsewhere;
+    db.elsewhere = [];
+    server.use(
+      http.post('*/api/v1/invitations/preview', () =>
+        HttpResponse.json({
+          orgName: 'Initech',
+          orgSlug: 'initech',
+          role: 'approver',
+          email: null,
+          expiresAt: '2027-10-28T09:00:00Z',
+        }),
+      ),
+    );
+    const router = open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
+    expect(await screen.findByText('You are already a member of Initech.')).toBeInTheDocument();
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Join Initech' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Open Initech' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    expect(useOrgStore.getState().current).toBe(db.otherOrganizations[0]?.id);
+  });
+
+  it('opens the console even when the person’s organizations cannot be read after', async () => {
     const user = userEvent.setup();
     server.use(
       http.post('*/api/v1/invitations/accept', () => refuse(409, 'already_member', 'already a member')),
     );
+    const router = open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
+    server.use(http.get('*/api/v1/orgs', () => refuse(500, 'internal', 'orgs are down')));
+    await user.click(await screen.findByRole('button', { name: 'Open Initech' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    // The console opens, and says why it cannot show the organizations.
+    expect(await screen.findByText('orgs are down')).toBeInTheDocument();
+  });
+
+  it('says a link revoked or used up since it was read no longer works, and forgets it', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/invitations/accept', () => refuse(404, 'not_found', 'gone')));
     open(DEMO_INVITATION_TOKEN);
     await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
-    expect(await screen.findByText('You are already a member of Initech.')).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Open the console' })).toHaveAttribute(
-      'href',
-      '/',
-    );
-    expect(screen.queryByRole('button', { name: 'Join Initech' })).toBeNull();
+    expect(await screen.findByText('This invitation no longer works')).toBeInTheDocument();
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBeNull();
   });
 
   it('says an e-mail invitation is for another address, with its address and a role it does not know', async () => {
@@ -143,6 +181,8 @@ describe('the invitation page', () => {
         'This invitation was sent to another e-mail address. Sign in with the account that holds it.',
       ),
     ).toBeInTheDocument();
+    // Kept for the account that holds it.
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBe('inv_jo');
   });
 
   it('says why joining failed, and lets the person try again', async () => {

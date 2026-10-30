@@ -15,6 +15,8 @@ export interface SetupFacts {
   readonly invitations: number | undefined;
   readonly accounts: number | undefined;
   readonly workflows: number | undefined;
+  /** The person said the CLI is set up: nothing the console reads can tell. */
+  readonly cliDone: boolean;
 }
 
 export interface SetupStep {
@@ -36,8 +38,8 @@ export function setupSteps(facts: SetupFacts): readonly SetupStep[] {
     team,
     accounts: known(facts.accounts),
     rules: known(facts.workflows),
-    // Nothing the console reads says the CLI is installed: the step stays open until the guide is put away.
-    cli: 'unknown',
+    // Nothing the console reads says the CLI is installed: the person says so.
+    cli: facts.cliDone ? 'done' : 'todo',
   };
   return SETUP_STEPS.map((id) => ({ id, state: states[id] }));
 }

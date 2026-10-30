@@ -2,42 +2,51 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { apiUrl } from '@/shared/api/apiClient';
 import { Button } from '@/shared/ui/Button';
 import { CopyField } from '@/shared/ui/CopyField';
-import { currentStep, type SetupStepId } from '../model';
+import { currentStep, type SetupStep } from '../model';
 import type { SetupViewModel } from '../useOnboarding';
 
-/** Where each step is done in the console. */
-function actionOf(id: SetupStepId, label: string): ReactNode {
-  switch (id) {
+/** Where each step is done in the console; a step only an owner or an admin can do says so to anyone else. */
+function actionOf(step: SetupStep, setup: SetupViewModel, label: string, onlyAdmins: string): ReactNode {
+  const button = 'o-btn o-btn--secondary o-btn--md';
+  switch (step.id) {
     case 'github':
       // GitHub's install page, then back to the console through the server's callback.
-      return (
-        <a className="o-btn o-btn--secondary o-btn--md" href={apiUrl('/api/v1/github/app/install/start')}>
+      return setup.install === undefined ? (
+        <span className="o-row__meta">{onlyAdmins}</span>
+      ) : (
+        <a className={button} href={setup.install}>
           {label}
         </a>
       );
     case 'team':
-      return (
-        <Link to="/members" className="o-btn o-btn--secondary o-btn--md">
+      return setup.install === undefined ? (
+        <span className="o-row__meta">{onlyAdmins}</span>
+      ) : (
+        <Link to="/members" className={button}>
           {label}
         </Link>
       );
     case 'accounts':
       return (
-        <Link to="/accounts" className="o-btn o-btn--secondary o-btn--md">
+        <Link to="/accounts" className={button}>
           {label}
         </Link>
       );
     case 'rules':
       return (
-        <Link to="/workflows" className="o-btn o-btn--secondary o-btn--md">
+        <Link to="/workflows" className={button}>
           {label}
         </Link>
       );
-    case 'org':
     case 'cli':
+      return step.state === 'done' ? null : (
+        <Button variant="secondary" onClick={setup.cliDone}>
+          {label}
+        </Button>
+      );
+    case 'org':
       return null;
   }
 }
@@ -53,7 +62,9 @@ export function SetupGuide({ setup }: { readonly setup: SetupViewModel }): React
           {t('onboarding.guide.title')}
         </h2>
         <span className="o-row__meta">
-          {t('onboarding.guide.progress', { done: setup.done, total: setup.steps.length })}
+          {open === undefined
+            ? t('onboarding.guide.complete')
+            : t('onboarding.guide.progress', { done: setup.done, total: setup.steps.length })}
         </span>
         <progress className="o-setup__bar" max={setup.steps.length} value={setup.done}>
           {setup.done}
@@ -97,7 +108,12 @@ export function SetupGuide({ setup }: { readonly setup: SetupViewModel }): React
               ) : null}
             </span>
             <span className="o-setup__action">
-              {actionOf(step.id, t(`onboarding.steps.${step.id}.action`))}
+              {actionOf(
+                step,
+                setup,
+                t(`onboarding.steps.${step.id}.action`),
+                t('onboarding.guide.onlyAdmins'),
+              )}
             </span>
           </li>
         ))}

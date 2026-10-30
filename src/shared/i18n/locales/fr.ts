@@ -918,6 +918,8 @@ export const fr = {
       title: 'Mise en route',
       lead: 'D’une organisation vide à un premier changement d’agent validé.',
       progress: '{{done}} sur {{total}} faites',
+      complete: 'Tout est prêt : les changements protégés des agents attendent maintenant un oui.',
+      onlyAdmins: 'Un propriétaire ou un admin s’en charge.',
       done: '(fait)',
       hide: 'Masquer le guide',
       show: 'Afficher le guide de mise en route',
@@ -951,7 +953,7 @@ export const fr = {
       cli: {
         title: 'Installer la CLI',
         body: 'Chaque développeur se connecte une fois, puis lance son agent à travers Ostrom.',
-        action: '',
+        action: 'C’est fait',
       },
     },
     cli: {
@@ -972,7 +974,7 @@ export const fr = {
     signIn: 'Se connecter pour rejoindre',
     join: 'Rejoindre {{org}}',
     joining: 'On t’ajoute…',
-    open: 'Ouvrir la console',
+    open: 'Ouvrir {{org}}',
     home: 'Aller à la console',
     alreadyTag: 'Déjà membre',
     already: 'Tu es déjà membre de {{org}}.',

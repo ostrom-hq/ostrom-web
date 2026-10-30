@@ -3,7 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ApiError } from '@gen/api/types.gen';
 import { delay, http, HttpResponse } from 'msw';
-import { GUIDE_HIDDEN_KEY } from '@/features/onboarding';
+import { GUIDE_CLI_KEY, GUIDE_HIDDEN_KEY } from '@/features/onboarding';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { freshAccount } from '@/mocks/handlers';
 import { setDemoRole } from '@/mocks/orgs';
@@ -153,6 +153,9 @@ describe('creating an organization', () => {
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
     expect(await screen.findByText('This short name is taken. Choose another.')).toBeInTheDocument();
     expect(slug).toHaveAttribute('aria-invalid', 'true');
+    // Changed, it is no longer the one refused.
+    await user.type(slug, 'x');
+    expect(screen.queryByText('This short name is taken. Choose another.')).toBeNull();
     await user.clear(slug);
     await user.type(slug, 'acme-labs');
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
@@ -218,7 +221,7 @@ describe('the setup guide', () => {
     expect(step(section, 'Install the CLI')).toHaveAttribute('aria-current', 'step');
     expect(within(section).getByRole('link', { name: 'Install the app' })).toHaveAttribute(
       'href',
-      `${TEST_API}/api/v1/github/app/install/start`,
+      `${TEST_API}/api/v1/github/app/install/start?org=${ACME}`,
     );
     expect(within(section).getByRole('link', { name: 'Invite' })).toHaveAttribute('href', '/members');
     expect(within(section).getByRole('link', { name: 'Add an account' })).toHaveAttribute(
@@ -275,6 +278,30 @@ describe('the setup guide', () => {
     expect(step(section, 'Connect GitHub')).not.toHaveTextContent('(done)');
     expect(step(section, 'Connect GitHub')).toHaveAttribute('aria-current', 'step');
     expect(screen.queryByRole('alert')).toBeNull();
+    // A member installs nothing and invites nobody: the guide says who does.
+    expect(
+      within(step(section, 'Connect GitHub')).getByText('An owner or an admin does this.'),
+    ).toBeInTheDocument();
+    expect(
+      within(step(section, 'Invite your team')).getByText('An owner or an admin does this.'),
+    ).toBeInTheDocument();
+    expect(within(section).queryByRole('link', { name: 'Install the app' })).toBeNull();
+    expect(within(section).queryByRole('link', { name: 'Invite' })).toBeNull();
+  });
+
+  it('takes the person’s word that the CLI is set up, then says the organization is all set', async () => {
+    const user = userEvent.setup();
+    visit('/');
+    const section = await guide();
+    expect(await within(section).findByText('5 of 6 done')).toBeInTheDocument();
+    await user.click(within(section).getByRole('button', { name: 'It is set up' }));
+    expect(
+      within(section).getByText('All set: protected agent changes now wait for a yes.'),
+    ).toBeInTheDocument();
+    expect(step(section, 'Install the CLI')).toHaveTextContent('(done)');
+    expect(within(section).queryByRole('button', { name: 'It is set up' })).toBeNull();
+    expect(section.querySelector('[aria-current]')).toBeNull();
+    expect(localStorage.getItem(`${GUIDE_CLI_KEY}.${ACME}`)).toBe('1');
   });
 
   it('counts the invitations waiting as a team invited', async () => {

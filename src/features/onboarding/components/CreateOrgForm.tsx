@@ -43,6 +43,7 @@ export function CreateOrgForm({ org }: { readonly org: CreateOrgViewModel }): Re
         aria-describedby={slug === undefined && name.trim() !== '' ? hintId : undefined}
         onChange={(event) => {
           setName(event.target.value);
+          org.edited();
         }}
       />
       {nameIssue === undefined ? null : (
@@ -78,6 +79,7 @@ export function CreateOrgForm({ org }: { readonly org: CreateOrgViewModel }): Re
             aria-invalid={slugIssue !== undefined || org.slugTaken}
             onChange={(event) => {
               setSlug(event.target.value.toLowerCase());
+              org.edited();
             }}
           />
           {slugIssue === undefined ? null : (

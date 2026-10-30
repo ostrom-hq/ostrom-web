@@ -75,6 +75,23 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+const MAX_SLUG = 39;
+const SLUG_ATTEMPTS = 20;
+
+function suffixed(base: string, suffix: string): string {
+  return base.slice(0, MAX_SLUG - suffix.length).replace(/-+$/, '') + suffix;
+}
+
+/** The server's numbering of a derived short name that is taken. */
+export function freeSlug(base: string, used: ReadonlySet<string>): string {
+  if (!used.has(base)) return base;
+  for (let n = 2; n <= SLUG_ATTEMPTS; n += 1) {
+    const numbered = suffixed(base, `-${String(n)}`);
+    if (!used.has(numbered)) return numbered;
+  }
+  return suffixed(base, `-${crypto.randomUUID().replaceAll('-', '').slice(0, 8)}`);
+}
+
 /** The person as the owner of an organization they made. */
 function owner(at: string): OrgMember {
   return {
@@ -179,10 +196,9 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
           );
         if (used.has(chosen)) return refusal(409, 'slug_taken', 'This short name is taken.');
       }
-      // Without a choice, the server takes the derived short name, or the first of `name-2`, `name-3`… that is free.
-      const base = slugOf(name);
-      let slug = chosen ?? base;
-      for (let n = 2; used.has(slug); n += 1) slug = `${base}-${String(n)}`;
+      // Without a choice, the server takes the derived short name, or the first of `name-2` to `name-20` that is free,
+      // else a random suffix; cut to stay within 39 characters (`freeSlug` in the server's `Rules.kt`).
+      const slug = chosen ?? freeSlug(slugOf(name), used);
       const at = now().toISOString();
       const created: Organization = {
         id: `org-${slug}`,

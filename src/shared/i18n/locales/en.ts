@@ -899,6 +899,8 @@ export const en = {
       title: 'Set up',
       lead: 'From an empty organization to a first agent change approved.',
       progress: '{{done}} of {{total}} done',
+      complete: 'All set: protected agent changes now wait for a yes.',
+      onlyAdmins: 'An owner or an admin does this.',
       done: '(done)',
       hide: 'Hide the guide',
       show: 'Show the setup guide',
@@ -932,7 +934,7 @@ export const en = {
       cli: {
         title: 'Install the CLI',
         body: 'Each developer signs in once, then runs their agent through Ostrom.',
-        action: '',
+        action: 'It is set up',
       },
     },
     cli: {
@@ -953,7 +955,7 @@ export const en = {
     signIn: 'Sign in to join',
     join: 'Join {{org}}',
     joining: 'Joining…',
-    open: 'Open the console',
+    open: 'Open {{org}}',
     home: 'Go to the console',
     alreadyTag: 'Already in',
     already: 'You are already a member of {{org}}.',

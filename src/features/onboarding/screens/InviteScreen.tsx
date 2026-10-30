@@ -93,9 +93,7 @@ export function InviteScreen(): ReactElement {
               {t('invite.signIn')}
             </Link>
           ) : invitation.already ? (
-            <Link to="/" className="o-btn o-btn--secondary o-btn--md">
-              {t('invite.open')}
-            </Link>
+            <Button onClick={open.enter}>{t('invite.open', { org: preview.orgName })}</Button>
           ) : (
             <Button onClick={open.accept} disabled={open.accept === undefined || invitation.accepting}>
               {invitation.accepting ? t('invite.joining') : t('invite.join', { org: preview.orgName })}

@@ -17,7 +17,7 @@ import {
 import { DEMO_INVITATION_TOKEN, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
-import { setDemoRole } from '@/mocks/orgs';
+import { freeSlug, setDemoRole } from '@/mocks/orgs';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 
@@ -119,6 +119,15 @@ describe('mock organizations', () => {
       'acme-corp-2',
     );
     expect((await createOrg({ body: { name: 'Initech' }, throwOnError: true })).data.slug).toBe('initech-2');
+  });
+
+  it('numbers a taken short name as the server does: cut to 39 characters, random after 20', () => {
+    const base = 'a'.repeat(38) + 'b';
+    expect(freeSlug(base, new Set([base]))).toBe(`${'a'.repeat(37)}-2`);
+    const dashed = `${'a'.repeat(36)}-bc`;
+    expect(freeSlug(dashed, new Set([dashed]))).toBe(`${'a'.repeat(36)}-2`);
+    const crowded = new Set(['acme', ...Array.from({ length: 19 }, (_, n) => `acme-${String(n + 2)}`)]);
+    expect(freeSlug('acme', crowded)).toMatch(/^acme-[0-9a-f]{8}$/);
   });
 
   it('renames an organization for its owners and admins only', async () => {

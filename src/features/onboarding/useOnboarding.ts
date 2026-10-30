@@ -21,6 +21,7 @@ import { meOf } from '@/shared/auth/me';
 import { ready } from '@/shared/api/ready';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 import { useOrgStore } from '@/shared/org/orgStore';
+import { githubInstallUrl } from '@/shared/org/githubInstall';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
 
@@ -44,6 +45,8 @@ export interface CreateOrgViewModel {
   /** The short name asked for is someone else's. */
   readonly slugTaken: boolean;
   readonly failure: Error | undefined;
+  /** Forgets the last refusal, once what was refused is changed. */
+  readonly edited: () => void;
 }
 
 /** Creates the organization, acts in it at once, and reads every list of organizations again. */
@@ -68,7 +71,7 @@ export function useCreateOrg(): CreateOrgViewModel {
       else choose(org.id, login);
     },
   });
-  const { mutate } = mutation;
+  const { mutate, reset } = mutation;
   const create = useCallback(
     (name: string, slug: string | undefined) => {
       mutate({ body: slug === undefined ? { name: name.trim() } : { name: name.trim(), slug } });
@@ -82,20 +85,27 @@ export function useCreateOrg(): CreateOrgViewModel {
     creating: mutation.isPending || mutation.isSuccess,
     slugTaken,
     failure: slugTaken ? undefined : failure,
+    edited: reset,
   };
 }
 
 /** Where the guide is put away, per organization: a preference of this browser, not a secret. */
 export const GUIDE_HIDDEN_KEY = 'ostrom.setup.hidden';
+/** Where the person said the CLI is set up, per organization. */
+export const GUIDE_CLI_KEY = 'ostrom.setup.cli';
 
 export interface SetupViewModel {
   readonly steps: readonly SetupStep[];
   readonly done: number;
   /** The address `ostrom login --server` takes. */
   readonly server: string;
+  /** Where the GitHub App is installed, for an owner or an admin; nobody else may install it nor invite. */
+  readonly install: string | undefined;
   readonly hidden: boolean;
   readonly hide: () => void;
   readonly show: () => void;
+  /** Says the CLI is set up. */
+  readonly cliDone: () => void;
 }
 
 /**
@@ -111,6 +121,8 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
   );
   const accounts = useQuery(ready(listSharedAccountsOptions(), quiet));
   const workflows = useQuery(ready(listWorkflowsOptions(), quiet));
+  const cliKey = `${GUIDE_CLI_KEY}.${org}`;
+  const [cli, setCli] = useState(() => safeLocalStorage.getItem(cliKey) === '1');
   const steps = useMemo(
     () =>
       setupSteps({
@@ -119,8 +131,9 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
         invitations: invitations.data?.items.length,
         accounts: accounts.data?.items.length,
         workflows: workflows.data?.items.length,
+        cliDone: cli,
       }),
-    [github.data, members.data, invitations.data, accounts.data, workflows.data],
+    [github.data, members.data, invitations.data, accounts.data, workflows.data, cli],
   );
   const key = `${GUIDE_HIDDEN_KEY}.${org}`;
   const [hidden, setHidden] = useState(() => safeLocalStorage.getItem(key) === '1');
@@ -128,6 +141,7 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
     steps,
     done: steps.filter((step) => step.state === 'done').length,
     server: originOf(apiUrl('/api/v1/'), window.location.href),
+    install: managesMembers(role) ? githubInstallUrl(org) : undefined,
     hidden,
     hide: () => {
       safeLocalStorage.setItem(key, '1');
@@ -136,6 +150,10 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
     show: () => {
       safeLocalStorage.removeItem(key);
       setHidden(false);
+    },
+    cliDone: () => {
+      safeLocalStorage.setItem(cliKey, '1');
+      setCli(true);
     },
   };
 }

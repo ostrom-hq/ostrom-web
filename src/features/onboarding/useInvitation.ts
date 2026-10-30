@@ -3,6 +3,7 @@ import {
   acceptInvitationMutation,
   getMeOptions,
   listMyOrganizationsQueryKey,
+  listOrgsOptions,
   listOrgsQueryKey,
   previewInvitationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -28,6 +29,8 @@ export interface OpenInvitation {
   readonly preview: InvitationPreview;
   /** Joins; none until someone signed in is known. */
   readonly accept: (() => void) | undefined;
+  /** Opens the organization, for a person already in it; none until someone signed in is known. */
+  readonly enter: (() => void) | undefined;
 }
 
 export interface InvitationViewModel {
@@ -39,7 +42,10 @@ export interface InvitationViewModel {
   readonly accepting: boolean;
   /** The person is already in the organization (the server answers 409). */
   readonly already: boolean;
-  /** The server refused this account: an e-mail invitation for another address answers 404 and nothing more. */
+  /**
+   * The server refused this account. An e-mail invitation for another address answers 404, as a dead one does: only
+   * an e-mail invitation can be refused, a link that answers 404 is dead.
+   */
   readonly refused: boolean;
   readonly failure: Error | undefined;
 }
@@ -66,14 +72,21 @@ export function useInvitation(): InvitationViewModel {
   const accept = useMutation(acceptInvitationMutation());
   /** Once joined: the organization is the person's choice, kept with their login, and the console opens. */
   const joined = useCallback(
-    async (org: OrgView, login: string) => {
+    async (org: OrgView | string, login: string) => {
       inviteToken.drop();
       // The lists first, as for an organization created: chosen before, the new one would be taken for one left.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: listOrgsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: listMyOrganizationsQueryKey() }),
       ]);
-      choose(org.id, login);
+      // Already in it: the invitation names its short name only, the person's list gives its id.
+      const id =
+        typeof org === 'string'
+          ? (
+              await queryClient.query(ready(listOrgsOptions(), { retry: false })).catch(() => undefined)
+            )?.items.find((item) => item.slug === org)?.id
+          : org.id;
+      if (id !== undefined) choose(id, login);
       await navigate({ to: '/', replace: true });
     },
     [queryClient, choose, navigate],
@@ -85,9 +98,14 @@ export function useInvitation(): InvitationViewModel {
   const { mutate: join } = accept;
   const acceptFailure = failureOf(accept.error);
   const already = isApiFailure(acceptFailure) && acceptFailure.kind === 'conflict';
-  const refused = isApiFailure(acceptFailure) && acceptFailure.kind === 'not-found';
+  const turnedAway = isApiFailure(acceptFailure) && acceptFailure.kind === 'not-found';
+  // A link names nobody: refused, it is dead (revoked, used up or expired since it was read).
+  const seen = preview.isSuccess ? preview.data : undefined;
+  const forSomeone = typeof seen?.email === 'string';
+  const refused = turnedAway && forSomeone;
   const previewFailure = failureOf(preview.error);
-  const dead = isApiFailure(previewFailure) && previewFailure.kind === 'not-found';
+  const dead =
+    (isApiFailure(previewFailure) && previewFailure.kind === 'not-found') || (turnedAway && !forSomeone);
   let state: InvitationState = 'reading';
   if (token === undefined) state = 'missing';
   else if (dead) state = 'dead';
@@ -95,9 +113,9 @@ export function useInvitation(): InvitationViewModel {
   // Joining needs someone signed in: until `/me` names them, there is no way in.
   const login = viewer?.dev.login;
   const open =
-    preview.isSuccess && token !== undefined
+    seen !== undefined && token !== undefined
       ? {
-          preview: preview.data,
+          preview: seen,
           accept:
             login === undefined
               ? undefined
@@ -108,8 +126,24 @@ export function useInvitation(): InvitationViewModel {
                       onSuccess: (org) => {
                         void joined(org, login);
                       },
+                      onError: (error) => {
+                        // Dead, or already in: the secret is of no more use. One for another address is kept, for
+                        // the account that holds it.
+                        const failure = failureOf(error);
+                        if (
+                          isApiFailure(failure) &&
+                          (failure.kind === 'conflict' || (failure.kind === 'not-found' && !forSomeone))
+                        )
+                          inviteToken.drop();
+                      },
                     },
                   );
+                },
+          enter:
+            login === undefined
+              ? undefined
+              : () => {
+                  void joined(seen.orgSlug, login);
                 },
         }
       : undefined;

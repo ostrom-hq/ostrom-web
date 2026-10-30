@@ -202,6 +202,8 @@ const emailLinkRoute = createRoute({
 const inviteRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/invite',
+  // Read signed out as well: the preview needs no session.
+  staticData: { anonymous: true },
   beforeLoad: ({ location }) => {
     const token = fragmentValue(location.hash, 'token');
     if (token === undefined) return;
