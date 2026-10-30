@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   answerApprovalMutation,
+  exchangeSignInLinkMutation,
   getApprovalOptions,
+  getMeOptions,
   getApprovalQueryKey,
   listApprovalsOptions,
   listApprovalsQueryKey,
@@ -14,12 +16,13 @@ import type {
   Receipt,
 } from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { meOf } from '@/shared/auth/me';
 import { stillOpen } from './model';
 import { useArrivals } from './useArrivals';
 
@@ -130,23 +133,69 @@ export function useShownApproval(id: string, follow = false): ShownApprovalViewM
 }
 
 export interface SignInNoticeViewModel {
-  /** A link to another account than this browser's, waiting for a yes. */
-  readonly pending: boolean;
+  /**
+   * Signs in with the held link; present only while someone is already signed in here, since the link may be
+   * another account and waits for a yes.
+   */
+  readonly accept: (() => void) | undefined;
   /** A link that was not a sign-in token. */
   readonly invalid: boolean;
-  readonly accept: () => void;
+  /** The link is being exchanged for the session cookie. */
+  readonly signingIn: boolean;
+  /** The server refused the link (already used, expired). */
+  readonly failure: Error | undefined;
   readonly dismiss: () => void;
 }
 
+/**
+ * A sign-in link held from the address bar is exchanged for the session cookie (`POST /auth/link`, server#58): at
+ * once when nobody is signed in, after a yes when someone is (opening someone else's link must not silently make
+ * them approve as that account). Once exchanged, the cookie is the session and everything cached is read again.
+ */
 export function useSignInNotice(): SignInNoticeViewModel {
-  const pending = useAuthStore((auth) => auth.pending);
+  const link = useAuthStore((auth) => auth.link);
   const notice = useAuthStore((auth) => auth.notice);
-  const accept = useAuthStore((auth) => auth.acceptPending);
-  const dismiss = useAuthStore((auth) => auth.dismiss);
+  const drop = useAuthStore((auth) => auth.dismiss);
+  const changed = useAuthStore((auth) => auth.changed);
+  // Asked afresh and once: the switch of account rests on this answer, never on a cached or failed one.
+  const me = useQuery(ready(getMeOptions(), { retry: false }));
+  const known = !me.isFetching;
+  // Nobody is signed in only when the server says so (401, or 204 with no body); an error of any other kind may
+  // hide a session, so the link then waits for a yes.
+  const signedOut =
+    known &&
+    ((isApiFailure(me.error) && me.error.kind === 'unauthorized') ||
+      (me.isSuccess && meOf(me.data) === undefined));
+  const mutation = useMutation({ ...exchangeSignInLinkMutation(), onSuccess: changed });
+  const { mutate, reset } = mutation;
+  // Spent once: the link leaves memory as it goes to the server, even when a screen mounts twice.
+  const exchange = useCallback(
+    (token: string) => {
+      drop();
+      mutate({ body: { token } });
+    },
+    [drop, mutate],
+  );
+  useEffect(() => {
+    if (!signedOut) return;
+    // Read from the store, not the render: a second run of the effect (StrictMode) finds the link already spent.
+    const token = useAuthStore.getState().link;
+    if (token !== undefined) exchange(token);
+  }, [link, signedOut, exchange]);
+  const dismiss = useCallback(() => {
+    drop();
+    reset();
+  }, [drop, reset]);
   return {
-    pending: pending !== undefined,
-    invalid: pending === undefined && notice !== undefined,
-    accept,
+    accept:
+      link !== undefined && known && !signedOut
+        ? () => {
+            exchange(link);
+          }
+        : undefined,
+    invalid: link === undefined && notice !== undefined,
+    signingIn: mutation.isPending,
+    failure: failureOf(mutation.error),
     dismiss,
   };
 }

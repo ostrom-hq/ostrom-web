@@ -7,8 +7,6 @@ import { useOrgStore } from '@/shared/org/orgStore';
 export interface ApiClientConfig {
   /** The origin of the Ostrom API (`''` for the same origin): the contract's paths carry `/api/v1`. */
   readonly baseUrl: string;
-  /** The viewer's in-memory bearer token, read at each call so a sign-in or sign-out applies at once. */
-  readonly getToken: () => string | undefined;
 }
 
 function typedFailure(error: unknown, response: Response | undefined): Error {
@@ -30,14 +28,14 @@ function org(request: Request): Request {
 }
 
 /**
- * Points the generated client at the server, sends the viewer's credentials and types every failure. Every
- * call carries the server's `HttpOnly` session cookie (`credentials: 'include'`, audit S2-08), which no
- * script on the page can read, a call that changes something its CSRF token, and every call the organization
- * it acts in (`Ostrom-Org`); a refusal for want of one opens the organization picker.
+ * Points the generated client at the server and types every failure. Every call carries the server's `HttpOnly`
+ * session cookie (`credentials: 'include'`, audit S2-08), which no script on the page can read, a call that
+ * changes something its CSRF token, and every call the organization it acts in (`Ostrom-Org`); a refusal for want
+ * of one asks which. The console sends no bearer token: the cookie is the session.
  */
-export function configureApiClient({ baseUrl, getToken }: ApiClientConfig): void {
+export function configureApiClient({ baseUrl }: ApiClientConfig): void {
   apiBase = baseUrl;
-  client.setConfig({ baseUrl, credentials: 'include', auth: () => getToken() });
+  client.setConfig({ baseUrl, credentials: 'include' });
   if (!client.interceptors.error.exists(typedFailure)) client.interceptors.error.use(typedFailure);
   if (!client.interceptors.request.exists(csrf)) client.interceptors.request.use(csrf);
   if (!client.interceptors.request.exists(org)) client.interceptors.request.use(org);

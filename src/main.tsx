@@ -5,7 +5,6 @@ import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { useAuthStore } from '@/shared/auth/authStore';
 import { parseEnv } from '@/shared/config/env';
 import '@/shared/i18n/i18n';
 import '@fontsource-variable/archivo/wdth.css';
@@ -17,7 +16,7 @@ import '@/app/shell.css';
 
 const env = parseEnv(import.meta.env);
 
-configureApiClient({ baseUrl: env.apiBaseUrl, getToken: () => useAuthStore.getState().token });
+configureApiClient({ baseUrl: env.apiBaseUrl });
 
 async function startMocksOrWarn(): Promise<void> {
   try {

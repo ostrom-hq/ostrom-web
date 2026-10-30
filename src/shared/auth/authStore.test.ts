@@ -11,77 +11,46 @@ function storedAnywhere(value: string): boolean {
 }
 
 beforeEach(() => {
-  useAuthStore.getState().signOut();
+  useAuthStore.setState({ link: undefined, notice: undefined, generation: 0 });
   window.localStorage.clear();
   window.sessionStorage.clear();
 });
 
 describe('useAuthStore', () => {
-  it('signs in with a valid token and keeps it', () => {
-    expect(useAuthStore.getState().signIn(TOKEN)).toBe(true);
-    expect(useAuthStore.getState().token).toBe(TOKEN);
-  });
-
-  it('keeps the token in memory only, never in web storage nor in the address (S2-08)', () => {
-    useAuthStore.getState().signIn(TOKEN);
-    expect(window.localStorage.getItem(LEGACY_KEY)).toBeNull();
+  it('holds a link in memory only, never in web storage nor in the address (S2-08)', () => {
+    expect(useAuthStore.getState().offer(TOKEN)).toBe('held');
+    expect(useAuthStore.getState().link).toBe(TOKEN);
     expect(storedAnywhere(TOKEN)).toBe(false);
     expect(window.location.href).not.toContain(TOKEN);
   });
 
-  it('refuses a malformed token and keeps the previous one', () => {
-    useAuthStore.getState().signIn(TOKEN);
-    expect(useAuthStore.getState().signIn('bad token')).toBe(false);
-    expect(useAuthStore.getState().signIn('opk_<script>alert(1)</script>')).toBe(false);
-    expect(useAuthStore.getState().token).toBe(TOKEN);
+  it('says a link was not a token, keeps nothing, until dismissed', () => {
+    expect(useAuthStore.getState().offer('bad token')).toBe('invalid');
+    expect(useAuthStore.getState().offer('opk_<script>alert(1)</script>')).toBe('invalid');
+    expect(useAuthStore.getState().link).toBeUndefined();
+    expect(useAuthStore.getState().notice).toBe('invalid');
+    useAuthStore.getState().dismiss();
+    expect(useAuthStore.getState().notice).toBeUndefined();
   });
 
-  it('signs out', () => {
-    useAuthStore.getState().signIn(TOKEN);
-    useAuthStore.getState().signOut();
-    expect(useAuthStore.getState().token).toBeUndefined();
+  it('drops a held link when dismissed, and counts each change of account', () => {
+    useAuthStore.getState().offer(TOKEN);
+    useAuthStore.getState().dismiss();
+    expect(useAuthStore.getState().link).toBeUndefined();
+    useAuthStore.getState().offer(TOKEN);
+    useAuthStore.getState().changed();
+    expect(useAuthStore.getState()).toMatchObject({ link: undefined, generation: 1 });
   });
 });
 
 describe('on load', () => {
-  it('erases a token an older console left in web storage, without signing in (S2-08)', async () => {
+  it('erases a token an older console left in web storage (S2-08)', async () => {
     window.localStorage.setItem(LEGACY_KEY, TOKEN);
     window.sessionStorage.setItem(LEGACY_KEY, TOKEN);
     vi.resetModules();
     const fresh = await import('@/shared/auth/authStore');
     expect(window.localStorage.getItem(LEGACY_KEY)).toBeNull();
     expect(window.sessionStorage.getItem(LEGACY_KEY)).toBeNull();
-    expect(fresh.useAuthStore.getState().token).toBeUndefined();
-  });
-});
-
-describe('sign-in links', () => {
-  it('signs in from a link when nobody is signed in, and leaves the same token alone', () => {
-    useAuthStore.getState().signOut();
-    expect(useAuthStore.getState().offer('opk_abcdef123456')).toBe('signed-in');
-    expect(useAuthStore.getState().offer('opk_abcdef123456')).toBe('same');
-    expect(useAuthStore.getState().token).toBe('opk_abcdef123456');
-  });
-
-  it('holds the link of another account until the person switches, or keeps the current one', () => {
-    useAuthStore.getState().signIn('opk_abcdef123456');
-    expect(useAuthStore.getState().offer('opk_other_123456')).toBe('pending');
-    expect(useAuthStore.getState().token).toBe('opk_abcdef123456');
-    expect(storedAnywhere('opk_abcdef123456')).toBe(false);
-    useAuthStore.getState().dismiss();
-    expect(useAuthStore.getState().pending).toBeUndefined();
-    useAuthStore.getState().offer('opk_other_123456');
-    useAuthStore.getState().acceptPending();
-    expect(useAuthStore.getState().token).toBe('opk_other_123456');
-    expect(useAuthStore.getState().pending).toBeUndefined();
-    useAuthStore.getState().acceptPending();
-    expect(useAuthStore.getState().token).toBe('opk_other_123456');
-  });
-
-  it('says a link was not a token, until dismissed', () => {
-    expect(useAuthStore.getState().offer('bad token')).toBe('invalid');
-    expect(useAuthStore.getState().notice).toBe('invalid');
-    useAuthStore.getState().dismiss();
-    expect(useAuthStore.getState().notice).toBeUndefined();
+    expect(fresh.useAuthStore.getState().link).toBeUndefined();
   });
 });

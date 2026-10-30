@@ -61,9 +61,11 @@ export const fr = {
       tag: 'Connexion',
       invalid: 'Ce lien de connexion n’est pas valide. Demandes-en un nouveau.',
       switch:
-        'Ce lien connecte avec une autre clé que celle de ce navigateur. Les demandes que tu approuves sont signées avec elle.',
-      accept: 'Utiliser la nouvelle clé',
-      keep: 'Garder l’actuelle',
+        'Quelqu’un est déjà connecté sur ce navigateur, et ce lien est peut-être un autre compte. Les demandes que tu approuves sont signées au nom du compte du lien.',
+      accept: 'Me connecter avec le lien',
+      keep: 'Rester connecté comme maintenant',
+      signingIn: 'Connexion avec le lien…',
+      failed: 'Ce lien de connexion n’a pas pu servir ({{reason}}). Demandes-en un nouveau.',
       dismiss: 'Fermer',
     },
     signedAs: 'Tu approuves en tant que {{name}}',
@@ -257,6 +259,8 @@ export const fr = {
       yourself: 'Le vérifier soi-même',
       yourselfHint: 'Télécharge le paquet, puis vérifie-le hors ligne avec la CLI :',
       download: 'Télécharger le paquet',
+      downloading: 'Téléchargement…',
+      downloadFailedTag: 'Pas téléchargé',
     },
   },
   members: {

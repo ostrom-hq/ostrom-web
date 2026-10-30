@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { requestSignInEmail, verifySignInEmail } from '@gen/api/sdk.gen';
+import { exchangeSignInLink, getMe, logout, requestSignInEmail, verifySignInEmail } from '@gen/api/sdk.gen';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { DEMO_EMAIL_TOKEN } from '@/mocks/handlers';
+import { DEMO_EMAIL_TOKEN, resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
-const { server } = createMockServer();
+const { server, db } = createMockServer();
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => undefined });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();
+  resetMockDb(db);
 });
 afterAll(() => {
   server.close();
@@ -32,5 +33,24 @@ describe('mock e-mail sign-in', () => {
     expect(signed.data).toEqual({ redirect: '/yes', csrfToken: 'csrf-demo' });
     expect(await post('/auth/email/verify', JSON.stringify({ token: 'ml_other' }))).toBe(401);
     expect(await post('/auth/email/verify', '{"token":7}')).toBe(401);
+  });
+});
+
+describe('mock session cookie', () => {
+  it('signs out, then an approver link signs in once', async () => {
+    await logout({ throwOnError: true });
+    expect((await getMe()).response?.status).toBe(401);
+    const signed = await exchangeSignInLink({ body: { token: 'opk_demo_12345678' }, throwOnError: true });
+    expect(signed.data).toEqual({ redirect: '/yes', csrfToken: 'csrf-demo' });
+    expect((await getMe()).response?.status).toBe(200);
+    expect(await post('/auth/link', JSON.stringify({ token: 'opk_demo_12345678' }))).toBe(401);
+    expect(await post('/auth/link', JSON.stringify({ token: 'ml_demo_12345678' }))).toBe(401);
+    expect(await post('/auth/link', '{}')).toBe(401);
+  });
+
+  it('signs in again with the e-mailed link after a sign-out', async () => {
+    await logout({ throwOnError: true });
+    await verifySignInEmail({ body: { token: DEMO_EMAIL_TOKEN }, throwOnError: true });
+    expect(db.signedIn).toBe(true);
   });
 });

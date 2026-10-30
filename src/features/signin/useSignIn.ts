@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import {
-  getMeQueryKey,
-  requestSignInEmailMutation,
-  verifySignInEmailMutation,
-} from '@gen/api/@tanstack/react-query.gen';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { requestSignInEmailMutation, verifySignInEmailMutation } from '@gen/api/@tanstack/react-query.gen';
+import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { useAuthStore } from '@/shared/auth/authStore';
 import { useEmailLinkStore } from './emailLink';
 import { safeRedirect } from './model';
 
@@ -44,13 +41,15 @@ export type EmailLinkState = 'missing' | 'verifying' | 'failed';
 
 /** Spends the e-mailed token once, then opens the page the link was asked from. */
 export function useEmailLink(): { readonly state: EmailLinkState; readonly failure: Error | undefined } {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const take = useEmailLinkStore((store) => store.take);
+  const changed = useAuthStore((auth) => auth.changed);
   const mutation = useMutation({
     ...verifySignInEmailMutation(),
+    // A new session in the cookie: everything read before is dropped (the cookie is the session), then the page the
+    // link was asked from opens.
     onSuccess: async (signedIn) => {
-      await queryClient.invalidateQueries({ queryKey: getMeQueryKey() });
+      changed();
       await navigate({ href: safeRedirect(signedIn.redirect), replace: true });
     },
   });

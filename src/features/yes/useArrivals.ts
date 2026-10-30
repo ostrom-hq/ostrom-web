@@ -48,7 +48,7 @@ export function resetArrivals(): void {
 
 // Another account has another queue: nothing it shows is "new" because of what the previous one saw.
 useAuthStore.subscribe((auth, previous) => {
-  if (auth.token !== previous.token) resetArrivals();
+  if (auth.generation !== previous.generation) resetArrivals();
 });
 
 /** Requests that arrived since the queue was first loaded, to highlight them. */

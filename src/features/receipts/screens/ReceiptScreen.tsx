@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { keyIdOf } from '@/shared/lib/signature';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
+import { Banner } from '@/shared/ui/Banner';
+import { Button } from '@/shared/ui/Button';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { type ReceiptViewModel, useReceipt } from '../useReceipts';
@@ -144,9 +146,16 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
       <Section label={t('receipts.detail.yourself')}>
         <p className="o-screen__lead">{t('receipts.detail.yourselfHint')}</p>
         <pre className="o-cmd">{`ostrom verify ${receipt.id}`}</pre>
-        <a className="o-btn o-self-start" href={view.bundleUrl} download={`${receipt.id}.json`}>
-          {t('receipts.detail.download')}
-        </a>
+        <div>
+          <Button disabled={view.downloading} onClick={view.download}>
+            {view.downloading ? t('receipts.detail.downloading') : t('receipts.detail.download')}
+          </Button>
+        </div>
+        {view.downloadFailure === undefined ? null : (
+          <Banner tone="danger" tag={t('receipts.detail.downloadFailedTag')} live>
+            {view.downloadFailure.message}
+          </Banner>
+        )}
       </Section>
     </>
   );

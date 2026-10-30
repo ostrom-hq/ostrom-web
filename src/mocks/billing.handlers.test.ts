@@ -21,7 +21,7 @@ const OTHER_ORG = '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d';
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => undefined });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();

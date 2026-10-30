@@ -23,12 +23,12 @@ const never = async (): Promise<undefined> => {
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => useAuthStore.getState().token });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();
   resetMockDb(db);
-  useAuthStore.getState().signOut();
+  useAuthStore.setState({ link: undefined, notice: undefined });
   resetArrivals();
 });
 afterAll(() => {
@@ -156,26 +156,87 @@ describe('the queue', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });
 
-  it('keeps the token and drops it from the address', async () => {
+  it('exchanges a link for the session cookie at once when nobody is signed in, and drops it from the address', async () => {
+    db.signedIn = false;
     const router = visit('/yes#signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
-    expect(useAuthStore.getState().token).toBe('opk_test_12345678');
+    await vi.waitFor(() => {
+      expect(db.usedLinks).toEqual(['opk_test_12345678']);
+    });
+    expect(db.signedIn).toBe(true);
+    expect(useAuthStore.getState().link).toBeUndefined();
     expect(router.state.location.hash).toBe('');
     expect(router.state.location.href).not.toContain('opk_');
+  });
+
+  it('takes a 204 with no body as nobody signed in, and exchanges the link at once', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
+    visit('/yes#signin=opk_test_12345678');
+    await vi.waitFor(() => {
+      expect(db.usedLinks).toEqual(['opk_test_12345678']);
+    });
+  });
+
+  it('asks before using a link when it cannot tell whether someone is signed in', async () => {
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    visit('/yes#signin=opk_test_12345678');
+    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(db.usedLinks).toEqual([]);
+  });
+
+  it('keeps everything as it was when the sign-out fails', async () => {
+    server.use(
+      http.post('*/api/v1/auth/logout', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    const generation = useAuthStore.getState().generation;
+    visit('/yes?signout');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    expect(useAuthStore.getState().generation).toBe(generation);
+    expect(db.signedIn).toBe(true);
+  });
+
+  it('says it signs in while the link is exchanged', async () => {
+    db.signedIn = false;
+    server.use(http.post('*/api/v1/auth/link', async () => delay('infinite')));
+    visit('/yes#signin=opk_test_12345678');
+    expect(await screen.findByText('Signing in with the link…')).toBeInTheDocument();
+  });
+
+  it('says a link was refused, until dismissed', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    db.usedLinks = ['opk_used_12345678'];
+    visit('/yes#signin=opk_used_12345678');
+    const alert = await screen.findByText(
+      /could not be used \(This link was already used or has expired\.\)/,
+    );
+    expect(alert).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText(/could not be used/)).toBeNull();
   });
 
   it('never takes a token from the query string, which servers log', async () => {
     const router = visit('/yes?signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
-    expect(useAuthStore.getState().token).toBeUndefined();
+    expect(useAuthStore.getState().link).toBeUndefined();
+    expect(db.usedLinks).toEqual([]);
     expect(router.state.location.searchStr).toBe('');
   });
 
-  it('forgets the token on signout', async () => {
-    useAuthStore.getState().signIn('opk_test_12345678');
+  it('ends the session on signout, and reads everything again', async () => {
+    const generation = useAuthStore.getState().generation;
     const router = visit('/yes?signout');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
-    expect(useAuthStore.getState().token).toBeUndefined();
+    await vi.waitFor(() => {
+      expect(useAuthStore.getState().generation).toBe(generation + 1);
+    });
+    expect(db.signedIn).toBe(false);
     expect(router.state.location.searchStr).toBe('');
   });
 });
@@ -219,13 +280,16 @@ describe('a request', () => {
   });
 
   it('signs in from a link to one request, wipes the token and shows that request', async () => {
+    db.signedIn = false;
     const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main' }),
     ).toBeInTheDocument();
     expect(router.state.location.hash).toBe('');
     expect(router.state.location.href).not.toContain('opk_');
-    expect(useAuthStore.getState().token).toBe('opk_test_12345678');
+    await vi.waitFor(() => {
+      expect(db.usedLinks).toEqual(['opk_test_12345678']);
+    });
   });
 
   it('keeps the version the person read when the request changes, until they ask for the new one', async () => {
@@ -525,26 +589,27 @@ describe('a request', () => {
 });
 
 describe('safety of what the server and links bring', () => {
-  it('signs in from a link only after asking, when another key is in use', async () => {
+  it('signs in from a link only after asking, when someone is already signed in', async () => {
     const user = userEvent.setup();
-    useAuthStore.getState().signIn('opk_current_123456');
     const router = visit('/yes#signin=opk_other_123456');
     const notice = await screen.findByRole('alert');
-    expect(notice).toHaveTextContent('another key');
-    expect(useAuthStore.getState().token).toBe('opk_current_123456');
+    expect(notice).toHaveTextContent('Someone is already signed in on this browser');
+    expect(db.usedLinks).toEqual([]);
     expect(router.state.location.hash).toBe('');
-    await user.click(within(notice).getByRole('button', { name: 'Use the new key' }));
-    expect(useAuthStore.getState().token).toBe('opk_other_123456');
-    expect(screen.queryByText(/another key/)).toBeNull();
+    await user.click(within(notice).getByRole('button', { name: 'Sign in with the link' }));
+    await vi.waitFor(() => {
+      expect(db.usedLinks).toEqual(['opk_other_123456']);
+    });
+    expect(screen.queryByText(/already signed in/)).toBeNull();
   });
 
-  it('keeps the current key when asked to', async () => {
+  it('stays signed in as now when asked to, and never spends the link', async () => {
     const user = userEvent.setup();
-    useAuthStore.getState().signIn('opk_current_123456');
-    visit('/yes#signin=opk_other_123456');
-    await user.click(await screen.findByRole('button', { name: 'Keep the current one' }));
-    expect(useAuthStore.getState().token).toBe('opk_current_123456');
-    expect(screen.queryByText(/another key/)).toBeNull();
+    visit('/yes/apr-merge-412#signin=opk_other_123456');
+    await user.click(await screen.findByRole('button', { name: 'Stay signed in as now' }));
+    expect(screen.queryByText(/already signed in/)).toBeNull();
+    expect(useAuthStore.getState().link).toBeUndefined();
+    expect(db.usedLinks).toEqual([]);
   });
 
   it('says a sign-in link is not valid', async () => {

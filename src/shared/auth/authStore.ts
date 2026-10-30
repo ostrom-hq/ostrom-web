@@ -18,68 +18,49 @@ export function eraseLegacyTokens(storages: readonly SafeStorage[]): void {
 // On load, before anything reads the session: a token that sat in localStorage is gone, never reused.
 eraseLegacyTokens([safeLocalStorage, safeSessionStorage]);
 
-/** A bearer token as the server hands it out: an approver account (`opk_…`) or a session token. */
+/** An approver's link token as the server hands it out (`opk_…`), before it is exchanged for the cookie. */
 export const tokenSchema = z.string().regex(/^[A-Za-z0-9_.-]{8,512}$/);
 
-/** What opening a sign-in link did. */
-export type SignInOutcome = 'signed-in' | 'same' | 'invalid' | 'pending';
+/** What opening a sign-in link did: held for its exchange, or not a token at all. */
+export type SignInOutcome = 'held' | 'invalid';
 
 /**
- * The viewer's bearer token, in memory only: never in localStorage, sessionStorage or an address
- * (CONVENTIONS § 16.2). The lasting session is the server's `HttpOnly; Secure; SameSite=Lax` cookie, sent
- * with every API call (`credentials: 'include'`, shared/api/apiClient.ts): a reload relies on it alone.
+ * The session is the server's `HttpOnly` cookie (`__Host-ostrom_session`, audit S2-08), sent with every call
+ * (`credentials: 'include'`, shared/api/apiClient.ts): no script reads it and the console keeps no token of its own.
+ * What lives here is a sign-in link between the address bar, wiped at once, and its exchange for that cookie
+ * (`POST /auth/link`), plus a count of the times the account in the cookie may have changed.
  */
 export interface AuthState {
-  readonly token: string | undefined;
-  /**
-   * A link's token kept in memory while the person decides: opening someone else's link must not silently make
-   * them approve as that account.
-   */
-  readonly pending: string | undefined;
+  /** A link's token waiting for its exchange; in memory only, never in web storage or an address. */
+  readonly link: string | undefined;
   /** A sign-in link that was not a token: said once, until dismissed. */
   readonly notice: 'invalid' | undefined;
-  /** A sign-in link: kept at once when nobody is signed in, held for confirmation when someone else is. */
+  /** Goes up at each sign-in or sign-out: everything read as the previous account is dropped. */
+  readonly generation: number;
+  /** Holds a link's token that passes the schema; says so otherwise. */
   readonly offer: (token: string) => SignInOutcome;
-  readonly acceptPending: () => void;
   readonly dismiss: () => void;
-  /** Keeps a token that passes the schema, in memory; returns false and keeps nothing otherwise. */
-  readonly signIn: (token: string) => boolean;
-  readonly signOut: () => void;
+  /** The cookie now holds another account, or none: the cached reads are someone else's. */
+  readonly changed: () => void;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
-  token: undefined,
-  pending: undefined,
+  link: undefined,
   notice: undefined,
-  signIn: (token) => {
-    const parsed = tokenSchema.safeParse(token);
-    if (!parsed.success) return false;
-    set({ token: parsed.data, pending: undefined, notice: undefined });
-    return true;
-  },
-  signOut: () => {
-    set({ token: undefined, pending: undefined, notice: undefined });
-  },
+  generation: 0,
   offer: (token) => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) {
-      set({ notice: 'invalid', pending: undefined });
+      set({ notice: 'invalid', link: undefined });
       return 'invalid';
     }
-    const current = get().token;
-    if (current === parsed.data) return 'same';
-    if (current === undefined) {
-      get().signIn(parsed.data);
-      return 'signed-in';
-    }
-    set({ pending: parsed.data, notice: undefined });
-    return 'pending';
-  },
-  acceptPending: () => {
-    const { pending, signIn } = get();
-    if (pending !== undefined) signIn(pending);
+    set({ link: parsed.data, notice: undefined });
+    return 'held';
   },
   dismiss: () => {
-    set({ pending: undefined, notice: undefined });
+    set({ link: undefined, notice: undefined });
+  },
+  changed: () => {
+    set({ link: undefined, notice: undefined, generation: get().generation + 1 });
   },
 }));
