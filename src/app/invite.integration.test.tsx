@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { ApiError } from '@gen/api/types.gen';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { delay, http, HttpResponse } from 'msw';
+import { INVITE_TOKEN_KEY } from '@/features/onboarding';
+import { DEMO_INVITATION_TOKEN } from '@/mocks/fixtures/organization';
+import { useOrgStore } from '@/shared/org/orgStore';
+import { setupMockApp, visit } from '@/test/mockApp';
+
+const { server, db } = setupMockApp();
+
+afterEach(() => {
+  sessionStorage.clear();
+});
+
+function refuse(status: number, type: string, message: string): HttpResponse<ApiError> {
+  return HttpResponse.json({ error: { type, message } }, { status });
+}
+
+/** Opens the invitation link as the e-mail gives it. */
+function open(token: string): ReturnType<typeof visit> {
+  return visit(`/invite#token=${token}`);
+}
+
+describe('the invitation page', () => {
+  it('takes the secret out of the address, keeps it for this tab, and shows where it leads', async () => {
+    const router = open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Join Initech' })).toBeInTheDocument();
+    expect(router.state.location.hash).toBe('');
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBe(DEMO_INVITATION_TOKEN);
+    expect(screen.getByText('You are invited as Approver.')).toBeInTheDocument();
+    const facts = screen.getAllByRole('definition')[0]?.closest('dl');
+    if (facts === null || facts === undefined) throw new Error('no facts');
+    expect(facts).toHaveTextContent('OrganizationInitech initech');
+    expect(facts).toHaveTextContent('RoleApprover');
+    expect(facts).not.toHaveTextContent('For');
+    expect(facts).toHaveTextContent(/Expires\w+ \d+, \d{4}/);
+  });
+
+  it('joins the organization, acts in it and opens the console', async () => {
+    const user = userEvent.setup();
+    const router = open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    const initech = db.otherOrganizations.find((organization) => organization.name === 'Initech');
+    expect(initech).toBeDefined();
+    expect(useOrgStore.getState().current).toBe(initech?.id);
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBeNull();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Initech' })).toBeInTheDocument();
+  });
+
+  it('says when no invitation was opened in this tab', async () => {
+    visit('/invite');
+    expect(await screen.findByText('No invitation here')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to the console' })).toHaveAttribute('href', '/');
+  });
+
+  it('says when the invitation is used up, revoked or expired, and forgets it', async () => {
+    open('inv_gone');
+    expect(await screen.findByText('This invitation no longer works')).toBeInTheDocument();
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBeNull();
+  });
+
+  it('keeps the invitation when the network kept it from being read, and says why', async () => {
+    server.use(http.post('*/api/v1/invitations/preview', () => HttpResponse.error()));
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBe(DEMO_INVITATION_TOKEN);
+  });
+
+  it('shows the shape of the page while the invitation is read', async () => {
+    server.use(http.post('*/api/v1/invitations/preview', async () => delay('infinite')));
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('asks someone signed out to sign in, and comes back here after', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => refuse(401, 'unauthorized', 'sign in')));
+    open(DEMO_INVITATION_TOKEN);
+    const signIn = await screen.findByRole('link', { name: 'Sign in to join' });
+    expect(signIn).toHaveAttribute('href', '/signin?redirect=%2Finvite');
+    expect(screen.queryByRole('button', { name: 'Join Initech' })).toBeNull();
+  });
+
+  it('holds the button while the person is read, and while they join', async () => {
+    const user = userEvent.setup();
+    let me = 0;
+    server.use(
+      http.get('*/api/v1/auth/me', async () => {
+        me += 1;
+        if (me === 1) await delay(300);
+        return undefined;
+      }),
+      http.post('*/api/v1/invitations/accept', async () => delay('infinite')),
+    );
+    open(DEMO_INVITATION_TOKEN);
+    const join = await screen.findByRole('button', { name: 'Join Initech' });
+    expect(join).toBeDisabled();
+    await vi.waitFor(() => {
+      expect(join).toBeEnabled();
+    });
+    await user.click(join);
+    expect(screen.getByRole('button', { name: 'Joining…' })).toBeDisabled();
+  });
+
+  it('says when the person is already in, and leads to the console', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/invitations/accept', () => refuse(409, 'already_member', 'already a member')),
+    );
+    open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
+    expect(await screen.findByText('You are already a member of Initech.')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('link', { name: 'Open the console' })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    expect(screen.queryByRole('button', { name: 'Join Initech' })).toBeNull();
+  });
+
+  it('says an e-mail invitation is for another address, with its address and a role it does not know', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/invitations/preview', () =>
+        HttpResponse.json({
+          orgName: 'Acme',
+          orgSlug: 'acme',
+          role: 'auditor',
+          email: 'jo@acme.dev',
+          expiresAt: '2027-10-28T09:00:00Z',
+        }),
+      ),
+    );
+    open('inv_jo');
+    expect(await screen.findByText('You are invited as auditor.')).toBeInTheDocument();
+    expect(screen.getByText('jo@acme.dev')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Join Acme' }));
+    expect(
+      await screen.findByText(
+        'This invitation was sent to another e-mail address. Sign in with the account that holds it.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('says why joining failed, and lets the person try again', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/invitations/accept', () => refuse(500, 'internal', 'joining is down')));
+    open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Join Initech' }));
+    expect(await screen.findByText('joining is down')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Join Initech' })).toBeEnabled();
+  });
+});

@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 
 test('a developer reads how a change goes to production and who approves it', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Workflows' }).click();
+  await page.getByRole('link', { name: 'Workflows', exact: true }).click();
   await page.getByRole('link', { name: /Backend changes/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Backend changes');
   const steps = page.getByRole('region', { name: 'Steps' });

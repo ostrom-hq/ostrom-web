@@ -24,6 +24,7 @@ import {
   zOrgRename,
 } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
 /** The demo person, as `/orgs/{org}/members` lists them. */
@@ -53,6 +54,8 @@ export interface OrgsState {
   elsewhere: Organization[];
   /** The next invitation number; numbers are never reused. */
   nextInvitation: number;
+  /** Whether the GitHub App is installed, by organization id: a new organization has it not. */
+  githubInstalled: Record<string, boolean>;
 }
 
 /** The person's organizations: the demo's own first; none for a fresh account. */
@@ -72,20 +75,6 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-/** The server's `slugify`: lowercase letters and digits, single hyphens, 40 characters at most. */
-export function slugify(name: string): string {
-  return name
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 40)
-    .replace(/-+$/, '');
-}
-
-const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,38}[a-z0-9])?$/;
-
 /** The person as the owner of an organization they made. */
 function owner(at: string): OrgMember {
   return {
@@ -99,8 +88,8 @@ function owner(at: string): OrgMember {
 }
 
 export function createOrgsHandlers(state: () => OrgsState, now: () => Date): HttpHandler[] {
-  const slugOf = (organization: Organization): string =>
-    state().slugs[organization.id] ?? slugify(organization.name);
+  const shortNameOf = (organization: Organization): string =>
+    state().slugs[organization.id] ?? slugOf(organization.name);
   const membersOf = (organization: Organization): OrgMember[] => {
     const s = state();
     const known = s.orgMembers[organization.id];
@@ -114,14 +103,16 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     orgRoleOf(membersOf(organization).find((member) => member.login === DEMO_LOGIN)?.role);
   const view = (organization: Organization): OrgView => ({
     id: organization.id,
-    slug: slugOf(organization),
+    slug: shortNameOf(organization),
     name: organization.name,
     role: roleIn(organization) ?? 'member',
     createdAt: organization.createdAt ?? now().toISOString(),
   });
   /** `{org}` is an id or a short name; an organization the person is not in is not found. */
   const find = (key: string): Organization | undefined =>
-    membershipsOf(state()).find((organization) => organization.id === key || slugOf(organization) === key);
+    membershipsOf(state()).find(
+      (organization) => organization.id === key || shortNameOf(organization) === key,
+    );
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'organization not found');
   const liveInvitation = (token: string): MockInvitation | undefined =>
     state().invitations.find(
@@ -169,14 +160,29 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     handleCreateOrg(async ({ request }) => {
       const body = zOrgCreate.safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
-      if (name === '' || name.length > 100) return refusal(400, 'invalid_request', 'a name is needed');
-      const slug = body.success && body.data.slug !== undefined ? body.data.slug : slugify(name);
-      if (!SLUG.test(slug)) return refusal(400, 'invalid_request', 'this short name cannot be used');
+      if (!body.success || nameProblem(name) !== undefined)
+        return refusal(
+          400,
+          'invalid_request',
+          'The name must be 1 to 100 characters, without control characters.',
+        );
       const s = state();
-      const taken = [...membershipsOf(s), ...s.elsewhere].some(
-        (organization) => slugOf(organization) === slug,
-      );
-      if (taken || slug === 'acme-corp') return refusal(409, 'slug_taken', 'this short name is taken');
+      /** Short names in use, those of organizations the person is not in included; `acme-corp` stands for a stranger's. */
+      const used = new Set(['acme-corp', ...[...membershipsOf(s), ...s.elsewhere].map(shortNameOf)]);
+      const chosen = body.data.slug;
+      if (chosen !== undefined) {
+        if (slugProblem(chosen) !== undefined)
+          return refusal(
+            400,
+            'invalid_request',
+            'The short name must be 2 to 39 lower case letters, digits and single dashes.',
+          );
+        if (used.has(chosen)) return refusal(409, 'slug_taken', 'This short name is taken.');
+      }
+      // Without a choice, the server takes the derived short name, or the first of `name-2`, `name-3`… that is free.
+      const base = slugOf(name);
+      let slug = chosen ?? base;
+      for (let n = 2; used.has(slug); n += 1) slug = `${base}-${String(n)}`;
       const at = now().toISOString();
       const created: Organization = {
         id: `org-${slug}`,
@@ -187,6 +193,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       };
       s.slugs[created.id] = slug;
       s.orgMembers[created.id] = [owner(at)];
+      s.githubInstalled[created.id] = false;
       if (s.noOrganization) {
         s.organization = created;
         s.noOrganization = false;
@@ -321,7 +328,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
         return refusal(404, 'not_found', 'This invitation no longer works.');
       return HttpResponse.json({
         orgName: organization.name,
-        orgSlug: slugOf(organization),
+        orgSlug: shortNameOf(organization),
         role: invitation.role,
         email: invitation.email,
         expiresAt: invitation.expiresAt,
