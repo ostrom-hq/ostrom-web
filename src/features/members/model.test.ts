@@ -3,7 +3,9 @@ import type { Member } from '@gen/api/types.gen';
 import { displayName, parseInvites, sortMembers } from './model';
 
 const member = (login: string, role: Member['role'], name?: string): Member =>
-  name === undefined ? { login, role, avatarUrl: '' } : { login, role, avatarUrl: '', name };
+  name === undefined
+    ? { id: `id-${login}`, login, role, avatarUrl: '' }
+    : { id: `id-${login}`, login, role, avatarUrl: '', name };
 
 describe('displayName and sortMembers', () => {
   it('names a member, or falls back to the login', () => {
@@ -24,11 +26,11 @@ describe('displayName and sortMembers', () => {
 });
 
 describe('parseInvites', () => {
-  it('splits on commas, spaces and lines, drops duplicates and sets aside what is not an email', () => {
-    expect(parseInvites('Ana@acme.dev, bo@acme.dev\nana@acme.dev  nope;')).toEqual({
-      emails: ['ana@acme.dev', 'bo@acme.dev'],
-      invalid: ['nope'],
+  it('splits on commas, spaces and lines, drops duplicates and sets aside what is not a GitHub login', () => {
+    expect(parseInvites('@Ana, bo-dev\nana  ana_acme; no.pe; -x; @')).toEqual({
+      logins: ['ana', 'bo-dev', 'ana_acme'],
+      invalid: ['no.pe', '-x'],
     });
-    expect(parseInvites('  ')).toEqual({ emails: [], invalid: [] });
+    expect(parseInvites('  ')).toEqual({ logins: [], invalid: [] });
   });
 });

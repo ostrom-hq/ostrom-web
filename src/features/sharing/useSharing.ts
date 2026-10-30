@@ -47,8 +47,10 @@ export function useArtifacts(): ArtifactsViewModel {
 export interface ArtifactDetailViewModel {
   readonly versions: readonly ArtifactVersion[] | undefined;
   readonly readers: readonly string[] | undefined;
-  /** The organization's members, to pick a new reader from: asked for its owner only, never in the way. */
+  /** The organization's members, to name the readers (ids) and pick a new one: never in the way when missing. */
   readonly members: readonly Member[] | undefined;
+  /** The members came back or failed: the readers are named only then, never shown as ids in between. */
+  readonly membersSettled: boolean;
   /** Why the members could not be read: the owner sees it where the form to add a reader goes. */
   readonly membersFailure: Error | undefined;
   readonly failure: Error | undefined;
@@ -59,10 +61,11 @@ export function newestFirst(versions: readonly ArtifactVersion[]): ArtifactVersi
   return [...versions].sort((a, b) => b.number - a.number);
 }
 
-export function useArtifactDetail(id: string, owner: boolean): ArtifactDetailViewModel {
+export function useArtifactDetail(id: string): ArtifactDetailViewModel {
   const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
   const readers = useQuery(ready(listArtifactMembersOptions({ path: { id } })));
-  const members = useQuery({ ...ready(listMembersOptions(), { staleTime: 60_000 }), enabled: owner });
+  // Only names: a refusal is not asked again, the detail opens without them.
+  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
   const sorted = useMemo(
     () => (versions.data === undefined ? undefined : newestFirst(versions.data.items)),
     [versions.data],
@@ -71,15 +74,16 @@ export function useArtifactDetail(id: string, owner: boolean): ArtifactDetailVie
     versions: sorted,
     readers: readers.data?.members,
     members: members.data?.items,
+    membersSettled: !members.isPending,
     membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),
   };
 }
 
 export interface ArtifactChangeViewModel {
-  /** `onDone` runs once the server took it: the picker clears then, not before. */
-  readonly share: (id: string, login: string, onDone: () => void) => void;
-  readonly unshare: (id: string, login: string) => void;
+  /** By member id (`Member.id`). `onDone` runs once the server took it: the picker clears then, not before. */
+  readonly share: (id: string, memberId: string, onDone: () => void) => void;
+  readonly unshare: (id: string, memberId: string) => void;
   readonly remove: (id: string) => void;
   /** The artifact being changed. */
   readonly pending: string | undefined;
@@ -120,20 +124,20 @@ export function useArtifactChange(): ArtifactChangeViewModel {
   const { mutate: unshareMutate, reset: resetUnshare } = unshared;
   const { mutate: dropMutate, reset: resetDrop } = dropped;
   const share = useCallback(
-    (id: string, login: string, onDone: () => void) => {
+    (id: string, memberId: string, onDone: () => void) => {
       resetUnshare();
       resetDrop();
       // Two cards may share at once through this one observer: each call keeps its own callback (a per-call
       // onSuccess would only reach the latest). A refusal is shown through `failure`, not thrown here.
-      shareAsync({ path: { id, memberId: login } }).then(onDone, () => undefined);
+      shareAsync({ path: { id, memberId } }).then(onDone, () => undefined);
     },
     [shareAsync, resetUnshare, resetDrop],
   );
   const unshare = useCallback(
-    (id: string, login: string) => {
+    (id: string, memberId: string) => {
       resetShare();
       resetDrop();
-      unshareMutate({ path: { id, memberId: login } });
+      unshareMutate({ path: { id, memberId } });
     },
     [unshareMutate, resetShare, resetDrop],
   );

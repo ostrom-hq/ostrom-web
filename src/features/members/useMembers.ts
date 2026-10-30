@@ -13,7 +13,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
-import { type AssignableRole, sortMembers } from './model';
+import { type AssignableRole, type InvitableRole, sortMembers } from './model';
 
 export interface MembersViewModel {
   readonly organization: Organization | undefined;
@@ -77,9 +77,9 @@ export function useRoleChange(): RoleChangeViewModel {
 
 export interface InviteViewModel {
   /** Sends the invitations; `onSent` runs once the server took them (the form clears then, not before). */
-  readonly invite: (emails: readonly string[], role: AssignableRole, onSent: () => void) => void;
+  readonly invite: (logins: readonly string[], role: InvitableRole, onSent: () => void) => void;
   readonly sending: boolean;
-  /** The addresses the server sent an invitation to; those already in the organization are left out. */
+  /** The logins the server invited; those already in the organization are left out. */
   readonly invited: readonly string[] | undefined;
   readonly failure: Error | undefined;
 }
@@ -89,8 +89,8 @@ export function useInvite(): InviteViewModel {
   const mutation = useMutation({ ...inviteMembersMutation(), onSuccess: invalidate });
   const { mutate } = mutation;
   const invite = useCallback(
-    (emails: readonly string[], role: AssignableRole, onSent: () => void) => {
-      mutate({ body: { invites: emails.map((email) => ({ email, role })) } }, { onSuccess: onSent });
+    (logins: readonly string[], role: InvitableRole, onSent: () => void) => {
+      mutate({ body: { invites: logins.map((login) => ({ login, role })) } }, { onSuccess: onSent });
     },
     [mutate],
   );

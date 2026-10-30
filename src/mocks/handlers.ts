@@ -92,6 +92,7 @@ import {
   zBudget,
   zCreateCloudSessionBody,
   zEnrollSharedAccountBody,
+  zInviteMembersBody,
   zBulkUpdateRulesBody,
   zMcpServer,
   zMemberRole,
@@ -229,7 +230,6 @@ const CLOUD_AGENTS = new Set(['claude-code', 'codex']);
 const LIVE = new Set(['queued', 'starting', 'running']);
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
-const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
 function canManage(db: MockDb): boolean {
@@ -453,15 +453,37 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleInviteMembers(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins invite people');
-      const body = zInvites.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'each invite needs an email');
-      const known = new Set(db.members.map((member) => member.email ?? member.login));
-      const invited = body.data.invites.map((invite) => invite.email).filter((email) => !known.has(email));
+      const body = zInviteMembersBody.safeParse(await readJson(request));
+      if (!body.success || body.data.invites.length === 0)
+        return refusal(400, 'invalid_request', 'each invite needs a GitHub login');
+      // The server's own checks: an invitation never makes an owner, and `invited` is a state, not a role.
+      if (body.data.invites.some((invite) => invite.role === 'owner' || invite.role === 'invited'))
+        return refusal(400, 'invalid_request', 'an invitation is for admin, approver or member');
+      if (
+        body.data.invites.some(
+          (invite) => invite.team !== undefined && !db.teams.some((team) => team.slug === invite.team),
+        )
+      )
+        return refusal(400, 'invalid_request', 'no such team');
+      // One invitation per login, whatever its case, and none for someone already in the organization.
+      const known = new Set(db.members.map((member) => member.login.toLowerCase()));
+      const fresh = body.data.invites.filter((invite) => {
+        const login = invite.login.toLowerCase();
+        if (known.has(login)) return false;
+        known.add(login);
+        return true;
+      });
       db.members = [
         ...db.members,
-        ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' })),
+        ...fresh.map((invite): Member => ({
+          id: crypto.randomUUID(),
+          login: invite.login,
+          avatarUrl: '',
+          role: 'invited',
+          ...(invite.team === undefined ? {} : { teams: [invite.team] }),
+        })),
       ];
-      return HttpResponse.json({ invited });
+      return HttpResponse.json({ invited: fresh.map((invite) => invite.login) });
     }),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
@@ -760,7 +782,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
       if (artifact.owner !== me.dev.login)
         return refusal(403, 'forbidden', 'only its owner shares an artifact');
-      if (!db.members.some((member) => member.login === params.memberId))
+      if (!db.members.some((member) => member.id === params.memberId))
         return refusal(404, 'not_found', `${params.memberId} is not a member of the organization`);
       const readers = db.artifactMembers[params.id] ?? [];
       db.artifactMembers[params.id] = readers.includes(params.memberId)
@@ -774,7 +796,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (artifact.owner !== me.dev.login)
         return refusal(403, 'forbidden', 'only its owner shares an artifact');
       db.artifactMembers[params.id] = (db.artifactMembers[params.id] ?? []).filter(
-        (login) => login !== params.memberId,
+        (id) => id !== params.memberId,
       );
       return new HttpResponse(null, { status: 204 });
     }),

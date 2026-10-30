@@ -41,7 +41,7 @@ export function MembersScreen(): ReactElement {
             </h2>
             <ul className="o-card o-rows">
               {members.map((member) => (
-                <li key={member.login}>
+                <li key={member.id}>
                   <MemberRow
                     member={member}
                     isViewer={member.login === view.viewer}

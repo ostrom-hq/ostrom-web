@@ -6,7 +6,7 @@ test('an owner shares an artifact with a member, then lends a subscription', asy
   await page.getByRole('link', { name: 'Artifacts' }).click();
   const study = page.locator('article').filter({ hasText: 'Billing API: latency study' });
   await study.getByRole('button', { name: 'Versions and readers' }).click();
-  await study.getByRole('combobox', { name: 'Add a reader' }).selectOption('samir');
+  await study.getByRole('combobox', { name: 'Add a reader' }).selectOption({ label: 'Samir Haddad (samir)' });
   await study.getByRole('button', { name: 'Share' }).click();
   await expect(study.getByRole('button', { name: 'Stop sharing with samir' })).toBeVisible();
 
