@@ -148,7 +148,7 @@ describe('the queue', () => {
   it('says the server does not answer', async () => {
     server.use(http.get('*/api/v1/approvals', () => HttpResponse.error()));
     visit('/yes');
-    expect(await screen.findByText(/Ostrom does not answer/)).toBeInTheDocument();
+    expect(await screen.findByText(/Ostrom does not answer/, {}, SLOW)).toBeInTheDocument();
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });
 
