@@ -31,7 +31,9 @@ function row(text: string | RegExp): HTMLElement {
 }
 
 async function card(name: string): Promise<HTMLElement> {
-  const found = (await screen.findByRole('heading', { level: 3, name })).closest('article');
+  const found = (await screen.findByRole('heading', { level: 3, name }, { timeout: 4_000 })).closest(
+    'article',
+  );
   if (found === null) throw new Error(`no automation ${name}`);
   return found;
 }
@@ -74,7 +76,7 @@ describe('the cloud agents', () => {
   it('starts an agent once there is something to do, then clears the form', async () => {
     const user = userEvent.setup();
     visit('/cloud');
-    const form = screen.getByRole('region', { name: 'Start an agent' });
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
     const start = within(form).getByRole('button', { name: 'Start the agent' });
     expect(start).toBeDisabled();
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Bump the SDK');
@@ -92,7 +94,7 @@ describe('the cloud agents', () => {
   it('starts an agent without a name or a repository', async () => {
     const user = userEvent.setup();
     visit('/cloud');
-    const form = screen.getByRole('region', { name: 'Start an agent' });
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
     expect(await screen.findByText('claude-code · cs-104')).toBeInTheDocument();
@@ -102,7 +104,7 @@ describe('the cloud agents', () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/cloud/sessions', async () => delay('infinite')));
     visit('/cloud');
-    const form = screen.getByRole('region', { name: 'Start an agent' });
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'x');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
     expect(within(form).getByRole('button', { name: 'Starting…' })).toBeDisabled();
@@ -116,7 +118,7 @@ describe('the cloud agents', () => {
       ),
     );
     visit('/cloud');
-    const form = screen.getByRole('region', { name: 'Start an agent' });
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'x');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('no runner online');

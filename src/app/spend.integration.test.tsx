@@ -75,7 +75,7 @@ describe('the spend', () => {
   it('keeps the month on screen while the week loads', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('*/api/v1/spending', ({ request }) =>
+      http.get('*/api/v1/spending', async ({ request }) =>
         new URL(request.url).searchParams.get('period') === 'week'
           ? never()
           : HttpResponse.json(spendingFor('month')),
