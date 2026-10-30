@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // The vendored contract, from the project root (Vite resolves a path that starts with a slash there).
 import contract from '/contract/openapi.yaml?raw';
-import { actsInOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
+import { actsInOrganization, namesOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
 
 /** Each path of the vendored contract, and whether it takes `Ostrom-Org`. */
 function contractPaths(): { readonly path: string; readonly takesOrg: boolean }[] {
@@ -39,5 +39,18 @@ describe('withOrg', () => {
       ({ path, takesOrg }) => actsInOrganization(path.replaceAll(/\{[^}]+\}/g, 'x')) !== takesOrg,
     );
     expect(disagreements).toEqual([]);
+  });
+});
+
+describe('namesOrganization', () => {
+  it('sees an organization named by the header or in the path, and none elsewhere', () => {
+    const named = new Request('http://ostrom.test/api/v1/artifacts', {
+      headers: { [ORG_HEADER]: 'org-acme' },
+    });
+    expect(namesOrganization(named)).toBe(true);
+    expect(namesOrganization(new Request('http://ostrom.test/api/v1/orgs/acme'))).toBe(true);
+    expect(namesOrganization(new Request('http://ostrom.test/api/v1/orgs/acme/members'))).toBe(true);
+    expect(namesOrganization(new Request('http://ostrom.test/api/v1/orgs'))).toBe(false);
+    expect(namesOrganization(new Request('http://ostrom.test/api/v1/artifacts'))).toBe(false);
   });
 });

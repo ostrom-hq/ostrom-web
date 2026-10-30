@@ -15,11 +15,19 @@ export interface InviteLinkProps {
   readonly roles: readonly OrgRole[];
 }
 
+/** The uses a typed value stands for: a whole number from 1 to 100, 1 when nothing readable is typed. */
+function usesOf(typed: string): number {
+  const value = Number.parseInt(typed, 10);
+  return Number.isNaN(value) ? 1 : Math.min(LINK_MAX_USES, Math.max(1, value));
+}
+
 /** A link anyone signed in can use a set number of times, shown once: it carries the secret. */
 export function InviteLink({ link, roles }: InviteLinkProps): ReactElement {
   const { t } = useTranslation();
   const [role, setRole] = useState<OrgRole>('member');
-  const [uses, setUses] = useState(LINK_DEFAULT_USES);
+  // What is typed, kept as typed (an empty field included) and read as 1 to 100 uses on blur and on submit.
+  const [typed, setTyped] = useState(String(LINK_DEFAULT_USES));
+  const uses = usesOf(typed);
   const usesId = useId();
   return (
     <Section label={t('members.link.title')}>
@@ -28,6 +36,7 @@ export function InviteLink({ link, roles }: InviteLinkProps): ReactElement {
         className="o-inline"
         onSubmit={(event) => {
           event.preventDefault();
+          setTyped(String(uses));
           link.create(role, uses);
         }}
       >
@@ -42,10 +51,12 @@ export function InviteLink({ link, roles }: InviteLinkProps): ReactElement {
           inputMode="numeric"
           min={1}
           max={LINK_MAX_USES}
-          value={uses}
+          value={typed}
           onChange={(event) => {
-            const value = Number.parseInt(event.target.value, 10);
-            setUses(Number.isNaN(value) ? 1 : Math.min(LINK_MAX_USES, Math.max(1, value)));
+            setTyped(event.target.value);
+          }}
+          onBlur={() => {
+            setTyped(String(uses));
           }}
         />
         <Button type="submit" disabled={link.creating}>

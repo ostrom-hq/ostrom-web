@@ -32,6 +32,9 @@ function MembersPage({
   const revoke = useRevokeInvitation(org.id);
   const roles = givableRoles(role);
   const manager = managesMembers(role);
+  const invitations = view.invitations ?? [];
+  // The invitations that did not load, or the one that was not revoked: said in their section.
+  const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
   return (
     <Screen
       title={org.name}
@@ -87,29 +90,31 @@ function MembersPage({
           </section>
         )}
       </LoadState>
-      {view.invitations === undefined || view.invitations.length === 0 ? null : (
+      {invitations.length === 0 && invitationsTrouble === undefined ? null : (
         <section aria-labelledby="mb-invitations" className="o-stack">
           <h2 id="mb-invitations" className="o-label">
             {t('members.invitations.title')}
           </h2>
-          {revoke.failure === undefined ? null : (
+          {invitationsTrouble === undefined ? null : (
             <Banner tone="danger" tag={t('members.list.errorTag')} live>
-              {revoke.failure.message}
+              {invitationsTrouble.message}
             </Banner>
           )}
-          <ul className="o-card o-rows">
-            {view.invitations.map((invitation) => (
-              <li key={invitation.id}>
-                <InvitationRow
-                  invitation={invitation}
-                  revoking={revoke.revoking === invitation.id}
-                  onRevoke={() => {
-                    revoke.revoke(invitation.id);
-                  }}
-                />
-              </li>
-            ))}
-          </ul>
+          {invitations.length === 0 ? null : (
+            <ul className="o-card o-rows">
+              {invitations.map((invitation) => (
+                <li key={invitation.id}>
+                  <InvitationRow
+                    invitation={invitation}
+                    revoking={revoke.revoking === invitation.id}
+                    onRevoke={() => {
+                      revoke.revoke(invitation.id);
+                    }}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       )}
     </Screen>

@@ -385,6 +385,7 @@ textarea.o-input {
 .o-copy__value {
   flex: 1 1 18rem;
   min-width: 0;
+  color: inherit;
   overflow-x: auto;
   white-space: nowrap;
 }

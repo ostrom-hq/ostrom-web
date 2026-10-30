@@ -24,7 +24,10 @@ export interface MembersViewModel {
   readonly members: readonly OrgMember[] | undefined;
   /** The live invitations, read by owners and admins only (the server refuses everyone else). */
   readonly invitations: readonly Invitation[] | undefined;
+  /** Why the people did not load. */
   readonly failure: Error | undefined;
+  /** Why the invitations did not load: said in their own section, the people still show. */
+  readonly invitationsFailure: Error | undefined;
   /** The login of the person looking: their own role is never changed from here. */
   readonly viewer: string | undefined;
 }
@@ -47,7 +50,8 @@ export function useMembers(org: string, role: OrgRole | undefined): MembersViewM
   return {
     members: sorted,
     invitations: pending,
-    failure: failureOf(members.error ?? invitations.error),
+    failure: failureOf(members.error),
+    invitationsFailure: failureOf(invitations.error),
     viewer: meOf(me.data)?.dev.login,
   };
 }

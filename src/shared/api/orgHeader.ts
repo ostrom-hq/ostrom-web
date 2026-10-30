@@ -37,3 +37,14 @@ export function withOrg(request: Request, orgId: string | undefined): Request {
   }
   return request;
 }
+
+/** A route that names its organization in the path: `/api/v1/orgs/{org}` and everything under it. */
+const ORG_IN_PATH = /^\/api\/v1\/orgs\/[^/]+(?:\/|$)/;
+
+/**
+ * Whether a call named an organization, by `Ostrom-Org` or in its path: a 404 then may mean the person left it, and
+ * their list is read again.
+ */
+export function namesOrganization(request: Request): boolean {
+  return request.headers.has(ORG_HEADER) || ORG_IN_PATH.test(new URL(request.url).pathname);
+}

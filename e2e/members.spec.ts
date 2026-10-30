@@ -17,7 +17,7 @@ test('an admin invites by e-mail, makes an invitation link and gives someone the
 
   const link = page.getByRole('region', { name: 'Invitation link' });
   await link.getByRole('button', { name: 'Create a link' }).click();
-  await expect(link.getByLabel('Invitation link', { exact: true })).toContainText('/invite#token=');
+  await expect(link.getByLabel('Invitation link', { exact: true })).toHaveValue(/\/invite#token=/);
 
   const role = page.getByRole('combobox', { name: 'Role of theo' });
   await role.selectOption('approver');

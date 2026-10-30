@@ -219,22 +219,36 @@ describe('the members screen', () => {
     const link = await screen.findByRole('region', { name: 'Invitation link' });
     const uses = within(link).getByRole('spinbutton', { name: 'Uses' });
     expect(uses).toHaveValue(10);
-    fireEvent.change(uses, { target: { value: '500' } });
+    // Cleared to type another number, the field stays empty until it is left.
+    await user.clear(uses);
+    expect(uses).toHaveValue(null);
+    await user.type(uses, '500');
+    await user.tab();
     expect(uses).toHaveValue(100);
-    fireEvent.change(uses, { target: { value: '' } });
+    await user.clear(uses);
+    await user.tab();
     expect(uses).toHaveValue(1);
-    fireEvent.change(uses, { target: { value: '3' } });
+    await user.clear(uses);
+    await user.type(uses, '3');
     await user.selectOptions(within(link).getByRole('combobox', { name: 'Joins as' }), 'approver');
     await user.click(within(link).getByRole('button', { name: 'Create a link' }));
     expect(
       await within(link).findByText('This link lets 3 people join. It is shown once: copy it now.'),
     ).toBeInTheDocument();
-    const url = within(link).getByLabelText('Invitation link');
-    expect(url.textContent).toMatch(/^http:\/\/ostrom\.test\/invite#token=inv_\d+$/);
+    const url = within(link).getByRole('textbox', { name: 'Invitation link' });
+    expect(url).toHaveDisplayValue(/^http:\/\/ostrom\.test\/invite#token=inv_\d+$/);
     await user.click(within(link).getByRole('button', { name: 'Copy Invitation link' }));
     expect(await within(link).findByText('Copied')).toBeInTheDocument();
-    expect(await navigator.clipboard.readText()).toBe(url.textContent);
+    expect(url).toHaveValue(await navigator.clipboard.readText());
     expect(rowNamed('Invitation link · 0 of 3 used')).toHaveTextContent('Approver');
+    // Focused, the link is selected whole, ready to copy by hand.
+    await user.click(url);
+    expect(url).toHaveProperty('selectionStart', 0);
+    // A second link was never copied: nothing says it was.
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    await vi.waitFor(() => {
+      expect(within(link).queryByText('Copied')).toBeNull();
+    });
   });
 
   it('says how many can join when the server leaves the uses open, and when the copy failed', async () => {
@@ -399,6 +413,21 @@ describe('the members screen', () => {
     );
     visit('/members');
     expect(await screen.findByText('members are down')).toBeInTheDocument();
+  });
+
+  it('says the invitations did not load in their own section, and still lists the people', async () => {
+    server.use(
+      http.get('*/api/v1/orgs/:org/invitations', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'invitations are down' } }, { status: 500 }),
+      ),
+    );
+    visit('/members');
+    const waiting = await screen.findByRole('heading', { level: 2, name: 'Waiting invitations' });
+    expect(await within(waiting.parentElement ?? document.body).findByRole('alert')).toHaveTextContent(
+      'invitations are down',
+    );
+    expect(rowsOf(await people())).toHaveLength(5);
+    expect(within(waiting.parentElement ?? document.body).queryByRole('list')).toBeNull();
   });
 
   it('says why the organization did not load', async () => {
