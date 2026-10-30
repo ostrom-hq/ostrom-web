@@ -3,18 +3,35 @@ import {
   handleAnswerApproval,
   handleGetApproval,
   handleGetMe,
+  handleGetOrganization,
   handleGetReceipt,
   handleGetReceiptBundle,
   handleGetSession,
+  handleInviteMembers,
   handleListApprovals,
+  handleListMembers,
   handleListReceipts,
   handleListSessions,
+  handleListTeams,
+  handleUpdateMember,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
-import type { ApiError, Approval, ApprovalAnswer, PublicKey, Receipt, Session } from '@gen/api/types.gen';
-import { zAnswerApprovalRequest } from '@gen/api/zod.gen';
+import type {
+  ApiError,
+  Approval,
+  ApprovalAnswer,
+  Member,
+  Organization,
+  PublicKey,
+  Receipt,
+  Session,
+  Team,
+} from '@gen/api/types.gen';
+import { zAnswerApprovalRequest, zMemberRole } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
+import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
+import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 
 export interface MockDb {
@@ -24,6 +41,9 @@ export interface MockDb {
   sessions: Session[];
   /** Newest first, as the server lists them; an answer adds its receipt at the top. */
   receipts: Receipt[];
+  organization: Organization;
+  members: Member[];
+  teams: Team[];
 }
 
 export function createMockDb(): MockDb {
@@ -32,7 +52,19 @@ export function createMockDb(): MockDb {
     approvers: initialApprovers(),
     sessions: initialSessions(),
     receipts: initialReceipts(),
+    organization: initialOrganization(),
+    members: initialMembers(),
+    teams: initialTeams(),
   };
+}
+
+const zUpdateMember = z.object({ role: zMemberRole.exclude(['invited']) });
+const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
+
+/** Owners and admins manage the members, as the server's `orgs:write` scope does. */
+function canManage(db: MockDb): boolean {
+  const role = db.members.find((member) => member.login === me.dev.login)?.role;
+  return role === 'owner' || role === 'admin';
 }
 
 /** The mock's stand-in for the server's check: a receipt whose signature names no key does not verify. */
@@ -151,6 +183,29 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const receipt = receiptOf(next, at);
       db.receipts = [receipt, ...db.receipts];
       return HttpResponse.json({ approval: next, receipt });
+    }),
+    handleGetOrganization(() => HttpResponse.json(db.organization)),
+    handleListMembers(() => HttpResponse.json({ items: db.members })),
+    handleListTeams(() => HttpResponse.json({ items: db.teams })),
+    handleUpdateMember(async ({ params, request }) => {
+      const member = db.members.find((item) => item.login === params.login);
+      if (member === undefined) return refusal(404, 'not_found', 'member not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change roles');
+      const body = zUpdateMember.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'role must be owner, admin, approver or member');
+      if (member.login === me.dev.login) return refusal(409, 'own_role', 'you cannot change your own role');
+      const next: Member = { ...member, role: body.data.role };
+      db.members = db.members.map((item) => (item.login === next.login ? next : item));
+      return HttpResponse.json(next);
+    }),
+    handleInviteMembers(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins invite people');
+      const body = zInvites.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'each invite needs an email');
+      const known = new Set(db.members.map((member) => member.email ?? member.login));
+      const invited = body.data.invites.map((invite) => invite.email).filter((email) => !known.has(email));
+      db.members = [...db.members, ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' }))];
+      return HttpResponse.json({ invited });
     }),
     handleListSessions(({ request }) => {
       const open = new URL(request.url).searchParams.get('open');

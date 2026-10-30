@@ -335,3 +335,41 @@ a.o-row:hover {
   flex-direction: column;
   gap: var(--space-3);
 }
+
+/* Fields: 16 px text so a phone does not zoom in, 44 px targets. */
+.o-input {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-16);
+}
+textarea.o-input {
+  resize: vertical;
+}
+.o-select {
+  width: auto;
+  min-width: 9rem;
+}
+.o-field-label {
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+.o-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.o-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

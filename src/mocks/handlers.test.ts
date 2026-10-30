@@ -3,12 +3,17 @@ import {
   answerApproval,
   getApproval,
   getMe,
+  getOrganization,
   getReceipt,
   getReceiptBundle,
   getSession,
+  inviteMembers,
   listApprovals,
+  listMembers,
   listReceipts,
   listSessions,
+  listTeams,
+  updateMember,
   verifyReceipt,
 } from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
@@ -266,5 +271,68 @@ describe('mock receipts', () => {
   it.each(calls)('answers 404 to %s an unknown receipt', async (_name, call) => {
     const error = await failureOf(async () => call('nope'));
     expect(isApiFailure(error) && error.message).toBe('receipt not found');
+  });
+});
+
+describe('mock organization', () => {
+  it('serves the organization, its members and its teams', async () => {
+    const org = await getOrganization({ throwOnError: true });
+    const members = await listMembers({ throwOnError: true });
+    const teams = await listTeams({ throwOnError: true });
+    expect(org.data.name).toBe('Acme');
+    expect(members.data.items.map((member) => member.login)).toContain('samir');
+    expect(teams.data.items.map((team) => team.slug)).toEqual(['billing', 'release']);
+  });
+
+  it('changes the role of a member, and refuses an unknown one, a bad role and the caller’s own', async () => {
+    const { data } = await updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true });
+    expect(data.role).toBe('approver');
+    const missing = await failureOf(async () =>
+      updateMember({ path: { login: 'nope' }, body: { role: 'member' }, throwOnError: true }),
+    );
+    const invited = await failureOf(async () =>
+      updateMember({ path: { login: 'theo' }, body: { role: 'invited' }, throwOnError: true }),
+    );
+    const own = await failureOf(async () =>
+      updateMember({ path: { login: 'maya' }, body: { role: 'member' }, throwOnError: true }),
+    );
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+    expect(isApiFailure(invited) && invited.status).toBe(400);
+    expect(isApiFailure(own) && own.code).toBe('own_role');
+  });
+
+  it('invites new emails only, and refuses an invite without one', async () => {
+    const { data } = await inviteMembers({
+      body: { invites: [{ email: 'ana@acme.dev', role: 'member' }, { email: 'theo@acme.dev' }] },
+      throwOnError: true,
+    });
+    expect(data.invited).toEqual(['ana@acme.dev']);
+    const members = await listMembers({ throwOnError: true });
+    expect(members.data.items.at(-1)).toMatchObject({ login: 'ana@acme.dev', role: 'invited' });
+    const bad = await failureOf(async () => inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }));
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+  });
+
+  it('lets only owners and admins manage members', async () => {
+    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+    const role = await failureOf(async () =>
+      updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true }),
+    );
+    const invite = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(role) && role.status).toBe(403);
+    expect(isApiFailure(invite) && invite.status).toBe(403);
+    db.members = db.members.filter((member) => member.login !== 'maya');
+    const gone = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(gone) && gone.status).toBe(403);
+  });
+
+  it('lets an owner invite', async () => {
+    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'owner' } : member));
+    const { data } = await inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true });
+    expect(data.invited).toEqual(['ana@acme.dev']);
   });
 });
