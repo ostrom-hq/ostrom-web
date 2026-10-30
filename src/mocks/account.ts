@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { handleListAuthSessions, handleLogoutEverywhere, handleRevokeAuthSession } from '@gen/api/msw.gen';
-import type { ApiError, AuthSession } from '@gen/api/types.gen';
+import type { AuthSession } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { refusal } from '@/mocks/http';
 
 export interface AccountState {
   /** The person's signed-in sessions, the current one first. */
@@ -12,10 +13,6 @@ export interface AccountState {
 
 /** What the browser's cookies become when its session ends. */
 const SIGNED_OUT = { 'Set-Cookie': 'ostrom_csrf=; Path=/; Max-Age=0' };
-
-function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
-  return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
-}
 
 /**
  * The sessions of the security settings. `GET` and `DELETE /auth/sessions` are planned in the contract and not

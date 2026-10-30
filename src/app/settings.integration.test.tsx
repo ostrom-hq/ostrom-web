@@ -44,13 +44,21 @@ describe('the settings screen', () => {
     expect(within(general).getByText('A name is needed.')).toBeInTheDocument();
     await user.type(name, '  Acme Labs ');
     await user.click(save);
-    expect(await within(general).findByRole('alert')).toHaveTextContent(
+    // The section starts again from the name the server now has, and says it was saved.
+    expect(await within(region('Organization')).findByRole('alert')).toHaveTextContent(
       'The organization is now called Acme Labs.',
     );
-    expect(name).toHaveValue('Acme Labs');
+    const renamed = within(region('Organization')).getByRole('textbox', { name: 'Name' });
+    expect(renamed).toHaveValue('Acme Labs');
     expect(
       screen.getByText('How Acme Labs is named, who is signed in, and deleting it.'),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Organization: Acme Labs. Switch' }),
+    ).toBeInTheDocument();
+    // Typing again: what was said about the last save no longer applies.
+    await user.type(renamed, '!');
+    expect(within(region('Organization')).queryByRole('alert')).toBeNull();
     expect(db.organization.name).toBe('Acme Labs');
   });
 
@@ -172,6 +180,24 @@ describe('the settings screen', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText(/Acme/)).toBeNull();
     expect(db.orgMembers[ACME]).toBeDefined();
+  });
+
+  it('deletes the chosen organization, then acts in the one left without offering the deleted one', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [otherOrganization()];
+    const router = visit('/settings');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    const list = await within(picker).findByRole('list', { name: 'Your organizations' });
+    await user.click(within(list).getByRole('button', { name: 'Globex' }));
+    const danger = await screen.findByRole('region', { name: 'Danger zone' });
+    await user.type(within(danger).getByRole('textbox', { name: 'Type globex to confirm' }), 'globex');
+    await user.click(within(danger).getByRole('button', { name: 'Delete Globex' }));
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(db.otherOrganizations).toEqual([]);
   });
 });
 

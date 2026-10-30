@@ -3,6 +3,7 @@ import { handleCreateToken, handleListTokens, handleRevokeToken, handleRotateTok
 import type { ApiError, CreatedToken, Token } from '@gen/api/types.gen';
 import { zTokenCreate } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { readJson, refusal } from '@/mocks/http';
 
 export interface TokensState {
   /** The person's live tokens, newest first; never their secret. */
@@ -17,18 +18,6 @@ const SCOPE = /^[a-z][a-z0-9-]{0,31}:[a-z][a-z0-9-]{0,31}$/;
 const NEVER_ON_A_TOKEN = new Set(['gates:answer', 'agent:session', 'user:*']);
 const MAX_SCOPES = 32;
 const DAY_MS = 86_400_000;
-
-function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
-  return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
-}
-
-async function readJson(request: Request): Promise<unknown> {
-  try {
-    return await request.json();
-  } catch {
-    return undefined;
-  }
-}
 
 /** A secret the demo can show once: never one the real server would take. */
 function secretOf(number: number): string {

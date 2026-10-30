@@ -117,6 +117,37 @@ describe('the tokens screen', () => {
     expect(db.tokens.map((token) => token.name)).toEqual(['GitHub Actions']);
   });
 
+  it('keeps a secret on screen until it is copied: no other creation or replacement takes its place', async () => {
+    const user = userEvent.setup();
+    visit('/tokens');
+    const [ci] = await liveTokens();
+    const row = ci ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
+    const secret = await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' });
+    // Every other replacement waits; revoking another token leaves the secret where it is.
+    const rows = await liveTokens();
+    for (const item of rows)
+      expect(within(item).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
+    const cli = rows.find((item) => item.textContent.includes('ostrom on maya-mbp')) ?? document.body;
+    await user.click(within(cli).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(cli).getByRole('button', { name: 'Revoke ostrom on maya-mbp' }));
+    await waitFor(async () => {
+      expect(await liveTokens()).toHaveLength(1);
+    });
+    expect(secret).toBeInTheDocument();
+    // The form waits too while its own secret is on screen.
+    await user.type(within(form()).getByRole('textbox', { name: 'Name' }), 'One');
+    await user.click(within(form()).getByRole('checkbox', { name: 'Usage: Read' }));
+    await user.click(within(form()).getByRole('button', { name: 'Create the token' }));
+    await within(form()).findByRole('textbox', { name: 'Secret of One' });
+    await user.type(within(form()).getByRole('textbox', { name: 'Name' }), 'Two');
+    await user.click(within(form()).getByRole('checkbox', { name: 'Usage: Read' }));
+    expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeDisabled();
+    await user.click(within(form()).getByRole('button', { name: 'I copied it' }));
+    expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeEnabled();
+  });
+
   it('says why a token was not created, revoked or replaced', async () => {
     const user = userEvent.setup();
     server.use(
@@ -139,6 +170,12 @@ describe('the tokens screen', () => {
     await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
     await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
     expect(await screen.findByText('rotation is down')).toBeInTheDocument();
+    // A revocation clears what was said about the failed replacement.
+    await user.click(within(row).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(row).getByRole('button', { name: 'Revoke GitHub Actions' }));
+    await waitFor(() => {
+      expect(screen.queryByText('rotation is down')).toBeNull();
+    });
   });
 
   it('says there is no token yet', async () => {

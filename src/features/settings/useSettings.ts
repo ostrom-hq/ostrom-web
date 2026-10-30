@@ -23,11 +23,14 @@ import { useOrgStore } from '@/shared/org/orgStore';
 import { sortSessions } from './model';
 
 export interface RenameViewModel {
-  /** Renames it; `onSaved` runs once the server took the new name. */
-  readonly rename: (name: string, onSaved: () => void) => void;
+  /** Renames it; the field starts again from the new name once the lists have it. */
+  readonly rename: (name: string) => void;
   readonly saving: boolean;
-  readonly saved: boolean;
+  /** The name the server just took, until the field changes again. */
+  readonly saved: string | undefined;
   readonly failure: Error | undefined;
+  /** The field changed: what was said about the last save no longer applies. */
+  readonly edited: () => void;
 }
 
 export function useRenameOrg(org: OrgView): RenameViewModel {
@@ -42,18 +45,19 @@ export function useRenameOrg(org: OrgView): RenameViewModel {
         queryClient.invalidateQueries({ queryKey: getOrgQueryKey({ path: { org: org.id } }) }),
       ]),
   });
-  const { mutate } = mutation;
+  const { mutate, reset } = mutation;
   const rename = useCallback(
-    (name: string, onSaved: () => void) => {
-      mutate({ path: { org: org.id }, body: { name: name.trim() } }, { onSuccess: onSaved });
+    (name: string) => {
+      mutate({ path: { org: org.id }, body: { name: name.trim() } });
     },
     [mutate, org.id],
   );
   return {
     rename,
     saving: mutation.isPending,
-    saved: mutation.isSuccess,
+    saved: mutation.isSuccess ? mutation.data.name : undefined,
     failure: failureOf(mutation.error),
+    edited: reset,
   };
 }
 
@@ -71,7 +75,9 @@ export function useDeleteOrg(org: OrgView): DeleteOrgViewModel {
   const mutation = useMutation({
     ...deleteOrgMutation(),
     onSuccess: async () => {
-      // The choice goes first (every read in it is reset), then the lists the switch keeps are read again.
+      // The switch's list goes before the choice does (which resets every other read), so nothing offers the
+      // organization just deleted; then both lists are read again.
+      queryClient.removeQueries({ queryKey: listMyOrganizationsQueryKey() });
       useOrgStore.getState().forget();
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: listOrgsQueryKey() }),
@@ -128,23 +134,28 @@ export function useSessionActions(): SessionActionsViewModel {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const signedOut = useCallback(async () => {
-    // Everything cached was this account's: the console starts again as nobody, on the sign-in page.
-    useAuthStore.getState().changed();
+    // Off this page first, so nothing on it reads again as nobody; then everything cached, this account's, goes.
     await navigate({ to: '/signin', search: { redirect: '/settings' } });
+    useAuthStore.getState().changed();
   }, [navigate]);
-  const revocation = useMutation({
-    ...revokeAuthSessionMutation(),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() }),
-  });
+  const relist = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() }),
+    [queryClient],
+  );
+  const revocation = useMutation(revokeAuthSessionMutation());
   const everywhere = useMutation({ ...logoutEverywhereMutation(), onSuccess: signedOut });
   const { mutate: revokeMutate, reset: resetRevocation } = revocation;
   const { mutate: everywhereMutate, reset: resetEverywhere } = everywhere;
   const revoke = useCallback(
     (session: AuthSession) => {
       resetEverywhere();
-      revokeMutate({ path: { id: session.id } }, session.current ? { onSuccess: signedOut } : undefined);
+      // This browser's session ended: the list is not read again with a cookie that no longer works.
+      revokeMutate(
+        { path: { id: session.id } },
+        session.current ? { onSuccess: signedOut, onError: relist } : { onSettled: relist },
+      );
     },
-    [revokeMutate, resetEverywhere, signedOut],
+    [revokeMutate, resetEverywhere, signedOut, relist],
   );
   const signOutEverywhere = useCallback(() => {
     resetRevocation();

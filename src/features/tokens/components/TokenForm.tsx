@@ -105,7 +105,10 @@ export function TokenForm({ create }: TokenFormProps): ReactElement {
               </option>
             ))}
           </select>
-          <Button type="submit" disabled={create.creating || problem !== undefined}>
+          <Button
+            type="submit"
+            disabled={create.creating || problem !== undefined || create.created !== undefined}
+          >
             {create.creating ? t('tokens.form.creating') : t('tokens.form.create')}
           </Button>
         </div>

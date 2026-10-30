@@ -3,9 +3,10 @@ import type { AuthSession } from '@gen/api/types.gen';
 import { browserTimeZone, deletionConfirmed, renameProblem, sortSessions } from './model';
 
 describe('renameProblem', () => {
-  it('takes a new name of 1 to 100 characters', () => {
+  it('takes a new name of 1 to 100 characters, without control characters', () => {
     expect(renameProblem('   ', 'Acme')).toBe('empty');
     expect(renameProblem('x'.repeat(101), 'Acme')).toBe('long');
+    expect(renameProblem('Ac\u0007me', 'Acme')).toBe('control');
     expect(renameProblem(' Acme ', 'Acme')).toBe('same');
     expect(renameProblem('Acme Labs', 'Acme')).toBeUndefined();
   });

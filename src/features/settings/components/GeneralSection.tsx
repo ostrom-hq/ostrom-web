@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Facts, Section } from '@/shared/ui/Screen';
-import { browserTimeZone, ORG_NAME_MAX, renameProblem } from '../model';
+import { MAX_ORG_NAME } from '@/shared/org/slug';
+import { browserTimeZone, renameProblem } from '../model';
 import type { RenameViewModel } from '../useSettings';
 
 export interface GeneralSectionProps {
@@ -18,6 +19,7 @@ export interface GeneralSectionProps {
 /** The organization's name, its short name and the time zone the console shows times in. */
 export function GeneralSection({ org, canRename, rename }: GeneralSectionProps): ReactElement {
   const { t } = useTranslation();
+  // Starts from the name as the server has it; the screen mounts this section again when that name changes.
   const [typed, setTyped] = useState(org.name);
   const nameId = useId();
   const problem = renameProblem(typed, org.name);
@@ -28,9 +30,7 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
           className="o-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            rename.rename(typed, () => {
-              setTyped(typed.trim());
-            });
+            rename.rename(typed);
           }}
         >
           <label htmlFor={nameId} className="o-field-label">
@@ -40,10 +40,11 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
             <input
               id={nameId}
               className="o-input st-name"
-              maxLength={ORG_NAME_MAX}
+              maxLength={MAX_ORG_NAME}
               value={typed}
               onChange={(event) => {
                 setTyped(event.target.value);
+                rename.edited();
               }}
             />
             <Button type="submit" disabled={rename.saving || problem !== undefined}>
@@ -64,7 +65,7 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
         ]}
       />
       <p className="o-row__meta">{t('settings.general.slugNote')}</p>
-      {rename.saved && problem === 'same' ? (
+      {rename.saved === org.name ? (
         <Banner tone="info" tag={t('settings.general.savedTag')} live>
           {t('settings.general.saved', { name: org.name })}
         </Banner>

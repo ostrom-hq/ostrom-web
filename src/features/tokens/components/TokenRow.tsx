@@ -8,12 +8,14 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 export interface TokenRowProps {
   readonly token: Token;
   readonly busy: boolean;
+  /** A replaced secret is on screen: no other replacement until it is copied. */
+  readonly holding: boolean;
   readonly onRevoke: () => void;
   readonly onRotate: () => void;
 }
 
 /** One token: its name, what it may do, the start of its secret, when it expires and when it was last used. */
-export function TokenRow({ token, busy, onRevoke, onRotate }: TokenRowProps): ReactElement {
+export function TokenRow({ token, busy, holding, onRevoke, onRotate }: TokenRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const day = (at: string): string =>
     new Date(at).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -43,7 +45,7 @@ export function TokenRow({ token, busy, onRevoke, onRotate }: TokenRowProps): Re
           label={t('tokens.list.rotate')}
           confirm={t('tokens.list.rotateConfirm', { name: token.name })}
           keep={t('tokens.list.keep')}
-          disabled={busy}
+          disabled={busy || holding}
           onConfirm={onRotate}
         />
         <ConfirmButton

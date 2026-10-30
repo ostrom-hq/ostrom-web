@@ -44,7 +44,8 @@ export function SecuritySection({ view, actions }: SecuritySectionProps): ReactE
           {t('settings.security.signInAgain')}
         </Link>
       </p>
-      <h3 className="o-field-label">{t('settings.sessions.title')}</h3>
+      {/* A server that does not list sessions yet: only the way to end them all is left. */}
+      {view.unavailable ? null : <h3 className="o-field-label">{t('settings.sessions.title')}</h3>}
       {list}
       {trouble === undefined ? null : (
         <Banner tone="danger" tag={t('settings.sessions.errorTag')} live>

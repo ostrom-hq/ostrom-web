@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { AuthSession } from '@gen/api/types.gen';
+import { nameProblem } from '@/shared/org/slug';
 
-export const ORG_NAME_MAX = 100;
-
-/** A name the server takes: 1 to 100 characters once trimmed, and not the one it already has. */
-export function renameProblem(typed: string, current: string): 'empty' | 'long' | 'same' | undefined {
-  const name = typed.trim();
-  if (name === '') return 'empty';
-  if (name.length > ORG_NAME_MAX) return 'long';
-  return name === current ? 'same' : undefined;
+/** A name the server takes (`validOrgName`) and not the one it already has. */
+export function renameProblem(
+  typed: string,
+  current: string,
+): 'empty' | 'long' | 'control' | 'same' | undefined {
+  return nameProblem(typed) ?? (typed.trim() === current ? 'same' : undefined);
 }
 
 /** The deletion is confirmed by the short name typed again, exactly as the server compares it. */
