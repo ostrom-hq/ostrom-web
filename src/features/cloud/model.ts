@@ -30,29 +30,34 @@ export function sessionTone(status: string): BadgeTone {
   return 'neutral';
 }
 
-/** The run states the contract names; any other is shown as the server wrote it. */
-export const RUN_STATUSES = [
-  'queued',
-  'started',
-  'failed',
-  'invalid_payload',
-  'skipped_overlap',
-  'skipped_budget',
-] as const;
-export type KnownRunStatus = (typeof RUN_STATUSES)[number];
-
-export function isKnownRunStatus(value: string): value is KnownRunStatus {
-  return RUN_STATUSES.some((status) => status === value);
-}
-
-export const RUN_TONES: Readonly<Record<KnownRunStatus, BadgeTone>> = {
+/** The run states the contract names, with their tone; any other is shown as the server wrote it. */
+export const RUN_TONES = {
   queued: 'warning',
   started: 'success',
   failed: 'danger',
   invalid_payload: 'danger',
   skipped_overlap: 'neutral',
   skipped_budget: 'warning',
-};
+} as const satisfies Readonly<Record<string, BadgeTone>>;
+export type KnownRunStatus = keyof typeof RUN_TONES;
+
+export function isKnownRunStatus(value: string): value is KnownRunStatus {
+  return Object.hasOwn(RUN_TONES, value);
+}
+
+/** The reasons of a failed run the console has words for; the contract keeps the list open. */
+export const RUN_REASONS = ['cloud_session_limit', 'cloud_hours_exhausted', 'owner_unavailable'] as const;
+export type KnownRunReason = (typeof RUN_REASONS)[number];
+
+export function isKnownRunReason(value: string): value is KnownRunReason {
+  return RUN_REASONS.some((reason) => reason === value);
+}
+
+/** An idempotency key for one gesture, from the random source every context has (randomUUID needs https). */
+export function idempotencyKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 /** A dry run answers what it would do; a real run answers with the run it queued. */
 export function isDryRun(answer: AutomationRun | AutomationDryRun): answer is AutomationDryRun {

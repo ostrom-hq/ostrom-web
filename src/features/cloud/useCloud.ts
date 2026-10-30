@@ -21,7 +21,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
-import type { CloudAgent } from './model';
+import { type CloudAgent, idempotencyKey } from './model';
 
 const POLL_MS = 10_000;
 
@@ -183,7 +183,7 @@ export function useAutomationChange(): AutomationChangeViewModel {
       testMutate(
         dry
           ? { path: { id }, body: { dryRun: true } }
-          : { path: { id }, body: { dryRun: false }, headers: { 'Idempotency-Key': crypto.randomUUID() } },
+          : { path: { id }, body: { dryRun: false }, headers: { 'Idempotency-Key': idempotencyKey() } },
       );
     },
     [resetAll, testMutate],

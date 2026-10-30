@@ -197,7 +197,7 @@ describe('a request', () => {
     expect(action).toHaveTextContent('Deploy production of acme/billing-api');
     expect(action).toHaveTextContent('a91d0e4 · 1 file · +1 −1');
     expect(within(action).getByText('High risk')).toBeInTheDocument();
-    expect(within(action).getByText(/face or fingerprint/)).toBeInTheDocument();
+    expect(within(action).getByText(/costliest to undo/)).toBeInTheDocument();
     expect(within(action).getByText(/too large to show in full/)).toBeInTheDocument();
   });
 

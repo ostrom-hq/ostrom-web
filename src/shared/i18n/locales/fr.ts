@@ -98,7 +98,7 @@ export const fr = {
       },
       range: '{{base}} → {{head}}',
       highRisk: 'Risque élevé',
-      highRiskHint: 'Sur un téléphone, approuver demande ton visage ou ton empreinte.',
+      highRiskHint: 'Lis tout le changement avant d’approuver : c’est le oui le plus coûteux à défaire.',
       diff_one: '{{count}} fichier · +{{additions}} −{{deletions}}',
       diff_other: '{{count}} fichiers · +{{additions}} −{{deletions}}',
       truncated: 'Le diff est trop long pour être montré en entier : ouvre les commits.',
@@ -623,6 +623,11 @@ export const fr = {
       invalid_payload: 'Contenu refusé',
       skipped_overlap: 'Sautée : déjà en cours',
       skipped_budget: 'Sautée : budget dépassé',
+    },
+    runReason: {
+      cloud_session_limit: 'Trop d’agents cloud en même temps pour l’offre.',
+      cloud_hours_exhausted: 'Les heures d’agent de l’offre sont épuisées pour cette période.',
+      owner_unavailable: 'Son propriétaire ne peut plus lancer d’agents ici.',
     },
   },
   signin: {
