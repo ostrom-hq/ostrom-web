@@ -183,6 +183,45 @@ describe('the queue', () => {
 });
 
 describe('a request', () => {
+  it('signs in from a link to one request, wipes the token and shows that request', async () => {
+    const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.hash).toBe('');
+    expect(router.state.location.href).not.toContain('opk_');
+    expect(useAuthStore.getState().token).toBe('opk_test_12345678');
+  });
+
+  it('keeps the version the person read when the request changes, until they ask for the new one', async () => {
+    const user = userEvent.setup();
+    visit('/yes/apr-merge-412');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main' }),
+    ).toBeInTheDocument();
+    db.approvals = db.approvals.map((item) =>
+      item.id === 'apr-merge-412'
+        ? { ...item, title: 'Merge PR #413 into main', shownDigest: 'sha256:new' }
+        : item,
+    );
+    expect(await screen.findByText(/changed while you were reading it/, {}, SLOW)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Merge PR #412 into main' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show the new version' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Merge PR #413 into main' })).toBeInTheDocument();
+    expect(screen.queryByText(/changed while you were reading it/)).toBeNull();
+  });
+
+  it('shows the bare commits when the server sends an empty list of details, in the list and the request', async () => {
+    const user = userEvent.setup();
+    addApproval({ ...bare, id: 'apr-nodetails', commits: ['abc1234def', 'fed4321cba'], commitDetails: [] });
+    visit('/yes');
+    const card = await screen.findByRole('link', { name: /Run a script/ });
+    expect(card).toHaveTextContent('2 commits');
+    await user.click(card);
+    expect(await screen.findByText('abc1234')).toBeInTheDocument();
+    expect(screen.getByText('fed4321')).toBeInTheDocument();
+  });
+
   it('shows the proof in order before the buttons, then approves with the action as the verb', async () => {
     const user = userEvent.setup();
     visit('/yes/apr-merge-412');

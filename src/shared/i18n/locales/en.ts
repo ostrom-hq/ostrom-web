@@ -18,8 +18,10 @@ export const en = {
   yes: {
     queue: {
       title: 'Requests',
-      waiting: '{{count}} waiting for you',
-      waitingMore: 'More than {{count}} waiting for you',
+      waiting_one: '{{count}} waiting for you',
+      waiting_other: '{{count}} waiting for you',
+      waitingMore_one: 'More than {{count}} waiting for you',
+      waitingMore_other: 'More than {{count}} waiting for you',
       decided: 'Decided',
       emptyTitle: 'Nothing waits for you',
       emptyBody:
@@ -65,6 +67,8 @@ export const en = {
       expires: 'Expires {{when}}',
       changes: 'Changes',
       commit: 'Commit {{sha}}',
+      newer: 'This request changed while you were reading it. You still see the version you opened.',
+      readNewer: 'Show the new version',
       checks: 'Checks',
       who: 'Who asks',
       via: 'from {{channel}}',

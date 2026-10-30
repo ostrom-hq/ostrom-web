@@ -19,8 +19,10 @@ export const fr = {
   yes: {
     queue: {
       title: 'Demandes',
-      waiting: '{{count}} t’attendent',
-      waitingMore: 'Plus de {{count}} t’attendent',
+      waiting_one: '{{count}} t’attend',
+      waiting_other: '{{count}} t’attendent',
+      waitingMore_one: 'Plus de {{count}} t’attend',
+      waitingMore_other: 'Plus de {{count}} t’attendent',
       decided: 'Décidées',
       emptyTitle: 'Rien ne t’attend',
       emptyBody:
@@ -66,6 +68,8 @@ export const fr = {
       expires: 'Expire {{when}}',
       changes: 'Changements',
       commit: 'Commit {{sha}}',
+      newer: 'Cette demande a changé pendant ta lecture. Tu vois toujours la version ouverte.',
+      readNewer: 'Voir la nouvelle version',
       checks: 'Vérifications',
       who: 'Qui demande',
       via: 'depuis {{channel}}',

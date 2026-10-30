@@ -4,7 +4,8 @@
 export interface QueryTuning {
   readonly staleTime?: number;
   readonly refetchInterval?:
-    number | ((query: { readonly state: { readonly error: unknown } }) => number | false);
+    | number
+    | ((query: { readonly state: { readonly error: unknown; readonly data?: unknown } }) => number | false);
   /** `keepPreviousData`: the last answer stays on screen while the next one loads. */
   readonly placeholderData?: <T>(previous: T | undefined) => T | undefined;
 }

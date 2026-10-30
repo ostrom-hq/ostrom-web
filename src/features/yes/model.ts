@@ -37,6 +37,11 @@ export function checksSummary(checks: readonly ApprovalCheck[]): ChecksSummary {
   };
 }
 
+/** A request that can still change: pending, or not loaded yet. A decided one is final, so nobody polls it. */
+export function stillOpen(data: unknown): boolean {
+  return !(typeof data === 'object' && data !== null && 'status' in data && data.status !== 'pending');
+}
+
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
