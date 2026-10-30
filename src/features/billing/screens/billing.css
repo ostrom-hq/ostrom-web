@@ -1,0 +1,46 @@
+.bl-plan {
+  font-size: var(--fs-28);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.bl-figure {
+  margin: 0;
+  font-size: var(--fs-28);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.bl-meter {
+  display: block;
+  block-size: 10px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.bl-meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--text-muted);
+}
+.bl-meter--near > span {
+  background: var(--warning);
+}
+.bl-meter--over > span {
+  background: var(--danger);
+}
+.bl-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bl-plans > li {
+  min-inline-size: 0;
+}
+.bl-price {
+  font-size: var(--fs-20);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
