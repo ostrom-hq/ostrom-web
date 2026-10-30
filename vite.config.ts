@@ -8,6 +8,7 @@ import { defineConfig } from 'vitest/config';
 const src = fileURLToPath(new URL('./src', import.meta.url));
 const ee = fileURLToPath(new URL('./ee', import.meta.url));
 const gen = fileURLToPath(new URL('./gen', import.meta.url));
+const apiUpstream = process.env['OSTROM_E2E_API_UPSTREAM'];
 
 /** A build without VITE_MOCKS ships no Mock Service Worker at all, so mock data cannot reach a real deploy. */
 function dropMockWorkerUnlessMocks(): Plugin {
@@ -49,7 +50,14 @@ export default defineConfig({
   plugins: [react(), dropMockWorkerUnlessMocks()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
-  preview: { port: 4173, strictPort: true, headers: imageSecurityHeaders() },
+  preview: {
+    port: 4173,
+    strictPort: true,
+    headers: imageSecurityHeaders(),
+    // The journeys against the real server (playwright.real.config.ts): /api goes to it, from the console's origin,
+    // as the console image proxies it, so the session cookie and its CSRF token stay first-party.
+    ...(apiUpstream === undefined ? {} : { proxy: { '/api': { target: apiUpstream } } }),
+  },
   // Nothing inlined as a data: URL: fonts and images come from 'self', the only source the CSP allows.
   build: { sourcemap: true, target: 'es2023', assetsInlineLimit: 0 },
   test: {

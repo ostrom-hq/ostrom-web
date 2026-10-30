@@ -6,3 +6,5 @@ test-results
 *.tsbuildinfo
 .DS_Store
 .env*.local
+dist-real
+playwright-report-real
