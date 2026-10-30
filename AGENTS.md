@@ -10,7 +10,7 @@ All repository content (code, comments, docs, commits, pull requests) is in Engl
 
 ## Specific to this repository
 
-API types and Zod schemas come from `@ostrom-hq/core` (generated from ostrom-core by Zodable): never hand-write an API entity type. Playwright end-to-end tests run against the real server and PostgreSQL in CI.
+API types and Zod schemas come from `@ostrom-hq/core` (generated from ostrom-core by Zodable): never hand-write an API entity type. Playwright end-to-end tests run against the real server and PostgreSQL in CI. Console writes go through the user session only; every org-scoped screen has an end-to-end test that another organization's data never shows (CONVENTIONS.md section 16).
 
 ## The 15 rules that matter most
 
