@@ -3009,7 +3009,7 @@ export type PollDeviceLoginData = {
 
 export type PollDeviceLoginErrors = {
     /**
-     * A refusal
+     * `error.type` is `slow_down`, `access_denied` or `expired_token` (RFC 8628), or the request is malformed
      */
     400: ApiError;
     /**
@@ -3017,9 +3017,9 @@ export type PollDeviceLoginErrors = {
      */
     404: ApiError;
     /**
-     * authorization pending
+     * `error.type` is `authorization_pending`: not approved yet, poll again after the interval
      */
-    428: unknown;
+    428: ApiError;
 };
 
 export type PollDeviceLoginError = PollDeviceLoginErrors[keyof PollDeviceLoginErrors];
@@ -3243,12 +3243,6 @@ export type CheckAgentPolicyResponse = CheckAgentPolicyResponses[keyof CheckAgen
 
 export type GetMeData = {
     body?: never;
-    headers?: {
-        /**
-         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
-         */
-        'Ostrom-Org'?: string;
-    };
     path?: never;
     query?: never;
     url: '/api/v1/auth/me';
@@ -3899,6 +3893,49 @@ export type DeletePushDeviceResponses = {
 };
 
 export type DeletePushDeviceResponse = DeletePushDeviceResponses[keyof DeletePushDeviceResponses];
+
+export type ListMyOrganizationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/organizations';
+};
+
+export type ListMyOrganizationsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMyOrganizationsError = ListMyOrganizationsErrors[keyof ListMyOrganizationsErrors];
+
+export type ListMyOrganizationsResponses = {
+    /**
+     * OK
+     */
+    200: {
+        items: Array<Organization>;
+    };
+};
+
+export type ListMyOrganizationsResponse = ListMyOrganizationsResponses[keyof ListMyOrganizationsResponses];
 
 export type GetNotificationPreferencesData = {
     body?: never;

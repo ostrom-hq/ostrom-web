@@ -2641,10 +2641,6 @@ export const zCheckAgentPolicyResponse = z.object({
     note: z.string().optional()
 });
 
-export const zGetMeHeaders = z.object({
-    'Ostrom-Org': z.string().optional()
-});
-
 export const zGetMeResponse = z.union([
     zMe,
     z.void()
@@ -2787,6 +2783,13 @@ export const zDeletePushDevicePath = z.object({
  * Done
  */
 export const zDeletePushDeviceResponse = z.void();
+
+/**
+ * OK
+ */
+export const zListMyOrganizationsResponse = z.object({
+    items: z.array(zOrganization)
+});
 
 /**
  * OK
