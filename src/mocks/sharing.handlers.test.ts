@@ -21,7 +21,7 @@ const { server, db } = createMockServer();
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => undefined });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();

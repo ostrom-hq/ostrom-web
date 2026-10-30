@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Receipt } from '@gen/api/types.gen';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
+import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
@@ -95,9 +96,61 @@ describe('a receipt', () => {
 
     const yourself = screen.getByRole('region', { name: 'Verify it yourself' });
     expect(yourself).toHaveTextContent('ostrom verify rcpt-ses-2b9e');
-    const download = within(yourself).getByRole('link', { name: 'Download the bundle' });
-    expect(download).toHaveAttribute('href', `${TEST_API}/api/v1/receipts/rcpt-ses-2b9e/bundle`);
-    expect(download).toHaveAttribute('download', 'rcpt-ses-2b9e.json');
+    expect(within(yourself).getByRole('button', { name: 'Download the bundle' })).toBeEnabled();
+  });
+
+  it('downloads the bundle the server signed, byte for byte, under the receipt id', async () => {
+    const user = userEvent.setup();
+    const signed = '{"receipt":{"id":"rcpt-ses-2b9e"},"unknownToTheContract":true}';
+    server.use(http.get('*/api/v1/receipts/:id/bundle', () => new HttpResponse(signed)));
+    const saved: Promise<string>[] = [];
+    // jsdom has no object URLs: these two stand in for the browser's for this test only.
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: (blob: Blob) => {
+        saved.push(blob.text());
+        return 'blob:ostrom/bundle';
+      },
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: () => undefined });
+    const names: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      names.push(this.download);
+    });
+    try {
+      visit('/receipts/rcpt-ses-2b9e');
+      await user.click(await screen.findByRole('button', { name: 'Download the bundle' }));
+      await vi.waitFor(() => {
+        expect(names).toEqual(['rcpt-ses-2b9e.json']);
+      });
+      expect(await saved[0]).toBe(signed);
+    } finally {
+      click.mockRestore();
+      Reflect.deleteProperty(URL, 'createObjectURL');
+      Reflect.deleteProperty(URL, 'revokeObjectURL');
+    }
+  });
+
+  it('holds the button while the bundle comes', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/receipts/:id/bundle', async () => delay('infinite')));
+    visit('/receipts/rcpt-ses-2b9e');
+    await user.click(await screen.findByRole('button', { name: 'Download the bundle' }));
+    expect(await screen.findByRole('button', { name: 'Downloading…' })).toBeDisabled();
+  });
+
+  it('says when the bundle could not be downloaded', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/receipts/:id/bundle', () =>
+        HttpResponse.json({ error: { type: 'not_found', message: 'no bundle yet' } }, { status: 404 }),
+      ),
+    );
+    visit('/receipts/rcpt-ses-2b9e');
+    await user.click(await screen.findByRole('button', { name: 'Download the bundle' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('no bundle yet');
   });
 
   it('lists the decisions of a request and links each to its request', async () => {

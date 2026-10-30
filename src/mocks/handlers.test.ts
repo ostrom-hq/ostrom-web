@@ -66,7 +66,7 @@ const NOW = new Date('2026-10-30T08:00:00.000Z');
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => undefined });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();

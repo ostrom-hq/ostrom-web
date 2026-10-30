@@ -53,9 +53,8 @@ describe('useArrivals', () => {
   it('forgets everything when the account changes', () => {
     renderHook(() => useArrivals(['a'])).unmount();
     renderHook(() => useArrivals(['a', 'b'])).unmount();
-    useAuthStore.getState().signIn('opk_other_12345678');
+    useAuthStore.getState().changed();
     const after = renderHook(() => useArrivals(['a', 'b', 'c']));
     expect(after.result.current.size).toBe(0);
-    useAuthStore.getState().signOut();
   });
 });

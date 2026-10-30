@@ -14,15 +14,13 @@ const server = setupServer(
   handleGetMe({ body: me }),
   http.get('*/api/v1/approvals/:id', () => HttpResponse.json(notFound, { status: 404 })),
 );
-let token: string | undefined;
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => token });
+  configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
   server.resetHandlers();
-  token = undefined;
 });
 afterAll(() => {
   server.close();
@@ -39,7 +37,7 @@ async function failureOf(call: () => Promise<unknown>): Promise<unknown> {
 
 describe('generated client, configured', () => {
   it('installs the failure mapping once, however often it is configured', () => {
-    configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => token });
+    configureApiClient({ baseUrl: 'http://ostrom.test' });
     expect(client.interceptors.error.fns.filter((fn) => fn !== null)).toHaveLength(1);
   });
 
@@ -48,9 +46,8 @@ describe('generated client, configured', () => {
     expect(data).toEqual(me);
   });
 
-  it('sends the viewer token as a bearer', async () => {
-    token = 'opk_abcdef123456';
-    let seen: string | null = null;
+  it('sends no bearer token: the cookie is the session', async () => {
+    let seen: string | null = 'unset';
     server.use(
       http.get('*/api/v1/auth/me', ({ request }) => {
         seen = request.headers.get('authorization');
@@ -58,7 +55,7 @@ describe('generated client, configured', () => {
       }),
     );
     await getMe({ throwOnError: true });
-    expect(seen).toBe('Bearer opk_abcdef123456');
+    expect(seen).toBeNull();
   });
 
   it('sends the session cookie with every call (S2-08)', async () => {
@@ -91,7 +88,7 @@ describe('generated client, configured', () => {
       document.cookie = 'ostrom_csrf=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
     }
     expect(seen).toBe('tok-1');
-    configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => token });
+    configureApiClient({ baseUrl: 'http://ostrom.test' });
     expect(client.interceptors.request.fns.filter((fn) => fn !== null)).toHaveLength(1);
   });
 

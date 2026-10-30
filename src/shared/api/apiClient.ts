@@ -5,8 +5,6 @@ import { withCsrf } from '@/shared/api/csrf';
 export interface ApiClientConfig {
   /** The origin of the Ostrom API (`''` for the same origin): the contract's paths carry `/api/v1`. */
   readonly baseUrl: string;
-  /** The viewer's in-memory bearer token, read at each call so a sign-in or sign-out applies at once. */
-  readonly getToken: () => string | undefined;
 }
 
 function typedFailure(error: unknown, response: Response | undefined): Error {
@@ -21,13 +19,13 @@ function csrf(request: Request): Request {
 }
 
 /**
- * Points the generated client at the server, sends the viewer's credentials and types every failure. Every
- * call carries the server's `HttpOnly` session cookie (`credentials: 'include'`, audit S2-08), which no
- * script on the page can read, and a call that changes something its CSRF token.
+ * Points the generated client at the server and types every failure. Every call carries the server's `HttpOnly`
+ * session cookie (`credentials: 'include'`, audit S2-08), which no script on the page can read, and a call that
+ * changes something its CSRF token. The console sends no bearer token: the cookie is the session.
  */
-export function configureApiClient({ baseUrl, getToken }: ApiClientConfig): void {
+export function configureApiClient({ baseUrl }: ApiClientConfig): void {
   apiBase = baseUrl;
-  client.setConfig({ baseUrl, credentials: 'include', auth: () => getToken() });
+  client.setConfig({ baseUrl, credentials: 'include' });
   if (!client.interceptors.error.exists(typedFailure)) client.interceptors.error.use(typedFailure);
   if (!client.interceptors.request.exists(csrf)) client.interceptors.request.use(csrf);
 }
