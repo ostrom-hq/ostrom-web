@@ -143,7 +143,12 @@ describe('the artifacts', () => {
 
   it('says what failed while loading the detail', async () => {
     const user = userEvent.setup();
-    server.use(http.get('*/api/v1/artifacts/:id/versions', refuse('versions are gone')));
+    server.use(
+      http.get('*/api/v1/artifacts/:id/versions', async () => {
+        await delay(50);
+        return refuse('versions are gone')();
+      }),
+    );
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
