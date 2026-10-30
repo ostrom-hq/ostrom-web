@@ -28,12 +28,8 @@ describe('nextArrivals', () => {
 
 describe('useArrivals', () => {
   it('follows the ids it is given', () => {
-    const { result, rerender } = renderHook(
-      ({ ids }: { ids: readonly string[] | undefined }) => useArrivals(ids),
-      {
-        initialProps: { ids: undefined },
-      },
-    );
+    const initialProps: { ids: readonly string[] | undefined } = { ids: undefined };
+    const { result, rerender } = renderHook(({ ids }) => useArrivals(ids), { initialProps });
     rerender({ ids: ['a'] });
     rerender({ ids: ['a', 'b'] });
     expect([...result.current]).toEqual(['b']);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Approval, CheckState } from '@gen/api/types.gen';
+import type { Approval, ApprovalCommit, CheckState } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -74,7 +74,8 @@ interface ApprovalDetailProps {
 function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const tone = approvalTone(approval, viewer.login);
-  const commits = approval.commitDetails ?? (approval.commits ?? []).map((sha) => ({ sha, title: '' }));
+  const commits: readonly ApprovalCommit[] =
+    approval.commitDetails ?? (approval.commits ?? []).map((sha) => ({ sha, title: '' }));
   const checks = approval.checks ?? [];
   const evidence = approval.evidence ?? [];
   const askers = approval.askedBy ?? [];
