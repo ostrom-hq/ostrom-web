@@ -157,16 +157,12 @@ export function refusalOf(error: unknown): string | undefined {
 }
 
 /**
- * A yes refused until the person signs in again (S2-54: a yes needs a sign-in of less than five minutes). The server
- * sends it as a plain `forbidden` today, like the other refusals: every 403 that names no other cause offers to sign
- * in again (`.coord/QUESTIONS.md`, WEB 09:10, until it carries `step_up_required`).
+ * A yes refused until the person signs in again: a yes needs a sign-in of less than five minutes (S2-54), and the
+ * server says so with `error.type` `step_up_required` (core, `answerApproval`). Any other 403 (not an approver, the
+ * asker who has to wait) is a refusal that signing in again would not change.
  */
 export function stepUpOf(error: unknown): boolean {
-  return (
-    isApiFailure(error) &&
-    error.kind === 'forbidden' &&
-    (error.code === undefined || error.code === 'forbidden' || error.code === 'step_up_required')
-  );
+  return isApiFailure(error) && error.kind === 'forbidden' && error.code === 'step_up_required';
 }
 
 /** The approval changed after it was shown: the answer was not taken, the page reloads it. */

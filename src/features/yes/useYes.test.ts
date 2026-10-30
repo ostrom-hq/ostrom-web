@@ -20,15 +20,15 @@ describe('refusalOf and changedOf', () => {
 });
 
 describe('stepUpOf', () => {
-  it('offers to sign in again on a 403 that names no other cause', () => {
+  it('offers to sign in again only when the server asks for a fresh sign-in', () => {
     const plain = (code?: string): ApiFailure =>
       new ApiFailure('forbidden', 'sign in again', 403, undefined, code);
-    expect(stepUpOf(plain())).toBe(true);
-    expect(stepUpOf(plain('forbidden'))).toBe(true);
     expect(stepUpOf(plain('step_up_required'))).toBe(true);
+    expect(stepUpOf(plain())).toBe(false);
+    expect(stepUpOf(plain('forbidden'))).toBe(false);
     expect(stepUpOf(plain('self_approval_refused'))).toBe(false);
-    expect(stepUpOf(new ApiFailure('conflict', 'changed', 409, undefined, 'forbidden'))).toBe(false);
-    expect(stepUpOf(new Error('forbidden'))).toBe(false);
+    expect(stepUpOf(new ApiFailure('conflict', 'changed', 409, undefined, 'step_up_required'))).toBe(false);
+    expect(stepUpOf(new Error('step_up_required'))).toBe(false);
   });
 });
 

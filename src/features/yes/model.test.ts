@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
-import { approvalTone, askedByViewer, checksSummary, reauthProvider, shortSha, stillOpen } from './model';
-
-describe('reauthProvider', () => {
-  it('signs in again through GitHub or Google, and through the form for any other way', () => {
-    expect(reauthProvider('github')).toBe('github');
-    expect(reauthProvider('google')).toBe('google');
-    expect(reauthProvider('email')).toBeUndefined();
-    expect(reauthProvider(undefined)).toBeUndefined();
-  });
-});
+import { approvalTone, askedByViewer, checksSummary, shortSha, stillOpen } from './model';
 
 describe('stillOpen', () => {
   it('is open until the request is decided', () => {

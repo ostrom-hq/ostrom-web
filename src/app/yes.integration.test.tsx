@@ -7,7 +7,6 @@ import { delay, http, HttpResponse } from 'msw';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { type AppRouter, createAppRouter } from '@/app/router';
-import { me } from '@/mocks/fixtures/approvals';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
@@ -334,40 +333,37 @@ describe('a request', () => {
     expect(decision).toHaveTextContent('The agent was told: “Wait for samir.”');
   });
 
-  it('offers to sign in again the same way when the server wants a fresh sign-in for the yes', async () => {
+  it('offers a fresh sign-in, back to the request, when the server wants one for the yes', async () => {
     const user = userEvent.setup();
     server.use(
       http.post('*/api/v1/approvals/:id/answer', () =>
         HttpResponse.json(
-          { error: { type: 'forbidden', message: 'Sign in again to approve.' } },
+          { error: { type: 'step_up_required', message: 'Sign in again to approve.' } },
           { status: 403 },
         ),
       ),
     );
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: /^Approve/ }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in again to approve.');
-    const again = screen.getByRole('link', { name: 'Sign in again' });
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sign in again to approve.');
+    const again = within(alert).getByRole('link', { name: 'Sign in again' });
     const target = new URL(again.getAttribute('href') ?? '', 'https://console.invalid');
-    expect(target.pathname).toBe('/api/v1/auth/github/start');
-    expect(target.searchParams.get('reauth')).toBe('true');
+    expect(target.pathname).toBe('/signin');
     expect(target.searchParams.get('redirect')).toBe('/yes/apr-merge-412');
   });
 
-  it('sends a person signed in by e-mail back to the sign-in form, then to the request', async () => {
+  it('offers no sign-in for a refusal it would not change', async () => {
     const user = userEvent.setup();
     server.use(
-      http.get('*/api/v1/auth/me', () => HttpResponse.json({ ...me, dev: { ...me.dev, via: 'email' } })),
       http.post('*/api/v1/approvals/:id/answer', () =>
-        HttpResponse.json({ error: { type: 'step_up_required', message: 'Too old.' } }, { status: 403 }),
+        HttpResponse.json({ error: { type: 'forbidden', message: 'Not an approver.' } }, { status: 403 }),
       ),
     );
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: /^Approve/ }));
-    const again = await screen.findByRole('link', { name: 'Sign in again' });
-    const target = new URL(again.getAttribute('href') ?? '', 'https://console.invalid');
-    expect(target.pathname).toBe('/signin');
-    expect(target.searchParams.get('redirect')).toBe('/yes/apr-merge-412');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not an approver.');
+    expect(screen.queryByRole('link', { name: 'Sign in again' })).toBeNull();
   });
 
   it('says it declines while the refusal is on its way', async () => {
