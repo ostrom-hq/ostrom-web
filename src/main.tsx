@@ -1,3 +1,5 @@
+// The CSP forbids eval: zod is set to never use it, before any schema is built (audit S2-09).
+import '@/shared/lib/zodConfig';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';

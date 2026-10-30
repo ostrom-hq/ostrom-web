@@ -7,7 +7,7 @@ export const themePreferenceSchema = z.enum(['system', 'light', 'dark']);
 export type ThemePreference = z.infer<typeof themePreferenceSchema>;
 export type ResolvedTheme = Exclude<ThemePreference, 'system'>;
 
-/** Also read by the inline script of index.html, which applies a pinned theme before the first paint. */
+/** Also read by public/theme.js, which index.html loads to apply a pinned theme before the first paint. */
 export const THEME_STORAGE_KEY = 'ostrom.theme';
 
 /** Storage is a trust boundary: anything that is not a known preference falls back to `system`. */

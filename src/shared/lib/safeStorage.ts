@@ -1,5 +1,5 @@
 /**
- * localStorage that never throws: blocked storage (strict privacy settings, sandboxed frames) or a full quota
+ * Web storage that never throws: blocked storage (strict privacy settings, sandboxed frames) or a full quota
  * degrades to "nothing stored" instead of a blank page or a dead button.
  */
 export interface SafeStorage {
@@ -37,3 +37,6 @@ export function createSafeStorage(resolve: () => Storage): SafeStorage {
 }
 
 export const safeLocalStorage: SafeStorage = createSafeStorage(() => window.localStorage);
+
+/** sessionStorage, as safe: the console keeps no secret there, it only erases what older builds left. */
+export const safeSessionStorage: SafeStorage = createSafeStorage(() => window.sessionStorage);

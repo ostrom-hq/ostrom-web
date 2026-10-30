@@ -21,26 +21,32 @@ const rootRoute = createRootRoute({ component: AppShell });
 const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen });
 
 /**
- * `/yes?signin=opk_…` is the link an approver opens on their phone: the token is kept, then dropped from the
- * address bar (and the history) at once. `/yes?signout` forgets it.
+ * `/yes#signin=opk_…` is the link an approver opens on their phone. The token rides in the fragment, which the
+ * browser never sends to a server nor writes in its logs: it is kept in memory, then dropped from the address bar
+ * (and the history) at once. `/yes?signout` forgets it.
  */
 export const yesSearchSchema = z.object({
-  signin: z.string().optional().catch(undefined),
   signout: z
     .unknown()
     .transform(() => true as const)
     .optional(),
 });
 
+/** The sign-in token a link carries in its fragment (`signin=…`), if any. */
+export function signInFromHash(hash: string): string | undefined {
+  return new URLSearchParams(hash.replace(/^#/, '')).get('signin') ?? undefined;
+}
+
 const yesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/yes',
   validateSearch: yesSearchSchema,
-  beforeLoad: ({ search }) => {
+  beforeLoad: ({ search, location }) => {
+    const signin = signInFromHash(location.hash);
     if (search.signout === true) useAuthStore.getState().signOut();
-    else if (search.signin !== undefined) useAuthStore.getState().offer(search.signin);
+    else if (signin !== undefined) useAuthStore.getState().offer(signin);
     else return;
-    throw redirect({ to: '/yes', search: {}, replace: true });
+    throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
   },
   component: YesQueueScreen,
 });
