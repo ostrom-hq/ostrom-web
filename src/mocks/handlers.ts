@@ -1,18 +1,50 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { handleAnswerApproval, handleGetApproval, handleGetMe, handleListApprovals } from '@gen/api/msw.gen';
-import type { ApiError, Approval, ApprovalAnswer, Receipt } from '@gen/api/types.gen';
+import {
+  handleAnswerApproval,
+  handleGetApproval,
+  handleGetMe,
+  handleGetReceipt,
+  handleGetReceiptBundle,
+  handleGetSession,
+  handleListApprovals,
+  handleListReceipts,
+  handleListSessions,
+  handleVerifyReceipt,
+} from '@gen/api/msw.gen';
+import type { ApiError, Approval, ApprovalAnswer, PublicKey, Receipt, Session } from '@gen/api/types.gen';
 import { zAnswerApprovalRequest } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
+import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 
 export interface MockDb {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
+  sessions: Session[];
+  /** Newest first, as the server lists them; an answer adds its receipt at the top. */
+  receipts: Receipt[];
 }
 
 export function createMockDb(): MockDb {
-  return { approvals: initialApprovals(), approvers: initialApprovers() };
+  return {
+    approvals: initialApprovals(),
+    approvers: initialApprovers(),
+    sessions: initialSessions(),
+    receipts: initialReceipts(),
+  };
+}
+
+/** The mock's stand-in for the server's check: a receipt whose signature names no key does not verify. */
+export const MOCK_KEY: PublicKey = {
+  kid: '4f2a9c1b',
+  alg: 'ed25519',
+  publicKeyPem: '-----BEGIN PUBLIC KEY-----\nmock\n-----END PUBLIC KEY-----',
+};
+
+/** Puts a database back to its first state in place: the running handlers keep their reference. */
+export function resetMockDb(db: MockDb): void {
+  Object.assign(db, createMockDb());
 }
 
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
@@ -80,6 +112,8 @@ async function readJson(request: Request): Promise<unknown> {
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
+  const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
+  const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   return [
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
@@ -114,7 +148,55 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
       const next = answered(approval, body.data.answer, selfApproved, at);
       db.approvals = db.approvals.map((item) => (item.id === next.id ? next : item));
-      return HttpResponse.json({ approval: next, receipt: receiptOf(next, at) });
+      const receipt = receiptOf(next, at);
+      db.receipts = [receipt, ...db.receipts];
+      return HttpResponse.json({ approval: next, receipt });
+    }),
+    handleListSessions(({ request }) => {
+      const open = new URL(request.url).searchParams.get('open');
+      const items = db.sessions.filter((session) => open === null || (session.endedAt === undefined) === (open === 'true'));
+      return HttpResponse.json({ items });
+    }),
+    handleGetSession(({ params }) => {
+      const session = db.sessions.find((item) => item.id === params.id);
+      if (session === undefined) return refusal(404, 'not_found', 'session not found');
+      const receipt = db.receipts.find((item) => item.id === session.receiptId);
+      return HttpResponse.json(receipt === undefined ? { session } : { session, receipt });
+    }),
+    handleListReceipts(({ request }) => {
+      const query = new URL(request.url).searchParams;
+      const kind = query.get('subjectKind');
+      const id = query.get('subjectId');
+      const items = db.receipts.filter(
+        (receipt) => (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
+      );
+      return HttpResponse.json({ items });
+    }),
+    handleGetReceipt(({ params }) => {
+      const receipt = findReceipt(params.id);
+      return receipt === undefined ? receiptNotFound() : HttpResponse.json(receipt);
+    }),
+    handleVerifyReceipt(({ params }) => {
+      const receipt = findReceipt(params.id);
+      if (receipt === undefined) return receiptNotFound();
+      const ok = receipt.signature.includes(`kid=${MOCK_KEY.kid}`);
+      return HttpResponse.json(
+        ok
+          ? { ok, digest: receipt.subject.digest, kid: MOCK_KEY.kid }
+          : { ok, reason: 'the signature does not match any key of this instance' },
+      );
+    }),
+    handleGetReceiptBundle(({ params }) => {
+      const receipt = findReceipt(params.id);
+      if (receipt === undefined) return receiptNotFound();
+      return HttpResponse.json({
+        format: 'ostrom-receipt-bundle/1',
+        receipt,
+        chain: [],
+        package: null,
+        keys: [MOCK_KEY],
+        exportedAt: now().toISOString(),
+      });
     }),
   ];
 }

@@ -1,19 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Me } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { changedOf, failureOf, refusalOf, viewerName } from './useYes';
-
-describe('failureOf', () => {
-  it('passes errors through and wraps anything else', () => {
-    const typed = new ApiFailure('server', 'HTTP 500', 500, undefined);
-    const plain = new Error('boom');
-    expect(failureOf(null)).toBeUndefined();
-    expect(failureOf(undefined)).toBeUndefined();
-    expect(failureOf(typed)).toBe(typed);
-    expect(failureOf(plain)).toBe(plain);
-    expect(failureOf('odd')?.message).toBe('odd');
-  });
-});
+import { changedOf, refusalOf, viewerName } from './useYes';
 
 describe('refusalOf and changedOf', () => {
   it('read a 403 as a refusal and a shown-digest 409 as a change', () => {

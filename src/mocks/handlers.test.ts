@@ -1,10 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { answerApproval, getApproval, getMe, listApprovals } from '@gen/api/sdk.gen';
+import {
+  answerApproval,
+  getApproval,
+  getMe,
+  getReceipt,
+  getReceiptBundle,
+  getSession,
+  listApprovals,
+  listReceipts,
+  listSessions,
+  verifyReceipt,
+} from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { initialApprovals } from '@/mocks/fixtures/approvals';
-import { createHandlers, createMockDb, selfApprovalRefusal } from '@/mocks/handlers';
+import { createHandlers, resetMockDb, selfApprovalRefusal } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -16,9 +27,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
-  const fresh = createMockDb();
-  db.approvals = fresh.approvals;
-  db.approvers = fresh.approvers;
+  resetMockDb(db);
 });
 afterAll(() => {
   server.close();
@@ -197,5 +206,65 @@ describe('selfApprovalRefusal', () => {
     const anonymous = fixture('apr-deploy-88');
     delete anonymous.askedBy;
     expect(selfApprovalRefusal(anonymous, ['maya'], 'maya')).toBeUndefined();
+  });
+});
+
+describe('mock sessions', () => {
+  it('lists open sessions, ended ones, or all', async () => {
+    const open = await listSessions({ query: { open: true }, throwOnError: true });
+    const ended = await listSessions({ query: { open: false }, throwOnError: true });
+    const all = await listSessions({ throwOnError: true });
+    expect(open.data.items.map((session) => session.id)).toEqual(['ses-7f3a', 'ses-51c0']);
+    expect(ended.data.items.map((session) => session.id)).toEqual(['ses-2b9e']);
+    expect(all.data.items).toHaveLength(3);
+  });
+
+  it('returns a session with its receipt once it has one, or 404', async () => {
+    const ended = await getSession({ path: { id: 'ses-2b9e' }, throwOnError: true });
+    const open = await getSession({ path: { id: 'ses-7f3a' }, throwOnError: true });
+    expect(ended.data.receipt?.id).toBe('rcpt-ses-2b9e');
+    expect(open.data).not.toHaveProperty('receipt');
+    const error = await failureOf(async () => getSession({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(error) && error.message).toBe('session not found');
+  });
+});
+
+describe('mock receipts', () => {
+  it('lists receipts, by subject kind and id', async () => {
+    const all = await listReceipts({ throwOnError: true });
+    const gates = await listReceipts({ query: { subjectKind: 'gate' }, throwOnError: true });
+    const one = await listReceipts({ query: { subjectKind: 'session', subjectId: 'ses-2b9e' }, throwOnError: true });
+    expect(all.data.items).toHaveLength(3);
+    expect(gates.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-apr-migration-7']);
+    expect(one.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-ses-2b9e']);
+  });
+
+  it('puts the receipt of an answer at the top', async () => {
+    await answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' }, throwOnError: true });
+    const { data } = await listReceipts({ throwOnError: true });
+    expect(data.items[0]?.id).toBe('rcpt-apr-merge-412');
+  });
+
+  it('returns, verifies and bundles a receipt', async () => {
+    const receipt = await getReceipt({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    const good = await verifyReceipt({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    const bad = await verifyReceipt({ path: { id: 'rcpt-tampered' }, throwOnError: true });
+    const bundle = await getReceiptBundle({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    expect(receipt.data.subject.kind).toBe('session');
+    expect(good.data).toEqual({ ok: true, digest: 'sha256:7d01e5b2', kid: '4f2a9c1b' });
+    expect(bad.data.ok).toBe(false);
+    expect(bad.data.reason).toMatch(/does not match/);
+    expect([bundle.data.receipt.id, bundle.data.keys[0]?.kid]).toEqual(['rcpt-ses-2b9e', '4f2a9c1b']);
+  });
+
+  const calls: readonly (readonly [string, (id: string) => Promise<unknown>])[] = [
+    ['get', async (id) => getReceipt({ path: { id }, throwOnError: true })],
+    ['verify', async (id) => verifyReceipt({ path: { id }, throwOnError: true })],
+    ['bundle', async (id) => getReceiptBundle({ path: { id }, throwOnError: true })],
+  ];
+
+  it.each(calls)('answers 404 to %s an unknown receipt', async (_name, call) => {
+    const error = await failureOf(async () => call('nope'));
+    expect(isApiFailure(error) && error.message).toBe('receipt not found');
   });
 });

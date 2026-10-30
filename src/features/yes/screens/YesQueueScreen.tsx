@@ -6,7 +6,7 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { useApprovalsQueue, useViewer } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {

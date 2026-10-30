@@ -10,7 +10,7 @@ import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
-import { Skeleton } from '../components/Skeleton';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
 import { type AnswerViewModel, type ViewerViewModel, useAnswerApproval, useApproval, useViewer } from '../useYes';
 

@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { HomeScreen } from '@/features/home';
+import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
+import { SessionScreen, SessionsScreen } from '@/features/sessions';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
@@ -47,7 +49,28 @@ const approvalRoute = createRoute({
   component: ApprovalScreen,
 });
 
-export const routeTree = rootRoute.addChildren([homeRoute, yesRoute, approvalRoute]);
+const sessionsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/sessions', component: SessionsScreen });
+const sessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions/$sessionId',
+  component: SessionScreen,
+});
+const receiptsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/receipts', component: ReceiptsScreen });
+const receiptRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/receipts/$receiptId',
+  component: ReceiptScreen,
+});
+
+export const routeTree = rootRoute.addChildren([
+  homeRoute,
+  yesRoute,
+  approvalRoute,
+  sessionsRoute,
+  sessionRoute,
+  receiptsRoute,
+  receiptRoute,
+]);
 
 const buildRouter = (history?: RouterHistory) =>
   createRouter({

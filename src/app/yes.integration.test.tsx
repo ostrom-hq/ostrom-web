@@ -7,7 +7,7 @@ import { delay, http, HttpResponse } from 'msw';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { type AppRouter, createAppRouter } from '@/app/router';
-import { createMockDb } from '@/mocks/handlers';
+import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { useAuthStore } from '@/shared/auth/authStore';
@@ -22,9 +22,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
-  const fresh = createMockDb();
-  db.approvals = fresh.approvals;
-  db.approvers = fresh.approvers;
+  resetMockDb(db);
   useAuthStore.getState().signOut();
 });
 afterAll(() => {
@@ -191,6 +189,10 @@ describe('a request', () => {
     expect(within(decision).getByText('rcpt-apr-merge-412')).toBeInTheDocument();
     expect(within(decision).getByText('ed25519 · 4f2a9c1b')).toBeInTheDocument();
     expect(within(decision).getByText('ostrom verify rcpt-apr-merge-412')).toBeInTheDocument();
+    expect(within(decision).getByRole('link', { name: 'Open the receipt' })).toHaveAttribute(
+      'href',
+      '/receipts/rcpt-apr-merge-412',
+    );
     expect(screen.queryByRole('button', { name: 'Approve merge' })).toBeNull();
   });
 
