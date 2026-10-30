@@ -484,6 +484,7 @@ describe('a request', () => {
             createdAt: '2026-10-30T08:00:00.000Z',
             signature: 'ed25519;sig=x',
           },
+          you: { login: 'maya', self: false, canApprove: false },
         });
       }),
     );
