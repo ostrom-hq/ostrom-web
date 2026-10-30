@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Ask } from '@gen/api/types.gen';
 
 export interface DiffStats {
@@ -18,7 +19,7 @@ export function diffLineKind(line: string): DiffLineKind {
 export function diffStats(diff: string): DiffStats {
   let added = 0;
   let removed = 0;
-  for (const line of diff.split('\n')) {
+  for (const line of diffLines(diff)) {
     const kind = diffLineKind(line);
     if (kind === 'added') added += 1;
     if (kind === 'removed') removed += 1;
@@ -75,4 +76,22 @@ export function shortSha(sha: string): string {
 /** The key id written in a receipt signature (`ed25519;kid=…;sha256=…;sig=…`). */
 export function keyIdOf(signature: string): string | undefined {
   return /(?:^|;)kid=([0-9a-f]+)(?:;|$)/.exec(signature)?.[1];
+}
+
+/** A diff longer than this is folded, and the yes waits until the person has opened it whole. */
+export const DIFF_FOLD_LINES = 40;
+
+export function diffLines(diff: string): readonly string[] {
+  return diff.split('\n');
+}
+
+/** The verb on the approve button says what will happen ("Approve merge"), never a bare "yes". */
+export type ActionKind = 'push' | 'merge' | 'deployment' | 'other';
+
+export function actionKind(ask: Ask): ActionKind {
+  const text = `${ask.what.action ?? ''} ${ask.what.command ?? ''} ${ask.title}`;
+  if (/\bmerge/i.test(text)) return 'merge';
+  if (/\bdeploy/i.test(text)) return 'deployment';
+  if (/\bpush/i.test(text)) return 'push';
+  return 'other';
 }

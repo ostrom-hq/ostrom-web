@@ -82,10 +82,10 @@ describe('mock API', () => {
   it('lets the author withdraw with a no', async () => {
     const { data } = await decideAsk({
       path: { id: 'ask-deploy-88' },
-      body: { result: 'rejected' },
+      body: { result: 'rejected', note: 'Wait for the migration PR.' },
       throwOnError: true,
     });
-    expect(data.status).toBe('rejected');
+    expect([data.status, data.note]).toEqual(['rejected', 'Wait for the migration PR.']);
   });
 
   it('answers 404 for an unknown request, on read and on decide', async () => {

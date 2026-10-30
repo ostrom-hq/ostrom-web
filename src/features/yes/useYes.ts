@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import {
   decideAskMutation,
   getAskOptions,
@@ -61,7 +62,8 @@ export function refusalOf(error: unknown): SelfApprovalRefused | undefined {
 }
 
 export interface DecideViewModel {
-  readonly decide: (result: Decision) => void;
+  /** A decline carries what the agent should do instead. */
+  readonly decide: (result: Decision, note?: string) => void;
   /** The answer being signed, while the call runs. */
   readonly signing: Decision | undefined;
   readonly refusal: SelfApprovalRefused | undefined;
@@ -79,8 +81,8 @@ export function useDecideAsk(id: string): DecideViewModel {
   });
   const { mutate } = mutation;
   const decide = useCallback(
-    (result: Decision) => {
-      mutate({ path: { id }, body: { result } });
+    (result: Decision, note?: string) => {
+      mutate({ path: { id }, body: note === undefined ? { result } : { result, note } });
     },
     [id, mutate],
   );

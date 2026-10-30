@@ -78,9 +78,6 @@ export default defineConfig(
         'error',
         { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
       ],
-      // A scrollable <pre> (diffs, commands) must be focusable to be scrolled by keyboard (axe
-      // scrollable-region-focusable); everything else keeps the strict rule.
-      'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: ['pre'], roles: ['tabpanel', 'region'] }],
     },
   },
   // Architecture: shared never imports features or app; features never import app,

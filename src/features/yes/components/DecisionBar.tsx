@@ -1,21 +1,29 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Ask } from '@gen/api/types.gen';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import { actionKind } from '../model';
 import type { DecideViewModel } from '../useYes';
 
 export interface DecisionBarProps {
   readonly ask: Ask;
   readonly viewer: string | undefined;
   readonly decision: DecideViewModel;
+  /** Why approving is not possible yet (a folded diff), shown instead of letting the click through. */
+  readonly blocked: string | undefined;
 }
 
-/** Fixed at the bottom on a phone: the one garnet action of the screen. */
-export function DecisionBar({ ask, viewer, decision }: DecisionBarProps): ReactElement {
+/** Under the thumb on a phone. Approving is one click on the proof above; declining always says why. */
+export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
   const { decide, signing, refusal, failure } = decision;
+  const [declining, setDeclining] = useState(false);
+  const [note, setNote] = useState('');
+  const noteId = useId();
   const busy = signing !== undefined;
+  const reason = note.trim();
   return (
     <footer className="ys-act">
       {refusal === undefined ? null : (
@@ -34,31 +42,75 @@ export function DecisionBar({ ask, viewer, decision }: DecisionBarProps): ReactE
         </Banner>
       ) : null}
       {ask.you?.selfApproval === true ? (
-        <Banner tag={t('yes.act.onlyApproverTag')}>{t('yes.act.onlyApprover')}</Banner>
+        <Banner tone="warning" tag={t('yes.act.onlyApproverTag')}>
+          {t('yes.act.onlyApprover')}
+        </Banner>
       ) : null}
-      {viewer === undefined ? null : (
-        <p className="ys-small ys-meta">{t('yes.act.signedAs', { login: viewer })}</p>
+      {declining ? (
+        <form
+          className="ys-decline"
+          onSubmit={(event) => {
+            event.preventDefault();
+            decide('rejected', reason);
+          }}
+        >
+          <label htmlFor={noteId} className="ys-label">
+            {t('yes.act.declineLabel')}
+          </label>
+          <textarea
+            id={noteId}
+            className="ys-textarea"
+            rows={3}
+            maxLength={2000}
+            placeholder={t('yes.act.declinePlaceholder')}
+            value={note}
+            onChange={(event) => {
+              setNote(event.target.value);
+            }}
+          />
+          <div className="ys-act__buttons">
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setDeclining(false);
+              }}
+            >
+              {t('yes.act.cancel')}
+            </Button>
+            <Button type="submit" variant="danger" disabled={busy || reason.length === 0}>
+              {signing === 'rejected' ? t('yes.act.declining') : t('yes.act.sendDecline')}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <>
+          {blocked === undefined ? null : <p className="ys-small ys-meta">{blocked}</p>}
+          {viewer === undefined ? null : (
+            <p className="ys-small ys-meta">{t('yes.act.signedAs', { login: viewer })}</p>
+          )}
+          <div className="ys-act__buttons">
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() => {
+                setDeclining(true);
+              }}
+            >
+              {t('yes.act.decline')}
+            </Button>
+            <Button
+              variant="primary"
+              disabled={busy || blocked !== undefined}
+              onClick={() => {
+                decide('approved');
+              }}
+            >
+              {signing === 'approved' ? t('yes.act.approving') : t(`yes.act.approve.${actionKind(ask)}`)}
+            </Button>
+          </div>
+        </>
       )}
-      <div className="ys-act__buttons">
-        <Button
-          variant="danger"
-          disabled={busy}
-          onClick={() => {
-            decide('rejected');
-          }}
-        >
-          {signing === 'rejected' ? t('yes.act.refusing') : t('yes.act.no')}
-        </Button>
-        <Button
-          variant="primary"
-          disabled={busy}
-          onClick={() => {
-            decide('approved');
-          }}
-        >
-          {signing === 'approved' ? t('yes.act.signing') : t('yes.act.yes')}
-        </Button>
-      </div>
     </footer>
   );
 }

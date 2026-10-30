@@ -132,13 +132,13 @@
   display: block;
   margin: 0;
   padding: var(--space-2) var(--space-3);
-  overflow-x: auto;
   background: var(--surface-sunken);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-family: var(--font-mono);
   font-size: var(--fs-12);
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .ys-chip {
   display: inline-flex;
@@ -206,8 +206,8 @@
 
 .ys-diff {
   margin: 0;
-  max-height: 420px;
-  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
   padding: var(--space-3) 0;
   background: var(--code-bg);
   border: 1px solid var(--border);
@@ -301,5 +301,61 @@
     border-radius: var(--radius-lg);
     bottom: var(--space-4);
     box-shadow: var(--shadow-md);
+  }
+}
+
+.ys-diffwrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ys-details > summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+.ys-details[open] > summary {
+  margin-bottom: var(--space-3);
+}
+.ys-decline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ys-textarea {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-16);
+  resize: vertical;
+}
+.ys-textarea:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.ys-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ys-skeleton__row {
+  height: 112px;
+  background: linear-gradient(90deg, var(--surface) 0%, var(--bg-subtle) 50%, var(--surface) 100%);
+  background-size: 200% 100%;
+  animation: ys-shimmer 1.4s linear infinite;
+}
+@keyframes ys-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ys-skeleton__row {
+    animation: none;
   }
 }

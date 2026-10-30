@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement, ReactNode } from 'react';
 
 export type BannerTone = 'info' | 'warning' | 'danger';

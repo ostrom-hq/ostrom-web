@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement } from 'react';
 import './yes.css';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +6,7 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { AskCard } from '../components/AskCard';
 import { DecidedLine } from '../components/DecidedLine';
+import { Skeleton } from '../components/Skeleton';
 import { useYesQueue, viewerLabel } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {
@@ -25,9 +27,7 @@ export function YesQueueScreen(): ReactElement {
       )}
       {queue === undefined ? (
         failure === undefined ? (
-          <p className="ys-meta" role="status">
-            {t('yes.queue.loading')}
-          </p>
+          <Skeleton />
         ) : null
       ) : (
         <>

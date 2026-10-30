@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Ask } from '@gen/api/types.gen';
 import { agentLabel, approversOf, askTone, diffLineKind, diffStats, keyIdOf, shortSha } from './model';
 
@@ -92,5 +93,14 @@ describe('labels', () => {
   it('reads the key id of a signature', () => {
     expect(keyIdOf('ed25519;kid=4f2a9c1b;sha256=0c;sig=ME')).toBe('4f2a9c1b');
     expect(keyIdOf('ed25519;sha256=0c')).toBeUndefined();
+  });
+});
+
+describe('actionKind', () => {
+  it('names the action for the approve button', () => {
+    expect(actionKind({ ...base, what: { action: 'Merge a pull request' } })).toBe('merge');
+    expect(actionKind({ ...base, what: { command: 'make deploy ENV=prod' } })).toBe('deployment');
+    expect(actionKind({ ...base, title: 'git push origin main' })).toBe('push');
+    expect(actionKind({ ...base, title: 'Run the migration' })).toBe('other');
   });
 });

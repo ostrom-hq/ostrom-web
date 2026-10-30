@@ -25,7 +25,8 @@ export const zApprovalChannel = z.enum(['slack', 'console']);
 export const zDecision = z.enum(['approved', 'rejected']);
 
 export const zDecideRequest = z.object({
-    result: zDecision
+    result: zDecision,
+    note: z.string().min(1).max(2000).optional()
 });
 
 export const zViewer = z.object({
@@ -106,6 +107,7 @@ export const zAsk = z.object({
     receipt: zAskReceipt.optional(),
     askedBy: z.array(z.string()),
     selfApproved: z.boolean().optional(),
+    note: z.string().optional(),
     askedVia: z.array(z.enum(['hook', 'ci'])).optional(),
     pr: z.object({
         number: z.string(),
