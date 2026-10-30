@@ -1,0 +1,305 @@
+/* Approvals: one column, phone first. The garnet stays on "a human is awaited" and the yes button. */
+.ys-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+}
+.ys-page--detail {
+  padding-bottom: calc(var(--space-10) + env(safe-area-inset-bottom));
+}
+.ys-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.ys-h1 {
+  margin: 0;
+  font-size: var(--fs-28);
+  font-weight: 800;
+  font-stretch: 112%;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.ys-h2,
+.ys-label {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+.ys-meta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+}
+.ys-small {
+  margin: 0;
+  font-size: var(--fs-14);
+}
+.ys-back {
+  align-self: flex-start;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ys-back::before {
+  content: '← ';
+}
+.ys-back:hover {
+  color: var(--text);
+}
+
+.ys-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ys-list--tight {
+  gap: 0;
+}
+.ys-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  color: var(--text);
+  text-decoration: none;
+  transition:
+    border-color var(--dur) var(--ease-snap),
+    box-shadow var(--dur) var(--ease-snap);
+}
+.ys-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+.ys-card--fresh {
+  border-color: var(--signal-border);
+  animation: ys-arrive var(--dur-slow) var(--ease-out);
+}
+@keyframes ys-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ys-card--fresh {
+    animation: none;
+  }
+}
+.ys-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.ys-wrap {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.ys-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ys-grow {
+  flex: 1;
+  min-width: 0;
+}
+.ys-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ys-action {
+  font-size: var(--fs-20);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.ys-cmd {
+  display: block;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  white-space: pre;
+}
+.ys-chip {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+.ys-chip__k {
+  color: var(--text-subtle);
+}
+
+.ys-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+}
+.ys-line__title {
+  flex: 1;
+}
+
+.ys-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-7) var(--space-5);
+  text-align: center;
+}
+.ys-empty__title {
+  margin: 0;
+  font-size: var(--fs-20);
+  font-weight: 700;
+}
+
+.ys-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+.ys-section p {
+  margin: 0;
+}
+.ys-commits,
+.ys-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-14);
+}
+.ys-commits code {
+  color: var(--signal-text);
+  font-family: var(--font-mono);
+}
+
+.ys-diff {
+  margin: 0;
+  max-height: 420px;
+  overflow: auto;
+  padding: var(--space-3) 0;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: 1.6;
+}
+.ys-diff__line {
+  display: block;
+  padding: 0 var(--space-3);
+}
+.ys-diff__line--added {
+  background: var(--success-tint);
+  color: var(--success);
+}
+.ys-diff__line--removed {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+.ys-diff__line--hunk {
+  color: var(--info);
+}
+.ys-diff__line--file {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.ys-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  font-size: var(--fs-14);
+}
+.ys-kv__row {
+  display: contents;
+}
+.ys-kv dt {
+  color: var(--text-muted);
+}
+.ys-kv dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+}
+
+.ys-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+}
+.ys-receipt__h {
+  margin: 0;
+  font-size: var(--fs-20);
+  font-weight: 700;
+}
+.ys-self-start {
+  align-self: flex-start;
+  text-decoration: none;
+}
+
+/* The decision stays under the thumb on a phone, and follows the page on a desk. */
+.ys-act {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 calc(-1 * var(--space-4));
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+}
+.ys-act__buttons {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: var(--space-3);
+}
+.ys-act__buttons .o-btn {
+  min-height: 48px;
+}
+@media (min-width: 720px) {
+  .ys-act {
+    margin: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    bottom: var(--space-4);
+    box-shadow: var(--shadow-md);
+  }
+}

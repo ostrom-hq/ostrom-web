@@ -1,13 +1,43 @@
-import { createRootRoute, createRoute, createRouter, type RouterHistory } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, redirect, type RouterHistory } from '@tanstack/react-router';
+import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { HomeScreen } from '@/features/home';
+import { AskScreen, YesQueueScreen } from '@/features/yes';
+import { useAuthStore } from '@/shared/auth/authStore';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
 const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen });
 
-export const routeTree = rootRoute.addChildren([homeRoute]);
+/**
+ * `/yes?signin=opk_…` is the link an approver opens on their phone: the token is kept, then dropped from the
+ * address bar (and the history) at once. `/yes?signout` forgets it.
+ */
+export const yesSearchSchema = z.object({
+  signin: z.string().optional().catch(undefined),
+  signout: z
+    .unknown()
+    .transform(() => true as const)
+    .optional(),
+});
+
+const yesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/yes',
+  validateSearch: yesSearchSchema,
+  beforeLoad: ({ search }) => {
+    if (search.signout === true) useAuthStore.getState().signOut();
+    else if (search.signin !== undefined) useAuthStore.getState().signIn(search.signin);
+    else return;
+    throw redirect({ to: '/yes', search: {}, replace: true });
+  },
+  component: YesQueueScreen,
+});
+
+const askRoute = createRoute({ getParentRoute: () => rootRoute, path: '/yes/$askId', component: AskScreen });
+
+export const routeTree = rootRoute.addChildren([homeRoute, yesRoute, askRoute]);
 
 const buildRouter = (history?: RouterHistory) =>
   createRouter({
