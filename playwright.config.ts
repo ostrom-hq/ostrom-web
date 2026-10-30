@@ -15,8 +15,8 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    // CI downloads the build of the `check` job; locally, build first so the journeys test the current code.
-    command: isCi ? 'pnpm preview' : 'pnpm build && pnpm preview',
+    // CI builds with VITE_MOCKS=true just before; locally, build the same way so the journeys test current code.
+    command: isCi ? 'pnpm preview' : 'VITE_MOCKS=true pnpm build && pnpm preview',
     port,
     reuseExistingServer: false,
   },
