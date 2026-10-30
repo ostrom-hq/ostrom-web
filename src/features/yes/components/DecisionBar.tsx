@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
-import { Link } from '@tanstack/react-router';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
@@ -19,6 +19,8 @@ export interface DecisionBarProps {
 export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
   const { sending, refusal, stepUp, changed, failure } = answer;
+  // Back to this very page after signing in: the router's own path for the request, never one rebuilt by hand.
+  const here = useRouterState({ select: (state) => `${state.location.pathname}${state.location.searchStr}` });
   const [declining, setDeclining] = useState(false);
   const [comment, setComment] = useState('');
   const commentId = useId();
@@ -38,7 +40,7 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
             <>
               {' '}
               {/* A fresh sign-in, GitHub or an e-mailed link, then back to this request. */}
-              <Link to="/signin" search={{ redirect: `/yes/${encodeURIComponent(approval.id)}` }}>
+              <Link to="/signin" search={{ redirect: here }}>
                 {t('yes.act.signInAgain')}
               </Link>
             </>
