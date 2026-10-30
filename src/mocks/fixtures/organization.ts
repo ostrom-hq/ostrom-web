@@ -38,7 +38,7 @@ const members: Member[] = [
     email: 'theo@acme.dev',
     teams: ['billing'],
   },
-  { id: MEMBER_IDS.jo, login: 'jo', avatarUrl: '', role: 'invited', email: 'jo@acme.dev' },
+  { id: MEMBER_IDS.jo, login: 'jo', avatarUrl: '', role: 'invited' },
 ];
 
 const teams: Team[] = [

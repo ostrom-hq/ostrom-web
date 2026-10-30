@@ -96,8 +96,8 @@ describe('the members screen', () => {
     const invite = await screen.findByRole('region', { name: 'Invite people' });
     const send = within(invite).getByRole('button', { name: 'Send 0 invitations' });
     expect(send).toBeDisabled();
-    await user.type(within(invite).getByRole('textbox', { name: 'GitHub logins' }), '@ana, no_pe, theo');
-    expect(within(invite).getByText('Not a GitHub login: no_pe')).toBeInTheDocument();
+    await user.type(within(invite).getByRole('textbox', { name: 'GitHub logins' }), '@ana, no.pe, theo');
+    expect(within(invite).getByText('Not a GitHub login: no.pe')).toBeInTheDocument();
     expect(within(invite).queryByRole('option', { name: 'Owner' })).toBeNull();
     await user.selectOptions(within(invite).getByRole('combobox', { name: 'Invite as' }), 'approver');
     fireEvent.change(within(invite).getByRole('combobox', { name: 'Invite as' }), {
