@@ -3,7 +3,7 @@ coverage
 playwright-report
 test-results
 pnpm-lock.yaml
-src/shared/api/generated
+gen
 src/shared/theme/tokens.css
 public
 LICENSE
