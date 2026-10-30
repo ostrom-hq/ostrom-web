@@ -4,10 +4,12 @@ import {
   handleBulkUpdateRules,
   handleCreateCloudSession,
   handleCreateMcpServer,
+  handleDeleteArtifact,
   handleCreateSecret,
   handleDeleteMcpServer,
   handleDeleteSecret,
   handleDisableAutomation,
+  handleEnrollSharedAccount,
   handleEnableAutomation,
   handleGetMcpUsage,
   handleGetSpending,
@@ -21,6 +23,9 @@ import {
   handleGetWorkflow,
   handleInviteMembers,
   handleListApprovals,
+  handleListArtifactMembers,
+  handleListArtifacts,
+  handleListArtifactVersions,
   handleListAutomationRuns,
   handleListAutomations,
   handleListBudgets,
@@ -33,6 +38,8 @@ import {
   handleListRules,
   handleListRunners,
   handleListSecrets,
+  handleListSharedAccounts,
+  handleRemoveSharedAccount,
   handleListSessions,
   handleListTeams,
   handleListWorkflows,
@@ -43,14 +50,19 @@ import {
   handleRotateSecret,
   handleSaveMcpServer,
   handleSetBudget,
+  handleShareArtifact,
   handleStopCloudSession,
   handleTestAutomation,
+  handleUnshareArtifact,
+  handleUpdateSharedAccount,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
   ApiError,
   Approval,
   ApprovalAnswer,
+  Artifact,
+  ArtifactVersion,
   Automation,
   Budget,
   CloudSession,
@@ -65,6 +77,7 @@ import type {
   RuleStatus,
   Runner,
   Secret,
+  SharedAccount,
   Session,
   Team,
   Workflow,
@@ -74,11 +87,13 @@ import {
   zAnswerApprovalRequest,
   zBudget,
   zCreateCloudSessionBody,
+  zEnrollSharedAccountBody,
   zBulkUpdateRulesBody,
   zMcpServer,
   zMemberRole,
   zSecretWrite,
   zTestAutomationBody,
+  zUpdateSharedAccountBody,
   zUpdateRuleBody,
 } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
@@ -92,6 +107,12 @@ import {
   initialCloudSessions,
   initialRunners,
 } from '@/mocks/fixtures/cloud';
+import {
+  initialArtifactMembers,
+  initialArtifacts,
+  initialArtifactVersions,
+  initialSharedAccounts,
+} from '@/mocks/fixtures/sharing';
 import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
 import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
@@ -122,6 +143,11 @@ export interface MockDb {
   runners: Runner[];
   automations: Automation[];
   automationRuns: WorkflowRun[];
+  artifacts: Artifact[];
+  artifactVersions: Record<string, ArtifactVersion[]>;
+  /** Who reads an artifact shared with people, by artifact. */
+  artifactMembers: Record<string, string[]>;
+  sharedAccounts: SharedAccount[];
 }
 
 export function createMockDb(): MockDb {
@@ -145,6 +171,10 @@ export function createMockDb(): MockDb {
     runners: initialRunners(),
     automations: initialAutomations(),
     automationRuns: initialAutomationRuns(),
+    artifacts: initialArtifacts(),
+    artifactVersions: initialArtifactVersions(),
+    artifactMembers: initialArtifactMembers(),
+    sharedAccounts: initialSharedAccounts(),
   };
 }
 
@@ -173,6 +203,7 @@ const zBudgetWrite = zBudget
 const CLOUD_AGENTS = new Set(['claude-code', 'codex']);
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
+const PROVIDERS = new Set(['anthropic', 'openai']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
@@ -314,6 +345,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
+  /** Ids are never reused, even after a removal. */
+  let nextAccount = 100;
   return [
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
@@ -636,6 +669,91 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({
         secret: `whsec_mock_${String(automation.version)}${now().getTime().toString(36)}`,
       });
+    }),
+    handleListArtifacts(() => HttpResponse.json({ items: db.artifacts })),
+    handleDeleteArtifact(({ params }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
+      if (artifact.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner deletes an artifact');
+      db.artifacts = db.artifacts.filter((item) => item.id !== params.id);
+      return new HttpResponse(null, { status: 204 });
+    }),
+    handleListArtifactVersions(({ params }) =>
+      HttpResponse.json({ items: db.artifactVersions[params.id] ?? [] }),
+    ),
+    handleListArtifactMembers(({ params }) =>
+      HttpResponse.json({ members: db.artifactMembers[params.id] ?? [] }),
+    ),
+    handleShareArtifact(({ params }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
+      if (artifact.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner shares an artifact');
+      if (!db.members.some((member) => member.login === params.login))
+        return refusal(404, 'not_found', `${params.login} is not a member of the organization`);
+      const readers = db.artifactMembers[params.id] ?? [];
+      db.artifactMembers[params.id] = readers.includes(params.login) ? readers : [...readers, params.login];
+      return new HttpResponse(null, { status: 204 });
+    }),
+    handleUnshareArtifact(({ params }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
+      if (artifact.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner shares an artifact');
+      db.artifactMembers[params.id] = (db.artifactMembers[params.id] ?? []).filter(
+        (login) => login !== params.login,
+      );
+      return new HttpResponse(null, { status: 204 });
+    }),
+    handleListSharedAccounts(() => HttpResponse.json({ items: db.sharedAccounts })),
+    handleEnrollSharedAccount(async ({ request }) => {
+      const body = zEnrollSharedAccountBody.safeParse(await readJson(request));
+      if (!body.success || body.data.label.trim() === '' || !PROVIDERS.has(body.data.provider))
+        return refusal(400, 'invalid_request', 'a provider, a label and a credential');
+      if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
+        return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
+      const account: SharedAccount = {
+        id: `acc-${String(nextAccount++)}`,
+        provider: body.data.provider,
+        label: body.data.label.trim(),
+        owner: me.dev.login,
+        status: 'active',
+        sharedWith: body.data.sharedWith ?? [],
+        paused: false,
+        ...(body.data.dailyAllocationUsd === undefined
+          ? {}
+          : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
+      };
+      db.sharedAccounts.push(account);
+      return HttpResponse.json(account, { status: 201 });
+    }),
+    handleUpdateSharedAccount(async ({ request, params }) => {
+      const index = db.sharedAccounts.findIndex((item) => item.id === params.id);
+      const account = db.sharedAccounts[index];
+      if (account === undefined) return refusal(404, 'not_found', 'shared account not found');
+      if (account.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner changes a subscription');
+      const body = zUpdateSharedAccountBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'sharedWith, dailyAllocationUsd or paused');
+      const updated: SharedAccount = {
+        ...account,
+        ...(body.data.sharedWith === undefined ? {} : { sharedWith: body.data.sharedWith }),
+        ...(body.data.dailyAllocationUsd === undefined
+          ? {}
+          : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
+        ...(body.data.paused === undefined ? {} : { paused: body.data.paused }),
+      };
+      db.sharedAccounts[index] = updated;
+      return HttpResponse.json(updated);
+    }),
+    handleRemoveSharedAccount(({ params }) => {
+      const account = db.sharedAccounts.find((item) => item.id === params.id);
+      if (account === undefined) return refusal(404, 'not_found', 'shared account not found');
+      if (account.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner removes a subscription');
+      db.sharedAccounts = db.sharedAccounts.filter((item) => item.id !== params.id);
+      return new HttpResponse(null, { status: 204 });
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');
