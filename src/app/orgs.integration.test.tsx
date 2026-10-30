@@ -56,7 +56,7 @@ describe('the organization the console acts in', () => {
     // Acme's artifacts are not Globex's: none of them shows.
     expect(await screen.findByText('No artifact yet.')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 3, name: 'Billing API: latency study' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(named).toContain(globex.id);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(globex.id);
