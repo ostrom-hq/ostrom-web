@@ -19,6 +19,7 @@ import { SessionScreen, SessionsScreen } from '@/features/sessions';
 import { AccountsScreen, ArtifactsScreen } from '@/features/sharing';
 import { EmailLinkScreen, fragmentValue, SignInScreen, useEmailLinkStore } from '@/features/signin';
 import { SpendScreen } from '@/features/spend';
+import { BillingScreen } from '@/features/billing';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -117,6 +118,11 @@ const secretsRoute = createRoute({
   component: SecretsScreen,
 });
 const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
+const billingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/billing',
+  component: BillingScreen,
+});
 const cloudRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cloud', component: CloudScreen });
 const automationsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -188,6 +194,7 @@ export const routeTree = rootRoute.addChildren([
   mcpRoute,
   secretsRoute,
   spendRoute,
+  billingRoute,
   cloudRoute,
   automationsRoute,
   artifactsRoute,

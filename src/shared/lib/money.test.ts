@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { formatUsd, parseUsd } from './money';
+import { formatMinor, formatUsd, parseUsd } from './money';
+
+describe('formatMinor', () => {
+  it('reads Stripe amounts in the smallest unit of their currency', () => {
+    expect(formatMinor(1500, 'usd', 'en')).toBe('$15.00');
+    expect(formatMinor(14_400, 'eur', 'fr')).toMatch(/^144,00\s€$/);
+    expect(formatMinor(1500, 'jpy', 'en')).toBe('¥1,500');
+  });
+});
 
 describe('formatUsd', () => {
   it('writes dollars to the cent in the reader’s locale', () => {
