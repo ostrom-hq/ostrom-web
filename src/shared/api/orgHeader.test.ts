@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import contract from '../../../contract/openapi.yaml?raw';
+// The vendored contract, from the project root (Vite resolves a path that starts with a slash there).
+import contract from '/contract/openapi.yaml?raw';
 import { actsInOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
 
 /** Each path of the vendored contract, and whether it takes `Ostrom-Org`. */
