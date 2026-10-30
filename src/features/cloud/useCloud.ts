@@ -19,7 +19,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
-import { tuned } from '@/shared/api/tuned';
+import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import type { CloudAgent } from './model';
 
@@ -36,9 +36,9 @@ export interface CloudViewModel {
 /** Sessions move on their own (queued, running, ended): the list follows them every ten seconds. */
 export function useCloud(): CloudViewModel {
   const sessions = useQuery(
-    tuned(listCloudSessionsOptions(), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+    ready(listCloudSessionsOptions(), { refetchInterval: pollUnlessRefused(POLL_MS) }),
   );
-  const runners = useQuery(listRunnersOptions());
+  const runners = useQuery(ready(listRunnersOptions()));
   const viewer = useViewer();
   return {
     sessions: sessions.data?.items,
@@ -119,7 +119,7 @@ export interface AutomationsViewModel {
 }
 
 export function useAutomations(): AutomationsViewModel {
-  const automations = useQuery(listAutomationsOptions());
+  const automations = useQuery(ready(listAutomationsOptions()));
   const viewer = useViewer();
   return {
     automations: automations.data?.items,
@@ -215,6 +215,6 @@ export function useAutomationRuns(id: string): {
   readonly runs: readonly WorkflowRun[] | undefined;
   readonly failure: Error | undefined;
 } {
-  const runs = useQuery(listAutomationRunsOptions({ path: { id } }));
+  const runs = useQuery(ready(listAutomationRunsOptions({ path: { id } })));
   return { runs: runs.data?.items, failure: failureOf(runs.error) };
 }
