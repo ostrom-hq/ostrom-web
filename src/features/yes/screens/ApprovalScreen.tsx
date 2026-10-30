@@ -8,6 +8,8 @@ import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
+import { Banner } from '@/shared/ui/Banner';
+import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
@@ -17,7 +19,7 @@ import {
   type AnswerViewModel,
   type ViewerViewModel,
   useAnswerApproval,
-  useApproval,
+  useShownApproval,
   useViewer,
 } from '../useYes';
 
@@ -44,7 +46,7 @@ export function ApprovalScreen(): ReactElement {
 
 function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactElement {
   const { t } = useTranslation();
-  const { approval, failure } = useApproval(approvalId);
+  const { approval, failure, newer, readNewer } = useShownApproval(approvalId);
   const viewer = useViewer();
   const answer = useAnswerApproval(approvalId);
   return (
@@ -53,6 +55,14 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
         {t('yes.detail.back')}
       </Link>
       <FailureBanner failure={failure} />
+      {newer ? (
+        <Banner tone="warning" tag={t('yes.act.changedTag')} live>
+          <span className="ys-signin">
+            <span>{t('yes.detail.newer')}</span>
+            <Button onClick={readNewer}>{t('yes.detail.readNewer')}</Button>
+          </span>
+        </Banner>
+      ) : null}
       {approval === undefined ? (
         failure === undefined ? (
           <Skeleton rows={2} />
@@ -74,8 +84,11 @@ interface ApprovalDetailProps {
 function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const tone = approvalTone(approval, viewer.login);
+  // Details when the server has them; an empty list of details still shows the bare commits.
   const commits: readonly ApprovalCommit[] =
-    approval.commitDetails ?? (approval.commits ?? []).map((sha) => ({ sha, title: '' }));
+    approval.commitDetails !== undefined && approval.commitDetails.length > 0
+      ? approval.commitDetails
+      : (approval.commits ?? []).map((sha) => ({ sha, title: '' }));
   const checks = approval.checks ?? [];
   const evidence = approval.evidence ?? [];
   const askers = approval.askedBy ?? [];
@@ -131,8 +144,8 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
           </h2>
           {checks.length === 0 ? null : (
             <ul className="ys-checks">
-              {checks.map((check) => (
-                <li key={check.name} className="ys-row">
+              {checks.map((check, index) => (
+                <li key={`${String(index)}-${check.name}`} className="ys-row">
                   <Badge tone={CHECK_TONES[check.state]}>{t(`yes.check.${check.state}`)}</Badge>
                   {safeHref(check.url) === undefined ? (
                     <span>{check.name}</span>
@@ -147,8 +160,8 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
           )}
           {evidence.length === 0 ? null : (
             <dl className="ys-kv">
-              {evidence.map((item) => (
-                <div key={item.label} className="ys-kv__row">
+              {evidence.map((item, index) => (
+                <div key={`${String(index)}-${item.label}`} className="ys-kv__row">
                   <dt>{item.label}</dt>
                   <dd>
                     {safeHref(item.url) === undefined ? (

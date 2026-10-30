@@ -1,6 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
-import { approvalTone, askedByViewer, checksSummary, shortSha } from './model';
+import { approvalTone, askedByViewer, checksSummary, shortSha, stillOpen } from './model';
+
+describe('stillOpen', () => {
+  it('is open until the request is decided', () => {
+    expect([stillOpen(undefined), stillOpen(null), stillOpen({}), stillOpen({ status: 'pending' })]).toEqual([
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect([stillOpen({ status: 'approved' }), stillOpen({ status: 'expired' })]).toEqual([false, false]);
+  });
+});
 
 const base: Approval = {
   id: 'a',

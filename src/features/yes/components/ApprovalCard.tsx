@@ -20,7 +20,7 @@ export function ApprovalCard({ approval, viewer, fresh, now }: ApprovalCardProps
   const { t, i18n } = useTranslation();
   const asker = approval.askedBy?.[0];
   const checks = checksSummary(approval.checks ?? []);
-  const commits = approval.commitDetails?.length ?? approval.commits?.length ?? 0;
+  const commits = Math.max(approval.commitDetails?.length ?? 0, approval.commits?.length ?? 0);
   return (
     <Link
       to="/yes/$approvalId"
