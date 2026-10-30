@@ -5,7 +5,11 @@ import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 function region(name: string): HTMLElement {
   return screen.getByRole('region', { name });

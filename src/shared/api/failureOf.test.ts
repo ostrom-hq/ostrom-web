@@ -11,5 +11,6 @@ describe('failureOf', () => {
     expect(failureOf(typed)).toBe(typed);
     expect(failureOf(plain)).toBe(plain);
     expect(failureOf('odd')?.message).toBe('odd');
+    expect(failureOf({ code: 7 })?.message).toBe('{"code":7}');
   });
 });
