@@ -40,11 +40,14 @@ async function statusOf(call: () => Promise<unknown>): Promise<number | false | 
 
 /** A body the generated client would never send, straight to the mock. */
 async function post(route: string, body: string): Promise<number> {
-  const response = await fetch(`http://ostrom.test/api/v1/orgs/6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c/billing/${route}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  });
+  const response = await fetch(
+    `http://ostrom.test/api/v1/orgs/6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c/billing/${route}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    },
+  );
   return response.status;
 }
 
@@ -59,9 +62,11 @@ function withoutSubscription(): void {
 describe('mock billing', () => {
   it('reads the plan of its organization only', async () => {
     expect((await getBilling({ path, throwOnError: true })).data.plan).toBe('team');
-    expect(await statusOf(async () => getBilling({ path: { orgId: '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d' }, throwOnError: true }))).toBe(
-      404,
-    );
+    expect(
+      await statusOf(async () =>
+        getBilling({ path: { orgId: '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d' }, throwOnError: true }),
+      ),
+    ).toBe(404);
   });
 
   it('sends an organization without a subscription to Stripe Checkout, and refuses one that has it', async () => {
