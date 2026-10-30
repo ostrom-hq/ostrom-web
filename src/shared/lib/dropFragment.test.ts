@@ -16,7 +16,10 @@ describe('dropFragment', () => {
 
   it('leaves an address without a fragment alone', () => {
     const replaceState = vi.fn();
-    dropFragment({ location: window.location, history: { ...window.history, replaceState } });
+    dropFragment({
+      location: { hash: '', pathname: '/yes', search: '' },
+      history: { state: null, replaceState },
+    });
     expect(replaceState).not.toHaveBeenCalled();
   });
 });

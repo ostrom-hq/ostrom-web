@@ -5,7 +5,12 @@
  * anything else runs: a sign-in token there (`#signin=opk_…`, `#token=…`) must not stay in the address bar, the
  * history or a screenshot. The router's own redirect follows; this does not wait for it.
  */
-export function dropFragment(target: Pick<Window, 'location' | 'history'> = window): void {
+export interface AddressBar {
+  readonly location: Pick<Location, 'hash' | 'pathname' | 'search'>;
+  readonly history: Pick<History, 'state' | 'replaceState'>;
+}
+
+export function dropFragment(target: AddressBar = window): void {
   if (target.location.hash === '') return;
   target.history.replaceState(
     target.history.state,
