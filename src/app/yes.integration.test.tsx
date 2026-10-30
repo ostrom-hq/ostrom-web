@@ -1,27 +1,31 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Ask } from '@gen/api/types.gen';
+import type { Approval } from '@gen/api/types.gen';
 import { createMemoryHistory } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { type AppRouter, createAppRouter } from '@/app/router';
-import { initialAsks } from '@/mocks/fixtures/yes';
+import { createMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 const { server, db } = createMockServer();
 const SLOW = { timeout: 4_000 };
+const never = (): Promise<never> => new Promise<never>(() => undefined);
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => useAuthStore.getState().token });
+  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => useAuthStore.getState().token });
 });
 afterEach(() => {
   server.resetHandlers();
-  db.asks = initialAsks();
+  const fresh = createMockDb();
+  db.approvals = fresh.approvals;
+  db.approvers = fresh.approvers;
+  useAuthStore.getState().signOut();
 });
 afterAll(() => {
   server.close();
@@ -33,130 +37,115 @@ function visit(path: string): AppRouter {
   return router;
 }
 
-function ask(id: string): Ask {
-  const found = db.asks.find((item) => item.id === id);
-  if (found === undefined) throw new Error(`no fixture ${id}`);
-  return found;
-}
-
-function withoutGate(item: Ask): Ask {
-  const copy = structuredClone(item);
-  delete copy.gate;
-  return copy;
-}
-
-function withoutReceipt(item: Ask): Ask {
-  const copy = structuredClone(item);
-  delete copy.receipt;
-  return copy;
-}
-
 /** Everything optional left out: the screens must still read. */
-const bare: Ask = {
-  id: 'ask-bare',
-  status: 'pending',
+const bare: Approval = {
+  id: 'apr-bare',
   title: 'Run a script',
+  requestedFrom: 'ops',
   channel: 'console',
-  who: {},
-  what: { harness: 'pkg-1' },
-  gate: { label: 'Scripts', approvers: ['maya'] },
-  rules: [{ id: 'R-1', statement: 'Scripts are reviewed.' }],
-  commits: [],
-  evidence: [{ label: 'Log', value: 'clean' }],
+  status: 'pending',
   shownDigest: 'sha256:bare',
-  askedBy: ['theo'],
-  pr: { number: '7', sha: 'abcdef1234' },
 };
 
-const longDiff = Array.from({ length: 45 }, (_, index) => `+line ${String(index)}`).join('\n');
-
-const rich: Ask = {
+/** Commits without their details, checks and evidence without links, a task and a decided request. */
+const plain: Approval = {
   ...bare,
-  id: 'ask-rich',
-  title: 'Refactor',
-  what: { action: 'Push a branch', command: 'git push', repo: 'acme/web', sessionRepo: 'acme/api' },
-  gate: { label: 'Push', approvers: ['maya', 'samir'] },
-  rules: Array.from({ length: 8 }, (_, index) => ({
-    id: `R-${String(index)}`,
-    statement: `Rule ${String(index)}`,
-    strength: index % 2 === 0 ? ('required' as const) : ('recommended' as const),
-  })),
-  diff: '--- a/x\n+++ b/x\n@@ -1 +1 @@\n\n-old\n+new',
-  askedBy: ['samir'],
+  id: 'apr-plain',
+  title: 'Push 1 commit to main',
+  commits: ['abcdef1234567'],
+  checks: [
+    { name: 'unit', state: 'failure' },
+    { name: 'docs', state: 'skipped' },
+  ],
+  evidence: [{ label: 'Log', value: 'clean' }],
+  taskId: 'task-9',
+  askedBy: ['theo'],
 };
+
+/** Each node comes after the one before it in the page. */
+function expectInOrder(nodes: readonly HTMLElement[]): void {
+  nodes.slice(1).forEach((node, index) => {
+    const previous = nodes[index];
+    expect(previous?.compareDocumentPosition(node)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+}
+
+function addApproval(approval: Approval, approvers: readonly string[] = ['maya']): void {
+  db.approvals.push(structuredClone(approval));
+  db.approvers[approval.id] = approvers;
+}
 
 describe('the queue', () => {
-  it('lists what waits, who approves, and what was decided', async () => {
+  it('lists what waits for the viewer and what was decided, without a button in a row', async () => {
     visit('/yes');
     expect(await screen.findByRole('heading', { level: 1, name: 'Requests' })).toBeInTheDocument();
-    expect(await screen.findByText('Approving as maya · approver account')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '2 waiting for you' })).toBeInTheDocument();
+    expect(await screen.findByText('Approving as Maya Lind (maya)')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '2 waiting for you' })).toBeInTheDocument();
 
-    const merge = screen.getByRole('link', { name: /Merge a pull request/ });
-    expect(merge).toHaveAttribute('href', '/yes/ask-merge-412');
+    const merge = screen.getByRole('link', { name: /Merge PR #412 into main/ });
+    expect(merge).toHaveAttribute('href', '/yes/apr-merge-412');
+    expect(within(merge).getByText('theo asks')).toBeInTheDocument();
     expect(within(merge).getByText('Waiting for you')).toBeInTheDocument();
-    expect(within(merge).getByText('+0 −0')).toBeInTheDocument();
-    expect(within(merge).getByText('#412 @ 9c1e4b2')).toBeInTheDocument();
-    expect(within(merge).getByText(/via Claude Code/)).toBeInTheDocument();
-    expect(merge.querySelector('time')).toHaveAttribute('title', expect.stringMatching(/^Oct 30, 2026/));
+    expect(within(merge).getByText('acme/billing-api · 9c1e4b2')).toBeInTheDocument();
+    expect(within(merge).getByText('2 commits')).toBeInTheDocument();
+    expect(within(merge).getByText('2/3 checks passed')).toBeInTheDocument();
+    expect(merge.querySelector('time')).toHaveAttribute('title', expect.stringMatching(/2026/));
     expect(within(merge).queryByRole('button')).toBeNull();
 
-    const deploy = screen.getByRole('link', { name: /Deploy/ });
+    const deploy = screen.getByRole('link', { name: /Deploy billing-api/ });
     expect(within(deploy).getByText('You asked')).toBeInTheDocument();
+    expect(within(deploy).getByText('0/1 checks passed')).toHaveClass('ys-chip--bad');
 
-    const decided = screen.getByRole('link', { name: /Database migration/ });
+    const decided = await screen.findByRole('link', { name: /Run migration/ });
     expect(within(decided).getByText('Approved')).toBeInTheDocument();
+    expect(within(decided).getByText(/^maya · /)).toBeInTheDocument();
   });
 
   it('marks a request that arrives while the page is open', async () => {
     visit('/yes');
     await screen.findByRole('heading', { name: '2 waiting for you' });
-    db.asks.push(structuredClone(bare));
+    addApproval(bare);
     const card = await screen.findByRole('link', { name: /Run a script/ }, SLOW);
     expect(within(card).getByText('New')).toBeInTheDocument();
+    expect(within(card).getByText('someone asks')).toBeInTheDocument();
   });
 
-  it('reads a bare request and a declined one', async () => {
-    server.use(
-      http.get('*/api/yes/queue', () =>
-        HttpResponse.json({
-          operator: 'ops',
-          pending: [bare, { ...withoutGate(bare), id: 'ask-nogate', title: 'Read the logs' }],
-          recent: [{ ...bare, id: 'ask-no', status: 'rejected', selfApproved: true }],
-        }),
-      ),
-    );
+  it('reads requests that carry only what the contract requires', async () => {
+    addApproval(bare);
+    addApproval(plain);
+    db.approvals.push({ ...bare, id: 'apr-no', title: 'Read the logs', status: 'rejected', selfApproved: true });
     visit('/yes');
-    expect(await screen.findByText('Approving as ops')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Run a script/ })).toHaveTextContent('someone via an agent');
-    expect(screen.getByRole('link', { name: /Read the logs/ })).not.toHaveTextContent('Scripts');
-    expect(screen.getByRole('link', { name: /Self-approved/ })).toHaveTextContent(/^Declined/);
+    const card = await screen.findByRole('link', { name: /Run a script/ });
+    expect(within(card).queryByText(/commit/)).toBeNull();
+    expect(card.querySelector('time')).toBeNull();
+    const push = screen.getByRole('link', { name: /Push 1 commit/ });
+    expect(within(push).getByText('1 commit')).toBeInTheDocument();
+    const declined = await screen.findByRole('link', { name: /Read the logs/ });
+    expect(within(declined).getByText('Declined')).toBeInTheDocument();
+    expect(within(declined).getByText('Self-approved')).toBeInTheDocument();
   });
 
-  it('says when nothing waits', async () => {
-    server.use(
-      http.get('*/api/yes/queue', () => HttpResponse.json({ operator: 'ops', pending: [], recent: [] })),
-    );
+  it('says when nothing waits and hides an empty decided list', async () => {
+    server.use(http.get('*/api/v1/approvals', () => HttpResponse.json({ items: [] })));
     visit('/yes');
     expect(await screen.findByText('Nothing waits for you')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Decided' })).toBeNull();
   });
 
-  it('shows the shape of the list while it loads', async () => {
-    server.use(http.get('*/api/yes/queue', () => new Promise<never>(() => undefined)));
+  it('shows the shape of the list while it loads, without a name yet', async () => {
+    server.use(http.get('*/api/v1/approvals', never), http.get('*/api/v1/auth/me', never));
     visit('/yes');
     expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByText(/Approving as/)).toBeNull();
   });
 
   it('says the server does not answer', async () => {
-    server.use(http.get('*/api/yes/queue', () => HttpResponse.error()));
+    server.use(http.get('*/api/v1/approvals', () => HttpResponse.error()));
     visit('/yes');
-    expect(await screen.findByText(/Ostrom does not answer/, undefined, SLOW)).toBeInTheDocument();
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(await screen.findByText(/Ostrom does not answer/)).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });
-});
 
-describe('signing in from a link', () => {
   it('keeps the token and drops it from the address', async () => {
     const router = visit('/yes?signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
@@ -174,213 +163,215 @@ describe('signing in from a link', () => {
 });
 
 describe('a request', () => {
-  it('shows the proof before the buttons, then approves with the action as the verb', async () => {
+  it('shows the proof in order before the buttons, then approves with the action as the verb', async () => {
     const user = userEvent.setup();
-    visit('/yes/ask-merge-412');
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Merge a pull request' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Waiting for you')).toBeInTheDocument();
-    expect(screen.getByText(/^in acme\/billing-api/)).toBeInTheDocument();
-    expect(screen.getByText('gh pr merge 412 --squash')).toBeInTheDocument();
-    expect(screen.getByText('acme/billing-api · PR #412 at 9c1e4b2')).toBeInTheDocument();
-    expect(screen.getByText('9c1e4b2')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'green (12 checks)' })).toHaveAttribute('target', '_blank');
-    expect(screen.getByText(/through Claude Code \(claude-opus-5-5\) session ses-7f3a/)).toBeInTheDocument();
-    expect(screen.queryByText(/Asked by/)).toBeNull();
-    expect(screen.getByText(/The rule “Merge to main” of Ship a backend change/)).toHaveTextContent(
-      'asks maya, samir to approve.',
+    visit('/yes/apr-merge-412');
+    const title = await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main' });
+    const sections = ['Changes', 'Checks', 'Who asks', 'Why you are asked'].map((name) =>
+      screen.getByRole('heading', { name }),
     );
-    expect(screen.getByText('2 rules your team decided')).toBeInTheDocument();
-    expect(screen.getByText('pkg-2026.10.30-3')).toBeInTheDocument();
-    expect(screen.getByText('9c1e4b2a7d')).toBeInTheDocument();
-    expect(screen.queryByText(/gate|Yes, run it/)).toBeNull();
-    expect(await screen.findByText('You approve as maya.')).toBeInTheDocument();
-
-    const sections = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
-    expect(sections).toEqual(['Changes', 'Checks', 'Who asks', 'Why you are asked']);
-
-    await user.click(screen.getByRole('button', { name: 'Approve merge' }));
-    const receipt = await screen.findByRole('region', { name: 'Receipt' });
-    expect(within(receipt).getByRole('heading')).toHaveTextContent(
-      /^maya approved: Merge a pull request · Oct 30, 2026/,
-    );
-    expect(within(receipt).getByText('Signature verified')).toBeInTheDocument();
-    expect(within(receipt).getByRole('link', { name: 'Download the receipt', hidden: true })).toHaveAttribute(
+    const approve = screen.getByRole('button', { name: 'Approve merge' });
+    expectInOrder([title, ...sections, approve]);
+    expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute('dateTime', '2026-10-30T18:00:00.000Z');
+    expect(screen.getByText('fix(invoices): round VAT per line')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '3fa0d81' })).toHaveAttribute(
       'href',
-      expect.stringMatching(/^\/api\/receipts\/.+\/bundle$/),
+      'https://github.com/acme/billing-api/commit/3fa0d81c55',
     );
+    expect(screen.getByRole('link', { name: 'test' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByRole('link', { name: '#412' })).toBeInTheDocument();
+    expect(screen.getByText('Ostrom asks billing-owners to approve this.')).toBeInTheDocument();
+    expect(screen.getByText('Workflow wf-backend')).toBeInTheDocument();
+    expect(await screen.findByText('You approve as Maya Lind (maya).')).toBeInTheDocument();
+
+    await user.click(approve);
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent(/maya approved: Merge PR #412 into main · /);
+    await user.click(within(decision).getByText('Verify the receipt'));
+    expect(within(decision).getByText('rcpt-apr-merge-412')).toBeInTheDocument();
+    expect(within(decision).getByText('ed25519 · 4f2a9c1b')).toBeInTheDocument();
+    expect(within(decision).getByText('ostrom verify rcpt-apr-merge-412')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Approve merge' })).toBeNull();
   });
 
-  it('refuses the author while another approver exists, and declines with what the agent should do', async () => {
+  it('says it approves while the answer is on its way', async () => {
     const user = userEvent.setup();
-    visit('/yes/ask-deploy-88');
-    expect(
-      await screen.findByText('You asked for this action: samir has to approve it.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('You asked for this yourself.')).toBeInTheDocument();
+    server.use(http.post('*/api/v1/approvals/:id/answer', async () => delay('infinite')));
+    visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
+    expect(await screen.findByRole('button', { name: 'Approving…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Decline & tell the agent…' })).toBeDisabled();
+  });
+
+  it('refuses the asker while another approver exists, and declines with what the agent should do', async () => {
+    const user = userEvent.setup();
+    visit('/yes/apr-deploy-88');
+    expect(await screen.findByText('You asked for this yourself.')).toBeInTheDocument();
+    expect(screen.getByText(/If someone else can approve it, Ostrom will ask them/)).toBeInTheDocument();
+    expect(screen.getByText('failed')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Approve deployment' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Not allowed');
-    expect(screen.queryByText('You asked for this action: samir has to approve it.')).toBeNull();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Not allowed');
+    expect(alert).toHaveTextContent('You asked for this: samir has to approve it.');
+    expect(screen.queryByText(/If someone else can approve it/)).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Decline & tell the agent…' }));
     const send = screen.getByRole('button', { name: 'Decline and send' });
     expect(send).toBeDisabled();
-    await user.type(
-      screen.getByRole('textbox', { name: 'What should the agent do instead?' }),
-      'Wait for samir.',
-    );
+    await user.type(screen.getByRole('textbox', { name: 'What should the agent do instead?' }), '  Wait for samir.  ');
     await user.click(send);
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent('maya declined: Deploy billing-api 2.14.0 to production');
+    expect(decision).toHaveTextContent('The agent was told: “Wait for samir.”');
+  });
 
-    const receipt = await screen.findByRole('region', { name: 'Receipt' });
-    expect(within(receipt).getByRole('heading')).toHaveTextContent(/^maya declined: Deploy · /);
-    expect(within(receipt).getByText('The agent was told: “Wait for samir.”')).toBeInTheDocument();
+  it('says it declines while the refusal is on its way', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/approvals/:id/answer', async () => delay('infinite')));
+    visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: 'Decline & tell the agent…' }));
+    await user.type(screen.getByRole('textbox'), 'No.');
+    await user.click(screen.getByRole('button', { name: 'Decline and send' }));
+    expect(await screen.findByRole('button', { name: 'Declining…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
   });
 
   it('lets the person back out of a decline', async () => {
     const user = userEvent.setup();
-    visit('/yes/ask-merge-412');
+    visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Decline & tell the agent…' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('warns the only approver that the receipt will say they approved their own request', async () => {
-    const deploy = ask('ask-deploy-88');
-    deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
-    deploy.you = { login: 'maya', self: true, canApprove: true, selfApproval: true };
-    visit('/yes/ask-deploy-88');
-    expect(await screen.findByText(/the receipt will say you approved your own request/)).toBeInTheDocument();
+  it('records a self-approval in plain words when the asker is the only approver', async () => {
+    const user = userEvent.setup();
+    db.approvers['apr-deploy-88'] = ['maya'];
+    visit('/yes/apr-deploy-88');
+    await user.click(await screen.findByRole('button', { name: 'Approve deployment' }));
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent('Self-approved');
+    expect(decision).toHaveTextContent('maya asked for this and was the only approver: the receipt says so.');
   });
 
-  it('says when the decision fails', async () => {
+  it('reloads a request that changed since it was opened, and asks to read it again', async () => {
+    const user = userEvent.setup();
+    visit('/yes/apr-merge-412');
+    const approve = await screen.findByRole('button', { name: 'Approve merge' });
+    db.approvals = db.approvals.map((item) =>
+      item.id === 'apr-merge-412' ? { ...item, title: 'Merge PR #412 into main (rebased)', shownDigest: 'sha256:new' } : item,
+    );
+    await user.click(approve);
+    expect(await screen.findByRole('alert')).toHaveTextContent('This request changed since you opened it.');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main (rebased)' })).toBeInTheDocument();
+  });
+
+  it('says when the answer fails', async () => {
     const user = userEvent.setup();
     server.use(
-      http.post('*/api/yes/:id/decide', () => HttpResponse.json({ error: 'down' }, { status: 500 })),
+      http.post('*/api/v1/approvals/:id/answer', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
+      ),
     );
-    visit('/yes/ask-merge-412');
+    visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Error');
+    expect(screen.getByRole('alert')).toHaveTextContent('down');
   });
 
-  it('reads a bare request without a signer', async () => {
-    server.use(http.get('*/api/yes/queue', () => new Promise<never>(() => undefined)));
-    db.asks.push(structuredClone(bare));
-    visit('/yes/ask-bare');
+  it('reads a request with only what the contract requires, before the viewer is known', async () => {
+    addApproval(bare);
+    server.use(http.get('*/api/v1/auth/me', never));
+    visit('/yes/apr-bare');
     expect(await screen.findByRole('heading', { level: 1, name: 'Run a script' })).toBeInTheDocument();
-    expect(screen.getByText(/through an agent/)).toBeInTheDocument();
-    expect(screen.getByText('Scripts are reviewed.')).toBeInTheDocument();
-    expect(screen.getByText('1 rule your team decided')).toBeInTheDocument();
-    expect(screen.getByText('The rule “Scripts” asks maya to approve.')).toBeInTheDocument();
-    expect(screen.getByText('PR #7 at abcdef1')).toBeInTheDocument();
-    expect(screen.getByText('pkg-1')).toBeInTheDocument();
-    expect(screen.getByText('clean')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Changes' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Checks' })).toBeNull();
+    expect(screen.getByText('someone')).toBeInTheDocument();
+    expect(screen.queryByText(/Workflow/)).toBeNull();
     expect(screen.queryByText(/You approve as/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
+    expect(screen.getByText('sha256:bare')).toBeInTheDocument();
   });
 
-  it('warns about another repository, caps the rules and colours the diff', async () => {
-    db.asks.push(structuredClone(rich));
-    visit('/yes/ask-rich');
-    expect(
-      await screen.findByText(/opened for acme\/api, but the command runs in acme\/web/),
-    ).toBeInTheDocument();
-    expect(screen.getByText('and 2 more')).toBeInTheDocument();
-    expect(screen.getByText('(not samir: they asked for it)')).toBeInTheDocument();
-    expect(screen.getByText(/^Asked by samir/)).toBeInTheDocument();
-    expect(screen.getByText('+new')).toHaveClass('ys-diff__line--added');
-    expect(screen.getByText('-old')).toHaveClass('ys-diff__line--removed');
-    expect(screen.getByRole('button', { name: 'Approve push' })).toBeEnabled();
+  it('reads commits without details, checks and evidence without links, and the task', async () => {
+    addApproval(plain);
+    visit('/yes/apr-plain');
+    expect(await screen.findByText('abcdef1')).toBeInTheDocument();
+    expect(screen.queryByText(/^Commit abcdef1/)).toBeNull();
+    expect(screen.getByText('unit')).not.toHaveAttribute('href');
+    expect(screen.getByText('skipped')).toBeInTheDocument();
+    expect(screen.getByText('clean')).toBeInTheDocument();
+    expect(screen.getByText('task-9')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve push' })).toBeInTheDocument();
   });
 
-  it('holds the approval until a long diff has been read whole', async () => {
-    const user = userEvent.setup();
-    db.asks.push({ ...structuredClone(rich), id: 'ask-long', diff: longDiff });
-    visit('/yes/ask-long');
-    const approve = await screen.findByRole('button', { name: 'Approve push' });
-    expect(approve).toBeDisabled();
-    expect(screen.getByText('Read the whole diff before approving.')).toBeInTheDocument();
-    expect(screen.queryByText('+line 44')).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: 'Show the whole diff (45 lines)' }));
-    expect(screen.getByText('+line 44')).toBeInTheDocument();
-    expect(approve).toBeEnabled();
-    expect(screen.queryByText('Read the whole diff before approving.')).toBeNull();
-  });
-
-  it('shows a decided request with its receipt instead of the buttons', async () => {
-    visit('/yes/ask-migration-7');
-    const receipt = await screen.findByRole('region', { name: 'Receipt' });
-    expect(within(receipt).getByRole('heading')).toHaveTextContent(/^maya approved: Database migration · /);
-    expect(within(receipt).getByText('ed25519 · 4f2a9c1b')).toBeInTheDocument();
-    expect(screen.getByText('Approved')).toBeInTheDocument();
-    expect(screen.queryByText('Why you are asked')).toBeNull();
-    expect(screen.queryByText('Changes')).toBeNull();
+  it('shows a decided request without its receipt, from the list', async () => {
+    visit('/yes/apr-migration-7');
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent('maya approved: Run migration 0042_add_credit_notes · ');
+    expect(within(decision).queryByText('Verify the receipt')).toBeNull();
     expect(screen.queryByRole('button', { name: /Approve/ })).toBeNull();
+  });
+
+  it('reads a declined request that names nobody and no time', async () => {
+    addApproval({ ...bare, id: 'apr-declined', status: 'rejected' });
+    visit('/yes/apr-declined');
+    expect(await screen.findByRole('region', { name: 'Decision' })).toHaveTextContent('someone declined: Run a script');
+    expect(screen.getByRole('region', { name: 'Decision' })).not.toHaveTextContent('·');
+  });
+
+  it.each([
+    ['apr-expired', /Expired without an answer · .*2026/],
+    ['apr-lapsed', /^DecisionExpired without an answer$/],
+  ] as const)('reads the expired request %s', async (id, text) => {
+    addApproval({ ...bare, id: 'apr-expired', status: 'expired', expiresAt: '2026-10-29T10:00:00.000Z' });
+    addApproval({ ...bare, id: 'apr-lapsed', status: 'expired' });
+    visit(`/yes/${id}`);
+    expect(await screen.findByRole('region', { name: 'Decision' })).toHaveTextContent(text);
   });
 
   it('says when the request cannot be loaded', async () => {
     visit('/yes/missing');
-    expect(await screen.findByText(/HTTP 404|not found/i, undefined, SLOW)).toBeInTheDocument();
+    expect(await screen.findByText('approval not found')).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows the shape of the request while it loads', async () => {
-    server.use(http.get('*/api/yes/:id', () => new Promise<never>(() => undefined)));
-    visit('/yes/ask-merge-412');
+    server.use(http.get('*/api/v1/approvals/:id', never));
+    visit('/yes/apr-merge-412');
     expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
-  });
-});
-
-describe('a receipt', () => {
-  const decided: Ask = {
-    ...bare,
-    id: 'ask-done',
-    status: 'rejected',
-    receipt: {
-      id: 'rcpt-1',
-      kind: 'gate',
-      signature: 'ed25519;sha256=00',
-      createdAt: '2026-10-30T08:00:00.000Z',
-      valid: false,
-      digest: 'sha256:0000',
-      result: 'rejected',
-      selfApproved: true,
-    },
-  };
-
-  it('reads an invalid receipt that names nobody', async () => {
-    db.asks.push(structuredClone(decided));
-    visit('/yes/ask-done');
-    const receipt = await screen.findByRole('region', { name: 'Receipt' });
-    expect(within(receipt).getByText('Signature does NOT verify')).toBeInTheDocument();
-    expect(within(receipt).getByRole('heading')).toHaveTextContent(/^someone declined: Run a script/);
-    expect(within(receipt).getByText('ed25519 · ?')).toBeInTheDocument();
-    expect(within(receipt).getByText(/was the only approver/)).toBeInTheDocument();
-    expect(screen.getByText('Declined')).toBeInTheDocument();
-  });
-
-  it('falls back to the decider when the receipt names nobody', async () => {
-    db.asks.push({
-      ...structuredClone(decided),
-      id: 'ask-by',
-      decidedBy: 'samir',
-      decidedAt: '2026-10-30T08:01:00.000Z',
-    });
-    visit('/yes/ask-by');
-    expect(await screen.findByText(/^samir declined/)).toBeInTheDocument();
-  });
-
-  it('shows a receipt being signed', async () => {
-    db.asks.push({ ...withoutReceipt(decided), id: 'ask-unsigned', status: 'expired' });
-    visit('/yes/ask-unsigned');
-    expect(await screen.findByText('Signing the receipt…')).toBeInTheDocument();
-    expect(screen.getByText('Expired')).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.queryByRole('button', { name: /Decline/ })).toBeNull();
+      expect(screen.getByRole('link', { name: 'All requests' })).toBeInTheDocument();
     });
+  });
+
+  it('shows the key as unknown when the signature does not name it', async () => {
+    const user = userEvent.setup();
+    const approved: Approval = { ...bare, id: 'apr-merge-412', status: 'approved' };
+    server.use(
+      http.post('*/api/v1/approvals/:id/answer', () => {
+        db.approvals = db.approvals.map((item) => (item.id === approved.id ? approved : item));
+        return HttpResponse.json({
+          approval: approved,
+          receipt: {
+            id: 'rcpt-x',
+            subject: { kind: 'gate', id: 'apr-merge-412', digest: 'sha256:x' },
+            initiator: 'theo',
+            rules: [],
+            decisions: [],
+            createdAt: '2026-10-30T08:00:00.000Z',
+            signature: 'ed25519;sig=x',
+          },
+        });
+      }),
+    );
+    visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent(/someone approved: Run a script · /);
+    await user.click(within(decision).getByText('Verify the receipt'));
+    expect(within(decision).getByText('ed25519 · ?')).toBeInTheDocument();
   });
 });

@@ -1,67 +1,70 @@
-import type {
-  Ask,
-  DecideRequest,
-  Error as ApiError,
-  SelfApprovalRefused,
-  YesQueue,
-} from '@gen/api/types.gen';
-import { handleDecideAsk, handleGetAsk, handleGetYesQueue } from '@gen/api/msw.gen';
-import { zDecideRequest } from '@gen/api/zod.gen';
+// SPDX-License-Identifier: AGPL-3.0-only
+import { handleAnswerApproval, handleGetApproval, handleGetMe, handleListApprovals } from '@gen/api/msw.gen';
+import type { ApiError, Approval, ApprovalAnswer, Receipt } from '@gen/api/types.gen';
+import { zAnswerApprovalRequest } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
-import { initialAsks, viewer } from '@/mocks/fixtures/yes';
+import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 
-const RECENT_LIMIT = 8;
-
-/** In-memory stand-in for the server: the same rules the prototype applies, so screens see real behaviour. */
 export interface MockDb {
-  asks: Ask[];
+  approvals: Approval[];
+  /** Who may answer each approval, by id. */
+  approvers: Record<string, readonly string[]>;
 }
 
 export function createMockDb(): MockDb {
-  return { asks: initialAsks() };
+  return { approvals: initialApprovals(), approvers: initialApprovers() };
 }
 
-function notFound(): HttpResponse<ApiError> {
-  return HttpResponse.json<ApiError>({ error: 'request not found' }, { status: 404 });
+function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
+  return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
 
-function decide(ask: Ask, request: DecideRequest, at: string): Ask {
-  const { result, note } = request;
-  const selfApproved = result === 'approved' && ask.askedBy.includes(viewer.login);
-  return {
-    ...ask,
-    ...(selfApproved ? { selfApproved } : {}),
-    ...(note === undefined ? {} : { note }),
-    status: result,
-    decidedBy: viewer.login,
-    decidedAt: at,
-    receipt: {
-      id: `rcpt-${ask.id}`,
-      kind: 'gate',
-      signature: `ed25519;kid=4f2a9c1b;sha256=${ask.shownDigest};sig=mock`,
-      createdAt: at,
-      valid: true,
-      digest: ask.shownDigest,
-      by: viewer.login,
-      result,
-      ...(selfApproved ? { selfApproved } : {}),
-    },
-  };
+function isAsker(approval: Approval, login: string): boolean {
+  return (approval.askedBy ?? []).some((author) => author.toLowerCase() === login.toLowerCase());
 }
 
 /**
- * The prototype's rule (`selfCheck`): the author of a request cannot say yes while another approver exists;
- * as the only approver, the yes passes (marked self-approved). A no always passes.
+ * The server's rule (prototype `selfCheck`): the person who asked cannot approve while another approver exists;
+ * as the only approver, the approval passes and is marked self-approved. A refusal always passes.
  */
-export function selfApprovalRefusal(ask: Ask, login: string): SelfApprovalRefused | undefined {
-  const asked = new Set(ask.askedBy.map((author) => author.toLowerCase()));
+export function selfApprovalRefusal(
+  approval: Approval,
+  approvers: readonly string[],
+  login: string,
+): string | undefined {
+  const asked = new Set((approval.askedBy ?? []).map((author) => author.toLowerCase()));
   if (!asked.has(login.toLowerCase())) return undefined;
-  const others = (ask.gate?.approvers ?? []).filter((approver) => !asked.has(approver.toLowerCase()));
-  if (others.length === 0) return undefined;
+  const others = approvers.filter((approver) => !asked.has(approver.toLowerCase()));
+  return others.length === 0 ? undefined : `You asked for this: ${others.join(' or ')} has to approve it.`;
+}
+
+function answered(approval: Approval, answer: ApprovalAnswer, selfApproved: boolean, at: string): Approval {
   return {
-    error: `You asked for this action: ${others.join(' or ')} has to approve it.`,
-    code: 'self_approval_refused',
-    others,
+    ...approval,
+    status: answer === 'approve' ? 'approved' : 'rejected',
+    decidedBy: me.dev.login,
+    decidedAt: at,
+    ...(selfApproved ? { selfApproved } : {}),
+  };
+}
+
+function receiptOf(approval: Approval, at: string): Receipt {
+  return {
+    id: `rcpt-${approval.id}`,
+    subject: { kind: 'gate', id: approval.id, digest: approval.shownDigest },
+    initiator: approval.askedBy?.[0] ?? me.dev.login,
+    rules: [],
+    decisions: [
+      {
+        approvalId: approval.id,
+        by: me.dev.login,
+        at,
+        result: approval.status,
+        ...(approval.selfApproved === true ? { selfApproved: true } : {}),
+      },
+    ],
+    createdAt: at,
+    signature: `ed25519;kid=4f2a9c1b;sha256=${approval.shownDigest};sig=mock`,
   };
 }
 
@@ -73,39 +76,45 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/** The approvals slice of the contract, served from memory with the server's rules. */
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
-  const options = { baseUrl: '*/api' };
+  const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
+  const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   return [
-    handleGetYesQueue(
-      () =>
-        HttpResponse.json<YesQueue>({
-          operator: viewer.login,
-          you: viewer,
-          pending: db.asks.filter((ask) => ask.status === 'pending'),
-          recent: db.asks.filter((ask) => ask.status !== 'pending').slice(0, RECENT_LIMIT),
-        }),
-      options,
-    ),
-    handleGetAsk(({ params }) => {
-      const ask = db.asks.find((candidate) => candidate.id === params.id);
-      return ask === undefined ? notFound() : HttpResponse.json<Ask>(ask);
-    }, options),
-    handleDecideAsk(async ({ params, request }) => {
-      const index = db.asks.findIndex((candidate) => candidate.id === params.id);
-      const ask = db.asks[index];
-      if (ask === undefined) return notFound();
-      if (ask.status !== 'pending') {
-        return HttpResponse.json<ApiError>({ error: 'request already decided' }, { status: 409 });
+    handleGetMe({ body: me }),
+    handleListApprovals(({ request }) => {
+      const query = new URL(request.url).searchParams;
+      const status = query.get('status');
+      const items = db.approvals.filter((approval) => {
+        if (query.get('mine') === 'true') {
+          return approval.status === 'pending' && (db.approvers[approval.id] ?? []).includes(me.dev.login);
+        }
+        return status === null || approval.status === status;
+      });
+      return HttpResponse.json({ items });
+    }),
+    handleGetApproval(({ params }) => {
+      const approval = find(params.id);
+      return approval === undefined ? notFound() : HttpResponse.json(approval);
+    }),
+    handleAnswerApproval(async ({ params, request }) => {
+      const approval = find(params.id);
+      if (approval === undefined) return notFound();
+      const body = zAnswerApprovalRequest.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'answer must be approve or reject');
+      if (approval.status !== 'pending') return refusal(409, 'already_decided', 'this approval is already decided');
+      if (body.data.shownDigest !== approval.shownDigest) {
+        return refusal(409, 'shown_digest_mismatch', 'the approval changed since it was shown');
       }
-      const body = zDecideRequest.safeParse(await readJson(request));
-      if (!body.success) {
-        return HttpResponse.json<ApiError>({ error: 'result must be approved or rejected' }, { status: 400 });
-      }
-      const refusal = body.data.result === 'approved' ? selfApprovalRefusal(ask, viewer.login) : undefined;
-      if (refusal !== undefined) return HttpResponse.json<SelfApprovalRefused>(refusal, { status: 403 });
-      const decided = decide(ask, body.data, now().toISOString());
-      db.asks[index] = decided;
-      return HttpResponse.json<Ask>(decided);
-    }, options),
+      const approvers = db.approvers[approval.id] ?? [];
+      if (!approvers.includes(me.dev.login)) return refusal(403, 'not_an_approver', 'you cannot answer this approval');
+      const refused = body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
+      if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
+      const at = now().toISOString();
+      const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
+      const next = answered(approval, body.data.answer, selfApproved, at);
+      db.approvals = db.approvals.map((item) => (item.id === next.id ? next : item));
+      return HttpResponse.json({ approval: next, receipt: receiptOf(next, at) });
+    }),
   ];
 }

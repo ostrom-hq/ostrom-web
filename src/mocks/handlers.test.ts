@@ -1,23 +1,24 @@
-import { decideAsk, getAsk, getYesQueue } from '@gen/api/sdk.gen';
-import type { Ask } from '@gen/api/types.gen';
-import { zSelfApprovalRefused } from '@gen/api/zod.gen';
+// SPDX-License-Identifier: AGPL-3.0-only
+import { answerApproval, getApproval, getMe, listApprovals } from '@gen/api/sdk.gen';
+import type { Approval } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { initialAsks } from '@/mocks/fixtures/yes';
-import { selfApprovalRefusal } from '@/mocks/handlers';
+import { initialApprovals } from '@/mocks/fixtures/approvals';
+import { createHandlers, createMockDb, selfApprovalRefusal } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
-const initial = structuredClone(db.asks);
 const NOW = new Date('2026-10-30T08:00:00.000Z');
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => undefined });
+  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => undefined });
 });
 afterEach(() => {
   server.resetHandlers();
-  db.asks = structuredClone(initial);
+  const fresh = createMockDb();
+  db.approvals = fresh.approvals;
+  db.approvers = fresh.approvers;
 });
 afterAll(() => {
   server.close();
@@ -32,131 +33,169 @@ async function failureOf(call: () => Promise<unknown>): Promise<unknown> {
   throw new Error('the call did not fail');
 }
 
+function fixture(id: string): Approval {
+  const found = initialApprovals().find((approval) => approval.id === id);
+  if (found === undefined) throw new Error(`no fixture ${id}`);
+  return found;
+}
+
+const merge = { path: { id: 'apr-merge-412' } };
+const deploy = { path: { id: 'apr-deploy-88' } };
+
 describe('mock API', () => {
-  it('lists pending and decided requests apart', async () => {
-    const { data } = await getYesQueue({ throwOnError: true });
-    expect(data.operator).toBe('maya');
-    expect(data.pending).toHaveLength(2);
-    expect(data.recent.map((ask) => ask.status)).toEqual(['approved']);
+  it('says who is signed in', async () => {
+    const { data } = await getMe({ throwOnError: true });
+    expect(data.dev.login).toBe('maya');
   });
 
-  it('returns one request', async () => {
-    const { data } = await getAsk({ path: { id: 'ask-merge-412' }, throwOnError: true });
-    expect(data.commits?.map((commit) => commit.sha)).toEqual(['9c1e4b2a7d', '3fa0d81c55']);
+  it('lists what waits for the caller, by status, or everything', async () => {
+    const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
+    const approved = await listApprovals({ query: { status: 'approved' }, throwOnError: true });
+    const all = await listApprovals({ throwOnError: true });
+    expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-merge-412', 'apr-deploy-88']);
+    expect(approved.data.items.map((approval) => approval.id)).toEqual(['apr-migration-7']);
+    expect(all.data.items).toHaveLength(3);
   });
 
-  it('signs a yes as the viewer and moves the request to the decided list', async () => {
-    const { data } = await decideAsk({
-      path: { id: 'ask-merge-412' },
-      body: { result: 'approved' },
+  it('leaves out of "mine" what the caller cannot answer', async () => {
+    db.approvers['apr-deploy-88'] = ['samir'];
+    const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
+    expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-merge-412']);
+  });
+
+  it('returns one approval, or 404', async () => {
+    const { data } = await getApproval({ ...merge, throwOnError: true });
+    expect(data.title).toBe('Merge PR #412 into main');
+    const error = await failureOf(async () => getApproval({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(error) && [error.status, error.code]).toEqual([404, 'not_found']);
+  });
+
+  it('approves as the caller, signs a receipt, and moves the approval out of the queue', async () => {
+    const { data } = await answerApproval({
+      ...merge,
+      body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
       throwOnError: true,
     });
-    expect(data.status).toBe('approved');
-    expect(data.receipt?.by).toBe('maya');
-    expect(data.receipt?.digest).toBe(data.shownDigest);
-    const queue = await getYesQueue({ throwOnError: true });
-    expect(queue.data.pending.map((ask) => ask.id)).toEqual(['ask-deploy-88']);
+    expect([data.approval.status, data.approval.decidedBy]).toEqual(['approved', 'maya']);
+    expect(data.receipt?.decisions[0]).toMatchObject({ approvalId: 'apr-merge-412', by: 'maya', result: 'approved' });
+    expect(data.receipt?.subject.digest).toBe('sha256:5b0c2f8e');
+    const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
+    expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-deploy-88']);
   });
 
-  it('stamps the decision with the injected clock', async () => {
-    const { createHandlers, createMockDb } = await import('@/mocks/handlers');
-    const ownDb = createMockDb();
-    server.use(...createHandlers(ownDb, () => NOW));
-    const { data } = await decideAsk({
-      path: { id: 'ask-merge-412' },
-      body: { result: 'rejected' },
+  it('stamps the answer with the injected clock', async () => {
+    server.use(...createHandlers(db, () => NOW));
+    const { data } = await answerApproval({
+      ...merge,
+      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e', comment: 'Wait for the migration.' },
       throwOnError: true,
     });
-    expect([data.status, data.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
+    expect([data.approval.status, data.approval.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
   });
 
-  it('refuses the author’s own yes while another approver exists', async () => {
+  it('refuses the asker’s own approval while another approver exists, and lets their refusal through', async () => {
     const error = await failureOf(async () =>
-      decideAsk({ path: { id: 'ask-deploy-88' }, body: { result: 'approved' }, throwOnError: true }),
+      answerApproval({ ...deploy, body: { answer: 'approve', shownDigest: 'sha256:a91d0e44' }, throwOnError: true }),
     );
-    expect(isApiFailure(error) && error.kind).toBe('forbidden');
-    const body = isApiFailure(error) ? zSelfApprovalRefused.parse(error.body) : undefined;
-    expect(body?.others).toEqual(['samir']);
-  });
-
-  it('lets the author withdraw with a no', async () => {
-    const { data } = await decideAsk({
-      path: { id: 'ask-deploy-88' },
-      body: { result: 'rejected', note: 'Wait for the migration PR.' },
-      throwOnError: true,
-    });
-    expect([data.status, data.note]).toEqual(['rejected', 'Wait for the migration PR.']);
-  });
-
-  it('answers 404 for an unknown request, on read and on decide', async () => {
-    const read = await failureOf(async () => getAsk({ path: { id: 'nope' }, throwOnError: true }));
-    const decide = await failureOf(async () =>
-      decideAsk({ path: { id: 'nope' }, body: { result: 'approved' }, throwOnError: true }),
-    );
-    expect([read, decide].map((error) => isApiFailure(error) && error.kind)).toEqual([
-      'not-found',
-      'not-found',
+    expect(isApiFailure(error) && [error.status, error.code, error.message]).toEqual([
+      403,
+      'self_approval_refused',
+      'You asked for this: samir has to approve it.',
     ]);
-  });
-
-  it('marks the yes of the only approver as self-approved, in the request and its receipt', async () => {
-    const deploy = db.asks.find((ask) => ask.id === 'ask-deploy-88');
-    if (deploy === undefined) throw new Error('no fixture');
-    deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
-    const { data } = await decideAsk({
-      path: { id: 'ask-deploy-88' },
-      body: { result: 'approved' },
+    const { data } = await answerApproval({
+      ...deploy,
+      body: { answer: 'reject', shownDigest: 'sha256:a91d0e44' },
       throwOnError: true,
     });
-    expect([data.selfApproved, data.receipt?.selfApproved]).toEqual([true, true]);
+    expect(data.approval.status).toBe('rejected');
   });
 
-  it('answers 409 when the request is already decided', async () => {
+  it('marks the approval of the only approver as self-approved, on the approval and its receipt', async () => {
+    db.approvers['apr-deploy-88'] = ['maya'];
+    const { data } = await answerApproval({
+      ...deploy,
+      body: { answer: 'approve', shownDigest: 'sha256:a91d0e44' },
+      throwOnError: true,
+    });
+    expect([data.approval.selfApproved, data.receipt?.decisions[0]?.selfApproved]).toEqual([true, true]);
+  });
+
+  it('refuses someone who is not an approver', async () => {
+    db.approvers['apr-merge-412'] = ['samir'];
     const error = await failureOf(async () =>
-      decideAsk({ path: { id: 'ask-migration-7' }, body: { result: 'rejected' }, throwOnError: true }),
+      answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' }, throwOnError: true }),
     );
-    expect(isApiFailure(error) && error.status).toBe(409);
+    expect(isApiFailure(error) && error.code).toBe('not_an_approver');
   });
 
-  it('answers 400 to a body that is not JSON', async () => {
-    const response = await fetch('http://ostrom.test/api/yes/ask-merge-412/decide', {
+  it('answers 409 when what was shown changed, or when the approval is already decided', async () => {
+    const changed = await failureOf(async () =>
+      answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:old' }, throwOnError: true }),
+    );
+    const decided = await failureOf(async () =>
+      answerApproval({
+        path: { id: 'apr-migration-7' },
+        body: { answer: 'reject', shownDigest: 'sha256:0c77aa19' },
+        throwOnError: true,
+      }),
+    );
+    expect(isApiFailure(changed) && [changed.kind, changed.code]).toEqual(['conflict', 'shown_digest_mismatch']);
+    expect(isApiFailure(decided) && decided.code).toBe('already_decided');
+  });
+
+  it('handles an approval nobody was named for, and one without an asker', async () => {
+    const orphan: Approval = { ...fixture('apr-merge-412'), id: 'apr-orphan' };
+    delete orphan.askedBy;
+    db.approvals.push(orphan);
+    const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
+    expect(mine.data.items.map((approval) => approval.id)).not.toContain('apr-orphan');
+    const refused = await failureOf(async () =>
+      answerApproval({
+        path: { id: 'apr-orphan' },
+        body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+        throwOnError: true,
+      }),
+    );
+    expect(isApiFailure(refused) && refused.code).toBe('not_an_approver');
+
+    db.approvers['apr-orphan'] = ['maya'];
+    const { data } = await answerApproval({
+      path: { id: 'apr-orphan' },
+      body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+      throwOnError: true,
+    });
+    expect([data.receipt?.initiator, data.approval.selfApproved]).toEqual(['maya', undefined]);
+  });
+
+  it('answers 404 to an unknown approval and 400 to a body that is not an answer', async () => {
+    const missing = await failureOf(async () =>
+      answerApproval({ path: { id: 'nope' }, body: { answer: 'approve', shownDigest: 'x' }, throwOnError: true }),
+    );
+    const notJson = await fetch('http://ostrom.test/api/v1/approvals/apr-merge-412/answer', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: '{not json',
     });
-    expect(response.status).toBe(400);
-  });
-
-  it('answers 400 to a body outside the contract', async () => {
-    const response = await fetch('http://ostrom.test/api/yes/ask-merge-412/decide', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ result: 'maybe' }),
-    });
-    expect(response.status).toBe(400);
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+    expect(notJson.status).toBe(400);
   });
 });
 
 describe('selfApprovalRefusal', () => {
-  function fixture(id: string): Ask {
-    const found = initialAsks().find((ask) => ask.id === id);
-    if (found === undefined) throw new Error(`no fixture ${id}`);
-    return found;
-  }
-
   it('lets through someone who did not ask', () => {
-    expect(selfApprovalRefusal(fixture('ask-merge-412'), 'maya')).toBeUndefined();
+    expect(selfApprovalRefusal(fixture('apr-merge-412'), ['maya', 'samir'], 'maya')).toBeUndefined();
   });
 
-  it('refuses the author, case-insensitively, and names the other approvers', () => {
-    expect(selfApprovalRefusal(fixture('ask-deploy-88'), 'MAYA')?.others).toEqual(['samir']);
+  it('refuses the asker, case-insensitively, and names the other approvers', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya', 'samir', 'lena'], 'MAYA')).toBe(
+      'You asked for this: samir or lena has to approve it.',
+    );
   });
 
-  it('lets the author through as the only approver, or when the request has no gate', () => {
-    const deploy = fixture('ask-deploy-88');
-    deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
-    expect(selfApprovalRefusal(deploy, 'maya')).toBeUndefined();
-    delete deploy.gate;
-    expect(selfApprovalRefusal(deploy, 'maya')).toBeUndefined();
+  it('lets the asker through as the only approver, and treats a missing asker list as nobody', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya')).toBeUndefined();
+    const anonymous = fixture('apr-deploy-88');
+    delete anonymous.askedBy;
+    expect(selfApprovalRefusal(anonymous, ['maya'], 'maya')).toBeUndefined();
   });
 });

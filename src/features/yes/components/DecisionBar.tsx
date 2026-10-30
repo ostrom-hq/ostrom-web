@@ -1,34 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Ask } from '@gen/api/types.gen';
+import type { Approval } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { actionKind } from '../model';
-import type { DecideViewModel } from '../useYes';
+import { actionKind, askedByViewer } from '../model';
+import type { AnswerViewModel } from '../useYes';
 
 export interface DecisionBarProps {
-  readonly ask: Ask;
+  readonly approval: Approval;
   readonly viewer: string | undefined;
-  readonly decision: DecideViewModel;
-  /** Why approving is not possible yet (a folded diff), shown instead of letting the click through. */
-  readonly blocked: string | undefined;
+  readonly viewerName: string | undefined;
+  readonly answer: AnswerViewModel;
 }
 
 /** Under the thumb on a phone. Approving is one click on the proof above; declining always says why. */
-export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps): ReactElement {
+export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
-  const { decide, signing, refusal, failure } = decision;
+  const { sending, refusal, changed, failure } = answer;
   const [declining, setDeclining] = useState(false);
-  const [note, setNote] = useState('');
-  const noteId = useId();
-  const busy = signing !== undefined;
-  const reason = note.trim();
+  const [comment, setComment] = useState('');
+  const commentId = useId();
+  const busy = sending !== undefined;
+  const reason = comment.trim();
   return (
     <footer className="ys-act">
+      {changed ? (
+        <Banner tone="warning" tag={t('yes.act.changedTag')} live>
+          {t('yes.act.changed')}
+        </Banner>
+      ) : null}
       {refusal === undefined ? null : (
         <Banner tone="danger" tag={t('yes.act.refusedTag')} live>
-          {refusal.error}
+          {refusal}
         </Banner>
       )}
       {failure === undefined ? null : (
@@ -36,14 +40,9 @@ export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps
           {failure.message}
         </Banner>
       )}
-      {refusal === undefined && ask.you?.self === true && !ask.you.canApprove ? (
+      {refusal === undefined && askedByViewer(approval, viewer) ? (
         <Banner tone="warning" tag={t('yes.act.youAskedTag')}>
-          {ask.you.reason}
-        </Banner>
-      ) : null}
-      {ask.you?.selfApproval === true ? (
-        <Banner tone="warning" tag={t('yes.act.onlyApproverTag')}>
-          {t('yes.act.onlyApprover')}
+          {t('yes.act.youAsked')}
         </Banner>
       ) : null}
       {declining ? (
@@ -51,21 +50,21 @@ export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps
           className="ys-decline"
           onSubmit={(event) => {
             event.preventDefault();
-            decide('rejected', reason);
+            answer.answer(approval, 'reject', reason);
           }}
         >
-          <label htmlFor={noteId} className="ys-label">
+          <label htmlFor={commentId} className="ys-label">
             {t('yes.act.declineLabel')}
           </label>
           <textarea
-            id={noteId}
+            id={commentId}
             className="ys-textarea"
             rows={3}
             maxLength={2000}
             placeholder={t('yes.act.declinePlaceholder')}
-            value={note}
+            value={comment}
             onChange={(event) => {
-              setNote(event.target.value);
+              setComment(event.target.value);
             }}
           />
           <div className="ys-act__buttons">
@@ -79,15 +78,14 @@ export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps
               {t('yes.act.cancel')}
             </Button>
             <Button type="submit" variant="danger" disabled={busy || reason.length === 0}>
-              {signing === 'rejected' ? t('yes.act.declining') : t('yes.act.sendDecline')}
+              {sending === 'reject' ? t('yes.act.declining') : t('yes.act.sendDecline')}
             </Button>
           </div>
         </form>
       ) : (
         <>
-          {blocked === undefined ? null : <p className="ys-small ys-meta">{blocked}</p>}
-          {viewer === undefined ? null : (
-            <p className="ys-small ys-meta">{t('yes.act.signedAs', { login: viewer })}</p>
+          {viewerName === undefined ? null : (
+            <p className="ys-small ys-meta">{t('yes.act.signedAs', { name: viewerName })}</p>
           )}
           <div className="ys-act__buttons">
             <Button
@@ -101,12 +99,12 @@ export function DecisionBar({ ask, viewer, decision, blocked }: DecisionBarProps
             </Button>
             <Button
               variant="primary"
-              disabled={busy || blocked !== undefined}
+              disabled={busy}
               onClick={() => {
-                decide('approved');
+                answer.answer(approval, 'approve');
               }}
             >
-              {signing === 'approved' ? t('yes.act.approving') : t(`yes.act.approve.${actionKind(ask)}`)}
+              {sending === 'approve' ? t('yes.act.approving') : t(`yes.act.approve.${actionKind(approval)}`)}
             </Button>
           </div>
         </>

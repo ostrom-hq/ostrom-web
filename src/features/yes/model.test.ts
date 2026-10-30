@@ -1,106 +1,66 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Ask } from '@gen/api/types.gen';
-import { agentLabel, approversOf, askTone, diffLineKind, diffStats, keyIdOf, shortSha } from './model';
+import type { Approval } from '@gen/api/types.gen';
+import { actionKind, approvalTone, askedByViewer, checksSummary, keyIdOf, shortSha } from './model';
 
-const base: Ask = {
+const base: Approval = {
   id: 'a',
-  status: 'pending',
-  title: 'Merge',
+  title: 'Run a script',
+  requestedFrom: 'owners',
   channel: 'console',
-  who: {},
-  what: {},
-  rules: [],
-  evidence: [],
+  status: 'pending',
   shownDigest: 'sha256:x',
-  askedBy: ['theo'],
+  askedBy: ['Theo'],
 };
 
-describe('diff', () => {
-  const diff = [
-    'diff --git a/x b/x',
-    '--- a/x',
-    '+++ b/x',
-    '@@ -1,2 +1,2 @@',
-    ' same',
-    '-old',
-    '+new',
-    '+more',
-  ].join('\n');
-
-  it('classifies each line', () => {
-    expect(diff.split('\n').map(diffLineKind)).toEqual([
-      'file',
-      'file',
-      'file',
-      'hunk',
-      'context',
-      'removed',
-      'added',
-      'added',
-    ]);
-  });
-
-  it('counts added and removed lines, not the file headers', () => {
-    expect(diffStats(diff)).toEqual({ added: 2, removed: 1 });
-  });
-});
-
-describe('askTone', () => {
-  it('waits for the viewer, or for someone else when the viewer asked', () => {
-    expect(askTone(base)).toBe('waiting-you');
-    expect(askTone({ ...base, you: { login: 'theo', self: true, canApprove: false } })).toBe('waiting-other');
-    expect(askTone({ ...base, you: { login: 'theo', self: true, canApprove: true } })).toBe('waiting-you');
+describe('approvalTone', () => {
+  it('waits for the viewer, or says the viewer asked', () => {
+    expect(approvalTone(base, 'maya')).toBe('waiting-you');
+    expect(approvalTone(base, 'theo')).toBe('asked-by-you');
+    expect(approvalTone(base, undefined)).toBe('waiting-you');
   });
 
   it('names the decided states', () => {
-    expect(askTone({ ...base, status: 'approved' })).toBe('approved');
-    expect(askTone({ ...base, status: 'rejected' })).toBe('refused');
-    expect(askTone({ ...base, status: 'expired' })).toBe('expired');
+    expect(approvalTone({ ...base, status: 'approved' }, 'maya')).toBe('approved');
+    expect(approvalTone({ ...base, status: 'rejected' }, 'maya')).toBe('refused');
+    expect(approvalTone({ ...base, status: 'expired' }, 'maya')).toBe('expired');
   });
 });
 
-describe('approversOf', () => {
-  it('sets the author aside when another approver exists', () => {
-    expect(approversOf({ ...base, gate: { label: 'g', approvers: ['Theo', 'maya'] } })).toEqual({
-      eligible: ['maya'],
-      askers: ['Theo'],
-    });
-  });
-
-  it('keeps the author when nobody else can approve', () => {
-    expect(approversOf({ ...base, gate: { label: 'g', approvers: ['theo'] } })).toEqual({
-      eligible: ['theo'],
-      askers: [],
-    });
-  });
-
-  it('has nobody without a gate', () => {
-    expect(approversOf(base)).toEqual({ eligible: [], askers: [] });
-  });
-});
-
-describe('labels', () => {
-  it('names known agents and keeps unknown ones', () => {
-    expect(agentLabel('claude-code')).toBe('Claude Code');
-    expect(agentLabel('aider')).toBe('aider');
-    expect(agentLabel(undefined)).toBeUndefined();
-  });
-
-  it('shortens a sha', () => {
-    expect(shortSha('9c1e4b2a7d')).toBe('9c1e4b2');
-  });
-
-  it('reads the key id of a signature', () => {
-    expect(keyIdOf('ed25519;kid=4f2a9c1b;sha256=0c;sig=ME')).toBe('4f2a9c1b');
-    expect(keyIdOf('ed25519;sha256=0c')).toBeUndefined();
+describe('askedByViewer', () => {
+  it('reads a missing asker list as nobody', () => {
+    const anonymous = structuredClone(base);
+    delete anonymous.askedBy;
+    expect(askedByViewer(anonymous, 'theo')).toBe(false);
   });
 });
 
 describe('actionKind', () => {
-  it('names the action for the approve button', () => {
-    expect(actionKind({ ...base, what: { action: 'Merge a pull request' } })).toBe('merge');
-    expect(actionKind({ ...base, what: { command: 'make deploy ENV=prod' } })).toBe('deployment');
-    expect(actionKind({ ...base, title: 'git push origin main' })).toBe('push');
-    expect(actionKind({ ...base, title: 'Run the migration' })).toBe('other');
+  it.each([
+    ['Merge PR #412 into main', 'merge'],
+    ['Deploy billing-api to production', 'deployment'],
+    ['Push 2 commits to main', 'push'],
+    ['Run the migration', 'other'],
+  ] as const)('reads "%s" as %s', (title, kind) => {
+    expect(actionKind({ ...base, title })).toBe(kind);
+  });
+});
+
+describe('checksSummary', () => {
+  it('counts passed and failed checks', () => {
+    expect(
+      checksSummary([
+        { name: 'a', state: 'success' },
+        { name: 'b', state: 'failure' },
+        { name: 'c', state: 'pending' },
+      ]),
+    ).toEqual({ passed: 1, failed: 1, total: 3 });
+  });
+});
+
+describe('labels', () => {
+  it('shortens a sha and reads the key id of a signature', () => {
+    expect(shortSha('9c1e4b2a7d')).toBe('9c1e4b2');
+    expect(keyIdOf('ed25519;kid=4f2a9c1b;sha256=0c;sig=ME')).toBe('4f2a9c1b');
+    expect(keyIdOf('ed25519;sha256=0c')).toBeUndefined();
   });
 });

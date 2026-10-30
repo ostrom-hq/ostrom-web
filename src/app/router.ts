@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { HomeScreen } from '@/features/home';
-import { AskScreen, YesQueueScreen } from '@/features/yes';
+import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 const rootRoute = createRootRoute({ component: AppShell });
@@ -41,9 +41,13 @@ const yesRoute = createRoute({
   component: YesQueueScreen,
 });
 
-const askRoute = createRoute({ getParentRoute: () => rootRoute, path: '/yes/$askId', component: AskScreen });
+const approvalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/yes/$approvalId',
+  component: ApprovalScreen,
+});
 
-export const routeTree = rootRoute.addChildren([homeRoute, yesRoute, askRoute]);
+export const routeTree = rootRoute.addChildren([homeRoute, yesRoute, approvalRoute]);
 
 const buildRouter = (history?: RouterHistory) =>
   createRouter({

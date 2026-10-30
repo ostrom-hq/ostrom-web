@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { YesQueue } from '@gen/api/types.gen';
+import type { Me } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { failureOf, refusalOf, viewerLabel } from './useYes';
+import { changedOf, failureOf, refusalOf, viewerName } from './useYes';
 
 describe('failureOf', () => {
   it('passes errors through and wraps anything else', () => {
@@ -15,29 +15,25 @@ describe('failureOf', () => {
   });
 });
 
-describe('refusalOf', () => {
-  const body = { error: 'samir has to approve it', code: 'self_approval_refused', others: ['samir'] };
-
-  it('reads the refusal of a 403 that matches the contract', () => {
-    expect(refusalOf(new ApiFailure('forbidden', 'HTTP 403', 403, body))).toEqual(body);
-  });
-
-  it('ignores other failures and other 403 bodies', () => {
-    expect(refusalOf(new Error('x'))).toBeUndefined();
-    expect(refusalOf(new ApiFailure('server', 'HTTP 500', 500, body))).toBeUndefined();
-    expect(refusalOf(new ApiFailure('forbidden', 'HTTP 403', 403, { error: 'no' }))).toBeUndefined();
+describe('refusalOf and changedOf', () => {
+  it('read a 403 as a refusal and a shown-digest 409 as a change', () => {
+    const forbidden = new ApiFailure('forbidden', 'samir has to approve it', 403, undefined, 'self_approval_refused');
+    const changed = new ApiFailure('conflict', 'changed', 409, undefined, 'shown_digest_mismatch');
+    expect([refusalOf(forbidden), changedOf(forbidden)]).toEqual(['samir has to approve it', false]);
+    expect([refusalOf(changed), changedOf(changed)]).toEqual([undefined, true]);
+    expect([refusalOf(new Error('x')), changedOf(new Error('x'))]).toEqual([undefined, false]);
   });
 });
 
-describe('viewerLabel', () => {
-  const queue: YesQueue = { operator: 'ops', pending: [], recent: [] };
+describe('viewerName', () => {
+  const me: Me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
 
-  it('names the approver account, or the console operator when the server knows no approver', () => {
-    const label = (via: string, login: string): string => `${login}/${via}`;
-    expect(viewerLabel(undefined, label)).toBeUndefined();
-    expect(viewerLabel(queue, label)).toBe('ops');
-    expect(viewerLabel({ ...queue, you: { login: 'maya', via: 'operator-account' } }, label)).toBe(
-      'maya/operator-account',
+  it('names the person, or falls back to the login', () => {
+    expect(viewerName(undefined)).toBeUndefined();
+    expect(viewerName(me)).toBe('maya');
+    expect(viewerName({ ...me, member: { login: 'maya', name: '', avatarUrl: '', role: 'approver' } })).toBe('maya');
+    expect(viewerName({ ...me, member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'approver' } })).toBe(
+      'Maya Lind (maya)',
     );
   });
 });

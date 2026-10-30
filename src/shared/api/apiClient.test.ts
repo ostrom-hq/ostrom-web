@@ -1,12 +1,13 @@
 import { client } from '@gen/api/client.gen';
 import { handleGetMe } from '@gen/api/msw.gen';
 import { getApproval, getMe } from '@gen/api/sdk.gen';
+import type { Me } from '@gen/api/types.gen';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 
-const me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
+const me: Me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
 const notFound = { error: { type: 'not_found', message: 'approval not found' } };
 
 const server = setupServer(

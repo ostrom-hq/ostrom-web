@@ -150,8 +150,9 @@
   font-family: var(--font-mono);
   font-size: var(--fs-12);
 }
-.ys-chip__k {
-  color: var(--text-subtle);
+.ys-chip--bad {
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 .ys-line {
@@ -190,7 +191,7 @@
   margin: 0;
 }
 .ys-commits,
-.ys-rules {
+.ys-checks {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -204,37 +205,6 @@
   font-family: var(--font-mono);
 }
 
-.ys-diff {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  padding: var(--space-3) 0;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-  font-size: var(--fs-12);
-  line-height: 1.6;
-}
-.ys-diff__line {
-  display: block;
-  padding: 0 var(--space-3);
-}
-.ys-diff__line--added {
-  background: var(--success-tint);
-  color: var(--success);
-}
-.ys-diff__line--removed {
-  background: var(--danger-tint);
-  color: var(--danger);
-}
-.ys-diff__line--hunk {
-  color: var(--info);
-}
-.ys-diff__line--file {
-  color: var(--text-muted);
-  font-weight: 700;
-}
 
 .ys-kv {
   display: grid;
@@ -304,11 +274,6 @@
   }
 }
 
-.ys-diffwrap {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
 .ys-details > summary {
   cursor: pointer;
   color: var(--text-muted);
