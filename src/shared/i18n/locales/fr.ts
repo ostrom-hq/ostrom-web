@@ -16,6 +16,14 @@ export const fr = {
       body: 'Cet écran n’a pas pu se charger. Le reste d’Ostrom fonctionne.',
     },
   },
+  consent: {
+    title: 'Statistiques d’usage',
+    body: 'Pouvons-nous mesurer l’usage de la console (pages vues et actions, jamais ce que vous tapez) avec PostHog, hébergé dans l’UE ? Rien n’est envoyé sans votre accord, et vous pouvez changer d’avis à tout moment.',
+    learnMore: 'Politique de confidentialité',
+    accept: 'Accepter',
+    refuse: 'Refuser',
+    manage: 'Choix de confidentialité',
+  },
   home: {
     title: 'Chaque changement d’agent, validé par la bonne personne.',
     lead: 'La console Ostrom est en reconstruction. Les écrans arrivent un par un.',
