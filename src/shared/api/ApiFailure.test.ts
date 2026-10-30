@@ -43,16 +43,16 @@ describe('toApiFailure', () => {
     expect(toApiFailure({ error: 'nope' }, response(status)).kind).toBe(kind);
   });
 
-  it('keeps the server message and the raw body', () => {
-    const body = { error: 'request not found' };
+  it('keeps the server message, its key and the raw body', () => {
+    const body = { error: { type: 'not_found', message: 'approval not found' } };
     const failure = toApiFailure(body, response(404));
-    expect(failure.message).toBe('request not found');
+    expect([failure.message, failure.code, failure.status]).toEqual(['approval not found', 'not_found', 404]);
     expect(failure.body).toBe(body);
-    expect(failure.status).toBe(404);
   });
 
   it('falls back to the status when the body is not an error', () => {
-    expect(toApiFailure('Bad Gateway', response(502)).message).toBe('HTTP 502');
+    const failure = toApiFailure('Bad Gateway', response(502));
+    expect([failure.message, failure.code]).toEqual(['HTTP 502', undefined]);
   });
 
   it('returns an ApiFailure unchanged', () => {

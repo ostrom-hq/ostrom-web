@@ -1,7 +1,16 @@
 import { z } from 'zod';
 
+function apiOrigin(value: string): string {
+  return value.startsWith('/') ? '' : value.replace(/\/+$/, '').replace(/\/api$/, '');
+}
+
 const envSchema = z.object({
-  VITE_OSTROM_API_URL: z.string().min(1).default('/api'),
+  // The contract's paths already start with /api/v1: '' is the same origin (nginx proxies /api/), or an origin URL.
+  // The former default `/api` and a URL ending in `/api` keep working: the prefix is the contract's, never doubled.
+  VITE_OSTROM_API_URL: z
+    .union([z.literal(''), z.literal('/api'), z.literal('/api/'), z.url({ protocol: /^https?$/ })])
+    .default('')
+    .transform(apiOrigin),
   VITE_MOCKS: z.enum(['true', 'false']).default('false'),
 });
 

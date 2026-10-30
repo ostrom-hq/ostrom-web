@@ -82,6 +82,11 @@ export default defineConfig(
     extends: [reactRefresh.configs.vite(), jsxA11y.flatConfigs.strict],
     rules: {
       ...reactHooks.configs.flat['recommended-latest'].rules,
+      // TanStack Router's `throw redirect()` is its documented control flow, not an error.
+      '@typescript-eslint/only-throw-error': [
+        'error',
+        { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'Redirect' }] },
+      ],
     },
   },
   // Architecture: shared never imports features or app; features never import app,

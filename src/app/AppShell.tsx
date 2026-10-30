@@ -34,6 +34,7 @@ export function AppShell(): ReactElement {
           <Link to="/" activeOptions={{ exact: true }}>
             {t('app.nav.home')}
           </Link>
+          <Link to="/yes">{t('app.nav.yes')}</Link>
         </nav>
         <div className="o-topbar__end">
           <ThemeToggle />

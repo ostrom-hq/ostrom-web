@@ -2,10 +2,10 @@
 
 import * as z from 'zod';
 
-import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client';
+import type { Client, ClientMeta, Options as Options2, RequestResult, ServerSentEventsResult, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DecideAskData, DecideAskErrors, DecideAskResponses, GetAskData, GetAskErrors, GetAskResponses, GetYesQueueData, GetYesQueueErrors, GetYesQueueResponses } from './types.gen';
-import { zDecideAskBody, zDecideAskPath, zDecideAskResponse, zGetAskPath, zGetAskResponse, zGetYesQueueResponse } from './zod.gen';
+import type { AddGroupMemberData, AddGroupMemberErrors, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalErrors, AnswerApprovalResponses, AnswerWaitData, AnswerWaitErrors, AnswerWaitResponses, AskGateData, AskGateErrors, AskGateResponses, BulkUpdateRulesData, BulkUpdateRulesErrors, BulkUpdateRulesResponses, CancelRunData, CancelRunErrors, CancelRunResponses, CancelWaitData, CancelWaitErrors, CancelWaitResponses, CapabilitiesData, CapabilitiesErrors, CapabilitiesResponses, CheckAgentPolicyData, CheckAgentPolicyErrors, CheckAgentPolicyResponses, ConsumeGateData, ConsumeGateErrors, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketErrors, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationErrors, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideErrors, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionErrors, CreateCloudSessionResponses, CreateGroupData, CreateGroupErrors, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteErrors, CreateInferenceRouteResponses, CreateLaunchData, CreateLaunchErrors, CreateLaunchResponses, CreateMcpServerData, CreateMcpServerErrors, CreateMcpServerResponses, CreateSecretData, CreateSecretErrors, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyErrors, CreateServiceKeyResponses, CreateWaitData, CreateWaitErrors, CreateWaitResponses, CreateWebhookData, CreateWebhookErrors, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, DeleteArtifactData, DeleteArtifactErrors, DeleteArtifactResponses, DeleteAutomationData, DeleteAutomationErrors, DeleteAutomationResponses, DeleteDeviceData, DeleteDeviceErrors, DeleteDeviceResponses, DeleteGroupData, DeleteGroupErrors, DeleteGroupResponses, DeleteInferenceRouteData, DeleteInferenceRouteErrors, DeleteInferenceRouteResponses, DeleteMcpServerData, DeleteMcpServerErrors, DeleteMcpServerResponses, DeletePushDeviceData, DeletePushDeviceErrors, DeletePushDeviceResponses, DeleteRunnerData, DeleteRunnerErrors, DeleteRunnerResponses, DeleteSecretData, DeleteSecretErrors, DeleteSecretResponses, DeleteServiceKeyData, DeleteServiceKeyErrors, DeleteServiceKeyResponses, DeleteSkillData, DeleteSkillErrors, DeleteSkillResponses, DeleteWebhookData, DeleteWebhookErrors, DeleteWebhookResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DisableAutomationData, DisableAutomationErrors, DisableAutomationResponses, EnableAutomationData, EnableAutomationErrors, EnableAutomationResponses, EndSessionData, EndSessionErrors, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountErrors, EnrollSharedAccountResponses, GetAnalysisStateData, GetAnalysisStateErrors, GetAnalysisStateResponses, GetApprovalData, GetApprovalErrors, GetApprovalResponses, GetArtifactData, GetArtifactErrors, GetArtifactFileData, GetArtifactFileErrors, GetArtifactFileResponses, GetArtifactResponses, GetAutomationData, GetAutomationErrors, GetAutomationResponses, GetCapacityData, GetCapacityErrors, GetCapacityResponses, GetCloudSessionData, GetCloudSessionErrors, GetCloudSessionResponses, GetCurrentPackageData, GetCurrentPackageErrors, GetCurrentPackageResponses, GetGateCatalogData, GetGateCatalogErrors, GetGateCatalogResponses, GetGateData, GetGateErrors, GetGatePolicyData, GetGatePolicyErrors, GetGatePolicyResponses, GetGateResponses, GetGithubAppData, GetGithubAppErrors, GetGithubAppResponses, GetGroupData, GetGroupErrors, GetGroupResponses, GetHookDeliveryData, GetHookDeliveryErrors, GetHookDeliveryResponses, GetLauncherConfigData, GetLauncherConfigErrors, GetLauncherConfigResponses, GetMcpUsageData, GetMcpUsageErrors, GetMcpUsageResponses, GetMeData, GetMeErrors, GetMemberData, GetMemberErrors, GetMemberResponses, GetMeResponses, GetModelPolicyData, GetModelPolicyErrors, GetModelPolicyResponses, GetNotificationPreferencesData, GetNotificationPreferencesErrors, GetNotificationPreferencesResponses, GetOrganizationData, GetOrganizationErrors, GetOrganizationResponses, GetPackageData, GetPackageErrors, GetPackageResponses, GetPackageStatusData, GetPackageStatusErrors, GetPackageStatusResponses, GetReceiptBundleData, GetReceiptBundleErrors, GetReceiptBundleResponses, GetReceiptData, GetReceiptErrors, GetReceiptResponses, GetReplayData, GetReplayErrors, GetReplayResponses, GetRuleData, GetRuleErrors, GetRuleResponses, GetRunData, GetRunErrors, GetRunResponses, GetSessionData, GetSessionErrors, GetSessionResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetSkillDeliveryData, GetSkillDeliveryErrors, GetSkillDeliveryResponses, GetSpendingData, GetSpendingErrors, GetSpendingResponses, GetUsageData, GetUsageErrors, GetUsageResponses, GetWaitData, GetWaitErrors, GetWaitResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GithubAppInstallCallbackData, GithubAppInstallCallbackErrors, GithubAppManifestCallbackData, GithubAppManifestCallbackErrors, GithubCheckData, GithubCheckErrors, GithubCheckResponses, GithubLoginCallbackData, GithubLoginCallbackErrors, GithubWebhookData, GithubWebhookErrors, GithubWebhookResponses, HealthData, HealthErrors, HealthResponses, InferenceChatCompletionsData, InferenceChatCompletionsErrors, InferenceChatCompletionsResponses, InferenceMessagesData, InferenceMessagesErrors, InferenceMessagesResponses, InferenceModelsData, InferenceModelsErrors, InferenceModelsResponses, InviteMembersData, InviteMembersErrors, InviteMembersResponses, LauncherLoginData, LauncherLoginErrors, LauncherLoginResponses, ListActivityData, ListActivityErrors, ListActivityResponses, ListApprovalsData, ListApprovalsErrors, ListApprovalsResponses, ListArtifactMembersData, ListArtifactMembersErrors, ListArtifactMembersResponses, ListArtifactsData, ListArtifactsErrors, ListArtifactsResponses, ListArtifactVersionsData, ListArtifactVersionsErrors, ListArtifactVersionsResponses, ListAuditData, ListAuditErrors, ListAuditResponses, ListAuthSessionsData, ListAuthSessionsErrors, ListAuthSessionsResponses, ListAutomationRunsData, ListAutomationRunsErrors, ListAutomationRunsResponses, ListAutomationsData, ListAutomationsErrors, ListAutomationsResponses, ListBudgetOverridesData, ListBudgetOverridesErrors, ListBudgetOverridesResponses, ListBudgetsData, ListBudgetsErrors, ListBudgetsResponses, ListChecksData, ListChecksErrors, ListChecksResponses, ListCloudSessionsData, ListCloudSessionsErrors, ListCloudSessionsResponses, ListDecisionsData, ListDecisionsErrors, ListDecisionsResponses, ListDevicesData, ListDevicesErrors, ListDevicesResponses, ListEventsData, ListEventsErrors, ListEventsResponses, ListGatesData, ListGatesErrors, ListGatesResponses, ListGroupsData, ListGroupsErrors, ListGroupsResponses, ListHooksData, ListHooksErrors, ListHooksResponses, ListInferenceRoutesData, ListInferenceRoutesErrors, ListInferenceRoutesResponses, ListMcpCallsData, ListMcpCallsErrors, ListMcpCallsResponses, ListMcpServersData, ListMcpServersErrors, ListMcpServersResponses, ListMembersData, ListMembersErrors, ListMembersResponses, ListNotificationsData, ListNotificationsErrors, ListNotificationsResponses, ListPackageAuditData, ListPackageAuditErrors, ListPackageAuditResponses, ListPackagesData, ListPackagesErrors, ListPackagesResponses, ListPendingUsageData, ListPendingUsageErrors, ListPendingUsageResponses, ListReceiptKeysData, ListReceiptKeysErrors, ListReceiptKeysResponses, ListReceiptsData, ListReceiptsErrors, ListReceiptsResponses, ListReposData, ListReposErrors, ListReposResponses, ListRulesData, ListRulesErrors, ListRulesResponses, ListRunnersData, ListRunnersErrors, ListRunnersResponses, ListRunsData, ListRunsErrors, ListRunsResponses, ListSecretsData, ListSecretsErrors, ListSecretsResponses, ListServiceKeysData, ListServiceKeysErrors, ListServiceKeysResponses, ListSessionsData, ListSessionsErrors, ListSessionsResponses, ListSharedAccountsData, ListSharedAccountsErrors, ListSharedAccountsResponses, ListSkillsData, ListSkillsErrors, ListSkillsResponses, ListTasksData, ListTasksErrors, ListTasksResponses, ListTeamsData, ListTeamsErrors, ListTeamsResponses, ListUsageReconciliationsData, ListUsageReconciliationsErrors, ListUsageReconciliationsResponses, ListWaitsData, ListWaitsErrors, ListWaitsResponses, ListWebhookDeliveriesData, ListWebhookDeliveriesErrors, ListWebhookDeliveriesResponses, ListWebhooksData, ListWebhooksErrors, ListWebhooksResponses, ListWorkflowRunsData, ListWorkflowRunsErrors, ListWorkflowRunsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, LogoutData, LogoutErrors, LogoutResponses, MobileTokenData, MobileTokenErrors, MobileTokenResponses, PauseGroupMemberData, PauseGroupMemberErrors, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginErrors, PollDeviceLoginResponses, PreviewPackageData, PreviewPackageErrors, PreviewPackageResponses, PublishArtifactData, PublishArtifactErrors, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionErrors, PublishArtifactVersionResponses, PublishSkillData, PublishSkillErrors, PublishSkillResponses, ReconcileUsageData, ReconcileUsageErrors, ReconcileUsageResponses, RefreshTokenData, RefreshTokenErrors, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceErrors, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerErrors, RegisterRunnerResponses, RelayMcpData, RelayMcpErrors, RelayMcpResponses, RemoveGroupMemberData, RemoveGroupMemberErrors, RemoveGroupMemberResponses, RemoveSharedAccountData, RemoveSharedAccountErrors, RemoveSharedAccountResponses, ReopenSessionData, ReopenSessionErrors, ReopenSessionResponses, ReportCheckData, ReportCheckErrors, ReportCheckResponses, ReportSeenData, ReportSeenErrors, ReportSeenResponses, RestartAnalysisData, RestartAnalysisErrors, RestartAnalysisResponses, RestorePackageData, RestorePackageErrors, RestorePackageResponses, RevokeAuthSessionData, RevokeAuthSessionErrors, RevokeAuthSessionResponses, RevokeBudgetOverrideData, RevokeBudgetOverrideErrors, RevokeBudgetOverrideResponses, RevokePackageData, RevokePackageErrors, RevokePackageResponses, RotateAutomationSecretData, RotateAutomationSecretErrors, RotateAutomationSecretResponses, RotateSecretData, RotateSecretErrors, RotateSecretResponses, RunnerHeartbeatData, RunnerHeartbeatErrors, RunnerHeartbeatResponses, RunTaskData, RunTaskErrors, RunTaskResponses, SaveAutomationData, SaveAutomationErrors, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerErrors, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowErrors, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageErrors, SendCloudMessageResponses, SendNotificationData, SendNotificationErrors, SendNotificationResponses, SessionAliveData, SessionAliveErrors, SessionAliveResponses, SetBudgetData, SetBudgetErrors, SetBudgetResponses, SetGatePolicyData, SetGatePolicyErrors, SetGatePolicyResponses, SetModelPolicyData, SetModelPolicyErrors, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesErrors, SetNotificationPreferencesResponses, ShareArtifactData, ShareArtifactErrors, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptErrors, SignWorkflowReceiptResponses, StartAnalysisData, StartAnalysisErrors, StartAnalysisResponses, StartDeviceLoginData, StartDeviceLoginErrors, StartDeviceLoginResponses, StartGithubAppInstallData, StartGithubAppInstallErrors, StartGithubAppManifestData, StartGithubAppManifestErrors, StartGithubLoginData, StartGithubLoginErrors, StartReplayData, StartReplayErrors, StartReplayResponses, StartSessionData, StartSessionErrors, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunErrors, StartWorkflowRunResponses, StopCloudSessionData, StopCloudSessionErrors, StopCloudSessionResponses, StreamCloudSessionData, StreamCloudSessionErrors, StreamCloudSessionResponse, StreamCloudSessionResponses, StreamEventsData, StreamEventsErrors, StreamEventsResponse, StreamEventsResponses, TestAutomationData, TestAutomationErrors, TestAutomationResponses, TriggerAutomationData, TriggerAutomationErrors, TriggerAutomationResponses, UnshareArtifactData, UnshareArtifactErrors, UnshareArtifactResponses, UpdateGroupData, UpdateGroupErrors, UpdateGroupResponses, UpdateMemberData, UpdateMemberErrors, UpdateMemberResponses, UpdateRuleData, UpdateRuleErrors, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountErrors, UpdateSharedAccountResponses, VerifyReceiptData, VerifyReceiptErrors, VerifyReceiptResponses } from './types.gen';
+import { zAddGroupMemberPath, zAddGroupMemberResponse, zAnswerApprovalBody, zAnswerApprovalPath, zAnswerApprovalResponse, zAnswerWaitBody, zAnswerWaitPath, zAnswerWaitResponse, zAskGateBody, zAskGateResponse, zBulkUpdateRulesBody, zBulkUpdateRulesResponse, zCancelRunPath, zCancelRunResponse, zCancelWaitPath, zCancelWaitResponse, zCapabilitiesResponse, zCheckAgentPolicyQuery, zCheckAgentPolicyResponse, zConsumeGatePath, zConsumeGateResponse, zCreateArtifactTicketPath, zCreateArtifactTicketResponse, zCreateAutomationBody, zCreateAutomationResponse, zCreateBudgetOverrideBody, zCreateBudgetOverridePath, zCreateBudgetOverrideResponse, zCreateCloudSessionBody, zCreateCloudSessionResponse, zCreateGroupBody, zCreateGroupResponse, zCreateInferenceRouteBody, zCreateInferenceRouteResponse, zCreateLaunchBody, zCreateLaunchResponse, zCreateMcpServerBody, zCreateMcpServerResponse, zCreateSecretBody, zCreateSecretResponse, zCreateServiceKeyBody, zCreateServiceKeyResponse, zCreateWaitBody, zCreateWaitResponse, zCreateWebhookBody, zCreateWebhookResponse, zCreateWorkflowBody, zCreateWorkflowResponse, zDeleteArtifactPath, zDeleteArtifactResponse, zDeleteAutomationPath, zDeleteAutomationResponse, zDeleteDevicePath, zDeleteDeviceResponse, zDeleteGroupPath, zDeleteGroupResponse, zDeleteInferenceRoutePath, zDeleteInferenceRouteResponse, zDeleteMcpServerPath, zDeleteMcpServerResponse, zDeletePushDevicePath, zDeletePushDeviceResponse, zDeleteRunnerPath, zDeleteRunnerResponse, zDeleteSecretPath, zDeleteSecretResponse, zDeleteServiceKeyPath, zDeleteServiceKeyResponse, zDeleteSkillPath, zDeleteSkillResponse, zDeleteWebhookPath, zDeleteWebhookResponse, zDeleteWorkflowPath, zDeleteWorkflowResponse, zDisableAutomationPath, zDisableAutomationResponse, zEnableAutomationPath, zEnableAutomationResponse, zEndSessionBody, zEndSessionPath, zEndSessionResponse, zEnrollSharedAccountBody, zEnrollSharedAccountResponse, zGetAnalysisStateResponse, zGetApprovalPath, zGetApprovalResponse, zGetArtifactFilePath, zGetArtifactFileQuery, zGetArtifactFileResponse, zGetArtifactPath, zGetArtifactResponse, zGetAutomationPath, zGetAutomationResponse, zGetCapacityResponse, zGetCloudSessionPath, zGetCloudSessionResponse, zGetCurrentPackageQuery, zGetCurrentPackageResponse, zGetGateCatalogQuery, zGetGateCatalogResponse, zGetGatePath, zGetGatePolicyResponse, zGetGateQuery, zGetGateResponse, zGetGithubAppResponse, zGetGroupPath, zGetGroupResponse, zGetHookDeliveryResponse, zGetLauncherConfigResponse, zGetMcpUsageResponse, zGetMemberPath, zGetMemberResponse, zGetMeResponse, zGetModelPolicyResponse, zGetNotificationPreferencesResponse, zGetOrganizationResponse, zGetPackagePath, zGetPackageResponse, zGetPackageStatusPath, zGetPackageStatusResponse, zGetReceiptBundlePath, zGetReceiptBundleResponse, zGetReceiptPath, zGetReceiptResponse, zGetReplayResponse, zGetRulePath, zGetRuleResponse, zGetRunPath, zGetRunResponse, zGetSessionPath, zGetSessionResponse, zGetSettingsResponse, zGetSkillDeliveryResponse, zGetSpendingQuery, zGetSpendingResponse, zGetUsageQuery, zGetUsageResponse, zGetWaitPath, zGetWaitResponse, zGetWorkflowPath, zGetWorkflowResponse, zGithubAppInstallCallbackQuery, zGithubAppManifestCallbackQuery, zGithubCheckBody, zGithubCheckResponse, zGithubLoginCallbackQuery, zGithubWebhookBody, zGithubWebhookResponse, zHealthResponse, zInferenceChatCompletionsBody, zInferenceMessagesBody, zInferenceModelsResponse, zInviteMembersBody, zInviteMembersResponse, zLauncherLoginBody, zLauncherLoginResponse, zListActivityQuery, zListActivityResponse, zListApprovalsQuery, zListApprovalsResponse, zListArtifactMembersPath, zListArtifactMembersResponse, zListArtifactsResponse, zListArtifactVersionsPath, zListArtifactVersionsResponse, zListAuditQuery, zListAuditResponse, zListAuthSessionsResponse, zListAutomationRunsPath, zListAutomationRunsResponse, zListAutomationsResponse, zListBudgetOverridesPath, zListBudgetOverridesResponse, zListBudgetsResponse, zListChecksQuery, zListChecksResponse, zListCloudSessionsQuery, zListCloudSessionsResponse, zListDecisionsQuery, zListDecisionsResponse, zListDevicesResponse, zListEventsQuery, zListEventsResponse, zListGatesQuery, zListGatesResponse, zListGroupsResponse, zListHooksResponse, zListInferenceRoutesResponse, zListMcpCallsQuery, zListMcpCallsResponse, zListMcpServersResponse, zListMembersResponse, zListNotificationsQuery, zListNotificationsResponse, zListPackageAuditResponse, zListPackagesQuery, zListPackagesResponse, zListPendingUsageQuery, zListPendingUsageResponse, zListReceiptKeysResponse, zListReceiptsQuery, zListReceiptsResponse, zListReposResponse, zListRulesQuery, zListRulesResponse, zListRunnersResponse, zListRunsQuery, zListRunsResponse, zListSecretsResponse, zListServiceKeysResponse, zListSessionsQuery, zListSessionsResponse, zListSharedAccountsResponse, zListSkillsResponse, zListTasksResponse, zListTeamsResponse, zListUsageReconciliationsQuery, zListUsageReconciliationsResponse, zListWaitsQuery, zListWaitsResponse, zListWebhookDeliveriesPath, zListWebhookDeliveriesResponse, zListWebhooksResponse, zListWorkflowRunsPath, zListWorkflowRunsQuery, zListWorkflowRunsResponse, zListWorkflowsQuery, zListWorkflowsResponse, zLogoutResponse, zMobileTokenBody, zMobileTokenResponse, zPauseGroupMemberBody, zPauseGroupMemberPath, zPauseGroupMemberResponse, zPollDeviceLoginBody, zPollDeviceLoginResponse, zPreviewPackageBody, zPreviewPackageResponse, zPublishArtifactBody, zPublishArtifactResponse, zPublishArtifactVersionBody, zPublishArtifactVersionPath, zPublishArtifactVersionResponse, zPublishSkillBody, zPublishSkillPath, zPublishSkillResponse, zReconcileUsageBody, zReconcileUsagePath, zReconcileUsageResponse, zRefreshTokenBody, zRefreshTokenResponse, zRegisterPushDeviceBody, zRegisterPushDeviceResponse, zRegisterRunnerBody, zRegisterRunnerResponse, zRelayMcpBody, zRelayMcpPath, zRemoveGroupMemberPath, zRemoveGroupMemberResponse, zRemoveSharedAccountPath, zRemoveSharedAccountResponse, zReopenSessionBody, zReopenSessionPath, zReopenSessionResponse, zReportCheckBody, zReportCheckResponse, zReportSeenBody, zReportSeenPath, zReportSeenResponse, zRestartAnalysisResponse, zRestorePackagePath, zRestorePackageResponse, zRevokeAuthSessionPath, zRevokeAuthSessionResponse, zRevokeBudgetOverridePath, zRevokeBudgetOverrideResponse, zRevokePackageBody, zRevokePackagePath, zRevokePackageResponse, zRotateAutomationSecretPath, zRotateAutomationSecretResponse, zRotateSecretBody, zRotateSecretPath, zRotateSecretResponse, zRunnerHeartbeatPath, zRunnerHeartbeatResponse, zRunTaskPath, zRunTaskResponse, zSaveAutomationBody, zSaveAutomationPath, zSaveAutomationResponse, zSaveMcpServerBody, zSaveMcpServerPath, zSaveMcpServerResponse, zSaveWorkflowBody, zSaveWorkflowPath, zSaveWorkflowResponse, zSendCloudMessageBody, zSendCloudMessagePath, zSendCloudMessageResponse, zSendNotificationBody, zSendNotificationResponse, zSessionAliveBody, zSessionAlivePath, zSessionAliveResponse, zSetBudgetBody, zSetBudgetResponse, zSetGatePolicyBody, zSetGatePolicyResponse, zSetModelPolicyBody, zSetModelPolicyResponse, zSetNotificationPreferencesBody, zSetNotificationPreferencesResponse, zShareArtifactPath, zShareArtifactResponse, zSignWorkflowReceiptBody, zSignWorkflowReceiptPath, zSignWorkflowReceiptResponse, zStartAnalysisResponse, zStartDeviceLoginResponse, zStartGithubLoginQuery, zStartReplayResponse, zStartSessionBody, zStartSessionResponse, zStartWorkflowRunBody, zStartWorkflowRunPath, zStartWorkflowRunResponse, zStopCloudSessionPath, zStopCloudSessionResponse, zStreamCloudSessionPath, zStreamCloudSessionResponse, zStreamEventsResponse, zTestAutomationBody, zTestAutomationPath, zTestAutomationResponse, zTriggerAutomationBody, zTriggerAutomationPath, zTriggerAutomationResponse, zUnshareArtifactPath, zUnshareArtifactResponse, zUpdateGroupBody, zUpdateGroupPath, zUpdateGroupResponse, zUpdateMemberBody, zUpdateMemberPath, zUpdateMemberResponse, zUpdateRuleBody, zUpdateRulePath, zUpdateRuleResponse, zUpdateSettingsBody, zUpdateSettingsResponse, zUpdateSharedAccountBody, zUpdateSharedAccountPath, zUpdateSharedAccountResponse, zVerifyReceiptPath, zVerifyReceiptResponse } from './zod.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -22,50 +22,3086 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Requests waiting for the viewer, and the last decided ones.
+ * Liveness
  */
-export const getYesQueue = <ThrowOnError extends boolean = false>(options?: Options<GetYesQueueData, ThrowOnError>): RequestResult<GetYesQueueResponses, GetYesQueueErrors, ThrowOnError> => (options?.client ?? client).get<GetYesQueueResponses, GetYesQueueErrors, ThrowOnError>({
+export const health = <ThrowOnError extends boolean = false>(options?: Options<HealthData, ThrowOnError>): RequestResult<HealthResponses, HealthErrors, ThrowOnError> => (options?.client ?? client).get<HealthResponses, HealthErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
         body: z.never().optional(),
         path: z.never().optional(),
         query: z.never().optional()
     }).parseAsync(data),
-    responseValidator: async (data) => await zGetYesQueueResponse.parseAsync(data),
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/yes/queue',
+    responseValidator: async (data) => await zHealthResponse.parseAsync(data),
+    url: '/api/v1/health',
     ...options
 });
 
 /**
- * One request, with its receipt once decided.
+ * Capabilities of this server (feature keys and versions)
  */
-export const getAsk = <ThrowOnError extends boolean = false>(options: Options<GetAskData, ThrowOnError>): RequestResult<GetAskResponses, GetAskErrors, ThrowOnError> => (options.client ?? client).get<GetAskResponses, GetAskErrors, ThrowOnError>({
+export const capabilities = <ThrowOnError extends boolean = false>(options?: Options<CapabilitiesData, ThrowOnError>): RequestResult<CapabilitiesResponses, CapabilitiesErrors, ThrowOnError> => (options?.client ?? client).get<CapabilitiesResponses, CapabilitiesErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
         body: z.never().optional(),
-        path: zGetAskPath,
+        path: z.never().optional(),
         query: z.never().optional()
     }).parseAsync(data),
-    responseValidator: async (data) => await zGetAskResponse.parseAsync(data),
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/yes/{id}',
+    responseValidator: async (data) => await zCapabilitiesResponse.parseAsync(data),
+    url: '/api/v1/capabilities',
     ...options
 });
 
 /**
- * Say yes or no; signed as the viewer.
+ * Start the GitHub OAuth sign-in. Browser: `redirect`. Mobile app: `redirect_uri` (ostrom://auth/callback), `state`, PKCE `code_challenge` and `code_challenge_method=S256`; the server redirects back with a one-time `code`
  */
-export const decideAsk = <ThrowOnError extends boolean = false>(options: Options<DecideAskData, ThrowOnError>): RequestResult<DecideAskResponses, DecideAskErrors, ThrowOnError> => (options.client ?? client).post<DecideAskResponses, DecideAskErrors, ThrowOnError>({
+export const startGithubLogin = <ThrowOnError extends boolean = false>(options?: Options<StartGithubLoginData, ThrowOnError>): RequestResult<unknown, StartGithubLoginErrors, ThrowOnError> => (options?.client ?? client).get<unknown, StartGithubLoginErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
-        body: zDecideAskBody,
-        path: zDecideAskPath,
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zStartGithubLoginQuery.optional()
+    }).parseAsync(data),
+    url: '/api/v1/auth/github/start',
+    ...options
+});
+
+/**
+ * Exchange the one-time code of the mobile sign-in (PKCE) for a token
+ */
+export const mobileToken = <ThrowOnError extends boolean = false>(options: Options<MobileTokenData, ThrowOnError>): RequestResult<MobileTokenResponses, MobileTokenErrors, ThrowOnError> => (options.client ?? client).post<MobileTokenResponses, MobileTokenErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zMobileTokenBody,
+        path: z.never().optional(),
         query: z.never().optional()
     }).parseAsync(data),
-    responseValidator: async (data) => await zDecideAskResponse.parseAsync(data),
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/yes/{id}/decide',
+    responseValidator: async (data) => await zMobileTokenResponse.parseAsync(data),
+    url: '/api/v1/auth/mobile/token',
     ...options,
     headers: {
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * GitHub OAuth callback
+ */
+export const githubLoginCallback = <ThrowOnError extends boolean = false>(options?: Options<GithubLoginCallbackData, ThrowOnError>): RequestResult<unknown, GithubLoginCallbackErrors, ThrowOnError> => (options?.client ?? client).get<unknown, GithubLoginCallbackErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGithubLoginCallbackQuery.optional()
+    }).parseAsync(data),
+    url: '/api/v1/auth/github/callback',
+    ...options
+});
+
+/**
+ * Start the device flow (CLI sign-in)
+ */
+export const startDeviceLogin = <ThrowOnError extends boolean = false>(options?: Options<StartDeviceLoginData, ThrowOnError>): RequestResult<StartDeviceLoginResponses, StartDeviceLoginErrors, ThrowOnError> => (options?.client ?? client).post<StartDeviceLoginResponses, StartDeviceLoginErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStartDeviceLoginResponse.parseAsync(data),
+    url: '/api/v1/auth/device',
+    ...options
+});
+
+/**
+ * Exchange a confirmed device code for a token
+ */
+export const pollDeviceLogin = <ThrowOnError extends boolean = false>(options: Options<PollDeviceLoginData, ThrowOnError>): RequestResult<PollDeviceLoginResponses, PollDeviceLoginErrors, ThrowOnError> => (options.client ?? client).post<PollDeviceLoginResponses, PollDeviceLoginErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPollDeviceLoginBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPollDeviceLoginResponse.parseAsync(data),
+    url: '/api/v1/auth/device/token',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Refresh a token
+ */
+export const refreshToken = <ThrowOnError extends boolean = false>(options: Options<RefreshTokenData, ThrowOnError>): RequestResult<RefreshTokenResponses, RefreshTokenErrors, ThrowOnError> => (options.client ?? client).post<RefreshTokenResponses, RefreshTokenErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRefreshTokenBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRefreshTokenResponse.parseAsync(data),
+    url: '/api/v1/auth/token/refresh',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * What the CLI needs to sign in (GitHub OAuth client id)
+ */
+export const getLauncherConfig = <ThrowOnError extends boolean = false>(options?: Options<GetLauncherConfigData, ThrowOnError>): RequestResult<GetLauncherConfigResponses, GetLauncherConfigErrors, ThrowOnError> => (options?.client ?? client).get<GetLauncherConfigResponses, GetLauncherConfigErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetLauncherConfigResponse.parseAsync(data),
+    url: '/api/v1/auth/launcher/config',
+    ...options
+});
+
+/**
+ * Exchange a GitHub token proven by the CLI for a device token
+ */
+export const launcherLogin = <ThrowOnError extends boolean = false>(options: Options<LauncherLoginData, ThrowOnError>): RequestResult<LauncherLoginResponses, LauncherLoginErrors, ThrowOnError> => (options.client ?? client).post<LauncherLoginResponses, LauncherLoginErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zLauncherLoginBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zLauncherLoginResponse.parseAsync(data),
+    url: '/api/v1/auth/launcher/login',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Start an agent launch: returns an agent token scoped to the sessions of this launch, expiring at its end. The device token never enters the agent environment
+ */
+export const createLaunch = <ThrowOnError extends boolean = false>(options: Options<CreateLaunchData, ThrowOnError>): RequestResult<CreateLaunchResponses, CreateLaunchErrors, ThrowOnError> => (options.client ?? client).post<CreateLaunchResponses, CreateLaunchErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateLaunchBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateLaunchResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/launches',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * May this developer launch this agent with this model
+ */
+export const checkAgentPolicy = <ThrowOnError extends boolean = false>(options?: Options<CheckAgentPolicyData, ThrowOnError>): RequestResult<CheckAgentPolicyResponses, CheckAgentPolicyErrors, ThrowOnError> => (options?.client ?? client).get<CheckAgentPolicyResponses, CheckAgentPolicyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zCheckAgentPolicyQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCheckAgentPolicyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policy/agents',
+    ...options
+});
+
+/**
+ * The caller: login, member, organization
+ */
+export const getMe = <ThrowOnError extends boolean = false>(options?: Options<GetMeData, ThrowOnError>): RequestResult<GetMeResponses, GetMeErrors, ThrowOnError> => (options?.client ?? client).get<GetMeResponses, GetMeErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetMeResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/me',
+    ...options
+});
+
+/**
+ * Revoke the current token
+ */
+export const logout = <ThrowOnError extends boolean = false>(options?: Options<LogoutData, ThrowOnError>): RequestResult<LogoutResponses, LogoutErrors, ThrowOnError> => (options?.client ?? client).post<LogoutResponses, LogoutErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zLogoutResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/logout',
+    ...options
+});
+
+/**
+ * Signed-in sessions of the caller
+ */
+export const listAuthSessions = <ThrowOnError extends boolean = false>(options?: Options<ListAuthSessionsData, ThrowOnError>): RequestResult<ListAuthSessionsResponses, ListAuthSessionsErrors, ThrowOnError> => (options?.client ?? client).get<ListAuthSessionsResponses, ListAuthSessionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListAuthSessionsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/sessions',
+    ...options
+});
+
+/**
+ * Revoke a signed-in session
+ */
+export const revokeAuthSession = <ThrowOnError extends boolean = false>(options: Options<RevokeAuthSessionData, ThrowOnError>): RequestResult<RevokeAuthSessionResponses, RevokeAuthSessionErrors, ThrowOnError> => (options.client ?? client).delete<RevokeAuthSessionResponses, RevokeAuthSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRevokeAuthSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRevokeAuthSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/auth/sessions/{id}',
+    ...options
+});
+
+/**
+ * Service keys (admins)
+ */
+export const listServiceKeys = <ThrowOnError extends boolean = false>(options?: Options<ListServiceKeysData, ThrowOnError>): RequestResult<ListServiceKeysResponses, ListServiceKeysErrors, ThrowOnError> => (options?.client ?? client).get<ListServiceKeysResponses, ListServiceKeysErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListServiceKeysResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/service-keys',
+    ...options
+});
+
+/**
+ * Create a service key; its secret is returned once
+ */
+export const createServiceKey = <ThrowOnError extends boolean = false>(options: Options<CreateServiceKeyData, ThrowOnError>): RequestResult<CreateServiceKeyResponses, CreateServiceKeyErrors, ThrowOnError> => (options.client ?? client).post<CreateServiceKeyResponses, CreateServiceKeyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateServiceKeyBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateServiceKeyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/service-keys',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a service key
+ */
+export const deleteServiceKey = <ThrowOnError extends boolean = false>(options: Options<DeleteServiceKeyData, ThrowOnError>): RequestResult<DeleteServiceKeyResponses, DeleteServiceKeyErrors, ThrowOnError> => (options.client ?? client).delete<DeleteServiceKeyResponses, DeleteServiceKeyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteServiceKeyPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteServiceKeyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/service-keys/{id}',
+    ...options
+});
+
+/**
+ * Workstations where the caller is signed in
+ */
+export const listDevices = <ThrowOnError extends boolean = false>(options?: Options<ListDevicesData, ThrowOnError>): RequestResult<ListDevicesResponses, ListDevicesErrors, ThrowOnError> => (options?.client ?? client).get<ListDevicesResponses, ListDevicesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListDevicesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/devices',
+    ...options
+});
+
+/**
+ * Sign a workstation out
+ */
+export const deleteDevice = <ThrowOnError extends boolean = false>(options: Options<DeleteDeviceData, ThrowOnError>): RequestResult<DeleteDeviceResponses, DeleteDeviceErrors, ThrowOnError> => (options.client ?? client).delete<DeleteDeviceResponses, DeleteDeviceErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteDevicePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteDeviceResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/devices/{id}',
+    ...options
+});
+
+/**
+ * Register a phone for push notifications (push data: {kind: "approval", approvalId})
+ */
+export const registerPushDevice = <ThrowOnError extends boolean = false>(options: Options<RegisterPushDeviceData, ThrowOnError>): RequestResult<RegisterPushDeviceResponses, RegisterPushDeviceErrors, ThrowOnError> => (options.client ?? client).post<RegisterPushDeviceResponses, RegisterPushDeviceErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRegisterPushDeviceBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRegisterPushDeviceResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/push-devices',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stop push notifications to a phone
+ */
+export const deletePushDevice = <ThrowOnError extends boolean = false>(options: Options<DeletePushDeviceData, ThrowOnError>): RequestResult<DeletePushDeviceResponses, DeletePushDeviceErrors, ThrowOnError> => (options.client ?? client).delete<DeletePushDeviceResponses, DeletePushDeviceErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeletePushDevicePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeletePushDeviceResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/push-devices/{id}',
+    ...options
+});
+
+/**
+ * Notification preferences of the caller
+ */
+export const getNotificationPreferences = <ThrowOnError extends boolean = false>(options?: Options<GetNotificationPreferencesData, ThrowOnError>): RequestResult<GetNotificationPreferencesResponses, GetNotificationPreferencesErrors, ThrowOnError> => (options?.client ?? client).get<GetNotificationPreferencesResponses, GetNotificationPreferencesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetNotificationPreferencesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/me/notifications',
+    ...options
+});
+
+/**
+ * Set the notification preferences of the caller
+ */
+export const setNotificationPreferences = <ThrowOnError extends boolean = false>(options: Options<SetNotificationPreferencesData, ThrowOnError>): RequestResult<SetNotificationPreferencesResponses, SetNotificationPreferencesErrors, ThrowOnError> => (options.client ?? client).put<SetNotificationPreferencesResponses, SetNotificationPreferencesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSetNotificationPreferencesBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSetNotificationPreferencesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/me/notifications',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Activity feed, newest first
+ */
+export const listActivity = <ThrowOnError extends boolean = false>(options?: Options<ListActivityData, ThrowOnError>): RequestResult<ListActivityResponses, ListActivityErrors, ThrowOnError> => (options?.client ?? client).get<ListActivityResponses, ListActivityErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListActivityQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListActivityResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/activity',
+    ...options
+});
+
+/**
+ * Spending by agent, repository and person
+ */
+export const getSpending = <ThrowOnError extends boolean = false>(options?: Options<GetSpendingData, ThrowOnError>): RequestResult<GetSpendingResponses, GetSpendingErrors, ThrowOnError> => (options?.client ?? client).get<GetSpendingResponses, GetSpendingErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGetSpendingQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetSpendingResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/spending',
+    ...options
+});
+
+/**
+ * The GitHub App of the organization and its installation
+ */
+export const getGithubApp = <ThrowOnError extends boolean = false>(options?: Options<GetGithubAppData, ThrowOnError>): RequestResult<GetGithubAppResponses, GetGithubAppErrors, ThrowOnError> => (options?.client ?? client).get<GetGithubAppResponses, GetGithubAppErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetGithubAppResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/github/app',
+    ...options
+});
+
+/**
+ * Create the GitHub App by the manifest flow
+ */
+export const startGithubAppManifest = <ThrowOnError extends boolean = false>(options?: Options<StartGithubAppManifestData, ThrowOnError>): RequestResult<unknown, StartGithubAppManifestErrors, ThrowOnError> => (options?.client ?? client).get<unknown, StartGithubAppManifestErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/github/app/manifest/start',
+    ...options
+});
+
+/**
+ * Manifest flow callback
+ */
+export const githubAppManifestCallback = <ThrowOnError extends boolean = false>(options?: Options<GithubAppManifestCallbackData, ThrowOnError>): RequestResult<unknown, GithubAppManifestCallbackErrors, ThrowOnError> => (options?.client ?? client).get<unknown, GithubAppManifestCallbackErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGithubAppManifestCallbackQuery.optional()
+    }).parseAsync(data),
+    url: '/api/v1/github/app/manifest/callback',
+    ...options
+});
+
+/**
+ * Install the GitHub App on the organization
+ */
+export const startGithubAppInstall = <ThrowOnError extends boolean = false>(options?: Options<StartGithubAppInstallData, ThrowOnError>): RequestResult<unknown, StartGithubAppInstallErrors, ThrowOnError> => (options?.client ?? client).get<unknown, StartGithubAppInstallErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/github/app/install/start',
+    ...options
+});
+
+/**
+ * Installation callback
+ */
+export const githubAppInstallCallback = <ThrowOnError extends boolean = false>(options?: Options<GithubAppInstallCallbackData, ThrowOnError>): RequestResult<unknown, GithubAppInstallCallbackErrors, ThrowOnError> => (options?.client ?? client).get<unknown, GithubAppInstallCallbackErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGithubAppInstallCallbackQuery.optional()
+    }).parseAsync(data),
+    url: '/api/v1/github/app/install/callback',
+    ...options
+});
+
+/**
+ * GitHub webhook (X-Hub-Signature-256)
+ */
+export const githubWebhook = <ThrowOnError extends boolean = false>(options: Options<GithubWebhookData, ThrowOnError>): RequestResult<GithubWebhookResponses, GithubWebhookErrors, ThrowOnError> => (options.client ?? client).post<GithubWebhookResponses, GithubWebhookErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zGithubWebhookBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGithubWebhookResponse.parseAsync(data),
+    url: '/api/v1/github/webhook',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A CI check asks the gate of a pull request merge or a push
+ */
+export const githubCheck = <ThrowOnError extends boolean = false>(options: Options<GithubCheckData, ThrowOnError>): RequestResult<GithubCheckResponses, GithubCheckErrors, ThrowOnError> => (options.client ?? client).post<GithubCheckResponses, GithubCheckErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zGithubCheckBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGithubCheckResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/github/checks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * The organization
+ */
+export const getOrganization = <ThrowOnError extends boolean = false>(options?: Options<GetOrganizationData, ThrowOnError>): RequestResult<GetOrganizationResponses, GetOrganizationErrors, ThrowOnError> => (options?.client ?? client).get<GetOrganizationResponses, GetOrganizationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetOrganizationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/org',
+    ...options
+});
+
+/**
+ * Members
+ */
+export const listMembers = <ThrowOnError extends boolean = false>(options?: Options<ListMembersData, ThrowOnError>): RequestResult<ListMembersResponses, ListMembersErrors, ThrowOnError> => (options?.client ?? client).get<ListMembersResponses, ListMembersErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListMembersResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members',
+    ...options
+});
+
+/**
+ * A member
+ */
+export const getMember = <ThrowOnError extends boolean = false>(options: Options<GetMemberData, ThrowOnError>): RequestResult<GetMemberResponses, GetMemberErrors, ThrowOnError> => (options.client ?? client).get<GetMemberResponses, GetMemberErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetMemberPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetMemberResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/{login}',
+    ...options
+});
+
+/**
+ * Change a member (role, linked chat accounts)
+ */
+export const updateMember = <ThrowOnError extends boolean = false>(options: Options<UpdateMemberData, ThrowOnError>): RequestResult<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError> => (options.client ?? client).patch<UpdateMemberResponses, UpdateMemberErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zUpdateMemberBody,
+        path: zUpdateMemberPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUpdateMemberResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/{login}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Invite people
+ */
+export const inviteMembers = <ThrowOnError extends boolean = false>(options: Options<InviteMembersData, ThrowOnError>): RequestResult<InviteMembersResponses, InviteMembersErrors, ThrowOnError> => (options.client ?? client).post<InviteMembersResponses, InviteMembersErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zInviteMembersBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zInviteMembersResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/invites',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Teams
+ */
+export const listTeams = <ThrowOnError extends boolean = false>(options?: Options<ListTeamsData, ThrowOnError>): RequestResult<ListTeamsResponses, ListTeamsErrors, ThrowOnError> => (options?.client ?? client).get<ListTeamsResponses, ListTeamsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListTeamsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/teams',
+    ...options
+});
+
+/**
+ * Repositories
+ */
+export const listRepos = <ThrowOnError extends boolean = false>(options?: Options<ListReposData, ThrowOnError>): RequestResult<ListReposResponses, ListReposErrors, ThrowOnError> => (options?.client ?? client).get<ListReposResponses, ListReposErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListReposResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/repos',
+    ...options
+});
+
+/**
+ * Organization settings
+ */
+export const getSettings = <ThrowOnError extends boolean = false>(options?: Options<GetSettingsData, ThrowOnError>): RequestResult<GetSettingsResponses, GetSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetSettingsResponses, GetSettingsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetSettingsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/settings',
+    ...options
+});
+
+/**
+ * Change organization settings (signed decision)
+ */
+export const updateSettings = <ThrowOnError extends boolean = false>(options: Options<UpdateSettingsData, ThrowOnError>): RequestResult<UpdateSettingsResponses, UpdateSettingsErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSettingsResponses, UpdateSettingsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zUpdateSettingsBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUpdateSettingsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/settings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Sessions
+ */
+export const listSessions = <ThrowOnError extends boolean = false>(options?: Options<ListSessionsData, ThrowOnError>): RequestResult<ListSessionsResponses, ListSessionsErrors, ThrowOnError> => (options?.client ?? client).get<ListSessionsResponses, ListSessionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListSessionsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListSessionsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions',
+    ...options
+});
+
+/**
+ * Start a session or a segment (hook SessionStart); a resumed session opens a chained segment
+ */
+export const startSession = <ThrowOnError extends boolean = false>(options: Options<StartSessionData, ThrowOnError>): RequestResult<StartSessionResponses, StartSessionErrors, ThrowOnError> => (options.client ?? client).post<StartSessionResponses, StartSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zStartSessionBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStartSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A session segment and its receipt
+ */
+export const getSession = <ThrowOnError extends boolean = false>(options: Options<GetSessionData, ThrowOnError>): RequestResult<GetSessionResponses, GetSessionErrors, ThrowOnError> => (options.client ?? client).get<GetSessionResponses, GetSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}',
+    ...options
+});
+
+/**
+ * Sign of life of the launcher (every 20 s)
+ */
+export const sessionAlive = <ThrowOnError extends boolean = false>(options: Options<SessionAliveData, ThrowOnError>): RequestResult<SessionAliveResponses, SessionAliveErrors, ThrowOnError> => (options.client ?? client).post<SessionAliveResponses, SessionAliveErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSessionAliveBody,
+        path: zSessionAlivePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSessionAliveResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}/alive',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * End a session: the server signs the segment receipt
+ */
+export const endSession = <ThrowOnError extends boolean = false>(options: Options<EndSessionData, ThrowOnError>): RequestResult<EndSessionResponses, EndSessionErrors, ThrowOnError> => (options.client ?? client).post<EndSessionResponses, EndSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zEndSessionBody,
+        path: zEndSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zEndSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}/end',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Reopen a closed session as a new segment chained to its receipt (launcher woke up)
+ */
+export const reopenSession = <ThrowOnError extends boolean = false>(options: Options<ReopenSessionData, ThrowOnError>): RequestResult<ReopenSessionResponses, ReopenSessionErrors, ThrowOnError> => (options.client ?? client).post<ReopenSessionResponses, ReopenSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zReopenSessionBody,
+        path: zReopenSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zReopenSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}/reopen',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Sign the workflow receipt of the session: what each compiled node did
+ */
+export const signWorkflowReceipt = <ThrowOnError extends boolean = false>(options: Options<SignWorkflowReceiptData, ThrowOnError>): RequestResult<SignWorkflowReceiptResponses, SignWorkflowReceiptErrors, ThrowOnError> => (options.client ?? client).post<SignWorkflowReceiptResponses, SignWorkflowReceiptErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSignWorkflowReceiptBody,
+        path: zSignWorkflowReceiptPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSignWorkflowReceiptResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}/workflow-receipt',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A skill or sub-agent of the package was opened
+ */
+export const reportSeen = <ThrowOnError extends boolean = false>(options: Options<ReportSeenData, ThrowOnError>): RequestResult<ReportSeenResponses, ReportSeenErrors, ThrowOnError> => (options.client ?? client).post<ReportSeenResponses, ReportSeenErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zReportSeenBody,
+        path: zReportSeenPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zReportSeenResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/sessions/{id}/seen',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Gate requests
+ */
+export const listGates = <ThrowOnError extends boolean = false>(options?: Options<ListGatesData, ThrowOnError>): RequestResult<ListGatesResponses, ListGatesErrors, ThrowOnError> => (options?.client ?? client).get<ListGatesResponses, ListGatesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListGatesQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListGatesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates',
+    ...options
+});
+
+/**
+ * Ask the gate of a boundary action (hook PreToolUse, CI, MCP); 409 session_closed in a closed session
+ */
+export const askGate = <ThrowOnError extends boolean = false>(options: Options<AskGateData, ThrowOnError>): RequestResult<AskGateResponses, AskGateErrors, ThrowOnError> => (options.client ?? client).post<AskGateResponses, AskGateErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zAskGateBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zAskGateResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A gate request; `wait` long-polls up to that many seconds for an answer
+ */
+export const getGate = <ThrowOnError extends boolean = false>(options: Options<GetGateData, ThrowOnError>): RequestResult<GetGateResponses, GetGateErrors, ThrowOnError> => (options.client ?? client).get<GetGateResponses, GetGateErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetGatePath,
+        query: zGetGateQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetGateResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates/{id}',
+    ...options
+});
+
+/**
+ * Consume a yes: it serves the action once
+ */
+export const consumeGate = <ThrowOnError extends boolean = false>(options: Options<ConsumeGateData, ThrowOnError>): RequestResult<ConsumeGateResponses, ConsumeGateErrors, ThrowOnError> => (options.client ?? client).post<ConsumeGateResponses, ConsumeGateErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zConsumeGatePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zConsumeGateResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates/{id}/consume',
+    ...options
+});
+
+/**
+ * Gates of a repository and the actions they cover
+ */
+export const getGateCatalog = <ThrowOnError extends boolean = false>(options?: Options<GetGateCatalogData, ThrowOnError>): RequestResult<GetGateCatalogResponses, GetGateCatalogErrors, ThrowOnError> => (options?.client ?? client).get<GetGateCatalogResponses, GetGateCatalogErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGetGateCatalogQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetGateCatalogResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates/catalog',
+    ...options
+});
+
+/**
+ * Self-approval policy
+ */
+export const getGatePolicy = <ThrowOnError extends boolean = false>(options?: Options<GetGatePolicyData, ThrowOnError>): RequestResult<GetGatePolicyResponses, GetGatePolicyErrors, ThrowOnError> => (options?.client ?? client).get<GetGatePolicyResponses, GetGatePolicyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetGatePolicyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates/policy',
+    ...options
+});
+
+/**
+ * Set the self-approval policy (`sole-approver` or `never`), signed decision
+ */
+export const setGatePolicy = <ThrowOnError extends boolean = false>(options: Options<SetGatePolicyData, ThrowOnError>): RequestResult<SetGatePolicyResponses, SetGatePolicyErrors, ThrowOnError> => (options.client ?? client).put<SetGatePolicyResponses, SetGatePolicyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSetGatePolicyBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSetGatePolicyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/gates/policy',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Approvals; `mine` lists those waiting for the caller
+ */
+export const listApprovals = <ThrowOnError extends boolean = false>(options?: Options<ListApprovalsData, ThrowOnError>): RequestResult<ListApprovalsResponses, ListApprovalsErrors, ThrowOnError> => (options?.client ?? client).get<ListApprovalsResponses, ListApprovalsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListApprovalsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListApprovalsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/approvals',
+    ...options
+});
+
+/**
+ * An approval, with what it shows
+ */
+export const getApproval = <ThrowOnError extends boolean = false>(options: Options<GetApprovalData, ThrowOnError>): RequestResult<GetApprovalResponses, GetApprovalErrors, ThrowOnError> => (options.client ?? client).get<GetApprovalResponses, GetApprovalErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetApprovalPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetApprovalResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/approvals/{id}',
+    ...options
+});
+
+/**
+ * Say yes or no; 409 shown_digest_mismatch when the shown digest differs; refused when the caller asked (unless sole approver) or is not an approver
+ */
+export const answerApproval = <ThrowOnError extends boolean = false>(options: Options<AnswerApprovalData, ThrowOnError>): RequestResult<AnswerApprovalResponses, AnswerApprovalErrors, ThrowOnError> => (options.client ?? client).post<AnswerApprovalResponses, AnswerApprovalErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zAnswerApprovalBody,
+        path: zAnswerApprovalPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zAnswerApprovalResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/approvals/{id}/answer',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Signed decisions
+ */
+export const listDecisions = <ThrowOnError extends boolean = false>(options?: Options<ListDecisionsData, ThrowOnError>): RequestResult<ListDecisionsResponses, ListDecisionsErrors, ThrowOnError> => (options?.client ?? client).get<ListDecisionsResponses, ListDecisionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListDecisionsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListDecisionsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/decisions',
+    ...options
+});
+
+/**
+ * Receipts
+ */
+export const listReceipts = <ThrowOnError extends boolean = false>(options?: Options<ListReceiptsData, ThrowOnError>): RequestResult<ListReceiptsResponses, ListReceiptsErrors, ThrowOnError> => (options?.client ?? client).get<ListReceiptsResponses, ListReceiptsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListReceiptsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListReceiptsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/receipts',
+    ...options
+});
+
+/**
+ * Public keys of the instance
+ */
+export const listReceiptKeys = <ThrowOnError extends boolean = false>(options?: Options<ListReceiptKeysData, ThrowOnError>): RequestResult<ListReceiptKeysResponses, ListReceiptKeysErrors, ThrowOnError> => (options?.client ?? client).get<ListReceiptKeysResponses, ListReceiptKeysErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListReceiptKeysResponse.parseAsync(data),
+    url: '/api/v1/receipts/keys',
+    ...options
+});
+
+/**
+ * A receipt
+ */
+export const getReceipt = <ThrowOnError extends boolean = false>(options: Options<GetReceiptData, ThrowOnError>): RequestResult<GetReceiptResponses, GetReceiptErrors, ThrowOnError> => (options.client ?? client).get<GetReceiptResponses, GetReceiptErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetReceiptPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetReceiptResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/receipts/{id}',
+    ...options
+});
+
+/**
+ * Verify a receipt with the instance keys
+ */
+export const verifyReceipt = <ThrowOnError extends boolean = false>(options: Options<VerifyReceiptData, ThrowOnError>): RequestResult<VerifyReceiptResponses, VerifyReceiptErrors, ThrowOnError> => (options.client ?? client).get<VerifyReceiptResponses, VerifyReceiptErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zVerifyReceiptPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zVerifyReceiptResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/receipts/{id}/verify',
+    ...options
+});
+
+/**
+ * The receipt with every signed piece it cites, for `ostrom verify`
+ */
+export const getReceiptBundle = <ThrowOnError extends boolean = false>(options: Options<GetReceiptBundleData, ThrowOnError>): RequestResult<GetReceiptBundleResponses, GetReceiptBundleErrors, ThrowOnError> => (options.client ?? client).get<GetReceiptBundleResponses, GetReceiptBundleErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetReceiptBundlePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetReceiptBundleResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/receipts/{id}/bundle',
+    ...options
+});
+
+/**
+ * The pinned package of a repository (served as signed, bytes untouched)
+ */
+export const getCurrentPackage = <ThrowOnError extends boolean = false>(options?: Options<GetCurrentPackageData, ThrowOnError>): RequestResult<GetCurrentPackageResponses, GetCurrentPackageErrors, ThrowOnError> => (options?.client ?? client).get<GetCurrentPackageResponses, GetCurrentPackageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGetCurrentPackageQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetCurrentPackageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/current',
+    ...options
+});
+
+/**
+ * Package versions
+ */
+export const listPackages = <ThrowOnError extends boolean = false>(options?: Options<ListPackagesData, ThrowOnError>): RequestResult<ListPackagesResponses, ListPackagesErrors, ThrowOnError> => (options?.client ?? client).get<ListPackagesResponses, ListPackagesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListPackagesQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListPackagesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages',
+    ...options
+});
+
+/**
+ * Compile without signing
+ */
+export const previewPackage = <ThrowOnError extends boolean = false>(options: Options<PreviewPackageData, ThrowOnError>): RequestResult<PreviewPackageResponses, PreviewPackageErrors, ThrowOnError> => (options.client ?? client).post<PreviewPackageResponses, PreviewPackageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPreviewPackageBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPreviewPackageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/preview',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Audit of compilations, pins and revocations
+ */
+export const listPackageAudit = <ThrowOnError extends boolean = false>(options?: Options<ListPackageAuditData, ThrowOnError>): RequestResult<ListPackageAuditResponses, ListPackageAuditErrors, ThrowOnError> => (options?.client ?? client).get<ListPackageAuditResponses, ListPackageAuditErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListPackageAuditResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/audit',
+    ...options
+});
+
+/**
+ * A package by digest
+ */
+export const getPackage = <ThrowOnError extends boolean = false>(options: Options<GetPackageData, ThrowOnError>): RequestResult<GetPackageResponses, GetPackageErrors, ThrowOnError> => (options.client ?? client).get<GetPackageResponses, GetPackageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetPackagePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetPackageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/{digest}',
+    ...options
+});
+
+/**
+ * Pinned or revoked
+ */
+export const getPackageStatus = <ThrowOnError extends boolean = false>(options: Options<GetPackageStatusData, ThrowOnError>): RequestResult<GetPackageStatusResponses, GetPackageStatusErrors, ThrowOnError> => (options.client ?? client).get<GetPackageStatusResponses, GetPackageStatusErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetPackageStatusPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetPackageStatusResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/{digest}/status',
+    ...options
+});
+
+/**
+ * Revoke a version: launchers refuse it
+ */
+export const revokePackage = <ThrowOnError extends boolean = false>(options: Options<RevokePackageData, ThrowOnError>): RequestResult<RevokePackageResponses, RevokePackageErrors, ThrowOnError> => (options.client ?? client).post<RevokePackageResponses, RevokePackageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRevokePackageBody,
+        path: zRevokePackagePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRevokePackageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/{digest}/revoke',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Restore a revoked version
+ */
+export const restorePackage = <ThrowOnError extends boolean = false>(options: Options<RestorePackageData, ThrowOnError>): RequestResult<RestorePackageResponses, RestorePackageErrors, ThrowOnError> => (options.client ?? client).post<RestorePackageResponses, RestorePackageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRestorePackagePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRestorePackageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/packages/{digest}/restore',
+    ...options
+});
+
+/**
+ * Check runs
+ */
+export const listChecks = <ThrowOnError extends boolean = false>(options?: Options<ListChecksData, ThrowOnError>): RequestResult<ListChecksResponses, ListChecksErrors, ThrowOnError> => (options?.client ?? client).get<ListChecksResponses, ListChecksErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListChecksQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListChecksResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/checks',
+    ...options
+});
+
+/**
+ * Report a check run
+ */
+export const reportCheck = <ThrowOnError extends boolean = false>(options: Options<ReportCheckData, ThrowOnError>): RequestResult<ReportCheckResponses, ReportCheckErrors, ThrowOnError> => (options.client ?? client).post<ReportCheckResponses, ReportCheckErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zReportCheckBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zReportCheckResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/checks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Notifications
+ */
+export const listNotifications = <ThrowOnError extends boolean = false>(options?: Options<ListNotificationsData, ThrowOnError>): RequestResult<ListNotificationsResponses, ListNotificationsErrors, ThrowOnError> => (options?.client ?? client).get<ListNotificationsResponses, ListNotificationsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListNotificationsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListNotificationsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notifications',
+    ...options
+});
+
+/**
+ * Ask the server to send a compiled notification (hook PostToolUse)
+ */
+export const sendNotification = <ThrowOnError extends boolean = false>(options: Options<SendNotificationData, ThrowOnError>): RequestResult<SendNotificationResponses, SendNotificationErrors, ThrowOnError> => (options.client ?? client).post<SendNotificationResponses, SendNotificationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSendNotificationBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSendNotificationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/notifications',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Rules
+ */
+export const listRules = <ThrowOnError extends boolean = false>(options?: Options<ListRulesData, ThrowOnError>): RequestResult<ListRulesResponses, ListRulesErrors, ThrowOnError> => (options?.client ?? client).get<ListRulesResponses, ListRulesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListRulesQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListRulesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/rules',
+    ...options
+});
+
+/**
+ * A rule
+ */
+export const getRule = <ThrowOnError extends boolean = false>(options: Options<GetRuleData, ThrowOnError>): RequestResult<GetRuleResponses, GetRuleErrors, ThrowOnError> => (options.client ?? client).get<GetRuleResponses, GetRuleErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetRulePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetRuleResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/rules/{id}',
+    ...options
+});
+
+/**
+ * Decide or edit a rule (signed decision)
+ */
+export const updateRule = <ThrowOnError extends boolean = false>(options: Options<UpdateRuleData, ThrowOnError>): RequestResult<UpdateRuleResponses, UpdateRuleErrors, ThrowOnError> => (options.client ?? client).patch<UpdateRuleResponses, UpdateRuleErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zUpdateRuleBody,
+        path: zUpdateRulePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUpdateRuleResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/rules/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Decide several rules
+ */
+export const bulkUpdateRules = <ThrowOnError extends boolean = false>(options: Options<BulkUpdateRulesData, ThrowOnError>): RequestResult<BulkUpdateRulesResponses, BulkUpdateRulesErrors, ThrowOnError> => (options.client ?? client).post<BulkUpdateRulesResponses, BulkUpdateRulesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zBulkUpdateRulesBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zBulkUpdateRulesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/rules/bulk',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Workflows
+ */
+export const listWorkflows = <ThrowOnError extends boolean = false>(options?: Options<ListWorkflowsData, ThrowOnError>): RequestResult<ListWorkflowsResponses, ListWorkflowsErrors, ThrowOnError> => (options?.client ?? client).get<ListWorkflowsResponses, ListWorkflowsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListWorkflowsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListWorkflowsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows',
+    ...options
+});
+
+/**
+ * Create a workflow
+ */
+export const createWorkflow = <ThrowOnError extends boolean = false>(options: Options<CreateWorkflowData, ThrowOnError>): RequestResult<CreateWorkflowResponses, CreateWorkflowErrors, ThrowOnError> => (options.client ?? client).post<CreateWorkflowResponses, CreateWorkflowErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateWorkflowBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateWorkflowResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a workflow; 409 workflow_in_use
+ */
+export const deleteWorkflow = <ThrowOnError extends boolean = false>(options: Options<DeleteWorkflowData, ThrowOnError>): RequestResult<DeleteWorkflowResponses, DeleteWorkflowErrors, ThrowOnError> => (options.client ?? client).delete<DeleteWorkflowResponses, DeleteWorkflowErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteWorkflowPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteWorkflowResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows/{id}',
+    ...options
+});
+
+/**
+ * A workflow
+ */
+export const getWorkflow = <ThrowOnError extends boolean = false>(options: Options<GetWorkflowData, ThrowOnError>): RequestResult<GetWorkflowResponses, GetWorkflowErrors, ThrowOnError> => (options.client ?? client).get<GetWorkflowResponses, GetWorkflowErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetWorkflowPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetWorkflowResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows/{id}',
+    ...options
+});
+
+/**
+ * Save a workflow; 409 workflow_conflict when `expectedVersion` is stale (signed decision)
+ */
+export const saveWorkflow = <ThrowOnError extends boolean = false>(options: Options<SaveWorkflowData, ThrowOnError>): RequestResult<SaveWorkflowResponses, SaveWorkflowErrors, ThrowOnError> => (options.client ?? client).put<SaveWorkflowResponses, SaveWorkflowErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSaveWorkflowBody,
+        path: zSaveWorkflowPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSaveWorkflowResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Runs of a workflow
+ */
+export const listWorkflowRuns = <ThrowOnError extends boolean = false>(options: Options<ListWorkflowRunsData, ThrowOnError>): RequestResult<ListWorkflowRunsResponses, ListWorkflowRunsErrors, ThrowOnError> => (options.client ?? client).get<ListWorkflowRunsResponses, ListWorkflowRunsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListWorkflowRunsPath,
+        query: zListWorkflowRunsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListWorkflowRunsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows/{id}/runs',
+    ...options
+});
+
+/**
+ * Start a run
+ */
+export const startWorkflowRun = <ThrowOnError extends boolean = false>(options: Options<StartWorkflowRunData, ThrowOnError>): RequestResult<StartWorkflowRunResponses, StartWorkflowRunErrors, ThrowOnError> => (options.client ?? client).post<StartWorkflowRunResponses, StartWorkflowRunErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zStartWorkflowRunBody,
+        path: zStartWorkflowRunPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStartWorkflowRunResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/workflows/{id}/runs',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Runs
+ */
+export const listRuns = <ThrowOnError extends boolean = false>(options?: Options<ListRunsData, ThrowOnError>): RequestResult<ListRunsResponses, ListRunsErrors, ThrowOnError> => (options?.client ?? client).get<ListRunsResponses, ListRunsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListRunsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListRunsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runs',
+    ...options
+});
+
+/**
+ * A run with its visits
+ */
+export const getRun = <ThrowOnError extends boolean = false>(options: Options<GetRunData, ThrowOnError>): RequestResult<GetRunResponses, GetRunErrors, ThrowOnError> => (options.client ?? client).get<GetRunResponses, GetRunErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetRunPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetRunResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runs/{id}',
+    ...options
+});
+
+/**
+ * Cancel a run
+ */
+export const cancelRun = <ThrowOnError extends boolean = false>(options: Options<CancelRunData, ThrowOnError>): RequestResult<CancelRunResponses, CancelRunErrors, ThrowOnError> => (options.client ?? client).post<CancelRunResponses, CancelRunErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zCancelRunPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCancelRunResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runs/{id}/cancel',
+    ...options
+});
+
+/**
+ * Automations
+ */
+export const listAutomations = <ThrowOnError extends boolean = false>(options?: Options<ListAutomationsData, ThrowOnError>): RequestResult<ListAutomationsResponses, ListAutomationsErrors, ThrowOnError> => (options?.client ?? client).get<ListAutomationsResponses, ListAutomationsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListAutomationsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations',
+    ...options
+});
+
+/**
+ * Create an automation
+ */
+export const createAutomation = <ThrowOnError extends boolean = false>(options: Options<CreateAutomationData, ThrowOnError>): RequestResult<CreateAutomationResponses, CreateAutomationErrors, ThrowOnError> => (options.client ?? client).post<CreateAutomationResponses, CreateAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateAutomationBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an automation
+ */
+export const deleteAutomation = <ThrowOnError extends boolean = false>(options: Options<DeleteAutomationData, ThrowOnError>): RequestResult<DeleteAutomationResponses, DeleteAutomationErrors, ThrowOnError> => (options.client ?? client).delete<DeleteAutomationResponses, DeleteAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}',
+    ...options
+});
+
+/**
+ * An automation
+ */
+export const getAutomation = <ThrowOnError extends boolean = false>(options: Options<GetAutomationData, ThrowOnError>): RequestResult<GetAutomationResponses, GetAutomationErrors, ThrowOnError> => (options.client ?? client).get<GetAutomationResponses, GetAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}',
+    ...options
+});
+
+/**
+ * Save an automation
+ */
+export const saveAutomation = <ThrowOnError extends boolean = false>(options: Options<SaveAutomationData, ThrowOnError>): RequestResult<SaveAutomationResponses, SaveAutomationErrors, ThrowOnError> => (options.client ?? client).put<SaveAutomationResponses, SaveAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSaveAutomationBody,
+        path: zSaveAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSaveAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Enable
+ */
+export const enableAutomation = <ThrowOnError extends boolean = false>(options: Options<EnableAutomationData, ThrowOnError>): RequestResult<EnableAutomationResponses, EnableAutomationErrors, ThrowOnError> => (options.client ?? client).post<EnableAutomationResponses, EnableAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zEnableAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zEnableAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}/enable',
+    ...options
+});
+
+/**
+ * Disable
+ */
+export const disableAutomation = <ThrowOnError extends boolean = false>(options: Options<DisableAutomationData, ThrowOnError>): RequestResult<DisableAutomationResponses, DisableAutomationErrors, ThrowOnError> => (options.client ?? client).post<DisableAutomationResponses, DisableAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDisableAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDisableAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}/disable',
+    ...options
+});
+
+/**
+ * Rotate the webhook secret (the old one stays valid 10 minutes); returned once
+ */
+export const rotateAutomationSecret = <ThrowOnError extends boolean = false>(options: Options<RotateAutomationSecretData, ThrowOnError>): RequestResult<RotateAutomationSecretResponses, RotateAutomationSecretErrors, ThrowOnError> => (options.client ?? client).post<RotateAutomationSecretResponses, RotateAutomationSecretErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRotateAutomationSecretPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRotateAutomationSecretResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}/webhook/rotate-secret',
+    ...options
+});
+
+/**
+ * Test run, optionally dry
+ */
+export const testAutomation = <ThrowOnError extends boolean = false>(options: Options<TestAutomationData, ThrowOnError>): RequestResult<TestAutomationResponses, TestAutomationErrors, ThrowOnError> => (options.client ?? client).post<TestAutomationResponses, TestAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zTestAutomationBody,
+        path: zTestAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zTestAutomationResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}/run',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Runs started by an automation
+ */
+export const listAutomationRuns = <ThrowOnError extends boolean = false>(options: Options<ListAutomationRunsData, ThrowOnError>): RequestResult<ListAutomationRunsResponses, ListAutomationRunsErrors, ThrowOnError> => (options.client ?? client).get<ListAutomationRunsResponses, ListAutomationRunsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListAutomationRunsPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListAutomationRunsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/automations/{id}/runs',
+    ...options
+});
+
+/**
+ * Signed webhook trigger (Ostrom-Timestamp, Ostrom-Signature v1=HMAC-SHA256, Ostrom-Delivery)
+ */
+export const triggerAutomation = <ThrowOnError extends boolean = false>(options: Options<TriggerAutomationData, ThrowOnError>): RequestResult<TriggerAutomationResponses, TriggerAutomationErrors, ThrowOnError> => (options.client ?? client).post<TriggerAutomationResponses, TriggerAutomationErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zTriggerAutomationBody,
+        path: zTriggerAutomationPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zTriggerAutomationResponse.parseAsync(data),
+    url: '/api/v1/automations/{id}/trigger',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Waits; `mine` lists those for the caller
+ */
+export const listWaits = <ThrowOnError extends boolean = false>(options?: Options<ListWaitsData, ThrowOnError>): RequestResult<ListWaitsResponses, ListWaitsErrors, ThrowOnError> => (options?.client ?? client).get<ListWaitsResponses, ListWaitsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListWaitsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListWaitsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/waits',
+    ...options
+});
+
+/**
+ * Ask a person (agent ask_human); Idempotency-Key header
+ */
+export const createWait = <ThrowOnError extends boolean = false>(options: Options<CreateWaitData, ThrowOnError>): RequestResult<CreateWaitResponses, CreateWaitErrors, ThrowOnError> => (options.client ?? client).post<CreateWaitResponses, CreateWaitErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateWaitBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateWaitResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/waits',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A wait
+ */
+export const getWait = <ThrowOnError extends boolean = false>(options: Options<GetWaitData, ThrowOnError>): RequestResult<GetWaitResponses, GetWaitErrors, ThrowOnError> => (options.client ?? client).get<GetWaitResponses, GetWaitErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetWaitPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetWaitResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/waits/{id}',
+    ...options
+});
+
+/**
+ * Answer a wait; first answer wins (409 wait_closed)
+ */
+export const answerWait = <ThrowOnError extends boolean = false>(options: Options<AnswerWaitData, ThrowOnError>): RequestResult<AnswerWaitResponses, AnswerWaitErrors, ThrowOnError> => (options.client ?? client).post<AnswerWaitResponses, AnswerWaitErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zAnswerWaitBody,
+        path: zAnswerWaitPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zAnswerWaitResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/waits/{id}/answer',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Cancel a wait
+ */
+export const cancelWait = <ThrowOnError extends boolean = false>(options: Options<CancelWaitData, ThrowOnError>): RequestResult<CancelWaitResponses, CancelWaitErrors, ThrowOnError> => (options.client ?? client).post<CancelWaitResponses, CancelWaitErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zCancelWaitPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCancelWaitResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/waits/{id}/cancel',
+    ...options
+});
+
+/**
+ * MCP servers relayed by Ostrom
+ */
+export const listMcpServers = <ThrowOnError extends boolean = false>(options?: Options<ListMcpServersData, ThrowOnError>): RequestResult<ListMcpServersResponses, ListMcpServersErrors, ThrowOnError> => (options?.client ?? client).get<ListMcpServersResponses, ListMcpServersErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListMcpServersResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/servers',
+    ...options
+});
+
+/**
+ * Add a relayed MCP server (credentials as secret names)
+ */
+export const createMcpServer = <ThrowOnError extends boolean = false>(options: Options<CreateMcpServerData, ThrowOnError>): RequestResult<CreateMcpServerResponses, CreateMcpServerErrors, ThrowOnError> => (options.client ?? client).post<CreateMcpServerResponses, CreateMcpServerErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateMcpServerBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateMcpServerResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/servers',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a relayed MCP server
+ */
+export const deleteMcpServer = <ThrowOnError extends boolean = false>(options: Options<DeleteMcpServerData, ThrowOnError>): RequestResult<DeleteMcpServerResponses, DeleteMcpServerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteMcpServerResponses, DeleteMcpServerErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteMcpServerPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteMcpServerResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/servers/{name}',
+    ...options
+});
+
+/**
+ * Change a relayed MCP server
+ */
+export const saveMcpServer = <ThrowOnError extends boolean = false>(options: Options<SaveMcpServerData, ThrowOnError>): RequestResult<SaveMcpServerResponses, SaveMcpServerErrors, ThrowOnError> => (options.client ?? client).put<SaveMcpServerResponses, SaveMcpServerErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSaveMcpServerBody,
+        path: zSaveMcpServerPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSaveMcpServerResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/servers/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * MCP Streamable HTTP endpoint of a relayed server (`ostrom` and `ostrom-workflow` are built in)
+ */
+export const relayMcp = <ThrowOnError extends boolean = false>(options: Options<RelayMcpData, ThrowOnError>): RequestResult<RelayMcpResponses, RelayMcpErrors, ThrowOnError> => (options.client ?? client).post<RelayMcpResponses, RelayMcpErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRelayMcpBody,
+        path: zRelayMcpPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/{server}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Relayed calls
+ */
+export const listMcpCalls = <ThrowOnError extends boolean = false>(options?: Options<ListMcpCallsData, ThrowOnError>): RequestResult<ListMcpCallsResponses, ListMcpCallsErrors, ThrowOnError> => (options?.client ?? client).get<ListMcpCallsResponses, ListMcpCallsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListMcpCallsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListMcpCallsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/calls',
+    ...options
+});
+
+/**
+ * Calls per server and tool
+ */
+export const getMcpUsage = <ThrowOnError extends boolean = false>(options?: Options<GetMcpUsageData, ThrowOnError>): RequestResult<GetMcpUsageResponses, GetMcpUsageErrors, ThrowOnError> => (options?.client ?? client).get<GetMcpUsageResponses, GetMcpUsageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetMcpUsageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/mcp/usage',
+    ...options
+});
+
+/**
+ * Secrets (metadata only)
+ */
+export const listSecrets = <ThrowOnError extends boolean = false>(options?: Options<ListSecretsData, ThrowOnError>): RequestResult<ListSecretsResponses, ListSecretsErrors, ThrowOnError> => (options?.client ?? client).get<ListSecretsResponses, ListSecretsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListSecretsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/secrets',
+    ...options
+});
+
+/**
+ * Create a secret
+ */
+export const createSecret = <ThrowOnError extends boolean = false>(options: Options<CreateSecretData, ThrowOnError>): RequestResult<CreateSecretResponses, CreateSecretErrors, ThrowOnError> => (options.client ?? client).post<CreateSecretResponses, CreateSecretErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateSecretBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateSecretResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/secrets',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a secret
+ */
+export const deleteSecret = <ThrowOnError extends boolean = false>(options: Options<DeleteSecretData, ThrowOnError>): RequestResult<DeleteSecretResponses, DeleteSecretErrors, ThrowOnError> => (options.client ?? client).delete<DeleteSecretResponses, DeleteSecretErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteSecretPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteSecretResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/secrets/{name}',
+    ...options
+});
+
+/**
+ * Rotate a secret
+ */
+export const rotateSecret = <ThrowOnError extends boolean = false>(options: Options<RotateSecretData, ThrowOnError>): RequestResult<RotateSecretResponses, RotateSecretErrors, ThrowOnError> => (options.client ?? client).put<RotateSecretResponses, RotateSecretErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRotateSecretBody,
+        path: zRotateSecretPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRotateSecretResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/secrets/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Anthropic-compatible Messages endpoint, metered against budgets
+ */
+export const inferenceMessages = <ThrowOnError extends boolean = false>(options: Options<InferenceMessagesData, ThrowOnError>): RequestResult<InferenceMessagesResponses, InferenceMessagesErrors, ThrowOnError> => (options.client ?? client).post<InferenceMessagesResponses, InferenceMessagesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zInferenceMessagesBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/inference/v1/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * OpenAI-compatible chat completions endpoint
+ */
+export const inferenceChatCompletions = <ThrowOnError extends boolean = false>(options: Options<InferenceChatCompletionsData, ThrowOnError>): RequestResult<InferenceChatCompletionsResponses, InferenceChatCompletionsErrors, ThrowOnError> => (options.client ?? client).post<InferenceChatCompletionsResponses, InferenceChatCompletionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zInferenceChatCompletionsBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/inference/v1/chat/completions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Models the caller may use
+ */
+export const inferenceModels = <ThrowOnError extends boolean = false>(options?: Options<InferenceModelsData, ThrowOnError>): RequestResult<InferenceModelsResponses, InferenceModelsErrors, ThrowOnError> => (options?.client ?? client).get<InferenceModelsResponses, InferenceModelsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zInferenceModelsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/inference/v1/models',
+    ...options
+});
+
+/**
+ * Model policy
+ */
+export const getModelPolicy = <ThrowOnError extends boolean = false>(options?: Options<GetModelPolicyData, ThrowOnError>): RequestResult<GetModelPolicyResponses, GetModelPolicyErrors, ThrowOnError> => (options?.client ?? client).get<GetModelPolicyResponses, GetModelPolicyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetModelPolicyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policy/models',
+    ...options
+});
+
+/**
+ * Set the model policy
+ */
+export const setModelPolicy = <ThrowOnError extends boolean = false>(options: Options<SetModelPolicyData, ThrowOnError>): RequestResult<SetModelPolicyResponses, SetModelPolicyErrors, ThrowOnError> => (options.client ?? client).put<SetModelPolicyResponses, SetModelPolicyErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSetModelPolicyBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSetModelPolicyResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/policy/models',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Inference routes
+ */
+export const listInferenceRoutes = <ThrowOnError extends boolean = false>(options?: Options<ListInferenceRoutesData, ThrowOnError>): RequestResult<ListInferenceRoutesResponses, ListInferenceRoutesErrors, ThrowOnError> => (options?.client ?? client).get<ListInferenceRoutesResponses, ListInferenceRoutesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListInferenceRoutesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/routes',
+    ...options
+});
+
+/**
+ * Add a route
+ */
+export const createInferenceRoute = <ThrowOnError extends boolean = false>(options: Options<CreateInferenceRouteData, ThrowOnError>): RequestResult<CreateInferenceRouteResponses, CreateInferenceRouteErrors, ThrowOnError> => (options.client ?? client).post<CreateInferenceRouteResponses, CreateInferenceRouteErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateInferenceRouteBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateInferenceRouteResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/routes',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a route
+ */
+export const deleteInferenceRoute = <ThrowOnError extends boolean = false>(options: Options<DeleteInferenceRouteData, ThrowOnError>): RequestResult<DeleteInferenceRouteResponses, DeleteInferenceRouteErrors, ThrowOnError> => (options.client ?? client).delete<DeleteInferenceRouteResponses, DeleteInferenceRouteErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteInferenceRoutePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteInferenceRouteResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/routes/{id}',
+    ...options
+});
+
+/**
+ * Budgets
+ */
+export const listBudgets = <ThrowOnError extends boolean = false>(options?: Options<ListBudgetsData, ThrowOnError>): RequestResult<ListBudgetsResponses, ListBudgetsErrors, ThrowOnError> => (options?.client ?? client).get<ListBudgetsResponses, ListBudgetsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListBudgetsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/budgets',
+    ...options
+});
+
+/**
+ * Set a budget (organization, member, workflow)
+ */
+export const setBudget = <ThrowOnError extends boolean = false>(options: Options<SetBudgetData, ThrowOnError>): RequestResult<SetBudgetResponses, SetBudgetErrors, ThrowOnError> => (options.client ?? client).put<SetBudgetResponses, SetBudgetErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSetBudgetBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSetBudgetResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/budgets',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Spending over a period
+ */
+export const getUsage = <ThrowOnError extends boolean = false>(options?: Options<GetUsageData, ThrowOnError>): RequestResult<GetUsageResponses, GetUsageErrors, ThrowOnError> => (options?.client ?? client).get<GetUsageResponses, GetUsageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zGetUsageQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetUsageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/usage',
+    ...options
+});
+
+/**
+ * Reservations not yet reconciled
+ */
+export const listPendingUsage = <ThrowOnError extends boolean = false>(options?: Options<ListPendingUsageData, ThrowOnError>): RequestResult<ListPendingUsageResponses, ListPendingUsageErrors, ThrowOnError> => (options?.client ?? client).get<ListPendingUsageResponses, ListPendingUsageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListPendingUsageQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListPendingUsageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/usage/pending',
+    ...options
+});
+
+/**
+ * Reconciliation history
+ */
+export const listUsageReconciliations = <ThrowOnError extends boolean = false>(options?: Options<ListUsageReconciliationsData, ThrowOnError>): RequestResult<ListUsageReconciliationsResponses, ListUsageReconciliationsErrors, ThrowOnError> => (options?.client ?? client).get<ListUsageReconciliationsResponses, ListUsageReconciliationsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListUsageReconciliationsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListUsageReconciliationsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/usage/reconciliations',
+    ...options
+});
+
+/**
+ * Reconcile a reservation with the provider bill
+ */
+export const reconcileUsage = <ThrowOnError extends boolean = false>(options: Options<ReconcileUsageData, ThrowOnError>): RequestResult<ReconcileUsageResponses, ReconcileUsageErrors, ThrowOnError> => (options.client ?? client).post<ReconcileUsageResponses, ReconcileUsageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zReconcileUsageBody,
+        path: zReconcileUsagePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zReconcileUsageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/usage/reservations/{id}/reconcile',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Budget overrides of a member
+ */
+export const listBudgetOverrides = <ThrowOnError extends boolean = false>(options: Options<ListBudgetOverridesData, ThrowOnError>): RequestResult<ListBudgetOverridesResponses, ListBudgetOverridesErrors, ThrowOnError> => (options.client ?? client).get<ListBudgetOverridesResponses, ListBudgetOverridesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListBudgetOverridesPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListBudgetOverridesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/{login}/budget-overrides',
+    ...options
+});
+
+/**
+ * Grant a dated exception
+ */
+export const createBudgetOverride = <ThrowOnError extends boolean = false>(options: Options<CreateBudgetOverrideData, ThrowOnError>): RequestResult<CreateBudgetOverrideResponses, CreateBudgetOverrideErrors, ThrowOnError> => (options.client ?? client).post<CreateBudgetOverrideResponses, CreateBudgetOverrideErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateBudgetOverrideBody,
+        path: zCreateBudgetOverridePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateBudgetOverrideResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/{login}/budget-overrides',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Revoke an exception
+ */
+export const revokeBudgetOverride = <ThrowOnError extends boolean = false>(options: Options<RevokeBudgetOverrideData, ThrowOnError>): RequestResult<RevokeBudgetOverrideResponses, RevokeBudgetOverrideErrors, ThrowOnError> => (options.client ?? client).post<RevokeBudgetOverrideResponses, RevokeBudgetOverrideErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRevokeBudgetOverridePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRevokeBudgetOverrideResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/members/{login}/budget-overrides/{id}/revoke',
+    ...options
+});
+
+/**
+ * Runners
+ */
+export const listRunners = <ThrowOnError extends boolean = false>(options?: Options<ListRunnersData, ThrowOnError>): RequestResult<ListRunnersResponses, ListRunnersErrors, ThrowOnError> => (options?.client ?? client).get<ListRunnersResponses, ListRunnersErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListRunnersResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runners',
+    ...options
+});
+
+/**
+ * Register a runner (service key)
+ */
+export const registerRunner = <ThrowOnError extends boolean = false>(options: Options<RegisterRunnerData, ThrowOnError>): RequestResult<RegisterRunnerResponses, RegisterRunnerErrors, ThrowOnError> => (options.client ?? client).post<RegisterRunnerResponses, RegisterRunnerErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zRegisterRunnerBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRegisterRunnerResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runners',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a runner
+ */
+export const deleteRunner = <ThrowOnError extends boolean = false>(options: Options<DeleteRunnerData, ThrowOnError>): RequestResult<DeleteRunnerResponses, DeleteRunnerErrors, ThrowOnError> => (options.client ?? client).delete<DeleteRunnerResponses, DeleteRunnerErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteRunnerPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteRunnerResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runners/{id}',
+    ...options
+});
+
+/**
+ * Sign of life; returns the work assigned
+ */
+export const runnerHeartbeat = <ThrowOnError extends boolean = false>(options: Options<RunnerHeartbeatData, ThrowOnError>): RequestResult<RunnerHeartbeatResponses, RunnerHeartbeatErrors, ThrowOnError> => (options.client ?? client).post<RunnerHeartbeatResponses, RunnerHeartbeatErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRunnerHeartbeatPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRunnerHeartbeatResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/runners/{id}/heartbeat',
+    ...options
+});
+
+/**
+ * Cloud agent sessions
+ */
+export const listCloudSessions = <ThrowOnError extends boolean = false>(options?: Options<ListCloudSessionsData, ThrowOnError>): RequestResult<ListCloudSessionsResponses, ListCloudSessionsErrors, ThrowOnError> => (options?.client ?? client).get<ListCloudSessionsResponses, ListCloudSessionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListCloudSessionsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListCloudSessionsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions',
+    ...options
+});
+
+/**
+ * Start a cloud agent session
+ */
+export const createCloudSession = <ThrowOnError extends boolean = false>(options: Options<CreateCloudSessionData, ThrowOnError>): RequestResult<CreateCloudSessionResponses, CreateCloudSessionErrors, ThrowOnError> => (options.client ?? client).post<CreateCloudSessionResponses, CreateCloudSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateCloudSessionBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateCloudSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stop a cloud session
+ */
+export const stopCloudSession = <ThrowOnError extends boolean = false>(options: Options<StopCloudSessionData, ThrowOnError>): RequestResult<StopCloudSessionResponses, StopCloudSessionErrors, ThrowOnError> => (options.client ?? client).delete<StopCloudSessionResponses, StopCloudSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zStopCloudSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStopCloudSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions/{id}',
+    ...options
+});
+
+/**
+ * A cloud session
+ */
+export const getCloudSession = <ThrowOnError extends boolean = false>(options: Options<GetCloudSessionData, ThrowOnError>): RequestResult<GetCloudSessionResponses, GetCloudSessionErrors, ThrowOnError> => (options.client ?? client).get<GetCloudSessionResponses, GetCloudSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetCloudSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetCloudSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions/{id}',
+    ...options
+});
+
+/**
+ * Send a message to the agent
+ */
+export const sendCloudMessage = <ThrowOnError extends boolean = false>(options: Options<SendCloudMessageData, ThrowOnError>): RequestResult<SendCloudMessageResponses, SendCloudMessageErrors, ThrowOnError> => (options.client ?? client).post<SendCloudMessageResponses, SendCloudMessageErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zSendCloudMessageBody,
+        path: zSendCloudMessagePath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zSendCloudMessageResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions/{id}/messages',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Events of a cloud session
+ */
+export const streamCloudSession = <ThrowOnError extends boolean = false>(options: Options<StreamCloudSessionData, ThrowOnError, StreamCloudSessionResponse>): Promise<ServerSentEventsResult<StreamCloudSessionResponses>> => (options.client ?? client).sse.get<StreamCloudSessionResponses, StreamCloudSessionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zStreamCloudSessionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStreamCloudSessionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/cloud/sessions/{id}/events',
+    ...options
+});
+
+/**
+ * Artifacts the caller can read
+ */
+export const listArtifacts = <ThrowOnError extends boolean = false>(options?: Options<ListArtifactsData, ThrowOnError>): RequestResult<ListArtifactsResponses, ListArtifactsErrors, ThrowOnError> => (options?.client ?? client).get<ListArtifactsResponses, ListArtifactsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListArtifactsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts',
+    ...options
+});
+
+/**
+ * Publish an artifact (multipart files)
+ */
+export const publishArtifact = <ThrowOnError extends boolean = false>(options: Options<PublishArtifactData, ThrowOnError>): RequestResult<PublishArtifactResponses, PublishArtifactErrors, ThrowOnError> => (options.client ?? client).post<PublishArtifactResponses, PublishArtifactErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPublishArtifactBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPublishArtifactResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an artifact
+ */
+export const deleteArtifact = <ThrowOnError extends boolean = false>(options: Options<DeleteArtifactData, ThrowOnError>): RequestResult<DeleteArtifactResponses, DeleteArtifactErrors, ThrowOnError> => (options.client ?? client).delete<DeleteArtifactResponses, DeleteArtifactErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteArtifactPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteArtifactResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}',
+    ...options
+});
+
+/**
+ * An artifact
+ */
+export const getArtifact = <ThrowOnError extends boolean = false>(options: Options<GetArtifactData, ThrowOnError>): RequestResult<GetArtifactResponses, GetArtifactErrors, ThrowOnError> => (options.client ?? client).get<GetArtifactResponses, GetArtifactErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetArtifactPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetArtifactResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}',
+    ...options
+});
+
+/**
+ * Versions
+ */
+export const listArtifactVersions = <ThrowOnError extends boolean = false>(options: Options<ListArtifactVersionsData, ThrowOnError>): RequestResult<ListArtifactVersionsResponses, ListArtifactVersionsErrors, ThrowOnError> => (options.client ?? client).get<ListArtifactVersionsResponses, ListArtifactVersionsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListArtifactVersionsPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListArtifactVersionsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/versions',
+    ...options
+});
+
+/**
+ * Publish a new version
+ */
+export const publishArtifactVersion = <ThrowOnError extends boolean = false>(options: Options<PublishArtifactVersionData, ThrowOnError>): RequestResult<PublishArtifactVersionResponses, PublishArtifactVersionErrors, ThrowOnError> => (options.client ?? client).post<PublishArtifactVersionResponses, PublishArtifactVersionErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPublishArtifactVersionBody,
+        path: zPublishArtifactVersionPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPublishArtifactVersionResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/versions',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * A file of a version
+ */
+export const getArtifactFile = <ThrowOnError extends boolean = false>(options: Options<GetArtifactFileData, ThrowOnError>): RequestResult<GetArtifactFileResponses, GetArtifactFileErrors, ThrowOnError> => (options.client ?? client).get<GetArtifactFileResponses, GetArtifactFileErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetArtifactFilePath,
+        query: zGetArtifactFileQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetArtifactFileResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/versions/{number}/file',
+    ...options
+});
+
+/**
+ * Who can read it
+ */
+export const listArtifactMembers = <ThrowOnError extends boolean = false>(options: Options<ListArtifactMembersData, ThrowOnError>): RequestResult<ListArtifactMembersResponses, ListArtifactMembersErrors, ThrowOnError> => (options.client ?? client).get<ListArtifactMembersResponses, ListArtifactMembersErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListArtifactMembersPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListArtifactMembersResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/members',
+    ...options
+});
+
+/**
+ * Stop sharing with a member
+ */
+export const unshareArtifact = <ThrowOnError extends boolean = false>(options: Options<UnshareArtifactData, ThrowOnError>): RequestResult<UnshareArtifactResponses, UnshareArtifactErrors, ThrowOnError> => (options.client ?? client).delete<UnshareArtifactResponses, UnshareArtifactErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zUnshareArtifactPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUnshareArtifactResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/members/{login}',
+    ...options
+});
+
+/**
+ * Share with a member
+ */
+export const shareArtifact = <ThrowOnError extends boolean = false>(options: Options<ShareArtifactData, ThrowOnError>): RequestResult<ShareArtifactResponses, ShareArtifactErrors, ThrowOnError> => (options.client ?? client).put<ShareArtifactResponses, ShareArtifactErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zShareArtifactPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zShareArtifactResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/members/{login}',
+    ...options
+});
+
+/**
+ * A short-lived reading ticket
+ */
+export const createArtifactTicket = <ThrowOnError extends boolean = false>(options: Options<CreateArtifactTicketData, ThrowOnError>): RequestResult<CreateArtifactTicketResponses, CreateArtifactTicketErrors, ThrowOnError> => (options.client ?? client).post<CreateArtifactTicketResponses, CreateArtifactTicketErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zCreateArtifactTicketPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateArtifactTicketResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/artifacts/{id}/tickets',
+    ...options
+});
+
+/**
+ * Subscriptions shared with the caller or owned by them
+ */
+export const listSharedAccounts = <ThrowOnError extends boolean = false>(options?: Options<ListSharedAccountsData, ThrowOnError>): RequestResult<ListSharedAccountsResponses, ListSharedAccountsErrors, ThrowOnError> => (options?.client ?? client).get<ListSharedAccountsResponses, ListSharedAccountsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListSharedAccountsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/accounts',
+    ...options
+});
+
+/**
+ * Enroll a personal subscription (credentials encrypted on the server)
+ */
+export const enrollSharedAccount = <ThrowOnError extends boolean = false>(options: Options<EnrollSharedAccountData, ThrowOnError>): RequestResult<EnrollSharedAccountResponses, EnrollSharedAccountErrors, ThrowOnError> => (options.client ?? client).post<EnrollSharedAccountResponses, EnrollSharedAccountErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zEnrollSharedAccountBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zEnrollSharedAccountResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/accounts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Stop sharing and delete the credentials
+ */
+export const removeSharedAccount = <ThrowOnError extends boolean = false>(options: Options<RemoveSharedAccountData, ThrowOnError>): RequestResult<RemoveSharedAccountResponses, RemoveSharedAccountErrors, ThrowOnError> => (options.client ?? client).delete<RemoveSharedAccountResponses, RemoveSharedAccountErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRemoveSharedAccountPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRemoveSharedAccountResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/accounts/{id}',
+    ...options
+});
+
+/**
+ * Change sharing, allocation, pause
+ */
+export const updateSharedAccount = <ThrowOnError extends boolean = false>(options: Options<UpdateSharedAccountData, ThrowOnError>): RequestResult<UpdateSharedAccountResponses, UpdateSharedAccountErrors, ThrowOnError> => (options.client ?? client).patch<UpdateSharedAccountResponses, UpdateSharedAccountErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zUpdateSharedAccountBody,
+        path: zUpdateSharedAccountPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUpdateSharedAccountResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/accounts/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remaining capacity of shared subscriptions
+ */
+export const getCapacity = <ThrowOnError extends boolean = false>(options?: Options<GetCapacityData, ThrowOnError>): RequestResult<GetCapacityResponses, GetCapacityErrors, ThrowOnError> => (options?.client ?? client).get<GetCapacityResponses, GetCapacityErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetCapacityResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/capacity',
+    ...options
+});
+
+/**
+ * Sharing groups
+ */
+export const listGroups = <ThrowOnError extends boolean = false>(options?: Options<ListGroupsData, ThrowOnError>): RequestResult<ListGroupsResponses, ListGroupsErrors, ThrowOnError> => (options?.client ?? client).get<ListGroupsResponses, ListGroupsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListGroupsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups',
+    ...options
+});
+
+/**
+ * Create a group
+ */
+export const createGroup = <ThrowOnError extends boolean = false>(options: Options<CreateGroupData, ThrowOnError>): RequestResult<CreateGroupResponses, CreateGroupErrors, ThrowOnError> => (options.client ?? client).post<CreateGroupResponses, CreateGroupErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateGroupBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateGroupResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a group
+ */
+export const deleteGroup = <ThrowOnError extends boolean = false>(options: Options<DeleteGroupData, ThrowOnError>): RequestResult<DeleteGroupResponses, DeleteGroupErrors, ThrowOnError> => (options.client ?? client).delete<DeleteGroupResponses, DeleteGroupErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteGroupPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteGroupResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}',
+    ...options
+});
+
+/**
+ * A group
+ */
+export const getGroup = <ThrowOnError extends boolean = false>(options: Options<GetGroupData, ThrowOnError>): RequestResult<GetGroupResponses, GetGroupErrors, ThrowOnError> => (options.client ?? client).get<GetGroupResponses, GetGroupErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zGetGroupPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetGroupResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}',
+    ...options
+});
+
+/**
+ * Change a group
+ */
+export const updateGroup = <ThrowOnError extends boolean = false>(options: Options<UpdateGroupData, ThrowOnError>): RequestResult<UpdateGroupResponses, UpdateGroupErrors, ThrowOnError> => (options.client ?? client).patch<UpdateGroupResponses, UpdateGroupErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zUpdateGroupBody,
+        path: zUpdateGroupPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zUpdateGroupResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove a member from a group
+ */
+export const removeGroupMember = <ThrowOnError extends boolean = false>(options: Options<RemoveGroupMemberData, ThrowOnError>): RequestResult<RemoveGroupMemberResponses, RemoveGroupMemberErrors, ThrowOnError> => (options.client ?? client).delete<RemoveGroupMemberResponses, RemoveGroupMemberErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRemoveGroupMemberPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRemoveGroupMemberResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}/members/{login}',
+    ...options
+});
+
+/**
+ * Add a member to a group
+ */
+export const addGroupMember = <ThrowOnError extends boolean = false>(options: Options<AddGroupMemberData, ThrowOnError>): RequestResult<AddGroupMemberResponses, AddGroupMemberErrors, ThrowOnError> => (options.client ?? client).put<AddGroupMemberResponses, AddGroupMemberErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zAddGroupMemberPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zAddGroupMemberResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}/members/{login}',
+    ...options
+});
+
+/**
+ * Pause a member in a group
+ */
+export const pauseGroupMember = <ThrowOnError extends boolean = false>(options: Options<PauseGroupMemberData, ThrowOnError>): RequestResult<PauseGroupMemberResponses, PauseGroupMemberErrors, ThrowOnError> => (options.client ?? client).post<PauseGroupMemberResponses, PauseGroupMemberErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPauseGroupMemberBody,
+        path: zPauseGroupMemberPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPauseGroupMemberResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/groups/{id}/members/{login}/pause',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Skills delivered to developers
+ */
+export const listSkills = <ThrowOnError extends boolean = false>(options?: Options<ListSkillsData, ThrowOnError>): RequestResult<ListSkillsResponses, ListSkillsErrors, ThrowOnError> => (options?.client ?? client).get<ListSkillsResponses, ListSkillsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListSkillsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/skills',
+    ...options
+});
+
+/**
+ * Delete a skill
+ */
+export const deleteSkill = <ThrowOnError extends boolean = false>(options: Options<DeleteSkillData, ThrowOnError>): RequestResult<DeleteSkillResponses, DeleteSkillErrors, ThrowOnError> => (options.client ?? client).delete<DeleteSkillResponses, DeleteSkillErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteSkillPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteSkillResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/skills/{name}',
+    ...options
+});
+
+/**
+ * Publish a skill version
+ */
+export const publishSkill = <ThrowOnError extends boolean = false>(options: Options<PublishSkillData, ThrowOnError>): RequestResult<PublishSkillResponses, PublishSkillErrors, ThrowOnError> => (options.client ?? client).put<PublishSkillResponses, PublishSkillErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zPublishSkillBody,
+        path: zPublishSkillPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zPublishSkillResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/skills/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Skills to install on this workstation
+ */
+export const getSkillDelivery = <ThrowOnError extends boolean = false>(options?: Options<GetSkillDeliveryData, ThrowOnError>): RequestResult<GetSkillDeliveryResponses, GetSkillDeliveryErrors, ThrowOnError> => (options?.client ?? client).get<GetSkillDeliveryResponses, GetSkillDeliveryErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetSkillDeliveryResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/skill-delivery',
+    ...options
+});
+
+/**
+ * Hooks delivered to developers
+ */
+export const listHooks = <ThrowOnError extends boolean = false>(options?: Options<ListHooksData, ThrowOnError>): RequestResult<ListHooksResponses, ListHooksErrors, ThrowOnError> => (options?.client ?? client).get<ListHooksResponses, ListHooksErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListHooksResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/hooks',
+    ...options
+});
+
+/**
+ * Hooks to install on this workstation
+ */
+export const getHookDelivery = <ThrowOnError extends boolean = false>(options?: Options<GetHookDeliveryData, ThrowOnError>): RequestResult<GetHookDeliveryResponses, GetHookDeliveryErrors, ThrowOnError> => (options?.client ?? client).get<GetHookDeliveryResponses, GetHookDeliveryErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetHookDeliveryResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/hook-delivery',
+    ...options
+});
+
+/**
+ * Outgoing webhooks
+ */
+export const listWebhooks = <ThrowOnError extends boolean = false>(options?: Options<ListWebhooksData, ThrowOnError>): RequestResult<ListWebhooksResponses, ListWebhooksErrors, ThrowOnError> => (options?.client ?? client).get<ListWebhooksResponses, ListWebhooksErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListWebhooksResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/webhooks',
+    ...options
+});
+
+/**
+ * Add an outgoing webhook; its secret is returned once
+ */
+export const createWebhook = <ThrowOnError extends boolean = false>(options: Options<CreateWebhookData, ThrowOnError>): RequestResult<CreateWebhookResponses, CreateWebhookErrors, ThrowOnError> => (options.client ?? client).post<CreateWebhookResponses, CreateWebhookErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: zCreateWebhookBody,
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zCreateWebhookResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/webhooks',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Remove an outgoing webhook
+ */
+export const deleteWebhook = <ThrowOnError extends boolean = false>(options: Options<DeleteWebhookData, ThrowOnError>): RequestResult<DeleteWebhookResponses, DeleteWebhookErrors, ThrowOnError> => (options.client ?? client).delete<DeleteWebhookResponses, DeleteWebhookErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zDeleteWebhookPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zDeleteWebhookResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/webhooks/{id}',
+    ...options
+});
+
+/**
+ * Deliveries
+ */
+export const listWebhookDeliveries = <ThrowOnError extends boolean = false>(options: Options<ListWebhookDeliveriesData, ThrowOnError>): RequestResult<ListWebhookDeliveriesResponses, ListWebhookDeliveriesErrors, ThrowOnError> => (options.client ?? client).get<ListWebhookDeliveriesResponses, ListWebhookDeliveriesErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zListWebhookDeliveriesPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListWebhookDeliveriesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/webhooks/{id}/deliveries',
+    ...options
+});
+
+/**
+ * Audit log (admins)
+ */
+export const listAudit = <ThrowOnError extends boolean = false>(options?: Options<ListAuditData, ThrowOnError>): RequestResult<ListAuditResponses, ListAuditErrors, ThrowOnError> => (options?.client ?? client).get<ListAuditResponses, ListAuditErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListAuditQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListAuditResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/audit',
+    ...options
+});
+
+/**
+ * Live events of the organization (SSE)
+ */
+export const streamEvents = <ThrowOnError extends boolean = false>(options?: Options<StreamEventsData, ThrowOnError, StreamEventsResponse>): Promise<ServerSentEventsResult<StreamEventsResponses>> => (options?.client ?? client).sse.get<StreamEventsResponses, StreamEventsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStreamEventsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/events',
+    ...options
+});
+
+/**
+ * Recent events, to catch up
+ */
+export const listEvents = <ThrowOnError extends boolean = false>(options?: Options<ListEventsData, ThrowOnError>): RequestResult<ListEventsResponses, ListEventsErrors, ThrowOnError> => (options?.client ?? client).get<ListEventsResponses, ListEventsErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: zListEventsQuery.optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListEventsResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/events/history',
+    ...options
+});
+
+/**
+ * Analyse the organization (rules and workflows)
+ */
+export const startAnalysis = <ThrowOnError extends boolean = false>(options?: Options<StartAnalysisData, ThrowOnError>): RequestResult<StartAnalysisResponses, StartAnalysisErrors, ThrowOnError> => (options?.client ?? client).post<StartAnalysisResponses, StartAnalysisErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStartAnalysisResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/analysis/start',
+    ...options
+});
+
+/**
+ * Restart a failed analysis
+ */
+export const restartAnalysis = <ThrowOnError extends boolean = false>(options?: Options<RestartAnalysisData, ThrowOnError>): RequestResult<RestartAnalysisResponses, RestartAnalysisErrors, ThrowOnError> => (options?.client ?? client).post<RestartAnalysisResponses, RestartAnalysisErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRestartAnalysisResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/analysis/restart',
+    ...options
+});
+
+/**
+ * Snapshot of the analysis
+ */
+export const getAnalysisState = <ThrowOnError extends boolean = false>(options?: Options<GetAnalysisStateData, ThrowOnError>): RequestResult<GetAnalysisStateResponses, GetAnalysisStateErrors, ThrowOnError> => (options?.client ?? client).get<GetAnalysisStateResponses, GetAnalysisStateErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetAnalysisStateResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/analysis/state',
+    ...options
+});
+
+/**
+ * Replay results
+ */
+export const getReplay = <ThrowOnError extends boolean = false>(options?: Options<GetReplayData, ThrowOnError>): RequestResult<GetReplayResponses, GetReplayErrors, ThrowOnError> => (options?.client ?? client).get<GetReplayResponses, GetReplayErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zGetReplayResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/analysis/replay',
+    ...options
+});
+
+/**
+ * Replay the last 30 days of pull requests under the rules (simulation)
+ */
+export const startReplay = <ThrowOnError extends boolean = false>(options?: Options<StartReplayData, ThrowOnError>): RequestResult<StartReplayResponses, StartReplayErrors, ThrowOnError> => (options?.client ?? client).post<StartReplayResponses, StartReplayErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zStartReplayResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/analysis/replay',
+    ...options
+});
+
+/**
+ * Tasks proposed by the analysis
+ */
+export const listTasks = <ThrowOnError extends boolean = false>(options?: Options<ListTasksData, ThrowOnError>): RequestResult<ListTasksResponses, ListTasksErrors, ThrowOnError> => (options?.client ?? client).get<ListTasksResponses, ListTasksErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: z.never().optional(),
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zListTasksResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/tasks',
+    ...options
+});
+
+/**
+ * Run a proposed task under the rules (nothing is pushed)
+ */
+export const runTask = <ThrowOnError extends boolean = false>(options: Options<RunTaskData, ThrowOnError>): RequestResult<RunTaskResponses, RunTaskErrors, ThrowOnError> => (options.client ?? client).post<RunTaskResponses, RunTaskErrors, ThrowOnError>({
+    requestValidator: async (data) => await z.object({
+        body: z.never().optional(),
+        path: zRunTaskPath,
+        query: z.never().optional()
+    }).parseAsync(data),
+    responseValidator: async (data) => await zRunTaskResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/api/v1/tasks/{id}/run',
+    ...options
 });

@@ -54,3 +54,34 @@ describe('on load', () => {
     expect(fresh.useAuthStore.getState().token).toBeUndefined();
   });
 });
+
+describe('sign-in links', () => {
+  it('signs in from a link when nobody is signed in, and leaves the same token alone', () => {
+    useAuthStore.getState().signOut();
+    expect(useAuthStore.getState().offer('opk_abcdef123456')).toBe('signed-in');
+    expect(useAuthStore.getState().offer('opk_abcdef123456')).toBe('same');
+    expect(useAuthStore.getState().token).toBe('opk_abcdef123456');
+  });
+
+  it('holds the link of another account until the person switches, or keeps the current one', () => {
+    useAuthStore.getState().signIn('opk_abcdef123456');
+    expect(useAuthStore.getState().offer('opk_other_123456')).toBe('pending');
+    expect(useAuthStore.getState().token).toBe('opk_abcdef123456');
+    expect(storedAnywhere('opk_abcdef123456')).toBe(false);
+    useAuthStore.getState().dismiss();
+    expect(useAuthStore.getState().pending).toBeUndefined();
+    useAuthStore.getState().offer('opk_other_123456');
+    useAuthStore.getState().acceptPending();
+    expect(useAuthStore.getState().token).toBe('opk_other_123456');
+    expect(useAuthStore.getState().pending).toBeUndefined();
+    useAuthStore.getState().acceptPending();
+    expect(useAuthStore.getState().token).toBe('opk_other_123456');
+  });
+
+  it('says a link was not a token, until dismissed', () => {
+    expect(useAuthStore.getState().offer('bad token')).toBe('invalid');
+    expect(useAuthStore.getState().notice).toBe('invalid');
+    useAuthStore.getState().dismiss();
+    expect(useAuthStore.getState().notice).toBeUndefined();
+  });
+});

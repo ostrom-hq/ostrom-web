@@ -1,4 +1,4 @@
-import { zError } from '@gen/api/zod.gen';
+import { zApiError } from '@gen/api/zod.gen';
 import { ZodError } from 'zod';
 
 export type ApiFailureKind =
@@ -20,12 +20,21 @@ export class ApiFailure extends Error {
   readonly status: number | undefined;
   /** The parsed error body, still unknown: parse it with the contract's zod schema before using it. */
   readonly body: unknown;
+  /** The server's stable snake_case key (`shown_digest_mismatch`, `self_approval_refused`…), when it sent one. */
+  readonly code: string | undefined;
 
-  constructor(kind: ApiFailureKind, message: string, status: number | undefined, body: unknown) {
+  constructor(
+    kind: ApiFailureKind,
+    message: string,
+    status: number | undefined,
+    body: unknown,
+    code?: string,
+  ) {
     super(message);
     this.kind = kind;
     this.status = status;
     this.body = body;
+    this.code = code;
   }
 }
 
@@ -60,9 +69,17 @@ export function toApiFailure(error: unknown, response: Response | undefined): Ap
       error,
     );
   }
-  const parsed = zError.safeParse(error);
-  const message = parsed.success ? parsed.data.error : `HTTP ${String(response.status)}`;
-  return new ApiFailure(kindOfStatus(response.status), message, response.status, error);
+  const parsed = zApiError.safeParse(error);
+  if (!parsed.success) {
+    return new ApiFailure(
+      kindOfStatus(response.status),
+      `HTTP ${String(response.status)}`,
+      response.status,
+      error,
+    );
+  }
+  const { type, message } = parsed.data.error;
+  return new ApiFailure(kindOfStatus(response.status), message, response.status, error, type);
 }
 
 export function isApiFailure(error: unknown): error is ApiFailure {
