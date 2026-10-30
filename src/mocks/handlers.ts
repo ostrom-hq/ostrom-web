@@ -22,7 +22,6 @@ import {
   handleGetReceiptBundle,
   handleGetSession,
   handleGetWorkflow,
-  handleInviteMembers,
   handleListApprovals,
   handleListArtifactMembers,
   handleListArtifacts,
@@ -45,10 +44,8 @@ import {
   handleLogout,
   handleRequestSignInEmail,
   handleListSessions,
-  handleListTeams,
   handleListWorkflows,
   handleSetGatePolicy,
-  handleUpdateMember,
   handleUpdateRule,
   handleRotateAutomationSecret,
   handleRotateSecret,
@@ -95,10 +92,8 @@ import {
   zBudget,
   zCreateCloudSessionBody,
   zEnrollSharedAccountBody,
-  zInviteMembersBody,
   zBulkUpdateRulesBody,
   zMcpServer,
-  zMemberRole,
   zRequestSignInEmailBody,
   zSecretWrite,
   zTestAutomationBody,
@@ -109,10 +104,19 @@ import {
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
-import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
+import {
+  initialInvitations,
+  initialMembers,
+  initialOrganization,
+  initialOrgMembers,
+  initialTeams,
+  invitedOrganization,
+} from '@/mocks/fixtures/organization';
 import { actsInOrganization, ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
+import { managesBilling, orgRoleOf } from '@/shared/org/roles';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
 import {
   initialAutomationRuns,
@@ -132,7 +136,7 @@ import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixt
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
-export interface MockDb extends BillingState {
+export interface MockDb extends BillingState, OrgsState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -192,6 +196,12 @@ export function createMockDb(): MockDb {
     receipts: initialReceipts(),
     organization: initialOrganization(),
     otherOrganizations: [],
+    noOrganization: false,
+    orgMembers: { [initialOrganization().id]: initialOrgMembers() },
+    slugs: { [initialOrganization().id]: 'acme' },
+    invitations: initialInvitations(),
+    elsewhere: [invitedOrganization()],
+    nextInvitation: 1,
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
@@ -220,7 +230,6 @@ export function createMockDb(): MockDb {
   };
 }
 
-const zUpdateMember = z.object({ role: zMemberRole.exclude(['invited']) });
 /** The server's own checks on top of the contract's shape: a name it can route to, an https URL. */
 const zMcpServerWrite = zMcpServer.extend({
   name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
@@ -298,11 +307,6 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
 
-/** The person's organizations: the demo's own first. */
-function membershipsOf(db: MockDb): Organization[] {
-  return [db.organization, ...db.otherOrganizations];
-}
-
 /** The organization a call acts in, once the first handler let it through. */
 function organizationOf(db: MockDb, request: Request): Organization {
   const named = request.headers.get(ORG_HEADER);
@@ -312,6 +316,8 @@ function organizationOf(db: MockDb, request: Request): Organization {
 /** The organization a call acts in, as `MembershipOrgResolver` resolves it; a refusal when it cannot. */
 function resolveOrganization(db: MockDb, request: Request): Organization | HttpResponse<ApiError> {
   const named = request.headers.get(ORG_HEADER);
+  if (membershipsOf(db).length === 0)
+    return refusal(404, 'not_found', 'You are not a member of any organization yet.');
   if (named === null) {
     return db.otherOrganizations.length === 0
       ? db.organization
@@ -534,55 +540,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       return HttpResponse.json(view);
     }),
+    // The contract's planned `/org`, kept for the organization tests; the screens read `/orgs/{org}`.
     handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
-    handleListTeams(() => HttpResponse.json({ items: db.teams })),
-    handleUpdateMember(async ({ params, request }) => {
-      const member = db.members.find((item) => item.login === params.login);
-      if (member === undefined) return refusal(404, 'not_found', 'member not found');
-      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change roles');
-      const body = zUpdateMember.safeParse(await readJson(request));
-      if (!body.success)
-        return refusal(400, 'invalid_request', 'role must be owner, admin, approver or member');
-      if (member.login === me.dev.login) return refusal(409, 'own_role', 'you cannot change your own role');
-      const next: Member = { ...member, role: body.data.role };
-      db.members = db.members.map((item) => (item.login === next.login ? next : item));
-      return HttpResponse.json(next);
-    }),
-    handleInviteMembers(async ({ request }) => {
-      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins invite people');
-      const body = zInviteMembersBody.safeParse(await readJson(request));
-      if (!body.success || body.data.invites.length === 0)
-        return refusal(400, 'invalid_request', 'each invite needs a GitHub login');
-      // The server's own checks: an invitation never makes an owner, and `invited` is a state, not a role.
-      if (body.data.invites.some((invite) => invite.role === 'owner' || invite.role === 'invited'))
-        return refusal(400, 'invalid_request', 'an invitation is for admin, approver or member');
-      if (
-        body.data.invites.some(
-          (invite) => invite.team !== undefined && !db.teams.some((team) => team.slug === invite.team),
-        )
-      )
-        return refusal(400, 'invalid_request', 'no such team');
-      // One invitation per login, whatever its case, and none for someone already in the organization.
-      const known = new Set(db.members.map((member) => member.login.toLowerCase()));
-      const fresh = body.data.invites.filter((invite) => {
-        const login = invite.login.toLowerCase();
-        if (known.has(login)) return false;
-        known.add(login);
-        return true;
-      });
-      db.members = [
-        ...db.members,
-        ...fresh.map((invite): Member => ({
-          id: crypto.randomUUID(),
-          login: invite.login,
-          avatarUrl: '',
-          role: 'invited',
-          ...(invite.team === undefined ? {} : { teams: [invite.team] }),
-        })),
-      ];
-      return HttpResponse.json({ invited: fresh.map((invite) => invite.login) });
-    }),
+    ...createOrgsHandlers(() => db, now),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');
@@ -1023,7 +984,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createBillingHandlers(
       () => db,
       () => db.organization.id,
-      () => canManage(db),
+      () =>
+        managesBilling(
+          orgRoleOf(db.orgMembers[db.organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role),
+        ),
     ),
   ];
 }

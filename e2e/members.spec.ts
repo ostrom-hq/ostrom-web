@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
 
-test('an admin invites people and gives someone the approver role', async ({ page }) => {
+test('an admin invites by e-mail, makes an invitation link and gives someone the approver role', async ({
+  page,
+}) => {
   await page.goto('/');
   await page.getByRole('link', { name: 'Members' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Acme');
+  await expect(page.getByText('5 people · you are Admin')).toBeVisible();
 
   const invite = page.getByRole('region', { name: 'Invite people' });
-  await invite.getByRole('textbox', { name: 'GitHub logins' }).fill('ana');
+  await invite.getByRole('textbox', { name: 'E-mail addresses' }).fill('ana@acme.dev');
   await invite.getByRole('button', { name: 'Send 1 invitation' }).click();
-  await expect(invite.getByRole('alert')).toContainText('Invitation sent to ana.');
+  await expect(invite.getByRole('alert')).toContainText('Invitation sent to ana@acme.dev.');
+  await expect(page.getByRole('listitem').filter({ hasText: 'ana@acme.dev' })).toContainText('Member');
+
+  const link = page.getByRole('region', { name: 'Invitation link' });
+  await link.getByRole('button', { name: 'Create a link' }).click();
+  await expect(link.getByLabel('Invitation link', { exact: true })).toContainText('/invite#token=');
 
   const role = page.getByRole('combobox', { name: 'Role of theo' });
   await role.selectOption('approver');
   await expect(role).toHaveValue('approver');
-  await expect(
-    page.getByRole('listitem').filter({ has: page.getByText('ana', { exact: true }) }),
-  ).toContainText('Invited');
 });

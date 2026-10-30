@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { BillingOverview } from '@gen/api/types.gen';
+import { setDemoRole } from '@/mocks/orgs';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -22,7 +23,7 @@ function leaving(): MockInstance<(url: string) => void> {
 }
 
 function asMember(): void {
-  db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+  setDemoRole(db, 'member');
   server.use(
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
@@ -344,7 +345,7 @@ describe('the billing', () => {
 
   it('says why the organization did not load', async () => {
     server.use(
-      http.get('*/api/v1/org', () =>
+      http.get('*/api/v1/orgs', () =>
         HttpResponse.json({ error: { type: 'internal', message: 'no organization' } }, { status: 500 }),
       ),
     );

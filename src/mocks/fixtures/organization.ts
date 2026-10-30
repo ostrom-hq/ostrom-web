@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Member, Organization, Team } from '@gen/api/types.gen';
+import type { Member, Organization, OrgMember, Team } from '@gen/api/types.gen';
+import type { MockInvitation } from '@/mocks/orgs';
 
 const organization: Organization = {
   id: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
@@ -66,4 +67,79 @@ export function initialMembers(): Member[] {
 
 export function initialTeams(): Team[] {
   return structuredClone(teams);
+}
+
+/** Acme's members as `/orgs/{org}/members` serves them: no member id, an empty name or address when there is none. */
+export function initialOrgMembers(): OrgMember[] {
+  const joined = '2026-09-01T09:00:00.000Z';
+  return [
+    {
+      login: 'lena',
+      name: 'Lena Ortiz',
+      avatarUrl: '',
+      email: 'lena@acme.dev',
+      role: 'owner',
+      joinedAt: joined,
+    },
+    {
+      login: 'maya',
+      name: 'Maya Lind',
+      avatarUrl: '',
+      email: 'maya@acme.dev',
+      role: 'admin',
+      joinedAt: joined,
+    },
+    { login: 'samir', name: 'Samir Haddad', avatarUrl: '', email: null, role: 'approver', joinedAt: joined },
+    { login: 'theo', name: '', avatarUrl: '', email: 'theo@acme.dev', role: 'member', joinedAt: joined },
+    {
+      login: 'ines',
+      name: 'Inès Morel',
+      avatarUrl: '',
+      email: 'ines@acme.dev',
+      role: 'billing',
+      joinedAt: joined,
+    },
+  ];
+}
+
+/** An organization the demo person is not in yet: the demo invitation link leads there. */
+export function invitedOrganization(): Organization {
+  return {
+    id: '9d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a',
+    name: 'Initech',
+    avatarUrl: '',
+    connectedVia: 'github-app',
+    createdAt: '2026-08-12T09:00:00.000Z',
+  };
+}
+
+/** The token of the demo invitation link: `/invite#token=inv_demo` joins Initech. */
+export const DEMO_INVITATION_TOKEN = 'inv_demo';
+
+/** Acme's waiting invitation to jo, and the link to Initech, valid for a year of demos. */
+export function initialInvitations(): MockInvitation[] {
+  return [
+    {
+      id: 'inv-jo',
+      orgId: organization.id,
+      token: 'inv_jo',
+      email: 'jo@acme.dev',
+      role: 'member',
+      createdAt: '2026-10-28T09:00:00.000Z',
+      expiresAt: '2027-10-28T09:00:00.000Z',
+      maxUses: 1,
+      uses: 0,
+    },
+    {
+      id: 'inv-initech',
+      orgId: invitedOrganization().id,
+      token: DEMO_INVITATION_TOKEN,
+      email: null,
+      role: 'approver',
+      createdAt: '2026-10-29T09:00:00.000Z',
+      expiresAt: '2027-10-29T09:00:00.000Z',
+      maxUses: 5,
+      uses: 1,
+    },
+  ];
 }

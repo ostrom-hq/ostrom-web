@@ -12,11 +12,14 @@ export const ORG_REQUIRED = 'org_required';
  */
 const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/auth\//,
-  /^\/api\/v1\/orgs\//,
+  /^\/api\/v1\/orgs(?:\/|$)/,
+  /^\/api\/v1\/invitations\/(?:preview|accept)$/,
+  /^\/api\/v1\/tokens(?:\/|$)/,
   /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
   /^\/api\/v1\/github\/app\/(?:manifest|install)\/callback$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
+  /^\/api\/v1\/cloud\/runner\/terminal$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */

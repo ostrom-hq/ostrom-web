@@ -10,25 +10,35 @@ import { PlanSummary } from '../components/PlanSummary';
 import { Subscription } from '../components/Subscription';
 import { Usage } from '../components/Usage';
 import { hasSubscription } from '../model';
-import { useBilling, useBillingActions, useBillingOrg } from '../useBilling';
+import { managesBilling } from '@/shared/org/roles';
+import { WithOrg } from '@/shared/org/WithOrg';
+import { useBilling, useBillingActions } from '../useBilling';
 import './billing.css';
 
 /** The organization's plan, its usage and limits, the plans on sale, the subscription and its invoices. */
 export function BillingScreen(): ReactElement {
   const { t } = useTranslation();
-  const { orgId, failure } = useBillingOrg();
   return (
-    <Screen title={t('billing.title')} lead={t('billing.lead')}>
-      <LoadState data={orgId} failure={failure} rows={3}>
-        {(id) => <BillingPage orgId={id} />}
-      </LoadState>
-    </Screen>
+    <WithOrg title={t('billing.title')}>
+      {(org, role) => (
+        <Screen title={t('billing.title')} lead={t('billing.lead')}>
+          <BillingPage orgId={org.id} canManage={managesBilling(role)} />
+        </Screen>
+      )}
+    </WithOrg>
   );
 }
 
-function BillingPage({ orgId }: { readonly orgId: string }): ReactElement {
+/** Owners, admins and the billing role buy, switch, cancel and read invoices; everyone else reads the plan. */
+function BillingPage({
+  orgId,
+  canManage,
+}: {
+  readonly orgId: string;
+  readonly canManage: boolean;
+}): ReactElement {
   const { t } = useTranslation();
-  const { billing, failure, canManage } = useBilling(orgId);
+  const { billing, failure } = useBilling(orgId);
   const actions = useBillingActions(orgId);
   return (
     <LoadState data={billing} failure={failure} rows={3}>

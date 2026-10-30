@@ -2,118 +2,185 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { otherOrganization } from '@/mocks/fixtures/organization';
+import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
-import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db } = setupMockApp();
-/** A handler that never answers, to hold a screen in its loading state. */
-const never = async (): Promise<undefined> => {
-  await delay('infinite');
-  return undefined;
-};
+const ACME = '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c';
 
-function viewerIs(role: 'owner' | 'admin' | 'member'): void {
-  db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role } : member));
-  server.use(
-    http.get('*/api/v1/auth/me', () =>
-      HttpResponse.json({
-        dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role },
-        capabilities: [],
-      }),
-    ),
-  );
+function rowsOf(list: HTMLElement): HTMLElement[] {
+  return within(list).getAllByRole('listitem');
+}
+
+function rowNamed(name: string): HTMLElement {
+  const row = screen.getAllByRole('listitem').find((item) => item.textContent.includes(name));
+  if (row === undefined) throw new Error(`no row for ${name}`);
+  return row;
+}
+
+async function people(): Promise<HTMLElement> {
+  const heading = await screen.findByRole('heading', { level: 2, name: 'People' });
+  const list = heading.parentElement?.querySelector('ul');
+  if (list === null || list === undefined) throw new Error('no list of people');
+  return list;
+}
+
+function members(): { login: string; role: string }[] {
+  return (db.orgMembers[ACME] ?? []).map(({ login, role }) => ({ login, role }));
 }
 
 describe('the members screen', () => {
-  it('names the organization, lists the people who decide first and the invitations last', async () => {
+  it('names the organization and the viewer’s role, and lists the people who decide first', async () => {
     visit('/members');
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme' })).toBeInTheDocument();
-    expect(await screen.findByText('4 people · connected with the GitHub App')).toBeInTheDocument();
-    const rows = within(screen.getByRole('list')).getAllByRole('listitem');
-    const row = (index: number): HTMLElement => {
-      const found = rows[index];
-      if (found === undefined) throw new Error(`no row ${String(index)}`);
-      return found;
-    };
+    expect(await screen.findByText('5 people · you are Admin')).toBeInTheDocument();
+    const rows = rowsOf(await people());
     expect(rows.map((row) => row.querySelector('.o-row__title')?.textContent)).toEqual([
       'Lena Ortiz',
       'Maya Lind (you)',
       'Samir Haddad',
       'theo',
-      'jo',
+      'Inès Morel',
     ]);
-    expect(row(2)).toHaveTextContent('@samir · team billing · team release');
-    expect(row(3)).toHaveTextContent('theo@acme.dev · team billing');
-    expect(within(row(4)).getByText('Invited')).toBeInTheDocument();
-    expect(row(4).querySelectorAll('.o-row__meta')).toHaveLength(0);
-    expect(within(row(1)).getByText('Admin')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Teams' })).toHaveTextContent(
-      'Billing3 people · acme/billing-api',
-    );
-    expect(screen.getByRole('region', { name: 'Teams' })).toHaveTextContent('Release1 person');
+    expect(rows[0]).toHaveTextContent('@lena');
+    expect(rows[3]).toHaveTextContent('theo@acme.dev');
+    // Nobody changes the owner, and nobody changes their own role.
+    expect(within(rowNamed('Lena Ortiz')).getByText('Owner')).toBeInTheDocument();
+    expect(within(rowNamed('Maya Lind')).getByText('Admin')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Role of Lena Ortiz' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Role of Maya Lind' })).toBeNull();
   });
 
-  it('lets an admin change the role of someone else', async () => {
+  it('shows a person without a name or an address by their login alone, and a role it does not know as is', async () => {
+    db.orgMembers[ACME] = [
+      ...(db.orgMembers[ACME] ?? []),
+      {
+        login: 'kim',
+        name: '',
+        avatarUrl: '',
+        email: null,
+        role: 'auditor',
+        joinedAt: '2026-10-01T00:00:00Z',
+      },
+    ];
+    visit('/members');
+    await people();
+    const row = rowNamed('kim');
+    expect(row.querySelectorAll('.o-row__meta')).toHaveLength(0);
+    expect(within(row).getByText('auditor')).toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: 'Remove' })).toBeNull();
+  });
+
+  it('lets an admin give the roles an admin can give, never owner nor admin', async () => {
     const user = userEvent.setup();
     visit('/members');
     const select = await screen.findByRole('combobox', { name: 'Role of theo' });
-    expect(screen.queryByRole('combobox', { name: 'Role of Maya Lind' })).toBeNull();
+    expect(
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Approver', 'Member', 'Billing']);
     await user.selectOptions(select, 'approver');
     expect(await screen.findByRole('combobox', { name: 'Role of theo' })).toHaveValue('approver');
     fireEvent.change(screen.getByRole('combobox', { name: 'Role of theo' }), { target: { value: 'king' } });
-    expect(db.members.find((member) => member.login === 'theo')?.role).toBe('approver');
-    expect(db.members.find((member) => member.login === 'theo')?.role).toBe('approver');
+    expect(members().find((member) => member.login === 'theo')?.role).toBe('approver');
   });
 
-  it('holds the select while a role is saved, and says when it was not', async () => {
+  it('lets the owner make an admin', async () => {
+    setDemoRole(db, 'owner');
+    visit('/members');
+    expect(await screen.findByText('5 people · you are Owner')).toBeInTheDocument();
+    const select = await screen.findByRole('combobox', { name: 'Role of theo' });
+    expect(within(select).getByRole('option', { name: 'Admin' })).toBeInTheDocument();
+  });
+
+  it('holds the row while a role is saved', async () => {
     const user = userEvent.setup();
-    server.use(http.patch('*/api/v1/members/:login', async () => delay('infinite')));
+    server.use(http.patch('*/api/v1/orgs/:org/members/:login', async () => delay('infinite')));
     visit('/members');
     const select = await screen.findByRole('combobox', { name: 'Role of Samir Haddad' });
     await user.selectOptions(select, 'member');
     expect(select).toBeDisabled();
+    expect(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove' })).toBeDisabled();
   });
 
   it('says when a role change is refused', async () => {
     const user = userEvent.setup();
     server.use(
-      http.patch('*/api/v1/members/:login', () =>
+      http.patch('*/api/v1/orgs/:org/members/:login', () =>
         HttpResponse.json(
-          { error: { type: 'forbidden', message: 'only owners change owners' } },
+          { error: { type: 'not_allowed', message: 'Your role does not allow this change.' } },
           { status: 403 },
         ),
       ),
     );
     visit('/members');
-    await user.selectOptions(await screen.findByRole('combobox', { name: 'Role of Lena Ortiz' }), 'admin');
-    expect(await screen.findByRole('alert')).toHaveTextContent('only owners change owners');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Role of theo' }), 'billing');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your role does not allow this change.');
   });
 
-  it('invites the GitHub logins typed, says which are not logins, and who was invited', async () => {
+  it('removes a person after a second click that names them, and can be taken back', async () => {
+    const user = userEvent.setup();
+    visit('/members');
+    await people();
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Keep' }));
+    expect(members().map((member) => member.login)).toContain('samir');
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove Samir Haddad' }));
+    expect(await screen.findByText('4 people · you are Admin')).toBeInTheDocument();
+    expect(members().map((member) => member.login)).not.toContain('samir');
+  });
+
+  it('holds the row while a person is removed, and says when it was refused', async () => {
+    const user = userEvent.setup();
+    server.use(http.delete('*/api/v1/orgs/:org/members/theo', async () => delay('infinite')));
+    server.use(
+      http.delete('*/api/v1/orgs/:org/members/samir', () =>
+        HttpResponse.json({ error: { type: 'not_allowed', message: 'not this one' } }, { status: 403 }),
+      ),
+    );
+    visit('/members');
+    await people();
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove Samir Haddad' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('not this one');
+    await user.click(within(rowNamed('theo')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('theo')).getByRole('button', { name: 'Remove theo' }));
+    expect(screen.getByRole('combobox', { name: 'Role of theo' })).toBeDisabled();
+  });
+
+  it('invites the addresses typed, says which are not addresses, and who was invited', async () => {
     const user = userEvent.setup();
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
     const send = within(invite).getByRole('button', { name: 'Send 0 invitations' });
     expect(send).toBeDisabled();
-    await user.type(within(invite).getByRole('textbox', { name: 'GitHub logins' }), '@ana, no.pe, theo');
-    expect(within(invite).getByText('Not a GitHub login: no.pe')).toBeInTheDocument();
-    expect(within(invite).queryByRole('option', { name: 'Owner' })).toBeNull();
-    await user.selectOptions(within(invite).getByRole('combobox', { name: 'Invite as' }), 'approver');
-    fireEvent.change(within(invite).getByRole('combobox', { name: 'Invite as' }), {
-      target: { value: 'king' },
-    });
+    await user.type(
+      within(invite).getByRole('textbox', { name: 'E-mail addresses' }),
+      'Ana@acme.dev, no.pe, theo@acme.dev',
+    );
+    expect(within(invite).getByText('Not an e-mail address: no.pe')).toBeInTheDocument();
+    const role = within(invite).getByRole('combobox', { name: 'Invite as' });
+    expect(within(role).queryByRole('option', { name: 'Owner' })).toBeNull();
+    await user.selectOptions(role, 'approver');
+    fireEvent.change(role, { target: { value: 'king' } });
     await user.click(within(invite).getByRole('button', { name: 'Send 2 invitations' }));
-    expect(await within(invite).findByRole('alert')).toHaveTextContent('Invitation sent to ana.');
-    expect(await screen.findByText('ana')).toBeInTheDocument();
+    expect(await within(invite).findByRole('alert')).toHaveTextContent(
+      'Invitation sent to ana@acme.dev. The link works for the account that holds this address.',
+    );
     expect(within(invite).getByRole('textbox')).toHaveValue('');
+    const waiting = await screen.findByRole('heading', { level: 2, name: 'Waiting invitations' });
+    expect(waiting.parentElement).toHaveTextContent('ana@acme.dev');
+    expect(db.invitations.find((item) => item.email === 'ana@acme.dev')?.role).toBe('approver');
   });
 
   it('says when everyone invited is already in', async () => {
     const user = userEvent.setup();
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'theo');
+    await user.type(within(invite).getByRole('textbox'), 'theo@acme.dev');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
     expect(await within(invite).findByRole('alert')).toHaveTextContent('already in the organization');
   });
@@ -121,74 +188,249 @@ describe('the members screen', () => {
   it('says invitations were not sent, and keeps what was typed', async () => {
     const user = userEvent.setup();
     server.use(
-      http.post('*/api/v1/members/invites', () =>
-        HttpResponse.json({ error: { type: 'internal', message: 'mail down' } }, { status: 500 }),
+      http.post('*/api/v1/orgs/:org/members/invites', () =>
+        HttpResponse.json(
+          { error: { type: 'rate_limited', message: 'too many invitations' } },
+          { status: 429 },
+        ),
       ),
     );
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'ana');
+    await user.type(within(invite).getByRole('textbox'), 'ana@acme.dev');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
-    expect(await within(invite).findByRole('alert')).toHaveTextContent('mail down');
-    expect(within(invite).getByRole('textbox')).toHaveValue('ana');
+    expect(await within(invite).findByRole('alert')).toHaveTextContent('too many invitations');
+    expect(within(invite).getByRole('textbox')).toHaveValue('ana@acme.dev');
   });
 
   it('holds the invite button while invitations go', async () => {
     const user = userEvent.setup();
-    server.use(http.post('*/api/v1/members/invites', async () => delay('infinite')));
+    server.use(http.post('*/api/v1/orgs/:org/members/invites', async () => delay('infinite')));
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'ana');
+    await user.type(within(invite).getByRole('textbox'), 'ana@acme.dev');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
-    expect(await within(invite).findByRole('button', { name: 'Sending…' })).toBeDisabled();
+    expect(within(invite).getByRole('button', { name: 'Sending…' })).toBeDisabled();
   });
 
-  it('shows roles without controls to someone who does not manage the organization', async () => {
-    viewerIs('member');
+  it('makes an invitation link, shows it once, and copies it', async () => {
+    const user = userEvent.setup();
     visit('/members');
-    expect(await screen.findByText('Samir Haddad')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Invite people' })).toBeNull();
-    expect(screen.queryByRole('combobox')).toBeNull();
-    expect(screen.getByText('Approver')).toBeInTheDocument();
+    const link = await screen.findByRole('region', { name: 'Invitation link' });
+    const uses = within(link).getByRole('spinbutton', { name: 'Uses' });
+    expect(uses).toHaveValue(10);
+    fireEvent.change(uses, { target: { value: '500' } });
+    expect(uses).toHaveValue(100);
+    fireEvent.change(uses, { target: { value: '' } });
+    expect(uses).toHaveValue(1);
+    fireEvent.change(uses, { target: { value: '3' } });
+    await user.selectOptions(within(link).getByRole('combobox', { name: 'Joins as' }), 'approver');
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    expect(
+      await within(link).findByText('This link lets 3 people join. It is shown once: copy it now.'),
+    ).toBeInTheDocument();
+    const url = within(link).getByLabelText('Invitation link');
+    expect(url.textContent).toMatch(/^http:\/\/ostrom\.test\/invite#token=inv_\d+$/);
+    await user.click(within(link).getByRole('button', { name: 'Copy Invitation link' }));
+    expect(await within(link).findByText('Copied')).toBeInTheDocument();
+    expect(await navigator.clipboard.readText()).toBe(url.textContent);
+    expect(rowNamed('Invitation link · 0 of 3 used')).toHaveTextContent('Approver');
   });
 
-  it('gives an owner the same controls', async () => {
-    viewerIs('owner');
-    visit('/members');
-    expect(await screen.findByRole('combobox', { name: 'Role of theo' })).toBeInTheDocument();
-  });
-
-  it('reads an organization without teams and before it is known', async () => {
+  it('says how many can join when the server leaves the uses open, and when the copy failed', async () => {
+    const user = userEvent.setup();
     server.use(
-      http.get('*/api/v1/teams', () => HttpResponse.json({ items: [] })),
-      http.get('*/api/v1/org', never),
+      http.post('*/api/v1/orgs/:org/invitations/links', () =>
+        HttpResponse.json(
+          {
+            invitation: {
+              id: 'inv-x',
+              email: null,
+              role: 'member',
+              createdAt: '2026-10-30T09:00:00Z',
+              expiresAt: '2026-11-06T09:00:00Z',
+              maxUses: null,
+              uses: 0,
+            },
+            url: 'http://ostrom.test/invite#token=inv_x',
+          },
+          { status: 201 },
+        ),
+      ),
+    );
+    visit('/members');
+    const link = await screen.findByRole('region', { name: 'Invitation link' });
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    expect(
+      await within(link).findByText('This link lets 10 people join. It is shown once: copy it now.'),
+    ).toBeInTheDocument();
+    const copy = within(link).getByRole('button', { name: 'Copy Invitation link' });
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('denied'));
+    await user.click(copy);
+    expect(await within(link).findByText('Copy failed: select it and copy by hand')).toBeInTheDocument();
+    vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(() => {
+      throw new TypeError('no clipboard');
+    });
+    await user.click(copy);
+    expect(within(link).getByText('Copy failed: select it and copy by hand')).toBeInTheDocument();
+  });
+
+  it('says when a link was not made, and holds the button meanwhile', async () => {
+    const user = userEvent.setup();
+    let answer = 0;
+    server.use(
+      http.post('*/api/v1/orgs/:org/invitations/links', async () => {
+        answer += 1;
+        if (answer === 1)
+          return HttpResponse.json(
+            { error: { type: 'rate_limited', message: 'slow down' } },
+            { status: 429 },
+          );
+        await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/members');
+    const link = await screen.findByRole('region', { name: 'Invitation link' });
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    expect(await within(link).findByRole('alert')).toHaveTextContent('slow down');
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    expect(within(link).getByRole('button', { name: 'Creating…' })).toBeDisabled();
+  });
+
+  it('lists the waiting invitations and revokes one after a second click', async () => {
+    const user = userEvent.setup();
+    db.invitations = [
+      ...db.invitations,
+      {
+        id: 'inv-open',
+        orgId: ACME,
+        token: 'inv_open',
+        email: null,
+        role: 'member',
+        createdAt: '2026-10-29T09:00:00.000Z',
+        expiresAt: '2027-10-29T09:00:00.000Z',
+        maxUses: null,
+        uses: 2,
+      },
+      {
+        id: 'inv-audit',
+        orgId: ACME,
+        token: 'inv_audit',
+        email: 'kim@acme.dev',
+        role: 'auditor',
+        createdAt: '2026-10-29T09:00:00.000Z',
+        expiresAt: '2027-10-29T09:00:00.000Z',
+        maxUses: 1,
+        uses: 0,
+      },
+    ];
+    visit('/members');
+    await screen.findByRole('heading', { level: 2, name: 'Waiting invitations' });
+    expect(rowNamed('Invitation link · 2 of unlimited used')).toHaveTextContent('Member');
+    expect(rowNamed('kim@acme.dev')).toHaveTextContent('auditor');
+    const jo = rowNamed('jo@acme.dev');
+    expect(jo).toHaveTextContent('Expires Oct 28, 2027');
+    await user.click(within(jo).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke the invitation' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByText('jo@acme.dev')).toBeNull();
+    });
+    expect(db.invitations.map((item) => item.id)).not.toContain('inv-jo');
+  });
+
+  it('says when an invitation was not revoked, and holds it meanwhile', async () => {
+    const user = userEvent.setup();
+    let answer = 0;
+    server.use(
+      http.delete('*/api/v1/orgs/:org/invitations/:id', async () => {
+        answer += 1;
+        if (answer === 1)
+          return HttpResponse.json(
+            { error: { type: 'not_found', message: 'already gone' } },
+            { status: 404 },
+          );
+        await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/members');
+    await screen.findByRole('heading', { level: 2, name: 'Waiting invitations' });
+    await user.click(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke the invitation' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('already gone');
+    await user.click(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke the invitation' }));
+    expect(within(rowNamed('jo@acme.dev')).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+  });
+
+  it('shows roles without controls, invitations nor forms to someone who does not manage the organization', async () => {
+    setDemoRole(db, 'member');
+    visit('/members');
+    expect(await screen.findByText('5 people · you are Member')).toBeInTheDocument();
+    await people();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Invite people' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Invitation link' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Waiting invitations' })).toBeNull();
+  });
+
+  it('says the role as the server wrote it when the console does not know it', async () => {
+    setDemoRole(db, 'member');
+    server.use(
+      http.get('*/api/v1/orgs', () =>
+        HttpResponse.json({
+          items: [
+            { id: ACME, slug: 'acme', name: 'Acme', role: 'auditor', createdAt: '2026-09-01T09:00:00Z' },
+          ],
+        }),
+      ),
+    );
+    visit('/members');
+    expect(await screen.findByText('5 people · you are auditor')).toBeInTheDocument();
+  });
+
+  it('says why the people did not load', async () => {
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'members are down' } }, { status: 500 }),
+      ),
+    );
+    visit('/members');
+    expect(await screen.findByText('members are down')).toBeInTheDocument();
+  });
+
+  it('says why the organization did not load', async () => {
+    server.use(
+      http.get('*/api/v1/orgs', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'orgs are down' } }, { status: 500 }),
+      ),
     );
     visit('/members');
     expect(await screen.findByRole('heading', { level: 1, name: 'Members' })).toBeInTheDocument();
-    expect(await screen.findByText('4 people')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Teams' })).toBeNull();
+    expect(await screen.findByText('orgs are down')).toBeInTheDocument();
   });
 
-  it('reads a team without people or repositories', async () => {
-    server.use(
-      http.get('*/api/v1/teams', () => HttpResponse.json({ items: [{ slug: 'x', name: 'Empty' }] })),
+  it('offers to create an organization to a person in none', async () => {
+    db.noOrganization = true;
+    visit('/members');
+    expect(await screen.findByText('No organization yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Create yours' })).toHaveAttribute('href', '/');
+  });
+
+  it('asks which organization to a person in several who chose none', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [otherOrganization()];
+    visit('/members');
+    expect(
+      await screen.findByText('Which organization?', { selector: '.o-empty__title' }),
+    ).toBeInTheDocument();
+    // The picker opens by itself; closed, the screen's own button opens it again.
+    await user.click(await screen.findByRole('button', { name: 'Not now' }));
+    await user.click(
+      within(screen.getByRole('main')).getByRole('button', { name: 'Choose an organization' }),
     );
-    visit('/members');
-    expect(await screen.findByRole('region', { name: 'Teams' })).toHaveTextContent('Empty0 people');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
-
-  it('shows the shape of the list while it loads', async () => {
-    server.use(http.get('*/api/v1/members', never));
-    visit('/members');
-    expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
-  });
-
-  it.each(['*/api/v1/org', '*/api/v1/members'])(
-    'says why the screen does not come when %s fails',
-    async (url) => {
-      server.use(http.get(url, () => HttpResponse.error()));
-      visit('/members');
-      expect(await screen.findByText('Offline', {}, { timeout: 4_000 })).toBeInTheDocument();
-    },
-  );
 });

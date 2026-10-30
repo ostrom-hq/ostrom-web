@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { setDemoRole } from '@/mocks/orgs';
 import {
   cancelBillingSubscription,
   changeBillingPlan,
@@ -54,7 +55,7 @@ async function post(route: string, body: string): Promise<number> {
 }
 
 function asMember(): void {
-  db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+  setDemoRole(db, 'member');
 }
 
 function withoutSubscription(): void {

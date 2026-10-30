@@ -373,3 +373,23 @@ textarea.o-input {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.o-copy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.o-copy__value {
+  flex: 1 1 18rem;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.o-input--narrow {
+  width: 6rem;
+  flex: 0 0 auto;
+}

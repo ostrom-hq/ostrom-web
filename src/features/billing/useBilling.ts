@@ -4,7 +4,6 @@ import {
   changeBillingPlanMutation,
   getBillingOptions,
   getBillingQueryKey,
-  getOrganizationOptions,
   listBillingInvoicesOptions,
   listBillingInvoicesQueryKey,
   openBillingPortalMutation,
@@ -16,32 +15,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { useViewer } from '@/shared/auth/useViewer';
 import { leaveFor } from '@/shared/lib/leave';
 import type { Interval, SoldPlan } from './model';
-
-export interface BillingOrgViewModel {
-  /** Billing is per organization: its id, once the server said which one this is. */
-  readonly orgId: string | undefined;
-  readonly failure: Error | undefined;
-}
-
-export function useBillingOrg(): BillingOrgViewModel {
-  const organization = useQuery(ready(getOrganizationOptions()));
-  return { orgId: organization.data?.id, failure: failureOf(organization.error) };
-}
 
 export interface BillingViewModel {
   readonly billing: BillingOverview | undefined;
   readonly failure: Error | undefined;
-  /** Owners and admins buy, switch, cancel and read invoices; everyone else reads the plan. */
-  readonly canManage: boolean;
 }
 
 export function useBilling(orgId: string): BillingViewModel {
   const billing = useQuery(ready(getBillingOptions({ path: { orgId } })));
-  const viewer = useViewer();
-  return { billing: billing.data, failure: failureOf(billing.error), canManage: viewer.canManage };
+  return { billing: billing.data, failure: failureOf(billing.error) };
 }
 
 export interface InvoicesViewModel {
