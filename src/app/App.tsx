@@ -36,9 +36,10 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(
     () =>
       useOrgStore.subscribe((org, previous) => {
-        // A call in the organization named found nothing: the person's list is read again, if it is on screen. A
-        // refetch already under way is joined, not restarted. The contract answers 404 alike for "not a member"
-        // and "no such thing", so a plain not-found costs one list request too.
+        // A call in the organization named found nothing: the person's list is read again, if it is on screen; a
+        // refetch already under way is joined. The contract answers 404 alike for "not a member" and "no such
+        // thing" (it never says whether an organization exists), so every such 404 costs one list request: no
+        // screen polls a single item, so that stays a few requests.
         if (org.doubts !== previous.doubts) {
           void queryClient.refetchQueries(
             { queryKey: listMyOrganizationsQueryKey(), type: 'active' },

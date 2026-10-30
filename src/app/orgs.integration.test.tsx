@@ -3,7 +3,7 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
-import { ORG_OWNER_STORAGE_KEY, ORG_STORAGE_KEY, useOrgStore } from '@/shared/org/orgStore';
+import { ORG_STORAGE_KEY, readStoredChoice, storedChoice, useOrgStore } from '@/shared/org/orgStore';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
@@ -59,8 +59,7 @@ describe('the organization the console acts in', () => {
     expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(named).toContain(globex.id);
-    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(globex.id);
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBe('maya');
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: globex.id, login: 'maya' });
   });
 
   it('switches from the top bar, a real modal that Escape or Not now closes', async () => {
@@ -216,7 +215,7 @@ describe('the organization the console acts in', () => {
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
     act(() => {
-      window.localStorage.setItem(ORG_STORAGE_KEY, globex.id);
+      window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: globex.id, login: 'maya' }));
       window.dispatchEvent(new StorageEvent('storage', { key: ORG_STORAGE_KEY }));
     });
     expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
@@ -235,9 +234,14 @@ describe('the organization the console acts in', () => {
 
   it('asks nobody who is signing in who they are', async () => {
     const asked = watch('/api/v1/auth/me');
+    const listed = watch('/api/v1/me/organizations');
     visit('/signin');
     expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    // A doubt with no list on screen reads nothing.
+    act(() => {
+      useOrgStore.getState().doubt();
+    });
     expect(screen.queryByRole('button', { name: /Organization/ })).toBeNull();
-    expect(asked).toEqual([]);
+    expect([asked, listed]).toEqual([[], []]);
   });
 });

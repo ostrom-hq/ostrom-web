@@ -3,16 +3,38 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 
-/** Where the organization the person chose is kept, with whose choice it was: ids, not secrets. */
-export const ORG_STORAGE_KEY = 'ostrom.org';
-export const ORG_OWNER_STORAGE_KEY = 'ostrom.org.login';
+/**
+ * Where the organization the person chose is kept, with whose choice it was: ids, not secrets. One key for both, so
+ * another tab never reads a new id with the previous owner.
+ */
+export const ORG_STORAGE_KEY = 'ostrom.org.choice';
 
 /** An id goes into a request header: visible ASCII only, so a stored value can never break the request. */
 export const orgIdSchema = z.string().regex(/^[\x21-\x7E]{1,200}$/);
 
-/** Storage is a trust boundary: anything that is not an id reads as nothing stored. */
-export function readStoredId(storage: Pick<SafeStorage, 'getItem'>, key: string): string | undefined {
-  const parsed = orgIdSchema.safeParse(storage.getItem(key));
+const choiceSchema = z.object({ id: orgIdSchema, login: z.string().min(1).max(200) });
+
+export interface StoredChoice {
+  readonly id: string;
+  readonly login: string;
+}
+
+/** The value kept for a choice. */
+export function storedChoice(choice: StoredChoice): string {
+  return JSON.stringify({ id: choice.id, login: choice.login });
+}
+
+/** Storage is a trust boundary: anything that is not an id with whose choice it is reads as nothing stored. */
+export function readStoredChoice(storage: Pick<SafeStorage, 'getItem'>): StoredChoice | undefined {
+  const raw = storage.getItem(ORG_STORAGE_KEY);
+  if (raw === null) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  const parsed = choiceSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
 }
 
@@ -58,12 +80,11 @@ export interface OrgState {
 }
 
 function kept(): Pick<OrgState, 'current' | 'owner'> {
-  const current = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
-  const owner = readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY);
   // A choice is always kept with whose it is: an id alone is nobody's, and is trusted for nobody.
-  return current === undefined || owner === undefined
+  const choice = readStoredChoice(safeLocalStorage);
+  return choice === undefined
     ? { current: undefined, owner: undefined }
-    : { current, owner };
+    : { current: choice.id, owner: choice.login };
 }
 
 export const useOrgStore = create<OrgState>()((set) => ({
@@ -80,8 +101,7 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set((state) => ({ current: id, owner: undefined, asked: false, picking: state.unknown }));
   },
   choose: (id, login) => {
-    safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
-    safeLocalStorage.setItem(ORG_OWNER_STORAGE_KEY, login);
+    safeLocalStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id, login }));
     set((state) => ({
       current: id,
       owner: login,
@@ -106,7 +126,6 @@ export const useOrgStore = create<OrgState>()((set) => ({
   },
   forget: (reason) => {
     safeLocalStorage.removeItem(ORG_STORAGE_KEY);
-    safeLocalStorage.removeItem(ORG_OWNER_STORAGE_KEY);
     set((state) => ({
       current: undefined,
       owner: undefined,
@@ -124,23 +143,22 @@ export const useOrgStore = create<OrgState>()((set) => ({
 }));
 
 /**
- * Another tab chose or dropped an organization: this one follows, and reads everything again if it changed. The two
- * keys are written one after the other, so a half-written pair waits for the second event. A tab acting in its only
- * organization keeps it when nothing is chosen anywhere. Listened to by App.tsx.
+ * Another tab chose or dropped an organization: this one follows, as if it had chosen itself, and reads everything
+ * again if it changed. A tab acting in its only organization keeps it when nothing is chosen anywhere. Listened to by
+ * App.tsx.
  */
 export function followOtherTab(event: StorageEvent): void {
-  if (event.key !== null && event.key !== ORG_STORAGE_KEY && event.key !== ORG_OWNER_STORAGE_KEY) return;
-  const id = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
-  const owner = readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY);
-  if ((id === undefined) !== (owner === undefined)) return;
+  if (event.key !== null && event.key !== ORG_STORAGE_KEY) return;
+  const next = kept();
   useOrgStore.setState((state) =>
-    (id === undefined && state.owner === undefined) || (id === state.current && owner === state.owner)
+    (next.current === undefined && state.owner === undefined) ||
+    (next.current === state.current && next.owner === state.owner)
       ? state
       : {
-          current: id,
-          owner,
+          ...next,
           asked: false,
           picking: false,
+          dismissed: false,
           unknown: false,
           generation: state.generation + 1,
         },

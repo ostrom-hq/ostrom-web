@@ -6,13 +6,6 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
-
-declare module '@tanstack/react-router' {
-  interface StaticDataRouteOption {
-    /** A page for people not signed in yet: the top bar asks nobody who they are. */
-    readonly anonymous?: boolean;
-  }
-}
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
@@ -33,6 +26,13 @@ import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { logout } from '@gen/api/sdk.gen';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
+
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** A page for people not signed in yet: the top bar asks nobody who they are. */
+    readonly anonymous?: boolean;
+  }
+}
 
 const rootRoute = createRootRoute({ component: AppShell });
 

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   followOtherTab,
-  ORG_OWNER_STORAGE_KEY,
   ORG_STORAGE_KEY,
-  readStoredId,
+  readStoredChoice,
+  storedChoice,
   useOrgStore,
 } from '@/shared/org/orgStore';
 
@@ -15,16 +15,25 @@ afterEach(() => {
   useOrgStore.getState().forget();
 });
 
-describe('readStoredId', () => {
-  it('keeps a stored id', () => {
-    expect(readStoredId(storageWith('org-acme'), ORG_STORAGE_KEY)).toBe('org-acme');
+describe('readStoredChoice', () => {
+  it('keeps a stored choice with whose it is', () => {
+    expect(readStoredChoice(storageWith(storedChoice({ id: 'org-acme', login: 'maya' })))).toEqual({
+      id: 'org-acme',
+      login: 'maya',
+    });
   });
 
-  it('reads nothing stored, or anything that could not go in a header, as nothing', () => {
-    expect(readStoredId(storageWith(null), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith(''), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith('acme\r\nX-Evil: 1'), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith('a'.repeat(201)), ORG_STORAGE_KEY)).toBeUndefined();
+  it('reads nothing stored, an id alone, or anything that could not go in a header, as nothing', () => {
+    expect(readStoredChoice(storageWith(null))).toBeUndefined();
+    expect(readStoredChoice(storageWith(''))).toBeUndefined();
+    expect(readStoredChoice(storageWith('org-acme'))).toBeUndefined();
+    expect(readStoredChoice(storageWith(JSON.stringify({ id: 'org-acme' })))).toBeUndefined();
+    expect(
+      readStoredChoice(storageWith(storedChoice({ id: 'acme\r\nX-Evil: 1', login: 'maya' }))),
+    ).toBeUndefined();
+    expect(
+      readStoredChoice(storageWith(storedChoice({ id: 'a'.repeat(201), login: 'maya' }))),
+    ).toBeUndefined();
   });
 });
 
@@ -63,8 +72,7 @@ describe('useOrgStore', () => {
       false,
       before + 1,
     ]);
-    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe('org-globex');
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBe('maya');
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: 'org-globex', login: 'maya' });
     useOrgStore.getState().choose('org-globex', 'maya');
     state = useOrgStore.getState();
     expect(state.generation).toBe(before + 1);
@@ -92,7 +100,6 @@ describe('useOrgStore', () => {
       true,
     ]);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBeNull();
     useOrgStore.getState().forget();
     expect(useOrgStore.getState().unknown).toBe(false);
   });
@@ -127,18 +134,21 @@ describe('useOrgStore', () => {
   });
 
   it('follows a choice made or dropped in another tab, and nothing else stored there', () => {
+    useOrgStore.getState().choose('org-acme', 'maya');
+    useOrgStore.getState().close();
     const before = useOrgStore.getState().generation;
     const event = (key: string | null): StorageEvent => new StorageEvent('storage', { key });
-    // Half written: the id first, its owner in the next event.
-    window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
-    followOtherTab(event(ORG_STORAGE_KEY));
-    expect(useOrgStore.getState().current).toBeUndefined();
-    window.localStorage.setItem(ORG_OWNER_STORAGE_KEY, 'maya');
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-globex', login: 'maya' }));
     followOtherTab(event('ostrom.theme'));
-    expect(useOrgStore.getState().current).toBeUndefined();
-    followOtherTab(event(ORG_OWNER_STORAGE_KEY));
-    expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual(['org-globex', 'maya']);
-    expect(useOrgStore.getState().generation).toBe(before + 1);
+    expect(useOrgStore.getState().current).toBe('org-acme');
+    followOtherTab(event(ORG_STORAGE_KEY));
+    const state = useOrgStore.getState();
+    expect([state.current, state.owner, state.dismissed, state.generation]).toEqual([
+      'org-globex',
+      'maya',
+      false,
+      before + 1,
+    ]);
     // The same again changes nothing.
     followOtherTab(event(ORG_STORAGE_KEY));
     expect(useOrgStore.getState().generation).toBe(before + 1);
