@@ -9,9 +9,10 @@ test('a person in two organizations chooses one, and every call then names it', 
     'GET /api/v1/me/organizations not served yet',
   );
   await signIn(page, freshEmail('lena'));
-  const names = [`Acme ${Date.now().toString(36)}`, `Globex ${Date.now().toString(36)}`];
+  const run = Date.now().toString(36);
+  const [acme, globex] = [`Acme ${run}`, `Globex ${run}`];
   const ids: string[] = [];
-  for (const name of names) {
+  for (const name of [acme, globex]) {
     const created = await callFromPage(page, 'POST', '/api/v1/orgs', { name });
     expect(created.status).toBe(201);
     ids.push((created.body as { id: string }).id);
@@ -22,7 +23,7 @@ test('a person in two organizations chooses one, and every call then names it', 
   const named = page.waitForRequest(
     (request) => request.url().includes('/api/v1/artifacts') && request.headers()['ostrom-org'] === ids[1],
   );
-  await picker.getByRole('button', { name: names[1] }).click();
+  await picker.getByRole('button', { name: globex }).click();
   await named;
-  await expect(page.getByRole('button', { name: `Organization: ${names[1] ?? ''}. Switch` })).toBeVisible();
+  await expect(page.getByRole('button', { name: `Organization: ${globex}. Switch` })).toBeVisible();
 });

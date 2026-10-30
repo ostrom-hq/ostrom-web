@@ -10,6 +10,6 @@ test('someone signs in with an e-mailed link and holds an HttpOnly session the p
   const cookies = await page.context().cookies();
   const session = cookies.find((cookie) => /ostrom_session/.test(cookie.name));
   expect(session?.httpOnly).toBe(true);
-  expect(await page.evaluate(() => document.cookie)).not.toMatch(/ostrom_session/);
+  expect(await page.evaluate<string>('document.cookie')).not.toMatch(/ostrom_session/);
   expect(page.url()).not.toContain('token=');
 });

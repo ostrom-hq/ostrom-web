@@ -58,9 +58,11 @@ export async function callFromPage(
   path: string,
   body?: unknown,
 ): Promise<{ status: number; body: unknown }> {
+  const csrf = (await page.context().cookies()).find((cookie) =>
+    /^(?:__Host-)?ostrom_csrf$/.test(cookie.name),
+  )?.value;
   return page.evaluate(
-    async ({ method, path, body }) => {
-      const csrf = /(?:^|;\s*)(?:__Host-)?ostrom_csrf=([^;]+)/.exec(document.cookie)?.[1];
+    async ({ method, path, body, csrf }) => {
       const headers: Record<string, string> = { accept: 'application/json' };
       if (csrf !== undefined) headers['X-CSRF-Token'] = decodeURIComponent(csrf);
       if (body !== undefined) headers['content-type'] = 'application/json';
@@ -73,6 +75,6 @@ export async function callFromPage(
       const text = await response.text();
       return { status: response.status, body: text === '' ? undefined : (JSON.parse(text) as unknown) };
     },
-    { method, path, body },
+    { method, path, body, csrf },
   );
 }
