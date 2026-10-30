@@ -72,25 +72,37 @@ describe('mock artifacts', () => {
     await unshareArtifact({ path: { id: 'art-2', login: 'theo' }, throwOnError: true });
     expect(db.artifactMembers['art-2']).toEqual([]);
     expect(
-      await statusOf(() => shareArtifact({ path: { id: 'art-5', login: 'samir' }, throwOnError: true })),
+      await statusOf(async () =>
+        shareArtifact({ path: { id: 'art-5', login: 'samir' }, throwOnError: true }),
+      ),
     ).toBe(403);
     expect(
-      await statusOf(() => unshareArtifact({ path: { id: 'art-5', login: 'theo' }, throwOnError: true })),
+      await statusOf(async () =>
+        unshareArtifact({ path: { id: 'art-5', login: 'theo' }, throwOnError: true }),
+      ),
     ).toBe(403);
     expect(
-      await statusOf(() => shareArtifact({ path: { id: 'art-7', login: 'nobody' }, throwOnError: true })),
+      await statusOf(async () =>
+        shareArtifact({ path: { id: 'art-7', login: 'nobody' }, throwOnError: true }),
+      ),
     ).toBe(404);
     expect(
-      await statusOf(() => shareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true })),
+      await statusOf(async () => shareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true })),
     ).toBe(404);
     expect(
-      await statusOf(() => unshareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true })),
+      await statusOf(async () =>
+        unshareArtifact({ path: { id: 'art-9', login: 'theo' }, throwOnError: true }),
+      ),
     ).toBe(404);
   });
 
   it('deletes an artifact for its owner only', async () => {
-    expect(await statusOf(() => deleteArtifact({ path: { id: 'art-5' }, throwOnError: true }))).toBe(403);
-    expect(await statusOf(() => deleteArtifact({ path: { id: 'art-9' }, throwOnError: true }))).toBe(404);
+    expect(await statusOf(async () => deleteArtifact({ path: { id: 'art-5' }, throwOnError: true }))).toBe(
+      403,
+    );
+    expect(await statusOf(async () => deleteArtifact({ path: { id: 'art-9' }, throwOnError: true }))).toBe(
+      404,
+    );
     await deleteArtifact({ path: { id: 'art-7' }, throwOnError: true });
     expect(db.artifacts.map((item) => item.id)).toEqual(['art-5', 'art-2']);
   });
@@ -127,7 +139,7 @@ describe('mock shared subscriptions', () => {
   });
 
   it('refuses a subscription without a name, a known provider or an existing secret', async () => {
-    const enroll = (body: { provider: string; label: string; credentialSecret: string }) => () =>
+    const enroll = (body: { provider: string; label: string; credentialSecret: string }) => async () =>
       enrollSharedAccount({ body, throwOnError: true });
     expect(
       await statusOf(enroll({ provider: 'anthropic', label: ' ', credentialSecret: 'LINEAR_TOKEN' })),
@@ -166,12 +178,12 @@ describe('mock shared subscriptions', () => {
     });
     expect(changed.data).toMatchObject({ paused: true, sharedWith: ['theo'], dailyAllocationUsd: 20 });
     expect(
-      await statusOf(() =>
+      await statusOf(async () =>
         updateSharedAccount({ path: { id: 'acc-2' }, body: { paused: false }, throwOnError: true }),
       ),
     ).toBe(403);
     expect(
-      await statusOf(() =>
+      await statusOf(async () =>
         updateSharedAccount({ path: { id: 'acc-9' }, body: { paused: false }, throwOnError: true }),
       ),
     ).toBe(404);
@@ -183,12 +195,12 @@ describe('mock shared subscriptions', () => {
   });
 
   it('removes a subscription for its owner only', async () => {
-    expect(await statusOf(() => removeSharedAccount({ path: { id: 'acc-2' }, throwOnError: true }))).toBe(
-      403,
-    );
-    expect(await statusOf(() => removeSharedAccount({ path: { id: 'acc-9' }, throwOnError: true }))).toBe(
-      404,
-    );
+    expect(
+      await statusOf(async () => removeSharedAccount({ path: { id: 'acc-2' }, throwOnError: true })),
+    ).toBe(403);
+    expect(
+      await statusOf(async () => removeSharedAccount({ path: { id: 'acc-9' }, throwOnError: true })),
+    ).toBe(404);
     await removeSharedAccount({ path: { id: 'acc-1' }, throwOnError: true });
     expect(db.sharedAccounts.map((account) => account.id)).toEqual(['acc-2']);
   });
