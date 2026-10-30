@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from '@tanstack/react-router';
+import { Link, Outlet, useMatches, useRouterState } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,6 +21,9 @@ export function AppShell(): ReactElement {
   useApplyTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const organizationGeneration = useOrgStore((state) => state.generation);
+  const anonymousPage = useMatches({
+    select: (matches) => matches.some((match) => match.staticData.anonymous === true),
+  });
   const consent = useConsentStore((state) => state.status);
   usePageViews(analytics, pathname, consent);
   return (
@@ -56,7 +59,7 @@ export function AppShell(): ReactElement {
           <Link to="/signin">{t('app.nav.signin')}</Link>
         </nav>
         <div className="o-topbar__end">
-          <OrgControls />
+          <OrgControls anonymousPage={anonymousPage} />
           <ThemeToggle />
         </div>
       </header>

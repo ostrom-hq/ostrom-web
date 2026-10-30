@@ -1,5 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { ORG_OWNER_STORAGE_KEY, ORG_STORAGE_KEY, readStoredId, useOrgStore } from '@/shared/org/orgStore';
+import {
+  followOtherTab,
+  moveLegacyChoice,
+  ORG_STORAGE_KEY,
+  readStoredChoice,
+  storedChoice,
+  useOrgStore,
+} from '@/shared/org/orgStore';
+import { safeLocalStorage } from '@/shared/lib/safeStorage';
 
 function storageWith(value: string | null): { getItem: (key: string) => string | null } {
   return { getItem: (key) => (key === ORG_STORAGE_KEY ? value : null) };
@@ -9,16 +17,25 @@ afterEach(() => {
   useOrgStore.getState().forget();
 });
 
-describe('readStoredId', () => {
-  it('keeps a stored id', () => {
-    expect(readStoredId(storageWith('org-acme'), ORG_STORAGE_KEY)).toBe('org-acme');
+describe('readStoredChoice', () => {
+  it('keeps a stored choice with whose it is', () => {
+    expect(readStoredChoice(storageWith(storedChoice({ id: 'org-acme', login: 'maya' })))).toEqual({
+      id: 'org-acme',
+      login: 'maya',
+    });
   });
 
-  it('reads nothing stored, or anything that could not go in a header, as nothing', () => {
-    expect(readStoredId(storageWith(null), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith(''), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith('acme\r\nX-Evil: 1'), ORG_STORAGE_KEY)).toBeUndefined();
-    expect(readStoredId(storageWith('a'.repeat(201)), ORG_STORAGE_KEY)).toBeUndefined();
+  it('reads nothing stored, an id alone, or anything that could not go in a header, as nothing', () => {
+    expect(readStoredChoice(storageWith(null))).toBeUndefined();
+    expect(readStoredChoice(storageWith(''))).toBeUndefined();
+    expect(readStoredChoice(storageWith('org-acme'))).toBeUndefined();
+    expect(readStoredChoice(storageWith(JSON.stringify({ id: 'org-acme' })))).toBeUndefined();
+    expect(
+      readStoredChoice(storageWith(storedChoice({ id: 'acme\r\nX-Evil: 1', login: 'maya' }))),
+    ).toBeUndefined();
+    expect(
+      readStoredChoice(storageWith(storedChoice({ id: 'a'.repeat(201), login: 'maya' }))),
+    ).toBeUndefined();
   });
 });
 
@@ -57,8 +74,7 @@ describe('useOrgStore', () => {
       false,
       before + 1,
     ]);
-    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe('org-globex');
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBe('maya');
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: 'org-globex', login: 'maya' });
     useOrgStore.getState().choose('org-globex', 'maya');
     state = useOrgStore.getState();
     expect(state.generation).toBe(before + 1);
@@ -86,7 +102,6 @@ describe('useOrgStore', () => {
       true,
     ]);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBeNull();
     useOrgStore.getState().forget();
     expect(useOrgStore.getState().unknown).toBe(false);
   });
@@ -112,5 +127,85 @@ describe('useOrgStore', () => {
     window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
     useOrgStore.getState().signedInOrOut();
     expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual([undefined, undefined]);
+  });
+
+  it('counts the doubts that send the list to be read again', () => {
+    const before = useOrgStore.getState().doubts;
+    useOrgStore.getState().doubt();
+    expect(useOrgStore.getState().doubts).toBe(before + 1);
+  });
+
+  it('follows a choice made or dropped in another tab, and nothing else stored there', () => {
+    useOrgStore.getState().choose('org-acme', 'maya');
+    useOrgStore.getState().close();
+    const before = useOrgStore.getState().generation;
+    const event = (key: string | null): StorageEvent =>
+      new StorageEvent('storage', { key, storageArea: window.localStorage });
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-globex', login: 'maya' }));
+    followOtherTab(event('ostrom.theme'));
+    expect(useOrgStore.getState().current).toBe('org-acme');
+    followOtherTab(event(ORG_STORAGE_KEY));
+    const state = useOrgStore.getState();
+    expect([state.current, state.owner, state.dismissed, state.generation]).toEqual([
+      'org-globex',
+      'maya',
+      false,
+      before + 1,
+    ]);
+    // The same again changes nothing; nor does a key of the same name in session storage.
+    followOtherTab(event(ORG_STORAGE_KEY));
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-other', login: 'maya' }));
+    followOtherTab(new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.sessionStorage }));
+    expect([useOrgStore.getState().current, useOrgStore.getState().generation]).toEqual([
+      'org-globex',
+      before + 1,
+    ]);
+    // Dropped in another tab (storage cleared).
+    window.localStorage.clear();
+    followOtherTab(event(null));
+    expect(useOrgStore.getState().current).toBeUndefined();
+    expect(useOrgStore.getState().generation).toBe(before + 2);
+  });
+
+  it('keeps the only organization of this tab when nothing is chosen anywhere', () => {
+    useOrgStore.getState().only('org-acme');
+    const before = useOrgStore.getState().generation;
+    followOtherTab(new StorageEvent('storage', { key: null, storageArea: window.localStorage }));
+    expect([useOrgStore.getState().current, useOrgStore.getState().generation]).toEqual(['org-acme', before]);
+  });
+
+  it('takes the same organization chosen in another tab as chosen, without reading anything again', () => {
+    useOrgStore.getState().only('org-acme');
+    useOrgStore.getState().open();
+    const before = useOrgStore.getState().generation;
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-acme', login: 'maya' }));
+    followOtherTab(new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.localStorage }));
+    const state = useOrgStore.getState();
+    expect([state.current, state.owner, state.generation, state.picking]).toEqual([
+      'org-acme',
+      'maya',
+      before,
+      true,
+    ]);
+  });
+
+  it('moves a choice kept under the two old keys to the one key, once', () => {
+    window.localStorage.setItem('ostrom.org', 'org-globex');
+    window.localStorage.setItem('ostrom.org.login', 'maya');
+    moveLegacyChoice(safeLocalStorage);
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: 'org-globex', login: 'maya' });
+    expect([
+      window.localStorage.getItem('ostrom.org'),
+      window.localStorage.getItem('ostrom.org.login'),
+    ]).toEqual([null, null]);
+    // A newer choice wins; half an old pair is only erased.
+    window.localStorage.setItem('ostrom.org', 'org-acme');
+    window.localStorage.setItem('ostrom.org.login', 'maya');
+    moveLegacyChoice(safeLocalStorage);
+    expect(readStoredChoice(window.localStorage)?.id).toBe('org-globex');
+    window.localStorage.clear();
+    window.localStorage.setItem('ostrom.org', 'org-acme');
+    moveLegacyChoice(safeLocalStorage);
+    expect(window.localStorage.length).toBe(0);
   });
 });

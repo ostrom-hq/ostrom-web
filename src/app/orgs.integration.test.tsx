@@ -3,7 +3,7 @@ import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
-import { ORG_OWNER_STORAGE_KEY, ORG_STORAGE_KEY, useOrgStore } from '@/shared/org/orgStore';
+import { ORG_STORAGE_KEY, readStoredChoice, storedChoice, useOrgStore } from '@/shared/org/orgStore';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
@@ -59,8 +59,7 @@ describe('the organization the console acts in', () => {
     expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(named).toContain(globex.id);
-    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(globex.id);
-    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBe('maya');
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: globex.id, login: 'maya' });
   });
 
   it('switches from the top bar, a real modal that Escape or Not now closes', async () => {
@@ -194,5 +193,74 @@ describe('the organization the console acts in', () => {
     expect(
       await within(picker).findByText(/You are not a member of any organization yet\./),
     ).toBeInTheDocument();
+  });
+
+  it('reads the list again when the organization named finds nothing, and says the choice is gone', async () => {
+    db.otherOrganizations = [globex];
+    chosenBefore(globex.id, 'maya');
+    const router = visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    // Removed from Globex meanwhile: the next call in it is not found.
+    db.otherOrganizations = [];
+    await act(async () => {
+      await router.navigate({ to: '/secrets' });
+    });
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
+  });
+
+  it('follows the organization chosen in another tab', async () => {
+    db.otherOrganizations = [globex];
+    chosenBefore(db.organization.id, 'maya');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    act(() => {
+      window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: globex.id, login: 'maya' }));
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.localStorage }),
+      );
+    });
+    expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    expect(await screen.findByText('No artifact yet.')).toBeInTheDocument();
+  });
+
+  it('keeps the organization of someone signed in who opens the sign-in page', async () => {
+    const router = visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate({ to: '/signin' });
+    });
+    expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+  });
+
+  it('reads the list once for a burst of not-found answers', async () => {
+    const listed = watch('/api/v1/me/organizations');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(listed).toHaveLength(1);
+    act(() => {
+      useOrgStore.getState().doubt();
+      useOrgStore.getState().doubt();
+      useOrgStore.getState().doubt();
+    });
+    await waitFor(() => {
+      expect(listed).toHaveLength(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(listed).toHaveLength(2);
+  });
+
+  it('asks nobody who is signing in who they are', async () => {
+    const asked = watch('/api/v1/auth/me');
+    const listed = watch('/api/v1/me/organizations');
+    visit('/signin');
+    expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    // A doubt with no list on screen reads nothing.
+    act(() => {
+      useOrgStore.getState().doubt();
+    });
+    expect(screen.queryByRole('button', { name: /Organization/ })).toBeNull();
+    expect([asked, listed]).toEqual([[], []]);
   });
 });
