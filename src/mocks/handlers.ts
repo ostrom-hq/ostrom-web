@@ -355,11 +355,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
+  const runsByKey = new Map<string, AutomationRun>();
   return [
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
       const query = new URL(request.url).searchParams;
-      const statuses = query.getAll('status');
+      // The contract writes several statuses comma-separated (form, explode false); a repeated key reads the same.
+      const statuses = query.getAll('status').flatMap((value) => value.split(','));
       const items = db.approvals.filter((approval) => {
         if (query.get('mine') === 'true') {
           return approval.status === 'pending' && (db.approvers[approval.id] ?? []).includes(me.dev.login);
@@ -625,8 +627,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleCreateCloudSession(async ({ request }) => {
       const body = zCreateCloudSessionBody.safeParse(await readJson(request));
-      if (!body.success || (body.data.prompt ?? '').trim() === '')
-        return refusal(400, 'invalid_request', 'an agent and a prompt are needed');
+      // Without a prompt the session is an interactive agent (contract): only the agent is required.
+      if (!body.success) return refusal(400, 'invalid_request', 'an agent is needed');
       if (!CLOUD_AGENTS.has(body.data.agent))
         return refusal(400, 'invalid_request', `no cloud agent ${body.data.agent}`);
       const session: CloudSession = {
@@ -676,8 +678,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         };
         return HttpResponse.json(dryRun);
       }
-      if (request.headers.get('Idempotency-Key') === null)
-        return refusal(400, 'invalid_request', 'a test run needs an Idempotency-Key');
+      const key = request.headers.get('Idempotency-Key');
+      if (key === null) return refusal(400, 'invalid_request', 'a test run needs an Idempotency-Key');
+      // A replay of the same key answers the run it already queued, never a second one.
+      const replayed = runsByKey.get(key);
+      if (replayed !== undefined) return HttpResponse.json(replayed, { status: 202 });
       const at = now().toISOString();
       const run: AutomationRun = {
         id: `run-${String(db.automationRuns.length + 100)}`,
@@ -690,6 +695,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         updatedAt: at,
       };
       db.automationRuns.unshift(run);
+      runsByKey.set(key, run);
       return HttpResponse.json(run, { status: 202 });
     }),
     handleRotateAutomationSecret(({ params }) => {

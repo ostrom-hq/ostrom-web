@@ -96,7 +96,7 @@ export const en = {
       },
       range: '{{base}} → {{head}}',
       highRisk: 'High risk',
-      highRiskHint: 'On a phone, approving asks for your face or fingerprint.',
+      highRiskHint: 'Read the whole change before you approve: this yes is the costliest to undo.',
       diff_one: '{{count}} file · +{{additions}} −{{deletions}}',
       diff_other: '{{count}} files · +{{additions}} −{{deletions}}',
       truncated: 'The diff is too large to show in full: open the commits.',
@@ -613,6 +613,11 @@ export const en = {
       invalid_payload: 'Payload refused',
       skipped_overlap: 'Skipped: still running',
       skipped_budget: 'Skipped: over budget',
+    },
+    runReason: {
+      cloud_session_limit: 'Too many cloud agents at once for the plan.',
+      cloud_hours_exhausted: 'The plan’s agent hours are used up for this period.',
+      owner_unavailable: 'Its owner can no longer run agents here.',
     },
   },
   sharing: {

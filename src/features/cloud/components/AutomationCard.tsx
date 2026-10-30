@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
-import { isCloudAgent, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
+import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
 import { useAutomationRuns } from '../useCloud';
 import { SecretOnce } from './SecretOnce';
 
@@ -43,7 +43,9 @@ function Runs({ id, now }: { readonly id: string; readonly now: Date }): ReactEl
               })}
             </span>
             {run.reason === undefined || run.reason === null ? null : (
-              <span className="o-row__meta">{run.reason}</span>
+              <span className="o-row__meta">
+                {isKnownRunReason(run.reason) ? t(`automations.runReason.${run.reason}`) : run.reason}
+              </span>
             )}
           </span>
           {isKnownRunStatus(run.status) ? (

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation, CloudSession } from '@gen/api/types.gen';
 import {
+  idempotencyKey,
   isCloudAgent,
+  isKnownRunReason,
+  isKnownRunStatus,
   isCloudStatus,
   isLive,
   isWebhook,
@@ -71,5 +74,22 @@ describe('isWebhook', () => {
       updatedAt: '',
     });
     expect([isWebhook(automation('webhook')), isWebhook(automation('cron'))]).toEqual([true, false]);
+  });
+});
+
+describe('runs', () => {
+  it('knows the run states and reasons it has words for', () => {
+    expect([isKnownRunStatus('queued'), isKnownRunStatus('toString'), isKnownRunStatus('x')]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    expect([isKnownRunReason('owner_unavailable'), isKnownRunReason('x')]).toEqual([true, false]);
+  });
+
+  it('makes a fresh 128-bit key for each gesture', () => {
+    const first = idempotencyKey();
+    expect(first).toMatch(/^[0-9a-f]{32}$/);
+    expect(idempotencyKey()).not.toBe(first);
   });
 });
