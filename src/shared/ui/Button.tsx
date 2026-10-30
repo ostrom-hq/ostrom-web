@@ -9,7 +9,7 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   readonly size?: ButtonSize;
 }
 
-/** Garnet (`primary`) means "a human is awaited": one per screen, never for a warning. */
+/** Garnet (`primary`) is the approve gesture only (PB-C2): one per request, never for another action or a warning. */
 export function Button({
   variant = 'secondary',
   size = 'md',

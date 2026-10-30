@@ -28,12 +28,27 @@ export const en = {
     queue: {
       title: 'Requests',
       waiting: '{{count}} waiting for you',
+      waitingMore: 'More than {{count}} waiting for you',
       decided: 'Decided',
       emptyTitle: 'Nothing waits for you',
       emptyBody:
         'When an agent reaches an action your team decided needs a person, it stops and the request shows up here.',
       offline: 'Ostrom does not answer ({{reason}}). Retrying every 2 s.',
       offlineTag: 'Offline',
+    },
+    failure: {
+      signedOutTag: 'Signed out',
+      signedOut: 'This browser is no longer signed in. Open your sign-in link again to see your requests.',
+      refusedTag: 'Refused',
+    },
+    signin: {
+      tag: 'Sign-in',
+      invalid: 'This sign-in link is not valid. Ask for a new one.',
+      switch:
+        'This link signs in with another key than the one this browser uses. Requests you approve are signed with it.',
+      accept: 'Use the new key',
+      keep: 'Keep the current one',
+      dismiss: 'Dismiss',
     },
     signedAs: 'Approving as {{name}}',
     asks: '{{who}} asks',
@@ -86,12 +101,8 @@ export const en = {
       key: 'Key',
     },
     act: {
-      approve: {
-        push: 'Approve push',
-        merge: 'Approve merge',
-        deployment: 'Approve deployment',
-        other: 'Approve',
-      },
+      // The title says what will happen; the verb waits for a typed action in the contract (see .coord/QUESTIONS.md).
+      approve: 'Approve',
       approving: 'Approving…',
       decline: 'Decline & tell the agent…',
       declineLabel: 'What should the agent do instead?',

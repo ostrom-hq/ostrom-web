@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useState } from 'react';
+import { useEffect } from 'react';
+import { create } from 'zustand';
+import { useAuthStore } from '@/shared/auth/authStore';
 
 export interface ArrivalState {
   readonly source: readonly string[] | undefined;
@@ -22,9 +24,38 @@ export function nextArrivals(previous: ArrivalState, ids: readonly string[] | un
   };
 }
 
-/** Requests that arrived while the queue was open, to highlight them. */
+interface ArrivalsStore {
+  readonly state: ArrivalState;
+  readonly see: (ids: readonly string[]) => void;
+  readonly reset: () => void;
+}
+
+/** Outlives the queue screen: a request that came in while the person read another one is still new on return. */
+const useArrivalsStore = create<ArrivalsStore>()((set) => ({
+  state: NO_ARRIVALS,
+  see: (ids) => {
+    set((store) => (ids === store.state.source ? store : { state: nextArrivals(store.state, ids) }));
+  },
+  reset: () => {
+    set({ state: NO_ARRIVALS });
+  },
+}));
+
+/** Forgets what was seen: on a change of account, and between tests. */
+export function resetArrivals(): void {
+  useArrivalsStore.getState().reset();
+}
+
+// Another account has another queue: nothing it shows is "new" because of what the previous one saw.
+useAuthStore.subscribe((auth, previous) => {
+  if (auth.token !== previous.token) resetArrivals();
+});
+
+/** Requests that arrived since the queue was first loaded, to highlight them. */
 export function useArrivals(ids: readonly string[] | undefined): ReadonlySet<string> {
-  const [state, setState] = useState<ArrivalState>(NO_ARRIVALS);
-  if (ids !== state.source) setState(nextArrivals(state, ids));
-  return state.fresh;
+  const see = useArrivalsStore((store) => store.see);
+  useEffect(() => {
+    if (ids !== undefined) see(ids);
+  }, [ids, see]);
+  return useArrivalsStore((store) => store.state.fresh);
 }

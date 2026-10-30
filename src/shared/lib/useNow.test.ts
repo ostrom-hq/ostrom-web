@@ -20,4 +20,15 @@ describe('useNow', () => {
     expect(vi.getTimerCount()).toBe(0);
     vi.useRealTimers();
   });
+
+  it('reads the time afresh when a screen mounts after nobody listened', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-30T08:00:00.000Z'));
+    renderHook(() => useNow()).unmount();
+    vi.setSystemTime(new Date('2026-10-30T08:10:00.000Z'));
+    const later = renderHook(() => useNow());
+    expect(later.result.current.toISOString()).toBe('2026-10-30T08:10:00.000Z');
+    later.unmount();
+    vi.useRealTimers();
+  });
 });

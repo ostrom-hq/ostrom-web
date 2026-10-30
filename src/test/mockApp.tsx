@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll } from 'vitest';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { type AppRouter, createAppRouter } from '@/app/router';
+import { resetArrivals } from '@/features/yes';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer, type MockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
@@ -24,6 +25,7 @@ export function setupMockApp(): MockServer {
     mock.server.resetHandlers();
     resetMockDb(mock.db);
     useAuthStore.getState().signOut();
+    resetArrivals();
   });
   afterAll(() => {
     mock.server.close();

@@ -14,6 +14,8 @@ function tick(): void {
 }
 
 function subscribe(listener: () => void): () => void {
+  // Nobody listened, so nothing ticked: a screen mounted after a pause must not read an old time.
+  if (listeners.size === 0) now = new Date();
   listeners.add(listener);
   timer ??= setInterval(tick, TICK_MS);
   return () => {

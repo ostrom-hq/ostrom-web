@@ -31,6 +31,16 @@ describe('Badge', () => {
     );
     expect(screen.getByText('plain')).toHaveClass('o-badge--neutral');
     expect(screen.getByText('refused')).toHaveClass('o-badge--danger');
+    expect(screen.getByText('plain')).not.toHaveAttribute('data-approval');
+  });
+
+  it('marks the waiting-for-your-decision state', () => {
+    render(
+      <Badge tone="signal" approval="waiting">
+        Waiting for you
+      </Badge>,
+    );
+    expect(screen.getByText('Waiting for you')).toHaveAttribute('data-approval', 'waiting');
   });
 });
 
