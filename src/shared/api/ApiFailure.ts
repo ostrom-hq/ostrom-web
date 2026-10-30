@@ -9,6 +9,7 @@ export type ApiFailureKind =
   | 'unauthorized'
   | 'forbidden'
   | 'not-found'
+  | 'conflict'
   | 'server'
   | 'unexpected';
 
@@ -33,6 +34,7 @@ function kindOfStatus(status: number): ApiFailureKind {
   if (status === 401) return 'unauthorized';
   if (status === 403) return 'forbidden';
   if (status === 404) return 'not-found';
+  if (status === 409) return 'conflict';
   if (status >= 500) return 'server';
   return 'unexpected';
 }
@@ -41,7 +43,14 @@ function kindOfStatus(status: number): ApiFailureKind {
 export function toApiFailure(error: unknown, response: Response | undefined): ApiFailure {
   if (error instanceof ApiFailure) return error;
   if (response === undefined) {
-    return new ApiFailure('network', 'The server could not be reached.', undefined, error);
+    if (error instanceof ZodError) {
+      return new ApiFailure('invalid-request', 'The request does not match the contract.', undefined, error);
+    }
+    // fetch() rejects with a TypeError when the network fails; anything else is a bug before the call.
+    if (error instanceof TypeError) {
+      return new ApiFailure('network', 'The server could not be reached.', undefined, error);
+    }
+    return new ApiFailure('unexpected', 'The request failed before reaching the server.', undefined, error);
   }
   if (response.ok || error instanceof ZodError) {
     return new ApiFailure(

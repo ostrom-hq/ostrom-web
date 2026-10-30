@@ -37,7 +37,8 @@ describe('toApiFailure', () => {
     [404, 'not-found'],
     [500, 'server'],
     [503, 'server'],
-    [409, 'unexpected'],
+    [409, 'conflict'],
+    [418, 'unexpected'],
   ] as const)('maps HTTP %i to %s', (status, kind) => {
     expect(toApiFailure({ error: 'nope' }, response(status)).kind).toBe(kind);
   });
