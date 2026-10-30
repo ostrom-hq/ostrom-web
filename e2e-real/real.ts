@@ -25,7 +25,8 @@ function signInToken(email: string): string | undefined {
     )
     .sort((a, b) => b.at - a.at);
   for (const mail of mails) {
-    const token = /#token=([A-Za-z0-9._~%-]+)/.exec(mail.text)?.[1];
+    // Followed by the end of its line: a mail still being written is not read with half a token.
+    const token = /#token=([A-Za-z0-9._~%-]+)\s/.exec(mail.text)?.[1];
     if (token !== undefined) return decodeURIComponent(token);
   }
   return undefined;
