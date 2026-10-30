@@ -5,8 +5,3 @@ rules:
   unpinned-uses:
     ignore:
       - ci.yml
-  # Temporary: image.yml caches the Docker build in a workflow that also runs on release tags. Drop the cache
-  # on tag runs, or split the release job, then remove this exception.
-  cache-poisoning:
-    ignore:
-      - image.yml
