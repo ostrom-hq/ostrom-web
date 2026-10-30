@@ -12,11 +12,14 @@ export const ORG_REQUIRED = 'org_required';
  */
 const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/auth\//,
-  /^\/api\/v1\/orgs\//,
+  /^\/api\/v1\/orgs(?:\/|$)/,
+  /^\/api\/v1\/invitations\/(?:preview|accept)$/,
+  /^\/api\/v1\/tokens(?:\/|$)/,
   /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
   /^\/api\/v1\/github\/app\/(?:manifest|install)\/callback$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
+  /^\/api\/v1\/cloud\/runner\/terminal$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */
@@ -33,4 +36,15 @@ export function withOrg(request: Request, orgId: string | undefined): Request {
     request.headers.set(ORG_HEADER, orgId);
   }
   return request;
+}
+
+/** A route that names its organization in the path: `/api/v1/orgs/{org}` and everything under it. */
+const ORG_IN_PATH = /^\/api\/v1\/orgs\/[^/]+(?:\/|$)/;
+
+/**
+ * Whether a call named an organization, by `Ostrom-Org` or in its path: a 404 then may mean the person left it, and
+ * their list is read again.
+ */
+export function namesOrganization(request: Request): boolean {
+  return request.headers.has(ORG_HEADER) || ORG_IN_PATH.test(new URL(request.url).pathname);
 }

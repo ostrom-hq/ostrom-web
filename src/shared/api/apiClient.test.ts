@@ -1,6 +1,6 @@
 import { client } from '@gen/api/client.gen';
 import { handleGetMe } from '@gen/api/msw.gen';
-import { getApproval, getMe, logout } from '@gen/api/sdk.gen';
+import { getApproval, getMe, getOrg, logout } from '@gen/api/sdk.gen';
 import type { Me } from '@gen/api/types.gen';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -132,6 +132,7 @@ describe('generated client, configured', () => {
         seen.push(request.headers.get('ostrom-org'));
         return HttpResponse.json(me);
       }),
+      http.get('*/api/v1/orgs/:org', () => HttpResponse.json(notFound, { status: 404 })),
     );
     const doubts = useOrgStore.getState().doubts;
     await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
@@ -143,6 +144,9 @@ describe('generated client, configured', () => {
     expect(useOrgStore.getState().doubts).toBe(doubts + 1);
     // `/me` acts in no organization: it never carries one, so a stale choice can always be checked.
     await getMe({ throwOnError: true });
+    // An organization named in the path, not found: the same doubt.
+    await failureOf(async () => getOrg({ path: { org: 'gone' }, throwOnError: true }));
+    expect(useOrgStore.getState().doubts).toBe(doubts + 2);
     expect(seen).toEqual([null, 'org-acme', null]);
   });
 

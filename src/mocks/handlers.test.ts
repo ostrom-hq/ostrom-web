@@ -13,13 +13,11 @@ import {
   getGatePolicy,
   getMcpUsage,
   getMe,
-  getOrganization,
   getReceipt,
   getReceiptBundle,
   getSession,
   getSpending,
   getWorkflow,
-  inviteMembers,
   listApprovals,
   listAutomationRuns,
   listAutomations,
@@ -34,7 +32,6 @@ import {
   listRunners,
   listSecrets,
   listSessions,
-  listTeams,
   listWorkflows,
   rotateAutomationSecret,
   rotateSecret,
@@ -43,7 +40,6 @@ import {
   setGatePolicy,
   stopCloudSession,
   testAutomation,
-  updateMember,
   updateRule,
   verifyReceipt,
   verifySignInEmail,
@@ -382,96 +378,10 @@ describe('mock receipts', () => {
   });
 });
 
-describe('mock organization', () => {
-  it('serves the organization, its members and its teams', async () => {
-    const org = await getOrganization({ throwOnError: true });
+describe('mock members', () => {
+  it('still lists the members by id for the screens that share with them', async () => {
     const members = await listMembers({ throwOnError: true });
-    const teams = await listTeams({ throwOnError: true });
-    expect(org.data.name).toBe('Acme');
     expect(members.data.items.map((member) => member.login)).toContain('samir');
-    expect(teams.data.items.map((team) => team.slug)).toEqual(['billing', 'release']);
-  });
-
-  it('changes the role of a member, and refuses an unknown one, a bad role and the caller’s own', async () => {
-    const { data } = await updateMember({
-      path: { login: 'theo' },
-      body: { role: 'approver' },
-      throwOnError: true,
-    });
-    expect(data.role).toBe('approver');
-    const missing = await failureOf(async () =>
-      updateMember({ path: { login: 'nope' }, body: { role: 'member' }, throwOnError: true }),
-    );
-    const invited = await failureOf(async () =>
-      updateMember({ path: { login: 'theo' }, body: { role: 'invited' }, throwOnError: true }),
-    );
-    const own = await failureOf(async () =>
-      updateMember({ path: { login: 'maya' }, body: { role: 'member' }, throwOnError: true }),
-    );
-    expect(isApiFailure(missing) && missing.status).toBe(404);
-    expect(isApiFailure(invited) && invited.status).toBe(400);
-    expect(isApiFailure(own) && own.code).toBe('own_role');
-  });
-
-  it('invites each new GitHub login once, into a team if it exists, and refuses an owner or nobody', async () => {
-    const { data } = await inviteMembers({
-      body: {
-        invites: [
-          { login: 'ana', role: 'member', team: 'release' },
-          { login: 'Theo' },
-          { login: 'bo' },
-          { login: 'BO' },
-        ],
-      },
-      throwOnError: true,
-    });
-    expect(data.invited).toEqual(['ana', 'bo']);
-    const members = await listMembers({ throwOnError: true });
-    expect(members.data.items.at(-2)).toMatchObject({ login: 'ana', role: 'invited', teams: ['release'] });
-    expect(members.data.items.at(-1)).not.toHaveProperty('teams');
-    const owner = await failureOf(async () =>
-      inviteMembers({ body: { invites: [{ login: 'cy', role: 'owner' }] }, throwOnError: true }),
-    );
-    expect(isApiFailure(owner) && owner.status).toBe(400);
-    const team = await failureOf(async () =>
-      inviteMembers({ body: { invites: [{ login: 'cy', team: 'nowhere' }] }, throwOnError: true }),
-    );
-    expect(isApiFailure(team) && team.status).toBe(400);
-    const nobody = await fetch('http://ostrom.test/api/v1/members/invites', {
-      method: 'POST',
-      body: '{"invites":[]}',
-    });
-    expect(nobody.status).toBe(400);
-  });
-
-  it('lets only owners and admins manage members', async () => {
-    db.members = db.members.map((member) =>
-      member.login === 'maya' ? { ...member, role: 'member' } : member,
-    );
-    const role = await failureOf(async () =>
-      updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true }),
-    );
-    const invite = await failureOf(async () =>
-      inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }),
-    );
-    expect(isApiFailure(role) && role.status).toBe(403);
-    expect(isApiFailure(invite) && invite.status).toBe(403);
-    db.members = db.members.filter((member) => member.login !== 'maya');
-    const gone = await failureOf(async () =>
-      inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }),
-    );
-    expect(isApiFailure(gone) && gone.status).toBe(403);
-  });
-
-  it('lets an owner invite', async () => {
-    db.members = db.members.map((member) =>
-      member.login === 'maya' ? { ...member, role: 'owner' } : member,
-    );
-    const { data } = await inviteMembers({
-      body: { invites: [{ login: 'ana' }] },
-      throwOnError: true,
-    });
-    expect(data.invited).toEqual(['ana']);
   });
 });
 

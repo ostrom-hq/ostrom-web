@@ -5,6 +5,47 @@ export type ClientOptions = {
 };
 
 /**
+ * A signed account-level audit event
+ */
+export type AccountAuditEvent = {
+    id: string;
+    sequence: number;
+    orgId: string | null;
+    actorId: string | null;
+    action: string;
+    targetType: string;
+    targetId: string;
+    details: {
+        [key: string]: string;
+    };
+    occurredAt: string;
+    previousHash: string | null;
+    /**
+     * SHA-256 of the canonical form
+     */
+    hash: string;
+    /**
+     * The instance's Ed25519 signature of the canonical form (base64)
+     */
+    signature: string;
+    /**
+     * The instance key that signed it (`GET /api/v1/instance/keys`)
+     */
+    keyId: string;
+};
+
+/**
+ * A page of audit events, newest first
+ */
+export type AccountAuditPage = {
+    events: Array<AccountAuditEvent>;
+    /**
+     * The `before` of the next page; null on the last
+     */
+    nextBefore: number | null;
+};
+
+/**
  * Who did it
  */
 export type ActivityActor = {
@@ -879,6 +920,17 @@ export type CompiledTrigger = {
 };
 
 /**
+ * A token just issued: the only answer with its secret
+ */
+export type CreatedToken = {
+    token: Token;
+    /**
+     * Use it as `Authorization: Bearer <secret>`
+     */
+    secret: string;
+};
+
+/**
  * A signed decision on something else than a gate (a rule, a workflow, an owner, a policy)
  */
 export type Decision = {
@@ -929,6 +981,23 @@ export type Device = {
     platform: string;
     cliVersion?: string;
     lastSeenAt?: string;
+};
+
+/**
+ * The answer to an `ostrom login`
+ */
+export type DeviceAnswer = {
+    userCode: string;
+    approve: boolean;
+};
+
+/**
+ * A pending `ostrom login`, as the console shows it
+ */
+export type DeviceAuthorization = {
+    userCode: string;
+    clientName: string;
+    expiresAt: string;
 };
 
 /**
@@ -1210,6 +1279,82 @@ export type InstanceSigningKey = {
      */
     publicKeyPem: string;
     firstSeenAt: string;
+};
+
+/**
+ * A live invitation
+ */
+export type Invitation = {
+    id: string;
+    /**
+     * Null for a link
+     */
+    email: string | null;
+    /**
+     * `owner`, `admin`, `member`, `approver` or `billing`
+     */
+    role: string;
+    createdAt: string;
+    expiresAt: string;
+    maxUses: number | null;
+    uses: number;
+};
+
+/**
+ * A new invitation link: the only time its URL is shown
+ */
+export type InvitationLink = {
+    invitation: Invitation;
+    url: string;
+};
+
+/**
+ * A new invitation link
+ */
+export type InvitationLinkCreate = {
+    /**
+     * `member` by default
+     */
+    role?: string;
+    /**
+     * How many people it can bring in, 1 to 100 (10 by default)
+     */
+    maxUses?: number;
+};
+
+/**
+ * The live invitations
+ */
+export type InvitationList = {
+    items: Array<Invitation>;
+};
+
+/**
+ * What an invitation leads to
+ */
+export type InvitationPreview = {
+    orgName: string;
+    orgSlug: string;
+    /**
+     * `owner`, `admin`, `member`, `approver` or `billing`
+     */
+    role: string;
+    email: string | null;
+    expiresAt: string;
+};
+
+/**
+ * An invitation link's token, sent in the body
+ */
+export type InvitationToken = {
+    token: string;
+};
+
+/**
+ * The consent page of a started link
+ */
+export type LinkStarted = {
+    authorizationUrl: string;
 };
 
 /**
@@ -1617,6 +1762,117 @@ export type NotificationPreferences = {
 export type NotificationStatus = 'queued' | 'sent' | 'logged-only' | 'not-sent';
 
 /**
+ * A new organization
+ */
+export type OrgCreate = {
+    name: string;
+    /**
+     * Derived from the name when absent
+     */
+    slug?: string;
+};
+
+/**
+ * Confirms a deletion
+ */
+export type OrgDeleteConfirm = {
+    /**
+     * The organization's short name, typed again
+     */
+    confirm: string;
+};
+
+/**
+ * Who was invited
+ */
+export type OrgInvited = {
+    invited: Array<string>;
+};
+
+/**
+ * Invitations by e-mail
+ */
+export type OrgInvites = {
+    invites: Array<{
+        email: string;
+        /**
+         * `member` by default
+         */
+        role?: string;
+    }>;
+};
+
+/**
+ * A member as `/api/v1/orgs/{org}/members` serves it (no member id there)
+ */
+export type OrgMember = {
+    login: string;
+    name: string;
+    /**
+     * Empty when none
+     */
+    avatarUrl: string;
+    email: string | null;
+    /**
+     * `owner`, `admin`, `member`, `approver` or `billing`
+     */
+    role: string;
+    joinedAt: string;
+};
+
+/**
+ * The members
+ */
+export type OrgMemberList = {
+    items: Array<OrgMember>;
+};
+
+/**
+ * A member's new role
+ */
+export type OrgMemberUpdate = {
+    /**
+     * `admin`, `member`, `approver` or `billing`
+     */
+    role: string;
+};
+
+/**
+ * A new name
+ */
+export type OrgRename = {
+    name: string;
+};
+
+/**
+ * The new owner
+ */
+export type OrgTransfer = {
+    login: string;
+};
+
+/**
+ * An organization as its member sees it
+ */
+export type OrgView = {
+    id: string;
+    slug: string;
+    name: string;
+    /**
+     * `owner`, `admin`, `member`, `approver` or `billing`
+     */
+    role: string;
+    createdAt: string;
+};
+
+/**
+ * The caller's organizations
+ */
+export type OrgViewList = {
+    items: Array<OrgView>;
+};
+
+/**
  * An organization: a GitHub organization connected to Ostrom
  */
 export type Organization = {
@@ -1733,6 +1989,30 @@ export type Produced = {
     shadow?: boolean;
     suggested?: boolean;
     note?: string;
+};
+
+/**
+ * The signed-in person, as main's `GET /api/v1/auth/me` answers today (see `getMe`)
+ */
+export type Profile = {
+    id: string;
+    login: string;
+    displayName: string;
+    primaryEmail: string | null;
+    avatarUrl: string | null;
+    createdAt: string;
+    emails: Array<{
+        email: string;
+        verified: boolean;
+    }>;
+    /**
+     * `github`, `google`, `email`, `oidc:<connection>`
+     */
+    providers: Array<string>;
+    /**
+     * For a browser session only
+     */
+    csrfToken?: string;
 };
 
 /**
@@ -2113,6 +2393,13 @@ export type SharedAccount = {
 };
 
 /**
+ * The sign-in methods this instance offers
+ */
+export type SignInMethods = {
+    methods: Array<string>;
+};
+
+/**
  * A gate policy signed by the instance: `signature` (base64, Ed25519 by the key `kid` of `/api/v1/instance/keys`) over the UTF-8 bytes of `payload`, the JSON text of a `SignedGatePolicyPayload`
  */
 export type SignedGatePolicy = {
@@ -2367,6 +2654,54 @@ export type TeamCodeStdio = {
     launcher: 'npm' | 'pypi';
     packageName: string;
     args?: Array<string>;
+};
+
+/**
+ * A personal or CLI token, without its secret
+ */
+export type Token = {
+    id: string;
+    name: string;
+    /**
+     * `personal` or `cli`
+     */
+    kind: string;
+    scopes: Array<string>;
+    /**
+     * The first characters of its secret
+     */
+    hint: string;
+    createdAt: string;
+    expiresAt: string | null;
+    /**
+     * Precise to five minutes
+     */
+    lastUsedAt: string | null;
+};
+
+/**
+ * A personal token to create
+ */
+export type TokenCreate = {
+    /**
+     * 1 to 100 characters
+     */
+    name: string;
+    /**
+     * `resource:action`, 1 to 32
+     */
+    scopes: Array<string>;
+    /**
+     * 1 to 366; no expiry when absent
+     */
+    expiresInDays?: number | null;
+};
+
+/**
+ * The live tokens, newest first
+ */
+export type TokenList = {
+    tokens: Array<Token>;
 };
 
 /**
@@ -2835,6 +3170,31 @@ export type HealthResponses = {
 
 export type HealthResponse = HealthResponses[keyof HealthResponses];
 
+export type ReadyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/ready';
+};
+
+export type ReadyErrors = {
+    /**
+     * Draining or degraded
+     */
+    503: Health;
+};
+
+export type ReadyError = ReadyErrors[keyof ReadyErrors];
+
+export type ReadyResponses = {
+    /**
+     * OK
+     */
+    200: Health;
+};
+
+export type ReadyResponse = ReadyResponses[keyof ReadyResponses];
+
 export type GetInstanceData = {
     body?: never;
     path?: never;
@@ -2987,6 +3347,148 @@ export type GithubLoginCallbackErrors = {
 
 export type GithubLoginCallbackError = GithubLoginCallbackErrors[keyof GithubLoginCallbackErrors];
 
+export type ListSignInMethodsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/providers';
+};
+
+export type ListSignInMethodsResponses = {
+    /**
+     * OK
+     */
+    200: SignInMethods;
+};
+
+export type ListSignInMethodsResponse = ListSignInMethodsResponses[keyof ListSignInMethodsResponses];
+
+export type StartOAuthLoginData = {
+    body?: never;
+    path: {
+        /**
+         * `github` or `google`
+         */
+        provider: string;
+    };
+    query?: {
+        /**
+         * The console path to return to
+         */
+        redirect?: string;
+        /**
+         * Sign in again before a yes: the provider asks again
+         */
+        reauth?: boolean;
+    };
+    url: '/api/v1/auth/{provider}/start';
+};
+
+export type OauthLoginCallbackData = {
+    body?: never;
+    path: {
+        /**
+         * `github` or `google`
+         */
+        provider: string;
+    };
+    query?: {
+        code?: string;
+        state?: string;
+        error?: string;
+    };
+    url: '/api/v1/auth/{provider}/callback';
+};
+
+export type LinkSignInProviderData = {
+    body?: never;
+    path: {
+        /**
+         * `github` or `google`
+         */
+        provider: string;
+    };
+    query?: {
+        /**
+         * The console path to return to
+         */
+        redirect?: string;
+    };
+    url: '/api/v1/auth/{provider}/link';
+};
+
+export type LinkSignInProviderErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type LinkSignInProviderError = LinkSignInProviderErrors[keyof LinkSignInProviderErrors];
+
+export type LinkSignInProviderResponses = {
+    /**
+     * OK
+     */
+    200: LinkStarted;
+};
+
+export type LinkSignInProviderResponse = LinkSignInProviderResponses[keyof LinkSignInProviderResponses];
+
+export type GetDeviceLoginData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * The code the CLI shows
+         */
+        userCode: string;
+    };
+    url: '/api/v1/auth/device';
+};
+
+export type GetDeviceLoginErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetDeviceLoginError = GetDeviceLoginErrors[keyof GetDeviceLoginErrors];
+
+export type GetDeviceLoginResponses = {
+    /**
+     * OK
+     */
+    200: DeviceAuthorization;
+};
+
+export type GetDeviceLoginResponse = GetDeviceLoginResponses[keyof GetDeviceLoginResponses];
+
 export type StartDeviceLoginData = {
     body?: never;
     path?: never;
@@ -3050,6 +3552,47 @@ export type PollDeviceLoginResponses = {
 };
 
 export type PollDeviceLoginResponse = PollDeviceLoginResponses[keyof PollDeviceLoginResponses];
+
+export type AnswerDeviceLoginData = {
+    body: DeviceAnswer;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/device/answer';
+};
+
+export type AnswerDeviceLoginErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AnswerDeviceLoginError = AnswerDeviceLoginErrors[keyof AnswerDeviceLoginErrors];
+
+export type AnswerDeviceLoginResponses = {
+    /**
+     * Answered
+     */
+    204: void;
+};
+
+export type AnswerDeviceLoginResponse = AnswerDeviceLoginResponses[keyof AnswerDeviceLoginResponses];
 
 export type RefreshTokenData = {
     body: {
@@ -3303,6 +3846,48 @@ export type GetMeResponses = {
 };
 
 export type GetMeResponse = GetMeResponses[keyof GetMeResponses];
+
+export type ListMyAuditData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * The `sequence` of the last event of the previous page
+         */
+        before?: number;
+        /**
+         * 1 to 200, 50 by default
+         */
+        limit?: number;
+    };
+    url: '/api/v1/auth/me/audit';
+};
+
+export type ListMyAuditErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListMyAuditError = ListMyAuditErrors[keyof ListMyAuditErrors];
+
+export type ListMyAuditResponses = {
+    /**
+     * OK
+     */
+    200: AccountAuditPage;
+};
+
+export type ListMyAuditResponse = ListMyAuditResponses[keyof ListMyAuditResponses];
 
 export type RequestSignInEmailData = {
     body: {
@@ -3644,6 +4229,138 @@ export type RevokeAuthSessionResponses = {
 };
 
 export type RevokeAuthSessionResponse = RevokeAuthSessionResponses[keyof RevokeAuthSessionResponses];
+
+export type ListTokensData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tokens';
+};
+
+export type ListTokensErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListTokensError = ListTokensErrors[keyof ListTokensErrors];
+
+export type ListTokensResponses = {
+    /**
+     * OK
+     */
+    200: TokenList;
+};
+
+export type ListTokensResponse = ListTokensResponses[keyof ListTokensResponses];
+
+export type CreateTokenData = {
+    body: TokenCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tokens';
+};
+
+export type CreateTokenErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type CreateTokenError = CreateTokenErrors[keyof CreateTokenErrors];
+
+export type CreateTokenResponses = {
+    /**
+     * OK
+     */
+    201: CreatedToken;
+};
+
+export type CreateTokenResponse = CreateTokenResponses[keyof CreateTokenResponses];
+
+export type RevokeTokenData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tokens/{id}';
+};
+
+export type RevokeTokenErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type RevokeTokenError = RevokeTokenErrors[keyof RevokeTokenErrors];
+
+export type RevokeTokenResponses = {
+    /**
+     * Revoked
+     */
+    204: void;
+};
+
+export type RevokeTokenResponse = RevokeTokenResponses[keyof RevokeTokenResponses];
+
+export type RotateTokenData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/tokens/{id}/rotate';
+};
+
+export type RotateTokenErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type RotateTokenError = RotateTokenErrors[keyof RotateTokenErrors];
+
+export type RotateTokenResponses = {
+    /**
+     * OK
+     */
+    201: CreatedToken;
+};
+
+export type RotateTokenResponse = RotateTokenResponses[keyof RotateTokenResponses];
 
 export type ListServiceKeysData = {
     body?: never;
@@ -4512,6 +5229,704 @@ export type GithubCheckResponses = {
 };
 
 export type GithubCheckResponse = GithubCheckResponses[keyof GithubCheckResponses];
+
+export type ListOrgsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/orgs';
+};
+
+export type ListOrgsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListOrgsError = ListOrgsErrors[keyof ListOrgsErrors];
+
+export type ListOrgsResponses = {
+    /**
+     * OK
+     */
+    200: OrgViewList;
+};
+
+export type ListOrgsResponse = ListOrgsResponses[keyof ListOrgsResponses];
+
+export type CreateOrgData = {
+    body: OrgCreate;
+    path?: never;
+    query?: never;
+    url: '/api/v1/orgs';
+};
+
+export type CreateOrgErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type CreateOrgError = CreateOrgErrors[keyof CreateOrgErrors];
+
+export type CreateOrgResponses = {
+    /**
+     * OK
+     */
+    201: OrgView;
+};
+
+export type CreateOrgResponse = CreateOrgResponses[keyof CreateOrgResponses];
+
+export type DeleteOrgData = {
+    body: OrgDeleteConfirm;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}';
+};
+
+export type DeleteOrgErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteOrgError = DeleteOrgErrors[keyof DeleteOrgErrors];
+
+export type DeleteOrgResponses = {
+    /**
+     * Deleted
+     */
+    204: void;
+};
+
+export type DeleteOrgResponse = DeleteOrgResponses[keyof DeleteOrgResponses];
+
+export type GetOrgData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}';
+};
+
+export type GetOrgErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetOrgError = GetOrgErrors[keyof GetOrgErrors];
+
+export type GetOrgResponses = {
+    /**
+     * OK
+     */
+    200: OrgView;
+};
+
+export type GetOrgResponse = GetOrgResponses[keyof GetOrgResponses];
+
+export type RenameOrgData = {
+    body: OrgRename;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}';
+};
+
+export type RenameOrgErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type RenameOrgError = RenameOrgErrors[keyof RenameOrgErrors];
+
+export type RenameOrgResponses = {
+    /**
+     * OK
+     */
+    200: OrgView;
+};
+
+export type RenameOrgResponse = RenameOrgResponses[keyof RenameOrgResponses];
+
+export type TransferOrgData = {
+    body: OrgTransfer;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/transfer';
+};
+
+export type TransferOrgErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type TransferOrgError = TransferOrgErrors[keyof TransferOrgErrors];
+
+export type TransferOrgResponses = {
+    /**
+     * Transferred
+     */
+    204: void;
+};
+
+export type TransferOrgResponse = TransferOrgResponses[keyof TransferOrgResponses];
+
+export type LeaveOrgData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/leave';
+};
+
+export type LeaveOrgErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LeaveOrgError = LeaveOrgErrors[keyof LeaveOrgErrors];
+
+export type LeaveOrgResponses = {
+    /**
+     * Left
+     */
+    204: void;
+};
+
+export type LeaveOrgResponse = LeaveOrgResponses[keyof LeaveOrgResponses];
+
+export type ListOrgMembersData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/members';
+};
+
+export type ListOrgMembersErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type ListOrgMembersError = ListOrgMembersErrors[keyof ListOrgMembersErrors];
+
+export type ListOrgMembersResponses = {
+    /**
+     * OK
+     */
+    200: OrgMemberList;
+};
+
+export type ListOrgMembersResponse = ListOrgMembersResponses[keyof ListOrgMembersResponses];
+
+export type InviteOrgMembersData = {
+    body: OrgInvites;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/members/invites';
+};
+
+export type InviteOrgMembersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type InviteOrgMembersError = InviteOrgMembersErrors[keyof InviteOrgMembersErrors];
+
+export type InviteOrgMembersResponses = {
+    /**
+     * OK
+     */
+    200: OrgInvited;
+};
+
+export type InviteOrgMembersResponse = InviteOrgMembersResponses[keyof InviteOrgMembersResponses];
+
+export type RemoveOrgMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/members/{login}';
+};
+
+export type RemoveOrgMemberErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RemoveOrgMemberError = RemoveOrgMemberErrors[keyof RemoveOrgMemberErrors];
+
+export type RemoveOrgMemberResponses = {
+    /**
+     * Removed
+     */
+    204: void;
+};
+
+export type RemoveOrgMemberResponse = RemoveOrgMemberResponses[keyof RemoveOrgMemberResponses];
+
+export type GetOrgMemberData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/members/{login}';
+};
+
+export type GetOrgMemberErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetOrgMemberError = GetOrgMemberErrors[keyof GetOrgMemberErrors];
+
+export type GetOrgMemberResponses = {
+    /**
+     * OK
+     */
+    200: OrgMember;
+};
+
+export type GetOrgMemberResponse = GetOrgMemberResponses[keyof GetOrgMemberResponses];
+
+export type UpdateOrgMemberData = {
+    body: OrgMemberUpdate;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/members/{login}';
+};
+
+export type UpdateOrgMemberErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateOrgMemberError = UpdateOrgMemberErrors[keyof UpdateOrgMemberErrors];
+
+export type UpdateOrgMemberResponses = {
+    /**
+     * OK
+     */
+    200: OrgMember;
+};
+
+export type UpdateOrgMemberResponse = UpdateOrgMemberResponses[keyof UpdateOrgMemberResponses];
+
+export type ListInvitationsData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/invitations';
+};
+
+export type ListInvitationsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type ListInvitationsError = ListInvitationsErrors[keyof ListInvitationsErrors];
+
+export type ListInvitationsResponses = {
+    /**
+     * OK
+     */
+    200: InvitationList;
+};
+
+export type ListInvitationsResponse = ListInvitationsResponses[keyof ListInvitationsResponses];
+
+export type CreateInvitationLinkData = {
+    body: InvitationLinkCreate;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/invitations/links';
+};
+
+export type CreateInvitationLinkErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type CreateInvitationLinkError = CreateInvitationLinkErrors[keyof CreateInvitationLinkErrors];
+
+export type CreateInvitationLinkResponses = {
+    /**
+     * OK
+     */
+    201: InvitationLink;
+};
+
+export type CreateInvitationLinkResponse = CreateInvitationLinkResponses[keyof CreateInvitationLinkResponses];
+
+export type RevokeInvitationData = {
+    body?: never;
+    path: {
+        /**
+         * The organization's id or short name
+         */
+        org: string;
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/orgs/{org}/invitations/{id}';
+};
+
+export type RevokeInvitationErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type RevokeInvitationError = RevokeInvitationErrors[keyof RevokeInvitationErrors];
+
+export type RevokeInvitationResponses = {
+    /**
+     * Revoked
+     */
+    204: void;
+};
+
+export type RevokeInvitationResponse = RevokeInvitationResponses[keyof RevokeInvitationResponses];
+
+export type PreviewInvitationData = {
+    body: InvitationToken;
+    path?: never;
+    query?: never;
+    url: '/api/v1/invitations/preview';
+};
+
+export type PreviewInvitationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type PreviewInvitationError = PreviewInvitationErrors[keyof PreviewInvitationErrors];
+
+export type PreviewInvitationResponses = {
+    /**
+     * OK
+     */
+    200: InvitationPreview;
+};
+
+export type PreviewInvitationResponse = PreviewInvitationResponses[keyof PreviewInvitationResponses];
+
+export type AcceptInvitationData = {
+    body: InvitationToken;
+    path?: never;
+    query?: never;
+    url: '/api/v1/invitations/accept';
+};
+
+export type AcceptInvitationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AcceptInvitationError = AcceptInvitationErrors[keyof AcceptInvitationErrors];
+
+export type AcceptInvitationResponses = {
+    /**
+     * OK
+     */
+    200: OrgView;
+};
+
+export type AcceptInvitationResponse = AcceptInvitationResponses[keyof AcceptInvitationResponses];
 
 export type GetOrganizationData = {
     body?: never;
@@ -5618,6 +7033,104 @@ export type ConsumeGateResponses = {
 };
 
 export type ConsumeGateResponse = ConsumeGateResponses[keyof ConsumeGateResponses];
+
+export type ReserveGateData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/gates/{id}/reserve';
+};
+
+export type ReserveGateErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReserveGateError = ReserveGateErrors[keyof ReserveGateErrors];
+
+export type ReserveGateResponses = {
+    /**
+     * OK
+     */
+    200: GateResponse;
+};
+
+export type ReserveGateResponse = ReserveGateResponses[keyof ReserveGateResponses];
+
+export type ReleaseGateData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/gates/{id}/release';
+};
+
+export type ReleaseGateErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReleaseGateError = ReleaseGateErrors[keyof ReleaseGateErrors];
+
+export type ReleaseGateResponses = {
+    /**
+     * OK
+     */
+    200: GateResponse;
+};
+
+export type ReleaseGateResponse = ReleaseGateResponses[keyof ReleaseGateResponses];
 
 export type GetApproversGraphData = {
     body?: never;
@@ -8396,6 +9909,64 @@ export type CreateWaitResponses = {
 };
 
 export type CreateWaitResponse = CreateWaitResponses[keyof CreateWaitResponses];
+
+export type WaitsMcpData = {
+    body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * The session the agent runs in
+         */
+        session?: string;
+        /**
+         * The workflow run, if any
+         */
+        run?: string;
+    };
+    url: '/api/v1/waits/mcp';
+};
+
+export type WaitsMcpErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type WaitsMcpError = WaitsMcpErrors[keyof WaitsMcpErrors];
+
+export type WaitsMcpResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+    /**
+     * Notification accepted
+     */
+    202: unknown;
+};
 
 export type GetWaitData = {
     body?: never;
@@ -11408,6 +12979,29 @@ export type AttachCloudTerminalErrors = {
 
 export type AttachCloudTerminalError = AttachCloudTerminalErrors[keyof AttachCloudTerminalErrors];
 
+export type AttachRunnerTerminalData = {
+    body?: never;
+    path?: never;
+    query: {
+        sessionId: string;
+        epoch: number;
+    };
+    url: '/api/v1/cloud/runner/terminal';
+};
+
+export type AttachRunnerTerminalErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AttachRunnerTerminalError = AttachRunnerTerminalErrors[keyof AttachRunnerTerminalErrors];
+
 export type CloudRunnerHeartbeatData = {
     body: {
         sessionId: string;
@@ -11675,6 +13269,118 @@ export type PublishArtifactResponses = {
 };
 
 export type PublishArtifactResponse = PublishArtifactResponses[keyof PublishArtifactResponses];
+
+export type ArtifactsMcpData = {
+    body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/mcp';
+};
+
+export type ArtifactsMcpErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ArtifactsMcpError = ArtifactsMcpErrors[keyof ArtifactsMcpErrors];
+
+export type ArtifactsMcpResponses = {
+    /**
+     * OK
+     */
+    200: unknown;
+    /**
+     * Notification accepted
+     */
+    202: unknown;
+};
+
+export type GetArtifactContentData = {
+    body?: never;
+    path: {
+        id: string;
+        ticket: string;
+        /**
+         * The file's path in the version, `/` included
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/a/{id}/{ticket}/{path}';
+};
+
+export type GetArtifactContentErrors = {
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactContentError = GetArtifactContentErrors[keyof GetArtifactContentErrors];
+
+export type GetArtifactContentResponses = {
+    /**
+     * OK
+     */
+    200: Blob | File;
+};
+
+export type GetArtifactContentResponse = GetArtifactContentResponses[keyof GetArtifactContentResponses];
+
+export type GetArtifactLinkContentData = {
+    body?: never;
+    path: {
+        slug: string;
+        /**
+         * The file's path in the version, `/` included
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/l/{slug}/{path}';
+};
+
+export type GetArtifactLinkContentErrors = {
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactLinkContentError = GetArtifactLinkContentErrors[keyof GetArtifactLinkContentErrors];
+
+export type GetArtifactLinkContentResponses = {
+    /**
+     * OK
+     */
+    200: Blob | File;
+};
+
+export type GetArtifactLinkContentResponse = GetArtifactLinkContentResponses[keyof GetArtifactLinkContentResponses];
 
 export type DeleteArtifactData = {
     body?: never;

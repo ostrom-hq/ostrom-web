@@ -1,37 +1,40 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { OrgRole } from '@/shared/org/roles';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { INVITABLE_ROLES, type InvitableRole, parseInvites } from '../model';
+import { parseInvites } from '../model';
 import type { InviteViewModel } from '../useMembers';
+import { RoleSelect } from './RoleSelect';
 
-function isInvitable(value: string): value is InvitableRole {
-  return INVITABLE_ROLES.some((role) => role === value);
+export interface InviteFormProps {
+  readonly invite: InviteViewModel;
+  /** The roles the viewer can give; `member` is the default. */
+  readonly roles: readonly OrgRole[];
 }
 
 /** Paste a list of addresses; what is not an address is shown before anything is sent. */
-export function InviteForm({ invite }: { readonly invite: InviteViewModel }): ReactElement {
+export function InviteForm({ invite, roles }: InviteFormProps): ReactElement {
   const { t } = useTranslation();
   const [text, setText] = useState('');
-  const [role, setRole] = useState<InvitableRole>('member');
+  const [role, setRole] = useState<OrgRole>('member');
   const textId = useId();
-  const roleId = useId();
-  const { logins, invalid } = parseInvites(text);
+  const { emails, invalid } = parseInvites(text);
   return (
     <Section label={t('members.invite.title')}>
       <form
         className="o-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          invite.invite(logins, role, () => {
+          invite.invite(emails, role, () => {
             setText('');
           });
         }}
       >
         <label htmlFor={textId} className="o-field-label">
-          {t('members.invite.logins')}
+          {t('members.invite.emails')}
         </label>
         <textarea
           id={textId}
@@ -49,28 +52,11 @@ export function InviteForm({ invite }: { readonly invite: InviteViewModel }): Re
           </Banner>
         )}
         <div className="o-inline">
-          <label htmlFor={roleId} className="o-field-label">
-            {t('members.invite.as')}
-          </label>
-          <select
-            id={roleId}
-            className="o-input o-select"
-            value={role}
-            onChange={(event) => {
-              if (isInvitable(event.target.value)) setRole(event.target.value);
-            }}
-          >
-            {/* An invitation never makes an owner: the server refuses it. */}
-            {INVITABLE_ROLES.map((option) => (
-              <option key={option} value={option}>
-                {t(`members.role.${option}`)}
-              </option>
-            ))}
-          </select>
-          <Button type="submit" disabled={invite.sending || logins.length === 0}>
+          <RoleSelect label={t('members.invite.as')} roles={roles} value={role} onChange={setRole} />
+          <Button type="submit" disabled={invite.sending || emails.length === 0}>
             {invite.sending
               ? t('members.invite.sending')
-              : t('members.invite.send', { count: logins.length })}
+              : t('members.invite.send', { count: emails.length })}
           </Button>
         </div>
       </form>

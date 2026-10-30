@@ -3,6 +3,33 @@
 import * as z from 'zod';
 
 /**
+ * A signed account-level audit event
+ */
+export const zAccountAuditEvent = z.object({
+    id: z.string(),
+    sequence: z.int(),
+    orgId: z.string().nullable(),
+    actorId: z.string().nullable(),
+    action: z.string(),
+    targetType: z.string(),
+    targetId: z.string(),
+    details: z.record(z.string(), z.string()),
+    occurredAt: z.iso.datetime({ offset: true }),
+    previousHash: z.string().nullable(),
+    hash: z.string(),
+    signature: z.string(),
+    keyId: z.string()
+});
+
+/**
+ * A page of audit events, newest first
+ */
+export const zAccountAuditPage = z.object({
+    events: z.array(zAccountAuditEvent),
+    nextBefore: z.int().nullable()
+});
+
+/**
  * Who did it
  */
 export const zActivityActor = z.object({
@@ -635,6 +662,23 @@ export const zDevice = z.object({
 });
 
 /**
+ * The answer to an `ostrom login`
+ */
+export const zDeviceAnswer = z.object({
+    userCode: z.string(),
+    approve: z.boolean()
+});
+
+/**
+ * A pending `ostrom login`, as the console shows it
+ */
+export const zDeviceAuthorization = z.object({
+    userCode: z.string(),
+    clientName: z.string(),
+    expiresAt: z.iso.datetime({ offset: true })
+});
+
+/**
  * OAuth device flow start
  */
 export const zDeviceCode = z.object({
@@ -894,6 +938,67 @@ export const zInstance = z.object({
 });
 
 /**
+ * A live invitation
+ */
+export const zInvitation = z.object({
+    id: z.string(),
+    email: z.string().nullable(),
+    role: z.string(),
+    createdAt: z.iso.datetime({ offset: true }),
+    expiresAt: z.iso.datetime({ offset: true }),
+    maxUses: z.int().nullable(),
+    uses: z.int()
+});
+
+/**
+ * A new invitation link: the only time its URL is shown
+ */
+export const zInvitationLink = z.object({
+    invitation: zInvitation,
+    url: z.string()
+});
+
+/**
+ * A new invitation link
+ */
+export const zInvitationLinkCreate = z.object({
+    role: z.string().optional(),
+    maxUses: z.int().optional()
+});
+
+/**
+ * The live invitations
+ */
+export const zInvitationList = z.object({
+    items: z.array(zInvitation)
+});
+
+/**
+ * What an invitation leads to
+ */
+export const zInvitationPreview = z.object({
+    orgName: z.string(),
+    orgSlug: z.string(),
+    role: z.string(),
+    email: z.string().nullable(),
+    expiresAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * An invitation link's token, sent in the body
+ */
+export const zInvitationToken = z.object({
+    token: z.string()
+});
+
+/**
+ * The consent page of a started link
+ */
+export const zLinkStarted = z.object({
+    authorizationUrl: z.string()
+});
+
+/**
  * One test on a tool call's arguments
  */
 export const zMcpArgumentCondition = z.object({
@@ -1105,6 +1210,96 @@ export const zNotificationStatus = z.enum([
 ]);
 
 /**
+ * A new organization
+ */
+export const zOrgCreate = z.object({
+    name: z.string(),
+    slug: z.string().optional()
+});
+
+/**
+ * Confirms a deletion
+ */
+export const zOrgDeleteConfirm = z.object({
+    confirm: z.string()
+});
+
+/**
+ * Who was invited
+ */
+export const zOrgInvited = z.object({
+    invited: z.array(z.string())
+});
+
+/**
+ * Invitations by e-mail
+ */
+export const zOrgInvites = z.object({
+    invites: z.array(z.object({
+        email: z.string(),
+        role: z.string().optional()
+    }))
+});
+
+/**
+ * A member as `/api/v1/orgs/{org}/members` serves it (no member id there)
+ */
+export const zOrgMember = z.object({
+    login: z.string(),
+    name: z.string(),
+    avatarUrl: z.string(),
+    email: z.string().nullable(),
+    role: z.string(),
+    joinedAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * The members
+ */
+export const zOrgMemberList = z.object({
+    items: z.array(zOrgMember)
+});
+
+/**
+ * A member's new role
+ */
+export const zOrgMemberUpdate = z.object({
+    role: z.string()
+});
+
+/**
+ * A new name
+ */
+export const zOrgRename = z.object({
+    name: z.string()
+});
+
+/**
+ * The new owner
+ */
+export const zOrgTransfer = z.object({
+    login: z.string()
+});
+
+/**
+ * An organization as its member sees it
+ */
+export const zOrgView = z.object({
+    id: z.string(),
+    slug: z.string(),
+    name: z.string(),
+    role: z.string(),
+    createdAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * The caller's organizations
+ */
+export const zOrgViewList = z.object({
+    items: z.array(zOrgView)
+});
+
+/**
  * An organization: a GitHub organization connected to Ostrom
  */
 export const zOrganization = z.object({
@@ -1254,6 +1449,24 @@ export const zPackageSummary = z.object({
     revokedBy: z.string().optional(),
     revokeReason: z.string().optional(),
     counts: z.record(z.string(), z.int())
+});
+
+/**
+ * The signed-in person, as main's `GET /api/v1/auth/me` answers today (see `getMe`)
+ */
+export const zProfile = z.object({
+    id: z.string(),
+    login: z.string(),
+    displayName: z.string(),
+    primaryEmail: z.string().nullable(),
+    avatarUrl: z.string().nullable(),
+    createdAt: z.iso.datetime({ offset: true }),
+    emails: z.array(z.object({
+        email: z.string(),
+        verified: z.boolean()
+    })),
+    providers: z.array(z.string()),
+    csrfToken: z.string().optional()
 });
 
 /**
@@ -1693,6 +1906,13 @@ export const zSharedAccount = z.object({
 });
 
 /**
+ * The sign-in methods this instance offers
+ */
+export const zSignInMethods = z.object({
+    methods: z.array(z.string())
+});
+
+/**
  * A gate policy signed by the instance: `signature` (base64, Ed25519 by the key `kid` of `/api/v1/instance/keys`) over the UTF-8 bytes of `payload`, the JSON text of a `SignedGatePolicyPayload`
  */
 export const zSignedGatePolicy = z.object({
@@ -1927,6 +2147,44 @@ export const zTeamCodeImportRequest = z.object({
     assignments: z.array(zTeamCodeAssignment).optional(),
     accounts: z.array(zTeamCodeAccount).optional(),
     memberMap: z.record(z.string(), z.string()).optional()
+});
+
+/**
+ * A personal or CLI token, without its secret
+ */
+export const zToken = z.object({
+    id: z.string(),
+    name: z.string(),
+    kind: z.string(),
+    scopes: z.array(z.string()),
+    hint: z.string(),
+    createdAt: z.iso.datetime({ offset: true }),
+    expiresAt: z.iso.datetime({ offset: true }).nullable(),
+    lastUsedAt: z.iso.datetime({ offset: true }).nullable()
+});
+
+/**
+ * A token just issued: the only answer with its secret
+ */
+export const zCreatedToken = z.object({
+    token: zToken,
+    secret: z.string()
+});
+
+/**
+ * A personal token to create
+ */
+export const zTokenCreate = z.object({
+    name: z.string(),
+    scopes: z.array(z.string()),
+    expiresInDays: z.int().nullish()
+});
+
+/**
+ * The live tokens, newest first
+ */
+export const zTokenList = z.object({
+    tokens: z.array(zToken)
 });
 
 /**
@@ -2523,6 +2781,11 @@ export const zHealthResponse = zHealth;
 /**
  * OK
  */
+export const zReadyResponse = zHealth;
+
+/**
+ * OK
+ */
 export const zGetInstanceResponse = zInstance;
 
 /**
@@ -2571,6 +2834,52 @@ export const zGithubLoginCallbackQuery = z.object({
 /**
  * OK
  */
+export const zListSignInMethodsResponse = zSignInMethods;
+
+export const zStartOAuthLoginPath = z.object({
+    provider: z.string()
+});
+
+export const zStartOAuthLoginQuery = z.object({
+    redirect: z.string().optional(),
+    reauth: z.boolean().optional()
+});
+
+export const zOauthLoginCallbackPath = z.object({
+    provider: z.string()
+});
+
+export const zOauthLoginCallbackQuery = z.object({
+    code: z.string().optional(),
+    state: z.string().optional(),
+    error: z.string().optional()
+});
+
+export const zLinkSignInProviderPath = z.object({
+    provider: z.string()
+});
+
+export const zLinkSignInProviderQuery = z.object({
+    redirect: z.string().optional()
+});
+
+/**
+ * OK
+ */
+export const zLinkSignInProviderResponse = zLinkStarted;
+
+export const zGetDeviceLoginQuery = z.object({
+    userCode: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetDeviceLoginResponse = zDeviceAuthorization;
+
+/**
+ * OK
+ */
 export const zStartDeviceLoginResponse = zDeviceCode;
 
 export const zPollDeviceLoginBody = z.object({
@@ -2581,6 +2890,13 @@ export const zPollDeviceLoginBody = z.object({
  * OK
  */
 export const zPollDeviceLoginResponse = zAuthToken;
+
+export const zAnswerDeviceLoginBody = zDeviceAnswer;
+
+/**
+ * Answered
+ */
+export const zAnswerDeviceLoginResponse = z.void();
 
 export const zRefreshTokenBody = z.object({
     refreshToken: z.string()
@@ -2655,6 +2971,16 @@ export const zGetMeResponse = z.union([
     z.void()
 ]);
 
+export const zListMyAuditQuery = z.object({
+    before: z.int().optional(),
+    limit: z.int().optional()
+});
+
+/**
+ * OK
+ */
+export const zListMyAuditResponse = zAccountAuditPage;
+
 export const zRequestSignInEmailBody = z.object({
     email: z.string(),
     redirect: z.string().optional()
@@ -2709,6 +3035,36 @@ export const zRevokeAuthSessionPath = z.object({
  * Done
  */
 export const zRevokeAuthSessionResponse = z.void();
+
+/**
+ * OK
+ */
+export const zListTokensResponse = zTokenList;
+
+export const zCreateTokenBody = zTokenCreate;
+
+/**
+ * OK
+ */
+export const zCreateTokenResponse = zCreatedToken;
+
+export const zRevokeTokenPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Revoked
+ */
+export const zRevokeTokenResponse = z.void();
+
+export const zRotateTokenPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRotateTokenResponse = zCreatedToken;
 
 export const zListServiceKeysHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -2916,6 +3272,165 @@ export const zGithubCheckHeaders = z.object({
  * OK
  */
 export const zGithubCheckResponse = zGateResponse;
+
+/**
+ * OK
+ */
+export const zListOrgsResponse = zOrgViewList;
+
+export const zCreateOrgBody = zOrgCreate;
+
+/**
+ * OK
+ */
+export const zCreateOrgResponse = zOrgView;
+
+export const zDeleteOrgBody = zOrgDeleteConfirm;
+
+export const zDeleteOrgPath = z.object({
+    org: z.string()
+});
+
+/**
+ * Deleted
+ */
+export const zDeleteOrgResponse = z.void();
+
+export const zGetOrgPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetOrgResponse = zOrgView;
+
+export const zRenameOrgBody = zOrgRename;
+
+export const zRenameOrgPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRenameOrgResponse = zOrgView;
+
+export const zTransferOrgBody = zOrgTransfer;
+
+export const zTransferOrgPath = z.object({
+    org: z.string()
+});
+
+/**
+ * Transferred
+ */
+export const zTransferOrgResponse = z.void();
+
+export const zLeaveOrgPath = z.object({
+    org: z.string()
+});
+
+/**
+ * Left
+ */
+export const zLeaveOrgResponse = z.void();
+
+export const zListOrgMembersPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListOrgMembersResponse = zOrgMemberList;
+
+export const zInviteOrgMembersBody = zOrgInvites;
+
+export const zInviteOrgMembersPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zInviteOrgMembersResponse = zOrgInvited;
+
+export const zRemoveOrgMemberPath = z.object({
+    org: z.string(),
+    login: z.string()
+});
+
+/**
+ * Removed
+ */
+export const zRemoveOrgMemberResponse = z.void();
+
+export const zGetOrgMemberPath = z.object({
+    org: z.string(),
+    login: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetOrgMemberResponse = zOrgMember;
+
+export const zUpdateOrgMemberBody = zOrgMemberUpdate;
+
+export const zUpdateOrgMemberPath = z.object({
+    org: z.string(),
+    login: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUpdateOrgMemberResponse = zOrgMember;
+
+export const zListInvitationsPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListInvitationsResponse = zInvitationList;
+
+export const zCreateInvitationLinkBody = zInvitationLinkCreate;
+
+export const zCreateInvitationLinkPath = z.object({
+    org: z.string()
+});
+
+/**
+ * OK
+ */
+export const zCreateInvitationLinkResponse = zInvitationLink;
+
+export const zRevokeInvitationPath = z.object({
+    org: z.string(),
+    id: z.string()
+});
+
+/**
+ * Revoked
+ */
+export const zRevokeInvitationResponse = z.void();
+
+export const zPreviewInvitationBody = zInvitationToken;
+
+/**
+ * OK
+ */
+export const zPreviewInvitationResponse = zInvitationPreview;
+
+export const zAcceptInvitationBody = zInvitationToken;
+
+/**
+ * OK
+ */
+export const zAcceptInvitationResponse = zOrgView;
 
 export const zGetOrganizationHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -3234,6 +3749,32 @@ export const zConsumeGatePath = z.object({
  * OK
  */
 export const zConsumeGateResponse = zGateResponse;
+
+export const zReserveGateHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zReserveGatePath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zReserveGateResponse = zGateResponse;
+
+export const zReleaseGateHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zReleaseGatePath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zReleaseGateResponse = zGateResponse;
 
 export const zGetApproversGraphHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4041,6 +4582,17 @@ export const zCreateWaitHeaders = z.object({
  */
 export const zCreateWaitResponse = zWait;
 
+export const zWaitsMcpBody = z.unknown();
+
+export const zWaitsMcpHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zWaitsMcpQuery = z.object({
+    session: z.string().optional(),
+    run: z.string().optional()
+});
+
 export const zGetWaitHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
@@ -4839,6 +5391,11 @@ export const zAttachCloudTerminalQuery = z.object({
     ticket: z.string().optional()
 });
 
+export const zAttachRunnerTerminalQuery = z.object({
+    sessionId: z.string(),
+    epoch: z.int()
+});
+
 export const zCloudRunnerHeartbeatBody = z.object({
     sessionId: z.string(),
     epoch: z.coerce.bigint().min(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
@@ -4922,6 +5479,33 @@ export const zPublishArtifactHeaders = z.object({
  * OK
  */
 export const zPublishArtifactResponse = zArtifact;
+
+export const zArtifactsMcpBody = z.unknown();
+
+export const zArtifactsMcpHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zGetArtifactContentPath = z.object({
+    id: z.string(),
+    ticket: z.string(),
+    path: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactContentResponse = z.string();
+
+export const zGetArtifactLinkContentPath = z.object({
+    slug: z.string(),
+    path: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactLinkContentResponse = z.string();
 
 export const zDeleteArtifactHeaders = z.object({
     'Ostrom-Org': z.string().optional()
