@@ -112,6 +112,7 @@ export function useBillingActions(orgId: string): BillingActionsViewModel {
   // Each gesture starts clean: an error belongs to the last one only.
   const fresh = (): void => {
     for (const mutation of all) mutation.reset();
+    setUnsafeRedirect(false);
   };
   const path = { orgId };
   const { mutate: checkoutMutate } = checkout;

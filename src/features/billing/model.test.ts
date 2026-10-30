@@ -108,9 +108,17 @@ describe('yearlySaving', () => {
     currency: 'usd',
   });
 
-  it('is the best saving of paying yearly, in whole percent', () => {
+  it('is the least saving of paying yearly across the plans, in whole percent', () => {
     expect(yearlySaving(team.prices)).toBe(20);
     expect(yearlySaving([price('team', 'month', 1000), price('team', 'year', 11_000)])).toBe(8);
+    expect(
+      yearlySaving([
+        price('team', 'month', 1000),
+        price('team', 'year', 10_800),
+        price('business', 'month', 1000),
+        price('business', 'year', 9600),
+      ]),
+    ).toBe(10);
   });
 
   it('is nothing without both prices, a free month, or no saving', () => {

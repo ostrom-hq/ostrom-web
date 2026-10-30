@@ -135,6 +135,17 @@ describe('the billing', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('did not come as a secure link');
     expect(assign).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Choose Business' })).toBeEnabled();
+    // The next gesture starts clean: the warning goes with it.
+    server.use(
+      http.post('*/api/v1/orgs/:orgId/billing/checkout', () =>
+        HttpResponse.json({ url: 'https://checkout.stripe.test/pay' }),
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Choose Team' }));
+    await vi.waitFor(() => {
+      expect(assign).toHaveBeenCalledWith('https://checkout.stripe.test/pay');
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('opens Stripe’s portal, ends the subscription at the end of the period and takes it back', async () => {

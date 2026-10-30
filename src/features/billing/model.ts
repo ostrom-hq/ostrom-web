@@ -49,7 +49,10 @@ export function plansState(billing: BillingOverview): PlansState {
   return billing.status === 'incomplete' ? 'unpaid' : 'open';
 }
 
-/** What paying yearly saves on the best plan, in whole percent, or undefined when it saves nothing. */
+/**
+ * What paying yearly saves on every plan at least, in whole percent, or undefined when it saves nothing: one label
+ * stands for all the plan cards, so it never promises more than the least of them.
+ */
 export function yearlySaving(prices: readonly BillingPrice[]): number | undefined {
   const savings = PLANS.flatMap((plan) => {
     const month = priceOf(prices, plan, 'month');
@@ -57,8 +60,8 @@ export function yearlySaving(prices: readonly BillingPrice[]): number | undefine
     if (month === undefined || year === undefined || month.unitAmount <= 0) return [];
     return [Math.round((1 - year.unitAmount / (12 * month.unitAmount)) * 100)];
   });
-  const best = Math.max(0, ...savings);
-  return best > 0 ? best : undefined;
+  const least = Math.min(...savings);
+  return savings.length > 0 && least > 0 ? least : undefined;
 }
 
 export function offerFor(billing: BillingOverview, plan: SoldPlan, interval: Interval): PlanOffer {
