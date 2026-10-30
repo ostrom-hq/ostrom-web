@@ -1,18 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { type ReactElement, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/shared/ui/Button';
+import { Button } from './Button';
 
-export interface ConfirmRemoveProps {
-  /** What is removed, read in the question ("Remove linear?"). */
-  readonly what: string;
+export interface ConfirmButtonProps {
+  /** The first button: "Remove", "Stop". */
+  readonly label: string;
+  /** The second button, which says exactly what goes away: "Remove linear". */
+  readonly confirm: string;
+  /** The way back: "Keep". */
+  readonly keep: string;
   readonly disabled: boolean;
   readonly onConfirm: () => void;
 }
 
-/** Removing takes two clicks: the second button says exactly what goes away. */
-export function ConfirmRemove({ what, disabled, onConfirm }: ConfirmRemoveProps): ReactElement {
-  const { t } = useTranslation();
+/** A gesture that cannot be undone takes two clicks; the second one names what it does. */
+export function ConfirmButton({
+  label,
+  confirm,
+  keep,
+  disabled,
+  onConfirm,
+}: ConfirmButtonProps): ReactElement {
   const [asking, setAsking] = useState(false);
   return asking ? (
     <span className="o-inline">
@@ -24,7 +32,7 @@ export function ConfirmRemove({ what, disabled, onConfirm }: ConfirmRemoveProps)
           onConfirm();
         }}
       >
-        {t('tools.remove.confirm', { what })}
+        {confirm}
       </Button>
       <Button
         variant="ghost"
@@ -32,7 +40,7 @@ export function ConfirmRemove({ what, disabled, onConfirm }: ConfirmRemoveProps)
           setAsking(false);
         }}
       >
-        {t('tools.remove.keep')}
+        {keep}
       </Button>
     </span>
   ) : (
@@ -43,7 +51,7 @@ export function ConfirmRemove({ what, disabled, onConfirm }: ConfirmRemoveProps)
         setAsking(true);
       }}
     >
-      {t('tools.remove.ask')}
+      {label}
     </Button>
   );
 }

@@ -4,7 +4,7 @@ import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
-import { ConfirmRemove } from './ConfirmRemove';
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
 export interface SecretRowProps {
   readonly secret: Secret;
@@ -90,7 +90,13 @@ export function SecretRow({ secret, busy, actions }: SecretRowProps): ReactEleme
           >
             {t('tools.secrets.rotate')}
           </Button>
-          <ConfirmRemove what={secret.name} disabled={busy} onConfirm={actions.remove} />
+          <ConfirmButton
+            label={t('tools.remove.ask')}
+            confirm={t('tools.remove.confirm', { what: secret.name })}
+            keep={t('tools.remove.keep')}
+            disabled={busy}
+            onConfirm={actions.remove}
+          />
         </span>
       )}
     </div>

@@ -4,8 +4,8 @@ import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { isTransport } from '../model';
-import { ConfirmRemove } from './ConfirmRemove';
 
 export interface ServerCardProps {
   readonly server: McpServer;
@@ -58,7 +58,13 @@ export function ServerCard({ server, calls, missing, busy, actions }: ServerCard
           <Button disabled={busy} onClick={actions.toggle}>
             {server.enabled ? t('tools.mcp.turnOff') : t('tools.mcp.turnOn')}
           </Button>
-          <ConfirmRemove what={server.name} disabled={busy} onConfirm={actions.remove} />
+          <ConfirmButton
+            label={t('tools.remove.ask')}
+            confirm={t('tools.remove.confirm', { what: server.name })}
+            keep={t('tools.remove.keep')}
+            disabled={busy}
+            onConfirm={actions.remove}
+          />
         </div>
       )}
     </article>

@@ -2,10 +2,13 @@
 import {
   handleAnswerApproval,
   handleBulkUpdateRules,
+  handleCreateCloudSession,
   handleCreateMcpServer,
   handleCreateSecret,
   handleDeleteMcpServer,
   handleDeleteSecret,
+  handleDisableAutomation,
+  handleEnableAutomation,
   handleGetMcpUsage,
   handleGetSpending,
   handleGetApproval,
@@ -18,13 +21,17 @@ import {
   handleGetWorkflow,
   handleInviteMembers,
   handleListApprovals,
+  handleListAutomationRuns,
+  handleListAutomations,
   handleListBudgets,
+  handleListCloudSessions,
   handleListDecisions,
   handleListMcpCalls,
   handleListMcpServers,
   handleListMembers,
   handleListReceipts,
   handleListRules,
+  handleListRunners,
   handleListSecrets,
   handleListSessions,
   handleListTeams,
@@ -32,16 +39,21 @@ import {
   handleSetGatePolicy,
   handleUpdateMember,
   handleUpdateRule,
+  handleRotateAutomationSecret,
   handleRotateSecret,
   handleSaveMcpServer,
   handleSetBudget,
+  handleStopCloudSession,
+  handleTestAutomation,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
   ApiError,
   Approval,
   ApprovalAnswer,
+  Automation,
   Budget,
+  CloudSession,
   Decision,
   McpCall,
   McpServer,
@@ -51,18 +63,22 @@ import type {
   Receipt,
   Rule,
   RuleStatus,
+  Runner,
   Secret,
   Session,
   Team,
   Workflow,
+  WorkflowRun,
 } from '@gen/api/types.gen';
 import {
   zAnswerApprovalRequest,
   zBudget,
+  zCreateCloudSessionBody,
   zBulkUpdateRulesBody,
   zMcpServer,
   zMemberRole,
   zSecretWrite,
+  zTestAutomationBody,
   zUpdateRuleBody,
 } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
@@ -70,6 +86,12 @@ import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
+import {
+  initialAutomationRuns,
+  initialAutomations,
+  initialCloudSessions,
+  initialRunners,
+} from '@/mocks/fixtures/cloud';
 import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
 import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
@@ -96,6 +118,10 @@ export interface MockDb {
   secrets: Secret[];
   mcpCalls: McpCall[];
   budgets: Budget[];
+  cloudSessions: CloudSession[];
+  runners: Runner[];
+  automations: Automation[];
+  automationRuns: WorkflowRun[];
 }
 
 export function createMockDb(): MockDb {
@@ -115,6 +141,10 @@ export function createMockDb(): MockDb {
     secrets: initialSecrets(),
     mcpCalls: initialMcpCalls(),
     budgets: initialBudgets(),
+    cloudSessions: initialCloudSessions(),
+    runners: initialRunners(),
+    automations: initialAutomations(),
+    automationRuns: initialAutomationRuns(),
   };
 }
 
@@ -135,6 +165,9 @@ const zBudgetWrite = zBudget
   })
   .refine((budget) => (budget.scope === 'org') === (budget.subject === undefined))
   .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
+const CLOUD_AGENTS = new Set(['claude-code', 'codex']);
+/** A session that still holds a runner: it can be stopped. */
+const LIVE = new Set(['queued', 'starting', 'running']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
@@ -142,6 +175,21 @@ const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min
 function canManage(db: MockDb): boolean {
   const role = db.members.find((member) => member.login === me.dev.login)?.role;
   return role === 'owner' || role === 'admin';
+}
+
+/** An automation changes by its owner, or by an owner or an admin of the organization. */
+function mayChange(db: MockDb, automation: Automation): boolean {
+  return automation.owner === me.dev.login || canManage(db);
+}
+
+function switchAutomation(db: MockDb, id: string, enabled: boolean): HttpResponse<Automation | ApiError> {
+  const index = db.automations.findIndex((item) => item.id === id);
+  const automation = db.automations[index];
+  if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+  if (!mayChange(db, automation)) return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
+  const switched: Automation = { ...automation, enabled, updatedAt: now().toISOString() };
+  db.automations[index] = switched;
+  return HttpResponse.json(switched);
 }
 
 /** The mock's stand-in for the server's check: a receipt whose signature names no key does not verify. */
@@ -497,6 +545,85 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ? db.budgets.map((item) => (same(item) ? budget : item))
         : [...db.budgets, budget];
       return HttpResponse.json(budget);
+    }),
+    handleListCloudSessions(({ request }) => {
+      const status = new URL(request.url).searchParams.get('status');
+      return HttpResponse.json({
+        items: db.cloudSessions.filter((session) => status === null || session.status === status),
+      });
+    }),
+    handleCreateCloudSession(async ({ request }) => {
+      const body = zCreateCloudSessionBody.safeParse(await readJson(request));
+      if (!body.success || body.data.prompt.trim() === '')
+        return refusal(400, 'invalid_request', 'an agent and a prompt are needed');
+      if (!CLOUD_AGENTS.has(body.data.agent))
+        return refusal(400, 'invalid_request', `no cloud agent ${body.data.agent}`);
+      const session: CloudSession = {
+        id: `cs-${String(db.cloudSessions.length + 100)}`,
+        owner: me.dev.login,
+        agent: body.data.agent,
+        status: 'queued',
+        createdAt: now().toISOString(),
+        ...(body.data.name === undefined || body.data.name.trim() === ''
+          ? {}
+          : { name: body.data.name.trim() }),
+        ...(body.data.model === undefined ? {} : { model: body.data.model }),
+      };
+      db.cloudSessions.unshift(session);
+      return HttpResponse.json(session, { status: 201 });
+    }),
+    handleStopCloudSession(({ params }) => {
+      const index = db.cloudSessions.findIndex((session) => session.id === params.id);
+      const session = db.cloudSessions[index];
+      if (session === undefined) return refusal(404, 'not_found', 'cloud session not found');
+      if (session.owner !== me.dev.login && !canManage(db))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin stops a session');
+      if (!LIVE.has(session.status)) return refusal(409, 'conflict', 'the session has already ended');
+      db.cloudSessions[index] = { ...session, status: 'stopped', endedAt: now().toISOString() };
+      return new HttpResponse(null, { status: 204 });
+    }),
+    handleListRunners(() => HttpResponse.json({ items: db.runners })),
+    handleListAutomations(() => HttpResponse.json({ items: db.automations })),
+    handleEnableAutomation(({ params }) => switchAutomation(db, params.id, true)),
+    handleDisableAutomation(({ params }) => switchAutomation(db, params.id, false)),
+    handleListAutomationRuns(({ params }) =>
+      HttpResponse.json({ items: db.automationRuns.filter((run) => run.automationId === params.id) }),
+    ),
+    handleTestAutomation(async ({ request, params }) => {
+      const automation = db.automations.find((item) => item.id === params.id);
+      if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+      if (!mayChange(db, automation))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin runs it');
+      const body = zTestAutomationBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'payload and dryRun');
+      const dry = body.data.dryRun === true;
+      const run: WorkflowRun = {
+        id: `run-${String(db.automationRuns.length + 100)}`,
+        workflowId: automation.action.workflowId ?? `wf-${automation.id}`,
+        workflowName: automation.name,
+        workflowVersion: automation.version,
+        status: dry ? 'succeeded' : 'queued',
+        startedBy: me.dev.login,
+        source: dry ? 'dry-run' : 'manual',
+        automationId: automation.id,
+        startedAt: now().toISOString(),
+        ...(dry
+          ? { endedAt: now().toISOString(), output: 'Dry run: the trigger and inputs are valid.' }
+          : {}),
+      };
+      if (!dry) db.automationRuns.unshift(run);
+      return HttpResponse.json(run);
+    }),
+    handleRotateAutomationSecret(({ params }) => {
+      const automation = db.automations.find((item) => item.id === params.id);
+      if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+      if (!mayChange(db, automation))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
+      if (automation.trigger.kind !== 'webhook')
+        return refusal(409, 'conflict', 'this automation has no webhook');
+      return HttpResponse.json({
+        secret: `whsec_mock_${String(automation.version)}${now().getTime().toString(36)}`,
+      });
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

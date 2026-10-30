@@ -2,10 +2,13 @@
 import {
   answerApproval,
   bulkUpdateRules,
+  createCloudSession,
   createMcpServer,
   createSecret,
   deleteMcpServer,
   deleteSecret,
+  disableAutomation,
+  enableAutomation,
   getApproval,
   getGatePolicy,
   getMcpUsage,
@@ -18,21 +21,28 @@ import {
   getWorkflow,
   inviteMembers,
   listApprovals,
+  listAutomationRuns,
+  listAutomations,
   listBudgets,
+  listCloudSessions,
   listDecisions,
   listMcpCalls,
   listMcpServers,
   listMembers,
   listReceipts,
   listRules,
+  listRunners,
   listSecrets,
   listSessions,
   listTeams,
   listWorkflows,
+  rotateAutomationSecret,
   rotateSecret,
   saveMcpServer,
   setBudget,
   setGatePolicy,
+  stopCloudSession,
+  testAutomation,
   updateMember,
   updateRule,
   verifyReceipt,
@@ -710,5 +720,137 @@ describe('mock spending and budgets', () => {
       member.login === 'maya' ? { ...member, role: 'member' } : member,
     );
     expect(await send({ scope: 'org', usdPerDay: 1, hardStop: false })).toBe(403);
+  });
+});
+
+describe('mock cloud agents and automations', () => {
+  const statusOf = async (call: () => Promise<unknown>): Promise<number | false> => {
+    const error = await failureOf(call);
+    return isApiFailure(error) && error.status;
+  };
+  const demote = (): void => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+  };
+
+  it('starts a cloud session as the viewer, queued, and refuses one without a prompt or a known agent', async () => {
+    const started = await createCloudSession({
+      body: { agent: 'codex', prompt: 'Fix it', name: '  Fix  ', model: 'gpt-6' },
+      throwOnError: true,
+    });
+    expect(started.data).toMatchObject({
+      owner: 'maya',
+      agent: 'codex',
+      status: 'queued',
+      name: 'Fix',
+      model: 'gpt-6',
+    });
+    const bare = await createCloudSession({
+      body: { agent: 'claude-code', prompt: 'x', name: ' ' },
+      throwOnError: true,
+    });
+    expect(bare.data.name).toBeUndefined();
+    expect(
+      await statusOf(async () =>
+        createCloudSession({ body: { agent: 'codex', prompt: ' ' }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    expect(
+      await statusOf(async () =>
+        createCloudSession({ body: { agent: 'gemini', prompt: 'x' }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    expect(
+      (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
+    ).toHaveLength(3);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(6);
+  });
+
+  it('stops a live session for its owner or a manager, not an ended one or another member', async () => {
+    await stopCloudSession({ path: { id: 'cs-31' }, throwOnError: true });
+    expect(db.cloudSessions.find((session) => session.id === 'cs-31')?.status).toBe('stopped');
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'cs-27' }, throwOnError: true }))).toBe(
+      409,
+    );
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'nope' }, throwOnError: true }))).toBe(
+      404,
+    );
+    demote();
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'cs-30' }, throwOnError: true }))).toBe(
+      403,
+    );
+  });
+
+  it('lists the runners and the automations, and an automation’s runs', async () => {
+    expect((await listRunners({ throwOnError: true })).data.items).toHaveLength(2);
+    expect((await listAutomations({ throwOnError: true })).data.items).toHaveLength(2);
+    expect(
+      (await listAutomationRuns({ path: { id: 'au-nightly' }, throwOnError: true })).data.items,
+    ).toHaveLength(2);
+    expect((await listAutomationRuns({ path: { id: 'au-sentry' }, throwOnError: true })).data.items).toEqual(
+      [],
+    );
+  });
+
+  it('turns an automation on and off for its owner, and refuses another member or an unknown one', async () => {
+    expect((await enableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      true,
+    );
+    expect((await disableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      false,
+    );
+    expect(await statusOf(async () => enableAutomation({ path: { id: 'nope' }, throwOnError: true }))).toBe(
+      404,
+    );
+    demote();
+    expect(
+      await statusOf(async () => enableAutomation({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(403);
+    expect((await enableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      true,
+    );
+  });
+
+  it('runs an automation now or dry, keeping only the real run', async () => {
+    const dry = await testAutomation({
+      path: { id: 'au-sentry' },
+      body: { dryRun: true },
+      throwOnError: true,
+    });
+    expect(dry.data).toMatchObject({ status: 'succeeded', source: 'dry-run', workflowId: 'wf-backend' });
+    const real = await testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true });
+    expect(real.data).toMatchObject({ status: 'queued', source: 'manual', workflowId: 'wf-au-nightly' });
+    expect(db.automationRuns).toHaveLength(3);
+    expect(
+      await statusOf(async () => testAutomation({ path: { id: 'nope' }, body: {}, throwOnError: true })),
+    ).toBe(404);
+    const bad = await fetch('http://ostrom.test/api/v1/automations/au-nightly/run', {
+      method: 'POST',
+      body: '{"dryRun":"yes"}',
+    });
+    expect(bad.status).toBe(400);
+    demote();
+    expect(
+      await statusOf(async () =>
+        testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true }),
+      ),
+    ).toBe(403);
+  });
+
+  it('gives a new webhook secret once, only for a webhook automation', async () => {
+    expect(
+      (await rotateAutomationSecret({ path: { id: 'au-sentry' }, throwOnError: true })).data.secret,
+    ).toMatch(/^whsec_mock_1/);
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(409);
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'nope' }, throwOnError: true })),
+    ).toBe(404);
+    demote();
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(403);
   });
 });

@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
+import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { DecisionsScreen } from '@/features/decisions';
 import { HomeScreen } from '@/features/home';
 import { MembersScreen } from '@/features/members';
@@ -99,6 +100,12 @@ const secretsRoute = createRoute({
   component: SecretsScreen,
 });
 const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
+const cloudRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cloud', component: CloudScreen });
+const automationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/automations',
+  component: AutomationsScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -127,6 +134,8 @@ export const routeTree = rootRoute.addChildren([
   mcpRoute,
   secretsRoute,
   spendRoute,
+  cloudRoute,
+  automationsRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>
