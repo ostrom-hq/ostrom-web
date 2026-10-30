@@ -65,7 +65,12 @@ describe('useOrgStore', () => {
     useOrgStore.getState().choose('org-acme', 'maya');
     useOrgStore.getState().forget('unknown');
     const state = useOrgStore.getState();
-    expect([state.current, state.owner, state.unknown]).toEqual([undefined, undefined, true]);
+    expect([state.current, state.owner, state.unknown, state.picking]).toEqual([
+      undefined,
+      undefined,
+      true,
+      true,
+    ]);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBeNull();
     useOrgStore.getState().forget();

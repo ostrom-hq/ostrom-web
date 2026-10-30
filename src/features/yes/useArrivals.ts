@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { useOrgStore } from '@/shared/org/orgStore';
 
 export interface ArrivalState {
   readonly source: readonly string[] | undefined;
@@ -41,7 +42,7 @@ const useArrivalsStore = create<ArrivalsStore>()((set) => ({
   },
 }));
 
-/** Forgets what was seen: on a change of account, and between tests. */
+/** Forgets what was seen: on a change of account or organization, and between tests. */
 export function resetArrivals(): void {
   useArrivalsStore.getState().reset();
 }
@@ -49,6 +50,10 @@ export function resetArrivals(): void {
 // Another account has another queue: nothing it shows is "new" because of what the previous one saw.
 useAuthStore.subscribe((auth, previous) => {
   if (auth.generation !== previous.generation) resetArrivals();
+});
+// Another organization too.
+useOrgStore.subscribe((org, previous) => {
+  if (org.generation !== previous.generation) resetArrivals();
 });
 
 /** Requests that arrived since the queue was first loaded, to highlight them. */

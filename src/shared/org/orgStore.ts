@@ -27,6 +27,8 @@ export interface OrgState {
   readonly current: string | undefined;
   /** Whose choice `current` is: kept with it, so another account is never sent someone else's. */
   readonly owner: string | undefined;
+  /** `current` was chosen by the person, not taken because it was their only one. */
+  readonly chosen: boolean;
   /** The organization must be chosen: several to choose from, or the server refused a call for want of one. */
   readonly asked: boolean;
   readonly picking: boolean;
@@ -44,16 +46,18 @@ export interface OrgState {
   readonly ask: () => void;
   readonly open: () => void;
   readonly close: () => void;
-  /** Drops the choice; `unknown` when it is not one of the person's organizations any more. */
+  /** Drops the choice; `unknown` when it is not one of the person's organizations any more, and the picker says so. */
   readonly forget: (reason?: 'unknown') => void;
   /** Someone signed in or out: back to what is kept, checked again against whoever is signed in now. */
   readonly signedInOrOut: () => void;
 }
 
-function kept(): Pick<OrgState, 'current' | 'owner'> {
+function kept(): Pick<OrgState, 'current' | 'owner' | 'chosen'> {
+  const current = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
   return {
-    current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
+    current,
     owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
+    chosen: current !== undefined,
   };
 }
 
@@ -66,7 +70,8 @@ export const useOrgStore = create<OrgState>()((set) => ({
   generation: 0,
   only: (id, login) => {
     // What was read before, without the header, was read in this same organization: nothing to read again.
-    set({ current: id, owner: login, asked: false, picking: false, unknown: false });
+    // A picker opened to say the last choice is gone stays open, with this organization in it.
+    set({ current: id, owner: login, chosen: false, asked: false });
   },
   choose: (id, login) => {
     safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
@@ -74,6 +79,7 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set((state) => ({
       current: id,
       owner: login,
+      chosen: true,
       asked: false,
       picking: false,
       dismissed: false,
@@ -96,8 +102,9 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set((state) => ({
       current: undefined,
       owner: undefined,
+      chosen: false,
       asked: false,
-      picking: false,
+      picking: reason === 'unknown',
       dismissed: false,
       unknown: reason === 'unknown',
       generation: state.generation + 1,

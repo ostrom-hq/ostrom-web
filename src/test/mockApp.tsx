@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { createMemoryHistory } from '@tanstack/react-router';
-import { render } from '@testing-library/react';
+import { cleanup, render } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
@@ -23,6 +23,8 @@ export function setupMockApp(): MockServer {
     configureApiClient({ baseUrl: TEST_API });
   });
   afterEach(() => {
+    // Unmount first: a console still mounted would act on the resets below (take the only organization again).
+    cleanup();
     mock.server.resetHandlers();
     resetMockDb(mock.db);
     useAuthStore.setState({ link: undefined, notice: undefined });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
@@ -121,11 +121,24 @@ describe('the organization the console acts in', () => {
     expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
   });
 
-  it('drops a choice that is no longer the person’s, and takes the only one left without a word', async () => {
+  it('drops a choice that is no longer the person’s, takes the only one left, and says so', async () => {
     chosenBefore('org-left', 'maya');
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).toBeNull();
+    const picker = screen.getByRole('dialog', { name: 'Which organization?' });
+    expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
+    expect(within(picker).getByRole('button', { name: 'Acme' })).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('asks once a second organization appears beside the only one', async () => {
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    // Invited to Globex meanwhile; the list is read again (here, by opening the console afresh in the same session).
+    db.otherOrganizations = [globex];
+    cleanup();
+    visit('/artifacts');
+    expect(await screen.findByRole('dialog', { name: 'Which organization?' })).toBeInTheDocument();
+    expect(useOrgStore.getState().current).toBe(db.organization.id);
   });
 
   it('never sends another account the organization chosen before in this browser', async () => {
