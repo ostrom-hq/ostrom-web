@@ -51,5 +51,5 @@ export function checkServer(
 
 /** The secrets a server needs that the organization does not have: its calls fail until they exist. */
 export function missingSecrets(server: McpServer, secrets: readonly Secret[]): string[] {
-  return server.secretNames.filter((name) => !secrets.some((secret) => secret.name === name));
+  return (server.secretNames ?? []).filter((name) => !secrets.some((secret) => secret.name === name));
 }

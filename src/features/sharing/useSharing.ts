@@ -106,7 +106,7 @@ export function useArtifactChange(): ArtifactChangeViewModel {
     (id: string, login: string) => {
       resetUnshare();
       resetDrop();
-      shareMutate({ path: { id, login } });
+      shareMutate({ path: { id, memberId: login } });
     },
     [shareMutate, resetUnshare, resetDrop],
   );
@@ -114,7 +114,7 @@ export function useArtifactChange(): ArtifactChangeViewModel {
     (id: string, login: string) => {
       resetShare();
       resetDrop();
-      unshareMutate({ path: { id, login } });
+      unshareMutate({ path: { id, memberId: login } });
     },
     [unshareMutate, resetShare, resetDrop],
   );

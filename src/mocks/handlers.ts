@@ -64,6 +64,8 @@ import type {
   Artifact,
   ArtifactVersion,
   Automation,
+  AutomationDryRun,
+  AutomationRun,
   Budget,
   CloudSession,
   Decision,
@@ -81,7 +83,6 @@ import type {
   Session,
   Team,
   Workflow,
-  WorkflowRun,
 } from '@gen/api/types.gen';
 import {
   zAnswerApprovalRequest,
@@ -142,7 +143,7 @@ export interface MockDb {
   cloudSessions: CloudSession[];
   runners: Runner[];
   automations: Automation[];
-  automationRuns: WorkflowRun[];
+  automationRuns: AutomationRun[];
   artifacts: Artifact[];
   artifactVersions: Record<string, ArtifactVersion[]>;
   /** Who reads an artifact shared with people, by artifact. */
@@ -184,10 +185,18 @@ const zMcpServerWrite = zMcpServer.extend({
   name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
   url: z.url({ protocol: /^https$/ }),
 });
-/** A parsed write as the contract's server: an absent tool list stays absent, never `undefined`. */
+/** A parsed write as the contract's server: an absent list stays absent, never `undefined`. */
 function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
-  const { tools, ...fields } = write;
-  return tools === undefined ? fields : { ...fields, tools };
+  const server: McpServer = {
+    name: write.name,
+    url: write.url,
+    transport: write.transport,
+    enabled: write.enabled,
+    scope: write.scope,
+  };
+  if (write.secretNames !== undefined) server.secretNames = write.secretNames;
+  if (write.tools !== undefined) server.tools = write.tools;
+  return server;
 }
 /** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
 const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
@@ -349,12 +358,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
       const query = new URL(request.url).searchParams;
-      const status = query.get('status');
+      const statuses = query.getAll('status');
       const items = db.approvals.filter((approval) => {
         if (query.get('mine') === 'true') {
           return approval.status === 'pending' && (db.approvers[approval.id] ?? []).includes(me.dev.login);
         }
-        return status === null || approval.status === status;
+        return statuses.length === 0 || statuses.some((status) => status === approval.status);
       });
       return HttpResponse.json({ items });
     }),
@@ -530,6 +539,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const secret: Secret = {
         name: body.data.name,
         scope: body.data.scope ?? 'org',
+        version: 1,
         createdAt: at,
         updatedAt: at,
         updatedBy: me.dev.login,
@@ -545,13 +555,18 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = zSecretWrite.safeParse(await readJson(request));
       if (!body.success || body.data.value === '')
         return refusal(400, 'invalid_request', 'a new value is needed');
-      const rotated: Secret = { ...secret, updatedAt: now().toISOString(), updatedBy: me.dev.login };
+      const rotated: Secret = {
+        ...secret,
+        version: secret.version + 1,
+        updatedAt: now().toISOString(),
+        updatedBy: me.dev.login,
+      };
       db.secrets[index] = rotated;
       return HttpResponse.json(rotated);
     }),
     handleDeleteSecret(({ params }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
-      const user = db.mcpServers.find((server) => server.secretNames.includes(params.name));
+      const user = db.mcpServers.find((server) => (server.secretNames ?? []).includes(params.name));
       if (user !== undefined)
         return refusal(
           409,
@@ -597,7 +612,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleCreateCloudSession(async ({ request }) => {
       const body = zCreateCloudSessionBody.safeParse(await readJson(request));
-      if (!body.success || body.data.prompt.trim() === '')
+      if (!body.success || (body.data.prompt ?? '').trim() === '')
         return refusal(400, 'invalid_request', 'an agent and a prompt are needed');
       if (!CLOUD_AGENTS.has(body.data.agent))
         return refusal(400, 'invalid_request', `no cloud agent ${body.data.agent}`);
@@ -639,23 +654,30 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(403, 'forbidden', 'only its owner, an owner or an admin runs it');
       const body = zTestAutomationBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'payload and dryRun');
-      const dry = body.data.dryRun === true;
-      const run: WorkflowRun = {
+      if (body.data.dryRun === true) {
+        const dryRun: AutomationDryRun = {
+          renderedPrompt: automation.action.prompt ?? '',
+          variables: [],
+          problems: body.data.payload === undefined ? [] : [{ path: '$', rule: 'not_scalar' }],
+          nextRuns: [],
+        };
+        return HttpResponse.json(dryRun);
+      }
+      if (request.headers.get('Idempotency-Key') === null)
+        return refusal(400, 'invalid_request', 'a test run needs an Idempotency-Key');
+      const at = now().toISOString();
+      const run: AutomationRun = {
         id: `run-${String(db.automationRuns.length + 100)}`,
-        workflowId: automation.action.workflowId ?? `wf-${automation.id}`,
-        workflowName: automation.name,
-        workflowVersion: automation.version,
-        status: dry ? 'succeeded' : 'queued',
-        startedBy: me.dev.login,
-        source: dry ? 'dry-run' : 'manual',
         automationId: automation.id,
-        startedAt: now().toISOString(),
-        ...(dry
-          ? { endedAt: now().toISOString(), output: 'Dry run: the trigger and inputs are valid.' }
-          : {}),
+        source: 'test',
+        status: 'queued',
+        version: automation.version,
+        problems: [],
+        createdAt: at,
+        updatedAt: at,
       };
-      if (!dry) db.automationRuns.unshift(run);
-      return HttpResponse.json(run);
+      db.automationRuns.unshift(run);
+      return HttpResponse.json(run, { status: 202 });
     }),
     handleRotateAutomationSecret(({ params }) => {
       const automation = db.automations.find((item) => item.id === params.id);
@@ -688,10 +710,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
       if (artifact.owner !== me.dev.login)
         return refusal(403, 'forbidden', 'only its owner shares an artifact');
-      if (!db.members.some((member) => member.login === params.login))
-        return refusal(404, 'not_found', `${params.login} is not a member of the organization`);
+      if (!db.members.some((member) => member.login === params.memberId))
+        return refusal(404, 'not_found', `${params.memberId} is not a member of the organization`);
       const readers = db.artifactMembers[params.id] ?? [];
-      db.artifactMembers[params.id] = readers.includes(params.login) ? readers : [...readers, params.login];
+      db.artifactMembers[params.id] = readers.includes(params.memberId)
+        ? readers
+        : [...readers, params.memberId];
       return new HttpResponse(null, { status: 204 });
     }),
     handleUnshareArtifact(({ params }) => {
@@ -700,7 +724,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (artifact.owner !== me.dev.login)
         return refusal(403, 'forbidden', 'only its owner shares an artifact');
       db.artifactMembers[params.id] = (db.artifactMembers[params.id] ?? []).filter(
-        (login) => login !== params.login,
+        (login) => login !== params.memberId,
       );
       return new HttpResponse(null, { status: 204 });
     }),

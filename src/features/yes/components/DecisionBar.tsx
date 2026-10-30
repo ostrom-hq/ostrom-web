@@ -105,7 +105,11 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
                 answer.answer(approval, 'approve');
               }}
             >
-              {sending === 'approve' ? t('yes.act.approving') : t('yes.act.approve')}
+              {sending === 'approve'
+                ? t('yes.act.approving')
+                : approval.action === undefined
+                  ? t('yes.act.approve')
+                  : t(`yes.act.approveKind.${approval.action.kind}`)}
             </Button>
           </div>
         </>

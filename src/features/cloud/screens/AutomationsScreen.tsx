@@ -5,7 +5,7 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { AutomationCard } from '../components/AutomationCard';
-import { mayChange } from '../model';
+import { isDryRun, mayChange } from '../model';
 import { useAutomationChange, useAutomations } from '../useCloud';
 import './cloud.css';
 
@@ -24,9 +24,11 @@ export function AutomationsScreen(): ReactElement {
       )}
       {change.started === undefined ? null : (
         <Banner tag={t('automations.started.tag')} live>
-          {change.started.source === 'dry-run'
-            ? t('automations.started.dry', { name: change.started.workflowName })
-            : t('automations.started.real', { name: change.started.workflowName, id: change.started.id })}
+          {isDryRun(change.started)
+            ? change.started.problems.length === 0
+              ? t('automations.started.dry')
+              : t('automations.started.dryProblems', { count: change.started.problems.length })
+            : t('automations.started.real', { id: change.started.id })}
         </Banner>
       )}
       <LoadState data={view.automations} failure={view.failure}>

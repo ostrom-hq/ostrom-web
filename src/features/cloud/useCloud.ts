@@ -14,7 +14,7 @@ import {
   stopCloudSessionMutation,
   testAutomationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Automation, CloudSession, Runner, WorkflowRun } from '@gen/api/types.gen';
+import type { Automation, AutomationDryRun, AutomationRun, CloudSession, Runner } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -135,8 +135,8 @@ export interface AutomationChangeViewModel {
   readonly rotate: (id: string) => void;
   /** The automation being changed. */
   readonly pending: string | undefined;
-  /** The last run started from here, and the automation it belongs to. */
-  readonly started: WorkflowRun | undefined;
+  /** What the last run from here answered: a queued run, or a dry run that started nothing. */
+  readonly started: AutomationRun | AutomationDryRun | undefined;
   /** The new webhook secret, shown once, and the automation it belongs to. */
   readonly secret: { readonly id: string; readonly value: string } | undefined;
   readonly failure: Error | undefined;
@@ -179,7 +179,12 @@ export function useAutomationChange(): AutomationChangeViewModel {
   const run = useCallback(
     (id: string, dry: boolean) => {
       resetAll();
-      testMutate({ path: { id }, body: { dryRun: dry } });
+      // A real run is started once per gesture: the server drops a replay of the same key.
+      testMutate(
+        dry
+          ? { path: { id }, body: { dryRun: true } }
+          : { path: { id }, body: { dryRun: false }, headers: { 'Idempotency-Key': crypto.randomUUID() } },
+      );
     },
     [resetAll, testMutate],
   );
@@ -211,7 +216,7 @@ export function useAutomationChange(): AutomationChangeViewModel {
 
 /** An automation's runs; the card mounts it only once someone opens them. */
 export function useAutomationRuns(id: string): {
-  readonly runs: readonly WorkflowRun[] | undefined;
+  readonly runs: readonly AutomationRun[] | undefined;
   readonly failure: Error | undefined;
 } {
   const runs = useQuery(ready(listAutomationRunsOptions({ path: { id } })));

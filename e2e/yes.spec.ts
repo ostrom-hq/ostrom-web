@@ -12,7 +12,7 @@ test('an approver opens a request from the queue, reads the proof, approves and 
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await expect(page).toHaveURL(/\/yes\/apr-merge-412$/);
   await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
-  await page.getByRole('button', { name: 'Approve' }).click();
+  await page.getByRole('button', { name: /^Approve/ }).click();
 
   const decision = page.getByRole('region', { name: 'Decision' });
   await expect(decision).toContainText('maya approved: Merge PR #412 into main');
@@ -29,7 +29,7 @@ test('the asker cannot approve while another approver exists, but can decline wi
   await page.goto('/yes/apr-deploy-88');
   await expect(page.getByText('You asked for this yourself.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Approve' }).click();
+  await page.getByRole('button', { name: /^Approve/ }).click();
   await expect(page.getByRole('alert')).toContainText('samir has to approve it');
 
   await page.getByRole('button', { name: 'Decline & tell the agent…' }).click();

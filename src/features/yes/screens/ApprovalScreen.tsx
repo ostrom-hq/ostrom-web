@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Approval, ApprovalCommit, CheckState } from '@gen/api/types.gen';
+import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -96,6 +96,8 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
           )}
         </p>
       </header>
+
+      {approval.action === undefined ? null : <ActionSection approval={approval} action={approval.action} />}
 
       {approval.sha === undefined && commits.length === 0 ? null : (
         <section className="o-card ys-section" aria-labelledby="ys-changes">
@@ -224,5 +226,44 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
         <DecisionCard approval={approval} receipt={answer.receipt} comment={answer.comment} />
       )}
     </>
+  );
+}
+
+/** The typed action first: what a yes lets through, how risky it is and how large the change. */
+function ActionSection({
+  approval,
+  action,
+}: {
+  readonly approval: Approval;
+  readonly action: ApprovalAction;
+}): ReactElement {
+  const { t } = useTranslation();
+  const head = shortSha(action.headSha);
+  return (
+    <section className="o-card ys-section" aria-labelledby="ys-action">
+      <h2 id="ys-action" className="ys-label">
+        {t('yes.detail.action')}
+      </h2>
+      <p>
+        {t(`yes.detail.kind.${action.kind}`, { ref: action.ref, repo: action.repo })}{' '}
+        {action.risk === 'high' ? <Badge tone="danger">{t('yes.detail.highRisk')}</Badge> : null}
+      </p>
+      {action.risk === 'high' ? <p className="ys-small">{t('yes.detail.highRiskHint')}</p> : null}
+      <p className="ys-small ys-meta">
+        <code>
+          {action.baseSha === undefined
+            ? head
+            : t('yes.detail.range', { base: shortSha(action.baseSha), head })}
+        </code>
+        {approval.diffStats === undefined
+          ? null
+          : ` · ${t('yes.detail.diff', {
+              count: approval.diffStats.files,
+              additions: approval.diffStats.additions,
+              deletions: approval.diffStats.deletions,
+            })}`}
+      </p>
+      {approval.diffTruncated === true ? <p className="ys-small">{t('yes.detail.truncated')}</p> : null}
+    </section>
   );
 }

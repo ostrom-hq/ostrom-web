@@ -62,8 +62,10 @@ describe('missingSecrets', () => {
       scope: 'org',
     };
     const secrets: Secret[] = [
-      { name: 'HAVE', scope: 'org', createdAt: '', updatedAt: '', updatedBy: 'maya' },
+      { name: 'HAVE', scope: 'org', createdAt: '', updatedAt: '', updatedBy: 'maya', version: 1 },
     ];
     expect(missingSecrets(server, secrets)).toEqual(['LACK']);
+    const bare: McpServer = { name: 'b', url: 'https://b', transport: 'http', enabled: true, scope: 'org' };
+    expect(missingSecrets(bare, secrets)).toEqual([]);
   });
 });
