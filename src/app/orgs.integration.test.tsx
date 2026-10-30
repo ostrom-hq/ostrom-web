@@ -216,7 +216,9 @@ describe('the organization the console acts in', () => {
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
     act(() => {
       window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: globex.id, login: 'maya' }));
-      window.dispatchEvent(new StorageEvent('storage', { key: ORG_STORAGE_KEY }));
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.localStorage }),
+      );
     });
     expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
     expect(await screen.findByText('No artifact yet.')).toBeInTheDocument();
@@ -230,6 +232,23 @@ describe('the organization the console acts in', () => {
     });
     expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+  });
+
+  it('reads the list once for a burst of not-found answers', async () => {
+    const listed = watch('/api/v1/me/organizations');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(listed).toHaveLength(1);
+    act(() => {
+      useOrgStore.getState().doubt();
+      useOrgStore.getState().doubt();
+      useOrgStore.getState().doubt();
+    });
+    await waitFor(() => {
+      expect(listed).toHaveLength(2);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(listed).toHaveLength(2);
   });
 
   it('asks nobody who is signing in who they are', async () => {

@@ -79,6 +79,24 @@ export interface OrgState {
   readonly signedInOrOut: () => void;
 }
 
+/** The two keys #28 kept the choice under, an id and its owner apart. */
+const LEGACY_ID_KEY = 'ostrom.org';
+const LEGACY_OWNER_KEY = 'ostrom.org.login';
+
+/** A choice kept the old way moves under the one key, once; the old keys are gone either way. */
+export function moveLegacyChoice(storage: SafeStorage): void {
+  const id = orgIdSchema.safeParse(storage.getItem(LEGACY_ID_KEY));
+  const login = choiceSchema.shape.login.safeParse(storage.getItem(LEGACY_OWNER_KEY));
+  if (id.success && login.success && storage.getItem(ORG_STORAGE_KEY) === null) {
+    storage.setItem(ORG_STORAGE_KEY, storedChoice({ id: id.data, login: login.data }));
+  }
+  storage.removeItem(LEGACY_ID_KEY);
+  storage.removeItem(LEGACY_OWNER_KEY);
+}
+
+// On load, before the store reads what is kept.
+moveLegacyChoice(safeLocalStorage);
+
 function kept(): Pick<OrgState, 'current' | 'owner'> {
   // A choice is always kept with whose it is: an id alone is nobody's, and is trusted for nobody.
   const choice = readStoredChoice(safeLocalStorage);
@@ -148,19 +166,20 @@ export const useOrgStore = create<OrgState>()((set) => ({
  * App.tsx.
  */
 export function followOtherTab(event: StorageEvent): void {
+  if (event.storageArea !== window.localStorage) return;
   if (event.key !== null && event.key !== ORG_STORAGE_KEY) return;
   const next = kept();
-  useOrgStore.setState((state) =>
-    (next.current === undefined && state.owner === undefined) ||
-    (next.current === state.current && next.owner === state.owner)
-      ? state
-      : {
-          ...next,
-          asked: false,
-          picking: false,
-          dismissed: false,
-          unknown: false,
-          generation: state.generation + 1,
-        },
-  );
+  useOrgStore.setState((state) => {
+    if (next.current === undefined && state.owner === undefined) return state;
+    // The same organization, chosen there: kept as chosen, nothing read again and nothing on screen closed.
+    if (next.current === state.current) return next.owner === state.owner ? state : { owner: next.owner };
+    return {
+      ...next,
+      asked: false,
+      picking: false,
+      dismissed: false,
+      unknown: false,
+      generation: state.generation + 1,
+    };
+  });
 }

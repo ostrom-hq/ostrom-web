@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   followOtherTab,
+  moveLegacyChoice,
   ORG_STORAGE_KEY,
   readStoredChoice,
   storedChoice,
@@ -137,7 +138,8 @@ describe('useOrgStore', () => {
     useOrgStore.getState().choose('org-acme', 'maya');
     useOrgStore.getState().close();
     const before = useOrgStore.getState().generation;
-    const event = (key: string | null): StorageEvent => new StorageEvent('storage', { key });
+    const event = (key: string | null): StorageEvent =>
+      new StorageEvent('storage', { key, storageArea: window.localStorage });
     window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-globex', login: 'maya' }));
     followOtherTab(event('ostrom.theme'));
     expect(useOrgStore.getState().current).toBe('org-acme');
@@ -149,9 +151,14 @@ describe('useOrgStore', () => {
       false,
       before + 1,
     ]);
-    // The same again changes nothing.
+    // The same again changes nothing; nor does a key of the same name in session storage.
     followOtherTab(event(ORG_STORAGE_KEY));
-    expect(useOrgStore.getState().generation).toBe(before + 1);
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-other', login: 'maya' }));
+    followOtherTab(new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.sessionStorage }));
+    expect([useOrgStore.getState().current, useOrgStore.getState().generation]).toEqual([
+      'org-globex',
+      before + 1,
+    ]);
     // Dropped in another tab (storage cleared).
     window.localStorage.clear();
     followOtherTab(event(null));
@@ -162,7 +169,42 @@ describe('useOrgStore', () => {
   it('keeps the only organization of this tab when nothing is chosen anywhere', () => {
     useOrgStore.getState().only('org-acme');
     const before = useOrgStore.getState().generation;
-    followOtherTab(new StorageEvent('storage', { key: null }));
+    followOtherTab(new StorageEvent('storage', { key: null, storageArea: window.localStorage }));
     expect([useOrgStore.getState().current, useOrgStore.getState().generation]).toEqual(['org-acme', before]);
+  });
+
+  it('takes the same organization chosen in another tab as chosen, without reading anything again', () => {
+    useOrgStore.getState().only('org-acme');
+    useOrgStore.getState().open();
+    const before = useOrgStore.getState().generation;
+    window.localStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id: 'org-acme', login: 'maya' }));
+    followOtherTab(new StorageEvent('storage', { key: ORG_STORAGE_KEY, storageArea: window.localStorage }));
+    const state = useOrgStore.getState();
+    expect([state.current, state.owner, state.generation, state.picking]).toEqual([
+      'org-acme',
+      'maya',
+      before,
+      true,
+    ]);
+  });
+
+  it('moves a choice kept under the two old keys to the one key, once', () => {
+    window.localStorage.setItem('ostrom.org', 'org-globex');
+    window.localStorage.setItem('ostrom.org.login', 'maya');
+    moveLegacyChoice(window.localStorage);
+    expect(readStoredChoice(window.localStorage)).toEqual({ id: 'org-globex', login: 'maya' });
+    expect([
+      window.localStorage.getItem('ostrom.org'),
+      window.localStorage.getItem('ostrom.org.login'),
+    ]).toEqual([null, null]);
+    // A newer choice wins; half an old pair is only erased.
+    window.localStorage.setItem('ostrom.org', 'org-acme');
+    window.localStorage.setItem('ostrom.org.login', 'maya');
+    moveLegacyChoice(window.localStorage);
+    expect(readStoredChoice(window.localStorage)?.id).toBe('org-globex');
+    window.localStorage.clear();
+    window.localStorage.setItem('ostrom.org', 'org-acme');
+    moveLegacyChoice(window.localStorage);
+    expect(window.localStorage.length).toBe(0);
   });
 });
