@@ -27,14 +27,21 @@ async function get(path: string, org?: string): Promise<{ status: number; body: 
 
 describe('mock organization of a call', () => {
   it('acts in the only organization when none is named, and says which', async () => {
-    const me = await get('/auth/me');
-    expect([me.status, me.body]).toMatchObject([200, { organization: { name: 'Acme' } }]);
+    expect(await get('/auth/me')).toMatchObject({ status: 200, body: { organization: { name: 'Acme' } } });
+    expect((await get('/org')).body).toMatchObject({ name: 'Acme' });
     expect((await get('/artifacts')).status).toBe(200);
   });
 
-  it('asks which organization when the person has several, on every route that acts in one', async () => {
+  it('lists the person’s organizations, without the header', async () => {
     db.otherOrganizations = [globex];
-    for (const path of ['/auth/me', '/org', '/artifacts', '/automations', '/secrets']) {
+    expect((await get('/me/organizations')).body).toMatchObject({
+      items: [{ name: 'Acme' }, { name: 'Globex' }],
+    });
+  });
+
+  it('asks which organization when the person has several, on every route that acts in one, never on /me', async () => {
+    db.otherOrganizations = [globex];
+    for (const path of ['/org', '/artifacts', '/automations', '/secrets']) {
       expect(await get(path)).toEqual({
         status: 409,
         body: {
@@ -45,14 +52,15 @@ describe('mock organization of a call', () => {
         },
       });
     }
+    const me = await get('/auth/me');
+    expect(me.status).toBe(200);
+    expect(me.body).not.toHaveProperty('organization');
   });
 
   it('acts in the organization named, and answers as for anything else of an organization it does not know', async () => {
     db.otherOrganizations = [globex];
     expect((await get('/org', globex.id)).body).toMatchObject({ name: 'Globex' });
-    expect((await get('/auth/me', db.organization.id)).body).toMatchObject({
-      organization: { name: 'Acme' },
-    });
+    expect((await get('/auth/me', globex.id)).body).toMatchObject({ organization: { name: 'Globex' } });
     expect((await get('/secrets', 'org-nobody')).status).toBe(404);
   });
 

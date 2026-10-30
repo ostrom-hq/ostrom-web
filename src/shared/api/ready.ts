@@ -10,6 +10,8 @@ export interface QueryTuning {
   readonly placeholderData?: <T>(previous: T | undefined) => T | undefined;
   /** `false` for a query that only adds to a screen: a refusal is shown at once, not asked three more times. */
   readonly retry?: boolean;
+  /** `false` holds the query until what it needs is known. */
+  readonly enabled?: boolean;
 }
 
 /** The generated options, with the query function they always carry declared as present. */

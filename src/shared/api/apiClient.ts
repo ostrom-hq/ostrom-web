@@ -14,7 +14,7 @@ export interface ApiClientConfig {
 function typedFailure(error: unknown, response: Response | undefined): Error {
   const failure = toApiFailure(error, response);
   // The server needs to know which organization: whatever screen asked, the picker opens.
-  if (failure.code === ORG_REQUIRED) useOrgStore.getState().required();
+  if (failure.code === ORG_REQUIRED) useOrgStore.getState().ask();
   return failure;
 }
 

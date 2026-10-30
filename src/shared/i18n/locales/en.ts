@@ -825,14 +825,12 @@ export const en = {
     },
     picker: {
       title: 'Which organization?',
-      body: 'You are a member of several organizations. Choose the one this console works in; you can switch at any time.',
+      body: 'Choose the organization this console works in. You can switch at any time.',
       known: 'Your organizations',
-      idLabel: 'Organization id',
-      use: 'Use this organization',
       notNow: 'Not now',
       problemTag: 'Check',
-      invalid: 'This is not an organization id.',
-      unknown: 'Ostrom does not know you in the organization chosen last. Choose another one.',
+      unknown: 'You are no longer a member of the organization chosen last. Choose another one.',
+      failed: 'Your organizations could not be read. Try again in a moment.',
     },
   },
   home: {

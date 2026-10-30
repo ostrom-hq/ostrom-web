@@ -10,8 +10,8 @@ import { OrgPicker } from './OrgPicker';
 export function OrgControls(): ReactElement | null {
   const { t } = useTranslation();
   const org = useOrgPicker();
-  const name = org.current?.name;
   if (!org.relevant) return null;
+  const name = org.current?.name;
   return (
     <>
       <Button
@@ -25,10 +25,10 @@ export function OrgControls(): ReactElement | null {
       </Button>
       {org.picking ? (
         <OrgPicker
-          choices={org.choices}
-          currentId={org.currentId}
+          options={org.options}
+          loading={org.loading}
+          failure={org.failure}
           unknown={org.unknown}
-          onChoose={org.choose}
           onClose={org.close}
         />
       ) : null}

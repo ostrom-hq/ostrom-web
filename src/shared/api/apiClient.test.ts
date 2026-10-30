@@ -133,7 +133,7 @@ describe('generated client, configured', () => {
       }),
     );
     await getMe({ throwOnError: true });
-    useOrgStore.getState().choose('org-acme');
+    useOrgStore.getState().choose('org-acme', 'maya');
     await getMe({ throwOnError: true });
     expect(seen).toEqual([null, 'org-acme']);
   });

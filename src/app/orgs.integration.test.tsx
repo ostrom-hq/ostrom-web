@@ -1,22 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { act, screen, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
-import { useAuthStore } from '@/shared/auth/authStore';
-import { ORG_STORAGE_KEY, useOrgStore } from '@/shared/org/orgStore';
+import { ORG_OWNER_STORAGE_KEY, ORG_STORAGE_KEY, useOrgStore } from '@/shared/org/orgStore';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
 const globex = otherOrganization();
 
-/** Every `Ostrom-Org` the console sent to the artifacts, in order; `null` for a call that named none. */
-function watchArtifacts(): (string | null)[] {
+/** Every `Ostrom-Org` the console sent to a route, in order; `null` for a call that named none. */
+function watch(path: string): (string | null)[] {
   const named: (string | null)[] = [];
   server.events.on('request:start', ({ request }) => {
-    if (new URL(request.url).pathname === '/api/v1/artifacts') named.push(request.headers.get('ostrom-org'));
+    if (new URL(request.url).pathname === path) named.push(request.headers.get('ostrom-org'));
   });
   return named;
+}
+
+function chosenBefore(id: string, login: string): void {
+  act(() => {
+    useOrgStore.getState().choose(id, login);
+  });
 }
 
 afterEach(() => {
@@ -24,96 +29,131 @@ afterEach(() => {
 });
 
 describe('the organization the console acts in', () => {
-  it('adopts the only organization and names it on every call after', async () => {
-    const named = watchArtifacts();
+  it('takes the only organization without asking, names it on the calls after, and keeps nothing', async () => {
+    const user = userEvent.setup();
+    const artifacts = watch('/api/v1/artifacts');
+    const secrets = watch('/api/v1/secrets');
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
-    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(db.organization.id);
     expect(screen.queryByRole('dialog')).toBeNull();
-    expect(named[0]).toBeNull();
+    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
+    expect(artifacts[0]).toBeNull();
+    await user.click(screen.getByRole('link', { name: 'Secrets' }));
+    await waitFor(() => {
+      expect(secrets).toEqual([db.organization.id]);
+    });
   });
 
   it('asks a person in two organizations which one, then reads everything again in it', async () => {
     const user = userEvent.setup();
     db.otherOrganizations = [globex];
-    const named = watchArtifacts();
+    const named = watch('/api/v1/artifacts');
     visit('/artifacts');
     const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
     expect(screen.getByRole('button', { name: 'Choose an organization' })).toHaveTextContent('Organization');
-    expect(within(picker).queryByRole('list')).toBeNull();
-    await user.type(within(picker).getByRole('textbox', { name: 'Organization id' }), globex.id);
-    await user.click(within(picker).getByRole('button', { name: 'Use this organization' }));
+    const list = await within(picker).findByRole('list', { name: 'Your organizations' });
+    await user.click(within(list).getByRole('button', { name: 'Globex' }));
     expect(
       await screen.findByRole('heading', { level: 3, name: 'Billing API: latency study' }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(named).toContain(globex.id);
+    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(globex.id);
+    expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBe('maya');
   });
 
-  it('says when what was typed is not an id, until it is changed', async () => {
+  it('switches from the top bar, a real modal that Escape or Not now closes', async () => {
     const user = userEvent.setup();
     db.otherOrganizations = [globex];
+    chosenBefore(globex.id, 'maya');
     visit('/artifacts');
-    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
-    const field = within(picker).getByRole('textbox', { name: 'Organization id' });
-    await user.type(field, 'two words');
-    await user.click(within(picker).getByRole('button', { name: 'Use this organization' }));
-    expect(within(picker).getByRole('alert')).toHaveTextContent('This is not an organization id.');
-    expect(field).toHaveAttribute('aria-invalid', 'true');
-    await user.type(field, 'x');
-    expect(within(picker).queryByRole('alert')).toBeNull();
-  });
-
-  it('switches to an organization already named, and closes with Escape or Not now', async () => {
-    const user = userEvent.setup();
-    db.otherOrganizations = [globex];
-    act(() => {
-      useOrgStore.getState().choose(globex.id);
-      useOrgStore.getState().adopt(db.organization);
-    });
-    visit('/artifacts');
-    await user.click(await screen.findByRole('button', { name: 'Organization: Globex. Switch' }));
-    let picker = screen.getByRole('dialog', { name: 'Which organization?' });
+    const opener = await screen.findByRole('button', { name: 'Organization: Globex. Switch' });
+    await user.click(opener);
+    const picker = screen.getByRole('dialog', { name: 'Which organization?' });
     expect(picker).toHaveFocus();
+    expect(document.querySelector('[inert]')).not.toBeNull();
     const list = within(picker).getByRole('list', { name: 'Your organizations' });
     expect(within(list).getByRole('button', { name: 'Globex' })).toHaveAttribute('aria-current', 'true');
     expect(within(list).getByRole('button', { name: 'Acme' })).not.toHaveAttribute('aria-current');
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.querySelector('[inert]')).toBeNull();
+    expect(opener).toHaveFocus();
 
-    await user.click(screen.getByRole('button', { name: 'Organization: Globex. Switch' }));
-    picker = screen.getByRole('dialog', { name: 'Which organization?' });
-    await user.click(within(picker).getByRole('button', { name: 'Not now' }));
+    await user.click(opener);
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Not now' }));
     expect(screen.queryByRole('dialog')).toBeNull();
 
-    await user.click(screen.getByRole('button', { name: 'Organization: Globex. Switch' }));
+    await user.click(opener);
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Acme' }));
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
     expect(useOrgStore.getState().current).toBe(db.organization.id);
   });
 
-  it('drops an organization the server no longer knows the person in, and asks the server again', async () => {
-    act(() => {
-      useOrgStore.getState().choose('org-left');
-    });
+  it('does not reopen the picker the person closed, until they ask for it', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [globex];
     visit('/artifacts');
-    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
-    expect(useOrgStore.getState().current).toBe(db.organization.id);
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    await user.click(within(picker).getByRole('button', { name: 'Not now' }));
+    let refused = false;
+    server.events.on('response:mocked', ({ request, response }) => {
+      if (new URL(request.url).pathname === '/api/v1/secrets' && response.status === 409) refused = true;
+    });
+    await user.click(screen.getByRole('link', { name: 'Secrets' }));
+    await waitFor(() => {
+      expect(refused).toBe(true);
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Choose an organization' }));
+    expect(screen.getByRole('dialog', { name: 'Which organization?' })).toBeInTheDocument();
   });
 
-  it('forgets the organization when another account signs in', async () => {
+  it('drops a choice that is no longer the person’s, and says so when there is another to choose', async () => {
+    db.otherOrganizations = [globex];
+    chosenBefore('org-left', 'maya');
     visit('/artifacts');
-    await screen.findByRole('button', { name: 'Organization: Acme. Switch' });
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
+  });
+
+  it('drops a choice that is no longer the person’s, and takes the only one left without a word', async () => {
+    chosenBefore('org-left', 'maya');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('never sends another account the organization chosen before in this browser', async () => {
+    chosenBefore(db.organization.id, 'lena');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(useOrgStore.getState().owner).toBeUndefined();
+    expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
+  });
+
+  it('says while the organizations load', async () => {
+    db.otherOrganizations = [globex];
+    server.use(http.get('*/api/v1/me/organizations', async () => delay('infinite')));
+    visit('/artifacts');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(picker).toHaveTextContent('Loading');
+    expect(picker).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('says when the organizations cannot be read', async () => {
+    db.otherOrganizations = [globex];
     server.use(
-      http.get('*/api/v1/auth/me', () =>
-        HttpResponse.json({ error: { type: 'x', message: 'x' } }, { status: 500 }),
+      http.get('*/api/v1/me/organizations', () =>
+        HttpResponse.json({ error: { type: 'unavailable', message: 'down' } }, { status: 503 }),
       ),
     );
-    act(() => {
-      useAuthStore.getState().signIn('opk_another_account');
-    });
-    expect(useOrgStore.getState().current).toBeUndefined();
-    expect(await screen.findByRole('button', { name: 'Choose an organization' })).toBeInTheDocument();
+    visit('/artifacts');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(await within(picker).findByRole('alert')).toHaveTextContent(
+      'Your organizations could not be read.',
+    );
+    expect(within(picker).queryByRole('list')).toBeNull();
   });
 });

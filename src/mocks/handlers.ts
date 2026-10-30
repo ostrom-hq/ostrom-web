@@ -34,6 +34,7 @@ import {
   handleListMcpCalls,
   handleListMcpServers,
   handleListMembers,
+  handleListMyOrganizations,
   handleListReceipts,
   handleListRules,
   handleListRunners,
@@ -290,15 +291,20 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
 
 /** The routes that do not act in the caller's organization: no `Ostrom-Org` in the contract. */
 const ORG_FREE: readonly RegExp[] = [
-  /^\/api\/v1\/auth\/(?!me$)/,
+  /^\/api\/v1\/auth\//,
   /^\/api\/v1\/orgs\//,
-  /^\/api\/v1\/me\/notifications$/,
+  /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys)$/,
   /^\/api\/v1\/github\/app\/(?:manifest|install)\/callback$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
 ];
 
-/** The organization a call acts in, as the server resolves it; a refusal when it cannot. */
+/** The person's organizations: the demo's own first. */
+function membershipsOf(db: MockDb): Organization[] {
+  return [db.organization, ...db.otherOrganizations];
+}
+
+/** The organization a call acts in, as `MembershipOrgResolver` resolves it; a refusal when it cannot. */
 function resolveOrganization(db: MockDb, request: Request): Organization | HttpResponse<ApiError> {
   const named = request.headers.get(ORG_HEADER);
   if (named === null) {
@@ -311,14 +317,8 @@ function resolveOrganization(db: MockDb, request: Request): Organization | HttpR
         );
   }
   // An organization the person is not a member of is not found, like anything of another organization.
-  const found = [db.organization, ...db.otherOrganizations].find((organization) => organization.id === named);
+  const found = membershipsOf(db).find((organization) => organization.id === named);
   return found ?? refusal(404, 'not_found', 'organization not found');
-}
-
-/** The organization a call acts in, once the first handler let it through. */
-function organizationOf(db: MockDb, request: Request): Organization {
-  const named = request.headers.get(ORG_HEADER);
-  return db.otherOrganizations.find((organization) => organization.id === named) ?? db.organization;
 }
 
 function isAsker(approval: Approval, login: string): boolean {
@@ -430,7 +430,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const organization = resolveOrganization(db, request);
       return organization instanceof HttpResponse ? organization : undefined;
     }),
-    handleGetMe(({ request }) => HttpResponse.json({ ...me, organization: organizationOf(db, request) })),
+    // `/me` never needs the header: it names the organization when the call resolves to one.
+    handleGetMe(({ request }) => {
+      const organization = resolveOrganization(db, request);
+      return HttpResponse.json(organization instanceof HttpResponse ? me : { ...me, organization });
+    }),
+    handleListMyOrganizations(() => HttpResponse.json({ items: membershipsOf(db) })),
     // The e-mail sign-in answers the same whether the address has an account or not.
     handleRequestSignInEmail(async ({ request }) => {
       const body = zRequestSignInEmailBody.safeParse(await readJson(request));
@@ -501,7 +506,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       return HttpResponse.json(view);
     }),
-    handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
+    handleGetOrganization(({ request }) =>
+      HttpResponse.json(
+        membershipsOf(db).find((organization) => organization.id === request.headers.get(ORG_HEADER)) ??
+          db.organization,
+      ),
+    ),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
     handleListTeams(() => HttpResponse.json({ items: db.teams })),
     handleUpdateMember(async ({ params, request }) => {

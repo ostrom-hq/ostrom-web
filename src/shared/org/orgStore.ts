@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Organization } from '@gen/api/types.gen';
 import { z } from 'zod';
 import { create } from 'zustand';
 import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
@@ -8,14 +7,8 @@ import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 export const ORG_STORAGE_KEY = 'ostrom.org';
 export const ORG_OWNER_STORAGE_KEY = 'ostrom.org.login';
 
-/** What the picker shows of an organization. */
-export type OrgChoice = Pick<Organization, 'id' | 'name' | 'avatarUrl'>;
-
-/** An id goes into a request header: visible ASCII only, so a stored or typed value can never break the request. */
-export const orgIdSchema = z
-  .string()
-  .trim()
-  .regex(/^[\x21-\x7E]{1,200}$/);
+/** An id goes into a request header: visible ASCII only, so a stored value can never break the request. */
+export const orgIdSchema = z.string().regex(/^[\x21-\x7E]{1,200}$/);
 
 /** Storage is a trust boundary: anything that is not an id reads as nothing stored. */
 export function readStoredId(storage: Pick<SafeStorage, 'getItem'>, key: string): string | undefined {
@@ -26,93 +19,61 @@ export function readStoredId(storage: Pick<SafeStorage, 'getItem'>, key: string)
 /**
  * The organization the console acts in, sent as `Ostrom-Org` on every API call (shared/api/apiClient.ts).
  *
- * A person with one membership needs none: the server takes it and `/me` names it, and the console then names it on
- * every call, without keeping it past a reload (should they join a second one, the server asks). A person with
- * several is refused with 409 `org_required` until they choose; their choice is kept, with their login, so another
+ * A person with one organization acts in it without being asked, and nothing is kept past a reload: should they join
+ * a second one, they are asked then. A person with several chooses; the choice is kept with their login, so another
  * account in the same browser is asked afresh.
  */
 export interface OrgState {
   readonly current: string | undefined;
-  /** Whose choice `current` is; unknown until `/me` answered with it. */
+  /** Whose choice `current` is: kept with it, so another account is never sent someone else's. */
   readonly owner: string | undefined;
-  /** Organizations the server named this session, for the picker: the contract has no list of a person's own yet. */
-  readonly seen: readonly OrgChoice[];
-  /** The server refused a call for want of an organization, and none was chosen since. */
+  /** The organization must be chosen: several to choose from, or the server refused a call for want of one. */
   readonly asked: boolean;
   readonly picking: boolean;
-  /** The person closed the picker: a further refusal does not open it again, the top bar does. */
+  /** The person closed the picker: being asked again does not reopen it, the top bar does. */
   readonly dismissed: boolean;
-  /** The organization last chosen turned out unknown to the server for this person. */
+  /** The organization chosen before is not one of the person's any more. */
   readonly unknown: boolean;
   /** Bumped when what was read belongs to another organization, or to none: everything is read again. */
   readonly generation: number;
-  /** `/me` answered, naming the organization the call acted in, if any, and who is signed in. */
-  readonly named: (organization: OrgChoice | undefined, login: string) => void;
-  /** The person's choice; false, and nothing changes, when it is not an id. */
-  readonly choose: (id: string) => boolean;
-  /** The server answered 409 `org_required`. */
-  readonly required: () => void;
+  /** The only organization of the person, acted in for this session without asking. */
+  readonly only: (id: string) => void;
+  /** The person's choice, kept with their login. */
+  readonly choose: (id: string, login: string) => void;
+  /** The person has to choose: the picker opens unless they closed it. */
+  readonly ask: () => void;
   readonly open: () => void;
   readonly close: () => void;
-  /** Drops the choice; `unknown` when the server does not know the person in it. */
+  /** Drops the choice; `unknown` when it is not one of the person's organizations any more. */
   readonly forget: (reason?: 'unknown') => void;
 }
 
-function stored(): Pick<OrgState, 'current' | 'owner'> {
-  return {
-    current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
-    owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
-  };
-}
-
-export const useOrgStore = create<OrgState>()((set, get) => ({
-  ...stored(),
-  seen: [],
+export const useOrgStore = create<OrgState>()((set) => ({
+  current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
+  owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
   asked: false,
   picking: false,
   dismissed: false,
   unknown: false,
   generation: 0,
-  named: (organization, login) => {
-    const state = get();
-    if (state.owner !== undefined && state.owner !== login) {
-      // Chosen by someone else in this browser.
-      state.forget();
-      return;
-    }
-    const kept = state.current !== undefined && readStoredId(safeLocalStorage, ORG_STORAGE_KEY) === state.current;
-    if (kept && state.owner === undefined) {
-      // The choice is now known to be theirs.
-      safeLocalStorage.setItem(ORG_OWNER_STORAGE_KEY, login);
-      set({ owner: login });
-    }
-    if (organization === undefined) return;
-    const choice: OrgChoice = { id: organization.id, name: organization.name, avatarUrl: organization.avatarUrl };
-    const seen = get().seen;
-    set({
-      current: get().current ?? choice.id,
-      seen: seen.some((known) => known.id === choice.id) ? seen : [...seen, choice],
-      unknown: false,
-    });
+  only: (id) => {
+    // What was read before, without the header, was read in this same organization: nothing to read again.
+    set({ current: id, asked: false, picking: false, unknown: false });
   },
-  choose: (id) => {
-    const parsed = orgIdSchema.safeParse(id);
-    if (!parsed.success) return false;
-    safeLocalStorage.setItem(ORG_STORAGE_KEY, parsed.data);
-    safeLocalStorage.removeItem(ORG_OWNER_STORAGE_KEY);
-    const changed = parsed.data !== get().current;
+  choose: (id, login) => {
+    safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
+    safeLocalStorage.setItem(ORG_OWNER_STORAGE_KEY, login);
     set((state) => ({
-      current: parsed.data,
-      owner: undefined,
+      current: id,
+      owner: login,
       asked: false,
       picking: false,
       dismissed: false,
       unknown: false,
-      generation: changed ? state.generation + 1 : state.generation,
+      generation: id === state.current ? state.generation : state.generation + 1,
     }));
-    return true;
   },
-  required: () => {
+  ask: () => {
     set((state) => ({ asked: true, picking: state.picking || !state.dismissed }));
   },
   open: () => {
@@ -127,7 +88,6 @@ export const useOrgStore = create<OrgState>()((set, get) => ({
     set((state) => ({
       current: undefined,
       owner: undefined,
-      seen: [],
       asked: false,
       picking: false,
       dismissed: false,

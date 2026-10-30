@@ -842,14 +842,12 @@ export const fr = {
     },
     picker: {
       title: 'Quelle organisation ?',
-      body: 'Tu es membre de plusieurs organisations. Choisis celle dans laquelle cette console travaille ; tu peux en changer à tout moment.',
+      body: 'Choisis l’organisation dans laquelle cette console travaille. Tu peux en changer à tout moment.',
       known: 'Tes organisations',
-      idLabel: 'Identifiant de l’organisation',
-      use: 'Utiliser cette organisation',
       notNow: 'Plus tard',
       problemTag: 'À vérifier',
-      invalid: 'Ce n’est pas un identifiant d’organisation.',
-      unknown: 'Ostrom ne te connaît pas dans la dernière organisation choisie. Choisis-en une autre.',
+      unknown: 'Tu n’es plus membre de la dernière organisation choisie. Choisis-en une autre.',
+      failed: 'Impossible de lire tes organisations. Réessaie dans un instant.',
     },
   },
   home: {

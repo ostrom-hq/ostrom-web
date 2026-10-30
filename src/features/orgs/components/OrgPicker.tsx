@@ -1,34 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { type ReactElement, useEffect, useId, useRef, useState } from 'react';
+import { type ReactElement, useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { OrgChoice } from '@/shared/org/orgStore';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import type { OrgOption } from '../useOrgPicker';
 
 export interface OrgPickerProps {
-  readonly choices: readonly OrgChoice[];
-  readonly currentId: string | undefined;
-  /** The organization last chosen is unknown to the server for this person. */
+  readonly options: readonly OrgOption[];
+  readonly loading: boolean;
+  readonly failure: Error | undefined;
+  /** The organization chosen before is not one of the person's any more. */
   readonly unknown: boolean;
-  /** False when the id typed is not one: the picker stays open and says so. */
-  readonly onChoose: (id: string) => boolean;
   readonly onClose: () => void;
 }
 
-/**
- * Which organization the console acts in. It lists the organizations the server already named; the contract has no
- * list of a person's own organizations yet (QUESTIONS 10:45 WEB), so an id can also be typed.
- */
-export function OrgPicker({ choices, currentId, unknown, onChoose, onClose }: OrgPickerProps): ReactElement {
+/** Which of the person's organizations the console acts in: a dialog over the console, a sheet on a phone. */
+export function OrgPicker({ options, loading, failure, unknown, onClose }: OrgPickerProps): ReactElement {
   const { t } = useTranslation();
-  const [typed, setTyped] = useState('');
-  const [invalid, setInvalid] = useState(false);
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  const fieldId = useId();
   useEffect(() => {
     // Modal for real: the rest of the page cannot be reached while it is open, and focus goes back where it was.
     const opener = document.activeElement;
@@ -55,6 +48,7 @@ export function OrgPicker({ choices, currentId, unknown, onChoose, onClose }: Or
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-busy={loading}
         tabIndex={-1}
       >
         <h2 id={titleId} className="o-org-picker__title">
@@ -66,57 +60,29 @@ export function OrgPicker({ choices, currentId, unknown, onChoose, onClose }: Or
             {t('orgs.picker.unknown')}
           </Banner>
         ) : null}
-        {choices.length > 0 ? (
+        {failure === undefined ? null : (
+          <Banner tone="danger" tag={t('orgs.picker.problemTag')} live>
+            {t('orgs.picker.failed')}
+          </Banner>
+        )}
+        {loading ? <p className="o-org-picker__body">{t('app.loading')}</p> : null}
+        {options.length > 0 ? (
           <ul className="o-org-picker__list" aria-label={t('orgs.picker.known')}>
-            {choices.map((choice) => (
-              <li key={choice.id}>
-                <Button
-                  aria-current={choice.id === currentId ? 'true' : undefined}
-                  onClick={() => {
-                    onChoose(choice.id);
-                  }}
-                >
-                  <Avatar login={choice.name} size={22} />
-                  <span>{choice.name}</span>
+            {options.map((option) => (
+              <li key={option.organization.id}>
+                <Button aria-current={option.current ? 'true' : undefined} onClick={option.choose}>
+                  <Avatar login={option.organization.name} size={22} />
+                  <span>{option.organization.name}</span>
                 </Button>
               </li>
             ))}
           </ul>
         ) : null}
-        <form
-          className="o-stack"
-          onSubmit={(event) => {
-            event.preventDefault();
-            setInvalid(!onChoose(typed));
-          }}
-        >
-          <label htmlFor={fieldId} className="o-field-label">
-            {t('orgs.picker.idLabel')}
-          </label>
-          <input
-            id={fieldId}
-            className="o-input o-mono"
-            autoComplete="off"
-            spellCheck={false}
-            value={typed}
-            aria-invalid={invalid}
-            onChange={(event) => {
-              setTyped(event.target.value);
-              setInvalid(false);
-            }}
-          />
-          {invalid ? (
-            <Banner tone="warning" tag={t('orgs.picker.problemTag')} live>
-              {t('orgs.picker.invalid')}
-            </Banner>
-          ) : null}
-          <div className="o-inline">
-            <Button type="submit">{t('orgs.picker.use')}</Button>
-            <Button variant="ghost" onClick={onClose}>
-              {t('orgs.picker.notNow')}
-            </Button>
-          </div>
-        </form>
+        <div className="o-inline">
+          <Button variant="ghost" onClick={onClose}>
+            {t('orgs.picker.notNow')}
+          </Button>
+        </div>
       </div>
     </div>,
     document.body,
