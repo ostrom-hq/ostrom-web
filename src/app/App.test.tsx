@@ -15,3 +15,10 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
   });
 });
+
+describe('createAppRouter', () => {
+  it('uses the browser history when none is given', () => {
+    window.history.replaceState(null, '', '/');
+    expect(createAppRouter().history.location.pathname).toBe('/');
+  });
+});

@@ -29,7 +29,7 @@ export interface ThemeViewModel {
 export function useTheme(): ThemeViewModel {
   const preference = useThemeStore((state) => state.preference);
   const setPreference = useThemeStore((state) => state.setPreference);
-  const system = useSyncExternalStore(subscribeToSystemTheme, systemTheme, () => 'light' as const);
+  const system = useSyncExternalStore(subscribeToSystemTheme, systemTheme);
   const resolved = resolveTheme(preference, system);
   const toggle = useCallback(() => {
     setPreference(resolved === 'dark' ? 'light' : 'dark');
