@@ -109,9 +109,9 @@ describe('createAnalytics', () => {
 
     const batch = sent[0]?.body.batch ?? [];
     expect(batch.map((it) => it.event)).toEqual(['$identify', 'member_invited']);
-    expect(batch[0]?.properties.$anon_distinct_id).toBe('anon-1');
+    expect(batch[0]?.properties['$anon_distinct_id']).toBe('anon-1');
     expect(batch[1]?.distinct_id).toBe('user-1');
-    expect(batch[1]?.properties.$groups).toEqual({ organization: 'org-1' });
+    expect(batch[1]?.properties['$groups']).toEqual({ organization: 'org-1' });
   });
 
   it('a full batch leaves at once', () => {
@@ -134,7 +134,7 @@ describe('createAnalytics', () => {
     analytics.capture('after');
     analytics.flush();
     expect(sent[0]?.body.batch[0]?.distinct_id).toBe('anon-2');
-    expect(sent[0]?.body.batch[0]?.properties.$groups).toBeUndefined();
+    expect(sent[0]?.body.batch[0]?.properties['$groups']).toBeUndefined();
   });
 
   it('stops at once when consent is withdrawn', () => {
