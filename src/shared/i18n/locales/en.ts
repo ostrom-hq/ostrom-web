@@ -773,7 +773,12 @@ export const en = {
     plans: {
       label: 'Plans',
       interval: 'Billing interval',
-      every: { month: 'Monthly', year: 'Yearly, 20 % off' },
+      every: { month: 'Monthly', year: 'Yearly' },
+      yearSaving: 'Yearly, {{percent}} % off',
+      closed: {
+        enterprise: 'Your organization is on Enterprise: its contract is handled with us, not here.',
+        unpaid: 'The first payment of the subscription is still due: pay it before changing plan.',
+      },
       per: { month: '{{price}} per person a month', year: '{{price}} per person a year' },
       noPrice: 'No price on this instance',
       pitch: {

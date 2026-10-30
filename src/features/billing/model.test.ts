@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { BillingOverview } from '@gen/api/types.gen';
+import type { BillingOverview, BillingPrice } from '@gen/api/types.gen';
 import { initialBilling } from '@/mocks/fixtures/billing';
 import {
   hasSubscription,
@@ -8,8 +8,10 @@ import {
   isInvoiceStatus,
   isKnownStatus,
   offerFor,
+  plansState,
   priceOf,
   topAlert,
+  yearlySaving,
 } from './model';
 
 const team: BillingOverview = initialBilling();
@@ -54,5 +56,38 @@ describe('the billing model', () => {
       false,
       false,
     ]);
+  });
+});
+
+describe('plansState', () => {
+  it('opens the plans, except to Enterprise and before the first payment', () => {
+    expect(plansState(team)).toBe('open');
+    expect(plansState({ ...team, plan: 'enterprise' })).toBe('enterprise');
+    expect(plansState({ ...team, status: 'incomplete' })).toBe('unpaid');
+  });
+});
+
+describe('yearlySaving', () => {
+  const price = (
+    plan: BillingPrice['plan'],
+    interval: BillingPrice['interval'],
+    unitAmount: number,
+  ): BillingPrice => ({
+    plan,
+    interval,
+    unitAmount,
+    currency: 'usd',
+  });
+
+  it('is the best saving of paying yearly, in whole percent', () => {
+    expect(yearlySaving(team.prices)).toBe(20);
+    expect(yearlySaving([price('team', 'month', 1000), price('team', 'year', 11_000)])).toBe(8);
+  });
+
+  it('is nothing without both prices, a free month, or no saving', () => {
+    expect(yearlySaving([])).toBeUndefined();
+    expect(yearlySaving([price('team', 'month', 1000)])).toBeUndefined();
+    expect(yearlySaving([price('team', 'month', 0), price('team', 'year', 0)])).toBeUndefined();
+    expect(yearlySaving([price('team', 'month', 1000), price('team', 'year', 12_000)])).toBeUndefined();
   });
 });

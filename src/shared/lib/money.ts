@@ -10,7 +10,13 @@ export function formatUsd(usd: number, locale: string): string {
  * reader's locale writes it.
  */
 export function formatMinor(amount: number, currency: string, locale: string): string {
-  const format = new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() });
+  let format: Intl.NumberFormat;
+  try {
+    format = new Intl.NumberFormat(locale, { style: 'currency', currency: currency.toUpperCase() });
+  } catch {
+    // A currency code the browser does not know: the amount in hundredths, with the code as the server wrote it.
+    return `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2 }).format(amount / 100)} ${currency}`;
+  }
   const digits = format.resolvedOptions().maximumFractionDigits ?? 2;
   return format.format(amount / 10 ** digits);
 }

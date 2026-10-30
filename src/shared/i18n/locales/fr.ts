@@ -788,7 +788,12 @@ export const fr = {
     plans: {
       label: 'Offres',
       interval: 'Rythme de facturation',
-      every: { month: 'Mensuel', year: 'Annuel, 20 % de remise' },
+      every: { month: 'Mensuel', year: 'Annuel' },
+      yearSaving: 'Annuel, {{percent}} % de remise',
+      closed: {
+        enterprise: 'Ton organisation est en Enterprise : son contrat se règle avec nous, pas ici.',
+        unpaid: 'Le premier paiement de l’abonnement est encore dû : règle-le avant de changer d’offre.',
+      },
       per: { month: '{{price}} par personne et par mois', year: '{{price}} par personne et par an' },
       noPrice: 'Pas de prix sur cette instance',
       pitch: {

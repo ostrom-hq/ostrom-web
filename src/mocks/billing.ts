@@ -88,6 +88,8 @@ export function createBillingHandlers(
       if (!body.success) return refusal(400, 'invalid_request', 'a plan (team, business) and an interval');
       if (!subscribed()) return refusal(409, 'no_subscription', 'buy a plan first');
       const { billing } = state();
+      // Stripe changes no plan before the first payment of a subscription is made.
+      if (billing.status === 'incomplete') return refusal(409, 'payment_due', 'pay the first invoice first');
       return save({
         ...billing,
         plan: body.data.plan,

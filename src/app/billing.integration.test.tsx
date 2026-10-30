@@ -114,6 +114,11 @@ describe('the billing', () => {
       expect(assign).toHaveBeenCalledWith(`${STRIPE_CHECKOUT}_team_month`);
     });
     expect(within(plans).getByRole('button', { name: 'Choose Business' })).toBeDisabled();
+    // Back from Stripe out of the browser's page cache: the buttons answer again.
+    window.dispatchEvent(new Event('pageshow'));
+    await vi.waitFor(() => {
+      expect(within(plans).getByRole('button', { name: 'Choose Business' })).toBeEnabled();
+    });
   });
 
   it('stays when Stripe’s address is not a secure link', async () => {
@@ -165,6 +170,39 @@ describe('the billing', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Business needs a card that passed 3-D Secure',
     );
+    // The next gesture starts clean: the refusal belongs to the switch only.
+    leaving();
+    await user.click(screen.getByRole('button', { name: 'Payment method and billing details' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+  });
+
+  it('offers no plan to an Enterprise organization', async () => {
+    billingWith({ plan: 'enterprise', effectivePlan: 'enterprise', limits: PLAN_LIMITS.enterprise });
+    visit('/billing');
+    expect(await screen.findByText(/^Your organization is on Enterprise/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Switch to|Choose) / })).toBeNull();
+  });
+
+  it('offers no plan before the first payment of the subscription', async () => {
+    billingWith({ status: 'incomplete' });
+    visit('/billing');
+    expect(
+      await screen.findByText(/^The first payment of the subscription is still due/),
+    ).toBeInTheDocument();
+  });
+
+  it('says only “Yearly” when paying yearly saves nothing', async () => {
+    billingWith({
+      prices: [
+        { plan: 'team', interval: 'month', unitAmount: 1000, currency: 'usd' },
+        { plan: 'team', interval: 'year', unitAmount: 12_000, currency: 'usd' },
+      ],
+    });
+    visit('/billing');
+    const plans = await region('Plans');
+    expect(within(plans).getByRole('button', { name: 'Yearly' })).toBeInTheDocument();
   });
 
   it('warns about a payment to make, the limits that apply meanwhile, and spent hours', async () => {

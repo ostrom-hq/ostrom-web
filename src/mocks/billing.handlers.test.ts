@@ -94,6 +94,12 @@ describe('mock billing', () => {
     expect(switched.data).toMatchObject({ plan: 'business', effectivePlan: 'business', interval: 'year' });
     expect(switched.data.limits.sso).toBe(true);
     expect(await post('plan', JSON.stringify({ plan: 'team', interval: 'week' }))).toBe(400);
+    db.billing = { ...db.billing, status: 'incomplete' };
+    expect(
+      await statusOf(async () =>
+        changeBillingPlan({ path, body: { plan: 'team', interval: 'month' }, throwOnError: true }),
+      ),
+    ).toBe(409);
     withoutSubscription();
     expect(
       await statusOf(async () =>

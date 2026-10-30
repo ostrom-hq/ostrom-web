@@ -6,13 +6,14 @@ import {
   getBillingQueryKey,
   getOrganizationOptions,
   listBillingInvoicesOptions,
+  listBillingInvoicesQueryKey,
   openBillingPortalMutation,
   resumeBillingSubscriptionMutation,
   startBillingCheckoutMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type { BillingInvoice, BillingOverview, BillingRedirect } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -78,9 +79,11 @@ export interface BillingActionsViewModel {
 export function useBillingActions(orgId: string): BillingActionsViewModel {
   const queryClient = useQueryClient();
   const [unsafeRedirect, setUnsafeRedirect] = useState(false);
+  // The new state of the subscription is in the answer; a change or a cancellation may also issue an invoice.
   const settle = useCallback(
-    (billing: BillingOverview) => {
+    async (billing: BillingOverview) => {
       queryClient.setQueryData(getBillingQueryKey({ path: { orgId } }), billing);
+      await queryClient.invalidateQueries({ queryKey: listBillingInvoicesQueryKey({ path: { orgId } }) });
     },
     [queryClient, orgId],
   );
@@ -93,6 +96,23 @@ export function useBillingActions(orgId: string): BillingActionsViewModel {
   const cancelling = useMutation({ ...cancelBillingSubscriptionMutation(), onSuccess: settle });
   const resuming = useMutation({ ...resumeBillingSubscriptionMutation(), onSuccess: settle });
   const all = [checkout, portal, plan, cancelling, resuming];
+  const { reset: resetCheckout } = checkout;
+  const { reset: resetPortal } = portal;
+  // Back from Stripe with the browser's back button, the page may come out of its cache as it was left: busy.
+  useEffect(() => {
+    const back = (): void => {
+      resetCheckout();
+      resetPortal();
+    };
+    window.addEventListener('pageshow', back);
+    return () => {
+      window.removeEventListener('pageshow', back);
+    };
+  }, [resetCheckout, resetPortal]);
+  // Each gesture starts clean: an error belongs to the last one only.
+  const fresh = (): void => {
+    for (const mutation of all) mutation.reset();
+  };
   const path = { orgId };
   const { mutate: checkoutMutate } = checkout;
   const { mutate: portalMutate } = portal;
@@ -101,18 +121,23 @@ export function useBillingActions(orgId: string): BillingActionsViewModel {
   const { mutate: resumeMutate } = resuming;
   return {
     buy: (chosen, interval) => {
+      fresh();
       checkoutMutate({ path, body: { plan: chosen, interval } });
     },
     change: (chosen, interval) => {
+      fresh();
       planMutate({ path, body: { plan: chosen, interval } });
     },
     openPortal: () => {
+      fresh();
       portalMutate({ path });
     },
     cancel: () => {
+      fresh();
       cancelMutate({ path });
     },
     resume: () => {
+      fresh();
       resumeMutate({ path });
     },
     busy:

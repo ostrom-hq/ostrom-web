@@ -38,6 +38,29 @@ export function priceOf(
  */
 export type PlanOffer = 'current' | 'switch' | 'buy';
 
+/**
+ * Whether the plan cards offer anything: not to an Enterprise organization (its contract is signed with us), and
+ * not while the first payment of a subscription is still due (Stripe's `incomplete`: pay it first).
+ */
+export type PlansState = 'open' | 'enterprise' | 'unpaid';
+
+export function plansState(billing: BillingOverview): PlansState {
+  if (billing.plan === 'enterprise') return 'enterprise';
+  return billing.status === 'incomplete' ? 'unpaid' : 'open';
+}
+
+/** What paying yearly saves on the best plan, in whole percent, or undefined when it saves nothing. */
+export function yearlySaving(prices: readonly BillingPrice[]): number | undefined {
+  const savings = PLANS.flatMap((plan) => {
+    const month = priceOf(prices, plan, 'month');
+    const year = priceOf(prices, plan, 'year');
+    if (month === undefined || year === undefined || month.unitAmount <= 0) return [];
+    return [Math.round((1 - year.unitAmount / (12 * month.unitAmount)) * 100)];
+  });
+  const best = Math.max(0, ...savings);
+  return best > 0 ? best : undefined;
+}
+
 export function offerFor(billing: BillingOverview, plan: SoldPlan, interval: Interval): PlanOffer {
   if (!hasSubscription(billing)) return 'buy';
   return billing.plan === plan && billing.interval === interval ? 'current' : 'switch';

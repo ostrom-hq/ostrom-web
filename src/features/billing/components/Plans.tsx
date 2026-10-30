@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatMinor } from '@/shared/lib/money';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { type Interval, INTERVALS, offerFor, PLANS, priceOf } from '../model';
+import { type Interval, INTERVALS, offerFor, PLANS, plansState, priceOf, yearlySaving } from '../model';
 import type { BillingActionsViewModel } from '../useBilling';
 
 export interface PlansProps {
@@ -20,12 +20,20 @@ export interface PlansProps {
 export function Plans({ billing, actions }: PlansProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [interval, setInterval] = useState<Interval>(billing.interval ?? 'month');
+  const state = plansState(billing);
   if (!billing.purchasable)
     return (
       <Section label={t('billing.plans.label')}>
         <p className="o-row__meta">{t('billing.plans.notSold')}</p>
       </Section>
     );
+  if (state !== 'open')
+    return (
+      <Section label={t('billing.plans.label')}>
+        <p className="o-row__meta">{t(`billing.plans.closed.${state}`)}</p>
+      </Section>
+    );
+  const saving = yearlySaving(billing.prices);
   return (
     <Section label={t('billing.plans.label')}>
       <div className="o-inline" role="group" aria-label={t('billing.plans.interval')}>
@@ -38,7 +46,9 @@ export function Plans({ billing, actions }: PlansProps): ReactElement {
               setInterval(option);
             }}
           >
-            {t(`billing.plans.every.${option}`)}
+            {option === 'year' && saving !== undefined
+              ? t('billing.plans.yearSaving', { percent: saving })
+              : t(`billing.plans.every.${option}`)}
           </Button>
         ))}
       </div>

@@ -7,6 +7,10 @@ describe('formatMinor', () => {
     expect(formatMinor(14_400, 'eur', 'fr')).toMatch(/^144,00\s€$/);
     expect(formatMinor(1500, 'jpy', 'en')).toBe('¥1,500');
   });
+
+  it('writes the code as it came for a currency the browser does not know', () => {
+    expect(formatMinor(1500, 'not a code', 'en')).toBe('15.00 not a code');
+  });
 });
 
 describe('formatUsd', () => {
