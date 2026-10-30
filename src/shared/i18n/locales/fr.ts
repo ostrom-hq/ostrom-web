@@ -5,7 +5,15 @@ export const fr = {
     name: 'Ostrom',
     skipToContent: 'Aller au contenu',
     nav: { label: 'Principale', home: 'Accueil' },
-    theme: { toLight: 'Passer au thème clair', toDark: 'Passer au thème sombre' },
+    theme: {
+      switch: 'Thème : {{current}}. Passer en {{next}}',
+      names: { system: 'système', light: 'clair', dark: 'sombre' },
+    },
+    notFound: { title: 'Rien ici', body: 'Cette page n’existe pas.', home: 'Retour à la console' },
+    error: {
+      title: 'Quelque chose a cassé',
+      body: 'Cet écran n’a pas pu se charger. Le reste d’Ostrom fonctionne.',
+    },
   },
   home: {
     title: 'Chaque changement d’agent, validé par la bonne personne.',

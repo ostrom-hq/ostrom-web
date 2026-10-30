@@ -1,4 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Azeret+Mono:wght@400;500;600&display=swap');
+/* Fonts are self-hosted (@fontsource-variable, imported in main.tsx): no third-party request on load. */
+:root {
+  --font-display: 'Archivo Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-text: 'Archivo Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Azeret Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
 *,
 *::before,

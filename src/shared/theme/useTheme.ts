@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { type ResolvedTheme, type ThemePreference, useThemeStore } from '@/shared/theme/themeStore';
+import { useCallback, useLayoutEffect, useSyncExternalStore } from 'react';
+import {
+  nextThemePreference,
+  type ResolvedTheme,
+  type ThemePreference,
+  useThemeStore,
+} from '@/shared/theme/themeStore';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
@@ -22,25 +27,27 @@ export function resolveTheme(preference: ThemePreference, system: ResolvedTheme)
 export interface ThemeViewModel {
   readonly preference: ThemePreference;
   readonly resolved: ResolvedTheme;
-  readonly toggle: () => void;
+  /** The preference the switch moves to next. */
+  readonly next: ThemePreference;
+  readonly cycle: () => void;
 }
 
-/** ViewModel of the theme switch: the resolved theme and a toggle that pins the opposite one. */
+/** ViewModel of the theme switch: system → light → dark → system. */
 export function useTheme(): ThemeViewModel {
   const preference = useThemeStore((state) => state.preference);
   const setPreference = useThemeStore((state) => state.setPreference);
   const system = useSyncExternalStore(subscribeToSystemTheme, systemTheme);
-  const resolved = resolveTheme(preference, system);
-  const toggle = useCallback(() => {
-    setPreference(resolved === 'dark' ? 'light' : 'dark');
-  }, [resolved, setPreference]);
-  return { preference, resolved, toggle };
+  const next = nextThemePreference(preference);
+  const cycle = useCallback(() => {
+    setPreference(next);
+  }, [next, setPreference]);
+  return { preference, resolved: resolveTheme(preference, system), next, cycle };
 }
 
-/** Mirrors the preference on <html data-theme>; tokens.css follows the system when it is absent. */
+/** Mirrors the preference on <html data-theme> before paint; tokens.css follows the system when it is absent. */
 export function useApplyTheme(): void {
   const preference = useThemeStore((state) => state.preference);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
     if (preference === 'system') {
       delete root.dataset['theme'];

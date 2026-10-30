@@ -19,7 +19,7 @@ export function AppShell(): ReactElement {
           <span>{t('app.name')}</span>
         </Link>
         <nav className="o-nav" aria-label={t('app.nav.label')}>
-          <Link to="/" activeProps={{ 'aria-current': 'page' }}>
+          <Link to="/" activeOptions={{ exact: true }}>
             {t('app.nav.home')}
           </Link>
         </nav>

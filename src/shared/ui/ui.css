@@ -47,3 +47,8 @@
   border-color: var(--danger);
   color: var(--danger);
 }
+
+.o-btn--icon {
+  min-width: 40px;
+  padding: 0;
+}

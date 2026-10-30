@@ -13,6 +13,13 @@ export function pickLanguage(candidates: readonly string[]): Language {
   return 'en';
 }
 
+/** Keeps <html lang> on the language actually shown, for screen readers and hyphenation. */
+export function syncDocumentLanguage(language: string): void {
+  document.documentElement.lang = language;
+}
+
+i18n.on('languageChanged', syncDocumentLanguage);
+
 void i18n.use(initReactI18next).init({
   lng: pickLanguage(navigator.languages),
   fallbackLng: 'en',

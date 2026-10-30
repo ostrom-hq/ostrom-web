@@ -1,5 +1,6 @@
 import { createRootRoute, createRoute, createRouter, type RouterHistory } from '@tanstack/react-router';
 import { AppShell } from '@/app/AppShell';
+import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { HomeScreen } from '@/features/home';
 
 const rootRoute = createRootRoute({ component: AppShell });
@@ -9,7 +10,13 @@ const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', comp
 export const routeTree = rootRoute.addChildren([homeRoute]);
 
 const buildRouter = (history?: RouterHistory) =>
-  createRouter({ routeTree, defaultPreload: 'intent', ...(history === undefined ? {} : { history }) });
+  createRouter({
+    routeTree,
+    defaultPreload: 'intent',
+    defaultNotFoundComponent: NotFoundScreen,
+    defaultErrorComponent: ErrorScreen,
+    ...(history === undefined ? {} : { history }),
+  });
 
 export type AppRouter = ReturnType<typeof buildRouter>;
 

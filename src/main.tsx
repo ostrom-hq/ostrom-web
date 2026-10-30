@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
 import '@/shared/i18n/i18n';
+import '@fontsource-variable/archivo/wdth.css';
+import '@fontsource-variable/azeret-mono';
 import '@/shared/theme/tokens.css';
 import '@/shared/theme/base.css';
 import '@/shared/ui/ui.css';

@@ -15,8 +15,9 @@ export default defineConfig({
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
   ],
   webServer: {
-    command: 'pnpm preview',
+    // CI downloads the build of the `check` job; locally, build first so the journeys test the current code.
+    command: isCi ? 'pnpm preview' : 'pnpm build && pnpm preview',
     port,
-    reuseExistingServer: !isCi,
+    reuseExistingServer: false,
   },
 });

@@ -6,17 +6,20 @@ import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 
 describe('ThemeToggle', () => {
   beforeEach(() => {
-    useThemeStore.setState({ preference: 'light' });
+    useThemeStore.setState({ preference: 'system' });
   });
 
-  it('pins the dark theme from light, then back', async () => {
+  it('cycles system, light, dark and back to system', async () => {
     const user = userEvent.setup();
     render(<ThemeToggle />);
 
-    await user.click(screen.getByRole('button', { name: 'Switch to dark theme' }));
+    await user.click(screen.getByRole('button', { name: 'Theme: system. Switch to light' }));
+    expect(useThemeStore.getState().preference).toBe('light');
+
+    await user.click(screen.getByRole('button', { name: 'Theme: light. Switch to dark' }));
     expect(useThemeStore.getState().preference).toBe('dark');
 
-    await user.click(screen.getByRole('button', { name: 'Switch to light theme' }));
-    expect(useThemeStore.getState().preference).toBe('light');
+    await user.click(screen.getByRole('button', { name: 'Theme: dark. Switch to system' }));
+    expect(useThemeStore.getState().preference).toBe('system');
   });
 });

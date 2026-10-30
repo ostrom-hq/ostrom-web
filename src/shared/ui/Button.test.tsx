@@ -6,11 +6,15 @@ describe('Button', () => {
     render(<Button>Later</Button>);
     const button = screen.getByRole('button', { name: 'Later' });
     expect(button).toHaveAttribute('type', 'button');
-    expect(button).toHaveClass('o-btn', 'o-btn--secondary');
+    expect(button).toHaveClass('o-btn', 'o-btn--secondary', 'o-btn--md');
   });
 
   it('carries its variant', () => {
-    render(<Button variant="primary">Approve</Button>);
-    expect(screen.getByRole('button', { name: 'Approve' })).toHaveClass('o-btn--primary');
+    render(
+      <Button variant="primary" size="icon" aria-label="Approve">
+        ✓
+      </Button>,
+    );
+    expect(screen.getByRole('button', { name: 'Approve' })).toHaveClass('o-btn--primary', 'o-btn--icon');
   });
 });

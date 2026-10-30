@@ -106,8 +106,23 @@ export default defineConfig(
         {
           patterns: [
             { group: ['@/app/*'], message: 'features/ never imports app/.' },
+            { group: ['@ee/*'], message: 'ee/ is loaded lazily by app/, never imported by features/.' },
             { group: ['@/features/*/*'], message: 'Import another feature through its index only.' },
             { group: ['../../*'], message: 'Use the @/ alias across folders.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/app/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['@ee/*'], message: 'ee/ is loaded through its single lazy entry point only.' },
+            { group: ['@/features/*/*'], message: 'Import a feature through its index only.' },
           ],
         },
       ],

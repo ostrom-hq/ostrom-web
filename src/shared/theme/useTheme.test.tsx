@@ -11,7 +11,7 @@ function mockSystemTheme(dark: boolean): {
   let matches = dark;
   const listeners = new Set<Listener>();
   vi.spyOn(window, 'matchMedia').mockImplementation(
-    (query: string): MediaQueryList =>
+    (query: string) =>
       ({
         get matches() {
           return matches;
@@ -19,7 +19,7 @@ function mockSystemTheme(dark: boolean): {
         media: query,
         addEventListener: (_type: string, listener: Listener) => listeners.add(listener),
         removeEventListener: (_type: string, listener: Listener) => listeners.delete(listener),
-      }) as unknown as MediaQueryList,
+      }) as Partial<MediaQueryList> as MediaQueryList,
   );
   return {
     listeners,
@@ -48,14 +48,16 @@ describe('useTheme', () => {
     expect(system.listeners.size).toBe(0);
   });
 
-  it('toggles to the opposite of what is shown', () => {
+  it('shows a pinned theme whatever the system says, and cycles to the next one', () => {
     mockSystemTheme(true);
-    useThemeStore.setState({ preference: 'system' });
+    useThemeStore.setState({ preference: 'light' });
     const { result } = renderHook(() => useTheme());
+    expect(result.current.resolved).toBe('light');
+    expect(result.current.next).toBe('dark');
     act(() => {
-      result.current.toggle();
+      result.current.cycle();
     });
-    expect(useThemeStore.getState().preference).toBe('light');
+    expect(useThemeStore.getState().preference).toBe('dark');
   });
 });
 

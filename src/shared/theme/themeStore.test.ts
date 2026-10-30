@@ -1,4 +1,9 @@
-import { readThemePreference, THEME_STORAGE_KEY, useThemeStore } from '@/shared/theme/themeStore';
+import {
+  nextThemePreference,
+  readThemePreference,
+  THEME_STORAGE_KEY,
+  useThemeStore,
+} from '@/shared/theme/themeStore';
 import { resolveTheme } from '@/shared/theme/useTheme';
 
 function storageWith(value: string | null): Pick<Storage, 'getItem'> {
@@ -31,5 +36,13 @@ describe('resolveTheme', () => {
   it('follows the system only for the system preference', () => {
     expect(resolveTheme('system', 'dark')).toBe('dark');
     expect(resolveTheme('light', 'dark')).toBe('light');
+  });
+});
+
+describe('nextThemePreference', () => {
+  it('goes system, light, dark, system', () => {
+    expect(nextThemePreference('system')).toBe('light');
+    expect(nextThemePreference('light')).toBe('dark');
+    expect(nextThemePreference('dark')).toBe('system');
   });
 });
