@@ -10,7 +10,8 @@ export default defineConfig({
   plugins: [
     '@hey-api/client-fetch',
     '@hey-api/typescript',
-    'zod',
+    // RFC 3339 allows `+02:00` as well as `Z`: accept both, so one server timestamp never fails a whole list.
+    { name: 'zod', dates: { offset: true } },
     { name: '@hey-api/sdk', validator: true },
     '@tanstack/react-query',
     'msw',

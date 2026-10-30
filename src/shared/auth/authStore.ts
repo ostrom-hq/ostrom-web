@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { create } from 'zustand';
+import { safeLocalStorage } from '@/shared/lib/safeStorage';
 
 export const AUTH_STORAGE_KEY = 'ostrom.token';
 
@@ -19,16 +20,17 @@ export interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>()((set) => ({
-  token: readStoredToken(window.localStorage),
+  token: readStoredToken(safeLocalStorage),
   signIn: (token) => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) return false;
-    window.localStorage.setItem(AUTH_STORAGE_KEY, parsed.data);
+    // A blocked storage keeps the sign-in for this tab only.
+    safeLocalStorage.setItem(AUTH_STORAGE_KEY, parsed.data);
     set({ token: parsed.data });
     return true;
   },
   signOut: () => {
-    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    safeLocalStorage.removeItem(AUTH_STORAGE_KEY);
     set({ token: undefined });
   },
 }));

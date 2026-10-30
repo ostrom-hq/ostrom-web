@@ -20,8 +20,10 @@ function notFound(): HttpResponse<ApiError> {
 }
 
 function decide(ask: Ask, result: Decision, at: string): Ask {
+  const selfApproved = result === 'approved' && ask.askedBy.includes(viewer.login);
   return {
     ...ask,
+    ...(selfApproved ? { selfApproved } : {}),
     status: result,
     decidedBy: viewer.login,
     decidedAt: at,
@@ -34,19 +36,33 @@ function decide(ask: Ask, result: Decision, at: string): Ask {
       digest: ask.shownDigest,
       by: viewer.login,
       result,
+      ...(selfApproved ? { selfApproved } : {}),
     },
   };
 }
 
-/** The prototype's rule: the author of a request cannot say yes while someone else can (a no always passes). */
-export function selfApprovalRefusal(ask: Ask): SelfApprovalRefused | undefined {
-  if (ask.you === undefined || ask.you.canApprove) return undefined;
-  const others = (ask.gate?.approvers ?? []).filter((login) => !ask.askedBy.includes(login));
+/**
+ * The prototype's rule (`selfCheck`): the author of a request cannot say yes while another approver exists;
+ * as the only approver, the yes passes (marked self-approved). A no always passes.
+ */
+export function selfApprovalRefusal(ask: Ask, login: string): SelfApprovalRefused | undefined {
+  const asked = new Set(ask.askedBy.map((author) => author.toLowerCase()));
+  if (!asked.has(login.toLowerCase())) return undefined;
+  const others = (ask.gate?.approvers ?? []).filter((approver) => !asked.has(approver.toLowerCase()));
+  if (others.length === 0) return undefined;
   return {
-    error: ask.you.reason ?? 'You asked for this action: another approver has to say yes.',
+    error: `You asked for this action: ${others.join(' or ')} has to approve it.`,
     code: 'self_approval_refused',
     others,
   };
+}
+
+async function readJson(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return undefined;
+  }
 }
 
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
@@ -70,11 +86,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const index = db.asks.findIndex((candidate) => candidate.id === params.id);
       const ask = db.asks[index];
       if (ask === undefined) return notFound();
-      const body = zDecideRequest.safeParse(await request.json());
+      if (ask.status !== 'pending') {
+        return HttpResponse.json<ApiError>({ error: 'request already decided' }, { status: 409 });
+      }
+      const body = zDecideRequest.safeParse(await readJson(request));
       if (!body.success) {
         return HttpResponse.json<ApiError>({ error: 'result must be approved or rejected' }, { status: 400 });
       }
-      const refusal = body.data.result === 'approved' ? selfApprovalRefusal(ask) : undefined;
+      const refusal = body.data.result === 'approved' ? selfApprovalRefusal(ask, viewer.login) : undefined;
       if (refusal !== undefined) return HttpResponse.json<SelfApprovalRefused>(refusal, { status: 403 });
       const decided = decide(ask, body.data.result, now().toISOString());
       db.asks[index] = decided;

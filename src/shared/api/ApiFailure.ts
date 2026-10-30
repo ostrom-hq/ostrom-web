@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 
 export type ApiFailureKind =
   | 'network'
+  | 'invalid-request'
   | 'invalid-response'
   | 'bad-request'
   | 'unauthorized'

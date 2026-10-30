@@ -4,7 +4,16 @@ import { ApiFailure, isApiFailure, toApiFailure } from '@/shared/api/ApiFailure'
 const response = (status: number): Response => new Response(null, { status });
 
 describe('toApiFailure', () => {
-  it('calls a missing response a network failure', () => {
+  it('calls a request that fails its own validation an invalid request, not a network failure', () => {
+    const zodError = z.string().min(1).safeParse('').error;
+    expect(toApiFailure(zodError, undefined).kind).toBe('invalid-request');
+  });
+
+  it('calls any other error before a response unexpected', () => {
+    expect(toApiFailure(new Error('interceptor bug'), undefined).kind).toBe('unexpected');
+  });
+
+  it('calls a fetch rejection a network failure', () => {
     const failure = toApiFailure(new TypeError('Failed to fetch'), undefined);
     expect(failure.kind).toBe('network');
     expect(failure.status).toBeUndefined();

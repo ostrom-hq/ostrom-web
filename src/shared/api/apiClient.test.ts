@@ -1,3 +1,4 @@
+import { client } from '@gen/api/client.gen';
 import { handleGetYesQueue } from '@gen/api/msw.gen';
 import { getAsk, getYesQueue } from '@gen/api/sdk.gen';
 import { http, HttpResponse } from 'msw';
@@ -13,7 +14,6 @@ let token: string | undefined;
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
   configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
 });
 afterEach(() => {
@@ -34,6 +34,11 @@ async function failureOf(call: () => Promise<unknown>): Promise<unknown> {
 }
 
 describe('generated client, configured', () => {
+  it('installs the failure mapping once, however often it is configured', () => {
+    configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
+    expect(client.interceptors.error.fns.filter((fn) => fn !== null)).toHaveLength(1);
+  });
+
   it('returns data that passed the contract', async () => {
     const { data } = await getYesQueue({ throwOnError: true });
     expect(data).toEqual({ operator: 'maya', pending: [], recent: [] });

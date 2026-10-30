@@ -16,6 +16,14 @@ describe('App', () => {
   });
 });
 
+describe('mock mode', () => {
+  it('says the data is a demo', async () => {
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
+    render(<App router={router} mocks />);
+    expect(await screen.findByRole('note')).toHaveTextContent('Demo data');
+  });
+});
+
 describe('createAppRouter', () => {
   it('uses the browser history when none is given', () => {
     window.history.replaceState(null, '', '/');

@@ -3,6 +3,7 @@ import type { LocaleShape } from '@/shared/i18n/types';
 export const fr = {
   app: {
     name: 'Ostrom',
+    mocks: 'Données de démo : cette console n’est reliée à aucun serveur Ostrom.',
     skipToContent: 'Aller au contenu',
     nav: { label: 'Principale', home: 'Accueil' },
     theme: {

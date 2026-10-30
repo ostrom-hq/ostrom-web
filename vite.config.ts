@@ -1,13 +1,32 @@
+import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
+import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const src = fileURLToPath(new URL('./src', import.meta.url));
 const ee = fileURLToPath(new URL('./ee', import.meta.url));
 const gen = fileURLToPath(new URL('./gen', import.meta.url));
 
+/** A build without VITE_MOCKS ships no Mock Service Worker at all, so mock data cannot reach a real deploy. */
+function dropMockWorkerUnlessMocks(): Plugin {
+  let outDir = 'dist';
+  return {
+    name: 'ostrom:drop-mock-worker',
+    apply: 'build',
+    configResolved(config) {
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    closeBundle() {
+      if (process.env['VITE_MOCKS'] !== 'true')
+        rmSync(resolve(outDir, 'mockServiceWorker.js'), { force: true });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), dropMockWorkerUnlessMocks()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },

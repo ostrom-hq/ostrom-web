@@ -17,14 +17,21 @@ const env = parseEnv(import.meta.env);
 
 configureApiClient({ baseUrl: env.apiBaseUrl, getToken: () => useAuthStore.getState().token });
 
-async function boot(container: HTMLElement): Promise<void> {
-  if (env.mocks) {
+async function startMocksOrWarn(): Promise<void> {
+  try {
     const { startMocks } = await import('@/mocks/browser');
     await startMocks();
+  } catch (error) {
+    // Render anyway: the screens show their offline state instead of a blank page.
+    console.error('Ostrom: the mock API could not start', error);
   }
+}
+
+async function boot(container: HTMLElement): Promise<void> {
+  if (env.mocks) await startMocksOrWarn();
   createRoot(container).render(
     <StrictMode>
-      <App router={createAppRouter()} />
+      <App router={createAppRouter()} mocks={env.mocks} />
     </StrictMode>,
   );
 }

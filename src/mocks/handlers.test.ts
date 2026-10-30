@@ -16,6 +16,7 @@ beforeAll(() => {
   configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => undefined });
 });
 afterEach(() => {
+  server.resetHandlers();
   db.asks = structuredClone(initial);
 });
 afterAll(() => {
@@ -67,7 +68,6 @@ describe('mock API', () => {
       throwOnError: true,
     });
     expect([data.status, data.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
-    server.resetHandlers();
   });
 
   it('refuses the author’s own yes while another approver exists', async () => {
@@ -99,6 +99,34 @@ describe('mock API', () => {
     ]);
   });
 
+  it('marks the yes of the only approver as self-approved, in the request and its receipt', async () => {
+    const deploy = db.asks.find((ask) => ask.id === 'ask-deploy-88');
+    if (deploy === undefined) throw new Error('no fixture');
+    deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
+    const { data } = await decideAsk({
+      path: { id: 'ask-deploy-88' },
+      body: { result: 'approved' },
+      throwOnError: true,
+    });
+    expect([data.selfApproved, data.receipt?.selfApproved]).toEqual([true, true]);
+  });
+
+  it('answers 409 when the request is already decided', async () => {
+    const error = await failureOf(async () =>
+      decideAsk({ path: { id: 'ask-migration-7' }, body: { result: 'rejected' }, throwOnError: true }),
+    );
+    expect(isApiFailure(error) && error.status).toBe(409);
+  });
+
+  it('answers 400 to a body that is not JSON', async () => {
+    const response = await fetch('http://ostrom.test/api/yes/ask-merge-412/decide', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{not json',
+    });
+    expect(response.status).toBe(400);
+  });
+
   it('answers 400 to a body outside the contract', async () => {
     const response = await fetch('http://ostrom.test/api/yes/ask-merge-412/decide', {
       method: 'POST',
@@ -116,21 +144,19 @@ describe('selfApprovalRefusal', () => {
     return found;
   }
 
-  it('lets through a viewer who can approve, or a request without a viewer', () => {
-    const merge = fixture('ask-merge-412');
-    expect(selfApprovalRefusal(merge)).toBeUndefined();
-    delete merge.you;
-    expect(selfApprovalRefusal(merge)).toBeUndefined();
+  it('lets through someone who did not ask', () => {
+    expect(selfApprovalRefusal(fixture('ask-merge-412'), 'maya')).toBeUndefined();
   });
 
-  it('gives a default reason and no other approver when the request has no gate', () => {
+  it('refuses the author, case-insensitively, and names the other approvers', () => {
+    expect(selfApprovalRefusal(fixture('ask-deploy-88'), 'MAYA')?.others).toEqual(['samir']);
+  });
+
+  it('lets the author through as the only approver, or when the request has no gate', () => {
     const deploy = fixture('ask-deploy-88');
+    deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
+    expect(selfApprovalRefusal(deploy, 'maya')).toBeUndefined();
     delete deploy.gate;
-    deploy.you = { login: 'maya', self: true, canApprove: false };
-    expect(selfApprovalRefusal(deploy)).toEqual({
-      error: 'You asked for this action: another approver has to say yes.',
-      code: 'self_approval_refused',
-      others: [],
-    });
+    expect(selfApprovalRefusal(deploy, 'maya')).toBeUndefined();
   });
 });

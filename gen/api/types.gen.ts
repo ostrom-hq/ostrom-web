@@ -218,6 +218,10 @@ export type DecideAskErrors = {
      * Nothing with this id.
      */
     404: Error;
+    /**
+     * The request is already decided; a signed decision never changes.
+     */
+    409: Error;
 };
 
 export type DecideAskError = DecideAskErrors[keyof DecideAskErrors];

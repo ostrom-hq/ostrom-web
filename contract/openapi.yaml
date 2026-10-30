@@ -67,6 +67,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SelfApprovalRefused' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: The request is already decided; a signed decision never changes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   securitySchemes:
     bearerAuth:
