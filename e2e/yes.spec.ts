@@ -51,7 +51,9 @@ test('a sign-in link keeps the token in memory and leaves no trace in the addres
   expect(stored.some((value) => value.includes('opk_e2e_token_123'))).toBe(false);
 });
 
-test('a yes from a sign-in five minutes old asks to sign in again, then goes through', async ({ page }) => {
+test('a yes from a sign-in more than five minutes old asks to sign in again, then goes through after the link', async ({
+  page,
+}) => {
   await page.clock.install();
   await page.goto('/yes/apr-merge-412');
   await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
@@ -65,7 +67,11 @@ test('a yes from a sign-in five minutes old asks to sign in again, then goes thr
 
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill('maya@acme.dev');
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
-  await page.goto('/auth/email#token=ml_demo');
+  // The link opened in this page, without a reload: the demo keeps its data and only its sign-in is new.
+  await page.evaluate(() => {
+    window.history.pushState({}, '', '/auth/email#token=ml_demo');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
   await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await page.getByRole('button', { name: /^Approve/ }).click();

@@ -335,7 +335,7 @@ describe('a request', () => {
 
   it('offers a fresh sign-in, back to the request, when the server wants one for the yes', async () => {
     const user = userEvent.setup();
-    db.signedInAt = Date.now() - FRESH_SIGN_IN_MS;
+    db.signedInAt = Date.now() - FRESH_SIGN_IN_MS - 1;
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     const alert = await screen.findByRole('alert');

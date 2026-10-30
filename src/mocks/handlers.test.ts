@@ -152,10 +152,11 @@ describe('mock API', () => {
     expect([data.approval.status, data.approval.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
   });
 
-  it('asks for a fresh sign-in before a yes once the sign-in is five minutes old, never before a no', async () => {
+  it('asks for a fresh sign-in before a yes once the sign-in is more than five minutes old, never before a no', async () => {
     let clock = NOW.getTime();
+    db.signedInAt = clock;
     server.use(...createHandlers(db, () => new Date(clock)));
-    clock += FRESH_SIGN_IN_MS;
+    clock += FRESH_SIGN_IN_MS + 1;
     const stale = await failureOf(async () =>
       answerApproval({
         ...merge,
@@ -165,7 +166,7 @@ describe('mock API', () => {
     );
     expect(isApiFailure(stale) && [stale.status, stale.code]).toEqual([403, 'step_up_required']);
     await verifySignInEmail({ body: { token: DEMO_EMAIL_TOKEN }, throwOnError: true });
-    clock += FRESH_SIGN_IN_MS - 1;
+    clock += FRESH_SIGN_IN_MS;
     const { data } = await answerApproval({
       ...merge,
       body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
