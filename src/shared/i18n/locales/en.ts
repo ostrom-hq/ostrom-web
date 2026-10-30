@@ -628,6 +628,7 @@ export const en = {
       sending: 'Sending…',
       sentTag: 'Sent',
       sent: 'If {{email}} may sign in, a link is on its way. Open it on this device; it works once.',
+      other: 'Use another address',
       failedTag: 'Not sent',
     },
     link: {

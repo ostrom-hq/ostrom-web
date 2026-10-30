@@ -4,6 +4,7 @@ import { CSRF_HEADER, csrfToken, withCsrf } from './csrf';
 describe('csrfToken', () => {
   it('reads the token among other cookies, decoded', () => {
     expect(csrfToken('theme=dark; ostrom_csrf=a%2Bb=c; other=1')).toBe('a+b=c');
+    expect(csrfToken('ostrom_csrf=a%E0%A4%A')).toBe('a%E0%A4%A');
   });
 
   it('has none without the cookie or with an empty one', () => {

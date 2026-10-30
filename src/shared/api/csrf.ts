@@ -12,7 +12,13 @@ export function csrfToken(cookies: string): string | undefined {
     const [name, ...value] = pair.trim().split('=');
     if (name === CSRF_COOKIE) {
       const token = value.join('=');
-      return token === '' ? undefined : decodeURIComponent(token);
+      if (token === '') return undefined;
+      // A badly encoded value is sent as it is: the server refuses it, the console does not crash.
+      try {
+        return decodeURIComponent(token);
+      } catch {
+        return token;
+      }
     }
   }
   return undefined;

@@ -63,9 +63,16 @@ export function SignInScreen(): ReactElement {
             </div>
           </form>
         ) : (
-          <Banner tag={t('signin.email.sentTag')} live>
-            {t('signin.email.sent', { email: email.sentTo })}
-          </Banner>
+          <div className="o-stack">
+            <Banner tag={t('signin.email.sentTag')} live>
+              {t('signin.email.sent', { email: email.sentTo })}
+            </Banner>
+            <div>
+              <Button variant="ghost" onClick={email.again}>
+                {t('signin.email.other')}
+              </Button>
+            </div>
+          </div>
         )}
       </Section>
     </Screen>

@@ -637,6 +637,7 @@ export const fr = {
       sending: 'Envoi…',
       sentTag: 'Envoyé',
       sent: 'Si {{email}} peut se connecter, un lien arrive. Ouvre-le sur cet appareil ; il ne sert qu’une fois.',
+      other: 'Utiliser une autre adresse',
       failedTag: 'Pas envoyé',
     },
     link: {
