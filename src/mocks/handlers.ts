@@ -436,7 +436,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return organization instanceof HttpResponse ? organization : undefined;
     }),
     // `/me` never needs the header: it names the organization when the call resolves to one.
-    handleGetMe(({ request }) => {
+    handleGetMe(() => {
       if (!db.signedIn) return refusal(401, 'unauthorized', 'nobody is signed in');
       // `/me` takes no Ostrom-Org (contract): it names the organization only for a person in exactly one.
       const memberships = membershipsOf(db);
