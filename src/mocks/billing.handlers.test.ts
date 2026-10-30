@@ -15,7 +15,7 @@ import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
-const path = { orgId: 'org-acme' };
+const path = { orgId: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c' };
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
@@ -40,7 +40,7 @@ async function statusOf(call: () => Promise<unknown>): Promise<number | false | 
 
 /** A body the generated client would never send, straight to the mock. */
 async function post(route: string, body: string): Promise<number> {
-  const response = await fetch(`http://ostrom.test/api/v1/orgs/org-acme/billing/${route}`, {
+  const response = await fetch(`http://ostrom.test/api/v1/orgs/6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c/billing/${route}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,
@@ -59,7 +59,7 @@ function withoutSubscription(): void {
 describe('mock billing', () => {
   it('reads the plan of its organization only', async () => {
     expect((await getBilling({ path, throwOnError: true })).data.plan).toBe('team');
-    expect(await statusOf(async () => getBilling({ path: { orgId: 'org-other' }, throwOnError: true }))).toBe(
+    expect(await statusOf(async () => getBilling({ path: { orgId: '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d' }, throwOnError: true }))).toBe(
       404,
     );
   });
@@ -109,7 +109,7 @@ describe('mock billing', () => {
     expect(
       await statusOf(async () =>
         changeBillingPlan({
-          path: { orgId: 'org-other' },
+          path: { orgId: '0a9b8c7d-6e5f-4a3b-8c2d-1e0f9a8b7c6d' },
           body: { plan: 'team', interval: 'month' },
           throwOnError: true,
         }),

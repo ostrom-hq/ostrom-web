@@ -15,7 +15,7 @@ import {
 
 // Built here: features/ never imports the mocks, not even in a test.
 const team: BillingOverview = {
-  orgId: 'org-acme',
+  orgId: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
   plan: 'team',
   effectivePlan: 'team',
   interval: 'month',
