@@ -9,7 +9,7 @@ import {
 import type { Ask, Decision, SelfApprovalRefused, Viewer, YesQueue } from '@gen/api/types.gen';
 import { zSelfApprovalRefused } from '@gen/api/zod.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { useArrivals } from './useArrivals';
 
@@ -31,7 +31,9 @@ export interface YesQueueViewModel {
 
 export function useYesQueue(): YesQueueViewModel {
   const query = useQuery({ ...getYesQueueOptions(), refetchInterval: POLL_MS });
-  const fresh = useArrivals(query.data?.pending.map((ask) => ask.id));
+  // Query data keeps its identity while nothing changes (structural sharing): the ids follow it.
+  const ids = useMemo(() => query.data?.pending.map((ask) => ask.id), [query.data]);
+  const fresh = useArrivals(ids);
   return { queue: query.data, failure: failureOf(query.error), fresh };
 }
 
