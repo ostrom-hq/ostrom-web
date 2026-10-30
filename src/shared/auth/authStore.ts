@@ -1,25 +1,39 @@
 import { z } from 'zod';
 import { create } from 'zustand';
-import { safeLocalStorage } from '@/shared/lib/safeStorage';
+import { type SafeStorage, safeLocalStorage, safeSessionStorage } from '@/shared/lib/safeStorage';
 
-export const AUTH_STORAGE_KEY = 'ostrom.token';
+/**
+ * Where older consoles kept the bearer token (web#3), readable by any script on the page (audit S2-08).
+ * Nothing is written there any more: the keys are only listed so the load below erases what was left.
+ */
+export const LEGACY_TOKEN_STORAGE_KEYS: readonly string[] = ['ostrom.token'];
+
+/** Erases every token an older console left in web storage. */
+export function eraseLegacyTokens(storages: readonly SafeStorage[]): void {
+  for (const storage of storages) {
+    for (const key of LEGACY_TOKEN_STORAGE_KEYS) storage.removeItem(key);
+  }
+}
+
+// On load, before anything reads the session: a token that sat in localStorage is gone, never reused.
+eraseLegacyTokens([safeLocalStorage, safeSessionStorage]);
 
 /** A bearer token as the server hands it out: an approver account (`opk_…`) or a session token. */
 export const tokenSchema = z.string().regex(/^[A-Za-z0-9_.-]{8,512}$/);
 
-export function readStoredToken(storage: Pick<Storage, 'getItem'>): string | undefined {
-  const parsed = tokenSchema.safeParse(storage.getItem(AUTH_STORAGE_KEY));
-  return parsed.success ? parsed.data : undefined;
-}
-
 /** What opening a sign-in link did. */
 export type SignInOutcome = 'signed-in' | 'same' | 'invalid' | 'pending';
 
+/**
+ * The viewer's bearer token, in memory only: never in localStorage, sessionStorage or an address
+ * (CONVENTIONS § 16.2). The lasting session is the server's `HttpOnly; Secure; SameSite=Lax` cookie, sent
+ * with every API call (`credentials: 'include'`, shared/api/apiClient.ts): a reload relies on it alone.
+ */
 export interface AuthState {
   readonly token: string | undefined;
   /**
-   * A link's token kept in memory (never stored) while the person decides: opening someone else's link must not
-   * silently make them approve as that account.
+   * A link's token kept in memory while the person decides: opening someone else's link must not silently make
+   * them approve as that account.
    */
   readonly pending: string | undefined;
   /** A sign-in link that was not a token: said once, until dismissed. */
@@ -28,25 +42,22 @@ export interface AuthState {
   readonly offer: (token: string) => SignInOutcome;
   readonly acceptPending: () => void;
   readonly dismiss: () => void;
-  /** Keeps a token that passes the schema; returns false and keeps nothing otherwise. */
+  /** Keeps a token that passes the schema, in memory; returns false and keeps nothing otherwise. */
   readonly signIn: (token: string) => boolean;
   readonly signOut: () => void;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
-  token: readStoredToken(safeLocalStorage),
+  token: undefined,
   pending: undefined,
   notice: undefined,
   signIn: (token) => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) return false;
-    // A blocked storage keeps the sign-in for this tab only.
-    safeLocalStorage.setItem(AUTH_STORAGE_KEY, parsed.data);
     set({ token: parsed.data, pending: undefined, notice: undefined });
     return true;
   },
   signOut: () => {
-    safeLocalStorage.removeItem(AUTH_STORAGE_KEY);
     set({ token: undefined, pending: undefined, notice: undefined });
   },
   offer: (token) => {
