@@ -4,7 +4,7 @@ import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { actionKind, askedByViewer } from '../model';
+import { askedByViewer } from '../model';
 import type { AnswerViewModel } from '../useYes';
 
 export interface DecisionBarProps {
@@ -99,12 +99,13 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
             </Button>
             <Button
               variant="primary"
+              data-approval="approve"
               disabled={busy}
               onClick={() => {
                 answer.answer(approval, 'approve');
               }}
             >
-              {sending === 'approve' ? t('yes.act.approving') : t(`yes.act.approve.${actionKind(approval)}`)}
+              {sending === 'approve' ? t('yes.act.approving') : t('yes.act.approve')}
             </Button>
           </div>
         </>
