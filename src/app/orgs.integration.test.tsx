@@ -87,9 +87,12 @@ describe('the organization the console acts in', () => {
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Not now' }));
     expect(screen.queryByRole('dialog')).toBeNull();
 
+    const screenInGlobex = screen.getByRole('main').firstElementChild;
     await user.click(opener);
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Acme' }));
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toHaveFocus();
+    // The screen opened in Globex is gone, with whatever was typed in it: nothing half done acts in Acme.
+    expect(screen.getByRole('main').firstElementChild).not.toBe(screenInGlobex);
     expect(useOrgStore.getState().current).toBe(db.organization.id);
     expect(
       await screen.findByRole('heading', { level: 3, name: 'Billing API: latency study' }),

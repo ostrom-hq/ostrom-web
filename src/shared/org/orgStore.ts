@@ -54,10 +54,12 @@ export interface OrgState {
 }
 
 function kept(): Pick<OrgState, 'current' | 'owner'> {
-  return {
-    current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
-    owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
-  };
+  const current = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
+  const owner = readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY);
+  // A choice is always kept with whose it is: an id alone is nobody's, and is trusted for nobody.
+  return current === undefined || owner === undefined
+    ? { current: undefined, owner: undefined }
+    : { current, owner };
 }
 
 export const useOrgStore = create<OrgState>()((set) => ({

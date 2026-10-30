@@ -438,8 +438,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     // `/me` never needs the header: it names the organization when the call resolves to one.
     handleGetMe(({ request }) => {
       if (!db.signedIn) return refusal(401, 'unauthorized', 'nobody is signed in');
-      const organization = resolveOrganization(db, request);
-      return HttpResponse.json(organization instanceof HttpResponse ? me : { ...me, organization });
+      // `/me` takes no Ostrom-Org (contract): it names the organization only for a person in exactly one.
+      const memberships = membershipsOf(db);
+      return HttpResponse.json(memberships.length === 1 ? { ...me, organization: db.organization } : me);
     }),
     handleListMyOrganizations(() => HttpResponse.json({ items: membershipsOf(db) })),
     // An approver's link (`opk_…`) is exchanged once for the session cookies; the body carries no secret.

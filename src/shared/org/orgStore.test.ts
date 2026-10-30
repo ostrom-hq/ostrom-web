@@ -107,4 +107,10 @@ describe('useOrgStore', () => {
       before,
     ]);
   });
+
+  it('trusts no kept id without whose choice it is', () => {
+    window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
+    useOrgStore.getState().signedInOrOut();
+    expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual([undefined, undefined]);
+  });
 });

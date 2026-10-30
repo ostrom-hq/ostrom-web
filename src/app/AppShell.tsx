@@ -11,6 +11,7 @@ import {
   usePageViews,
 } from '@/shared/analytics';
 import { OrgControls } from '@/features/orgs';
+import { useOrgStore } from '@/shared/org/orgStore';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
@@ -19,6 +20,7 @@ export function AppShell(): ReactElement {
   const { t } = useTranslation();
   useApplyTheme();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const organizationGeneration = useOrgStore((state) => state.generation);
   const consent = useConsentStore((state) => state.status);
   usePageViews(analytics, pathname, consent);
   return (
@@ -59,7 +61,8 @@ export function AppShell(): ReactElement {
         </div>
       </header>
       <main id="main" className="o-main">
-        <Outlet />
+        {/* A screen opened in one organization never acts in the next: a switch opens it afresh. */}
+        <Outlet key={organizationGeneration} />
       </main>
       <footer className="o-footer">
         <PrivacyChoices analytics={analytics} configured={analyticsConfig !== null} />

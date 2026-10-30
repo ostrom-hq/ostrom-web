@@ -60,7 +60,8 @@ describe('mock organization of a call', () => {
   it('acts in the organization named, and answers as for anything else of an organization it does not know', async () => {
     db.otherOrganizations = [globex];
     expect((await get('/org', globex.id)).body).toMatchObject({ name: 'Globex' });
-    expect((await get('/auth/me', globex.id)).body).toMatchObject({ organization: { name: 'Globex' } });
+    // `/me` takes no header: it names no organization for a person in several, whatever is sent.
+    expect((await get('/auth/me', globex.id)).body).not.toHaveProperty('organization');
     expect((await get('/secrets', 'org-nobody')).status).toBe(404);
   });
 
