@@ -100,9 +100,14 @@ describe('createAnalytics', () => {
       event: '$pageview',
       distinct_id: 'anon-1',
       timestamp: '2027-01-15T08:00:00.000Z',
-      properties: { $pathname: '/yes/42', $current_url: 'https://app.ostrom.run/yes/42', $lib: 'ostrom-web' },
+      properties: {
+        $pathname: '/yes/42',
+        $current_url: 'https://app.ostrom.run/yes/42',
+        $lib: 'ostrom-web',
+        $geoip_disable: true,
+      },
     });
-    expect(gate?.properties).toEqual({ channel: 'web', $lib: 'ostrom-web' });
+    expect(gate?.properties).toEqual({ channel: 'web', $lib: 'ostrom-web', $geoip_disable: true });
     expect(map.get(ANONYMOUS_ID_KEY)).toBe('anon-1');
     expect(JSON.stringify(sent)).not.toContain('secret');
   });

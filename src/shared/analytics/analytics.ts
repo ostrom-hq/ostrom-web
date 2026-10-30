@@ -102,7 +102,8 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
       event,
       distinct_id: distinctId,
       timestamp: new Date(options.now()).toISOString(),
-      properties: { ...properties, ...groups, $lib: 'ostrom-web' },
+      // $geoip_disable: no city or country derived from the request's IP.
+      properties: { ...properties, ...groups, $lib: 'ostrom-web', $geoip_disable: true },
     });
     if (queue.length >= MAX_BATCH) {
       flush();
