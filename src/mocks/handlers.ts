@@ -103,6 +103,7 @@ import {
   zVerifySignInEmailBody,
 } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
+import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
@@ -119,12 +120,13 @@ import {
   initialArtifactVersions,
   initialSharedAccounts,
 } from '@/mocks/fixtures/sharing';
+import { initialBilling, initialInvoices } from '@/mocks/fixtures/billing';
 import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
 import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
-export interface MockDb {
+export interface MockDb extends BillingState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -187,6 +189,8 @@ export function createMockDb(): MockDb {
     sharedAccounts: initialSharedAccounts(),
     runsByKey: {},
     nextAccountId: 100,
+    billing: initialBilling(),
+    invoices: initialInvoices(),
   };
 }
 
@@ -893,5 +897,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         exportedAt: now().toISOString(),
       });
     }),
+    ...createBillingHandlers(
+      () => db,
+      () => db.organization.id,
+      () => canManage(db),
+    ),
   ];
 }

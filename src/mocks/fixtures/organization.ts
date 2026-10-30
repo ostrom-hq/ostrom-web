@@ -2,7 +2,7 @@
 import type { Member, Organization, Team } from '@gen/api/types.gen';
 
 const organization: Organization = {
-  id: 'org-acme',
+  id: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
   name: 'Acme',
   avatarUrl: '',
   description: 'Billing and payments',
