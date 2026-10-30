@@ -25,9 +25,12 @@ export function PlanSummary({ billing }: { readonly billing: BillingOverview }):
   const until = formatAbsolute(billing.periodEnd, i18n.language);
   const alert = topAlert(billing.alerts);
   const invoice = safeHref(paymentIssue?.hostedInvoiceUrl ?? undefined);
-  let period = t('billing.plan.resets', { date: until });
-  if (billing.cancelAtPeriodEnd) period = t('billing.plan.ends', { date: until });
-  else if (hasSubscription(billing)) period = t('billing.plan.renews', { date: until });
+  const periodKey = billing.cancelAtPeriodEnd
+    ? 'billing.plan.ends'
+    : hasSubscription(billing)
+      ? 'billing.plan.renews'
+      : 'billing.plan.resets';
+  const period: string = t(periodKey, { date: until });
   return (
     <Section label={t('billing.plan.label')}>
       <div className="o-row">
