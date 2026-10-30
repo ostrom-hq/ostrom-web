@@ -2,6 +2,7 @@
 import {
   handleAnswerApproval,
   handleGetApproval,
+  handleGetGatePolicy,
   handleGetMe,
   handleGetOrganization,
   handleGetReceipt,
@@ -13,6 +14,8 @@ import {
   handleListReceipts,
   handleListSessions,
   handleListTeams,
+  handleListWorkflows,
+  handleSetGatePolicy,
   handleUpdateMember,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
@@ -26,6 +29,7 @@ import type {
   Receipt,
   Session,
   Team,
+  Workflow,
 } from '@gen/api/types.gen';
 import { zAnswerApprovalRequest, zMemberRole } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
@@ -33,6 +37,7 @@ import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
+import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
 export interface MockDb {
   approvals: Approval[];
@@ -44,6 +49,9 @@ export interface MockDb {
   organization: Organization;
   members: Member[];
   teams: Team[];
+  workflows: Workflow[];
+  /** `sole-approver`: the asker who is the only approver may approve, and the receipt says so; `never`. */
+  selfApproval: string;
 }
 
 export function createMockDb(): MockDb {
@@ -55,10 +63,13 @@ export function createMockDb(): MockDb {
     organization: initialOrganization(),
     members: initialMembers(),
     teams: initialTeams(),
+    workflows: initialWorkflows(),
+    selfApproval: 'sole-approver',
   };
 }
 
 const zUpdateMember = z.object({ role: zMemberRole.exclude(['invited']) });
+const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
@@ -95,9 +106,11 @@ export function selfApprovalRefusal(
   approval: Approval,
   approvers: readonly string[],
   login: string,
+  policy = 'sole-approver',
 ): string | undefined {
   const asked = new Set((approval.askedBy ?? []).map((author) => author.toLowerCase()));
   if (!asked.has(login.toLowerCase())) return undefined;
+  if (policy === 'never') return 'You asked for this: your organization never lets the asker approve.';
   const others = approvers.filter((approver) => !asked.has(approver.toLowerCase()));
   return others.length === 0 ? undefined : `You asked for this: ${others.join(' or ')} has to approve it.`;
 }
@@ -177,7 +190,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!approvers.includes(me.dev.login))
         return refusal(403, 'not_an_approver', 'you cannot answer this approval');
       const refused =
-        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
+        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval) : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
@@ -213,6 +226,18 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' })),
       ];
       return HttpResponse.json({ invited });
+    }),
+    handleListWorkflows(({ request }) => {
+      const status = new URL(request.url).searchParams.get('status');
+      return HttpResponse.json({ items: db.workflows.filter((workflow) => status === null || workflow.status === status) });
+    }),
+    handleGetGatePolicy(() => HttpResponse.json({ selfApproval: db.selfApproval })),
+    handleSetGatePolicy(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set the policy');
+      const body = zPolicy.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'selfApproval must be sole-approver or never');
+      db.selfApproval = body.data.selfApproval;
+      return HttpResponse.json({ selfApproval: db.selfApproval });
     }),
     handleListSessions(({ request }) => {
       const open = new URL(request.url).searchParams.get('open');

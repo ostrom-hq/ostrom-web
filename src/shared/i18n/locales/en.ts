@@ -13,6 +13,7 @@ export const en = {
       sessions: 'Sessions',
       receipts: 'Receipts',
       members: 'Members',
+      approvers: 'Approvers',
     },
     theme: {
       switch: 'Theme: {{current}}. Switch to {{next}}',
@@ -235,6 +236,30 @@ export const en = {
       title: 'Teams',
       people_one: '{{count}} person',
       people_other: '{{count}} people',
+    },
+  },
+  approvers: {
+    title: 'Who approves what',
+    lead: 'Every place an agent stops for a person, and who may say yes there.',
+    empty: 'No workflow has a gate yet.',
+    stuck: {
+      tag: 'Blocked',
+      text_one: 'Nobody may approve {{list}}: an agent that reaches it waits for good.',
+      text_other: 'Nobody may approve {{count}} gates ({{list}}): an agent that reaches one waits for good.',
+    },
+    gates: { title: 'By gate' },
+    people: { title: 'By person', count_one: '{{count}} gate', count_other: '{{count}} gates' },
+    point: { nobody: 'Nobody', hours: 'from {{hours}}', days: 'on {{days}}' },
+    policy: {
+      title: 'When the asker is an approver',
+      label: 'Self-approval',
+      says: {
+        'sole-approver':
+          'Someone who asked may approve only when nobody else can, and the receipt says they approved their own request.',
+        never: 'Someone who asked never approves their own request: another approver has to.',
+      },
+      option: { 'sole-approver': 'Only as the sole approver', never: 'Never' },
+      errorTag: 'Not saved',
     },
   },
   home: {

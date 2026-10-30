@@ -8,6 +8,7 @@ import {
 import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
+import { ApproversScreen } from '@/features/approvers';
 import { HomeScreen } from '@/features/home';
 import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
@@ -65,6 +66,11 @@ const membersRoute = createRoute({
   path: '/members',
   component: MembersScreen,
 });
+const approversRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/approvers',
+  component: ApproversScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -85,6 +91,7 @@ export const routeTree = rootRoute.addChildren([
   receiptsRoute,
   receiptRoute,
   membersRoute,
+  approversRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>

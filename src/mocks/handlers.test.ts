@@ -2,6 +2,7 @@
 import {
   answerApproval,
   getApproval,
+  getGatePolicy,
   getMe,
   getOrganization,
   getReceipt,
@@ -13,6 +14,8 @@ import {
   listReceipts,
   listSessions,
   listTeams,
+  listWorkflows,
+  setGatePolicy,
   updateMember,
   verifyReceipt,
 } from '@gen/api/sdk.gen';
@@ -229,6 +232,11 @@ describe('selfApprovalRefusal', () => {
     );
   });
 
+  it('refuses the asker even as the only approver when the policy says never', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya', 'never')).toMatch(/never lets the asker/);
+    expect(selfApprovalRefusal(fixture('apr-merge-412'), ['maya'], 'maya', 'never')).toBeUndefined();
+  });
+
   it('lets the asker through as the only approver, and treats a missing asker list as nobody', () => {
     expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya')).toBeUndefined();
     const anonymous = fixture('apr-deploy-88');
@@ -377,5 +385,25 @@ describe('mock organization', () => {
       throwOnError: true,
     });
     expect(data.invited).toEqual(['ana@acme.dev']);
+  });
+});
+
+describe('mock workflows and policy', () => {
+  it('lists workflows, by status', async () => {
+    const all = await listWorkflows({ throwOnError: true });
+    const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
+    expect(all.data.items).toHaveLength(2);
+    expect(proposed.data.items.map((workflow) => workflow.id)).toEqual(['wf-migrations']);
+  });
+
+  it('reads and sets the self-approval policy, for owners and admins only', async () => {
+    expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('sole-approver');
+    const set = await setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true });
+    expect(set.data.selfApproval).toBe('never');
+    const bad = await failureOf(async () => setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }));
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+    const refused = await failureOf(async () => setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true }));
+    expect(isApiFailure(refused) && refused.status).toBe(403);
   });
 });

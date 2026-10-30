@@ -14,6 +14,7 @@ export const fr = {
       sessions: 'Sessions',
       receipts: 'Reçus',
       members: 'Membres',
+      approvers: 'Approbateurs',
     },
     theme: {
       switch: 'Thème : {{current}}. Passer en {{next}}',
@@ -242,6 +243,30 @@ export const fr = {
       title: 'Équipes',
       people_one: '{{count}} personne',
       people_other: '{{count}} personnes',
+    },
+  },
+  approvers: {
+    title: 'Qui approuve quoi',
+    lead: 'Chaque endroit où un agent s’arrête pour une personne, et qui peut y dire oui.',
+    empty: 'Aucun workflow n’a encore de porte.',
+    stuck: {
+      tag: 'Bloqué',
+      text_one: 'Personne ne peut approuver {{list}} : un agent qui y arrive attend pour toujours.',
+      text_other: 'Personne ne peut approuver {{count}} portes ({{list}}) : un agent qui y arrive attend pour toujours.',
+    },
+    gates: { title: 'Par porte' },
+    people: { title: 'Par personne', count_one: '{{count}} porte', count_other: '{{count}} portes' },
+    point: { nobody: 'Personne', hours: 'de {{hours}}', days: 'le {{days}}' },
+    policy: {
+      title: 'Quand le demandeur est approbateur',
+      label: 'Auto-approbation',
+      says: {
+        'sole-approver':
+          'Qui a demandé ne peut approuver que si personne d’autre ne le peut, et le reçu dit qu’il a approuvé sa propre demande.',
+        never: 'Qui a demandé n’approuve jamais sa propre demande : un autre approbateur doit le faire.',
+      },
+      option: { 'sole-approver': 'Seulement s’il est le seul', never: 'Jamais' },
+      errorTag: 'Non enregistré',
     },
   },
   home: {
