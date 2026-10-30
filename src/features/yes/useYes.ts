@@ -19,6 +19,8 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { useCallback, useMemo } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { pollUnlessRefused } from '@/shared/api/poll';
+import { tuned } from '@/shared/api/tuned';
+import { meOf } from '@/shared/auth/me';
 import { useArrivals } from './useArrivals';
 
 /** The queue polls like the prototype: a request must show up on the phone within seconds. */
@@ -46,8 +48,9 @@ export interface ViewerViewModel {
 }
 
 export function useViewer(): ViewerViewModel {
-  const query = useQuery({ ...getMeOptions(), staleTime: 60_000 });
-  return { login: query.data?.dev.login, name: viewerName(query.data) };
+  const query = useQuery(tuned(getMeOptions(), { staleTime: 60_000 }));
+  const me = meOf(query.data);
+  return { login: me?.dev.login, name: viewerName(me) };
 }
 
 export interface QueueViewModel {
@@ -89,15 +92,15 @@ export function combineDecided(
 }
 
 export function useApprovalsQueue(): QueueViewModel {
-  const waiting = useQuery({
-    ...listApprovalsOptions({ query: { mine: true } }),
-    refetchInterval: pollUnlessRefused(POLL_MS),
-  });
+  const waiting = useQuery(
+    tuned(listApprovalsOptions({ query: { mine: true } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+  );
   const decided = useQueries({
-    queries: DECIDED_STATUSES.map((status) => ({
-      ...listApprovalsOptions({ query: { status } }),
-      refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
-    })),
+    queries: DECIDED_STATUSES.map((status) =>
+      tuned(listApprovalsOptions({ query: { status } }), {
+        refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
+      }),
+    ),
     combine: combineDecided,
   });
   // Query data keeps its identity while nothing changes (structural sharing): the ids follow it.
@@ -118,10 +121,9 @@ export interface ApprovalViewModel {
 }
 
 export function useApproval(id: string): ApprovalViewModel {
-  const query = useQuery({
-    ...getApprovalOptions({ path: { id } }),
-    refetchInterval: pollUnlessRefused(POLL_MS),
-  });
+  const query = useQuery(
+    tuned(getApprovalOptions({ path: { id } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+  );
   return { approval: query.data, failure: failureOf(query.error) };
 }
 
