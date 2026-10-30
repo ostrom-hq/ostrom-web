@@ -44,5 +44,9 @@ test('a sign-in link keeps the token and leaves no trace in the address bar', as
   await page.goto('/yes?signin=opk_e2e_token_123');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
   await expect(page).toHaveURL(/\/yes$/);
-  expect(await page.evaluate(() => window.localStorage.getItem('ostrom.token'))).toBe('opk_e2e_token_123');
+  const { origins } = await page.context().storageState();
+  expect(origins.flatMap((origin) => origin.localStorage)).toContainEqual({
+    name: 'ostrom.token',
+    value: 'opk_e2e_token_123',
+  });
 });
