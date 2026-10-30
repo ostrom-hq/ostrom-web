@@ -111,7 +111,13 @@ describe('the queue', () => {
   it('reads requests that carry only what the contract requires', async () => {
     addApproval(bare);
     addApproval(plain);
-    db.approvals.push({ ...bare, id: 'apr-no', title: 'Read the logs', status: 'rejected', selfApproved: true });
+    db.approvals.push({
+      ...bare,
+      id: 'apr-no',
+      title: 'Read the logs',
+      status: 'rejected',
+      selfApproved: true,
+    });
     visit('/yes');
     const card = await screen.findByRole('link', { name: /Run a script/ });
     expect(within(card).queryByText(/commit/)).toBeNull();
@@ -170,7 +176,10 @@ describe('a request', () => {
     );
     const approve = screen.getByRole('button', { name: 'Approve merge' });
     expectInOrder([title, ...sections, approve]);
-    expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute('dateTime', '2026-10-30T18:00:00.000Z');
+    expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute(
+      'dateTime',
+      '2026-10-30T18:00:00.000Z',
+    );
     expect(screen.getByText('fix(invoices): round VAT per line')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '3fa0d81' })).toHaveAttribute(
       'href',
@@ -221,7 +230,10 @@ describe('a request', () => {
     await user.click(screen.getByRole('button', { name: 'Decline & tell the agent…' }));
     const send = screen.getByRole('button', { name: 'Decline and send' });
     expect(send).toBeDisabled();
-    await user.type(screen.getByRole('textbox', { name: 'What should the agent do instead?' }), '  Wait for samir.  ');
+    await user.type(
+      screen.getByRole('textbox', { name: 'What should the agent do instead?' }),
+      '  Wait for samir.  ',
+    );
     await user.click(send);
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent('maya declined: Deploy billing-api 2.14.0 to production');
@@ -263,11 +275,15 @@ describe('a request', () => {
     visit('/yes/apr-merge-412');
     const approve = await screen.findByRole('button', { name: 'Approve merge' });
     db.approvals = db.approvals.map((item) =>
-      item.id === 'apr-merge-412' ? { ...item, title: 'Merge PR #412 into main (rebased)', shownDigest: 'sha256:new' } : item,
+      item.id === 'apr-merge-412'
+        ? { ...item, title: 'Merge PR #412 into main (rebased)', shownDigest: 'sha256:new' }
+        : item,
     );
     await user.click(approve);
     expect(await screen.findByRole('alert')).toHaveTextContent('This request changed since you opened it.');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main (rebased)' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Merge PR #412 into main (rebased)' }),
+    ).toBeInTheDocument();
   });
 
   it('says when the answer fails', async () => {
@@ -320,7 +336,9 @@ describe('a request', () => {
   it('reads a declined request that names nobody and no time', async () => {
     addApproval({ ...bare, id: 'apr-declined', status: 'rejected' });
     visit('/yes/apr-declined');
-    expect(await screen.findByRole('region', { name: 'Decision' })).toHaveTextContent('someone declined: Run a script');
+    expect(await screen.findByRole('region', { name: 'Decision' })).toHaveTextContent(
+      'someone declined: Run a script',
+    );
     expect(screen.getByRole('region', { name: 'Decision' })).not.toHaveTextContent('·');
   });
 

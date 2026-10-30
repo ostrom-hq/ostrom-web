@@ -168,13 +168,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (approval === undefined) return notFound();
       const body = zAnswerApprovalRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'answer must be approve or reject');
-      if (approval.status !== 'pending') return refusal(409, 'already_decided', 'this approval is already decided');
+      if (approval.status !== 'pending')
+        return refusal(409, 'already_decided', 'this approval is already decided');
       if (body.data.shownDigest !== approval.shownDigest) {
         return refusal(409, 'shown_digest_mismatch', 'the approval changed since it was shown');
       }
       const approvers = db.approvers[approval.id] ?? [];
-      if (!approvers.includes(me.dev.login)) return refusal(403, 'not_an_approver', 'you cannot answer this approval');
-      const refused = body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
+      if (!approvers.includes(me.dev.login))
+        return refusal(403, 'not_an_approver', 'you cannot answer this approval');
+      const refused =
+        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
@@ -209,7 +212,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleListSessions(({ request }) => {
       const open = new URL(request.url).searchParams.get('open');
-      const items = db.sessions.filter((session) => open === null || (session.endedAt === undefined) === (open === 'true'));
+      const items = db.sessions.filter(
+        (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
+      );
       return HttpResponse.json({ items });
     }),
     handleGetSession(({ params }) => {
@@ -223,7 +228,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const kind = query.get('subjectKind');
       const id = query.get('subjectId');
       const items = db.receipts.filter(
-        (receipt) => (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
+        (receipt) =>
+          (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
       );
       return HttpResponse.json({ items });
     }),

@@ -23,7 +23,13 @@ export class ApiFailure extends Error {
   /** The server's stable snake_case key (`shown_digest_mismatch`, `self_approval_refused`…), when it sent one. */
   readonly code: string | undefined;
 
-  constructor(kind: ApiFailureKind, message: string, status: number | undefined, body: unknown, code?: string) {
+  constructor(
+    kind: ApiFailureKind,
+    message: string,
+    status: number | undefined,
+    body: unknown,
+    code?: string,
+  ) {
     super(message);
     this.kind = kind;
     this.status = status;
@@ -65,7 +71,12 @@ export function toApiFailure(error: unknown, response: Response | undefined): Ap
   }
   const parsed = zApiError.safeParse(error);
   if (!parsed.success) {
-    return new ApiFailure(kindOfStatus(response.status), `HTTP ${String(response.status)}`, response.status, error);
+    return new ApiFailure(
+      kindOfStatus(response.status),
+      `HTTP ${String(response.status)}`,
+      response.status,
+      error,
+    );
   }
   const { type, message } = parsed.data.error;
   return new ApiFailure(kindOfStatus(response.status), message, response.status, error, type);

@@ -19,7 +19,8 @@ export interface DecisionCardProps {
 export function DecisionCard({ approval, receipt, comment }: DecisionCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const who = approval.decidedBy ?? t('yes.someone');
-  const stamp = (iso: string | undefined): string => (iso === undefined ? '' : ` · ${formatAbsolute(iso, i18n.language)}`);
+  const stamp = (iso: string | undefined): string =>
+    iso === undefined ? '' : ` · ${formatAbsolute(iso, i18n.language)}`;
   const sentence = { who, action: approval.title, when: stamp(approval.decidedAt ?? receipt?.createdAt) };
   return (
     <section className="o-card ys-receipt" aria-label={t('yes.receipt.label')}>

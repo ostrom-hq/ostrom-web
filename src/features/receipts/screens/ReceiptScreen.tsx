@@ -23,7 +23,10 @@ export function ReceiptScreen(): ReactElement {
               {t('receipts.detail.back')}
             </Link>
           }
-          title={t('receipts.detail.title', { kind: t(`receipts.kind.${receipt.subject.kind}`), id: receipt.subject.id })}
+          title={t('receipts.detail.title', {
+            kind: t(`receipts.kind.${receipt.subject.kind}`),
+            id: receipt.subject.id,
+          })}
           lead={t('receipts.detail.signed', { when: formatAbsolute(receipt.createdAt, i18n.language) })}
         >
           <ReceiptDetail receipt={receipt} view={view} />
@@ -49,7 +52,11 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
           facts={[
             { label: t('receipts.detail.receiptId'), value: receipt.id, mono: true },
             { label: t('receipts.detail.digest'), value: receipt.subject.digest, mono: true },
-            { label: t('receipts.detail.key'), value: `ed25519 · ${keyIdOf(receipt.signature) ?? '?'}`, mono: true },
+            {
+              label: t('receipts.detail.key'),
+              value: `ed25519 · ${keyIdOf(receipt.signature) ?? '?'}`,
+              mono: true,
+            },
           ]}
         />
       </Section>
@@ -58,8 +65,12 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
         <Facts
           facts={[
             { label: t('receipts.detail.initiator'), value: receipt.initiator },
-            receipt.agent === undefined ? undefined : { label: t('receipts.detail.agent'), value: receipt.agent },
-            receipt.model === undefined ? undefined : { label: t('receipts.detail.model'), value: receipt.model },
+            receipt.agent === undefined
+              ? undefined
+              : { label: t('receipts.detail.agent'), value: receipt.agent },
+            receipt.model === undefined
+              ? undefined
+              : { label: t('receipts.detail.model'), value: receipt.model },
             receipt.package === undefined
               ? undefined
               : {
@@ -80,17 +91,28 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
             {receipt.decisions.map((decision) => (
               <li key={`${decision.approvalId}-${decision.at}`} className="o-row">
                 <Badge tone={decision.result === 'approved' ? 'success' : 'danger'}>
-                  {decision.result === 'approved' ? t('receipts.detail.approved') : t('receipts.detail.declined')}
+                  {decision.result === 'approved'
+                    ? t('receipts.detail.approved')
+                    : t('receipts.detail.declined')}
                 </Badge>
                 <span className="o-row__main">
-                  <Link to="/yes/$approvalId" params={{ approvalId: decision.approvalId }} className="o-row__title">
+                  <Link
+                    to="/yes/$approvalId"
+                    params={{ approvalId: decision.approvalId }}
+                    className="o-row__title"
+                  >
                     {decision.approvalId}
                   </Link>
                   <span className="o-row__meta">
-                    {t('receipts.detail.decidedBy', { who: decision.by, when: formatAbsolute(decision.at, i18n.language) })}
+                    {t('receipts.detail.decidedBy', {
+                      who: decision.by,
+                      when: formatAbsolute(decision.at, i18n.language),
+                    })}
                   </span>
                 </span>
-                {decision.selfApproved === true ? <Badge tone="warning">{t('receipts.detail.selfApproved')}</Badge> : null}
+                {decision.selfApproved === true ? (
+                  <Badge tone="warning">{t('receipts.detail.selfApproved')}</Badge>
+                ) : null}
               </li>
             ))}
           </ul>

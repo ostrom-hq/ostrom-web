@@ -14,7 +14,10 @@ export interface SessionListViewModel {
 }
 
 export function useSessionList(): SessionListViewModel {
-  const open = useQuery({ ...listSessionsOptions({ query: { open: true } }), refetchInterval: SESSIONS_POLL_MS });
+  const open = useQuery({
+    ...listSessionsOptions({ query: { open: true } }),
+    refetchInterval: SESSIONS_POLL_MS,
+  });
   const ended = useQuery(listSessionsOptions({ query: { open: false } }));
   return { open: open.data?.items, ended: ended.data?.items, failure: failureOf(open.error ?? ended.error) };
 }

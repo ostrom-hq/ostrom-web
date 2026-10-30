@@ -25,7 +25,9 @@ describe('Section and Facts', () => {
   it('names the section by its heading and skips a missing fact', () => {
     render(
       <Section label="Signature">
-        <Facts facts={[{ label: 'Key', value: '4f2a', mono: true }, undefined, { label: 'Who', value: 'maya' }]} />
+        <Facts
+          facts={[{ label: 'Key', value: '4f2a', mono: true }, undefined, { label: 'Who', value: 'maya' }]}
+        />
       </Section>,
     );
     const section = screen.getByRole('region', { name: 'Signature' });
@@ -46,13 +48,25 @@ describe('LoadState', () => {
   const show = (value: string): string => `got ${value}`;
 
   it('shows the shape while loading, the data once there, and why it failed', () => {
-    const { rerender } = render(<LoadState data={undefined} failure={undefined} rows={1}>{show}</LoadState>);
+    const { rerender } = render(
+      <LoadState data={undefined} failure={undefined} rows={1}>
+        {show}
+      </LoadState>,
+    );
     expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
 
-    rerender(<LoadState data="x" failure={undefined}>{show}</LoadState>);
+    rerender(
+      <LoadState data="x" failure={undefined}>
+        {show}
+      </LoadState>,
+    );
     expect(screen.getByText('got x')).toBeInTheDocument();
 
-    rerender(<LoadState data={undefined} failure={new Error('down')}>{show}</LoadState>);
+    rerender(
+      <LoadState data={undefined} failure={new Error('down')}>
+        {show}
+      </LoadState>,
+    );
     expect(screen.getByText('down')).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });

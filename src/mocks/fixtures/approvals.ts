@@ -15,7 +15,11 @@ const merge: Approval = {
   sha: '9c1e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6d7e8f90',
   commits: ['9c1e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6d7e8f90', '3fa0d81c55e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6'],
   commitDetails: [
-    { sha: '9c1e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6d7e8f90', title: 'fix(invoices): round VAT per line', author: 'theo' },
+    {
+      sha: '9c1e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6d7e8f90',
+      title: 'fix(invoices): round VAT per line',
+      author: 'theo',
+    },
     {
       sha: '3fa0d81c55e4b2a7d0f5e3c8b6a9d1e2f3a4b5c6',
       title: 'test(invoices): cover the 0.005 rounding case',

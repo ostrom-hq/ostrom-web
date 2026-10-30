@@ -13,7 +13,13 @@ const bare: Receipt = {
   initiator: 'lena',
   rules: [],
   decisions: [
-    { approvalId: 'apr-9', by: 'samir', at: '2026-10-29T10:00:00.000Z', result: 'rejected', selfApproved: true },
+    {
+      approvalId: 'apr-9',
+      by: 'samir',
+      at: '2026-10-29T10:00:00.000Z',
+      result: 'rejected',
+      selfApproved: true,
+    },
   ],
   nodes: [],
   createdAt: '2026-10-29T10:00:01.000Z',
@@ -35,7 +41,9 @@ describe('the receipts list', () => {
     expect(gate.querySelector('time')).toHaveAttribute('title', expect.stringMatching(/2026/));
     const session = screen.getByRole('link', { name: /ses-2b9e/ });
     expect(within(session).getByText('by samir · 0 decisions')).toBeInTheDocument();
-    expect(within(screen.getByRole('link', { name: /wf-backend/ })).getByText('Workflow')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('link', { name: /wf-backend/ })).getByText('Workflow'),
+    ).toBeInTheDocument();
   });
 
   it('says when there is no receipt yet', async () => {
@@ -73,7 +81,9 @@ describe('a receipt', () => {
     expect(records).toHaveTextContent('Modelclaude-sonnet-5');
     expect(records).toHaveTextContent('Package0.4.1 · sha256:9e1d77c0');
     expect(records).toHaveTextContent('Model cost$1.07');
-    expect(screen.getByRole('region', { name: 'Rules in force' })).toHaveTextContent('R-3sha256:33ccR-12sha256:11aa');
+    expect(screen.getByRole('region', { name: 'Rules in force' })).toHaveTextContent(
+      'R-3sha256:33ccR-12sha256:11aa',
+    );
     const steps = screen.getByRole('region', { name: 'Workflow steps' });
     expect(steps).toHaveTextContent('Tests passpassed');
     expect(steps).toHaveTextContent('Merge to mainNo mergeskipped');
