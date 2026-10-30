@@ -69,7 +69,7 @@ describe('generated client, configured', () => {
     };
     client.interceptors.request.use(capture);
     try {
-      await getYesQueue({ throwOnError: true });
+      await getMe({ throwOnError: true });
     } finally {
       client.interceptors.request.eject(capture);
     }
