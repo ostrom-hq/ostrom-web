@@ -42,7 +42,9 @@ export function ApprovalCard({ approval, viewer, fresh, now }: ApprovalCardProps
         ) : fresh ? (
           <Badge tone="signal">{t('yes.badge.new')}</Badge>
         ) : (
-          <Badge tone="signal">{t('yes.tone.waiting-you')}</Badge>
+          <Badge tone="signal" approval="waiting">
+            {t('yes.tone.waiting-you')}
+          </Badge>
         )}
       </span>
       <span className="ys-action">{approval.title}</span>

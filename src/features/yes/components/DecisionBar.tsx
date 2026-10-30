@@ -99,6 +99,7 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
             </Button>
             <Button
               variant="primary"
+              data-approval="approve"
               disabled={busy}
               onClick={() => {
                 answer.answer(approval, 'approve');

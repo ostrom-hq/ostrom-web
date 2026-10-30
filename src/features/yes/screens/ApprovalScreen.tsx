@@ -81,7 +81,9 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
   return (
     <>
       <header className="ys-head">
-        <Badge tone={TONES[tone]}>{t(`yes.tone.${tone}`)}</Badge>
+        <Badge tone={TONES[tone]} approval={tone === 'waiting-you' ? 'waiting' : undefined}>
+          {t(`yes.tone.${tone}`)}
+        </Badge>
         <h1 className="ys-h1">{approval.title}</h1>
         <p className="ys-meta">
           {approval.repo}
