@@ -103,11 +103,12 @@ import {
   zUpdateRuleBody,
   zVerifySignInEmailBody,
 } from '@gen/api/zod.gen';
-import { HttpResponse, type HttpHandler } from 'msw';
+import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
+import { ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
 import {
   initialAutomationRuns,
@@ -135,6 +136,12 @@ export interface MockDb extends BillingState {
   /** Newest first, as the server lists them; an answer adds its receipt at the top. */
   receipts: Receipt[];
   organization: Organization;
+  /**
+   * The person's other active memberships. With none, a call that names no organization acts in `organization`; with
+   * any, it must name one with `Ostrom-Org` or is refused with 409 `org_required`, as `MembershipOrgResolver` does.
+   * The demo keeps one set of data: every organization reads the same screens.
+   */
+  otherOrganizations: Organization[];
   members: Member[];
   teams: Team[];
   workflows: Workflow[];
@@ -176,6 +183,7 @@ export function createMockDb(): MockDb {
     sessions: initialSessions(),
     receipts: initialReceipts(),
     organization: initialOrganization(),
+    otherOrganizations: [],
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
@@ -278,6 +286,39 @@ export function resetMockDb(db: MockDb): void {
 
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
+}
+
+/** The routes that do not act in the caller's organization: no `Ostrom-Org` in the contract. */
+const ORG_FREE: readonly RegExp[] = [
+  /^\/api\/v1\/auth\/(?!me$)/,
+  /^\/api\/v1\/orgs\//,
+  /^\/api\/v1\/me\/notifications$/,
+  /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys)$/,
+  /^\/api\/v1\/github\//,
+  /^\/api\/v1\/automations\/[^/]+\/trigger$/,
+];
+
+/** The organization a call acts in, as the server resolves it; a refusal when it cannot. */
+function resolveOrganization(db: MockDb, request: Request): Organization | HttpResponse<ApiError> {
+  const named = request.headers.get(ORG_HEADER);
+  if (named === null) {
+    return db.otherOrganizations.length === 0
+      ? db.organization
+      : refusal(
+          409,
+          ORG_REQUIRED,
+          'You are a member of several organizations: name one with the Ostrom-Org header.',
+        );
+  }
+  // An organization the person is not a member of is not found, like anything of another organization.
+  const found = [db.organization, ...db.otherOrganizations].find((organization) => organization.id === named);
+  return found ?? refusal(404, 'not_found', 'organization not found');
+}
+
+/** The organization a call acts in, once the first handler let it through. */
+function organizationOf(db: MockDb, request: Request): Organization {
+  const named = request.headers.get(ORG_HEADER);
+  return db.otherOrganizations.find((organization) => organization.id === named) ?? db.organization;
 }
 
 function isAsker(approval: Approval, login: string): boolean {
@@ -383,7 +424,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   return [
-    handleGetMe({ body: me }),
+    // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
+    http.all('*/api/v1/*', ({ request }) => {
+      if (ORG_FREE.some((route) => route.test(new URL(request.url).pathname))) return undefined;
+      const organization = resolveOrganization(db, request);
+      return organization instanceof HttpResponse ? organization : undefined;
+    }),
+    handleGetMe(({ request }) => HttpResponse.json({ ...me, organization: organizationOf(db, request) })),
     // The e-mail sign-in answers the same whether the address has an account or not.
     handleRequestSignInEmail(async ({ request }) => {
       const body = zRequestSignInEmailBody.safeParse(await readJson(request));
@@ -454,7 +501,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       return HttpResponse.json(view);
     }),
-    handleGetOrganization(() => HttpResponse.json(db.organization)),
+    handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
     handleListTeams(() => HttpResponse.json({ items: db.teams })),
     handleUpdateMember(async ({ params, request }) => {

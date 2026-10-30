@@ -10,6 +10,7 @@ import {
   useConsentStore,
   usePageViews,
 } from '@/shared/analytics';
+import { OrgControls } from '@/features/orgs';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
@@ -53,6 +54,7 @@ export function AppShell(): ReactElement {
           <Link to="/signin">{t('app.nav.signin')}</Link>
         </nav>
         <div className="o-topbar__end">
+          <OrgControls />
           <ThemeToggle />
         </div>
       </header>

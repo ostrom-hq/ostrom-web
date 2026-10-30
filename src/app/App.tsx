@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { useOrgStore } from '@/shared/org/orgStore';
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -21,7 +22,18 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(
     () =>
       useAuthStore.subscribe((auth, previous) => {
-        if (auth.token !== previous.token) queryClient.clear();
+        if (auth.token === previous.token) return;
+        // The organization chosen was the previous account's: the new one is asked afresh.
+        useOrgStore.getState().forget();
+        queryClient.clear();
+      }),
+    [queryClient],
+  );
+  // Read in another organization, or refused for want of one: everything is read again in the one chosen.
+  useEffect(
+    () =>
+      useOrgStore.subscribe((org, previous) => {
+        if (org.generation !== previous.generation) void queryClient.resetQueries();
       }),
     [queryClient],
   );

@@ -834,6 +834,23 @@ export const fr = {
       pdf: 'PDF',
     },
   },
+  orgs: {
+    switch: {
+      named: 'Organisation : {{name}}. Changer',
+      choose: 'Choisir une organisation',
+      unnamed: 'Organisation',
+    },
+    picker: {
+      title: 'Quelle organisation ?',
+      body: 'Tu es membre de plusieurs organisations. Choisis celle dans laquelle cette console travaille ; tu peux en changer à tout moment.',
+      known: 'Tes organisations',
+      idLabel: 'Identifiant de l’organisation',
+      use: 'Utiliser cette organisation',
+      notNow: 'Plus tard',
+      problemTag: 'À vérifier',
+      invalid: 'Ce n’est pas un identifiant d’organisation.',
+    },
+  },
   home: {
     title: 'Chaque changement d’agent, validé par la bonne personne.',
     lead: 'La console Ostrom est en reconstruction. Les écrans arrivent un par un.',

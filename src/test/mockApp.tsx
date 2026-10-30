@@ -10,6 +10,7 @@ import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer, type MockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { useOrgStore } from '@/shared/org/orgStore';
 
 /** The base URL the tests give the client: links built from the contract start with it. */
 export const TEST_API = 'http://ostrom.test';
@@ -25,6 +26,7 @@ export function setupMockApp(): MockServer {
     mock.server.resetHandlers();
     resetMockDb(mock.db);
     useAuthStore.getState().signOut();
+    useOrgStore.getState().forget();
     resetArrivals();
   });
   afterAll(() => {

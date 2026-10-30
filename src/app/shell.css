@@ -135,6 +135,72 @@
   flex: 1;
 }
 
+/* The organization picker: a dialog over the console, a sheet from the bottom on a phone. */
+.o-org-switch__name {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.o-org-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--text) 32%, transparent);
+}
+.o-org-picker__panel {
+  display: grid;
+  gap: var(--space-3);
+  width: min(100%, 480px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-5);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.o-org-picker__panel:focus {
+  outline: none;
+}
+.o-org-picker__title {
+  margin: 0;
+  font-size: var(--fs-20);
+}
+.o-org-picker__body {
+  margin: 0;
+  color: var(--text-muted);
+}
+.o-org-picker__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.o-org-picker__list .o-btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: var(--space-2);
+}
+@media (max-width: 640px) {
+  .o-org-picker {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .o-org-picker__panel {
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  }
+  .o-org-switch__name {
+    max-width: 6rem;
+  }
+}
+
 .o-mock-banner {
   margin: 0;
   padding: var(--space-1) var(--space-4);

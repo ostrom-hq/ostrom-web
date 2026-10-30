@@ -50,6 +50,16 @@ export function initialOrganization(): Organization {
   return structuredClone(organization);
 }
 
+/** A second organization the demo person can belong to: with it, the console must say which one it acts in. */
+export function otherOrganization(): Organization {
+  return {
+    ...structuredClone(organization),
+    id: '8c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
+    name: 'Globex',
+    description: 'Imports and exports',
+  };
+}
+
 export function initialMembers(): Member[] {
   return structuredClone(members);
 }
