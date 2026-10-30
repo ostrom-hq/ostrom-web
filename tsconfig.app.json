@@ -7,8 +7,14 @@
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom/vitest"],
     "paths": {
       "@/*": ["./src/*"],
-      "@ee/*": ["./ee/*"]
+      "@ee/*": ["./ee/*"],
+      "@gen/*": ["./gen/*"]
     }
   },
-  "include": ["src", "ee"]
+  "include": ["src", "ee"],
+  "references": [
+    {
+      "path": "./tsconfig.gen.json"
+    }
+  ]
 }

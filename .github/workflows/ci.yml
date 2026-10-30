@@ -1,21 +1,25 @@
 name: CI
 
+# Organisation CI rules (.coord/JOURNAL.md 03:25, QA): one job `ci`, the required check on main; no CI on drafts.
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  ci:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -24,35 +28,22 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generated API client matches the contract
+        run: pnpm gen:check
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm test:coverage
-      - run: pnpm build
-      - uses: actions/upload-artifact@v5
-        with:
-          name: dist
-          path: dist
-          retention-days: 3
-
-  e2e:
-    needs: check
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v5
-        with:
-          name: dist
-          path: dist
+      - name: Unit and integration tests, 100 % lines, branches, functions, statements
+        run: pnpm test:coverage
+      # No Ostrom server image yet: the journeys run against the MSW mocks generated from the contract.
+      # Once ostrom-server ships its container, this job starts it with PostgreSQL and drops VITE_MOCKS.
+      - name: Build (mock API)
+        run: pnpm build
+        env:
+          VITE_MOCKS: 'true'
       - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm e2e
+      - name: End-to-end journeys (Playwright, desktop and mobile)
+        run: pnpm e2e
       - if: failure()
         uses: actions/upload-artifact@v5
         with:
