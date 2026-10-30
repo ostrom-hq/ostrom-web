@@ -1,0 +1,51 @@
+# Rendered at start by the image's envsubst step (only ${OSTROM_*} variables).
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header X-Frame-Options DENY always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Runtime settings (public values only), written at start by 40-ostrom-config.sh.
+    location = /config.js {
+        alias /var/run/ostrom/config.js;
+        default_type application/javascript;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # The API on the same origin: /api/v1/… → <server>/v1/…, streaming kept (SSE).
+    location /api/ {
+        proxy_pass ${OSTROM_API_UPSTREAM}/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header Connection "";
+        proxy_buffering off;
+        proxy_read_timeout 3600s;
+        client_max_body_size 16m;
+    }
+
+    # Hashed assets: cached for a year.
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # The single-page app: every other path serves index.html, never cached.
+    location / {
+        add_header Cache-Control "no-cache" always;
+        try_files $uri /index.html;
+    }
+}
