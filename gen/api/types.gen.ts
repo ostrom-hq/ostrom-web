@@ -2137,6 +2137,24 @@ export type SignedGatePolicyPayload = {
 };
 
 /**
+ * A sign-in link just made
+ */
+export type SignInLink = {
+    /**
+     * The link to open, the token in its fragment
+     */
+    url: string;
+    /**
+     * The token alone (`opk_…`), for a QR code
+     */
+    token: string;
+    /**
+     * When it stops working (ISO 8601)
+     */
+    expiresAt: string;
+};
+
+/**
  * A completed sign-in; the session itself is in the cookies
  */
 export type SignedIn = {
@@ -2145,7 +2163,7 @@ export type SignedIn = {
      */
     redirect: string;
     /**
-     * The same value as the `ostrom_csrf` cookie, for the `X-CSRF-Token` header
+     * The same value as the `__Host-ostrom_csrf` cookie, for the `X-CSRF-Token` header
      */
     csrfToken?: string;
 };
@@ -3457,6 +3475,88 @@ export type LogoutResponses = {
 };
 
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
+
+export type LogoutEverywhereData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout/everywhere';
+};
+
+export type LogoutEverywhereErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LogoutEverywhereError = LogoutEverywhereErrors[keyof LogoutEverywhereErrors];
+
+export type LogoutEverywhereResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type LogoutEverywhereResponse = LogoutEverywhereResponses[keyof LogoutEverywhereResponses];
+
+export type CreateSignInLinkData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/links';
+};
+
+export type CreateSignInLinkErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateSignInLinkError = CreateSignInLinkErrors[keyof CreateSignInLinkErrors];
+
+export type CreateSignInLinkResponses = {
+    /**
+     * Created
+     */
+    201: SignInLink;
+};
+
+export type CreateSignInLinkResponse = CreateSignInLinkResponses[keyof CreateSignInLinkResponses];
 
 export type ListAuthSessionsData = {
     body?: never;

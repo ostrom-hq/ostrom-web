@@ -1704,6 +1704,15 @@ export const zSignedGatePolicy = z.object({
 });
 
 /**
+ * A sign-in link just made
+ */
+export const zSignInLink = z.object({
+    url: z.string(),
+    token: z.string(),
+    expiresAt: z.string()
+});
+
+/**
  * A completed sign-in; the session itself is in the cookies
  */
 export const zSignedIn = z.object({
@@ -2673,6 +2682,16 @@ export const zExchangeSignInLinkResponse = zSignedIn;
  * Done
  */
 export const zLogoutResponse = z.void();
+
+/**
+ * Done
+ */
+export const zLogoutEverywhereResponse = z.void();
+
+/**
+ * Created
+ */
+export const zCreateSignInLinkResponse = zSignInLink;
 
 /**
  * OK
