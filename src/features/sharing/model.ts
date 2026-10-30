@@ -2,8 +2,11 @@
 import type { SharedAccount } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
-/** Who reads an artifact: its owner alone, the people it is shared with, or the whole organization. */
-export const ARTIFACT_ACCESSES = ['personal', 'members', 'org'] as const;
+/**
+ * Who reads an artifact, as the contract names it: `personal` is its owner, the administrators and the members it is
+ * shared with; `team` every member; `link` anyone with its link. Sharing adds a reader and never changes the access.
+ */
+export const ARTIFACT_ACCESSES = ['personal', 'team', 'link'] as const;
 export type ArtifactAccess = (typeof ARTIFACT_ACCESSES)[number];
 
 export function isArtifactAccess(value: string): value is ArtifactAccess {

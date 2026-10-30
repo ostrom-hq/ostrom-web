@@ -9,6 +9,8 @@ export interface Viewer {
   readonly login: string | undefined;
   /** "Maya Lind (maya)", or the login alone. */
   readonly name: string | undefined;
+  /** Their member id (`Member.id`) in the organization: what an artifact's readers are listed by. */
+  readonly memberId: string | undefined;
   readonly role: MemberRole | undefined;
   /** Owners and admins change the organization (members, rules, tools); everyone else reads. */
   readonly canManage: boolean;
@@ -22,6 +24,7 @@ export function useViewer(): Viewer {
   return {
     login: me?.dev.login,
     name: viewerName(me),
+    memberId: me?.member?.id,
     role,
     canManage: role === 'owner' || role === 'admin',
   };

@@ -8,6 +8,7 @@ import { STRIPE_CHECKOUT, STRIPE_PORTAL } from '@/mocks/billing';
 import { PLAN_LIMITS } from '@/mocks/fixtures/billing';
 import { exit } from '@/shared/lib/leave';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db } = setupMockApp();
 
@@ -26,7 +27,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),

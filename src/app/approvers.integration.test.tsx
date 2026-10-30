@@ -3,6 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
@@ -88,7 +89,7 @@ describe('who approves what', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: 'maya', verified: true, via: 'github' },
-          member: { login: 'maya', avatarUrl: '', role: 'member' },
+          member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
           capabilities: [],
         }),
       ),
@@ -103,7 +104,7 @@ describe('who approves what', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: 'lena', verified: true, via: 'github' },
-          member: { login: 'lena', avatarUrl: '', role: 'owner' },
+          member: { id: MEMBER_IDS.lena, login: 'lena', avatarUrl: '', role: 'owner' },
           capabilities: [],
         }),
       ),
@@ -121,7 +122,17 @@ describe('who approves what', () => {
   it('names approvers by login when the organization gives no name, and needs no warning when every gate has one', async () => {
     server.use(
       http.get('*/api/v1/members', () =>
-        HttpResponse.json({ items: [{ login: 'ana', name: '', avatarUrl: '', role: 'approver' }] }),
+        HttpResponse.json({
+          items: [
+            {
+              id: '8cbe4f6d-7091-4cd3-8e5f-60718293a4b5',
+              login: 'ana',
+              name: '',
+              avatarUrl: '',
+              role: 'approver',
+            },
+          ],
+        }),
       ),
       http.get('*/api/v1/workflows', () =>
         HttpResponse.json({

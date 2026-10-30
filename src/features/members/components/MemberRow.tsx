@@ -27,7 +27,8 @@ export function MemberRow({ member, onRole, saving, isViewer }: MemberRowProps):
   const selectId = useId();
   const name = displayName(member);
   const meta = [
-    member.login !== name ? `@${member.login}` : member.email === member.login ? undefined : member.email,
+    // The login under a name; without a name, the login is the title and the address (if any) says who it is.
+    member.login !== name ? `@${member.login}` : member.email,
     ...(member.teams ?? []).map((team) => t('members.list.team', { team })),
   ].filter((part) => part !== undefined);
   return (

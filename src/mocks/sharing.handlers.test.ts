@@ -14,6 +14,7 @@ import {
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { resetMockDb } from '@/mocks/handlers';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -52,8 +53,8 @@ describe('mock artifacts', () => {
       [],
     );
     expect((await listArtifactMembers({ path: { id: 'art-7' }, throwOnError: true })).data.members).toEqual([
-      'maya',
-      'theo',
+      MEMBER_IDS.maya,
+      MEMBER_IDS.theo,
     ]);
     expect((await listArtifactMembers({ path: { id: 'art-2' }, throwOnError: true })).data.members).toEqual(
       [],
@@ -61,24 +62,24 @@ describe('mock artifacts', () => {
   });
 
   it('shares with a member once, stops sharing, and lets only the owner do either', async () => {
-    await shareArtifact({ path: { id: 'art-7', memberId: 'samir' }, throwOnError: true });
-    await shareArtifact({ path: { id: 'art-7', memberId: 'samir' }, throwOnError: true });
-    expect(db.artifactMembers['art-7']).toEqual(['maya', 'theo', 'samir']);
-    await unshareArtifact({ path: { id: 'art-7', memberId: 'theo' }, throwOnError: true });
-    expect(db.artifactMembers['art-7']).toEqual(['maya', 'samir']);
-    await shareArtifact({ path: { id: 'art-2', memberId: 'theo' }, throwOnError: true });
-    expect(db.artifactMembers['art-2']).toEqual(['theo']);
+    await shareArtifact({ path: { id: 'art-7', memberId: MEMBER_IDS.samir }, throwOnError: true });
+    await shareArtifact({ path: { id: 'art-7', memberId: MEMBER_IDS.samir }, throwOnError: true });
+    expect(db.artifactMembers['art-7']).toEqual([MEMBER_IDS.maya, MEMBER_IDS.theo, MEMBER_IDS.samir]);
+    await unshareArtifact({ path: { id: 'art-7', memberId: MEMBER_IDS.theo }, throwOnError: true });
+    expect(db.artifactMembers['art-7']).toEqual([MEMBER_IDS.maya, MEMBER_IDS.samir]);
+    await shareArtifact({ path: { id: 'art-2', memberId: MEMBER_IDS.theo }, throwOnError: true });
+    expect(db.artifactMembers['art-2']).toEqual([MEMBER_IDS.theo]);
     delete db.artifactMembers['art-2'];
-    await unshareArtifact({ path: { id: 'art-2', memberId: 'theo' }, throwOnError: true });
+    await unshareArtifact({ path: { id: 'art-2', memberId: MEMBER_IDS.theo }, throwOnError: true });
     expect(db.artifactMembers['art-2']).toEqual([]);
     expect(
       await statusOf(async () =>
-        shareArtifact({ path: { id: 'art-5', memberId: 'samir' }, throwOnError: true }),
+        shareArtifact({ path: { id: 'art-5', memberId: MEMBER_IDS.samir }, throwOnError: true }),
       ),
     ).toBe(403);
     expect(
       await statusOf(async () =>
-        unshareArtifact({ path: { id: 'art-5', memberId: 'theo' }, throwOnError: true }),
+        unshareArtifact({ path: { id: 'art-5', memberId: MEMBER_IDS.theo }, throwOnError: true }),
       ),
     ).toBe(403);
     expect(
@@ -88,12 +89,12 @@ describe('mock artifacts', () => {
     ).toBe(404);
     expect(
       await statusOf(async () =>
-        shareArtifact({ path: { id: 'art-9', memberId: 'theo' }, throwOnError: true }),
+        shareArtifact({ path: { id: 'art-9', memberId: MEMBER_IDS.theo }, throwOnError: true }),
       ),
     ).toBe(404);
     expect(
       await statusOf(async () =>
-        unshareArtifact({ path: { id: 'art-9', memberId: 'theo' }, throwOnError: true }),
+        unshareArtifact({ path: { id: 'art-9', memberId: MEMBER_IDS.theo }, throwOnError: true }),
       ),
     ).toBe(404);
   });

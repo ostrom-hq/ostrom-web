@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval, Me } from '@gen/api/types.gen';
+import { MEMBER_IDS } from './organization';
 
 /** The person signed in to the demo console. */
 export const me: Me = {
   dev: { login: 'maya', verified: true, via: 'github' },
-  member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin' },
+  member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin' },
   capabilities: [],
 };
 

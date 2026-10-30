@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerWaitData, AnswerWaitResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeletePushDeviceResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetArtifactFileResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListNotificationsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OpenBillingPortalResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, RemoveGroupMemberResponses, RemoveSharedAccountResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokePackageData, RevokePackageResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses } from './types.gen';
+import type { AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerWaitData, AnswerWaitResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeletePushDeviceResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactFileResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListNotificationsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OpenBillingPortalResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveSharedAccountResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokePackageData, RevokePackageResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -1193,6 +1193,37 @@ export function handleListMembers(response?: HandleListMembersResponse | HttpRes
     }, options);
 }
 
+export type HandleRemoveMemberResponse = {
+    body: RemoveMemberResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `DELETE /api/v1/members/{login}` operation.
+ */
+export function handleRemoveMember(response?: HandleRemoveMemberResponse | HttpResponseResolver<{
+    login: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.delete<{
+        login: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/members/:login`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleGetMemberResponse = {
     body: GetMemberResponses[200];
     status?: 200;
@@ -1729,6 +1760,33 @@ export function handleConsumeGate(response?: HandleConsumeGateResponse | HttpRes
     return http.post<{
         id: string;
     }, never>(`${options?.baseUrl ?? '*'}/api/v1/gates/:id/consume`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetApproversGraphResponse = {
+    body: GetApproversGraphResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/gates/approvers` operation.
+ */
+export function handleGetApproversGraph(response?: HandleGetApproversGraphResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/gates/approvers`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -6878,6 +6936,10 @@ export type MswHandlerFactories = {
      */
     listMembers: typeof handleListMembers;
     /**
+     * Handler for the `DELETE /api/v1/members/{login}` operation.
+     */
+    removeMember: typeof handleRemoveMember;
+    /**
      * Handler for the `GET /api/v1/members/{login}` operation.
      */
     getMember: typeof handleGetMember;
@@ -6953,6 +7015,10 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/gates/{id}/consume` operation.
      */
     consumeGate: typeof handleConsumeGate;
+    /**
+     * Handler for the `GET /api/v1/gates/approvers` operation.
+     */
+    getApproversGraph: typeof handleGetApproversGraph;
     /**
      * Handler for the `GET /api/v1/gates/catalog` operation.
      */
@@ -7693,6 +7759,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         githubCheck: wrap(handleGithubCheck),
         getOrganization: wrap(handleGetOrganization),
         listMembers: wrap(handleListMembers),
+        removeMember: wrap(handleRemoveMember),
         getMember: wrap(handleGetMember),
         updateMember: wrap(handleUpdateMember),
         inviteMembers: wrap(handleInviteMembers),
@@ -7712,6 +7779,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         askGate: wrap(handleAskGate),
         getGate: wrap(handleGetGate),
         consumeGate: wrap(handleConsumeGate),
+        getApproversGraph: wrap(handleGetApproversGraph),
         getGateCatalog: wrap(handleGetGateCatalog),
         getSignedGatePolicy: wrap(handleGetSignedGatePolicy),
         getGatePolicy: wrap(handleGetGatePolicy),
@@ -7989,6 +8057,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.getGithubApp, overrides.getGithubApp),
             invoke(pick.githubCheck, overrides.githubCheck),
             invoke(pick.inviteMembers, overrides.inviteMembers),
+            invoke(pick.getApproversGraph, overrides.getApproversGraph),
             invoke(pick.getGateCatalog, overrides.getGateCatalog),
             invoke(pick.getGatePolicy, overrides.getGatePolicy),
             invoke(pick.setGatePolicy, overrides.setGatePolicy),
@@ -8027,6 +8096,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.deleteServiceKey, overrides.deleteServiceKey),
             invoke(pick.deleteDevice, overrides.deleteDevice),
             invoke(pick.deletePushDevice, overrides.deletePushDevice),
+            invoke(pick.removeMember, overrides.removeMember),
             invoke(pick.getMember, overrides.getMember),
             invoke(pick.updateMember, overrides.updateMember),
             invoke(pick.getSession, overrides.getSession),

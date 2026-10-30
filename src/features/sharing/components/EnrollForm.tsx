@@ -134,7 +134,7 @@ export function EnrollForm({ change, secrets, members }: EnrollFormProps): React
             <fieldset className="o-stack sh-people">
               <legend className="o-field-label">{t('sharing.enroll.sharedWith')}</legend>
               {members.map((member) => (
-                <label key={member.login} className="o-inline">
+                <label key={member.id} className="o-inline">
                   <input
                     type="checkbox"
                     checked={sharedWith.includes(member.login)}
