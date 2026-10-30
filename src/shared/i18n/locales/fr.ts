@@ -872,7 +872,6 @@ export const fr = {
       saving: 'Enregistrement…',
       problem: {
         empty: 'Il faut un nom.',
-        long: 'Un nom fait au plus 100 caractères.',
         control:
           'Un nom ne peut contenir ni tabulation, ni retour à la ligne, ni autre caractère de contrôle.',
       },
@@ -961,7 +960,7 @@ export const fr = {
       label: 'Secret de {{name}}',
       use: 'Envoie-le en Authorization: Bearer suivi du secret.',
       done: 'Je l’ai copié',
-      held: 'Tant que tu n’as pas appuyé sur Je l’ai copié, aucun autre jeton n’est créé ni aucun secret remplacé.',
+      held: 'Tant que tu n’as pas appuyé sur Je l’ai copié, aucun jeton n’est créé, remplacé ni révoqué.',
     },
     kind: { personal: 'Personnel', cli: 'CLI' },
     list: {

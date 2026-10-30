@@ -7,12 +7,13 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
 export interface SessionRowProps {
   readonly session: AuthSession;
-  readonly revoking: boolean;
+  /** One sign-out at a time: every row waits for the one on its way. */
+  readonly locked: boolean;
   readonly onRevoke: () => void;
 }
 
 /** A signed-in session: where, since when, last seen when; this browser is said so. */
-export function SessionRow({ session, revoking, onRevoke }: SessionRowProps): ReactElement {
+export function SessionRow({ session, locked, onRevoke }: SessionRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const when = (at: string): string =>
     new Date(at).toLocaleString(i18n.language, {
@@ -47,7 +48,7 @@ export function SessionRow({ session, revoking, onRevoke }: SessionRowProps): Re
               : t('settings.sessions.revokeConfirm', { device })
           }
           keep={t('settings.sessions.keep')}
-          disabled={revoking}
+          disabled={locked}
           onConfirm={onRevoke}
         />
       </span>

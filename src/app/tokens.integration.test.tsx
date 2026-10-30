@@ -116,43 +116,39 @@ describe('the tokens screen', () => {
     expect(db.tokens.map((token) => token.name)).toEqual(['GitHub Actions']);
   });
 
-  it('keeps a secret on screen until it is copied: no other creation or replacement takes its place', async () => {
+  it('keeps a secret on screen until it is copied: nothing else on the page changes a token meanwhile', async () => {
     const user = userEvent.setup();
     visit('/tokens');
     const [ci] = await liveTokens();
     const row = ci ?? document.body;
     await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
     await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
-    const secret = await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' });
-    expect(screen.getByText(/no other token is created and no other secret replaced/)).toBeInTheDocument();
-    // Every other replacement waits, and the token whose secret is shown is not revoked under it.
-    await waitFor(async () => {
-      const ids = (await liveTokens()).map((item) => item.textContent);
-      expect(ids.some((text) => text.includes(db.tokens[0]?.hint ?? 'none'))).toBe(true);
-    });
-    const rows = await liveTokens();
-    for (const item of rows)
-      expect(within(item).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
-    const shownRow = rows.find((item) => item.textContent.includes('GitHub Actions')) ?? document.body;
-    expect(within(shownRow).getByRole('button', { name: 'Revoke' })).toBeDisabled();
-    // Revoking another token leaves the secret where it is.
-    const cli = rows.find((item) => item.textContent.includes('ostrom on maya-mbp')) ?? document.body;
-    await user.click(within(cli).getByRole('button', { name: 'Revoke' }));
-    await user.click(within(cli).getByRole('button', { name: 'Revoke ostrom on maya-mbp' }));
-    await waitFor(async () => {
-      expect(await liveTokens()).toHaveLength(1);
-    });
-    expect(secret).toBeInTheDocument();
-    // The form waits too while its own secret is on screen.
+    expect(await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Until you press I copied it, no token is created, replaced or revoked.'),
+    ).toBeInTheDocument();
+    const locked = async (): Promise<void> => {
+      for (const item of await liveTokens()) {
+        expect(within(item).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
+        expect(within(item).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+      }
+    };
+    await locked();
     await user.type(within(form()).getByRole('textbox', { name: 'Name' }), 'One');
     await user.click(within(form()).getByRole('checkbox', { name: 'Usage: Read' }));
+    expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'I copied it' }));
+    // Then a created secret locks the page the same way.
     await user.click(within(form()).getByRole('button', { name: 'Create the token' }));
     await within(form()).findByRole('textbox', { name: 'Secret of One' });
+    await locked();
     await user.type(within(form()).getByRole('textbox', { name: 'Name' }), 'Two');
     await user.click(within(form()).getByRole('checkbox', { name: 'Usage: Read' }));
     expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeDisabled();
     await user.click(within(form()).getByRole('button', { name: 'I copied it' }));
     expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeEnabled();
+    for (const item of await liveTokens())
+      expect(within(item).getByRole('button', { name: 'Revoke' })).toBeEnabled();
   });
 
   it('says why a token was not created, revoked or replaced', async () => {

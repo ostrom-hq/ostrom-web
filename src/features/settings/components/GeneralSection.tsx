@@ -6,7 +6,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Facts, Section } from '@/shared/ui/Screen';
 import { MAX_ORG_NAME } from '@/shared/org/slug';
-import { browserTimeZone, followName, renameProblem } from '../model';
+import { browserTimeZone, renameProblem } from '../model';
 import type { RenameViewModel } from '../useSettings';
 
 export interface GeneralSectionProps {
@@ -19,11 +19,9 @@ export interface GeneralSectionProps {
 /** The organization's name, its short name and the time zone the console shows times in. */
 export function GeneralSection({ org, canRename, rename }: GeneralSectionProps): ReactElement {
   const { t } = useTranslation();
-  // The field and the name it started from: when the server's name changes, the field follows it if untouched.
-  const [draft, setDraft] = useState({ from: org.name, typed: org.name });
-  if (draft.from !== org.name)
-    setDraft({ from: org.name, typed: followName(draft.typed, draft.from, org.name) });
-  const { typed } = draft;
+  // What was typed, or nothing: an untouched field shows the server's name, wherever it was changed.
+  const [edit, setEdit] = useState<string | undefined>(undefined);
+  const typed = edit ?? org.name;
   const nameId = useId();
   const problem = renameProblem(typed, org.name);
   return (
@@ -33,7 +31,9 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
           className="o-stack"
           onSubmit={(event) => {
             event.preventDefault();
-            rename.rename(typed);
+            rename.rename(typed, () => {
+              setEdit(undefined);
+            });
           }}
         >
           <label htmlFor={nameId} className="o-field-label">
@@ -47,7 +47,7 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
               value={typed}
               readOnly={rename.saving}
               onChange={(event) => {
-                setDraft({ from: draft.from, typed: event.target.value });
+                setEdit(event.target.value);
                 rename.edited();
               }}
             />
@@ -55,9 +55,10 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
               {rename.saving ? t('settings.general.saving') : t('settings.general.save')}
             </Button>
           </span>
-          {problem === undefined || problem === 'same' ? null : (
+          {/* A name longer than the field takes cannot be typed: only these two are said. */}
+          {problem === 'empty' || problem === 'control' ? (
             <p className="o-row__meta">{t(`settings.general.problem.${problem}`)}</p>
-          )}
+          ) : null}
         </form>
       ) : null}
       <Facts

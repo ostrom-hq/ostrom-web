@@ -15,12 +15,16 @@ export function TokensScreen(): ReactElement {
   const view = useTokens();
   const create = useCreateToken();
   const actions = useTokenActions();
+  // One secret at a time: while one is on its way or on screen, nothing else on the page changes a token, so it is
+  // never lost under another nor shown for a token already revoked.
+  const locked =
+    create.creating || create.created !== undefined || actions.rotating || actions.rotated !== undefined;
   return (
     <Screen
       title={t('tokens.title')}
       lead={view.tokens === undefined ? undefined : t('tokens.lead', { count: view.tokens.length })}
     >
-      <TokenForm create={create} />
+      <TokenForm create={create} locked={locked} />
       {actions.rotated === undefined ? null : (
         <NewSecret created={actions.rotated} onDone={actions.dismiss} />
       )}
@@ -44,8 +48,7 @@ export function TokensScreen(): ReactElement {
                     <TokenRow
                       token={token}
                       busy={actions.busy === token.id}
-                      holding={actions.rotating || actions.rotated !== undefined}
-                      keep={actions.rotating || actions.rotated?.token.id === token.id}
+                      locked={locked}
                       onRevoke={() => {
                         actions.revoke(token.id);
                       }}

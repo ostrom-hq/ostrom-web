@@ -26,7 +26,7 @@ export function SecuritySection({ view, actions }: SecuritySectionProps): ReactE
           <li key={session.id}>
             <SessionRow
               session={session}
-              revoking={actions.revoking === session.id}
+              locked={actions.revoking !== undefined || actions.signingOut}
               onRevoke={() => {
                 actions.revoke(session);
               }}

@@ -19,10 +19,12 @@ import { NewSecret } from './NewSecret';
 
 export interface TokenFormProps {
   readonly create: CreateTokenViewModel;
+  /** A secret is on its way or on screen: nothing is created until it is copied. */
+  readonly locked: boolean;
 }
 
 /** A name, what it may do and for how long; the secret comes back once. */
-export function TokenForm({ create }: TokenFormProps): ReactElement {
+export function TokenForm({ create, locked }: TokenFormProps): ReactElement {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [scopes, setScopes] = useState<readonly string[]>([]);
@@ -105,10 +107,7 @@ export function TokenForm({ create }: TokenFormProps): ReactElement {
               </option>
             ))}
           </select>
-          <Button
-            type="submit"
-            disabled={create.creating || problem !== undefined || create.created !== undefined}
-          >
+          <Button type="submit" disabled={locked || problem !== undefined}>
             {create.creating ? t('tokens.form.creating') : t('tokens.form.create')}
           </Button>
         </div>

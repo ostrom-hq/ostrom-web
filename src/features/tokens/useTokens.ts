@@ -54,10 +54,15 @@ export interface CreateTokenViewModel {
 
 export function useCreateToken(): CreateTokenViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...createTokenMutation(), ...FORGET_AT_ONCE, onSuccess: invalidate });
+  // The secret shows as soon as the server sent it; the list is read again behind it.
+  const mutation = useMutation({
+    ...createTokenMutation(),
+    ...FORGET_AT_ONCE,
+    onSuccess: () => {
+      void invalidate();
+    },
+  });
   const { mutate, reset } = mutation;
-  // A secret on screen is never replaced by the next one before it is copied (the form waits): it could not be read
-  // again.
   const create = useCallback(
     (name: string, scopes: readonly string[], days: TokenLifetime, onCreated: () => void) => {
       const body = { name: name.trim(), scopes: [...scopes] };
@@ -80,9 +85,9 @@ export interface TokenActionsViewModel {
   readonly rotate: (id: string) => void;
   /** The token being revoked or replaced. */
   readonly busy: string | undefined;
-  /** The token a replacement just issued, with its new secret: no other replacement until it is copied. */
+  /** The token a replacement just issued, with its new secret. */
   readonly rotated: CreatedToken | undefined;
-  /** A replacement is on its way or its secret on screen: the other replacements wait, and so do revocations. */
+  /** A replacement is on its way. */
   readonly rotating: boolean;
   readonly failure: Error | undefined;
   readonly dismiss: () => void;
@@ -91,17 +96,22 @@ export interface TokenActionsViewModel {
 export function useTokenActions(): TokenActionsViewModel {
   const invalidate = useInvalidate();
   const revocation = useMutation({ ...revokeTokenMutation(), onSettled: invalidate });
-  const rotation = useMutation({ ...rotateTokenMutation(), ...FORGET_AT_ONCE, onSettled: invalidate });
+  const rotation = useMutation({
+    ...rotateTokenMutation(),
+    ...FORGET_AT_ONCE,
+    onSettled: () => {
+      void invalidate();
+    },
+  });
   const { mutate: revokeMutate, reset: resetRevocation } = revocation;
   const { mutate: rotateMutate, reset: resetRotation } = rotation;
-  const holding = rotation.data !== undefined;
+  // Nothing is revoked while a replaced secret is on screen (the page waits): only a failed replacement is cleared.
   const revoke = useCallback(
     (id: string) => {
-      // A replaced secret still on screen stays there: only a failed replacement is cleared.
-      if (!holding) resetRotation();
+      resetRotation();
       revokeMutate({ path: { id } });
     },
-    [revokeMutate, resetRotation, holding],
+    [revokeMutate, resetRotation],
   );
   const rotate = useCallback(
     (id: string) => {

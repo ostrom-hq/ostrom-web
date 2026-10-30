@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { AuthSession } from '@gen/api/types.gen';
-import { browserTimeZone, deletionConfirmed, followName, renameProblem, sortSessions } from './model';
+import { browserTimeZone, deletionConfirmed, renameProblem, sortSessions } from './model';
 
 describe('renameProblem', () => {
   it('takes a new name of 1 to 100 characters, without control characters', () => {
@@ -37,13 +37,5 @@ describe('sortSessions', () => {
 describe('browserTimeZone', () => {
   it('names an IANA zone', () => {
     expect(browserTimeZone()).toMatch(/^[A-Za-z_]+(?:\/[A-Za-z_+-]+)*$/);
-  });
-});
-
-describe('followName', () => {
-  it('follows a new name unless something else is being typed', () => {
-    expect(followName('Acme', 'Acme', 'Acme Corp')).toBe('Acme Corp');
-    expect(followName(' Acme Labs ', 'Acme', 'Acme Labs')).toBe('Acme Labs');
-    expect(followName('Acme X', 'Acme', 'Acme Corp')).toBe('Acme X');
   });
 });

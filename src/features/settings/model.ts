@@ -24,17 +24,6 @@ export function sortSessions(sessions: readonly AuthSession[]): AuthSession[] {
   });
 }
 
-/**
- * What the name field shows once the organization's name changed from `from` to `now` (this save, another tab,
- * another admin): a field left as it was, or holding the new name already, follows it; anything else typed stays.
- */
-export function followName(typed: string, from: string, now: string): string {
-  const name = typed.trim();
-  if (name === from) return now;
-  if (name === now) return now;
-  return typed;
-}
-
 /** The time zone this browser shows every time in: the organization has none of its own yet. */
 export function browserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;

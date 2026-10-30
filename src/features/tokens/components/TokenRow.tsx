@@ -8,16 +8,14 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 export interface TokenRowProps {
   readonly token: Token;
   readonly busy: boolean;
-  /** A replaced secret is on its way or on screen: no other replacement until it is copied. */
-  readonly holding: boolean;
-  /** Revoking waits too: while a replacement is on its way, or for the token whose new secret is on screen. */
-  readonly keep: boolean;
+  /** A secret is on its way or on screen: nothing is replaced or revoked until it is copied. */
+  readonly locked: boolean;
   readonly onRevoke: () => void;
   readonly onRotate: () => void;
 }
 
 /** One token: its name, what it may do, the start of its secret, when it expires and when it was last used. */
-export function TokenRow({ token, busy, holding, keep, onRevoke, onRotate }: TokenRowProps): ReactElement {
+export function TokenRow({ token, busy, locked, onRevoke, onRotate }: TokenRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const day = (at: string): string =>
     new Date(at).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -47,14 +45,14 @@ export function TokenRow({ token, busy, holding, keep, onRevoke, onRotate }: Tok
           label={t('tokens.list.rotate')}
           confirm={t('tokens.list.rotateConfirm', { name: token.name })}
           keep={t('tokens.list.keep')}
-          disabled={busy || holding}
+          disabled={busy || locked}
           onConfirm={onRotate}
         />
         <ConfirmButton
           label={t('tokens.list.revoke')}
           confirm={t('tokens.list.revokeConfirm', { name: token.name })}
           keep={t('tokens.list.keep')}
-          disabled={busy || keep}
+          disabled={busy || locked}
           onConfirm={onRevoke}
         />
       </span>

@@ -853,7 +853,6 @@ export const en = {
       saving: 'Saving…',
       problem: {
         empty: 'A name is needed.',
-        long: 'A name has at most 100 characters.',
         control: 'A name cannot hold tabs, line breaks or other control characters.',
       },
       slug: 'Short name',
@@ -941,7 +940,7 @@ export const en = {
       label: 'Secret of {{name}}',
       use: 'Send it as Authorization: Bearer followed by the secret.',
       done: 'I copied it',
-      held: 'Until you press I copied it, no other token is created and no other secret replaced.',
+      held: 'Until you press I copied it, no token is created, replaced or revoked.',
     },
     kind: { personal: 'Personal', cli: 'CLI' },
     list: {

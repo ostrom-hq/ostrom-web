@@ -32,7 +32,9 @@ export const DEFAULT_LIFETIME: TokenLifetime = 30;
 
 /** The lifetime a select's value stands for: anything else reads as the default. */
 export function lifetimeOf(value: string): TokenLifetime {
-  return TOKEN_LIFETIMES.find((days) => String(days) === value) ?? DEFAULT_LIFETIME;
+  // Not `find(…) ?? default`: the lifetime found may be `null`, a token that never expires.
+  for (const days of TOKEN_LIFETIMES) if (String(days) === value) return days;
+  return DEFAULT_LIFETIME;
 }
 
 export const TOKEN_NAME_MAX = 100;

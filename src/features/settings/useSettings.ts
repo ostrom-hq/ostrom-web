@@ -13,7 +13,7 @@ import {
 import type { AuthSession, OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -23,8 +23,8 @@ import { useOrgStore } from '@/shared/org/orgStore';
 import { sortSessions } from './model';
 
 export interface RenameViewModel {
-  /** Renames it; the field starts again from the new name once the lists have it. */
-  readonly rename: (name: string) => void;
+  /** Renames it; `onSaved` runs once the lists have the new name. */
+  readonly rename: (name: string, onSaved: () => void) => void;
   readonly saving: boolean;
   /** The name the server just took, until the field changes again. */
   readonly saved: string | undefined;
@@ -48,8 +48,8 @@ export function useRenameOrg(org: OrgView): RenameViewModel {
   });
   const { mutate, reset } = mutation;
   const rename = useCallback(
-    (name: string) => {
-      mutate({ path: { org: org.id }, body: { name: name.trim() } });
+    (name: string, onSaved: () => void) => {
+      mutate({ path: { org: org.id }, body: { name: name.trim() } }, { onSuccess: onSaved });
     },
     [mutate, org.id],
   );
@@ -133,8 +133,6 @@ export interface SessionActionsViewModel {
 export function useSessionActions(): SessionActionsViewModel {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  // The session this browser holds, once its revocation is asked: its end signs this browser out.
-  const endingHere = useRef<string | undefined>(undefined);
   const signedOut = useCallback(async () => {
     // Off this page first, so nothing on it reads again as nobody; then everything cached, this account's, goes.
     await navigate({ to: '/signin', search: { redirect: '/settings' } });
@@ -143,12 +141,14 @@ export function useSessionActions(): SessionActionsViewModel {
   const relist = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() });
   }, [queryClient]);
-  // Each revocation stays pending until the list is read again, so its row never offers it twice; this browser's
-  // own is not read again with a cookie that no longer works.
+  // A revocation stays pending until the list is read again, so its row never offers it twice. Ending the session
+  // this browser holds (as the list says) signs it out, without reading the list again with a dead cookie.
   const revocation = useMutation({
     ...revokeAuthSessionMutation(),
     onSuccess: async (_data, variables) => {
-      await (variables.path.id === endingHere.current ? signedOut() : relist());
+      const sessions = queryClient.getQueryData(listAuthSessionsQueryKey())?.items ?? [];
+      const here = sessions.some((session) => session.id === variables.path.id && session.current);
+      await (here ? signedOut() : relist());
     },
     onError: relist,
   });
@@ -158,7 +158,6 @@ export function useSessionActions(): SessionActionsViewModel {
   const revoke = useCallback(
     (session: AuthSession) => {
       resetEverywhere();
-      if (session.current) endingHere.current = session.id;
       revokeMutate({ path: { id: session.id } });
     },
     [revokeMutate, resetEverywhere],
