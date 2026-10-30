@@ -16,6 +16,7 @@ import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { RulesScreen } from '@/features/rules';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
+import { AccountsScreen, ArtifactsScreen } from '@/features/sharing';
 import { SpendScreen } from '@/features/spend';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
@@ -112,6 +113,16 @@ const automationsRoute = createRoute({
   path: '/automations',
   component: AutomationsScreen,
 });
+const artifactsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/artifacts',
+  component: ArtifactsScreen,
+});
+const accountsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts',
+  component: AccountsScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -142,6 +153,8 @@ export const routeTree = rootRoute.addChildren([
   spendRoute,
   cloudRoute,
   automationsRoute,
+  artifactsRoute,
+  accountsRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>
