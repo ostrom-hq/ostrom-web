@@ -14,12 +14,28 @@ concurrency:
 
 permissions:
   contents: read
+  # The real server's image, ghcr.io/ostrom-hq/ostrom-server (private).
+  packages: read
 
 jobs:
   ci:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    env:
+      HAS_SERVER_KEY: ${{ secrets.DEPLOY_KEY_SERVER != '' }}
+    # The real server's database and Stripe stand-in, for the journeys against the real server. The database is
+    # `ostrom_ci`: ci/database-roles.sql of ostrom-server creates `ostrom` itself, owned by its owner role.
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_USER: ostrom, POSTGRES_PASSWORD: ostrom, POSTGRES_DB: ostrom_ci }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ostrom -d ostrom_ci" --health-interval 5s --health-timeout 5s --health-retries 20
+      stripe-mock:
+        image: stripe/stripe-mock@sha256:aeb96b83e87a893d2ac005e363ac01ffa6e59a5ad85b49c155dfc9129de02e78 # as ostrom-server
+        ports: ['12111:12111']
     steps:
       - uses: actions/checkout@v5
         with:
@@ -63,9 +79,105 @@ jobs:
         run: |
           docker build --tag ostrom-web:ci .
           ./docker/smoke-test.sh ostrom-web:ci
+      # The same console against the REAL server: the image of ostrom-server main, as deployed (the owner role
+      # migrates, the server serves as `ostrom_app`, which owns nothing and cannot bypass row-level security).
+      - name: ostrom-server main (its database roles)
+        # Without the deploy key (a pull request from outside), the journeys against the real server are skipped.
+        if: env.HAS_SERVER_KEY == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ostrom-hq/ostrom-server
+          ref: main
+          ssh-key: ${{ secrets.DEPLOY_KEY_SERVER }}
+          path: .ostrom/server
+          # The whole history, every blob: whether the image's commit contains the oldest server the console needs, and
+          # its own roles script.
+          fetch-depth: 0
+          persist-credentials: false
+      # Until the image can be pulled (Actions access of the package for ostrom-web) and contains the oldest server the
+      # console needs (MIN_SERVER: server#58, the browser session), the journeys below are skipped with a warning and a
+      # line in the summary; from then on they run and fail the job like any other test.
+      - name: Real server image (edge of ostrom-server main)
+        id: server
+        env:
+          IMAGE: ghcr.io/ostrom-hq/ostrom-server:edge
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MIN_SERVER: 5c8f826
+          # Repository variable: `true` once the image is reachable and recent, so a skip fails the job from then on.
+          REQUIRED: ${{ vars.OSTROM_WEB_REQUIRE_REAL_SERVER == 'true' }}
+        run: |
+          skip() {
+            echo "::warning title=Journeys against the real server skipped::$1"
+            echo "Journeys against the real server **skipped**: $1" >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            [ "$REQUIRED" = "true" ] && exit 1
+            exit 0
+          }
+          if [ "$HAS_SERVER_KEY" != "true" ]; then
+            # Never fatal: a pull request from outside has no deploy key.
+            echo "Journeys against the real server **skipped**: no deploy key for ostrom-server." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker pull --quiet "$IMAGE" || skip "$IMAGE cannot be pulled from this repository (package Actions access)."
+          revision=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
+          main=$(git -C .ostrom/server rev-parse HEAD)
+          echo "Server image built from ostrom-server@${revision:0:7}; main is at ${main:0:7}." >> "$GITHUB_STEP_SUMMARY"
+          [ -n "$revision" ] || skip "$IMAGE carries no org.opencontainers.image.revision label."
+          git -C .ostrom/server cat-file -e "${revision}^{commit}" 2>/dev/null \
+            || skip "edge is ostrom-server@${revision:0:7}, a commit that is not in the history of main."
+          git -C .ostrom/server merge-base --is-ancestor "$MIN_SERVER" "$revision" \
+            || skip "edge is ostrom-server@${revision:0:7}, older than $MIN_SERVER (server#58)."
+          # The database roles of the image's own commit, not of a main that may have moved past it.
+          git -C .ostrom/server show "${revision}:ci/database-roles.sql" > "$RUNNER_TEMP/database-roles.sql"
+          if [ "$revision" != "$main" ]; then
+            echo "::warning title=Server image::edge is ostrom-server@${revision:0:7}, main is at ${main:0:7}"
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+      - name: Start the real server (roles, migrate, serve as ostrom_app)
+        if: steps.server.outputs.ready == 'true'
+        env:
+          IMAGE: ghcr.io/ostrom-hq/ostrom-server:edge
+          PGPASSWORD: ostrom
+          OWNER_URL: postgresql://ostrom_owner:ostrom_owner@localhost:5432/ostrom
+          APP_URL: postgresql://ostrom_app:ostrom_app@localhost:5432/ostrom
+        run: |
+          psql -h localhost -U ostrom -d ostrom_ci -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/database-roles.sql"
+          docker run --rm --network host -e OSTROM_DATABASE_MIGRATION_URL="$OWNER_URL" "$IMAGE" migrate
+          # The server's non-root user writes the mails (0644); the journeys, as the runner's user, read them.
+          mkdir -p "$RUNNER_TEMP/ostrom-mail" && chmod 0777 "$RUNNER_TEMP/ostrom-mail"
+          # Test values only: Stripe is stripe-mock, sign-in mails are written to a directory, the console is
+          # `vite preview` on localhost:4173, which proxies /api to the server.
+          docker run -d --name ostrom-server --network host \
+            -v "$RUNNER_TEMP/ostrom-mail:/var/lib/ostrom/mail" \
+            -e OSTROM_DATABASE_URL="$APP_URL" -e OSTROM_PORT=4600 \
+            -e OSTROM_MAIL_DIR=/var/lib/ostrom/mail \
+            -e OSTROM_PUBLIC_URL=http://localhost:4173 -e OSTROM_CONSOLE_URL=http://localhost:4173 \
+            -e OSTROM_STRIPE_SECRET_KEY=sk_test_web_e2e -e OSTROM_STRIPE_WEBHOOK_SECRET=whsec_web_e2e \
+            -e OSTROM_STRIPE_API_BASE=http://127.0.0.1:12111 \
+            "$IMAGE"
+          for i in $(seq 1 60); do curl -fsS localhost:4600/ready >/dev/null 2>&1 && exit 0; sleep 1; done
+          docker logs ostrom-server; exit 1
+      - name: Build (real API, same origin)
+        if: steps.server.outputs.ready == 'true'
+        run: pnpm exec vite build --outDir dist-real
+      - name: End-to-end journeys against the real server (Playwright, desktop and mobile)
+        if: steps.server.outputs.ready == 'true'
+        env:
+          OSTROM_E2E_API_UPSTREAM: http://127.0.0.1:4600
+          OSTROM_E2E_MAIL_DIR: ${{ runner.temp }}/ostrom-mail
+          # `true` once ostrom-server#64 is on main: the organization journey no longer skips when its route is missing.
+          OSTROM_E2E_REQUIRE_ORGS: ${{ vars.OSTROM_WEB_REQUIRE_ORGS == 'true' }}
+        run: pnpm exec playwright test --config playwright.real.config.ts
+      - name: Real server logs
+        if: always() && steps.server.outputs.ready == 'true'
+        run: docker logs ostrom-server 2>&1 | tail -n 200
       - if: failure()
         uses: actions/upload-artifact@v5
         with:
           name: playwright-report
-          path: playwright-report
+          path: |
+            playwright-report
+            playwright-report-real
           retention-days: 7
