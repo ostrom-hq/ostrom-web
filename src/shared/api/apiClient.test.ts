@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { apiUrl, configureApiClient } from '@/shared/api/apiClient';
+import { useOrgStore } from '@/shared/org/orgStore';
 
 const me: Me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
 const notFound = { error: { type: 'not_found', message: 'approval not found' } };
@@ -21,6 +22,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  useOrgStore.getState().forget();
 });
 afterAll(() => {
   server.close();
@@ -89,7 +91,8 @@ describe('generated client, configured', () => {
     }
     expect(seen).toBe('tok-1');
     configureApiClient({ baseUrl: 'http://ostrom.test' });
-    expect(client.interceptors.request.fns.filter((fn) => fn !== null)).toHaveLength(1);
+    // The CSRF token and the organization: each once, however often the client is configured.
+    expect(client.interceptors.request.fns.filter((fn) => fn !== null)).toHaveLength(2);
   });
 
   it('builds an API address the browser opens itself', () => {
@@ -116,5 +119,44 @@ describe('generated client, configured', () => {
     server.use(http.get('*/api/v1/auth/me', () => HttpResponse.error()));
     const error = await failureOf(async () => getMe({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('network');
+  });
+
+  it('names the organization it acts in on every call that acts in one, once there is one', async () => {
+    const seen: (string | null)[] = [];
+    server.use(
+      http.get('*/api/v1/approvals/:id', ({ request }) => {
+        seen.push(request.headers.get('ostrom-org'));
+        return HttpResponse.json(notFound, { status: 404 });
+      }),
+      http.get('*/api/v1/auth/me', ({ request }) => {
+        seen.push(request.headers.get('ostrom-org'));
+        return HttpResponse.json(me);
+      }),
+    );
+    await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    useOrgStore.getState().choose('org-acme', 'maya');
+    await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    // `/me` acts in no organization: it never carries one, so a stale choice can always be checked.
+    await getMe({ throwOnError: true });
+    expect(seen).toEqual([null, 'org-acme', null]);
+  });
+
+  it('opens the organization picker when the server asks which organization', async () => {
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json(
+          { error: { type: 'org_required', message: 'Name the organization.' } },
+          { status: 409 },
+        ),
+      ),
+    );
+    const error = await failureOf(async () => getMe({ throwOnError: true }));
+    expect(isApiFailure(error) && [error.kind, error.code]).toEqual(['conflict', 'org_required']);
+    expect(useOrgStore.getState().picking).toBe(true);
+  });
+
+  it('leaves the picker closed on any other refusal', async () => {
+    await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    expect(useOrgStore.getState().picking).toBe(false);
   });
 });

@@ -821,6 +821,24 @@ export const en = {
       pdf: 'PDF',
     },
   },
+  orgs: {
+    switch: {
+      named: 'Organization: {{name}}. Switch',
+      choose: 'Choose an organization',
+      unnamed: 'Organization',
+    },
+    picker: {
+      title: 'Which organization?',
+      body: 'Choose the organization this console works in. You can switch at any time.',
+      known: 'Your organizations',
+      notNow: 'Not now',
+      problemTag: 'Check',
+      unknown: 'You are no longer a member of the organization chosen last.',
+      failed: 'Your organizations could not be read.',
+      retry: 'Try again',
+      none: 'You are not a member of any organization yet. Ask an owner to invite you.',
+    },
+  },
   home: {
     title: 'Every agent change, approved by the right person.',
     lead: 'The Ostrom console is being rebuilt. Screens arrive one by one.',

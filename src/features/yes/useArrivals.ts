@@ -41,7 +41,7 @@ const useArrivalsStore = create<ArrivalsStore>()((set) => ({
   },
 }));
 
-/** Forgets what was seen: on a change of account, and between tests. */
+/** Forgets what was seen: on a change of account or organization (App.tsx), and between tests. */
 export function resetArrivals(): void {
   useArrivalsStore.getState().reset();
 }

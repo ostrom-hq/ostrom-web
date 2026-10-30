@@ -838,6 +838,24 @@ export const fr = {
       pdf: 'PDF',
     },
   },
+  orgs: {
+    switch: {
+      named: 'Organisation : {{name}}. Changer',
+      choose: 'Choisir une organisation',
+      unnamed: 'Organisation',
+    },
+    picker: {
+      title: 'Quelle organisation ?',
+      body: 'Choisis l’organisation dans laquelle cette console travaille. Tu peux en changer à tout moment.',
+      known: 'Tes organisations',
+      notNow: 'Plus tard',
+      problemTag: 'À vérifier',
+      unknown: 'Tu n’es plus membre de la dernière organisation choisie.',
+      failed: 'Impossible de lire tes organisations.',
+      retry: 'Réessayer',
+      none: 'Tu n’es encore membre d’aucune organisation. Demande à un propriétaire de t’inviter.',
+    },
+  },
   home: {
     title: 'Chaque changement d’agent, validé par la bonne personne.',
     lead: 'La console Ostrom est en reconstruction. Les écrans arrivent un par un.',

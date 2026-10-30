@@ -2137,6 +2137,24 @@ export type SignedGatePolicyPayload = {
 };
 
 /**
+ * A sign-in link just made
+ */
+export type SignInLink = {
+    /**
+     * The link to open, the token in its fragment
+     */
+    url: string;
+    /**
+     * The token alone (`opk_…`), for a QR code
+     */
+    token: string;
+    /**
+     * When it stops working (ISO 8601)
+     */
+    expiresAt: string;
+};
+
+/**
  * A completed sign-in; the session itself is in the cookies
  */
 export type SignedIn = {
@@ -2145,7 +2163,7 @@ export type SignedIn = {
      */
     redirect: string;
     /**
-     * The same value as the `ostrom_csrf` cookie, for the `X-CSRF-Token` header
+     * The same value as the `__Host-ostrom_csrf` cookie, for the `X-CSRF-Token` header
      */
     csrfToken?: string;
 };
@@ -2754,6 +2772,11 @@ export type TeamCodeStdioWritable = {
     };
 };
 
+/**
+ * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+ */
+export type OstromOrg = string;
+
 export type HealthRootData = {
     body?: never;
     path?: never;
@@ -3004,7 +3027,7 @@ export type PollDeviceLoginData = {
 
 export type PollDeviceLoginErrors = {
     /**
-     * A refusal
+     * `error.type` is `slow_down`, `access_denied` or `expired_token` (RFC 8628), or the request is malformed
      */
     400: ApiError;
     /**
@@ -3012,9 +3035,9 @@ export type PollDeviceLoginErrors = {
      */
     404: ApiError;
     /**
-     * authorization pending
+     * `error.type` is `authorization_pending`: not approved yet, poll again after the interval
      */
-    428: unknown;
+    428: ApiError;
 };
 
 export type PollDeviceLoginError = PollDeviceLoginErrors[keyof PollDeviceLoginErrors];
@@ -3132,6 +3155,12 @@ export type CreateLaunchData = {
         agent: string;
         model?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/launches';
@@ -3177,6 +3206,12 @@ export type CreateLaunchResponse = CreateLaunchResponses[keyof CreateLaunchRespo
 
 export type CheckAgentPolicyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         agent?: string;
@@ -3441,6 +3476,88 @@ export type LogoutResponses = {
 
 export type LogoutResponse = LogoutResponses[keyof LogoutResponses];
 
+export type LogoutEverywhereData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/logout/everywhere';
+};
+
+export type LogoutEverywhereErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LogoutEverywhereError = LogoutEverywhereErrors[keyof LogoutEverywhereErrors];
+
+export type LogoutEverywhereResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type LogoutEverywhereResponse = LogoutEverywhereResponses[keyof LogoutEverywhereResponses];
+
+export type CreateSignInLinkData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/links';
+};
+
+export type CreateSignInLinkErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateSignInLinkError = CreateSignInLinkErrors[keyof CreateSignInLinkErrors];
+
+export type CreateSignInLinkResponses = {
+    /**
+     * Created
+     */
+    201: SignInLink;
+};
+
+export type CreateSignInLinkResponse = CreateSignInLinkResponses[keyof CreateSignInLinkResponses];
+
 export type ListAuthSessionsData = {
     body?: never;
     path?: never;
@@ -3530,6 +3647,12 @@ export type RevokeAuthSessionResponse = RevokeAuthSessionResponses[keyof RevokeA
 
 export type ListServiceKeysData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/service-keys';
@@ -3577,6 +3700,12 @@ export type CreateServiceKeyData = {
         name: string;
         scopes: Array<string>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/service-keys';
@@ -3618,6 +3747,12 @@ export type CreateServiceKeyResponse = CreateServiceKeyResponses[keyof CreateSer
 
 export type DeleteServiceKeyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -3661,6 +3796,12 @@ export type DeleteServiceKeyResponse = DeleteServiceKeyResponses[keyof DeleteSer
 
 export type ListDevicesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/devices';
@@ -3705,6 +3846,12 @@ export type ListDevicesResponse = ListDevicesResponses[keyof ListDevicesResponse
 
 export type DeleteDeviceData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -3753,6 +3900,12 @@ export type RegisterPushDeviceData = {
         platform: string;
         locale?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/push-devices';
@@ -3794,6 +3947,12 @@ export type RegisterPushDeviceResponse = RegisterPushDeviceResponses[keyof Regis
 
 export type DeletePushDeviceData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -3834,6 +3993,49 @@ export type DeletePushDeviceResponses = {
 };
 
 export type DeletePushDeviceResponse = DeletePushDeviceResponses[keyof DeletePushDeviceResponses];
+
+export type ListMyOrganizationsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/organizations';
+};
+
+export type ListMyOrganizationsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMyOrganizationsError = ListMyOrganizationsErrors[keyof ListMyOrganizationsErrors];
+
+export type ListMyOrganizationsResponses = {
+    /**
+     * OK
+     */
+    200: {
+        items: Array<Organization>;
+    };
+};
+
+export type ListMyOrganizationsResponse = ListMyOrganizationsResponses[keyof ListMyOrganizationsResponses];
 
 export type GetNotificationPreferencesData = {
     body?: never;
@@ -3919,6 +4121,12 @@ export type SetNotificationPreferencesResponse = SetNotificationPreferencesRespo
 
 export type ListActivityData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         before?: string;
@@ -3966,6 +4174,12 @@ export type ListActivityResponse = ListActivityResponses[keyof ListActivityRespo
 
 export type GetSpendingData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         period?: string;
@@ -4009,6 +4223,12 @@ export type GetSpendingResponse = GetSpendingResponses[keyof GetSpendingResponse
 
 export type GetGithubAppData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/github/app';
@@ -4055,6 +4275,12 @@ export type GetGithubAppResponse = GetGithubAppResponses[keyof GetGithubAppRespo
 
 export type StartGithubAppManifestData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/github/app/manifest/start';
@@ -4110,6 +4336,12 @@ export type GithubAppManifestCallbackError = GithubAppManifestCallbackErrors[key
 
 export type StartGithubAppInstallData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/github/app/install/start';
@@ -4236,6 +4468,12 @@ export type GithubCheckData = {
         author?: string;
         base?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/github/checks';
@@ -4277,6 +4515,12 @@ export type GithubCheckResponse = GithubCheckResponses[keyof GithubCheckResponse
 
 export type GetOrganizationData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/org';
@@ -4318,6 +4562,12 @@ export type GetOrganizationResponse = GetOrganizationResponses[keyof GetOrganiza
 
 export type ListMembersData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/members';
@@ -4362,6 +4612,12 @@ export type ListMembersResponse = ListMembersResponses[keyof ListMembersResponse
 
 export type RemoveMemberData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
     };
@@ -4405,6 +4661,12 @@ export type RemoveMemberResponse = RemoveMemberResponses[keyof RemoveMemberRespo
 
 export type GetMemberData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
     };
@@ -4452,6 +4714,12 @@ export type UpdateMemberData = {
         slackUserId?: string;
         discordUserId?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
     };
@@ -4497,6 +4765,12 @@ export type InviteMembersData = {
     body: {
         invites: Array<MemberInvite>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/members/invites';
@@ -4540,6 +4814,12 @@ export type InviteMembersResponse = InviteMembersResponses[keyof InviteMembersRe
 
 export type ListTeamsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/teams';
@@ -4584,6 +4864,12 @@ export type ListTeamsResponse = ListTeamsResponses[keyof ListTeamsResponses];
 
 export type ListReposData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/repos';
@@ -4628,6 +4914,12 @@ export type ListReposResponse = ListReposResponses[keyof ListReposResponses];
 
 export type GetSettingsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/settings';
@@ -4669,6 +4961,12 @@ export type GetSettingsResponse = GetSettingsResponses[keyof GetSettingsResponse
 
 export type UpdateSettingsData = {
     body: Settings;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/settings';
@@ -4710,6 +5008,12 @@ export type UpdateSettingsResponse = UpdateSettingsResponses[keyof UpdateSetting
 
 export type ListSessionsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -4759,6 +5063,12 @@ export type ListSessionsResponse = ListSessionsResponses[keyof ListSessionsRespo
 
 export type StartSessionData = {
     body: StartSessionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/sessions';
@@ -4800,6 +5110,12 @@ export type StartSessionResponse = StartSessionResponses[keyof StartSessionRespo
 
 export type GetSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -4845,6 +5161,12 @@ export type SessionAliveData = {
     body: {
         launchId?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -4888,6 +5210,12 @@ export type SessionAliveResponse = SessionAliveResponses[keyof SessionAliveRespo
 
 export type EndSessionData = {
     body: EndSessionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -4932,6 +5260,12 @@ export type EndSessionResponse = EndSessionResponses[keyof EndSessionResponses];
 export type ReopenSessionData = {
     body: {
         launchId?: string;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
     };
     path: {
         id: string;
@@ -4979,6 +5313,12 @@ export type SignWorkflowReceiptData = {
         digest: string;
         agent?: string;
         model?: string;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
     };
     path: {
         id: string;
@@ -5030,6 +5370,12 @@ export type ReportSeenData = {
         name: string;
         via: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5073,6 +5419,12 @@ export type ReportSeenResponse = ReportSeenResponses[keyof ReportSeenResponses];
 
 export type ListGatesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         sessionId?: string;
@@ -5122,6 +5474,12 @@ export type ListGatesResponse = ListGatesResponses[keyof ListGatesResponses];
 
 export type AskGateData = {
     body: GateAskRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/gates';
@@ -5163,6 +5521,12 @@ export type AskGateResponse = AskGateResponses[keyof AskGateResponses];
 
 export type GetGateData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5208,6 +5572,12 @@ export type GetGateResponse = GetGateResponses[keyof GetGateResponses];
 
 export type ConsumeGateData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5251,6 +5621,12 @@ export type ConsumeGateResponse = ConsumeGateResponses[keyof ConsumeGateResponse
 
 export type GetApproversGraphData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -5297,6 +5673,12 @@ export type GetApproversGraphResponse = GetApproversGraphResponses[keyof GetAppr
 
 export type GetGateCatalogData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -5340,6 +5722,12 @@ export type GetGateCatalogResponse = GetGateCatalogResponses[keyof GetGateCatalo
 
 export type GetSignedGatePolicyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query: {
         repo: string;
@@ -5383,6 +5771,12 @@ export type GetSignedGatePolicyResponse = GetSignedGatePolicyResponses[keyof Get
 
 export type GetGatePolicyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/gates/policy';
@@ -5428,6 +5822,12 @@ export type SetGatePolicyData = {
     body: {
         selfApproval: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/gates/policy';
@@ -5471,6 +5871,12 @@ export type SetGatePolicyResponse = SetGatePolicyResponses[keyof SetGatePolicyRe
 
 export type ListApprovalsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -5526,6 +5932,12 @@ export type ListApprovalsResponse = ListApprovalsResponses[keyof ListApprovalsRe
 
 export type GetApprovalQueueData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/approvals/queue';
@@ -5567,6 +5979,12 @@ export type GetApprovalQueueResponse = GetApprovalQueueResponses[keyof GetApprov
 
 export type GetApprovalData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5610,6 +6028,12 @@ export type GetApprovalResponse = GetApprovalResponses[keyof GetApprovalResponse
 
 export type GetApprovalViewData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5653,6 +6077,12 @@ export type GetApprovalViewResponse = GetApprovalViewResponses[keyof GetApproval
 
 export type AnswerApprovalData = {
     body: AnswerApprovalRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5696,6 +6126,12 @@ export type AnswerApprovalResponse = AnswerApprovalResponses[keyof AnswerApprova
 
 export type ListDecisionsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         subjectKind?: string;
@@ -5744,6 +6180,12 @@ export type ListDecisionsResponse = ListDecisionsResponses[keyof ListDecisionsRe
 
 export type ListReceiptsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         subjectKind?: string;
@@ -5823,6 +6265,12 @@ export type ListReceiptKeysResponse = ListReceiptKeysResponses[keyof ListReceipt
 
 export type GetReceiptData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5866,6 +6314,12 @@ export type GetReceiptResponse = GetReceiptResponses[keyof GetReceiptResponses];
 
 export type VerifyReceiptData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5909,6 +6363,12 @@ export type VerifyReceiptResponse = VerifyReceiptResponses[keyof VerifyReceiptRe
 
 export type GetReceiptBundleData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -5952,6 +6412,12 @@ export type GetReceiptBundleResponse = GetReceiptBundleResponses[keyof GetReceip
 
 export type GetCurrentPackageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -5995,6 +6461,12 @@ export type GetCurrentPackageResponse = GetCurrentPackageResponses[keyof GetCurr
 
 export type ListPackagesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -6043,6 +6515,12 @@ export type PreviewPackageData = {
     body: {
         repo?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/packages/preview';
@@ -6084,6 +6562,12 @@ export type PreviewPackageResponse = PreviewPackageResponses[keyof PreviewPackag
 
 export type ListPackageAuditData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/packages/audit';
@@ -6128,6 +6612,12 @@ export type ListPackageAuditResponse = ListPackageAuditResponses[keyof ListPacka
 
 export type GetPackageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         digest: string;
     };
@@ -6171,6 +6661,12 @@ export type GetPackageResponse = GetPackageResponses[keyof GetPackageResponses];
 
 export type GetPackageStatusData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         digest: string;
     };
@@ -6216,6 +6712,12 @@ export type RevokePackageData = {
     body: {
         reason: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         digest: string;
     };
@@ -6259,6 +6761,12 @@ export type RevokePackageResponse = RevokePackageResponses[keyof RevokePackageRe
 
 export type RestorePackageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         digest: string;
     };
@@ -6302,6 +6810,12 @@ export type RestorePackageResponse = RestorePackageResponses[keyof RestorePackag
 
 export type ListChecksData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         sessionId?: string;
@@ -6350,6 +6864,12 @@ export type ListChecksResponse = ListChecksResponses[keyof ListChecksResponses];
 
 export type ReportCheckData = {
     body: ReportCheckRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/checks';
@@ -6391,6 +6911,12 @@ export type ReportCheckResponse = ReportCheckResponses[keyof ReportCheckResponse
 
 export type ListNotificationsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         sessionId?: string;
@@ -6445,6 +6971,12 @@ export type SendNotificationData = {
         notifyId: string;
         command?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/notifications';
@@ -6486,6 +7018,12 @@ export type SendNotificationResponse = SendNotificationResponses[keyof SendNotif
 
 export type ListRulesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -6534,6 +7072,12 @@ export type ListRulesResponse = ListRulesResponses[keyof ListRulesResponses];
 
 export type GetRuleData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6583,6 +7127,12 @@ export type UpdateRuleData = {
         reviewBy?: string;
         scope?: Array<string>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6629,6 +7179,12 @@ export type BulkUpdateRulesData = {
         ids: Array<string>;
         status: RuleStatus;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/rules/bulk';
@@ -6672,6 +7228,12 @@ export type BulkUpdateRulesResponse = BulkUpdateRulesResponses[keyof BulkUpdateR
 
 export type ListWorkflowsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         repo?: string;
@@ -6719,6 +7281,12 @@ export type ListWorkflowsResponse = ListWorkflowsResponses[keyof ListWorkflowsRe
 
 export type CreateWorkflowData = {
     body: Workflow;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/workflows';
@@ -6760,6 +7328,12 @@ export type CreateWorkflowResponse = CreateWorkflowResponses[keyof CreateWorkflo
 
 export type DeleteWorkflowData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6803,6 +7377,12 @@ export type DeleteWorkflowResponse = DeleteWorkflowResponses[keyof DeleteWorkflo
 
 export type GetWorkflowData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6849,6 +7429,12 @@ export type SaveWorkflowData = {
         workflow: Workflow;
         expectedVersion?: number;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6892,6 +7478,12 @@ export type SaveWorkflowResponse = SaveWorkflowResponses[keyof SaveWorkflowRespo
 
 export type ListWorkflowRunsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6945,6 +7537,12 @@ export type StartWorkflowRunData = {
             [key: string]: string;
         };
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -6988,6 +7586,12 @@ export type StartWorkflowRunResponse = StartWorkflowRunResponses[keyof StartWork
 
 export type ListRunsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         status?: string;
@@ -7035,6 +7639,12 @@ export type ListRunsResponse = ListRunsResponses[keyof ListRunsResponses];
 
 export type GetRunData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7078,6 +7688,12 @@ export type GetRunResponse = GetRunResponses[keyof GetRunResponses];
 
 export type CancelRunData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7121,6 +7737,12 @@ export type CancelRunResponse = CancelRunResponses[keyof CancelRunResponses];
 
 export type ListAutomationsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/automations';
@@ -7165,6 +7787,12 @@ export type ListAutomationsResponse = ListAutomationsResponses[keyof ListAutomat
 
 export type CreateAutomationData = {
     body: Automation;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/automations';
@@ -7206,6 +7834,12 @@ export type CreateAutomationResponse = CreateAutomationResponses[keyof CreateAut
 
 export type DeleteAutomationData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7249,6 +7883,12 @@ export type DeleteAutomationResponse = DeleteAutomationResponses[keyof DeleteAut
 
 export type GetAutomationData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7292,6 +7932,12 @@ export type GetAutomationResponse = GetAutomationResponses[keyof GetAutomationRe
 
 export type SaveAutomationData = {
     body: Automation;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7335,6 +7981,12 @@ export type SaveAutomationResponse = SaveAutomationResponses[keyof SaveAutomatio
 
 export type EnableAutomationData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7378,6 +8030,12 @@ export type EnableAutomationResponse = EnableAutomationResponses[keyof EnableAut
 
 export type DisableAutomationData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7421,6 +8079,12 @@ export type DisableAutomationResponse = DisableAutomationResponses[keyof Disable
 
 export type RotateAutomationSecretData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7469,6 +8133,12 @@ export type TestAutomationData = {
         payload?: unknown;
         dryRun?: boolean;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7516,6 +8186,12 @@ export type TestAutomationResponse = TestAutomationResponses[keyof TestAutomatio
 
 export type ListAutomationRunsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7615,6 +8291,12 @@ export type TriggerAutomationResponse = TriggerAutomationResponses[keyof Trigger
 
 export type ListWaitsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         status?: string;
@@ -7670,6 +8352,12 @@ export type CreateWaitData = {
         kind?: string;
         question: WaitSpec;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/waits';
@@ -7711,6 +8399,12 @@ export type CreateWaitResponse = CreateWaitResponses[keyof CreateWaitResponses];
 
 export type GetWaitData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7759,6 +8453,12 @@ export type AnswerWaitData = {
             [key: string]: unknown;
         };
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7802,6 +8502,12 @@ export type AnswerWaitResponse = AnswerWaitResponses[keyof AnswerWaitResponses];
 
 export type CancelWaitData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -7845,6 +8551,12 @@ export type CancelWaitResponse = CancelWaitResponses[keyof CancelWaitResponses];
 
 export type ListMcpServersData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -7894,6 +8606,12 @@ export type ListMcpServersResponse = ListMcpServersResponses[keyof ListMcpServer
 
 export type CreateMcpServerData = {
     body: McpServerWritable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/mcp/servers';
@@ -7935,6 +8653,12 @@ export type CreateMcpServerResponse = CreateMcpServerResponses[keyof CreateMcpSe
 
 export type DeleteMcpServerData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -7978,6 +8702,12 @@ export type DeleteMcpServerResponse = DeleteMcpServerResponses[keyof DeleteMcpSe
 
 export type SaveMcpServerData = {
     body: McpServerWritable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8021,6 +8751,12 @@ export type SaveMcpServerResponse = SaveMcpServerResponses[keyof SaveMcpServerRe
 
 export type ListMcpAssignmentsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8064,6 +8800,12 @@ export type ListMcpAssignmentsResponse = ListMcpAssignmentsResponses[keyof ListM
 
 export type UnassignMcpServerData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
         /**
@@ -8111,6 +8853,12 @@ export type UnassignMcpServerResponse = UnassignMcpServerResponses[keyof Unassig
 
 export type AssignMcpServerData = {
     body: McpAssignmentRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
         /**
@@ -8158,6 +8906,12 @@ export type AssignMcpServerResponse = AssignMcpServerResponses[keyof AssignMcpSe
 
 export type ListMcpArgumentPoliciesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8201,6 +8955,12 @@ export type ListMcpArgumentPoliciesResponse = ListMcpArgumentPoliciesResponses[k
 
 export type CreateMcpArgumentPolicyData = {
     body: McpArgumentPolicyRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8244,6 +9004,12 @@ export type CreateMcpArgumentPolicyResponse = CreateMcpArgumentPolicyResponses[k
 
 export type DeleteMcpArgumentPolicyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
         policyId: string;
@@ -8288,6 +9054,12 @@ export type DeleteMcpArgumentPolicyResponse = DeleteMcpArgumentPolicyResponses[k
 
 export type GetMcpSettingsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/mcp/settings';
@@ -8329,6 +9101,12 @@ export type GetMcpSettingsResponse = GetMcpSettingsResponses[keyof GetMcpSetting
 
 export type PutMcpSettingsData = {
     body: McpSettings;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/mcp/settings';
@@ -8370,6 +9148,12 @@ export type PutMcpSettingsResponse = PutMcpSettingsResponses[keyof PutMcpSetting
 
 export type RelayMcpData = {
     body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         server: string;
     };
@@ -8411,6 +9195,12 @@ export type RelayMcpResponses = {
 
 export type ListMcpCallsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         server?: string;
@@ -8459,6 +9249,12 @@ export type ListMcpCallsResponse = ListMcpCallsResponses[keyof ListMcpCallsRespo
 
 export type GetMcpUsageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/mcp/usage';
@@ -8507,6 +9303,12 @@ export type GetMcpUsageResponse = GetMcpUsageResponses[keyof GetMcpUsageResponse
 
 export type ListSecretsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/secrets';
@@ -8551,6 +9353,12 @@ export type ListSecretsResponse = ListSecretsResponses[keyof ListSecretsResponse
 
 export type CreateSecretData = {
     body: SecretWrite;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/secrets';
@@ -8592,6 +9400,12 @@ export type CreateSecretResponse = CreateSecretResponses[keyof CreateSecretRespo
 
 export type DeleteSecretData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8635,6 +9449,12 @@ export type DeleteSecretResponse = DeleteSecretResponses[keyof DeleteSecretRespo
 
 export type RotateSecretData = {
     body: SecretWrite;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -8678,6 +9498,12 @@ export type RotateSecretResponse = RotateSecretResponses[keyof RotateSecretRespo
 
 export type ImportTeamCodeData = {
     body: TeamCodeImportRequestWritable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -8724,6 +9550,12 @@ export type ImportTeamCodeResponse = ImportTeamCodeResponses[keyof ImportTeamCod
 
 export type InferenceMessagesData = {
     body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/v1/messages';
@@ -8763,6 +9595,12 @@ export type InferenceMessagesResponses = {
 
 export type InferenceResponsesData = {
     body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/v1/responses';
@@ -8802,6 +9640,12 @@ export type InferenceResponsesResponses = {
 
 export type InferenceChatCompletionsData = {
     body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/v1/chat/completions';
@@ -8841,6 +9685,12 @@ export type InferenceChatCompletionsResponses = {
 
 export type InferenceModelsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/v1/models';
@@ -8886,6 +9736,12 @@ export type InferenceModelsResponse = InferenceModelsResponses[keyof InferenceMo
 
 export type GetInferenceSettingsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/settings';
@@ -8927,6 +9783,12 @@ export type GetInferenceSettingsResponse = GetInferenceSettingsResponses[keyof G
 
 export type SetInferenceSettingsData = {
     body: InferenceSettings;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/inference/settings';
@@ -8968,6 +9830,12 @@ export type SetInferenceSettingsResponse = SetInferenceSettingsResponses[keyof S
 
 export type GetModelPolicyData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/policy/models';
@@ -9009,6 +9877,12 @@ export type GetModelPolicyResponse = GetModelPolicyResponses[keyof GetModelPolic
 
 export type SetModelPolicyData = {
     body: ModelPolicy;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/policy/models';
@@ -9050,6 +9924,12 @@ export type SetModelPolicyResponse = SetModelPolicyResponses[keyof SetModelPolic
 
 export type ListInferenceRoutesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/routes';
@@ -9094,6 +9974,12 @@ export type ListInferenceRoutesResponse = ListInferenceRoutesResponses[keyof Lis
 
 export type CreateInferenceRouteData = {
     body: InferenceRoute;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/routes';
@@ -9135,6 +10021,12 @@ export type CreateInferenceRouteResponse = CreateInferenceRouteResponses[keyof C
 
 export type DeleteInferenceRouteData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -9178,6 +10070,12 @@ export type DeleteInferenceRouteResponse = DeleteInferenceRouteResponses[keyof D
 
 export type ListBudgetsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/budgets';
@@ -9234,6 +10132,12 @@ export type ListBudgetsResponse = ListBudgetsResponses[keyof ListBudgetsResponse
 
 export type SetBudgetData = {
     body: Budget;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/budgets';
@@ -9275,6 +10179,12 @@ export type SetBudgetResponse = SetBudgetResponses[keyof SetBudgetResponses];
 
 export type GetMyBudgetData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/budgets/me';
@@ -9316,6 +10226,12 @@ export type GetMyBudgetResponse = GetMyBudgetResponses[keyof GetMyBudgetResponse
 
 export type GetUsageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         from?: string;
@@ -9361,6 +10277,12 @@ export type GetUsageResponse = GetUsageResponses[keyof GetUsageResponses];
 
 export type GetUsageSummaryData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         days?: number;
@@ -9405,6 +10327,12 @@ export type GetUsageSummaryResponse = GetUsageSummaryResponses[keyof GetUsageSum
 
 export type ListUsageEventsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -9457,6 +10385,12 @@ export type RecordUsageEventsData = {
     body: {
         events: Array<UsageEventInput>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/usage/events';
@@ -9504,6 +10438,12 @@ export type RecordUsageEventsResponse = RecordUsageEventsResponses[keyof RecordU
 
 export type StreamUsageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/usage/live';
@@ -9545,6 +10485,12 @@ export type StreamUsageResponse = StreamUsageResponses[keyof StreamUsageResponse
 
 export type ListPendingUsageData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         member?: string;
@@ -9593,6 +10539,12 @@ export type ListPendingUsageResponse = ListPendingUsageResponses[keyof ListPendi
 
 export type ListUsageReconciliationsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         member?: string;
@@ -9643,6 +10595,12 @@ export type ReconcileUsageData = {
     body: {
         usd: number;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -9689,6 +10647,12 @@ export type ReconcileUsageResponse = ReconcileUsageResponses[keyof ReconcileUsag
 
 export type ListBudgetOverridesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
     };
@@ -9739,6 +10703,12 @@ export type CreateBudgetOverrideData = {
         expiresAt: string;
         reason: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
     };
@@ -9782,6 +10752,12 @@ export type CreateBudgetOverrideResponse = CreateBudgetOverrideResponses[keyof C
 
 export type RevokeBudgetOverrideData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         login: string;
         id: string;
@@ -9826,6 +10802,12 @@ export type RevokeBudgetOverrideResponse = RevokeBudgetOverrideResponses[keyof R
 
 export type ListRunnersData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/runners';
@@ -9874,6 +10856,12 @@ export type RegisterRunnerData = {
         labels: Array<string>;
         version?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/runners';
@@ -9915,6 +10903,12 @@ export type RegisterRunnerResponse = RegisterRunnerResponses[keyof RegisterRunne
 
 export type DeleteRunnerData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -9958,6 +10952,12 @@ export type DeleteRunnerResponse = DeleteRunnerResponses[keyof DeleteRunnerRespo
 
 export type RunnerHeartbeatData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10003,6 +11003,12 @@ export type RunnerHeartbeatResponse = RunnerHeartbeatResponses[keyof RunnerHeart
 
 export type ListCloudSessionsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         status?: string;
@@ -10067,6 +11073,12 @@ export type CreateCloudSessionData = {
         prompt?: string;
         name?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/cloud/sessions';
@@ -10108,6 +11120,12 @@ export type CreateCloudSessionResponse = CreateCloudSessionResponses[keyof Creat
 
 export type StopCloudSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10151,6 +11169,12 @@ export type StopCloudSessionResponse = StopCloudSessionResponses[keyof StopCloud
 
 export type GetCloudSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10194,6 +11218,12 @@ export type GetCloudSessionResponse = GetCloudSessionResponses[keyof GetCloudSes
 
 export type PauseCloudSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10237,6 +11267,12 @@ export type PauseCloudSessionResponse = PauseCloudSessionResponses[keyof PauseCl
 
 export type ResumeCloudSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10280,6 +11316,12 @@ export type ResumeCloudSessionResponse = ResumeCloudSessionResponses[keyof Resum
 
 export type IssueCloudTerminalTicketData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10326,6 +11368,12 @@ export type IssueCloudTerminalTicketResponse = IssueCloudTerminalTicketResponses
 
 export type AttachCloudTerminalData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10367,6 +11415,12 @@ export type CloudRunnerHeartbeatData = {
         ready?: boolean;
         stopped?: boolean;
         lastModelRequestAt?: string;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
     };
     path?: never;
     query?: never;
@@ -10417,6 +11471,12 @@ export type SendCloudMessageData = {
     body: {
         text: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10462,6 +11522,12 @@ export type SendCloudMessageResponse = SendCloudMessageResponses[keyof SendCloud
 
 export type StreamCloudSessionData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10505,6 +11571,12 @@ export type StreamCloudSessionResponse = StreamCloudSessionResponses[keyof Strea
 
 export type ListArtifactsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         /**
@@ -10559,6 +11631,12 @@ export type PublishArtifactData = {
         access?: ArtifactAccess;
         files: Array<ArtifactFile>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/artifacts';
@@ -10600,6 +11678,12 @@ export type PublishArtifactResponse = PublishArtifactResponses[keyof PublishArti
 
 export type DeleteArtifactData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10643,6 +11727,12 @@ export type DeleteArtifactResponse = DeleteArtifactResponses[keyof DeleteArtifac
 
 export type GetArtifactData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10689,6 +11779,12 @@ export type UpdateArtifactData = {
         title?: string;
         access?: ArtifactAccess;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10732,6 +11828,12 @@ export type UpdateArtifactResponse = UpdateArtifactResponses[keyof UpdateArtifac
 
 export type ListArtifactVersionsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10780,6 +11882,12 @@ export type PublishArtifactVersionData = {
     body: {
         files: Array<ArtifactFile>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10823,6 +11931,12 @@ export type PublishArtifactVersionResponse = PublishArtifactVersionResponses[key
 
 export type GetArtifactFileData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         number: string;
@@ -10869,6 +11983,12 @@ export type GetArtifactFileResponse = GetArtifactFileResponses[keyof GetArtifact
 
 export type ListArtifactMembersData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -10917,6 +12037,12 @@ export type ListArtifactMembersResponse = ListArtifactMembersResponses[keyof Lis
 
 export type UnshareArtifactData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         /**
@@ -10964,6 +12090,12 @@ export type UnshareArtifactResponse = UnshareArtifactResponses[keyof UnshareArti
 
 export type ShareArtifactData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         /**
@@ -11016,6 +12148,12 @@ export type CreateArtifactTicketData = {
          */
         version?: number;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11059,6 +12197,12 @@ export type CreateArtifactTicketResponse = CreateArtifactTicketResponses[keyof C
 
 export type ListSharedAccountsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/accounts';
@@ -11109,6 +12253,12 @@ export type EnrollSharedAccountData = {
         sharedWith?: Array<string>;
         dailyAllocationUsd?: number;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/accounts';
@@ -11150,6 +12300,12 @@ export type EnrollSharedAccountResponse = EnrollSharedAccountResponses[keyof Enr
 
 export type RemoveSharedAccountData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11197,6 +12353,12 @@ export type UpdateSharedAccountData = {
         dailyAllocationUsd?: number;
         paused?: boolean;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11240,6 +12402,12 @@ export type UpdateSharedAccountResponse = UpdateSharedAccountResponses[keyof Upd
 
 export type GetCapacityData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/capacity';
@@ -11281,6 +12449,12 @@ export type GetCapacityResponse = GetCapacityResponses[keyof GetCapacityResponse
 
 export type ListGroupsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/groups';
@@ -11329,6 +12503,12 @@ export type CreateGroupData = {
         members?: Array<string>;
         accounts?: Array<string>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/groups';
@@ -11370,6 +12550,12 @@ export type CreateGroupResponse = CreateGroupResponses[keyof CreateGroupResponse
 
 export type DeleteGroupData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11413,6 +12599,12 @@ export type DeleteGroupResponse = DeleteGroupResponses[keyof DeleteGroupResponse
 
 export type GetGroupData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11459,6 +12651,12 @@ export type UpdateGroupData = {
         name?: string;
         accounts?: Array<string>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -11502,6 +12700,12 @@ export type UpdateGroupResponse = UpdateGroupResponses[keyof UpdateGroupResponse
 
 export type RemoveGroupMemberData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         login: string;
@@ -11546,6 +12750,12 @@ export type RemoveGroupMemberResponse = RemoveGroupMemberResponses[keyof RemoveG
 
 export type AddGroupMemberData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         login: string;
@@ -11592,6 +12802,12 @@ export type PauseGroupMemberData = {
     body: {
         until?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
         login: string;
@@ -11636,6 +12852,12 @@ export type PauseGroupMemberResponse = PauseGroupMemberResponses[keyof PauseGrou
 
 export type ListSkillsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/skills';
@@ -11680,6 +12902,12 @@ export type ListSkillsResponse = ListSkillsResponses[keyof ListSkillsResponses];
 
 export type DeleteSkillData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -11729,6 +12957,12 @@ export type PublishSkillData = {
         }>;
         description?: string;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         name: string;
     };
@@ -11772,6 +13006,12 @@ export type PublishSkillResponse = PublishSkillResponses[keyof PublishSkillRespo
 
 export type GetSkillDeliveryData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/skill-delivery';
@@ -11815,6 +13055,12 @@ export type GetSkillDeliveryResponse = GetSkillDeliveryResponses[keyof GetSkillD
 
 export type ListHooksData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/hooks';
@@ -11859,6 +13105,12 @@ export type ListHooksResponse = ListHooksResponses[keyof ListHooksResponses];
 
 export type GetHookDeliveryData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/hook-delivery';
@@ -11902,6 +13154,12 @@ export type GetHookDeliveryResponse = GetHookDeliveryResponses[keyof GetHookDeli
 
 export type ListWebhooksData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/webhooks';
@@ -11949,6 +13207,12 @@ export type CreateWebhookData = {
         url: string;
         events: Array<string>;
     };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/webhooks';
@@ -11990,6 +13254,12 @@ export type CreateWebhookResponse = CreateWebhookResponses[keyof CreateWebhookRe
 
 export type DeleteWebhookData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -12033,6 +13303,12 @@ export type DeleteWebhookResponse = DeleteWebhookResponses[keyof DeleteWebhookRe
 
 export type ListWebhookDeliveriesData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };
@@ -12080,6 +13356,12 @@ export type ListWebhookDeliveriesResponse = ListWebhookDeliveriesResponses[keyof
 
 export type ListAuditData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         actor?: string;
@@ -12128,6 +13410,12 @@ export type ListAuditResponse = ListAuditResponses[keyof ListAuditResponses];
 
 export type StreamEventsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/events';
@@ -12169,6 +13457,12 @@ export type StreamEventsResponse = StreamEventsResponses[keyof StreamEventsRespo
 
 export type ListEventsData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: {
         since?: string;
@@ -12216,6 +13510,12 @@ export type ListEventsResponse = ListEventsResponses[keyof ListEventsResponses];
 
 export type StartAnalysisData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/analysis/start';
@@ -12259,6 +13559,12 @@ export type StartAnalysisResponse = StartAnalysisResponses[keyof StartAnalysisRe
 
 export type RestartAnalysisData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/analysis/restart';
@@ -12302,6 +13608,12 @@ export type RestartAnalysisResponse = RestartAnalysisResponses[keyof RestartAnal
 
 export type GetAnalysisStateData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/analysis/state';
@@ -12343,6 +13655,12 @@ export type GetAnalysisStateResponse = GetAnalysisStateResponses[keyof GetAnalys
 
 export type GetReplayData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/analysis/replay';
@@ -12388,6 +13706,12 @@ export type GetReplayResponse = GetReplayResponses[keyof GetReplayResponses];
 
 export type StartReplayData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/analysis/replay';
@@ -12431,6 +13755,12 @@ export type StartReplayResponse = StartReplayResponses[keyof StartReplayResponse
 
 export type ListTasksData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/tasks';
@@ -12475,6 +13805,12 @@ export type ListTasksResponse = ListTasksResponses[keyof ListTasksResponses];
 
 export type RunTaskData = {
     body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path: {
         id: string;
     };

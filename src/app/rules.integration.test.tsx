@@ -138,6 +138,17 @@ describe('the rules', () => {
     expect(within(review).getByRole('button', { name: 'Reject' })).toBeDisabled();
   });
 
+  it('holds a fixed rule while it saves', async () => {
+    const user = userEvent.setup();
+    server.use(http.patch('*/api/v1/rules/:id', async () => delay('infinite')));
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    await user.selectOptions(within(tests).getByRole('combobox', { name: 'Strength' }), 'required');
+    await user.click(within(tests).getByRole('button', { name: 'Save and accept' }));
+    expect(await within(tests).findByRole('button', { name: 'Saving…' })).toBeDisabled();
+  });
+
   it('says when a decision is refused', async () => {
     const user = userEvent.setup();
     server.use(
