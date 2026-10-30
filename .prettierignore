@@ -1,0 +1,10 @@
+dist
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+src/shared/api/generated
+src/shared/theme/tokens.css
+public
+LICENSE
+ee/LICENSE
