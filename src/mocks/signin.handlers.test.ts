@@ -39,10 +39,10 @@ describe('mock e-mail sign-in', () => {
 describe('mock session cookie', () => {
   it('signs out, then an approver link signs in once', async () => {
     await logout({ throwOnError: true });
-    expect((await getMe()).response.status).toBe(401);
+    expect((await getMe()).response?.status).toBe(401);
     const signed = await exchangeSignInLink({ body: { token: 'opk_demo_12345678' }, throwOnError: true });
     expect(signed.data).toEqual({ redirect: '/yes', csrfToken: 'csrf-demo' });
-    expect((await getMe()).response.status).toBe(200);
+    expect((await getMe()).response?.status).toBe(200);
     expect(await post('/auth/link', JSON.stringify({ token: 'opk_demo_12345678' }))).toBe(401);
     expect(await post('/auth/link', JSON.stringify({ token: 'ml_demo_12345678' }))).toBe(401);
     expect(await post('/auth/link', '{}')).toBe(401);
