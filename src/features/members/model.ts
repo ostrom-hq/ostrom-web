@@ -25,9 +25,10 @@ export function displayName(member: Member): string {
 
 /** Owners first, invitations last, then by name: the people who decide are the first ones read. */
 export function sortMembers(members: readonly Member[]): Member[] {
-  return [...members].sort(
-    (a, b) => ORDER[a.role] - ORDER[b.role] || displayName(a).localeCompare(displayName(b), 'en'),
-  );
+  return [...members].sort((a, b) => {
+    const byRole = ORDER[a.role] - ORDER[b.role];
+    return byRole !== 0 ? byRole : displayName(a).localeCompare(displayName(b), 'en');
+  });
 }
 
 export interface ParsedInvites {

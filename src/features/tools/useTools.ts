@@ -51,7 +51,11 @@ function useInvalidate(): (keys: readonly (readonly unknown[])[]) => Promise<voi
   const queryClient = useQueryClient();
   return useCallback(
     async (keys) => {
-      await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+      await Promise.all(
+        keys.map(async (queryKey) => {
+          await queryClient.invalidateQueries({ queryKey });
+        }),
+      );
     },
     [queryClient],
   );
@@ -69,10 +73,9 @@ export interface McpChangeViewModel {
 
 export function useMcpChange(): McpChangeViewModel {
   const invalidate = useInvalidate();
-  const refresh = useCallback(
-    () => invalidate([listMcpServersQueryKey(), getMcpUsageQueryKey()]),
-    [invalidate],
-  );
+  const refresh = useCallback(async () => {
+    await invalidate([listMcpServersQueryKey(), getMcpUsageQueryKey()]);
+  }, [invalidate]);
   const create = useMutation({ ...createMcpServerMutation(), onSuccess: refresh });
   const save = useMutation({ ...saveMcpServerMutation(), onSettled: refresh });
   const drop = useMutation({ ...deleteMcpServerMutation(), onSettled: refresh });
@@ -142,7 +145,9 @@ export interface SecretChangeViewModel {
 
 export function useSecretChange(): SecretChangeViewModel {
   const invalidate = useInvalidate();
-  const refresh = useCallback(() => invalidate([listSecretsQueryKey()]), [invalidate]);
+  const refresh = useCallback(async () => {
+    await invalidate([listSecretsQueryKey()]);
+  }, [invalidate]);
   const created = useMutation({ ...createSecretMutation(), onSuccess: refresh });
   const rotated = useMutation({ ...rotateSecretMutation(), onSuccess: refresh });
   const dropped = useMutation({ ...deleteSecretMutation(), onSettled: refresh });

@@ -46,7 +46,9 @@ export function useMembers(): MembersViewModel {
 
 function useInvalidateMembers(): () => Promise<void> {
   const queryClient = useQueryClient();
-  return useCallback(() => queryClient.invalidateQueries({ queryKey: listMembersQueryKey() }), [queryClient]);
+  return useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listMembersQueryKey() });
+  }, [queryClient]);
 }
 
 export interface RoleChangeViewModel {
