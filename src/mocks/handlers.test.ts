@@ -868,7 +868,7 @@ describe('mock cloud agents and automations', () => {
       headers: once,
       throwOnError: true,
     });
-    expect(replay.data.id).toBe(real.data.id);
+    expect(replay.data).toEqual(real.data);
     expect(db.automationRuns).toHaveLength(3);
     expect(
       await statusOf(async () =>
