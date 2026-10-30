@@ -18,7 +18,9 @@ export function YesQueueScreen(): ReactElement {
     <div className="ys-page">
       <header className="ys-head">
         <h1 className="ys-h1">{t('yes.queue.title')}</h1>
-        {viewer.name === undefined ? null : <p className="ys-meta">{t('yes.signedAs', { name: viewer.name })}</p>}
+        {viewer.name === undefined ? null : (
+          <p className="ys-meta">{t('yes.signedAs', { name: viewer.name })}</p>
+        )}
       </header>
       {failure === undefined ? null : (
         <Banner tone="warning" tag={t('yes.queue.offlineTag')}>
@@ -43,7 +45,12 @@ export function YesQueueScreen(): ReactElement {
             <ul className="ys-list" aria-live="polite">
               {waiting.map((approval) => (
                 <li key={approval.id}>
-                  <ApprovalCard approval={approval} viewer={viewer.login} fresh={fresh.has(approval.id)} now={now} />
+                  <ApprovalCard
+                    approval={approval}
+                    viewer={viewer.login}
+                    fresh={fresh.has(approval.id)}
+                    now={now}
+                  />
                 </li>
               ))}
             </ul>

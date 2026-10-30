@@ -86,7 +86,11 @@ describe('mock API', () => {
       throwOnError: true,
     });
     expect([data.approval.status, data.approval.decidedBy]).toEqual(['approved', 'maya']);
-    expect(data.receipt?.decisions[0]).toMatchObject({ approvalId: 'apr-merge-412', by: 'maya', result: 'approved' });
+    expect(data.receipt?.decisions[0]).toMatchObject({
+      approvalId: 'apr-merge-412',
+      by: 'maya',
+      result: 'approved',
+    });
     expect(data.receipt?.subject.digest).toBe('sha256:5b0c2f8e');
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
     expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-deploy-88']);
@@ -104,7 +108,11 @@ describe('mock API', () => {
 
   it('refuses the asker’s own approval while another approver exists, and lets their refusal through', async () => {
     const error = await failureOf(async () =>
-      answerApproval({ ...deploy, body: { answer: 'approve', shownDigest: 'sha256:a91d0e44' }, throwOnError: true }),
+      answerApproval({
+        ...deploy,
+        body: { answer: 'approve', shownDigest: 'sha256:a91d0e44' },
+        throwOnError: true,
+      }),
     );
     expect(isApiFailure(error) && [error.status, error.code, error.message]).toEqual([
       403,
@@ -132,14 +140,22 @@ describe('mock API', () => {
   it('refuses someone who is not an approver', async () => {
     db.approvers['apr-merge-412'] = ['samir'];
     const error = await failureOf(async () =>
-      answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' }, throwOnError: true }),
+      answerApproval({
+        ...merge,
+        body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+        throwOnError: true,
+      }),
     );
     expect(isApiFailure(error) && error.code).toBe('not_an_approver');
   });
 
   it('answers 409 when what was shown changed, or when the approval is already decided', async () => {
     const changed = await failureOf(async () =>
-      answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:old' }, throwOnError: true }),
+      answerApproval({
+        ...merge,
+        body: { answer: 'approve', shownDigest: 'sha256:old' },
+        throwOnError: true,
+      }),
     );
     const decided = await failureOf(async () =>
       answerApproval({
@@ -148,7 +164,10 @@ describe('mock API', () => {
         throwOnError: true,
       }),
     );
-    expect(isApiFailure(changed) && [changed.kind, changed.code]).toEqual(['conflict', 'shown_digest_mismatch']);
+    expect(isApiFailure(changed) && [changed.kind, changed.code]).toEqual([
+      'conflict',
+      'shown_digest_mismatch',
+    ]);
     expect(isApiFailure(decided) && decided.code).toBe('already_decided');
   });
 
@@ -178,7 +197,11 @@ describe('mock API', () => {
 
   it('answers 404 to an unknown approval and 400 to a body that is not an answer', async () => {
     const missing = await failureOf(async () =>
-      answerApproval({ path: { id: 'nope' }, body: { answer: 'approve', shownDigest: 'x' }, throwOnError: true }),
+      answerApproval({
+        path: { id: 'nope' },
+        body: { answer: 'approve', shownDigest: 'x' },
+        throwOnError: true,
+      }),
     );
     const notJson = await fetch('http://ostrom.test/api/v1/approvals/apr-merge-412/answer', {
       method: 'POST',

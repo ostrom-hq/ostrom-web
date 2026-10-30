@@ -62,7 +62,9 @@ describe('generated client, configured', () => {
   });
 
   it('turns an answer outside the contract into an invalid-response failure', async () => {
-    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json({ dev: { login: 'maya' }, capabilities: 'nope' })));
+    server.use(
+      http.get('*/api/v1/auth/me', () => HttpResponse.json({ dev: { login: 'maya' }, capabilities: 'nope' })),
+    );
     const error = await failureOf(async () => getMe({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('invalid-response');
   });

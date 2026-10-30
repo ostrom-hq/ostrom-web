@@ -12,7 +12,13 @@ import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
-import { type AnswerViewModel, type ViewerViewModel, useAnswerApproval, useApproval, useViewer } from '../useYes';
+import {
+  type AnswerViewModel,
+  type ViewerViewModel,
+  useAnswerApproval,
+  useApproval,
+  useViewer,
+} from '../useYes';
 
 const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   'waiting-you': 'signal',
@@ -166,7 +172,9 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
             <span className="ys-meta">{t('yes.detail.via', { channel: approval.channel })}</span>
           </div>
         </div>
-        {askedByViewer(approval, viewer.login) ? <p className="ys-small">{t('yes.detail.youAsked')}</p> : null}
+        {askedByViewer(approval, viewer.login) ? (
+          <p className="ys-small">{t('yes.detail.youAsked')}</p>
+        ) : null}
       </section>
 
       <section className="o-card ys-section" aria-labelledby="ys-why">

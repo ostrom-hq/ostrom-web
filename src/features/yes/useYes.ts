@@ -98,7 +98,8 @@ export function useAnswerApproval(id: string): AnswerViewModel {
       await queryClient.invalidateQueries({ queryKey: listApprovalsQueryKey() });
     },
     onError: async (error) => {
-      if (changedOf(error)) await queryClient.invalidateQueries({ queryKey: getApprovalQueryKey({ path: { id } }) });
+      if (changedOf(error))
+        await queryClient.invalidateQueries({ queryKey: getApprovalQueryKey({ path: { id } }) });
     },
   });
   const { mutate } = mutation;
