@@ -119,6 +119,13 @@ export const en = {
       changed: 'This request changed since you opened it. Read it again, then decide.',
       errorTag: 'Error',
     },
+  consent: {
+    title: 'Usage statistics',
+    body: 'Can we measure how the console is used (pages visited and actions, never what you type) with PostHog, hosted in the EU? Nothing is sent unless you accept, and you can change your mind at any time.',
+    learnMore: 'Privacy policy',
+    accept: 'Accept',
+    refuse: 'Refuse',
+    manage: 'Privacy choices',
   },
   sessions: {
     list: {

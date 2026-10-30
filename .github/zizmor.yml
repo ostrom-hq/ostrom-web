@@ -1,0 +1,12 @@
+# zizmor configuration (https://docs.zizmor.sh/configuration/).
+# Temporary: ci.yml predates the open source checks and still uses actions by tag. CONVENTIONS.md section 11 requires
+# a commit SHA for every action; remove this exception in the pull request that pins them.
+rules:
+  unpinned-uses:
+    ignore:
+      - ci.yml
+  # Temporary: image.yml caches the Docker build in a workflow that also runs on release tags. Drop the cache
+  # on tag runs, or split the release job, then remove this exception.
+  cache-poisoning:
+    ignore:
+      - image.yml

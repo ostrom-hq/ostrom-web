@@ -15,6 +15,11 @@ describe('ready', () => {
   });
 
   it('refuses options without a query function, which the generator never writes', () => {
-    expect(() => ready({ queryKey: ['me'] })).toThrow('a generated query always carries its query function');
+    expect(() => ready({ queryKey: ['me'], queryFn: undefined })).toThrow(
+      'a generated query always carries its query function',
+    );
+    expect(() => ready({ queryKey: ['me'], queryFn: null })).toThrow(
+      'a generated query always carries its query function',
+    );
   });
 });
