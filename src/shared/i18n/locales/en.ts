@@ -851,7 +851,11 @@ export const en = {
       name: 'Name',
       save: 'Save the name',
       saving: 'Saving…',
-      empty: 'A name is needed.',
+      problem: {
+        empty: 'A name is needed.',
+        long: 'A name has at most 100 characters.',
+        control: 'A name cannot hold tabs, line breaks or other control characters.',
+      },
       slug: 'Short name',
       slugNote: 'The short name is in the console’s addresses and in the CLI’s commands.',
       timeZone: 'Time zone',
@@ -937,6 +941,7 @@ export const en = {
       label: 'Secret of {{name}}',
       use: 'Send it as Authorization: Bearer followed by the secret.',
       done: 'I copied it',
+      held: 'Until you press I copied it, no other token is created and no other secret replaced.',
     },
     kind: { personal: 'Personal', cli: 'CLI' },
     list: {

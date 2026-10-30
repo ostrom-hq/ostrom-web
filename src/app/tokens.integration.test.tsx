@@ -51,8 +51,8 @@ describe('the tokens screen', () => {
     await user.selectOptions(within(form()).getByRole('combobox', { name: 'Expires' }), '7');
     await user.click(create);
     const secret = await within(form()).findByRole('textbox', { name: 'Secret of Nightly CI' });
-    expect(secret).toHaveValue(expect.stringMatching(/^osp_/));
     const shown = secret instanceof HTMLInputElement ? secret.value : 'no secret';
+    expect(shown).toMatch(/^osp_/);
     expect(within(form()).getByRole('alert')).toHaveTextContent('is shown once');
     // The form is ready for the next one; the list has the new token, without its secret.
     expect(within(form()).getByRole('textbox', { name: 'Name' })).toHaveValue('');
@@ -101,9 +101,8 @@ describe('the tokens screen', () => {
     const row = ci ?? document.body;
     await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
     await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
-    expect(await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' })).toHaveValue(
-      expect.stringMatching(/^osp_/),
-    );
+    const replaced = await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' });
+    expect(replaced instanceof HTMLInputElement ? replaced.value : 'no secret').toMatch(/^osp_/);
     expect(db.tokens.map((token) => token.id)).not.toContain('tok-2');
     await user.click(screen.getByRole('button', { name: 'I copied it' }));
     expect(screen.queryByRole('textbox', { name: 'Secret of GitHub Actions' })).toBeNull();
@@ -125,10 +124,18 @@ describe('the tokens screen', () => {
     await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
     await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
     const secret = await screen.findByRole('textbox', { name: 'Secret of GitHub Actions' });
-    // Every other replacement waits; revoking another token leaves the secret where it is.
+    expect(screen.getByText(/no other token is created and no other secret replaced/)).toBeInTheDocument();
+    // Every other replacement waits, and the token whose secret is shown is not revoked under it.
+    await waitFor(async () => {
+      const ids = (await liveTokens()).map((item) => item.textContent);
+      expect(ids.some((text) => text.includes(db.tokens[0]?.hint ?? 'none'))).toBe(true);
+    });
     const rows = await liveTokens();
     for (const item of rows)
       expect(within(item).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
+    const shownRow = rows.find((item) => item.textContent.includes('GitHub Actions')) ?? document.body;
+    expect(within(shownRow).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    // Revoking another token leaves the secret where it is.
     const cli = rows.find((item) => item.textContent.includes('ostrom on maya-mbp')) ?? document.body;
     await user.click(within(cli).getByRole('button', { name: 'Revoke' }));
     await user.click(within(cli).getByRole('button', { name: 'Revoke ostrom on maya-mbp' }));

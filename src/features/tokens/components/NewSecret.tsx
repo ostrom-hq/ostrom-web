@@ -20,6 +20,7 @@ export function NewSecret({ created, onDone }: NewSecretProps): ReactElement {
         <span>{t('tokens.secret.once', { name: created.token.name })}</span>
         <CopyField label={t('tokens.secret.label', { name: created.token.name })} value={created.secret} />
         <span className="o-row__meta">{t('tokens.secret.use')}</span>
+        <span className="o-row__meta">{t('tokens.secret.held')}</span>
         <Button variant="ghost" onClick={onDone}>
           {t('tokens.secret.done')}
         </Button>

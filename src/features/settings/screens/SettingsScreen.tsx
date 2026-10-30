@@ -34,8 +34,7 @@ function SettingsPage({
   const sessionActions = useSessionActions();
   return (
     <Screen title={t('settings.title')} lead={t('settings.lead', { name: org.name })}>
-      {/* A name changed here or elsewhere (another tab, another admin) starts the field again from it. */}
-      <GeneralSection key={org.name} org={org} canRename={managesMembers(role)} rename={rename} />
+      <GeneralSection org={org} canRename={managesMembers(role)} rename={rename} />
       <SecuritySection view={sessions} actions={sessionActions} />
       <DangerZone org={org} isOwner={role === 'owner'} deletion={deletion} />
     </Screen>

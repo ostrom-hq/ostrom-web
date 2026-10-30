@@ -870,7 +870,12 @@ export const fr = {
       name: 'Nom',
       save: 'Enregistrer le nom',
       saving: 'Enregistrement…',
-      empty: 'Il faut un nom.',
+      problem: {
+        empty: 'Il faut un nom.',
+        long: 'Un nom fait au plus 100 caractères.',
+        control:
+          'Un nom ne peut contenir ni tabulation, ni retour à la ligne, ni autre caractère de contrôle.',
+      },
       slug: 'Nom court',
       slugNote: 'Le nom court figure dans les adresses de la console et dans les commandes de la CLI.',
       timeZone: 'Fuseau horaire',
@@ -956,6 +961,7 @@ export const fr = {
       label: 'Secret de {{name}}',
       use: 'Envoie-le en Authorization: Bearer suivi du secret.',
       done: 'Je l’ai copié',
+      held: 'Tant que tu n’as pas appuyé sur Je l’ai copié, aucun autre jeton n’est créé ni aucun secret remplacé.',
     },
     kind: { personal: 'Personnel', cli: 'CLI' },
     list: {

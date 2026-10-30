@@ -26,7 +26,9 @@ export function useTokens(): TokensViewModel {
 
 function useInvalidate(): () => Promise<void> {
   const queryClient = useQueryClient();
-  return useCallback(() => queryClient.invalidateQueries({ queryKey: listTokensQueryKey() }), [queryClient]);
+  return useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listTokensQueryKey() });
+  }, [queryClient]);
 }
 
 /**
@@ -80,6 +82,8 @@ export interface TokenActionsViewModel {
   readonly busy: string | undefined;
   /** The token a replacement just issued, with its new secret: no other replacement until it is copied. */
   readonly rotated: CreatedToken | undefined;
+  /** A replacement is on its way or its secret on screen: the other replacements wait, and so do revocations. */
+  readonly rotating: boolean;
   readonly failure: Error | undefined;
   readonly dismiss: () => void;
 }
@@ -114,6 +118,7 @@ export function useTokenActions(): TokenActionsViewModel {
     rotate,
     busy,
     rotated: rotation.data,
+    rotating: rotation.isPending,
     failure: failureOf(revocation.error ?? rotation.error),
     dismiss: resetRotation,
   };

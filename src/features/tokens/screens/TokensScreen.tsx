@@ -44,7 +44,8 @@ export function TokensScreen(): ReactElement {
                     <TokenRow
                       token={token}
                       busy={actions.busy === token.id}
-                      holding={actions.rotated !== undefined}
+                      holding={actions.rotating || actions.rotated !== undefined}
+                      keep={actions.rotating || actions.rotated?.token.id === token.id}
                       onRevoke={() => {
                         actions.revoke(token.id);
                       }}

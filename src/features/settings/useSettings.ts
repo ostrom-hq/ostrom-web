@@ -13,7 +13,7 @@ import {
 import type { AuthSession, OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -38,12 +38,13 @@ export function useRenameOrg(org: OrgView): RenameViewModel {
   const mutation = useMutation({
     ...renameOrgMutation(),
     // The top bar's switch and every screen read the name from the person's lists.
-    onSuccess: () =>
-      Promise.all([
+    onSuccess: async () => {
+      await Promise.all([
         queryClient.invalidateQueries({ queryKey: listOrgsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: listMyOrganizationsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getOrgQueryKey({ path: { org: org.id } }) }),
-      ]),
+      ]);
+    },
   });
   const { mutate, reset } = mutation;
   const rename = useCallback(
@@ -64,7 +65,10 @@ export function useRenameOrg(org: OrgView): RenameViewModel {
 export interface DeleteOrgViewModel {
   readonly remove: (confirm: string) => void;
   readonly deleting: boolean;
-  /** The server wants a sign-in less than five minutes old before deleting. */
+  /**
+   * The server wants a sign-in less than five minutes old before deleting (`step_up_required`). The contract asks it;
+   * the server does not enforce it yet (JOURNAL, AUTH-REPRISE), so this only shows when it actually refuses.
+   */
   readonly stepUp: boolean;
   readonly failure: Error | undefined;
 }
@@ -75,14 +79,10 @@ export function useDeleteOrg(org: OrgView): DeleteOrgViewModel {
   const mutation = useMutation({
     ...deleteOrgMutation(),
     onSuccess: async () => {
-      // The switch's list goes before the choice does (which resets every other read), so nothing offers the
-      // organization just deleted; then both lists are read again.
-      queryClient.removeQueries({ queryKey: listMyOrganizationsQueryKey() });
+      // The switch's list, which the choice keeps, is read again from nothing, so it never offers the organization
+      // just deleted; dropping the choice reads everything else again.
+      void queryClient.resetQueries({ queryKey: listMyOrganizationsQueryKey() });
       useOrgStore.getState().forget();
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: listOrgsQueryKey() }),
-        queryClient.invalidateQueries({ queryKey: listMyOrganizationsQueryKey() }),
-      ]);
       await navigate({ to: '/' });
     },
   });
@@ -133,29 +133,35 @@ export interface SessionActionsViewModel {
 export function useSessionActions(): SessionActionsViewModel {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  // The session this browser holds, once its revocation is asked: its end signs this browser out.
+  const endingHere = useRef<string | undefined>(undefined);
   const signedOut = useCallback(async () => {
     // Off this page first, so nothing on it reads again as nobody; then everything cached, this account's, goes.
     await navigate({ to: '/signin', search: { redirect: '/settings' } });
     useAuthStore.getState().changed();
   }, [navigate]);
-  const relist = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() }),
-    [queryClient],
-  );
-  const revocation = useMutation(revokeAuthSessionMutation());
+  const relist = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() });
+  }, [queryClient]);
+  // Each revocation stays pending until the list is read again, so its row never offers it twice; this browser's
+  // own is not read again with a cookie that no longer works.
+  const revocation = useMutation({
+    ...revokeAuthSessionMutation(),
+    onSuccess: async (_data, variables) => {
+      await (variables.path.id === endingHere.current ? signedOut() : relist());
+    },
+    onError: relist,
+  });
   const everywhere = useMutation({ ...logoutEverywhereMutation(), onSuccess: signedOut });
   const { mutate: revokeMutate, reset: resetRevocation } = revocation;
   const { mutate: everywhereMutate, reset: resetEverywhere } = everywhere;
   const revoke = useCallback(
     (session: AuthSession) => {
       resetEverywhere();
-      // This browser's session ended: the list is not read again with a cookie that no longer works.
-      revokeMutate(
-        { path: { id: session.id } },
-        session.current ? { onSuccess: signedOut, onError: relist } : { onSettled: relist },
-      );
+      if (session.current) endingHere.current = session.id;
+      revokeMutate({ path: { id: session.id } });
     },
-    [revokeMutate, resetEverywhere, signedOut, relist],
+    [revokeMutate, resetEverywhere],
   );
   const signOutEverywhere = useCallback(() => {
     resetRevocation();

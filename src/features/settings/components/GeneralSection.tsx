@@ -6,7 +6,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Facts, Section } from '@/shared/ui/Screen';
 import { MAX_ORG_NAME } from '@/shared/org/slug';
-import { browserTimeZone, renameProblem } from '../model';
+import { browserTimeZone, followName, renameProblem } from '../model';
 import type { RenameViewModel } from '../useSettings';
 
 export interface GeneralSectionProps {
@@ -19,8 +19,11 @@ export interface GeneralSectionProps {
 /** The organization's name, its short name and the time zone the console shows times in. */
 export function GeneralSection({ org, canRename, rename }: GeneralSectionProps): ReactElement {
   const { t } = useTranslation();
-  // Starts from the name as the server has it; the screen mounts this section again when that name changes.
-  const [typed, setTyped] = useState(org.name);
+  // The field and the name it started from: when the server's name changes, the field follows it if untouched.
+  const [draft, setDraft] = useState({ from: org.name, typed: org.name });
+  if (draft.from !== org.name)
+    setDraft({ from: org.name, typed: followName(draft.typed, draft.from, org.name) });
+  const { typed } = draft;
   const nameId = useId();
   const problem = renameProblem(typed, org.name);
   return (
@@ -42,8 +45,9 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
               className="o-input st-name"
               maxLength={MAX_ORG_NAME}
               value={typed}
+              readOnly={rename.saving}
               onChange={(event) => {
-                setTyped(event.target.value);
+                setDraft({ from: draft.from, typed: event.target.value });
                 rename.edited();
               }}
             />
@@ -51,7 +55,9 @@ export function GeneralSection({ org, canRename, rename }: GeneralSectionProps):
               {rename.saving ? t('settings.general.saving') : t('settings.general.save')}
             </Button>
           </span>
-          {problem === 'empty' ? <p className="o-row__meta">{t('settings.general.empty')}</p> : null}
+          {problem === undefined || problem === 'same' ? null : (
+            <p className="o-row__meta">{t(`settings.general.problem.${problem}`)}</p>
+          )}
         </form>
       ) : null}
       <Facts
