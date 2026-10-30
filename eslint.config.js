@@ -11,7 +11,16 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig(
   {
-    ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'gen', 'public/mockServiceWorker.js'],
+    ignores: [
+      'dist',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'gen',
+      'public/mockServiceWorker.js',
+      'public/config.js',
+      'public/theme.js',
+    ],
   },
   {
     linterOptions: { noInlineConfig: true, reportUnusedDisableDirectives: 'error' },
