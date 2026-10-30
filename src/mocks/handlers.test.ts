@@ -560,7 +560,7 @@ describe('mock MCP servers and secrets', () => {
       member.login === 'maya' ? { ...member, role: 'member' } : member,
     );
   };
-  const status = async (call: () => Promise<unknown>): Promise<number | false> => {
+  const status = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
     const error = await failureOf(call);
     return isApiFailure(error) && error.status;
   };
@@ -583,6 +583,13 @@ describe('mock MCP servers and secrets', () => {
       throwOnError: true,
     });
     expect(saved.data.enabled).toBe(false);
+    expect(saved.data).not.toHaveProperty('tools');
+    const listed = await saveMcpServer({
+      path: { name: 'notion' },
+      body: { ...notion, tools: ['search'] },
+      throwOnError: true,
+    });
+    expect(listed.data.tools).toEqual(['search']);
     expect(await send('PUT', '/mcp/servers/notion', JSON.stringify({ ...notion, url: 'ftp://x' }))).toBe(400);
     expect(
       await status(async () => saveMcpServer({ path: { name: 'nope' }, body: notion, throwOnError: true })),
@@ -724,7 +731,7 @@ describe('mock spending and budgets', () => {
 });
 
 describe('mock cloud agents and automations', () => {
-  const statusOf = async (call: () => Promise<unknown>): Promise<number | false> => {
+  const statusOf = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
     const error = await failureOf(call);
     return isApiFailure(error) && error.status;
   };
