@@ -71,7 +71,7 @@ describe('mock API', () => {
   });
 
   it('refuses the author’s own yes while another approver exists', async () => {
-    const error = await failureOf(() =>
+    const error = await failureOf(async () =>
       decideAsk({ path: { id: 'ask-deploy-88' }, body: { result: 'approved' }, throwOnError: true }),
     );
     expect(isApiFailure(error) && error.kind).toBe('forbidden');
@@ -89,8 +89,8 @@ describe('mock API', () => {
   });
 
   it('answers 404 for an unknown request, on read and on decide', async () => {
-    const read = await failureOf(() => getAsk({ path: { id: 'nope' }, throwOnError: true }));
-    const decide = await failureOf(() =>
+    const read = await failureOf(async () => getAsk({ path: { id: 'nope' }, throwOnError: true }));
+    const decide = await failureOf(async () =>
       decideAsk({ path: { id: 'nope' }, body: { result: 'approved' }, throwOnError: true }),
     );
     expect([read, decide].map((error) => isApiFailure(error) && error.kind)).toEqual([

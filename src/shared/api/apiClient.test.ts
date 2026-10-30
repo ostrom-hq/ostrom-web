@@ -54,18 +54,18 @@ describe('generated client, configured', () => {
 
   it('turns an answer outside the contract into an invalid-response failure', async () => {
     server.use(http.get('*/api/yes/queue', () => HttpResponse.json({ operator: 'maya', pending: 'nope' })));
-    const error = await failureOf(() => getYesQueue({ throwOnError: true }));
+    const error = await failureOf(async () => getYesQueue({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('invalid-response');
   });
 
   it('turns a 404 into a not-found failure with the server message', async () => {
-    const error = await failureOf(() => getAsk({ path: { id: 'missing' }, throwOnError: true }));
+    const error = await failureOf(async () => getAsk({ path: { id: 'missing' }, throwOnError: true }));
     expect(isApiFailure(error) && [error.kind, error.message]).toEqual(['not-found', 'request not found']);
   });
 
   it('turns a dropped connection into a network failure', async () => {
     server.use(http.get('*/api/yes/queue', () => HttpResponse.error()));
-    const error = await failureOf(() => getYesQueue({ throwOnError: true }));
+    const error = await failureOf(async () => getYesQueue({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('network');
   });
 });
