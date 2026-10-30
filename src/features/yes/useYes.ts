@@ -141,12 +141,14 @@ export interface ShownApprovalViewModel extends ApprovalViewModel {
 
 /**
  * The version on screen is the one the person read, and its digest is the one an answer sends: a poll never swaps
- * the proof under their thumb. A decided request, or a newer one they asked for, replaces it.
+ * the proof under their thumb. A decided request, a newer one they asked for, or one the server refused an answer
+ * on because it changed (`follow`), replaces it.
  */
-export function useShownApproval(id: string): ShownApprovalViewModel {
+export function useShownApproval(id: string, follow = false): ShownApprovalViewModel {
   const { approval: latest, failure } = useApproval(id);
   const [read, setRead] = useState<Approval | undefined>(undefined);
-  const newer = read !== undefined && latest?.status === 'pending' && latest.shownDigest !== read.shownDigest;
+  const newer =
+    !follow && read !== undefined && latest?.status === 'pending' && latest.shownDigest !== read.shownDigest;
   if (latest !== undefined && !newer && read !== latest) setRead(latest);
   const readNewer = useCallback(() => {
     setRead(latest);
