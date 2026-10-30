@@ -8,7 +8,7 @@ import { client } from '@gen/api/client.gen';
 import type { GetReceiptBundleData, Receipt, Verification } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
-import { tuned } from '@/shared/api/tuned';
+import { ready } from '@/shared/api/ready';
 
 export interface ReceiptListViewModel {
   readonly receipts: readonly Receipt[] | undefined;
@@ -16,7 +16,7 @@ export interface ReceiptListViewModel {
 }
 
 export function useReceiptList(): ReceiptListViewModel {
-  const query = useQuery(listReceiptsOptions());
+  const query = useQuery(ready(listReceiptsOptions()));
   return { receipts: query.data?.items, failure: failureOf(query.error) };
 }
 
@@ -32,8 +32,8 @@ export interface ReceiptViewModel {
 
 /** A receipt never changes once signed: it is read once and kept. */
 export function useReceipt(id: string): ReceiptViewModel {
-  const receipt = useQuery(tuned(getReceiptOptions({ path: { id } }), { staleTime: Infinity }));
-  const verification = useQuery(tuned(verifyReceiptOptions({ path: { id } }), { staleTime: Infinity }));
+  const receipt = useQuery(ready(getReceiptOptions({ path: { id } }), { staleTime: Infinity }));
+  const verification = useQuery(ready(verifyReceiptOptions({ path: { id } }), { staleTime: Infinity }));
   return {
     receipt: receipt.data,
     failure: failureOf(receipt.error),

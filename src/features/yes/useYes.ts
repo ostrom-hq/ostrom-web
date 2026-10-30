@@ -20,7 +20,7 @@ import { useCallback, useMemo } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
-import { tuned } from '@/shared/api/tuned';
+import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
 import { useArrivals } from './useArrivals';
 
@@ -42,7 +42,7 @@ export interface ViewerViewModel {
 }
 
 export function useViewer(): ViewerViewModel {
-  const query = useQuery(tuned(getMeOptions(), { staleTime: 60_000 }));
+  const query = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
   const me = meOf(query.data);
   return { login: me?.dev.login, name: viewerName(me) };
 }
@@ -87,11 +87,11 @@ export function combineDecided(
 
 export function useApprovalsQueue(): QueueViewModel {
   const waiting = useQuery(
-    tuned(listApprovalsOptions({ query: { mine: true } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+    ready(listApprovalsOptions({ query: { mine: true } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
   );
   const decided = useQueries({
     queries: DECIDED_STATUSES.map((status) =>
-      tuned(listApprovalsOptions({ query: { status } }), {
+      ready(listApprovalsOptions({ query: { status } }), {
         refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
       }),
     ),
@@ -116,7 +116,7 @@ export interface ApprovalViewModel {
 
 export function useApproval(id: string): ApprovalViewModel {
   const query = useQuery(
-    tuned(getApprovalOptions({ path: { id } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+    ready(getApprovalOptions({ path: { id } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
   );
   return { approval: query.data, failure: failureOf(query.error) };
 }
