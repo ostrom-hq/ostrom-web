@@ -1,4 +1,11 @@
 # Rendered at start by the image's envsubst step (only ${OSTROM_*} variables).
+
+# WebSocket upgrade for the terminal routes; plain keep-alive otherwise.
+map $http_upgrade $ostrom_connection {
+    default upgrade;
+    ''      '';
+}
+
 server {
     listen 8080;
     listen [::]:8080;
@@ -22,16 +29,19 @@ server {
         include /etc/nginx/ostrom/security-headers.conf;
     }
 
-    # The API on the same origin: /api/v1/… → <server>/v1/…, streaming kept (SSE).
+    # The API on the same origin: the contract's paths start with /api/v1, passed unchanged to the server.
+    # Streaming kept (SSE), WebSocket upgrades passed through (cloud session terminals).
     location /api/ {
-        proxy_pass ${OSTROM_API_UPSTREAM}/;
+        proxy_pass ${OSTROM_API_UPSTREAM};
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
-        proxy_set_header Connection "";
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $ostrom_connection;
         proxy_buffering off;
         proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
         client_max_body_size 16m;
     }
 

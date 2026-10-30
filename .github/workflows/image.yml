@@ -1,18 +1,17 @@
 name: Image
 
-# The console image ghcr.io/ostrom-hq/ostrom-web: built and smoke-tested on every pull request; pushed as `edge`
-# from main and as the version on a release tag (bare semver, CONVENTIONS § 12), multi-arch, with SBOM and
-# provenance attestations, signed with cosign by digest.
+# The console image ghcr.io/ostrom-hq/ostrom-web: smoke-tested, then pushed as `edge` from main and as the version on
+# a release tag (bare semver, CONVENTIONS § 12), multi-arch, with SBOM and provenance attestations, signed with
+# cosign by digest. Not on pull requests (org CI rules, JOURNAL 03:10): `docker/**` changes are proven on main.
 on:
-  pull_request:
   push:
     branches: [main]
     tags: ['[0-9]*']
   workflow_dispatch:
 
 concurrency:
-  group: image-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
