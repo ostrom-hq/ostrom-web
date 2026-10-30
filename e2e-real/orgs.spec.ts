@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { callFromPage, freshEmail, served, signIn } from './real';
 
 test('a person in two organizations chooses one, and every call then names it', async ({ page }) => {
-  // `GET /me/organizations` and the 409 org_required come with ostrom-server#64.
+  // `GET /me/organizations` and the 409 org_required come with ostrom-server#64: remove this skip once it is on main.
   test.skip(
     !(await served(page, 'GET', '/api/v1/me/organizations')),
     'GET /api/v1/me/organizations not served yet',

@@ -62,9 +62,27 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end journeys (Playwright, desktop and mobile)
         run: pnpm e2e
+      # The image is built and pushed by image.yml on main; a pull request that changes what goes into it proves it here,
+      # in this one job: security headers (S2-09), read-only root, API proxy, runtime settings.
+      - name: Does this pull request change the console image?
+        id: image
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only HEAD^1 HEAD \
+            | grep -Eq '^(Dockerfile|\.dockerignore|docker/|index\.html|public/|vite\.config\.ts|package\.json|pnpm-lock\.yaml)'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Console image smoke test (security headers, read-only root, API proxied, runtime settings)
+        if: steps.image.outputs.changed == 'true'
+        run: |
+          docker build --tag ostrom-web:ci .
+          ./docker/smoke-test.sh ostrom-web:ci
       # The same console against the REAL server: the image of ostrom-server main, as deployed (the owner role
       # migrates, the server serves as `ostrom_app`, which owns nothing and cannot bypass row-level security).
       - name: ostrom-server main (its database roles)
+        id: serverSource
+        # Without the deploy key (a pull request from outside), the journeys against the real server are skipped.
+        continue-on-error: true
         uses: actions/checkout@v5
         with:
           repository: ostrom-hq/ostrom-server
@@ -84,20 +102,33 @@ jobs:
           IMAGE: ghcr.io/ostrom-hq/ostrom-server:edge
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MIN_SERVER: 5c8f826
+          # Repository variable: `true` once the image is reachable and recent, so a skip fails the job from then on.
+          REQUIRED: ${{ vars.OSTROM_WEB_REQUIRE_REAL_SERVER == 'true' }}
+          SOURCE: ${{ steps.serverSource.outcome }}
         run: |
           skip() {
             echo "::warning title=Journeys against the real server skipped::$1"
             echo "Journeys against the real server **skipped**: $1" >> "$GITHUB_STEP_SUMMARY"
             echo "ready=false" >> "$GITHUB_OUTPUT"
+            [ "$REQUIRED" = "true" ] && exit 1
             exit 0
           }
+          [ "$SOURCE" = "success" ] || skip "ostrom-server could not be checked out (no deploy key)."
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker pull --quiet "$IMAGE" || skip "$IMAGE cannot be pulled from this repository (package Actions access)."
           revision=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
           main=$(git -C .ostrom/server rev-parse HEAD)
           echo "Server image built from ostrom-server@${revision:0:7}; main is at ${main:0:7}." >> "$GITHUB_STEP_SUMMARY"
-          git -C .ostrom/server merge-base --is-ancestor "$MIN_SERVER" "$revision" \
-            || skip "edge is ostrom-server@${revision:0:7}, older than $MIN_SERVER (server#58)."
+          [ -n "$revision" ] || skip "$IMAGE carries no org.opencontainers.image.revision label."
+          if git -C .ostrom/server cat-file -e "${revision}^{commit}" 2>/dev/null; then
+            git -C .ostrom/server merge-base --is-ancestor "$MIN_SERVER" "$revision" \
+              || skip "edge is ostrom-server@${revision:0:7}, older than $MIN_SERVER (server#58)."
+            # The database roles of the image's own commit, not of a main that may have moved past it.
+            git -C .ostrom/server show "${revision}:ci/database-roles.sql" > "$RUNNER_TEMP/database-roles.sql"
+          else
+            # Newer than the main checked out a moment ago: it contains MIN_SERVER; main's roles are the closest.
+            cp .ostrom/server/ci/database-roles.sql "$RUNNER_TEMP/database-roles.sql"
+          fi
           if [ "$revision" != "$main" ]; then
             echo "::warning title=Server image::edge is ostrom-server@${revision:0:7}, main is at ${main:0:7}"
           fi
@@ -110,9 +141,11 @@ jobs:
           OWNER_URL: postgresql://ostrom_owner:ostrom_owner@localhost:5432/ostrom
           APP_URL: postgresql://ostrom_app:ostrom_app@localhost:5432/ostrom
         run: |
-          psql -h localhost -U ostrom -d ostrom_ci -v ON_ERROR_STOP=1 -f .ostrom/server/ci/database-roles.sql
+          psql -h localhost -U ostrom -d ostrom_ci -v ON_ERROR_STOP=1 -f "$RUNNER_TEMP/database-roles.sql"
           docker run --rm --network host -e OSTROM_DATABASE_MIGRATION_URL="$OWNER_URL" "$IMAGE" migrate
           mkdir -p "$RUNNER_TEMP/ostrom-mail" && chmod 0777 "$RUNNER_TEMP/ostrom-mail"
+          # The server's non-root user writes the mails; the journeys, as the runner's user, read them.
+          setfacl -d -m o::r "$RUNNER_TEMP/ostrom-mail"
           # Test values only: Stripe is stripe-mock, sign-in mails are written to a directory, the console is
           # `vite preview` on localhost:4173, which proxies /api to the server.
           docker run -d --name ostrom-server --network host \
@@ -137,21 +170,6 @@ jobs:
       - name: Real server logs
         if: always() && steps.server.outputs.ready == 'true'
         run: docker logs ostrom-server 2>&1 | tail -n 200
-      # The image is built and pushed by image.yml on main; a pull request that changes what goes into it proves it here,
-      # in this one job: security headers (S2-09), read-only root, API proxy, runtime settings.
-      - name: Does this pull request change the console image?
-        id: image
-        if: github.event_name == 'pull_request'
-        run: |
-          if git diff --name-only HEAD^1 HEAD \
-            | grep -Eq '^(Dockerfile|\.dockerignore|docker/|index\.html|public/|vite\.config\.ts|package\.json|pnpm-lock\.yaml)'; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Console image smoke test (security headers, read-only root, API proxied, runtime settings)
-        if: steps.image.outputs.changed == 'true'
-        run: |
-          docker build --tag ostrom-web:ci .
-          ./docker/smoke-test.sh ostrom-web:ci
       - if: failure()
         uses: actions/upload-artifact@v5
         with:

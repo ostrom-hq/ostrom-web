@@ -10,9 +10,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   forbidOnly: true,
-  retries: 0,
+  // Once, as the mock journeys: a mail written a moment late, a server still warming up.
+  retries: 1,
   reporter: [['github'], ['html', { open: 'never', outputFolder: 'playwright-report-real' }]],
-  use: { baseURL: `http://localhost:${String(port)}`, trace: 'retain-on-failure' },
+  use: { baseURL: `http://localhost:${String(port)}`, trace: 'on-first-retry' },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },
