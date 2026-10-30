@@ -6,6 +6,9 @@ map $http_upgrade $ostrom_connection {
     ''      '';
 }
 
+# $ostrom_csp_connect_extra: the PostHog origin the CSP's connect-src allows, or nothing (40-ostrom-config.sh).
+include /var/run/ostrom/csp.conf;
+
 server {
     listen 8080;
     listen [::]:8080;
