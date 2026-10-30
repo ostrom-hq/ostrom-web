@@ -80,7 +80,7 @@ const deploy = { path: { id: 'apr-deploy-88' } };
 describe('mock API', () => {
   it('says who is signed in', async () => {
     const { data } = await getMe({ throwOnError: true });
-    expect(data.dev.login).toBe('maya');
+    expect(data).toMatchObject({ dev: { login: 'maya' } });
   });
 
   it('lists what waits for the caller, by status, or everything', async () => {
