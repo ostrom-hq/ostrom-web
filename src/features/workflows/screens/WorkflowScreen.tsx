@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { getWorkflowOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { Workflow } from '@gen/api/types.gen';
-import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { failureOf } from '@/shared/api/failureOf';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { readSteps, STATUS_TONES, type Step } from '../model';
-import { ready } from '@/shared/api/ready';
+import { useWorkflow } from '../useWorkflows';
 
 export function WorkflowScreen(): ReactElement {
   const { t } = useTranslation();
   const { workflowId } = useParams({ from: '/workflows/$workflowId' });
-  const query = useQuery(ready(getWorkflowOptions({ path: { id: workflowId } })));
+  const { workflow, failure } = useWorkflow(workflowId);
   return (
-    <LoadState data={query.data} failure={failureOf(query.error)} rows={2}>
+    <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (
         <Screen
           top={

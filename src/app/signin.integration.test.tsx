@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { useEmailLinkStore } from '@/features/signin';
@@ -64,6 +64,8 @@ describe('the sign-in page', () => {
     visit('/signin');
     const field = await screen.findByRole('textbox', { name: 'Your e-mail address' });
     await user.type(field, 'maya{Enter}');
+    // A form submitted another way (a script, an assistive tool) still sends nothing for an incomplete address.
+    fireEvent.submit(field);
     expect(sent).toBeUndefined();
     await user.type(field, '@acme.dev');
     await user.click(screen.getByRole('button', { name: 'E-mail me a link' }));

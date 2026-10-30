@@ -96,9 +96,9 @@ export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElemen
   const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const accepted = isAccepted(rule);
-  const headingId = useId();
   return (
-    <article className="o-card o-stack rl-card" aria-labelledby={headingId}>
+    // Named by the statement itself, which the editor replaces on screen while it is open.
+    <article className="o-card o-stack rl-card" aria-label={rule.statement}>
       <div className="o-inline">
         <Badge>{t(`rules.strength.${rule.strength}`)}</Badge>
         {rule.status === 'proposed' ? null : (
@@ -122,9 +122,7 @@ export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElemen
           }}
         />
       ) : (
-        <p id={headingId} className="rl-statement">
-          {rule.statement}
-        </p>
+        <p className="rl-statement">{rule.statement}</p>
       )}
       {rule.why === undefined ? null : (
         <p className="o-row__meta">{t('rules.card.why', { why: rule.why })}</p>

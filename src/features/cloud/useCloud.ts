@@ -43,7 +43,7 @@ export function useCloud(): CloudViewModel {
   return {
     sessions: sessions.data?.items,
     runners: runners.data?.items,
-    failure: failureOf(sessions.error),
+    failure: failureOf(sessions.error ?? runners.error),
     viewer: viewer.login,
     canManage: viewer.canManage,
   };
