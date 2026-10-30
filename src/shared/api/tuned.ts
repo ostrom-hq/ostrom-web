@@ -3,7 +3,8 @@
 /** What a screen adds to a generated query: how long it stays fresh, how often it polls, when it runs. */
 export interface QueryTuning {
   readonly staleTime?: number;
-  readonly refetchInterval?: (query: { readonly state: { readonly error: unknown } }) => number | false;
+  readonly refetchInterval?:
+    number | ((query: { readonly state: { readonly error: unknown } }) => number | false);
   readonly enabled?: boolean;
 }
 
