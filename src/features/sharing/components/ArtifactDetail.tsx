@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
 import type { ArtifactChangeViewModel } from '../useSharing';
+import { isArtifactAccess } from '../model';
 import { useArtifactDetail } from '../useSharing';
 
 export interface ArtifactDetailProps {
@@ -13,18 +14,30 @@ export interface ArtifactDetailProps {
   readonly change: ArtifactChangeViewModel | undefined;
 }
 
-/** Its versions, newest first, and who reads it: the readers are listed only when it is shared with people. */
+/** What the access says about who reads it, above the list of the members it is shared with. */
+const ACCESS_NOTE = {
+  personal: 'sharing.artifacts.readersPersonal',
+  team: 'sharing.artifacts.readersTeam',
+  link: 'sharing.artifacts.readersLink',
+} as const;
+
+/**
+ * Its versions, newest first, and who reads it: what its access opens, then the members it is shared with (by id,
+ * named from the organization's members when they could be read). Its owner adds and removes readers on any access.
+ */
 export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const detail = useArtifactDetail(artifact.id, change !== undefined);
+  const detail = useArtifactDetail(artifact.id);
   const [reader, setReader] = useState('');
   const readerId = useId();
   if (detail.failure !== undefined) return <p className="o-row__meta">{detail.failure.message}</p>;
   if (detail.versions === undefined || detail.readers === undefined)
     return <p className="o-row__meta">{t('sharing.artifacts.loading')}</p>;
   const readers = detail.readers;
-  const candidates = (detail.members ?? []).filter(
-    (member) => member.login !== artifact.owner && !readers.includes(member.login),
+  const members = detail.members;
+  const loginOf = (id: string): string => members?.find((member) => member.id === id)?.login ?? id;
+  const candidates = (members ?? []).filter(
+    (member) => member.login !== artifact.owner && !readers.includes(member.id),
   );
   const busy = change?.pending === artifact.id;
   return (
@@ -51,73 +64,73 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
         </ol>
       )}
       <h4 className="sh-label">{t('sharing.artifacts.readers')}</h4>
-      {artifact.access === 'org' ? (
-        <p className="o-row__meta">{t('sharing.artifacts.readersOrg')}</p>
-      ) : artifact.access === 'personal' ? (
-        <p className="o-row__meta">{t('sharing.artifacts.readersPersonal', { owner: artifact.owner })}</p>
+      {isArtifactAccess(artifact.access) ? (
+        <p className="o-row__meta">{t(ACCESS_NOTE[artifact.access], { owner: artifact.owner })}</p>
+      ) : null}
+      {readers.length === 0 ? (
+        <p className="o-row__meta">{t('sharing.artifacts.readersNone')}</p>
       ) : (
-        <>
-          {readers.length === 0 ? (
-            <p className="o-row__meta">{t('sharing.artifacts.readersNone')}</p>
-          ) : (
-            <ul className="o-rows">
-              {readers.map((login) => (
-                <li key={login} className="o-row">
-                  <span className="o-row__main">
-                    <span className="o-row__title">{login}</span>
-                  </span>
-                  {change === undefined || login === artifact.owner ? null : (
-                    <Button
-                      variant="ghost"
-                      disabled={busy}
-                      aria-label={t('sharing.artifacts.unshareLabel', { login })}
-                      onClick={() => {
-                        change.unshare(artifact.id, login);
-                      }}
-                    >
-                      {t('sharing.artifacts.unshare')}
-                    </Button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-          {change === undefined ? null : detail.membersFailure !== undefined ? (
-            <p className="o-row__meta">{detail.membersFailure.message}</p>
-          ) : candidates.length === 0 ? null : (
-            <form
-              className="o-inline"
-              onSubmit={(event) => {
-                event.preventDefault();
-                change.share(artifact.id, reader, () => {
-                  setReader('');
-                });
-              }}
-            >
-              <label htmlFor={readerId} className="o-field-label">
-                {t('sharing.artifacts.addReader')}
-              </label>
-              <select
-                id={readerId}
-                className="o-input"
-                value={reader}
-                onChange={(event) => {
-                  setReader(event.target.value);
-                }}
-              >
-                <option value="">{t('sharing.artifacts.pickReader')}</option>
-                {candidates.map((member) => (
-                  <option key={member.login} value={member.login}>
-                    {member.name === undefined ? member.login : `${member.name} (${member.login})`}
-                  </option>
-                ))}
-              </select>
-              <Button type="submit" disabled={busy || reader === ''}>
-                {t('sharing.artifacts.share')}
-              </Button>
-            </form>
-          )}
-        </>
+        <ul className="o-rows">
+          {readers.map((id) => {
+            const login = loginOf(id);
+            return (
+              <li key={id} className="o-row">
+                <span className="o-row__main">
+                  <span className="o-row__title">{login}</span>
+                </span>
+                {change === undefined || login === artifact.owner ? null : (
+                  <Button
+                    variant="ghost"
+                    disabled={busy}
+                    aria-label={t('sharing.artifacts.unshareLabel', { login })}
+                    onClick={() => {
+                      change.unshare(artifact.id, id);
+                    }}
+                  >
+                    {t('sharing.artifacts.unshare')}
+                  </Button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {change === undefined ? null : members === undefined && detail.membersFailure !== undefined ? (
+        <p className="o-row__meta">
+          {t('sharing.artifacts.membersFailed', { reason: detail.membersFailure.message })}
+        </p>
+      ) : candidates.length === 0 ? null : (
+        <form
+          className="o-inline"
+          onSubmit={(event) => {
+            event.preventDefault();
+            change.share(artifact.id, reader, () => {
+              setReader('');
+            });
+          }}
+        >
+          <label htmlFor={readerId} className="o-field-label">
+            {t('sharing.artifacts.addReader')}
+          </label>
+          <select
+            id={readerId}
+            className="o-input"
+            value={reader}
+            onChange={(event) => {
+              setReader(event.target.value);
+            }}
+          >
+            <option value="">{t('sharing.artifacts.pickReader')}</option>
+            {candidates.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.name === undefined ? member.login : `${member.name} (${member.login})`}
+              </option>
+            ))}
+          </select>
+          <Button type="submit" disabled={busy || reader === ''}>
+            {t('sharing.artifacts.share')}
+          </Button>
+        </form>
       )}
     </div>
   );

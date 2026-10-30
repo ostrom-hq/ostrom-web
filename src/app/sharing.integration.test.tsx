@@ -2,6 +2,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
@@ -24,7 +25,7 @@ describe('the artifacts', () => {
       'href',
       'https://app.ostrom.run/a/art-7',
     );
-    expect(study).toHaveTextContent('Shared with people');
+    expect(study).toHaveTextContent('Its owner and chosen people');
     expect(study).toHaveTextContent(/by maya · version 3 · updated /);
     expect(within(study).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     const checklist = await findCard('Release checklist');
@@ -32,13 +33,18 @@ describe('the artifacts', () => {
     expect(within(checklist).queryByRole('button', { name: 'Delete' })).toBeNull();
     const draft = await findCard('Draft: pricing page');
     expect(within(draft).queryByRole('link')).toBeNull();
-    expect(draft).toHaveTextContent('Only its owner');
+    expect(draft).toHaveTextContent('Its owner and chosen people');
   });
 
   it('shows an access it has no word for as is', async () => {
+    const user = userEvent.setup();
     db.artifacts = db.artifacts.map((item) => (item.id === 'art-5' ? { ...item, access: 'public' } : item));
     visit('/artifacts');
-    expect(await findCard('Release checklist')).toHaveTextContent('public');
+    const checklist = await findCard('Release checklist');
+    expect(checklist).toHaveTextContent('public');
+    await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
+    expect(await within(checklist).findByText('Nobody else is on the list.')).toBeInTheDocument();
+    expect(within(checklist).queryByText(/reads? it/)).toBeNull();
   });
 
   it('says when no artifact exists', async () => {
@@ -62,7 +68,7 @@ describe('the artifacts', () => {
     expect(within(reader).getByRole('option', { name: 'jo@acme.dev' })).toBeInTheDocument();
     expect(within(reader).queryByRole('option', { name: 'theo' })).toBeNull();
     expect(within(study).getByRole('button', { name: 'Share' })).toBeDisabled();
-    await user.selectOptions(reader, 'samir');
+    await user.selectOptions(reader, 'Samir Haddad (samir)');
     await user.click(within(study).getByRole('button', { name: 'Share' }));
     expect(await within(study).findByRole('button', { name: 'Stop sharing with samir' })).toBeInTheDocument();
     await user.click(within(study).getByRole('button', { name: 'Stop sharing with theo' }));
@@ -80,7 +86,7 @@ describe('the artifacts', () => {
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
     const reader = await within(study).findByRole('combobox', { name: 'Add a reader' });
-    await user.selectOptions(reader, 'lena');
+    await user.selectOptions(reader, 'Lena Ortiz (lena)');
     await user.click(within(study).getByRole('button', { name: 'Share' }));
     expect(within(study).getByRole('button', { name: 'Stop sharing with theo' })).toBeDisabled();
     expect(within(study).getByRole('button', { name: 'Delete' })).toBeDisabled();
@@ -105,8 +111,7 @@ describe('the artifacts', () => {
 
   it('has no form when every member already reads it, and says when nobody does', async () => {
     const user = userEvent.setup();
-    db.artifactMembers['art-7'] = db.members.map((member) => member.login);
-    db.artifacts = db.artifacts.map((item) => (item.id === 'art-2' ? { ...item, access: 'members' } : item));
+    db.artifactMembers['art-7'] = db.members.map((member) => member.id);
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
@@ -114,25 +119,33 @@ describe('the artifacts', () => {
     expect(within(study).queryByRole('combobox')).toBeNull();
     const draft = await findCard('Draft: pricing page');
     await user.click(within(draft).getByRole('button', { name: 'Versions and readers' }));
-    expect(await within(draft).findByText('Nobody reads it yet.')).toBeInTheDocument();
+    expect(await within(draft).findByText('Nobody else is on the list.')).toBeInTheDocument();
     expect(draft).toHaveTextContent('No version yet.');
   });
 
-  it('says who reads an artifact of the whole organization or of its owner alone, and reads only', async () => {
+  it('says what each access opens, above the people it is shared with', async () => {
     const user = userEvent.setup();
+    db.artifacts = db.artifacts.map((item) => (item.id === 'art-2' ? { ...item, access: 'link' } : item));
     visit('/artifacts');
     const checklist = await findCard('Release checklist');
     await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
-    expect(await within(checklist).findByText('Everyone in the organization reads it.')).toBeInTheDocument();
+    expect(
+      await within(checklist).findByText('Everyone in the organization reads it, and the people below.'),
+    ).toBeInTheDocument();
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    expect(
+      await within(study).findByText('maya, the administrators and the people below read it.'),
+    ).toBeInTheDocument();
     const draft = await findCard('Draft: pricing page');
+    expect(draft).toHaveTextContent('Anyone with the link');
     await user.click(within(draft).getByRole('button', { name: 'Versions and readers' }));
-    expect(await within(draft).findByText('Only maya reads it.')).toBeInTheDocument();
+    expect(await within(draft).findByText('Anyone with its link reads it.')).toBeInTheDocument();
   });
 
   it('lists the readers of someone else’s artifact without buttons', async () => {
     const user = userEvent.setup();
-    db.artifacts = db.artifacts.map((item) => (item.id === 'art-5' ? { ...item, access: 'members' } : item));
-    db.artifactMembers['art-5'] = ['theo', 'samir'];
+    db.artifactMembers['art-5'] = [MEMBER_IDS.theo, MEMBER_IDS.samir];
     visit('/artifacts');
     const checklist = await findCard('Release checklist');
     await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
@@ -144,12 +157,15 @@ describe('the artifacts', () => {
   it('opens someone else’s artifact even when the members cannot be read, versions newest first', async () => {
     const user = userEvent.setup();
     db.artifactVersions['art-5'] = [...(db.artifactVersions['art-7'] ?? [])].reverse();
+    db.artifactMembers['art-5'] = [MEMBER_IDS.samir];
     server.use(http.get('*/api/v1/members', refuse('members are private')));
     visit('/artifacts');
     const checklist = await findCard('Release checklist');
     await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
-    const versions = await within(checklist).findAllByRole('listitem');
-    expect(versions).toHaveLength(3);
+    const items = await within(checklist).findAllByRole('listitem');
+    // Without the members, a reader shows as its id.
+    expect(items[3]).toHaveTextContent(MEMBER_IDS.samir);
+    const versions = items.slice(0, 3);
     expect(versions[0]).toHaveTextContent(/^Version 3/);
     expect(versions[2]).toHaveTextContent(/^Version 1/);
     expect(within(checklist).queryByText('members are private')).toBeNull();
@@ -161,7 +177,9 @@ describe('the artifacts', () => {
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
-    expect(await within(study).findByText('members are private')).toBeInTheDocument();
+    expect(
+      await within(study).findByText(/^No reader can be added: .*members are private/),
+    ).toBeInTheDocument();
     expect(within(study).queryByRole('combobox')).toBeNull();
   });
 
@@ -172,10 +190,10 @@ describe('the artifacts', () => {
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
     const reader = await within(study).findByRole('combobox', { name: 'Add a reader' });
-    await user.selectOptions(reader, 'samir');
+    await user.selectOptions(reader, 'Samir Haddad (samir)');
     await user.click(within(study).getByRole('button', { name: 'Share' }));
     expect(await screen.findByText('samir cannot read it')).toBeInTheDocument();
-    expect(reader).toHaveValue('samir');
+    expect(reader).toHaveValue(MEMBER_IDS.samir);
   });
 
   it('says what failed while loading the detail', async () => {

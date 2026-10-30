@@ -14,7 +14,8 @@ const account: SharedAccount = {
 
 describe('sharing model', () => {
   it('knows the accesses and providers it has words for', () => {
-    expect(isArtifactAccess('members')).toBe(true);
+    expect(isArtifactAccess('team')).toBe(true);
+    expect(isArtifactAccess('members')).toBe(false);
     expect(isArtifactAccess('public')).toBe(false);
     expect(isProvider('openai')).toBe(true);
     expect(isProvider('mistral')).toBe(false);

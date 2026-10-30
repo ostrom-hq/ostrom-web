@@ -10,12 +10,35 @@ const organization: Organization = {
   createdAt: '2026-09-01T09:00:00.000Z',
 };
 
+/** Each member's id (`Member.id`): artifacts, relayed servers and imports name a member by it, never by login. */
+export const MEMBER_IDS = {
+  maya: '3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60',
+  lena: '4e7a0b2f-3c5d-4e9f-8a1b-2c3d4e5f6071',
+  samir: '5f8b1c3a-4d6e-4fa0-9b2c-3d4e5f607182',
+  theo: '6a9c2d4b-5e7f-4ab1-8c3d-4e5f60718293',
+  jo: '7bad3e5c-6f80-4bc2-9d4e-5f60718293a4',
+} as const;
+
 const members: Member[] = [
-  { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin', teams: ['billing'] },
-  { login: 'lena', name: 'Lena Ortiz', avatarUrl: '', role: 'owner' },
-  { login: 'samir', name: 'Samir Haddad', avatarUrl: '', role: 'approver', teams: ['billing', 'release'] },
-  { login: 'theo', avatarUrl: '', role: 'member', email: 'theo@acme.dev', teams: ['billing'] },
-  { login: 'jo@acme.dev', avatarUrl: '', role: 'invited', email: 'jo@acme.dev' },
+  { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin', teams: ['billing'] },
+  { id: MEMBER_IDS.lena, login: 'lena', name: 'Lena Ortiz', avatarUrl: '', role: 'owner' },
+  {
+    id: MEMBER_IDS.samir,
+    login: 'samir',
+    name: 'Samir Haddad',
+    avatarUrl: '',
+    role: 'approver',
+    teams: ['billing', 'release'],
+  },
+  {
+    id: MEMBER_IDS.theo,
+    login: 'theo',
+    avatarUrl: '',
+    role: 'member',
+    email: 'theo@acme.dev',
+    teams: ['billing'],
+  },
+  { id: MEMBER_IDS.jo, login: 'jo@acme.dev', avatarUrl: '', role: 'invited', email: 'jo@acme.dev' },
 ];
 
 const teams: Team[] = [

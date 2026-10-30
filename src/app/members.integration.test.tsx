@@ -3,6 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
@@ -17,7 +18,7 @@ function viewerIs(role: 'owner' | 'admin' | 'member'): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role },
         capabilities: [],
       }),
     ),
@@ -89,24 +90,22 @@ describe('the members screen', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('only owners change owners');
   });
 
-  it('invites the addresses typed, says which are not addresses, and who received one', async () => {
+  it('invites the GitHub logins typed, says which are not logins, and who was invited', async () => {
     const user = userEvent.setup();
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
     const send = within(invite).getByRole('button', { name: 'Send 0 invitations' });
     expect(send).toBeDisabled();
-    await user.type(
-      within(invite).getByRole('textbox', { name: 'Email addresses' }),
-      'ana@acme.dev, nope, theo@acme.dev',
-    );
-    expect(within(invite).getByText('Not an email address: nope')).toBeInTheDocument();
+    await user.type(within(invite).getByRole('textbox', { name: 'GitHub logins' }), '@ana, no_pe, theo');
+    expect(within(invite).getByText('Not a GitHub login: no_pe')).toBeInTheDocument();
+    expect(within(invite).queryByRole('option', { name: 'Owner' })).toBeNull();
     await user.selectOptions(within(invite).getByRole('combobox', { name: 'Invite as' }), 'approver');
     fireEvent.change(within(invite).getByRole('combobox', { name: 'Invite as' }), {
       target: { value: 'king' },
     });
     await user.click(within(invite).getByRole('button', { name: 'Send 2 invitations' }));
-    expect(await within(invite).findByRole('alert')).toHaveTextContent('Invitation sent to ana@acme.dev.');
-    expect(await screen.findByText('ana@acme.dev')).toBeInTheDocument();
+    expect(await within(invite).findByRole('alert')).toHaveTextContent('Invitation sent to ana.');
+    expect(await screen.findByText('ana')).toBeInTheDocument();
     expect(within(invite).getByRole('textbox')).toHaveValue('');
   });
 
@@ -114,7 +113,7 @@ describe('the members screen', () => {
     const user = userEvent.setup();
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'theo@acme.dev');
+    await user.type(within(invite).getByRole('textbox'), 'theo');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
     expect(await within(invite).findByRole('alert')).toHaveTextContent('already in the organization');
   });
@@ -128,10 +127,10 @@ describe('the members screen', () => {
     );
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'ana@acme.dev');
+    await user.type(within(invite).getByRole('textbox'), 'ana');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
     expect(await within(invite).findByRole('alert')).toHaveTextContent('mail down');
-    expect(within(invite).getByRole('textbox')).toHaveValue('ana@acme.dev');
+    expect(within(invite).getByRole('textbox')).toHaveValue('ana');
   });
 
   it('holds the invite button while invitations go', async () => {
@@ -139,7 +138,7 @@ describe('the members screen', () => {
     server.use(http.post('*/api/v1/members/invites', async () => delay('infinite')));
     visit('/members');
     const invite = await screen.findByRole('region', { name: 'Invite people' });
-    await user.type(within(invite).getByRole('textbox'), 'ana@acme.dev');
+    await user.type(within(invite).getByRole('textbox'), 'ana');
     await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
     expect(await within(invite).findByRole('button', { name: 'Sending…' })).toBeDisabled();
   });

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Artifact, ArtifactVersion, SharedAccount } from '@gen/api/types.gen';
+import { MEMBER_IDS } from './organization';
 
 const artifacts: Artifact[] = [
   {
     id: 'art-7',
     title: 'Billing API: latency study',
     owner: 'maya',
-    access: 'members',
+    access: 'personal',
     latestVersion: 3,
     url: 'https://app.ostrom.run/a/art-7',
     createdAt: '2026-10-27T09:00:00.000Z',
@@ -16,7 +17,7 @@ const artifacts: Artifact[] = [
     id: 'art-5',
     title: 'Release checklist',
     owner: 'theo',
-    access: 'org',
+    access: 'team',
     latestVersion: 1,
     url: 'https://app.ostrom.run/a/art-5',
     createdAt: '2026-10-21T10:00:00.000Z',
@@ -60,7 +61,8 @@ const versions: Record<string, ArtifactVersion[]> = {
   ],
 };
 
-const members: Record<string, string[]> = { 'art-7': ['maya', 'theo'] };
+/** The members an artifact is shared with, by member id (`Member.id`), as the server lists them. */
+const members: Record<string, string[]> = { 'art-7': [MEMBER_IDS.maya, MEMBER_IDS.theo] };
 
 const accounts: SharedAccount[] = [
   {
