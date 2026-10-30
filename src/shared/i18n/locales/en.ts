@@ -745,7 +745,7 @@ export const en = {
     lead: 'The plan of the organization, what it used this period, and its invoices.',
     failureTag: 'Billing',
     unsafeRedirect: 'Stripe’s page did not come as a secure link, so the console stayed here. Try again.',
-    readOnly: 'Owners and admins change the plan and read the invoices.',
+    readOnly: 'Owners, admins and the billing role change the plan and read the invoices.',
     planName: { free: 'Free', team: 'Team', business: 'Business', enterprise: 'Enterprise' },
     status: {
       none: 'No subscription',

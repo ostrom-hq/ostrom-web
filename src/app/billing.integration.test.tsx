@@ -338,7 +338,9 @@ describe('the billing', () => {
     asMember();
     visit('/billing');
     expect(await region('Plan')).toBeInTheDocument();
-    expect(screen.getByText('Owners and admins change the plan and read the invoices.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Owners, admins and the billing role change the plan and read the invoices.'),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Plans' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Invoices' })).toBeNull();
   });

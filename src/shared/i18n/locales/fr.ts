@@ -757,7 +757,7 @@ export const fr = {
     failureTag: 'Facturation',
     unsafeRedirect:
       'La page de Stripe n’est pas arrivée sous forme de lien sécurisé : la console est restée ici. Réessaie.',
-    readOnly: 'Les propriétaires et les admins changent d’offre et lisent les factures.',
+    readOnly: 'Les propriétaires, les admins et le rôle facturation changent d’offre et lisent les factures.',
     planName: { free: 'Free', team: 'Team', business: 'Business', enterprise: 'Enterprise' },
     status: {
       none: 'Sans abonnement',
