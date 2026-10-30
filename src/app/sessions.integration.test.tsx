@@ -49,9 +49,12 @@ describe('the sessions list', () => {
 
   it('reads a session that carries only what the contract requires', async () => {
     server.use(
-      http.get('*/api/v1/sessions', () =>
+      http.get('*/api/v1/sessions', ({ request }) =>
         HttpResponse.json({
-          items: [{ id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:59:00.000Z' }],
+          items:
+            new URL(request.url).searchParams.get('open') === 'true'
+              ? [{ id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:59:00.000Z' }]
+              : [],
         }),
       ),
     );

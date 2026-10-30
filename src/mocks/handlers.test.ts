@@ -618,7 +618,7 @@ describe('mock MCP servers and secrets', () => {
       1,
     );
     expect((await getMcpUsage({ throwOnError: true })).data).toEqual({
-      byServer: { sentry: 1, notion: 2 },
+      byServer: { sentry: 1, linear: 2 },
       byTool: { create_issue: 1, list_issues: 2 },
     });
   });
