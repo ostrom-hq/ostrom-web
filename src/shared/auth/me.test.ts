@@ -7,6 +7,7 @@ describe('meOf', () => {
     const me: Me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
     expect(meOf(me)).toBe(me);
     expect(meOf(undefined)).toBeUndefined();
+    expect(meOf(null)).toBeUndefined();
   });
 });
 
