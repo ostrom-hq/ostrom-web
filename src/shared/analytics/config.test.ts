@@ -1,4 +1,9 @@
-import { DEFAULT_POSTHOG_HOST, readAnalyticsConfig } from '@/shared/analytics/config';
+import {
+  DEFAULT_POSTHOG_HOST,
+  DEFAULT_PRIVACY_URL,
+  readAnalyticsConfig,
+  readPrivacyUrl,
+} from '@/shared/analytics/config';
 
 describe('readAnalyticsConfig', () => {
   it('is off without a key, so that a self-hosted console asks nothing and sends nothing', () => {
@@ -22,5 +27,15 @@ describe('readAnalyticsConfig', () => {
       key: 'phc_r',
       host: DEFAULT_POSTHOG_HOST,
     });
+  });
+});
+
+describe('readPrivacyUrl', () => {
+  it('is the deployment one, or the hosted service one', () => {
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: 'https://corp.example/privacy' })).toBe(
+      'https://corp.example/privacy',
+    );
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: ' ' })).toBe(DEFAULT_PRIVACY_URL);
+    expect(readPrivacyUrl(undefined)).toBe('https://ostrom.run/privacy');
   });
 });

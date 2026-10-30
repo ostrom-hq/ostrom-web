@@ -13,13 +13,14 @@ function fakeAnalytics(): Analytics & { calls: string[] } {
     pageview: (path) => calls.push(`pageview:${path}`),
     identify: (user) => calls.push(`identify:${user}`),
     forget: () => calls.push('forget'),
+    reset: () => calls.push('reset'),
     flush: () => calls.push('flush'),
   };
 }
 
 describe('ConsentBanner', () => {
   beforeEach(() => {
-    useConsentStore.setState({ status: 'unknown' });
+    useConsentStore.setState({ status: 'unknown', reopened: false });
   });
 
   it('offers Accept and Refuse as equal buttons, with the privacy policy', () => {
@@ -30,10 +31,18 @@ describe('ConsentBanner', () => {
     const accept = screen.getByRole('button', { name: 'Accept' });
     const refuse = screen.getByRole('button', { name: 'Refuse' });
     expect(accept.className).toBe(refuse.className);
-    expect(screen.getByRole('link', { name: 'Privacy policy' })).toHaveAttribute(
-      'href',
-      'https://ostrom.run/privacy',
-    );
+    const link = screen.getByRole('link', { name: 'Privacy policy' });
+    expect(link).toHaveAttribute('href', 'https://ostrom.run/privacy');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(region).not.toHaveFocus();
+  });
+
+  it('takes the focus when reopened from the footer', () => {
+    useConsentStore.setState({ status: 'unknown', reopened: true });
+    render(<ConsentBanner analytics={fakeAnalytics()} configured privacyUrl="/privacy" />);
+
+    expect(screen.getByRole('region', { name: 'Usage statistics' })).toHaveFocus();
   });
 
   it('a yes is recorded and announced, then the banner leaves', async () => {
@@ -70,17 +79,19 @@ describe('ConsentBanner', () => {
 });
 
 describe('PrivacyChoices', () => {
-  it('reopens the banner', async () => {
+  it('withdraws the choice, forgets the browser and reopens the banner', async () => {
     useConsentStore.setState({ status: 'granted' });
-    render(<PrivacyChoices configured />);
+    const analytics = fakeAnalytics();
+    render(<PrivacyChoices analytics={analytics} configured />);
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Privacy choices' }));
 
-    expect(useConsentStore.getState().status).toBe('unknown');
+    expect(useConsentStore.getState()).toMatchObject({ status: 'unknown', reopened: true });
+    expect(analytics.calls).toEqual(['forget']);
   });
 
   it('is hidden when analytics are not configured', () => {
-    render(<PrivacyChoices configured={false} />);
+    render(<PrivacyChoices analytics={fakeAnalytics()} configured={false} />);
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });

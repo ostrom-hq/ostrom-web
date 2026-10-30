@@ -34,10 +34,17 @@ export function readConsent(storage: Pick<SafeStorage, 'getItem'>, now: number):
 
 export interface ConsentState {
   readonly status: ConsentStatus;
+  /** True when the person asked for the banner again: it then takes the focus. */
+  readonly reopened: boolean;
   /** Records the choice; Accept and Refuse are equal choices. */
   readonly decide: (analytics: boolean) => void;
-  /** Shows the banner again (the footer link), so that a yes can be withdrawn as easily as it was given. */
+  /**
+   * Withdraws the stored choice and shows the banner again (the footer link): a yes is withdrawn as easily as it
+   * was given, and stays withdrawn after a reload until the person chooses again.
+   */
   readonly reopen: () => void;
+  /** Reads the stored choice again: a choice made in another tab, a choice that expired while the tab was open. */
+  readonly sync: () => void;
 }
 
 export function createConsentStore(
@@ -46,12 +53,17 @@ export function createConsentStore(
 ): UseBoundStore<StoreApi<ConsentState>> {
   return create<ConsentState>()((set) => ({
     status: readConsent(storage, now()),
+    reopened: false,
     decide: (analytics) => {
       storage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics, at: now() }));
-      set({ status: analytics ? 'granted' : 'denied' });
+      set({ status: analytics ? 'granted' : 'denied', reopened: false });
     },
     reopen: () => {
-      set({ status: 'unknown' });
+      storage.removeItem(CONSENT_STORAGE_KEY);
+      set({ status: 'unknown', reopened: true });
+    },
+    sync: () => {
+      set({ status: readConsent(storage, now()) });
     },
   }));
 }

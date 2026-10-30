@@ -12,16 +12,23 @@ export const ANONYMOUS_ID_KEY = 'ostrom.analytics.id';
 export const FLUSH_DELAY_MS = 2_000;
 
 const MAX_BATCH = 50;
+const VERSION_BYTE = 6;
+const VARIANT_BYTE = 8;
 
 export interface Analytics {
   /** Records an event if analytics are configured and accepted; otherwise does nothing. */
   readonly capture: (event: string, properties?: Readonly<Record<string, PropertyValue>>) => void;
   /** Records a page view of [path], without its query string or fragment (a magic link carries a token there). */
   readonly pageview: (path: string) => void;
-  /** Links the next events to the signed-in user (an opaque id, never an e-mail) and their organization. */
+  /**
+   * Links the next events to the signed-in user (an opaque id, never an e-mail) and their organization. Called before
+   * a yes, the link is sent with the first event after it.
+   */
   readonly identify: (userId: string, organizationId?: string) => void;
-  /** Drops what is queued and the browser id: on a refusal, on sign-out. */
+  /** On a refusal: drops what is queued and the browser id. The signed-in user is kept for a later yes. */
   readonly forget: () => void;
+  /** On sign-out: forgets the user and starts a new browser id, so the next person is never merged with this one. */
+  readonly reset: () => void;
   /** Sends what is queued now. */
   readonly flush: () => void;
 }
@@ -57,26 +64,32 @@ export function pathOnly(path: string): string {
 export function createAnalytics(options: AnalyticsOptions): Analytics {
   const { config, storage } = options;
   let queue: QueuedEvent[] = [];
+  // Each flush starts a new generation: a timer of an earlier one finds nothing to do.
+  let generation = 0;
   let scheduled = false;
   let userId: string | undefined;
   let organizationId: string | undefined;
+  // The user whose $identify left, so that it leaves once, after the yes.
+  let linked: string | undefined;
+  // Kept in memory too: with storage blocked, the id stays the same for the life of the page.
+  let anonId: string | undefined;
 
   const enabled = (): boolean => config !== null && options.consent() === 'granted';
 
   const anonymousId = (): string => {
-    const existing = storage.getItem(ANONYMOUS_ID_KEY);
-    if (existing !== null) return existing;
-    const id = options.newId();
-    storage.setItem(ANONYMOUS_ID_KEY, id);
-    return id;
+    anonId ??= storage.getItem(ANONYMOUS_ID_KEY) ?? options.newId();
+    storage.setItem(ANONYMOUS_ID_KEY, anonId);
+    return anonId;
   };
 
   const flush = (): void => {
+    generation++;
     scheduled = false;
-    if (config === null || queue.length === 0) return;
-    const body = JSON.stringify({ api_key: config.key, batch: queue });
+    const batch = queue;
     queue = [];
-    options.send(`${config.host}/batch/`, body);
+    // A withdrawal (the banner reopened, a refusal in another tab) also drops what was waiting.
+    if (config === null || batch.length === 0 || !enabled()) return;
+    options.send(`${config.host}/batch/`, JSON.stringify({ api_key: config.key, batch }));
   };
 
   const enqueue = (
@@ -95,36 +108,66 @@ export function createAnalytics(options: AnalyticsOptions): Analytics {
       flush();
     } else if (!scheduled) {
       scheduled = true;
-      options.schedule(flush, FLUSH_DELAY_MS);
+      const mine = generation;
+      options.schedule(() => {
+        if (mine === generation) flush();
+      }, FLUSH_DELAY_MS);
     }
+  };
+
+  /** The distinct id of the next event; sends the pending $identify first. Only called once enabled. */
+  const distinctId = (): string => {
+    if (userId === undefined) return anonymousId();
+    if (linked !== userId) {
+      linked = userId;
+      enqueue('$identify', userId, { $anon_distinct_id: anonymousId() });
+    }
+    return userId;
+  };
+
+  const forgetBrowser = (): void => {
+    queue = [];
+    anonId = undefined;
+    linked = undefined;
+    storage.removeItem(ANONYMOUS_ID_KEY);
   };
 
   return {
     capture: (event, properties = {}) => {
-      if (enabled()) enqueue(event, userId ?? anonymousId(), properties);
+      if (enabled()) enqueue(event, distinctId(), properties);
     },
     pageview: (path) => {
       if (!enabled()) return;
       const pathname = pathOnly(path);
-      enqueue('$pageview', userId ?? anonymousId(), {
-        $pathname: pathname,
-        $current_url: options.origin + pathname,
-      });
+      enqueue('$pageview', distinctId(), { $pathname: pathname, $current_url: options.origin + pathname });
     },
     identify: (user, organization) => {
-      const previous = userId;
       userId = user;
       organizationId = organization;
-      if (enabled() && previous !== user) enqueue('$identify', user, { $anon_distinct_id: anonymousId() });
+      if (enabled()) distinctId();
     },
-    forget: () => {
-      queue = [];
+    forget: forgetBrowser,
+    reset: () => {
+      flush();
       userId = undefined;
       organizationId = undefined;
-      storage.removeItem(ANONYMOUS_ID_KEY);
+      forgetBrowser();
     },
     flush,
   };
+}
+
+/** A random UUID v4 from `crypto.getRandomValues`, which, unlike `randomUUID`, also exists over plain http. */
+export function randomId(random: (bytes: Uint8Array) => Uint8Array): string {
+  const hex = Array.from(random(new Uint8Array(16)), (byte, index) => {
+    // The version (4) and variant (10xx) bits of RFC 9562.
+    if (index === VERSION_BYTE) return (byte & 0x0f) | 0x40;
+    if (index === VARIANT_BYTE) return (byte & 0x3f) | 0x80;
+    return byte;
+  })
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
 /** Sends a batch without a preflight (`text/plain`) and without holding the page (`keepalive`); failures are dropped. */

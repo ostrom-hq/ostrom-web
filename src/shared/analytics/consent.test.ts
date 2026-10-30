@@ -63,10 +63,26 @@ describe('createConsentStore', () => {
     expect(storage.getItem(CONSENT_STORAGE_KEY)).toBe(JSON.stringify({ analytics: true, at: NOW }));
 
     store.getState().reopen();
-    expect(store.getState().status).toBe('unknown');
+    expect(store.getState()).toMatchObject({ status: 'unknown', reopened: true });
+    expect(storage.getItem(CONSENT_STORAGE_KEY)).toBeNull();
+    expect(createConsentStore(storage, () => NOW).getState().status).toBe('unknown');
 
     store.getState().decide(false);
+    expect(store.getState().reopened).toBe(false);
     expect(store.getState().status).toBe('denied');
     expect(createConsentStore(storage, () => NOW).getState().status).toBe('denied');
+  });
+
+  it('sync reads a choice made in another tab, and one that expired', () => {
+    const storage = memoryStorage();
+    let now = NOW;
+    const store = createConsentStore(storage, () => now);
+    storage.setItem(CONSENT_STORAGE_KEY, JSON.stringify({ analytics: true, at: NOW }));
+    store.getState().sync();
+    expect(store.getState().status).toBe('granted');
+
+    now = NOW + CONSENT_MAX_AGE_MS + 1;
+    store.getState().sync();
+    expect(store.getState().status).toBe('unknown');
   });
 });

@@ -11,7 +11,12 @@ export const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 export interface RuntimeConfig {
   readonly OSTROM_POSTHOG_API_KEY?: string;
   readonly OSTROM_POSTHOG_HOST?: string;
+  /** The privacy policy the consent banner links to; a deployment with its own PostHog sets its own. */
+  readonly OSTROM_PRIVACY_URL?: string;
 }
+
+/** The privacy policy of the hosted service. */
+export const DEFAULT_PRIVACY_URL = 'https://ostrom.run/privacy';
 
 /** The build-time fallback, for `pnpm dev` and previews. */
 export interface BuildConfig {
@@ -44,4 +49,9 @@ export function readAnalyticsConfig(
   const host =
     nonEmpty(runtime?.OSTROM_POSTHOG_HOST) ?? nonEmpty(build.VITE_POSTHOG_HOST) ?? DEFAULT_POSTHOG_HOST;
   return { key, host: host.replace(/\/+$/, '') };
+}
+
+/** The privacy policy the banner links to: the deployment's own, or the hosted service's. */
+export function readPrivacyUrl(runtime: RuntimeConfig | undefined): string {
+  return nonEmpty(runtime?.OSTROM_PRIVACY_URL) ?? DEFAULT_PRIVACY_URL;
 }

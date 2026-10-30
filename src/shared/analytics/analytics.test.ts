@@ -3,6 +3,7 @@ import {
   createAnalytics,
   FLUSH_DELAY_MS,
   pathOnly,
+  randomId,
   sendWithFetch,
 } from '@/shared/analytics/analytics';
 import type { ConsentStatus } from '@/shared/analytics/consent';
@@ -16,13 +17,19 @@ interface Sent {
   };
 }
 
-function setup(consent: ConsentStatus = 'granted', configured = true) {
-  const map = new Map<string, string>();
+function setup(
+  consent: ConsentStatus = 'granted',
+  configured = true,
+  stored: Record<string, string> = {},
+  blocked = false,
+) {
+  const map = new Map<string, string>(Object.entries(stored));
   const storage = createSafeStorage(
     () =>
       ({
         getItem: (key: string) => map.get(key) ?? null,
         setItem: (key: string, value: string) => {
+          if (blocked) throw new DOMException('quota', 'QuotaExceededError');
           map.set(key, value);
         },
         removeItem: (key: string) => {
@@ -123,7 +130,7 @@ describe('createAnalytics', () => {
     expect(tasks).toHaveLength(1);
   });
 
-  it('forget drops the queue, the user and the browser id', () => {
+  it('forget drops the queue and the browser id, and links the user again to the next one', () => {
     const { analytics, sent, map, runScheduled } = setup();
     analytics.identify('user-1', 'org-1');
     analytics.forget();
@@ -133,8 +140,80 @@ describe('createAnalytics', () => {
 
     analytics.capture('after');
     analytics.flush();
-    expect(sent[0]?.body.batch[0]?.distinct_id).toBe('anon-2');
-    expect(sent[0]?.body.batch[0]?.properties['$groups']).toBeUndefined();
+    const batch = sent[0]?.body.batch ?? [];
+    expect(batch.map((it) => it.event)).toEqual(['$identify', 'after']);
+    expect(batch[0]?.properties['$anon_distinct_id']).toBe('anon-2');
+    expect(batch[1]?.distinct_id).toBe('user-1');
+  });
+
+  it('a user signed in before the yes is linked with the first event after it', () => {
+    const { analytics, sent, setConsent } = setup('unknown');
+    analytics.identify('user-1');
+    setConsent('granted');
+    analytics.pageview('/');
+    analytics.flush();
+
+    const batch = sent[0]?.body.batch ?? [];
+    expect(batch.map((it) => [it.event, it.distinct_id])).toEqual([
+      ['$identify', 'user-1'],
+      ['$pageview', 'user-1'],
+    ]);
+  });
+
+  it('reset on sign-out sends what was waiting, then starts over with a new browser id', () => {
+    const { analytics, sent, map } = setup();
+    analytics.identify('user-1', 'org-1');
+    analytics.capture('signed_out');
+    analytics.reset();
+
+    expect(sent[0]?.body.batch.map((it) => it.event)).toEqual(['$identify', 'signed_out']);
+    expect(map.has(ANONYMOUS_ID_KEY)).toBe(false);
+
+    analytics.capture('next_person');
+    analytics.flush();
+    const next = sent[1]?.body.batch[0];
+    expect(next?.distinct_id).toBe('anon-2');
+    expect(next?.properties['$groups']).toBeUndefined();
+  });
+
+  it('a withdrawal drops what was waiting', () => {
+    const { analytics, sent, setConsent, runScheduled } = setup();
+    analytics.capture('x');
+    setConsent('unknown');
+    runScheduled();
+    analytics.flush();
+
+    expect(sent).toEqual([]);
+  });
+
+  it('a timer of an earlier flush sends nothing; the next one sends the new events', () => {
+    const { analytics, sent, tasks } = setup();
+    analytics.capture('first');
+    analytics.flush();
+    analytics.capture('second');
+    const [stale, current] = tasks.splice(0);
+
+    stale?.task();
+    expect(sent).toHaveLength(1);
+    current?.task();
+    expect(sent.map((it) => it.body.batch.map((event) => event.event))).toEqual([['first'], ['second']]);
+  });
+
+  it('reuses the stored browser id', () => {
+    const { analytics, sent } = setup('granted', true, { [ANONYMOUS_ID_KEY]: 'stored-id' });
+    analytics.capture('x');
+    analytics.flush();
+
+    expect(sent[0]?.body.batch[0]?.distinct_id).toBe('stored-id');
+  });
+
+  it('keeps one browser id for the page when storage is blocked', () => {
+    const { analytics, sent } = setup('granted', true, {}, true);
+    analytics.capture('a');
+    analytics.capture('b');
+    analytics.flush();
+
+    expect(sent[0]?.body.batch.map((it) => it.distinct_id)).toEqual(['anon-1', 'anon-1']);
   });
 
   it('stops at once when consent is withdrawn', () => {
@@ -153,6 +232,13 @@ describe('pathOnly', () => {
     expect(pathOnly('/a/b?c=d')).toBe('/a/b');
     expect(pathOnly('?only=query')).toBe('/');
     expect(pathOnly('/x#y')).toBe('/x');
+  });
+});
+
+describe('randomId', () => {
+  it('is a UUID v4 built from random bytes', () => {
+    expect(randomId((bytes) => bytes.fill(0xff))).toBe('ffffffff-ffff-4fff-bfff-ffffffffffff');
+    expect(randomId((bytes) => bytes.fill(0))).toBe('00000000-0000-4000-8000-000000000000');
   });
 });
 

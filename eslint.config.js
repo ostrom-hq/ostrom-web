@@ -18,6 +18,7 @@ export default defineConfig(
       'test-results',
       'src/shared/api/generated',
       'public/mockServiceWorker.js',
+      'public/config.js',
     ],
   },
   {

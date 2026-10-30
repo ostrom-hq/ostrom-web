@@ -45,7 +45,7 @@ export function AppShell(): ReactElement {
         <Outlet />
       </main>
       <footer className="o-footer">
-        <PrivacyChoices configured={analyticsConfig !== null} />
+        <PrivacyChoices analytics={analytics} configured={analyticsConfig !== null} />
       </footer>
       <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />
     </div>
