@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -110,6 +110,22 @@ describe('the rules', () => {
     await user.click(within(tests).getByRole('button', { name: 'Edit' }));
     await user.click(within(tests).getByRole('button', { name: 'Cancel' }));
     expect(within(tests).queryByRole('textbox')).toBeNull();
+  });
+
+  it('sends only the text when the strength is unchanged, and ignores a strength it does not know', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    fireEvent.change(within(tests).getByRole('combobox', { name: 'Strength' }), {
+      target: { value: 'mandatory' },
+    });
+    const text = within(tests).getByRole('textbox', { name: 'Rule' });
+    await user.clear(text);
+    await user.type(text, 'Run the whole test suite before pushing.');
+    await user.click(within(tests).getByRole('button', { name: 'Save and accept' }));
+    await user.click(await screen.findByRole('button', { name: 'Accepted 2' }));
+    expect(card(/Run the whole test suite/)).toHaveTextContent('Accepted with a fix');
   });
 
   it('holds a rule while it saves', async () => {

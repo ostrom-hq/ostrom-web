@@ -186,6 +186,10 @@ describe('the budgets', () => {
     const form = await screen.findByRole('region', { name: 'Set a budget' });
     const save = within(form).getByRole('button', { name: 'Save the budget' });
     expect(save).toBeDisabled();
+    const budgets = db.budgets.length;
+    const element = save.closest('form');
+    if (element !== null) fireEvent.submit(element);
+    expect(db.budgets).toHaveLength(budgets);
     const scope = within(form).getByRole('combobox', { name: 'For' });
     await user.selectOptions(scope, 'member');
     fireEvent.change(scope, { target: { value: 'team' } });

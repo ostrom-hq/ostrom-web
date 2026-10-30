@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { Budget } from '@gen/api/types.gen';
 import { budgetLevel, draftBudget, isBudgetScope, shares, sortBudgets } from './model';
 
 describe('budgetLevel', () => {
@@ -15,8 +16,8 @@ describe('budgetLevel', () => {
 describe('shares', () => {
   it('scales each line on the largest, and an all-zero list to zero', () => {
     const line = (usd: number) => ({ key: String(usd), label: '', usd, sessions: 1 });
-    expect(shares([line(50), line(100), line(25)])).toEqual([0.5, 1, 0.25]);
-    expect(shares([line(0)])).toEqual([0]);
+    expect(shares([line(50), line(100), line(25)]).map((scaled) => scaled.share)).toEqual([0.5, 1, 0.25]);
+    expect(shares([line(0)])).toEqual([{ line: line(0), share: 0 }]);
     expect(shares([])).toEqual([]);
   });
 });
@@ -40,14 +41,23 @@ describe('sortBudgets', () => {
       { scope: 'member', subject: 'theo', hardStop: false },
       { scope: 'member', subject: 'ana', hardStop: false },
       { scope: 'org', hardStop: false },
+      { scope: 'member', hardStop: false },
     ]);
     expect(sorted.map((budget) => `${budget.scope}:${budget.subject ?? ''}`)).toEqual([
       'org:',
+      'member:',
       'member:ana',
       'member:theo',
       'workflow:wf',
       'team:t',
     ]);
+  });
+
+  it('puts a budget without a subject before named ones of its scope, whichever comes first', () => {
+    const bare: Budget = { scope: 'member', hardStop: false };
+    const named: Budget = { scope: 'member', subject: 'ana', hardStop: false };
+    expect(sortBudgets([bare, named])).toEqual([bare, named]);
+    expect(sortBudgets([named, bare])).toEqual([bare, named]);
   });
 });
 
