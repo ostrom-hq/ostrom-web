@@ -32,6 +32,8 @@ const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', comp
  * (and the history) at once. `/yes?signout` forgets it.
  */
 export const yesSearchSchema = z.object({
+  /** A token in the query string is never used (servers log it), only wiped from the address. */
+  signin: z.unknown().optional(),
   signout: z
     .unknown()
     .transform(() => true as const)
@@ -51,7 +53,7 @@ const yesRoute = createRoute({
     const signin = signInFromHash(location.hash);
     if (search.signout === true) useAuthStore.getState().signOut();
     else if (signin !== undefined) useAuthStore.getState().offer(signin);
-    else return;
+    else if (search.signin === undefined) return;
     throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
   },
   component: YesQueueScreen,
