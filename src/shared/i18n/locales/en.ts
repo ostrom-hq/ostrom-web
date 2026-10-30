@@ -23,6 +23,7 @@ export const en = {
       automations: 'Automations',
       artifacts: 'Artifacts',
       accounts: 'Shared subscriptions',
+      signin: 'Sign in',
       workflows: 'Workflows',
     },
     theme: {
@@ -609,6 +610,28 @@ export const en = {
       invalid_payload: 'Payload refused',
       skipped_overlap: 'Skipped: still running',
       skipped_budget: 'Skipped: over budget',
+    },
+  },
+  signin: {
+    title: 'Sign in to Ostrom',
+    lead: 'With GitHub, or with a link sent to your e-mail. Nothing to remember.',
+    github: { label: 'GitHub', go: 'Continue with GitHub' },
+    email: {
+      label: 'E-mail',
+      field: 'Your e-mail address',
+      placeholder: 'maya@acme.dev',
+      send: 'E-mail me a link',
+      sending: 'Sending…',
+      sentTag: 'Sent',
+      sent: 'If {{email}} may sign in, a link is on its way. Open it on this device; it works once.',
+      failedTag: 'Not sent',
+    },
+    link: {
+      title: 'Signing in',
+      verifying: 'Signing you in…',
+      failedTag: 'Not signed in',
+      missing: 'This link was already used or is incomplete.',
+      again: 'Ask for a new link',
     },
   },
   sharing: {

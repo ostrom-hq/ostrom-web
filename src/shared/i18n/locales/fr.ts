@@ -24,6 +24,7 @@ export const fr = {
       automations: 'Automatisations',
       artifacts: 'Artefacts',
       accounts: 'Abonnements partagés',
+      signin: 'Se connecter',
       workflows: 'Workflows',
     },
     theme: {
@@ -618,6 +619,28 @@ export const fr = {
       invalid_payload: 'Contenu refusé',
       skipped_overlap: 'Sautée : déjà en cours',
       skipped_budget: 'Sautée : budget dépassé',
+    },
+  },
+  signin: {
+    title: 'Se connecter à Ostrom',
+    lead: 'Avec GitHub, ou avec un lien envoyé par e-mail. Rien à retenir.',
+    github: { label: 'GitHub', go: 'Continuer avec GitHub' },
+    email: {
+      label: 'E-mail',
+      field: 'Ton adresse e-mail',
+      placeholder: 'maya@acme.dev',
+      send: 'M’envoyer un lien',
+      sending: 'Envoi…',
+      sentTag: 'Envoyé',
+      sent: 'Si {{email}} peut se connecter, un lien arrive. Ouvre-le sur cet appareil ; il ne sert qu’une fois.',
+      failedTag: 'Pas envoyé',
+    },
+    link: {
+      title: 'Connexion',
+      verifying: 'Connexion en cours…',
+      failedTag: 'Pas connecté',
+      missing: 'Ce lien a déjà servi ou il est incomplet.',
+      again: 'Demander un nouveau lien',
     },
   },
   sharing: {

@@ -49,6 +49,7 @@ export function AppShell(): ReactElement {
           <Link to="/automations">{t('app.nav.automations')}</Link>
           <Link to="/artifacts">{t('app.nav.artifacts')}</Link>
           <Link to="/accounts">{t('app.nav.accounts')}</Link>
+          <Link to="/signin">{t('app.nav.signin')}</Link>
         </nav>
         <div className="o-topbar__end">
           <ThemeToggle />

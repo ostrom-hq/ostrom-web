@@ -40,6 +40,7 @@ import {
   handleListSecrets,
   handleListSharedAccounts,
   handleRemoveSharedAccount,
+  handleRequestSignInEmail,
   handleListSessions,
   handleListTeams,
   handleListWorkflows,
@@ -55,6 +56,7 @@ import {
   handleTestAutomation,
   handleUnshareArtifact,
   handleUpdateSharedAccount,
+  handleVerifySignInEmail,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
@@ -92,10 +94,12 @@ import {
   zBulkUpdateRulesBody,
   zMcpServer,
   zMemberRole,
+  zRequestSignInEmailBody,
   zSecretWrite,
   zTestAutomationBody,
   zUpdateSharedAccountBody,
   zUpdateRuleBody,
+  zVerifySignInEmailBody,
 } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
 import { z } from 'zod';
@@ -349,6 +353,9 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
   return open;
 }
 
+/** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
+export const DEMO_EMAIL_TOKEN = 'ml_demo';
+
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
@@ -356,6 +363,21 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   return [
     handleGetMe({ body: me }),
+    // The e-mail sign-in answers the same whether the address has an account or not.
+    handleRequestSignInEmail(async ({ request }) => {
+      const body = zRequestSignInEmailBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'an e-mail address is needed');
+      return new HttpResponse(null, { status: 202 });
+    }),
+    handleVerifySignInEmail(async ({ request }) => {
+      const body = zVerifySignInEmailBody.safeParse(await readJson(request));
+      if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
+        return refusal(401, 'invalid_link', 'This link was already used or has expired.');
+      return HttpResponse.json(
+        { redirect: '/yes', csrfToken: 'csrf-demo' },
+        { headers: { 'Set-Cookie': 'ostrom_csrf=csrf-demo; Path=/; SameSite=Lax' } },
+      );
+    }),
     handleListApprovals(({ request }) => {
       const query = new URL(request.url).searchParams;
       const statuses = query.getAll('status');

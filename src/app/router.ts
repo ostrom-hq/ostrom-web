@@ -17,6 +17,7 @@ import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { RulesScreen } from '@/features/rules';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
 import { AccountsScreen, ArtifactsScreen } from '@/features/sharing';
+import { EmailLinkScreen, fragmentValue, SignInScreen, useEmailLinkStore } from '@/features/signin';
 import { SpendScreen } from '@/features/spend';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
@@ -136,8 +137,35 @@ const receiptRoute = createRoute({
   component: ReceiptScreen,
 });
 
+export const signInSearchSchema = z.object({ redirect: z.string().optional() });
+
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/signin',
+  validateSearch: signInSearchSchema,
+  component: SignInScreen,
+});
+
+/**
+ * `/auth/email#token=…` is the link the sign-in e-mail carries. As for the approver link, the token is taken from
+ * the fragment, kept in memory and wiped from the address bar before the page renders; the screen then spends it.
+ */
+const emailLinkRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth/email',
+  beforeLoad: ({ location }) => {
+    const token = fragmentValue(location.hash, 'token');
+    if (token === undefined) return;
+    useEmailLinkStore.getState().hold(token);
+    throw redirect({ to: '/auth/email', hash: '', replace: true });
+  },
+  component: EmailLinkScreen,
+});
+
 export const routeTree = rootRoute.addChildren([
   homeRoute,
+  signInRoute,
+  emailLinkRoute,
   yesRoute,
   approvalRoute,
   sessionsRoute,
