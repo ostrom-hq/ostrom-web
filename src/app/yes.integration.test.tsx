@@ -27,7 +27,7 @@ afterAll(() => {
   server.close();
 });
 
-function open(path: string): AppRouter {
+function visit(path: string): AppRouter {
   const router = createAppRouter(createMemoryHistory({ initialEntries: [path] }));
   render(<App router={router} />);
   return router;
@@ -87,7 +87,7 @@ const rich: Ask = {
 
 describe('the queue', () => {
   it('lists what waits, who approves, and what was decided', async () => {
-    open('/yes');
+    visit('/yes');
     expect(await screen.findByRole('heading', { level: 1, name: 'Requests' })).toBeInTheDocument();
     expect(await screen.findByText('Approving as maya · approver account')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '2 waiting for you' })).toBeInTheDocument();
@@ -109,7 +109,7 @@ describe('the queue', () => {
   });
 
   it('marks a request that arrives while the page is open', async () => {
-    open('/yes');
+    visit('/yes');
     await screen.findByRole('heading', { name: '2 waiting for you' });
     db.asks.push(structuredClone(bare));
     const card = await screen.findByRole('link', { name: /Run a script/ }, SLOW);
@@ -126,7 +126,7 @@ describe('the queue', () => {
         }),
       ),
     );
-    open('/yes');
+    visit('/yes');
     expect(await screen.findByText('Approving as ops')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Run a script/ })).toHaveTextContent('someone via an agent');
     expect(screen.getByRole('link', { name: /Read the logs/ })).not.toHaveTextContent('Scripts');
@@ -137,20 +137,20 @@ describe('the queue', () => {
     server.use(
       http.get('*/api/yes/queue', () => HttpResponse.json({ operator: 'ops', pending: [], recent: [] })),
     );
-    open('/yes');
+    visit('/yes');
     expect(await screen.findByText('Nothing waits for you')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Decided' })).toBeNull();
   });
 
   it('shows the shape of the list while it loads', async () => {
     server.use(http.get('*/api/yes/queue', () => new Promise<never>(() => undefined)));
-    open('/yes');
+    visit('/yes');
     expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 
   it('says the server does not answer', async () => {
     server.use(http.get('*/api/yes/queue', () => HttpResponse.error()));
-    open('/yes');
+    visit('/yes');
     expect(await screen.findByText(/Ostrom does not answer/, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -158,7 +158,7 @@ describe('the queue', () => {
 
 describe('signing in from a link', () => {
   it('keeps the token and drops it from the address', async () => {
-    const router = open('/yes?signin=opk_test_12345678');
+    const router = visit('/yes?signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
     expect(useAuthStore.getState().token).toBe('opk_test_12345678');
     expect(router.state.location.searchStr).toBe('');
@@ -166,7 +166,7 @@ describe('signing in from a link', () => {
 
   it('forgets the token on signout', async () => {
     useAuthStore.getState().signIn('opk_test_12345678');
-    const router = open('/yes?signout');
+    const router = visit('/yes?signout');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
     expect(useAuthStore.getState().token).toBeUndefined();
     expect(router.state.location.searchStr).toBe('');
@@ -176,7 +176,7 @@ describe('signing in from a link', () => {
 describe('a request', () => {
   it('shows the proof before the buttons, then approves with the action as the verb', async () => {
     const user = userEvent.setup();
-    open('/yes/ask-merge-412');
+    visit('/yes/ask-merge-412');
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Merge a pull request' }),
     ).toBeInTheDocument();
@@ -215,7 +215,7 @@ describe('a request', () => {
 
   it('refuses the author while another approver exists, and declines with what the agent should do', async () => {
     const user = userEvent.setup();
-    open('/yes/ask-deploy-88');
+    visit('/yes/ask-deploy-88');
     expect(
       await screen.findByText('You asked for this action: samir has to approve it.'),
     ).toBeInTheDocument();
@@ -241,7 +241,7 @@ describe('a request', () => {
 
   it('lets the person back out of a decline', async () => {
     const user = userEvent.setup();
-    open('/yes/ask-merge-412');
+    visit('/yes/ask-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Decline & tell the agent…' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(screen.getByRole('button', { name: 'Approve merge' })).toBeEnabled();
@@ -252,7 +252,7 @@ describe('a request', () => {
     const deploy = ask('ask-deploy-88');
     deploy.gate = { label: 'Production deploy', approvers: ['maya'] };
     deploy.you = { login: 'maya', self: true, canApprove: true, selfApproval: true };
-    open('/yes/ask-deploy-88');
+    visit('/yes/ask-deploy-88');
     expect(await screen.findByText(/the receipt will say you approved your own request/)).toBeInTheDocument();
   });
 
@@ -261,7 +261,7 @@ describe('a request', () => {
     server.use(
       http.post('*/api/yes/:id/decide', () => HttpResponse.json({ error: 'down' }, { status: 500 })),
     );
-    open('/yes/ask-merge-412');
+    visit('/yes/ask-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Error');
   });
@@ -269,7 +269,7 @@ describe('a request', () => {
   it('reads a bare request without a signer', async () => {
     server.use(http.get('*/api/yes/queue', () => new Promise<never>(() => undefined)));
     db.asks.push(structuredClone(bare));
-    open('/yes/ask-bare');
+    visit('/yes/ask-bare');
     expect(await screen.findByRole('heading', { level: 1, name: 'Run a script' })).toBeInTheDocument();
     expect(screen.getByText(/through an agent/)).toBeInTheDocument();
     expect(screen.getByText('Scripts are reviewed.')).toBeInTheDocument();
@@ -284,7 +284,7 @@ describe('a request', () => {
 
   it('warns about another repository, caps the rules and colours the diff', async () => {
     db.asks.push(structuredClone(rich));
-    open('/yes/ask-rich');
+    visit('/yes/ask-rich');
     expect(
       await screen.findByText(/opened for acme\/api, but the command runs in acme\/web/),
     ).toBeInTheDocument();
@@ -299,7 +299,7 @@ describe('a request', () => {
   it('holds the approval until a long diff has been read whole', async () => {
     const user = userEvent.setup();
     db.asks.push({ ...structuredClone(rich), id: 'ask-long', diff: longDiff });
-    open('/yes/ask-long');
+    visit('/yes/ask-long');
     const approve = await screen.findByRole('button', { name: 'Approve push' });
     expect(approve).toBeDisabled();
     expect(screen.getByText('Read the whole diff before approving.')).toBeInTheDocument();
@@ -312,7 +312,7 @@ describe('a request', () => {
   });
 
   it('shows a decided request with its receipt instead of the buttons', async () => {
-    open('/yes/ask-migration-7');
+    visit('/yes/ask-migration-7');
     const receipt = await screen.findByRole('region', { name: 'Receipt' });
     expect(within(receipt).getByRole('heading')).toHaveTextContent(/^maya approved: Database migration · /);
     expect(within(receipt).getByText('ed25519 · 4f2a9c1b')).toBeInTheDocument();
@@ -323,14 +323,14 @@ describe('a request', () => {
   });
 
   it('says when the request cannot be loaded', async () => {
-    open('/yes/missing');
+    visit('/yes/missing');
     expect(await screen.findByText(/HTTP 404|not found/i, undefined, SLOW)).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows the shape of the request while it loads', async () => {
     server.use(http.get('*/api/yes/:id', () => new Promise<never>(() => undefined)));
-    open('/yes/ask-merge-412');
+    visit('/yes/ask-merge-412');
     expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });
@@ -354,7 +354,7 @@ describe('a receipt', () => {
 
   it('reads an invalid receipt that names nobody', async () => {
     db.asks.push(structuredClone(decided));
-    open('/yes/ask-done');
+    visit('/yes/ask-done');
     const receipt = await screen.findByRole('region', { name: 'Receipt' });
     expect(within(receipt).getByText('Signature does NOT verify')).toBeInTheDocument();
     expect(within(receipt).getByRole('heading')).toHaveTextContent(/^someone declined: Run a script/);
@@ -370,13 +370,13 @@ describe('a receipt', () => {
       decidedBy: 'samir',
       decidedAt: '2026-10-30T08:01:00.000Z',
     });
-    open('/yes/ask-by');
+    visit('/yes/ask-by');
     expect(await screen.findByText(/^samir declined/)).toBeInTheDocument();
   });
 
   it('shows a receipt being signed', async () => {
     db.asks.push({ ...withoutReceipt(decided), id: 'ask-unsigned', status: 'expired' });
-    open('/yes/ask-unsigned');
+    visit('/yes/ask-unsigned');
     expect(await screen.findByText('Signing the receipt…')).toBeInTheDocument();
     expect(screen.getByText('Expired')).toBeInTheDocument();
     await waitFor(() => {
