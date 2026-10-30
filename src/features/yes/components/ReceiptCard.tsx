@@ -40,7 +40,8 @@ export function ReceiptCard({ ask }: ReceiptCardProps): ReactElement {
       </h2>
       {receipt.selfApproved === true ? (
         <p className="ys-small">
-          <Badge tone="warning">{t('yes.badge.selfApproved')}</Badge> {t('yes.receipt.selfApproved', { login: by })}
+          <Badge tone="warning">{t('yes.badge.selfApproved')}</Badge>{' '}
+          {t('yes.receipt.selfApproved', { login: by })}
         </p>
       ) : null}
       <dl className="ys-kv">
@@ -55,7 +56,11 @@ export function ReceiptCard({ ask }: ReceiptCardProps): ReactElement {
       </dl>
       <p className="ys-small ys-meta">{t('yes.receipt.verifyHint')}</p>
       <pre className="ys-cmd" tabIndex={0}>{`ostrom verify ${receipt.id}.json`}</pre>
-      <a className="o-btn o-btn--secondary o-btn--md ys-self-start" href={bundle} download={`${receipt.id}.json`}>
+      <a
+        className="o-btn o-btn--secondary o-btn--md ys-self-start"
+        href={bundle}
+        download={`${receipt.id}.json`}
+      >
         {t('yes.receipt.download')}
       </a>
     </section>
