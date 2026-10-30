@@ -9,7 +9,10 @@ const BASE = 'https://console.invalid';
  */
 export function safeRedirect(path: string | undefined): string {
   if (path === undefined || !path.startsWith('/') || path.includes('\\')) return '/';
-  if ([...path].some((char) => char < ' ' || char === '\u007f')) return '/';
+  for (let index = 0; index < path.length; index += 1) {
+    const code = path.charCodeAt(index);
+    if (code < 0x20 || code === 0x7f) return '/';
+  }
   const url = new URL(path, BASE);
   if (url.origin !== BASE) return '/';
   return `${url.pathname}${url.search}${url.hash}`;
