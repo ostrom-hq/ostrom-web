@@ -1,7 +1,7 @@
 import { client } from '@gen/api/client.gen';
 import { toApiFailure } from '@/shared/api/ApiFailure';
 import { withCsrf } from '@/shared/api/csrf';
-import { ORG_REQUIRED, withOrg } from '@/shared/api/orgHeader';
+import { ORG_HEADER, ORG_REQUIRED, withOrg } from '@/shared/api/orgHeader';
 import { useOrgStore } from '@/shared/org/orgStore';
 
 export interface ApiClientConfig {
@@ -9,10 +9,13 @@ export interface ApiClientConfig {
   readonly baseUrl: string;
 }
 
-function typedFailure(error: unknown, response: Response | undefined): Error {
+function typedFailure(error: unknown, response: Response | undefined, request: Request | undefined): Error {
   const failure = toApiFailure(error, response);
   // The server needs to know which organization: whatever screen asked, the picker opens.
   if (failure.code === ORG_REQUIRED) useOrgStore.getState().ask();
+  // Nothing found in the organization named: the person may have left it, their list is read again.
+  else if (response?.status === 404 && request?.headers.has(ORG_HEADER) === true)
+    useOrgStore.getState().doubt();
   return failure;
 }
 

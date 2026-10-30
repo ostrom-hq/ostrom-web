@@ -27,6 +27,13 @@ import { logout } from '@gen/api/sdk.gen';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** A page for people not signed in yet: the top bar asks nobody who they are. */
+    readonly anonymous?: boolean;
+  }
+}
+
 const rootRoute = createRootRoute({ component: AppShell });
 
 const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen });
@@ -165,6 +172,7 @@ export const signInSearchSchema = z.object({ redirect: z.string().optional().cat
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/signin',
+  staticData: { anonymous: true },
   validateSearch: signInSearchSchema,
   component: SignInScreen,
 });
@@ -176,6 +184,7 @@ const signInRoute = createRoute({
 const emailLinkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/email',
+  staticData: { anonymous: true },
   beforeLoad: ({ location }) => {
     const token = fragmentValue(location.hash, 'token');
     if (token === undefined) return;

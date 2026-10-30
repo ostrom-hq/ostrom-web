@@ -3,16 +3,38 @@ import { z } from 'zod';
 import { create } from 'zustand';
 import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 
-/** Where the organization the person chose is kept, with whose choice it was: ids, not secrets. */
-export const ORG_STORAGE_KEY = 'ostrom.org';
-export const ORG_OWNER_STORAGE_KEY = 'ostrom.org.login';
+/**
+ * Where the organization the person chose is kept, with whose choice it was: ids, not secrets. One key for both, so
+ * another tab never reads a new id with the previous owner.
+ */
+export const ORG_STORAGE_KEY = 'ostrom.org.choice';
 
 /** An id goes into a request header: visible ASCII only, so a stored value can never break the request. */
 export const orgIdSchema = z.string().regex(/^[\x21-\x7E]{1,200}$/);
 
-/** Storage is a trust boundary: anything that is not an id reads as nothing stored. */
-export function readStoredId(storage: Pick<SafeStorage, 'getItem'>, key: string): string | undefined {
-  const parsed = orgIdSchema.safeParse(storage.getItem(key));
+const choiceSchema = z.object({ id: orgIdSchema, login: z.string().min(1).max(200) });
+
+export interface StoredChoice {
+  readonly id: string;
+  readonly login: string;
+}
+
+/** The value kept for a choice. */
+export function storedChoice(choice: StoredChoice): string {
+  return JSON.stringify({ id: choice.id, login: choice.login });
+}
+
+/** Storage is a trust boundary: anything that is not an id with whose choice it is reads as nothing stored. */
+export function readStoredChoice(storage: Pick<SafeStorage, 'getItem'>): StoredChoice | undefined {
+  const raw = storage.getItem(ORG_STORAGE_KEY);
+  if (raw === null) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return undefined;
+  }
+  const parsed = choiceSchema.safeParse(value);
   return parsed.success ? parsed.data : undefined;
 }
 
@@ -39,12 +61,16 @@ export interface OrgState {
   readonly unknown: boolean;
   /** Bumped when what was read belongs to another organization, or to none: everything is read again. */
   readonly generation: number;
+  /** Bumped when the server did not find something in the organization named: the person's list is read again. */
+  readonly doubts: number;
   /** The only organization of the person, acted in for this session without asking. */
   readonly only: (id: string) => void;
   /** The person's choice, kept with their login. */
   readonly choose: (id: string, login: string) => void;
   /** The person has to choose: the picker opens unless they closed it. */
   readonly ask: () => void;
+  /** A call in the organization named found nothing: perhaps it is not the person's any more. */
+  readonly doubt: () => void;
   readonly open: () => void;
   readonly close: () => void;
   /** Drops the choice; `unknown` when it is not one of the person's organizations any more, and the picker says so. */
@@ -53,13 +79,30 @@ export interface OrgState {
   readonly signedInOrOut: () => void;
 }
 
+/** The two keys #28 kept the choice under, an id and its owner apart. */
+const LEGACY_ID_KEY = 'ostrom.org';
+const LEGACY_OWNER_KEY = 'ostrom.org.login';
+
+/** A choice kept the old way moves under the one key, once; the old keys are gone either way. */
+export function moveLegacyChoice(storage: SafeStorage): void {
+  const id = orgIdSchema.safeParse(storage.getItem(LEGACY_ID_KEY));
+  const login = choiceSchema.shape.login.safeParse(storage.getItem(LEGACY_OWNER_KEY));
+  if (id.success && login.success && storage.getItem(ORG_STORAGE_KEY) === null) {
+    storage.setItem(ORG_STORAGE_KEY, storedChoice({ id: id.data, login: login.data }));
+  }
+  storage.removeItem(LEGACY_ID_KEY);
+  storage.removeItem(LEGACY_OWNER_KEY);
+}
+
+// On load, before the store reads what is kept.
+moveLegacyChoice(safeLocalStorage);
+
 function kept(): Pick<OrgState, 'current' | 'owner'> {
-  const current = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
-  const owner = readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY);
   // A choice is always kept with whose it is: an id alone is nobody's, and is trusted for nobody.
-  return current === undefined || owner === undefined
+  const choice = readStoredChoice(safeLocalStorage);
+  return choice === undefined
     ? { current: undefined, owner: undefined }
-    : { current, owner };
+    : { current: choice.id, owner: choice.login };
 }
 
 export const useOrgStore = create<OrgState>()((set) => ({
@@ -69,14 +112,14 @@ export const useOrgStore = create<OrgState>()((set) => ({
   dismissed: false,
   unknown: false,
   generation: 0,
+  doubts: 0,
   only: (id) => {
     // What was read before, without the header, was read in this same organization: nothing to read again. A picker
     // opened to say the last choice is gone stays open, with this organization in it; any other closes.
     set((state) => ({ current: id, owner: undefined, asked: false, picking: state.unknown }));
   },
   choose: (id, login) => {
-    safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
-    safeLocalStorage.setItem(ORG_OWNER_STORAGE_KEY, login);
+    safeLocalStorage.setItem(ORG_STORAGE_KEY, storedChoice({ id, login }));
     set((state) => ({
       current: id,
       owner: login,
@@ -90,6 +133,9 @@ export const useOrgStore = create<OrgState>()((set) => ({
   ask: () => {
     set((state) => ({ asked: true, picking: state.picking || !state.dismissed }));
   },
+  doubt: () => {
+    set((state) => ({ doubts: state.doubts + 1 }));
+  },
   open: () => {
     set({ picking: true });
   },
@@ -98,7 +144,6 @@ export const useOrgStore = create<OrgState>()((set) => ({
   },
   forget: (reason) => {
     safeLocalStorage.removeItem(ORG_STORAGE_KEY);
-    safeLocalStorage.removeItem(ORG_OWNER_STORAGE_KEY);
     set((state) => ({
       current: undefined,
       owner: undefined,
@@ -114,3 +159,27 @@ export const useOrgStore = create<OrgState>()((set) => ({
     set({ ...kept(), asked: false, picking: false, dismissed: false, unknown: false });
   },
 }));
+
+/**
+ * Another tab chose or dropped an organization: this one follows, as if it had chosen itself, and reads everything
+ * again if it changed. A tab acting in its only organization keeps it when nothing is chosen anywhere. Listened to by
+ * App.tsx.
+ */
+export function followOtherTab(event: StorageEvent): void {
+  if (event.storageArea !== window.localStorage) return;
+  if (event.key !== null && event.key !== ORG_STORAGE_KEY) return;
+  const next = kept();
+  useOrgStore.setState((state) => {
+    if (next.current === undefined && state.owner === undefined) return state;
+    // The same organization, chosen there: kept as chosen, nothing read again and nothing on screen closed.
+    if (next.current === state.current) return next.owner === state.owner ? state : { owner: next.owner };
+    return {
+      ...next,
+      asked: false,
+      picking: false,
+      dismissed: false,
+      unknown: false,
+      generation: state.generation + 1,
+    };
+  });
+}
