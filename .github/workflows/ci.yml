@@ -14,12 +14,26 @@ concurrency:
 
 permissions:
   contents: read
+  # The real server's image, ghcr.io/ostrom-hq/ostrom-server (private).
+  packages: read
 
 jobs:
   ci:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
+    # The real server's database and Stripe stand-in, for the journeys against the real server. The database is
+    # `ostrom_ci`: ci/database-roles.sql of ostrom-server creates `ostrom` itself, owned by its owner role.
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_USER: ostrom, POSTGRES_PASSWORD: ostrom, POSTGRES_DB: ostrom_ci }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ostrom -d ostrom_ci" --health-interval 5s --health-timeout 5s --health-retries 20
+      stripe-mock:
+        image: stripe/stripe-mock@sha256:aeb96b83e87a893d2ac005e363ac01ffa6e59a5ad85b49c155dfc9129de02e78 # as ostrom-server
+        ports: ['12111:12111']
     steps:
       - uses: actions/checkout@v5
         with:
@@ -48,6 +62,64 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: End-to-end journeys (Playwright, desktop and mobile)
         run: pnpm e2e
+      # The same console against the REAL server: the image of ostrom-server main, as deployed (the owner role
+      # migrates, the server serves as `ostrom_app`, which owns nothing and cannot bypass row-level security).
+      - name: ostrom-server main (its database roles)
+        uses: actions/checkout@v5
+        with:
+          repository: ostrom-hq/ostrom-server
+          ref: main
+          ssh-key: ${{ secrets.DEPLOY_KEY_SERVER }}
+          path: .ostrom/server
+          sparse-checkout: ci
+          persist-credentials: false
+      - name: Real server image (edge of ostrom-server main)
+        id: server
+        env:
+          IMAGE: ghcr.io/ostrom-hq/ostrom-server:edge
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker pull --quiet "$IMAGE"
+          revision=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
+          main=$(git -C .ostrom/server rev-parse HEAD)
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+          echo "Server image built from ostrom-server@${revision:0:7}; main is at ${main:0:7}." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$revision" != "$main" ]; then
+            echo "::warning title=Server image::edge is ostrom-server@${revision:0:7}, main is at ${main:0:7}"
+          fi
+      - name: Start the real server (roles, migrate, serve as ostrom_app)
+        env:
+          IMAGE: ghcr.io/ostrom-hq/ostrom-server:edge
+          PGPASSWORD: ostrom
+          OWNER_URL: postgresql://ostrom_owner:ostrom_owner@localhost:5432/ostrom
+          APP_URL: postgresql://ostrom_app:ostrom_app@localhost:5432/ostrom
+        run: |
+          psql -h localhost -U ostrom -d ostrom_ci -v ON_ERROR_STOP=1 -f .ostrom/server/ci/database-roles.sql
+          docker run --rm --network host -e OSTROM_DATABASE_MIGRATION_URL="$OWNER_URL" "$IMAGE" migrate
+          mkdir -p "$RUNNER_TEMP/ostrom-mail" && chmod 0777 "$RUNNER_TEMP/ostrom-mail"
+          # Test values only: Stripe is stripe-mock, sign-in mails are written to a directory, the console is
+          # `vite preview` on localhost:4173, which proxies /api to the server.
+          docker run -d --name ostrom-server --network host \
+            -v "$RUNNER_TEMP/ostrom-mail:/var/lib/ostrom/mail" \
+            -e OSTROM_DATABASE_URL="$APP_URL" -e OSTROM_PORT=4600 \
+            -e OSTROM_MAIL_DIR=/var/lib/ostrom/mail \
+            -e OSTROM_PUBLIC_URL=http://localhost:4173 -e OSTROM_CONSOLE_URL=http://localhost:4173 \
+            -e OSTROM_STRIPE_SECRET_KEY=sk_test_web_e2e -e OSTROM_STRIPE_WEBHOOK_SECRET=whsec_web_e2e \
+            -e OSTROM_STRIPE_API_BASE=http://127.0.0.1:12111 \
+            "$IMAGE"
+          for i in $(seq 1 60); do curl -fsS localhost:4600/ready >/dev/null 2>&1 && exit 0; sleep 1; done
+          docker logs ostrom-server; exit 1
+      - name: Build (real API, same origin)
+        run: pnpm exec vite build --outDir dist-real
+      - name: End-to-end journeys against the real server (Playwright, desktop and mobile)
+        env:
+          OSTROM_E2E_API_UPSTREAM: http://127.0.0.1:4600
+          OSTROM_E2E_MAIL_DIR: ${{ runner.temp }}/ostrom-mail
+        run: pnpm exec playwright test --config playwright.real.config.ts
+      - name: Real server logs
+        if: always() && steps.server.outcome == 'success'
+        run: docker logs ostrom-server 2>&1 | tail -n 200
       # The image is built and pushed by image.yml on main; a pull request that changes what goes into it proves it here,
       # in this one job: security headers (S2-09), read-only root, API proxy, runtime settings.
       - name: Does this pull request change the console image?
@@ -67,5 +139,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: playwright-report
-          path: playwright-report
+          path: |
+            playwright-report
+            playwright-report-real
           retention-days: 7

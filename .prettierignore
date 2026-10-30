@@ -1,4 +1,6 @@
 dist
+dist-real
+playwright-report-real
 coverage
 playwright-report
 test-results

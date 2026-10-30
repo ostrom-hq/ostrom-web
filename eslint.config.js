@@ -13,6 +13,8 @@ export default defineConfig(
   {
     ignores: [
       'dist',
+      'dist-real',
+      'playwright-report-real',
       'coverage',
       'playwright-report',
       'test-results',
@@ -138,13 +140,13 @@ export default defineConfig(
     },
   },
   {
-    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}', 'e2e/**/*.ts'],
+    files: ['src/**/*.test.{ts,tsx}', 'src/test/**/*.{ts,tsx}', 'e2e/**/*.ts', 'e2e-real/**/*.ts'],
     rules: {
       '@typescript-eslint/explicit-module-boundary-types': 'off',
     },
   },
   {
-    files: ['e2e/**/*.ts', '*.config.ts'],
+    files: ['e2e/**/*.ts', 'e2e-real/**/*.ts', '*.config.ts'],
     languageOptions: { globals: globals.node },
   },
 );
