@@ -38,7 +38,7 @@ export function useMembers(): MembersViewModel {
     organization: organization.data,
     members: sorted,
     teams: teams.data?.items,
-    failure: failureOf(members.error ?? organization.error),
+    failure: failureOf(members.error ?? organization.error ?? teams.error),
     viewer: viewer.login,
     canManage: viewer.canManage,
   };

@@ -315,6 +315,19 @@ describe('the automations', () => {
     expect(await within(sentry).findByText('Could not copy: select it by hand.')).toBeInTheDocument();
   });
 
+  it('says so when the browser has no clipboard here, rather than failing silently', async () => {
+    const user = userEvent.setup();
+    visit('/automations');
+    const sentry = await card('Triage new Sentry issues');
+    await user.click(within(sentry).getByRole('button', { name: 'New webhook secret' }));
+    await within(sentry).findByText(/^whsec_mock_1/);
+    vi.spyOn(navigator.clipboard, 'writeText').mockImplementationOnce(() => {
+      throw new TypeError('the Clipboard API needs a secure context');
+    });
+    await user.click(within(sentry).getByRole('button', { name: 'Copy' }));
+    expect(await within(sentry).findByText('Could not copy: select it by hand.')).toBeInTheDocument();
+  });
+
   it('holds only the automation that changes', async () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/automations/:id/enable', async () => delay('infinite')));

@@ -211,6 +211,16 @@ describe('the MCP servers', () => {
     visit('/mcp');
     expect(await screen.findByText('Offline', {}, { timeout: 4_000 })).toBeInTheDocument();
   });
+
+  it('says when the usage did not come, rather than counting no call', async () => {
+    server.use(
+      http.get('*/api/v1/mcp/usage', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'usage is down' } }, { status: 500 }),
+      ),
+    );
+    visit('/mcp');
+    expect(await screen.findByText('usage is down', {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
 });
 
 describe('the secrets', () => {

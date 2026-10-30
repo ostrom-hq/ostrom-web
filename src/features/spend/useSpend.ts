@@ -35,7 +35,7 @@ export function useSpend(period: Period): SpendViewModel {
   return {
     spending: spending.data,
     switching: spending.isPlaceholderData,
-    failure: failureOf(spending.error),
+    failure: failureOf(spending.error ?? budgets.error),
     budgets: sorted,
     canManage: viewer.canManage,
   };
