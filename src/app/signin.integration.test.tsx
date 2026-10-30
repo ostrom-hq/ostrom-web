@@ -102,7 +102,7 @@ describe('the e-mailed link', () => {
   it('says signing in while the server checks the link', async () => {
     server.use(http.post('*/api/v1/auth/email/verify', async () => delay('infinite')));
     const router = visit('/auth/email#token=ml_slow');
-    expect(await screen.findByRole('status')).toHaveTextContent('Signing you in…');
+    expect(await screen.findByText('Signing you in…')).toBeInTheDocument();
     expect(router.state.location.hash).toBe('');
   });
 

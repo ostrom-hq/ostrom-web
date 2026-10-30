@@ -22,7 +22,7 @@ export function SignInScreen(): ReactElement {
     <Screen title={t('signin.title')} lead={t('signin.lead')}>
       <Section label={t('signin.github.label')}>
         <a
-          className="o-btn o-btn--primary o-btn--md"
+          className="o-btn o-btn--secondary o-btn--md"
           href={apiUrl('/api/v1/auth/github/start', { redirect: target })}
         >
           {t('signin.github.go')}
