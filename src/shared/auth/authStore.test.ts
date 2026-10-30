@@ -53,7 +53,6 @@ describe('on load', () => {
     expect(window.sessionStorage.getItem(LEGACY_KEY)).toBeNull();
     expect(fresh.useAuthStore.getState().token).toBeUndefined();
   });
-
 });
 
 describe('sign-in links', () => {

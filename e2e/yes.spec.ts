@@ -40,13 +40,13 @@ test('the asker cannot approve while another approver exists, but can decline wi
   await expect(decision).toContainText('Wait for samir.');
 });
 
-test('a sign-in link keeps the token and leaves no trace in the address bar', async ({ page }) => {
-  await page.goto('/yes?signin=opk_e2e_token_123');
+test('a sign-in link keeps the token in memory and leaves no trace in the address bar or storage', async ({
+  page,
+}) => {
+  await page.goto('/yes#signin=opk_e2e_token_123');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
   await expect(page).toHaveURL(/\/yes$/);
   const { origins } = await page.context().storageState();
-  expect(origins.flatMap((origin) => origin.localStorage)).toContainEqual({
-    name: 'ostrom.token',
-    value: 'opk_e2e_token_123',
-  });
+  const stored = origins.flatMap((origin) => origin.localStorage).map((entry) => entry.value);
+  expect(stored.some((value) => value.includes('opk_e2e_token_123'))).toBe(false);
 });
