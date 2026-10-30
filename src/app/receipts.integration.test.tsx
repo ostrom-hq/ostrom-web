@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Receipt } from '@gen/api/types.gen';
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
 const { server } = setupMockApp();
-const never = (): Promise<never> => new Promise<never>(() => undefined);
+/** A handler that never answers, to hold a screen in its loading state. */
+const never = async (): Promise<undefined> => {
+  await delay('infinite');
+  return undefined;
+};
 
 const bare: Receipt = {
   id: 'rcpt-bare',
