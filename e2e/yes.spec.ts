@@ -68,10 +68,9 @@ test('a yes from a sign-in more than five minutes old asks to sign in again, the
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill('maya@acme.dev');
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
   // The link opened in this page, without a reload: the demo keeps its data and only its sign-in is new.
-  await page.evaluate(() => {
-    window.history.pushState({}, '', '/auth/email#token=ml_demo');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  });
+  await page.evaluate(
+    "history.pushState({}, '', '/auth/email#token=ml_demo'); dispatchEvent(new PopStateEvent('popstate'))",
+  );
   await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await page.getByRole('button', { name: /^Approve/ }).click();
