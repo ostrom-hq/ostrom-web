@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const envSchema = z.object({
-  VITE_OSTROM_API_URL: z.string().min(1).default('/api'),
+  // The contract's paths already start with /api/v1: '' is the same origin (nginx proxies /api/), or an origin URL.
+  VITE_OSTROM_API_URL: z.union([z.literal(''), z.url()]).default(''),
   VITE_MOCKS: z.enum(['true', 'false']).default('false'),
 });
 

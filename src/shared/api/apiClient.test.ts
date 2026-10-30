@@ -1,20 +1,23 @@
 import { client } from '@gen/api/client.gen';
-import { handleGetYesQueue } from '@gen/api/msw.gen';
-import { getAsk, getYesQueue } from '@gen/api/sdk.gen';
+import { handleGetMe } from '@gen/api/msw.gen';
+import { getApproval, getMe } from '@gen/api/sdk.gen';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 
+const me = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
+const notFound = { error: { type: 'not_found', message: 'approval not found' } };
+
 const server = setupServer(
-  handleGetYesQueue({ body: { operator: 'maya', pending: [], recent: [] } }, { baseUrl: '*/api' }),
-  http.get('*/api/yes/:id', () => HttpResponse.json({ error: 'request not found' }, { status: 404 })),
+  handleGetMe({ body: me }),
+  http.get('*/api/v1/approvals/:id', () => HttpResponse.json(notFound, { status: 404 })),
 );
 let token: string | undefined;
 
 beforeAll(() => {
   server.listen({ onUnhandledFrame: 'error' });
-  configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
+  configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => token });
 });
 afterEach(() => {
   server.resetHandlers();
@@ -35,42 +38,42 @@ async function failureOf(call: () => Promise<unknown>): Promise<unknown> {
 
 describe('generated client, configured', () => {
   it('installs the failure mapping once, however often it is configured', () => {
-    configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
+    configureApiClient({ baseUrl: 'http://ostrom.test', getToken: () => token });
     expect(client.interceptors.error.fns.filter((fn) => fn !== null)).toHaveLength(1);
   });
 
   it('returns data that passed the contract', async () => {
-    const { data } = await getYesQueue({ throwOnError: true });
-    expect(data).toEqual({ operator: 'maya', pending: [], recent: [] });
+    const { data } = await getMe({ throwOnError: true });
+    expect(data).toEqual(me);
   });
 
   it('sends the viewer token as a bearer', async () => {
     token = 'opk_abcdef123456';
     let seen: string | null = null;
     server.use(
-      http.get('*/api/yes/queue', ({ request }) => {
+      http.get('*/api/v1/auth/me', ({ request }) => {
         seen = request.headers.get('authorization');
-        return HttpResponse.json({ operator: 'maya', pending: [], recent: [] });
+        return HttpResponse.json(me);
       }),
     );
-    await getYesQueue({ throwOnError: true });
+    await getMe({ throwOnError: true });
     expect(seen).toBe('Bearer opk_abcdef123456');
   });
 
   it('turns an answer outside the contract into an invalid-response failure', async () => {
-    server.use(http.get('*/api/yes/queue', () => HttpResponse.json({ operator: 'maya', pending: 'nope' })));
-    const error = await failureOf(async () => getYesQueue({ throwOnError: true }));
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json({ dev: { login: 'maya' }, capabilities: 'nope' })));
+    const error = await failureOf(async () => getMe({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('invalid-response');
   });
 
   it('turns a 404 into a not-found failure with the server message', async () => {
-    const error = await failureOf(async () => getAsk({ path: { id: 'missing' }, throwOnError: true }));
-    expect(isApiFailure(error) && [error.kind, error.message]).toEqual(['not-found', 'request not found']);
+    const error = await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    expect(isApiFailure(error) && [error.kind, error.message]).toEqual(['not-found', 'approval not found']);
   });
 
   it('turns a dropped connection into a network failure', async () => {
-    server.use(http.get('*/api/yes/queue', () => HttpResponse.error()));
-    const error = await failureOf(async () => getYesQueue({ throwOnError: true }));
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.error()));
+    const error = await failureOf(async () => getMe({ throwOnError: true }));
     expect(isApiFailure(error) && error.kind).toBe('network');
   });
 });

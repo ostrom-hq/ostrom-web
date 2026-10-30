@@ -2,7 +2,7 @@ import { client } from '@gen/api/client.gen';
 import { toApiFailure } from '@/shared/api/ApiFailure';
 
 export interface ApiClientConfig {
-  /** Where the Ostrom API lives, e.g. `/api` behind the same origin. */
+  /** The origin of the Ostrom API (`''` for the same origin): the contract's paths carry `/api/v1`. */
   readonly baseUrl: string;
   /** The bearer token of the viewer, read at each call so a sign-in or sign-out applies at once. */
   readonly getToken: () => string | undefined;
