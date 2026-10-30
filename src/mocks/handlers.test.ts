@@ -12,7 +12,7 @@ const initial = structuredClone(db.asks);
 const NOW = new Date('2026-10-30T08:00:00.000Z');
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
+  server.listen({ onUnhandledFrame: 'error' });
   configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => undefined });
 });
 afterEach(() => {

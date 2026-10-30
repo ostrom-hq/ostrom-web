@@ -12,7 +12,7 @@ const server = setupServer(
 let token: string | undefined;
 
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
+  server.listen({ onUnhandledFrame: 'error' });
   configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
   configureApiClient({ baseUrl: 'http://ostrom.test/api', getToken: () => token });
 });

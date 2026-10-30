@@ -1,8 +1,8 @@
-import { setupServer, type SetupServerApi } from 'msw/node';
+import { setupServer, type SetupServer } from 'msw/node';
 import { createHandlers, createMockDb, type MockDb } from '@/mocks/handlers';
 
 export interface MockServer {
-  readonly server: SetupServerApi;
+  readonly server: SetupServer;
   readonly db: MockDb;
 }
 
