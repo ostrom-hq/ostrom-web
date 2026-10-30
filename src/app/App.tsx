@@ -3,6 +3,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
+import { retryOnce } from '@/shared/api/retry';
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -13,7 +14,7 @@ export interface AppProps {
 export function App({ router, mocks = false }: AppProps): ReactElement {
   const { t } = useTranslation();
   const [queryClient] = useState(
-    () => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: 1 } } }),
+    () => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: retryOnce } } }),
   );
   return (
     <QueryClientProvider client={queryClient}>
