@@ -233,7 +233,7 @@ describe('the automations', () => {
     const user = userEvent.setup();
     visit('/automations');
     const sentry = await card('Triage new Sentry issues');
-    await user.click(within(sentry).getByRole('button', { name: 'Turn on' }));
+    await user.click(await within(sentry).findByRole('button', { name: 'Turn on' }));
     expect(await within(sentry).findByRole('button', { name: 'Turn off' })).toBeInTheDocument();
     await user.click(within(sentry).getByRole('button', { name: 'Turn off' }));
     expect(await within(sentry).findByRole('button', { name: 'Turn on' })).toBeInTheDocument();
