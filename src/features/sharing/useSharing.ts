@@ -76,21 +76,28 @@ export interface ArtifactChangeViewModel {
 export function useArtifactChange(): ArtifactChangeViewModel {
   const queryClient = useQueryClient();
   const refreshReaders = useCallback(
-    (id: string) =>
-      queryClient.invalidateQueries({ queryKey: listArtifactMembersQueryKey({ path: { id } }) }),
+    async (id: string) => {
+      await queryClient.invalidateQueries({ queryKey: listArtifactMembersQueryKey({ path: { id } }) });
+    },
     [queryClient],
   );
   const shared = useMutation({
     ...shareArtifactMutation(),
-    onSettled: (_data, _error, variables) => refreshReaders(variables.path.id),
+    onSettled: async (_data, _error, variables) => {
+      await refreshReaders(variables.path.id);
+    },
   });
   const unshared = useMutation({
     ...unshareArtifactMutation(),
-    onSettled: (_data, _error, variables) => refreshReaders(variables.path.id),
+    onSettled: async (_data, _error, variables) => {
+      await refreshReaders(variables.path.id);
+    },
   });
   const dropped = useMutation({
     ...deleteArtifactMutation(),
-    onSettled: () => queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() }),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() });
+    },
   });
   const { mutate: shareMutate, reset: resetShare } = shared;
   const { mutate: unshareMutate, reset: resetUnshare } = unshared;
@@ -173,10 +180,9 @@ export interface AccountChangeViewModel {
 
 export function useAccountChange(): AccountChangeViewModel {
   const queryClient = useQueryClient();
-  const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: listSharedAccountsQueryKey() }),
-    [queryClient],
-  );
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listSharedAccountsQueryKey() });
+  }, [queryClient]);
   const enrolled = useMutation({ ...enrollSharedAccountMutation(), onSuccess: refresh });
   const updated = useMutation({ ...updateSharedAccountMutation(), onSettled: refresh });
   const dropped = useMutation({ ...removeSharedAccountMutation(), onSettled: refresh });
