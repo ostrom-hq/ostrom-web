@@ -7,7 +7,7 @@ import { delay, http, HttpResponse } from 'msw';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { type AppRouter, createAppRouter } from '@/app/router';
-import { resetMockDb } from '@/mocks/handlers';
+import { FRESH_SIGN_IN_MS, resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { resetArrivals } from '@/features/yes';
@@ -335,18 +335,11 @@ describe('a request', () => {
 
   it('offers a fresh sign-in, back to the request, when the server wants one for the yes', async () => {
     const user = userEvent.setup();
-    server.use(
-      http.post('*/api/v1/approvals/:id/answer', () =>
-        HttpResponse.json(
-          { error: { type: 'step_up_required', message: 'Sign in again to approve.' } },
-          { status: 403 },
-        ),
-      ),
-    );
+    db.signedInAt = Date.now() - FRESH_SIGN_IN_MS - 1;
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: /^Approve/ }));
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Sign in again to approve.');
+    expect(alert).toHaveTextContent('Sign in again to approve: your sign-in is more than five minutes old.');
     const again = within(alert).getByRole('link', { name: 'Sign in again' });
     const target = new URL(again.getAttribute('href') ?? '', 'https://console.invalid');
     expect(target.pathname).toBe('/signin');

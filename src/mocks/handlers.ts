@@ -161,6 +161,12 @@ export interface MockDb extends BillingState {
   runsByKey: Record<string, AutomationRun>;
   /** The next shared account id; ids are never reused, even after a removal. */
   nextAccountId: number;
+  /**
+   * When the person signed in (ms since the epoch): when the demo opened, then each e-mail link. A yes needs a
+   * sign-in of no more than five minutes, as on the server (S2-54), so the demo asks to sign in again once it has been
+   * open that long. Opening the link in a new page starts the demo afresh, its data with it.
+   */
+  signedInAt: number;
 }
 
 export function createMockDb(): MockDb {
@@ -190,6 +196,7 @@ export function createMockDb(): MockDb {
     sharedAccounts: initialSharedAccounts(),
     runsByKey: {},
     nextAccountId: 100,
+    signedInAt: Date.now(),
     billing: initialBilling(),
     invoices: initialInvoices(),
   };
@@ -367,6 +374,9 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
 /** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
 export const DEMO_EMAIL_TOKEN = 'ml_demo';
 
+/** How long a sign-in may say yes, as on the server (S2-54). */
+export const FRESH_SIGN_IN_MS = 5 * 60_000;
+
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
@@ -384,6 +394,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = zVerifySignInEmailBody.safeParse(await readJson(request));
       if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
         return refusal(401, 'invalid_link', 'This link was already used or has expired.');
+      db.signedInAt = now().getTime();
       return HttpResponse.json(
         { redirect: '/yes', csrfToken: 'csrf-demo' },
         { headers: { 'Set-Cookie': 'ostrom_csrf=csrf-demo; Path=/; SameSite=Lax' } },
@@ -423,6 +434,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval)
           : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
+      // A no never needs it; a yes needs a sign-in of no more than five minutes.
+      if (body.data.answer === 'approve' && now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS)
+        return refusal(
+          403,
+          'step_up_required',
+          'Sign in again to approve: your sign-in is more than five minutes old.',
+        );
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
       const next = answered(approval, body.data.answer, selfApproved, at);
