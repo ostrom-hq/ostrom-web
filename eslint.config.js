@@ -16,7 +16,7 @@ export default defineConfig(
       'coverage',
       'playwright-report',
       'test-results',
-      'src/shared/api/generated',
+      'gen',
       'public/mockServiceWorker.js',
       'public/config.js',
     ],
@@ -93,6 +93,7 @@ export default defineConfig(
         {
           patterns: [
             { group: ['@/features/*', '@/app/*', '@ee/*'], message: 'shared/ is the bottom layer.' },
+            { group: ['@/mocks/*'], message: 'Mocks are wired by app/ (and tests), never by shared/.' },
             { group: ['../*'], message: 'Use the @/ alias across folders.' },
           ],
         },
@@ -108,6 +109,7 @@ export default defineConfig(
           patterns: [
             { group: ['@/app/*'], message: 'features/ never imports app/.' },
             { group: ['@ee/*'], message: 'ee/ is loaded lazily by app/, never imported by features/.' },
+            { group: ['@/mocks/*'], message: 'Mocks are wired by app/ (and tests), never by features/.' },
             { group: ['@/features/*/*'], message: 'Import another feature through its index only.' },
             { group: ['../../*'], message: 'Use the @/ alias across folders.' },
           ],

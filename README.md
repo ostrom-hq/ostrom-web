@@ -14,6 +14,19 @@ pnpm build
 pnpm e2e          # Playwright against `pnpm preview`
 ```
 
+## API contract
+
+Nothing in `src/` writes a route by hand. `pnpm gen:api` generates `gen/api/` from the OpenAPI contract with
+hey-api: types, zod schemas (every request and response is validated at runtime), the fetch SDK, TanStack Query
+options and typed MSW handlers. CI fails when `gen/` is stale (`pnpm gen:check`).
+
+The contract belongs to `ostrom-core` (`api/openapi.yaml`, package `@ostrom-hq/api-types`). Until it is
+published, `contract/openapi.yaml` mirrors the slice the console uses; `OSTROM_CONTRACT=<path> pnpm gen:api`
+generates from another copy.
+
+`VITE_MOCKS=true pnpm dev` serves the API from MSW (`src/mocks/`, an in-memory server that applies the same
+rules as the prototype), so every screen works without a server.
+
 ## Architecture
 
 ```
@@ -21,6 +34,9 @@ src/
   app/        shell, router, providers: the only place that wires features together
   features/   one folder per screen family; a feature exposes its public API in index.ts
   shared/     api client, ui kit, theme, i18n: never imports features/ or app/
+  mocks/      MSW handlers and fixtures, wired by app/ in mock mode and by tests
+gen/api/      generated from the contract, never edited
+contract/     mirror of the OpenAPI contract until ostrom-core publishes it
 ee/           enterprise screens, loaded lazily, never imported statically by src/
 ```
 

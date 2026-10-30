@@ -133,4 +133,13 @@
 }
 .o-consent__actions .o-btn {
   flex: 1;
+
+.o-mock-banner {
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  background: var(--warning-tint);
+  color: var(--warning-text);
+  font-size: var(--fs-12);
+  font-weight: 600;
+  text-align: center;
 }

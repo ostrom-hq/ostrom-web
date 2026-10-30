@@ -2,6 +2,7 @@
 export const en = {
   app: {
     name: 'Ostrom',
+    mocks: 'Demo data: this console is not connected to an Ostrom server.',
     skipToContent: 'Skip to content',
     nav: { label: 'Main', home: 'Home' },
     theme: {
