@@ -7,13 +7,8 @@
     <meta name="theme-color" content="#F7F5F5" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#140E10" media="(prefers-color-scheme: dark)" />
     <title>Ostrom</title>
-    <script>
-      // Applies a pinned theme before the first paint (key and values: src/shared/theme/themeStore.ts).
-      try {
-        var pinned = window.localStorage.getItem('ostrom.theme');
-        if (pinned === 'light' || pinned === 'dark') document.documentElement.dataset.theme = pinned;
-      } catch (e) {}
-    </script>
+    <!-- Applies a pinned theme before the first paint; a file, never inline: the CSP has no 'unsafe-inline'. -->
+    <script src="/theme.js"></script>
   </head>
   <body>
     <div id="root"></div>

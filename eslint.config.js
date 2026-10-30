@@ -19,6 +19,7 @@ export default defineConfig(
       'gen',
       'public/mockServiceWorker.js',
       'public/config.js',
+      'public/theme.js',
     ],
   },
   {

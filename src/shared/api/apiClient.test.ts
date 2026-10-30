@@ -57,6 +57,21 @@ describe('generated client, configured', () => {
     expect(seen).toBe('Bearer opk_abcdef123456');
   });
 
+  it('sends the session cookie with every call (S2-08)', async () => {
+    let credentials: RequestCredentials | undefined;
+    const capture = (request: Request): Request => {
+      credentials = request.credentials;
+      return request;
+    };
+    client.interceptors.request.use(capture);
+    try {
+      await getYesQueue({ throwOnError: true });
+    } finally {
+      client.interceptors.request.eject(capture);
+    }
+    expect(credentials).toBe('include');
+  });
+
   it('turns an answer outside the contract into an invalid-response failure', async () => {
     server.use(http.get('*/api/yes/queue', () => HttpResponse.json({ operator: 'maya', pending: 'nope' })));
     const error = await failureOf(async () => getYesQueue({ throwOnError: true }));
