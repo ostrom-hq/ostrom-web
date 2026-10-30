@@ -10,6 +10,8 @@ import { Button } from '@/shared/ui/Button';
 export interface OrgPickerProps {
   readonly choices: readonly OrgChoice[];
   readonly currentId: string | undefined;
+  /** The organization last chosen is unknown to the server for this person. */
+  readonly unknown: boolean;
   /** False when the id typed is not one: the picker stays open and says so. */
   readonly onChoose: (id: string) => boolean;
   readonly onClose: () => void;
@@ -19,14 +21,21 @@ export interface OrgPickerProps {
  * Which organization the console acts in. It lists the organizations the server already named; the contract has no
  * list of a person's own organizations yet (QUESTIONS 10:45 WEB), so an id can also be typed.
  */
-export function OrgPicker({ choices, currentId, onChoose, onClose }: OrgPickerProps): ReactElement {
+export function OrgPicker({ choices, currentId, unknown, onChoose, onClose }: OrgPickerProps): ReactElement {
   const { t } = useTranslation();
   const [typed, setTyped] = useState('');
   const [invalid, setInvalid] = useState(false);
+  const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const fieldId = useId();
   useEffect(() => {
+    // Modal for real: the rest of the page cannot be reached while it is open, and focus goes back where it was.
+    const opener = document.activeElement;
+    const behind = [...document.body.children].filter(
+      (child) => child !== overlay.current && !child.hasAttribute('inert'),
+    );
+    for (const element of behind) element.setAttribute('inert', '');
     panel.current?.focus();
     const onKey = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') onClose();
@@ -34,10 +43,12 @@ export function OrgPicker({ choices, currentId, onChoose, onClose }: OrgPickerPr
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
+      for (const element of behind) element.removeAttribute('inert');
+      if (opener instanceof HTMLElement) opener.focus();
     };
   }, [onClose]);
   return createPortal(
-    <div className="o-org-picker">
+    <div ref={overlay} className="o-org-picker">
       <div
         ref={panel}
         className="o-org-picker__panel"
@@ -50,6 +61,11 @@ export function OrgPicker({ choices, currentId, onChoose, onClose }: OrgPickerPr
           {t('orgs.picker.title')}
         </h2>
         <p className="o-org-picker__body">{t('orgs.picker.body')}</p>
+        {unknown ? (
+          <Banner tone="warning" tag={t('orgs.picker.problemTag')}>
+            {t('orgs.picker.unknown')}
+          </Banner>
+        ) : null}
         {choices.length > 0 ? (
           <ul className="o-org-picker__list" aria-label={t('orgs.picker.known')}>
             {choices.map((choice) => (

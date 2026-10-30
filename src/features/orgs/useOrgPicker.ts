@@ -13,38 +13,42 @@ export interface OrgPickerViewModel {
   /** The same organization with its name, once the server named it. */
   readonly current: OrgChoice | undefined;
   readonly choices: readonly OrgChoice[];
+  /** There is an organization to show or one to choose: nothing in the top bar otherwise (signed out, say). */
+  readonly relevant: boolean;
   readonly picking: boolean;
+  /** The organization last chosen is unknown to the server for this person. */
+  readonly unknown: boolean;
   readonly choose: (id: string) => boolean;
   readonly open: () => void;
   readonly close: () => void;
 }
 
 /**
- * The organization the console acts in. `/me` names it, and the console adopts it when nothing was chosen; a 409
- * `org_required` on any call opens the picker (shared/api/apiClient.ts). A chosen organization the server answers
- * 404 for (the person left it, or another account signed in) is dropped, so the server is asked afresh.
+ * The organization the console acts in. `/me` names it, and who is signed in; a 409 `org_required` on any call asks
+ * for it (shared/api/apiClient.ts). A chosen organization the server answers 404 for is dropped, and the person told.
  */
 export function useOrgPicker(): OrgPickerViewModel {
-  const me = useQuery(ready(getMeOptions(), { retry: false }));
-  const organization = meOf(me.data)?.organization;
-  const currentId = useOrgStore((state) => state.current);
-  const seen = useOrgStore((state) => state.seen);
-  const picking = useOrgStore((state) => state.picking);
-  const { adopt, choose, open, close, forget } = useOrgStore.getState();
+  // The same freshness as `useViewer`: one `/me` for both.
+  const me = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
+  const viewer = meOf(me.data);
+  const state = useOrgStore();
+  const { named, forget } = state;
   useEffect(() => {
-    if (organization !== undefined) adopt(organization);
-  }, [organization, adopt]);
-  const lost = currentId !== undefined && isApiFailure(me.error) && me.error.kind === 'not-found';
+    if (viewer !== undefined) named(viewer.organization, viewer.dev.login);
+  }, [viewer, named]);
+  const lost = state.current !== undefined && isApiFailure(me.error) && me.error.kind === 'not-found';
   useEffect(() => {
-    if (lost) forget();
+    if (lost) forget('unknown');
   }, [lost, forget]);
   return {
-    currentId,
-    current: seen.find((choice) => choice.id === currentId),
-    choices: seen,
-    picking,
-    choose,
-    open,
-    close,
+    currentId: state.current,
+    current: state.seen.find((choice) => choice.id === state.current),
+    choices: state.seen,
+    relevant: state.current !== undefined || state.asked || state.unknown,
+    picking: state.picking,
+    unknown: state.unknown,
+    choose: state.choose,
+    open: state.open,
+    close: state.close,
   };
 }

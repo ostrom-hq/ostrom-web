@@ -7,10 +7,11 @@ import { useOrgPicker } from '../useOrgPicker';
 import { OrgPicker } from './OrgPicker';
 
 /** The organization the console acts in, in the top bar, and the picker it opens. */
-export function OrgControls(): ReactElement {
+export function OrgControls(): ReactElement | null {
   const { t } = useTranslation();
   const org = useOrgPicker();
   const name = org.current?.name;
+  if (!org.relevant) return null;
   return (
     <>
       <Button
@@ -26,6 +27,7 @@ export function OrgControls(): ReactElement {
         <OrgPicker
           choices={org.choices}
           currentId={org.currentId}
+          unknown={org.unknown}
           onChoose={org.choose}
           onClose={org.close}
         />

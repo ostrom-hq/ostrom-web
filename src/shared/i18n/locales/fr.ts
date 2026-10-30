@@ -849,6 +849,7 @@ export const fr = {
       notNow: 'Plus tard',
       problemTag: 'À vérifier',
       invalid: 'Ce n’est pas un identifiant d’organisation.',
+      unknown: 'Ostrom ne te connaît pas dans la dernière organisation choisie. Choisis-en une autre.',
     },
   },
   home: {

@@ -832,6 +832,7 @@ export const en = {
       notNow: 'Not now',
       problemTag: 'Check',
       invalid: 'This is not an organization id.',
+      unknown: 'Ostrom does not know you in the organization chosen last. Choose another one.',
     },
   },
   home: {

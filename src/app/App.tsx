@@ -22,10 +22,7 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(
     () =>
       useAuthStore.subscribe((auth, previous) => {
-        if (auth.token === previous.token) return;
-        // The organization chosen was the previous account's: the new one is asked afresh.
-        useOrgStore.getState().forget();
-        queryClient.clear();
+        if (auth.token !== previous.token) queryClient.clear();
       }),
     [queryClient],
   );

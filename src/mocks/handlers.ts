@@ -294,7 +294,7 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/orgs\//,
   /^\/api\/v1\/me\/notifications$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys)$/,
-  /^\/api\/v1\/github\//,
+  /^\/api\/v1\/github\/app\/(?:manifest|install)\/callback$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
 ];
 
