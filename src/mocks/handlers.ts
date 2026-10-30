@@ -356,6 +356,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   const runsByKey = new Map<string, AutomationRun>();
+  /** Ids are never reused, even after a removal. */
+  let nextAccount = 100;
   return [
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
@@ -755,7 +757,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
       const account: SharedAccount = {
-        id: `acc-${String(db.sharedAccounts.length + 100)}`,
+        id: `acc-${String(nextAccount++)}`,
         provider: body.data.provider,
         label: body.data.label.trim(),
         owner: me.dev.login,
