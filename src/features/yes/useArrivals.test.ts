@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { renderHook } from '@testing-library/react';
-import { NO_ARRIVALS, nextArrivals, useArrivals } from './useArrivals';
+import { useAuthStore } from '@/shared/auth/authStore';
+import { NO_ARRIVALS, nextArrivals, resetArrivals, useArrivals } from './useArrivals';
+
+afterEach(() => {
+  resetArrivals();
+});
 
 describe('nextArrivals', () => {
   it('marks nothing on the first load', () => {
@@ -32,5 +37,21 @@ describe('useArrivals', () => {
     rerender({ ids: ['a'] });
     rerender({ ids: ['a', 'b'] });
     expect([...result.current]).toEqual(['b']);
+  });
+
+  it('keeps what it saw when the screen unmounts, and marks what came in meanwhile', () => {
+    const first = renderHook(() => useArrivals(['a']));
+    first.unmount();
+    const back = renderHook(() => useArrivals(['a', 'c']));
+    expect([...back.result.current]).toEqual(['c']);
+  });
+
+  it('forgets everything when the account changes', () => {
+    renderHook(() => useArrivals(['a'])).unmount();
+    renderHook(() => useArrivals(['a', 'b'])).unmount();
+    useAuthStore.getState().signIn('opk_other_12345678');
+    const after = renderHook(() => useArrivals(['a', 'b', 'c']));
+    expect(after.result.current.size).toBe(0);
+    useAuthStore.getState().signOut();
   });
 });

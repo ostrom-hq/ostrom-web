@@ -66,7 +66,7 @@ export function InviteForm({ invite }: { readonly invite: InviteViewModel }): Re
               </option>
             ))}
           </select>
-          <Button type="submit" variant="primary" disabled={invite.sending || emails.length === 0}>
+          <Button type="submit" disabled={invite.sending || emails.length === 0}>
             {invite.sending
               ? t('members.invite.sending')
               : t('members.invite.send', { count: emails.length })}

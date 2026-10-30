@@ -38,7 +38,7 @@ const yesRoute = createRoute({
   validateSearch: yesSearchSchema,
   beforeLoad: ({ search }) => {
     if (search.signout === true) useAuthStore.getState().signOut();
-    else if (search.signin !== undefined) useAuthStore.getState().signIn(search.signin);
+    else if (search.signin !== undefined) useAuthStore.getState().offer(search.signin);
     else return;
     throw redirect({ to: '/yes', search: {}, replace: true });
   },

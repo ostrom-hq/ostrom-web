@@ -23,16 +23,6 @@ export function approvalTone(approval: Approval, viewer: string | undefined): Ap
   }
 }
 
-/** The verb on the approve button says what will happen ("Approve merge"), never a bare "yes". */
-export type ActionKind = 'push' | 'merge' | 'deployment' | 'other';
-
-export function actionKind(approval: Approval): ActionKind {
-  if (/\bmerge/i.test(approval.title)) return 'merge';
-  if (/\bdeploy/i.test(approval.title)) return 'deployment';
-  if (/\bpush/i.test(approval.title)) return 'push';
-  return 'other';
-}
-
 export interface ChecksSummary {
   readonly passed: number;
   readonly failed: number;

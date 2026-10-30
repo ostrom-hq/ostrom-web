@@ -30,12 +30,27 @@ export const fr = {
     queue: {
       title: 'Demandes',
       waiting: '{{count}} t’attendent',
+      waitingMore: 'Plus de {{count}} t’attendent',
       decided: 'Décidées',
       emptyTitle: 'Rien ne t’attend',
       emptyBody:
         'Quand un agent arrive sur une action que ton équipe a confiée à une personne, il s’arrête et la demande apparaît ici.',
       offline: 'Ostrom ne répond pas ({{reason}}). Nouvel essai toutes les 2 s.',
       offlineTag: 'Hors ligne',
+    },
+    failure: {
+      signedOutTag: 'Déconnecté',
+      signedOut: 'Ce navigateur n’est plus connecté. Rouvre ton lien de connexion pour voir tes demandes.',
+      refusedTag: 'Refusé',
+    },
+    signin: {
+      tag: 'Connexion',
+      invalid: 'Ce lien de connexion n’est pas valide. Demandes-en un nouveau.',
+      switch:
+        'Ce lien connecte avec une autre clé que celle de ce navigateur. Les demandes que tu approuves sont signées avec elle.',
+      accept: 'Utiliser la nouvelle clé',
+      keep: 'Garder l’actuelle',
+      dismiss: 'Fermer',
     },
     signedAs: 'Tu approuves en tant que {{name}}',
     asks: '{{who}} demande',
@@ -88,12 +103,7 @@ export const fr = {
       key: 'Clé',
     },
     act: {
-      approve: {
-        push: 'Approuver le push',
-        merge: 'Approuver le merge',
-        deployment: 'Approuver le déploiement',
-        other: 'Approuver',
-      },
+      approve: 'Approuver',
       approving: 'Approbation…',
       decline: 'Refuser et le dire à l’agent…',
       declineLabel: 'Que doit faire l’agent à la place ?',
