@@ -6,7 +6,7 @@ describe('parseEnv', () => {
   });
 
   it('reads the base URL and the mock switch', () => {
-    expect(parseEnv({ VITE_API_BASE_URL: 'https://ostrom.example/api', VITE_MOCKS: 'true' })).toEqual({
+    expect(parseEnv({ VITE_OSTROM_API_URL: 'https://ostrom.example/api', VITE_MOCKS: 'true' })).toEqual({
       apiBaseUrl: 'https://ostrom.example/api',
       mocks: true,
     });

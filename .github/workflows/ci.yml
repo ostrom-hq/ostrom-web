@@ -12,8 +12,9 @@ concurrency:
 permissions:
   contents: read
 
+# Job names `lint`, `coverage` and `e2e` are the required checks on main (QA, .coord/JOURNAL.md 01:50).
 jobs:
-  check:
+  lint:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,11 +30,23 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
-      - run: pnpm test:coverage
+
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Unit and integration tests, 100 % lines, branches, functions, statements
+        run: pnpm test:coverage
       - run: pnpm build
 
   e2e:
-    needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -45,6 +58,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # No Ostrom server yet: the journeys run against the MSW mocks generated from the contract.
+      # Once ostrom-server ships its container, this job starts it with PostgreSQL and drops VITE_MOCKS.
       - run: pnpm build
         env:
           VITE_MOCKS: 'true'
