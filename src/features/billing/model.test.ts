@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { BillingOverview, BillingPrice } from '@gen/api/types.gen';
-import { initialBilling } from '@/mocks/fixtures/billing';
 import {
   hasSubscription,
   hoursLevel,
@@ -14,7 +13,37 @@ import {
   yearlySaving,
 } from './model';
 
-const team: BillingOverview = initialBilling();
+// Built here: features/ never imports the mocks, not even in a test.
+const team: BillingOverview = {
+  orgId: 'org-acme',
+  plan: 'team',
+  effectivePlan: 'team',
+  interval: 'month',
+  status: 'active',
+  cancelAtPeriodEnd: false,
+  periodStart: '2026-10-01T00:00:00.000Z',
+  periodEnd: '2026-11-01T00:00:00.000Z',
+  activePeople: 4,
+  committedPeople: 0,
+  limits: {
+    maxPeople: 25,
+    maxConcurrentCloudAgents: 3,
+    agentHoursPerPeriod: 200,
+    sso: false,
+    policies: true,
+    receiptRetentionDays: 365,
+  },
+  usage: { agentSeconds: 594_000, agentHours: 165, sessions: 41, percentOfHours: 82 },
+  alerts: [80],
+  paymentIssue: null,
+  purchasable: true,
+  prices: [
+    { plan: 'team', interval: 'month', unitAmount: 1500, currency: 'usd' },
+    { plan: 'team', interval: 'year', unitAmount: 14_400, currency: 'usd' },
+    { plan: 'business', interval: 'month', unitAmount: 3500, currency: 'usd' },
+    { plan: 'business', interval: 'year', unitAmount: 33_600, currency: 'usd' },
+  ],
+};
 
 describe('the billing model', () => {
   it('knows a subscription Stripe still bills', () => {
