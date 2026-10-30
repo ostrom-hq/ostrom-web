@@ -870,6 +870,15 @@ describe('mock cloud agents and automations', () => {
     });
     expect(replay.data).toEqual(real.data);
     expect(db.automationRuns).toHaveLength(3);
+    // The same key on another automation is another gesture.
+    const elsewhere = await testAutomation({
+      path: { id: 'au-sentry' },
+      body: {},
+      headers: once,
+      throwOnError: true,
+    });
+    expect(elsewhere.data).toMatchObject({ automationId: 'au-sentry' });
+    expect(db.automationRuns).toHaveLength(4);
     expect(
       await statusOf(async () =>
         testAutomation({ path: { id: 'nope' }, body: {}, headers: once, throwOnError: true }),

@@ -155,6 +155,16 @@ describe('the artifacts', () => {
     expect(within(checklist).queryByText('members are private')).toBeNull();
   });
 
+  it('tells the owner why no reader can be added when the members cannot be read', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/members', refuse('members are private')));
+    visit('/artifacts');
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    expect(await within(study).findByText('members are private')).toBeInTheDocument();
+    expect(within(study).queryByRole('combobox')).toBeNull();
+  });
+
   it('keeps the picked reader when the share is refused', async () => {
     const user = userEvent.setup();
     server.use(http.put('*/api/v1/artifacts/:id/members/:login', refuse('samir cannot read it')));
