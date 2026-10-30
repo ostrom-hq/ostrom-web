@@ -7,6 +7,7 @@ import {
   storedChoice,
   useOrgStore,
 } from '@/shared/org/orgStore';
+import { safeLocalStorage } from '@/shared/lib/safeStorage';
 
 function storageWith(value: string | null): { getItem: (key: string) => string | null } {
   return { getItem: (key) => (key === ORG_STORAGE_KEY ? value : null) };
@@ -191,7 +192,7 @@ describe('useOrgStore', () => {
   it('moves a choice kept under the two old keys to the one key, once', () => {
     window.localStorage.setItem('ostrom.org', 'org-globex');
     window.localStorage.setItem('ostrom.org.login', 'maya');
-    moveLegacyChoice(window.localStorage);
+    moveLegacyChoice(safeLocalStorage);
     expect(readStoredChoice(window.localStorage)).toEqual({ id: 'org-globex', login: 'maya' });
     expect([
       window.localStorage.getItem('ostrom.org'),
@@ -200,11 +201,11 @@ describe('useOrgStore', () => {
     // A newer choice wins; half an old pair is only erased.
     window.localStorage.setItem('ostrom.org', 'org-acme');
     window.localStorage.setItem('ostrom.org.login', 'maya');
-    moveLegacyChoice(window.localStorage);
+    moveLegacyChoice(safeLocalStorage);
     expect(readStoredChoice(window.localStorage)?.id).toBe('org-globex');
     window.localStorage.clear();
     window.localStorage.setItem('ostrom.org', 'org-acme');
-    moveLegacyChoice(window.localStorage);
+    moveLegacyChoice(safeLocalStorage);
     expect(window.localStorage.length).toBe(0);
   });
 });
