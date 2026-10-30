@@ -2,12 +2,39 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerWaitData, AnswerWaitResponses, AskGateData, AskGateResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, CheckAgentPolicyResponses, ClientOptions, ConsumeGateResponses, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpServerData, CreateMcpServerResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpServerResponses, DeletePushDeviceResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, GetAnalysisStateResponses, GetApprovalResponses, GetArtifactFileResponses, GetArtifactResponses, GetAutomationResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGroupResponses, GetHookDeliveryResponses, GetLauncherConfigResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InviteMembersData, InviteMembersResponses, LauncherLoginData, LauncherLoginResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListNotificationsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, ReconcileUsageData, ReconcileUsageResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, RemoveGroupMemberResponses, RemoveSharedAccountResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportSeenData, ReportSeenResponses, RestartAnalysisResponses, RestorePackageResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokePackageData, RevokePackageResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartDeviceLoginResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, TestAutomationData, TestAutomationResponses, TriggerAutomationResponses, UnshareArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses } from './types.gen';
+import type { AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerWaitData, AnswerWaitResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeletePushDeviceResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetArtifactFileResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListNotificationsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OpenBillingPortalResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, RemoveGroupMemberResponses, RemoveSharedAccountResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokePackageData, RevokePackageResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
     responseFallback?: 'error' | 'passthrough';
 };
+
+export type HandleHealthRootResponse = {
+    body: HealthRootResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /health` operation.
+ */
+export function handleHealthRoot(response?: HandleHealthRootResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/health`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
 
 export type HandleHealthResponse = {
     body: HealthResponses[200];
@@ -19,6 +46,60 @@ export type HandleHealthResponse = {
  */
 export function handleHealth(response?: HandleHealthResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/health`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetInstanceResponse = {
+    body: GetInstanceResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/instance` operation.
+ */
+export function handleGetInstance(response?: HandleGetInstanceResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/instance`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListInstanceKeysResponse = {
+    body: ListInstanceKeysResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/instance/keys` operation.
+ */
+export function handleListInstanceKeys(response?: HandleListInstanceKeysResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/instance/keys`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -350,6 +431,87 @@ type ToResponseUnion<T> = {
  */
 export function handleGetMe(response?: HandleGetMeResponse | ToResponseUnion<GetMeResponses> | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/auth/me`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleRequestSignInEmailResponse = {
+    body: RequestSignInEmailResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/auth/email` operation.
+ */
+export function handleRequestSignInEmail(response?: HandleRequestSignInEmailResponse | HttpResponseResolver<never, RequestSignInEmailData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, RequestSignInEmailData['body']>(`${options?.baseUrl ?? '*'}/api/v1/auth/email`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleVerifySignInEmailResponse = {
+    body: VerifySignInEmailResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/auth/email/verify` operation.
+ */
+export function handleVerifySignInEmail(response?: HandleVerifySignInEmailResponse | HttpResponseResolver<never, VerifySignInEmailData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, VerifySignInEmailData['body']>(`${options?.baseUrl ?? '*'}/api/v1/auth/email/verify`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleExchangeSignInLinkResponse = {
+    body: ExchangeSignInLinkResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/auth/link` operation.
+ */
+export function handleExchangeSignInLink(response?: HandleExchangeSignInLinkResponse | HttpResponseResolver<never, ExchangeSignInLinkData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ExchangeSignInLinkData['body']>(`${options?.baseUrl ?? '*'}/api/v1/auth/link`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -902,16 +1064,43 @@ export type HandleGithubWebhookResponse = {
 };
 
 /**
- * Handler for the `POST /api/v1/github/webhook` operation.
+ * Handler for the `POST /webhooks/github` operation.
  */
 export function handleGithubWebhook(response?: HandleGithubWebhookResponse | HttpResponseResolver<never, DefaultBodyType>, options?: RequestHandlerOptions): HttpHandler {
-    return http.post<never, DefaultBodyType>(`${options?.baseUrl ?? '*'}/api/v1/github/webhook`, info => {
+    return http.post<never, DefaultBodyType>(`${options?.baseUrl ?? '*'}/webhooks/github`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
         const body = response?.body;
         if (body !== undefined) {
             return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReceiveSlackInteractionResponse = {
+    body: ReceiveSlackInteractionResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /webhooks/slack` operation.
+ */
+export function handleReceiveSlackInteraction(response?: HandleReceiveSlackInteractionResponse | HttpResponseResolver<never, ReceiveSlackInteractionData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ReceiveSlackInteractionData['body']>(`${options?.baseUrl ?? '*'}/webhooks/slack`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -1584,6 +1773,33 @@ export function handleGetGateCatalog(response?: HandleGetGateCatalogResponse | H
     }, options);
 }
 
+export type HandleGetSignedGatePolicyResponse = {
+    body: GetSignedGatePolicyResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/gates/catalog/signed` operation.
+ */
+export function handleGetSignedGatePolicy(response?: HandleGetSignedGatePolicyResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/gates/catalog/signed`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleGetGatePolicyResponse = {
     body: GetGatePolicyResponses[200];
     status?: 200;
@@ -1665,6 +1881,33 @@ export function handleListApprovals(response?: HandleListApprovalsResponse | Htt
     }, options);
 }
 
+export type HandleGetApprovalQueueResponse = {
+    body: GetApprovalQueueResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/approvals/queue` operation.
+ */
+export function handleGetApprovalQueue(response?: HandleGetApprovalQueueResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/approvals/queue`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleGetApprovalResponse = {
     body: GetApprovalResponses[200];
     status?: 200;
@@ -1679,6 +1922,37 @@ export function handleGetApproval(response?: HandleGetApprovalResponse | HttpRes
     return http.get<{
         id: string;
     }, never>(`${options?.baseUrl ?? '*'}/api/v1/approvals/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetApprovalViewResponse = {
+    body: GetApprovalViewResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/approvals/{id}/view` operation.
+ */
+export function handleGetApprovalView(response?: HandleGetApprovalViewResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/approvals/:id/view`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -2903,7 +3177,7 @@ export type HandleTestAutomationResponse = {
 /**
  * Handler for the `POST /api/v1/automations/{id}/run` operation.
  */
-export function handleTestAutomation(response?: HandleTestAutomationResponse | HttpResponseResolver<{
+export function handleTestAutomation(response?: HandleTestAutomationResponse | ToResponseUnion<TestAutomationResponses> | HttpResponseResolver<{
     id: string;
 }, TestAutomationData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
@@ -3251,6 +3525,252 @@ export function handleSaveMcpServer(response?: HandleSaveMcpServerResponse | Htt
     }, options);
 }
 
+export type HandleListMcpAssignmentsResponse = {
+    body: ListMcpAssignmentsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/mcp/servers/{name}/assignments` operation.
+ */
+export function handleListMcpAssignments(response?: HandleListMcpAssignmentsResponse | HttpResponseResolver<{
+    name: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        name: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/assignments`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleUnassignMcpServerResponse = {
+    body: UnassignMcpServerResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `DELETE /api/v1/mcp/servers/{name}/assignments/{member}` operation.
+ */
+export function handleUnassignMcpServer(response?: HandleUnassignMcpServerResponse | HttpResponseResolver<{
+    name: string;
+    member: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.delete<{
+        name: string;
+        member: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/assignments/:member`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAssignMcpServerResponse = {
+    body: AssignMcpServerResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/mcp/servers/{name}/assignments/{member}` operation.
+ */
+export function handleAssignMcpServer(response?: HandleAssignMcpServerResponse | HttpResponseResolver<{
+    name: string;
+    member: string;
+}, AssignMcpServerData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        name: string;
+        member: string;
+    }, AssignMcpServerData['body']>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/assignments/:member`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListMcpArgumentPoliciesResponse = {
+    body: ListMcpArgumentPoliciesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/mcp/servers/{name}/policies` operation.
+ */
+export function handleListMcpArgumentPolicies(response?: HandleListMcpArgumentPoliciesResponse | HttpResponseResolver<{
+    name: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        name: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/policies`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCreateMcpArgumentPolicyResponse = {
+    body: CreateMcpArgumentPolicyResponses[201];
+    status?: 201;
+};
+
+/**
+ * Handler for the `POST /api/v1/mcp/servers/{name}/policies` operation.
+ */
+export function handleCreateMcpArgumentPolicy(response?: HandleCreateMcpArgumentPolicyResponse | HttpResponseResolver<{
+    name: string;
+}, CreateMcpArgumentPolicyData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        name: string;
+    }, CreateMcpArgumentPolicyData['body']>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/policies`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 201 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleDeleteMcpArgumentPolicyResponse = {
+    body: DeleteMcpArgumentPolicyResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `DELETE /api/v1/mcp/servers/{name}/policies/{policyId}` operation.
+ */
+export function handleDeleteMcpArgumentPolicy(response?: HandleDeleteMcpArgumentPolicyResponse | HttpResponseResolver<{
+    name: string;
+    policyId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.delete<{
+        name: string;
+        policyId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/mcp/servers/:name/policies/:policyId`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetMcpSettingsResponse = {
+    body: GetMcpSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/mcp/settings` operation.
+ */
+export function handleGetMcpSettings(response?: HandleGetMcpSettingsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/mcp/settings`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandlePutMcpSettingsResponse = {
+    body: PutMcpSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/mcp/settings` operation.
+ */
+export function handlePutMcpSettings(response?: HandlePutMcpSettingsResponse | HttpResponseResolver<never, PutMcpSettingsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<never, PutMcpSettingsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/mcp/settings`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleRelayMcpResponse = {
     body: RelayMcpResponses[200];
     status?: 200;
@@ -3452,6 +3972,33 @@ export function handleRotateSecret(response?: HandleRotateSecretResponse | HttpR
     }, options);
 }
 
+export type HandleImportTeamCodeResponse = {
+    body: ImportTeamCodeResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/import/teamcode` operation.
+ */
+export function handleImportTeamCode(response?: HandleImportTeamCodeResponse | HttpResponseResolver<never, ImportTeamCodeData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ImportTeamCodeData['body']>(`${options?.baseUrl ?? '*'}/api/v1/import/teamcode`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleInferenceMessagesResponse = {
     body: InferenceMessagesResponses[200];
     status?: 200;
@@ -3462,6 +4009,33 @@ export type HandleInferenceMessagesResponse = {
  */
 export function handleInferenceMessages(response?: HandleInferenceMessagesResponse | HttpResponseResolver<never, DefaultBodyType>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, DefaultBodyType>(`${options?.baseUrl ?? '*'}/api/v1/inference/v1/messages`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleInferenceResponsesResponse = {
+    body: InferenceResponsesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/inference/v1/responses` operation.
+ */
+export function handleInferenceResponses(response?: HandleInferenceResponsesResponse | HttpResponseResolver<never, DefaultBodyType>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, DefaultBodyType>(`${options?.baseUrl ?? '*'}/api/v1/inference/v1/responses`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -3516,6 +4090,60 @@ export type HandleInferenceModelsResponse = {
  */
 export function handleInferenceModels(response?: HandleInferenceModelsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/inference/v1/models`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetInferenceSettingsResponse = {
+    body: GetInferenceSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/inference/settings` operation.
+ */
+export function handleGetInferenceSettings(response?: HandleGetInferenceSettingsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/inference/settings`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetInferenceSettingsResponse = {
+    body: SetInferenceSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/inference/settings` operation.
+ */
+export function handleSetInferenceSettings(response?: HandleSetInferenceSettingsResponse | HttpResponseResolver<never, SetInferenceSettingsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<never, SetInferenceSettingsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/inference/settings`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -3726,6 +4354,33 @@ export function handleSetBudget(response?: HandleSetBudgetResponse | HttpRespons
     }, options);
 }
 
+export type HandleGetMyBudgetResponse = {
+    body: GetMyBudgetResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/budgets/me` operation.
+ */
+export function handleGetMyBudget(response?: HandleGetMyBudgetResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/budgets/me`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleGetUsageResponse = {
     body: GetUsageResponses[200];
     status?: 200;
@@ -3742,6 +4397,114 @@ export function handleGetUsage(response?: HandleGetUsageResponse | HttpResponseR
         const body = response?.body;
         if (body !== undefined) {
             return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetUsageSummaryResponse = {
+    body: GetUsageSummaryResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/usage/summary` operation.
+ */
+export function handleGetUsageSummary(response?: HandleGetUsageSummaryResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/usage/summary`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListUsageEventsResponse = {
+    body: ListUsageEventsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/usage/events` operation.
+ */
+export function handleListUsageEvents(response?: HandleListUsageEventsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/usage/events`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleRecordUsageEventsResponse = {
+    body: RecordUsageEventsResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/usage/events` operation.
+ */
+export function handleRecordUsageEvents(response?: HandleRecordUsageEventsResponse | HttpResponseResolver<never, RecordUsageEventsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, RecordUsageEventsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/usage/events`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStreamUsageResponse = {
+    body: StreamUsageResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/usage/live` operation.
+ */
+export function handleStreamUsage(response?: HandleStreamUsageResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/usage/live`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.text(typeof body === 'string' ? body : JSON.stringify(body), { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -4104,8 +4867,8 @@ export function handleCreateCloudSession(response?: HandleCreateCloudSessionResp
 }
 
 export type HandleStopCloudSessionResponse = {
-    body: StopCloudSessionResponses[204];
-    status?: 204;
+    body: StopCloudSessionResponses[202];
+    status?: 202;
 };
 
 /**
@@ -4122,7 +4885,7 @@ export function handleStopCloudSession(response?: HandleStopCloudSessionResponse
         }
         const body = response?.body;
         if (body !== undefined) {
-            return new HttpResponse(body, { status: response?.status ?? 204 });
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -4148,6 +4911,157 @@ export function handleGetCloudSession(response?: HandleGetCloudSessionResponse |
     return http.get<{
         id: string;
     }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandlePauseCloudSessionResponse = {
+    body: PauseCloudSessionResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/pause` operation.
+ */
+export function handlePauseCloudSession(response?: HandlePauseCloudSessionResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/pause`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleResumeCloudSessionResponse = {
+    body: ResumeCloudSessionResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/resume` operation.
+ */
+export function handleResumeCloudSession(response?: HandleResumeCloudSessionResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/resume`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleIssueCloudTerminalTicketResponse = {
+    body: IssueCloudTerminalTicketResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/terminal/ticket` operation.
+ */
+export function handleIssueCloudTerminalTicket(response?: HandleIssueCloudTerminalTicketResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/terminal/ticket`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAttachCloudTerminalResponse = {
+    body: DefaultBodyType;
+    status?: number;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/terminal` operation.
+ */
+export function handleAttachCloudTerminal(response?: HandleAttachCloudTerminalResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/terminal`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerHeartbeatResponse = {
+    body: CloudRunnerHeartbeatResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/heartbeat` operation.
+ */
+export function handleCloudRunnerHeartbeat(response?: HandleCloudRunnerHeartbeatResponse | HttpResponseResolver<never, CloudRunnerHeartbeatData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CloudRunnerHeartbeatData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/heartbeat`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -4343,6 +5257,37 @@ export function handleGetArtifact(response?: HandleGetArtifactResponse | HttpRes
     }, options);
 }
 
+export type HandleUpdateArtifactResponse = {
+    body: UpdateArtifactResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PATCH /api/v1/artifacts/{id}` operation.
+ */
+export function handleUpdateArtifact(response?: HandleUpdateArtifactResponse | HttpResponseResolver<{
+    id: string;
+}, UpdateArtifactData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.patch<{
+        id: string;
+    }, UpdateArtifactData['body']>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleListArtifactVersionsResponse = {
     body: ListArtifactVersionsResponses[200];
     status?: 200;
@@ -4475,16 +5420,16 @@ export type HandleUnshareArtifactResponse = {
 };
 
 /**
- * Handler for the `DELETE /api/v1/artifacts/{id}/members/{login}` operation.
+ * Handler for the `DELETE /api/v1/artifacts/{id}/members/{memberId}` operation.
  */
 export function handleUnshareArtifact(response?: HandleUnshareArtifactResponse | HttpResponseResolver<{
     id: string;
-    login: string;
+    memberId: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.delete<{
         id: string;
-        login: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/members/:login`, info => {
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/members/:memberId`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -4508,16 +5453,16 @@ export type HandleShareArtifactResponse = {
 };
 
 /**
- * Handler for the `PUT /api/v1/artifacts/{id}/members/{login}` operation.
+ * Handler for the `PUT /api/v1/artifacts/{id}/members/{memberId}` operation.
  */
 export function handleShareArtifact(response?: HandleShareArtifactResponse | HttpResponseResolver<{
     id: string;
-    login: string;
+    memberId: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.put<{
         id: string;
-        login: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/members/:login`, info => {
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/members/:memberId`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -4545,10 +5490,10 @@ export type HandleCreateArtifactTicketResponse = {
  */
 export function handleCreateArtifactTicket(response?: HandleCreateArtifactTicketResponse | HttpResponseResolver<{
     id: string;
-}, never>, options?: RequestHandlerOptions): HttpHandler {
+}, CreateArtifactTicketData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
         id: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/tickets`, info => {
+    }, CreateArtifactTicketData['body']>(`${options?.baseUrl ?? '*'}/api/v1/artifacts/:id/tickets`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -5515,11 +6460,267 @@ export function handleRunTask(response?: HandleRunTaskResponse | HttpResponseRes
     }, options);
 }
 
+export type HandleGetBillingResponse = {
+    body: GetBillingResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/orgs/{orgId}/billing` operation.
+ */
+export function handleGetBilling(response?: HandleGetBillingResponse | HttpResponseResolver<{
+    orgId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        orgId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStartBillingCheckoutResponse = {
+    body: StartBillingCheckoutResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/orgs/{orgId}/billing/checkout` operation.
+ */
+export function handleStartBillingCheckout(response?: HandleStartBillingCheckoutResponse | HttpResponseResolver<{
+    orgId: string;
+}, StartBillingCheckoutData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        orgId: string;
+    }, StartBillingCheckoutData['body']>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/checkout`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleOpenBillingPortalResponse = {
+    body: OpenBillingPortalResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/orgs/{orgId}/billing/portal` operation.
+ */
+export function handleOpenBillingPortal(response?: HandleOpenBillingPortalResponse | HttpResponseResolver<{
+    orgId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        orgId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/portal`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleChangeBillingPlanResponse = {
+    body: ChangeBillingPlanResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/orgs/{orgId}/billing/plan` operation.
+ */
+export function handleChangeBillingPlan(response?: HandleChangeBillingPlanResponse | HttpResponseResolver<{
+    orgId: string;
+}, ChangeBillingPlanData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        orgId: string;
+    }, ChangeBillingPlanData['body']>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/plan`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCancelBillingSubscriptionResponse = {
+    body: CancelBillingSubscriptionResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/orgs/{orgId}/billing/cancel` operation.
+ */
+export function handleCancelBillingSubscription(response?: HandleCancelBillingSubscriptionResponse | HttpResponseResolver<{
+    orgId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        orgId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/cancel`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleResumeBillingSubscriptionResponse = {
+    body: ResumeBillingSubscriptionResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/orgs/{orgId}/billing/resume` operation.
+ */
+export function handleResumeBillingSubscription(response?: HandleResumeBillingSubscriptionResponse | HttpResponseResolver<{
+    orgId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        orgId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/resume`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListBillingInvoicesResponse = {
+    body: ListBillingInvoicesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/orgs/{orgId}/billing/invoices` operation.
+ */
+export function handleListBillingInvoices(response?: HandleListBillingInvoicesResponse | HttpResponseResolver<{
+    orgId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        orgId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:orgId/billing/invoices`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReceiveStripeWebhookResponse = {
+    body: ReceiveStripeWebhookResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /webhooks/stripe` operation.
+ */
+export function handleReceiveStripeWebhook(response?: HandleReceiveStripeWebhookResponse | HttpResponseResolver<never, ReceiveStripeWebhookData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ReceiveStripeWebhookData['body']>(`${options?.baseUrl ?? '*'}/webhooks/stripe`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type MswHandlerFactories = {
+    /**
+     * Handler for the `GET /health` operation.
+     */
+    healthRoot: typeof handleHealthRoot;
     /**
      * Handler for the `GET /api/v1/health` operation.
      */
     health: typeof handleHealth;
+    /**
+     * Handler for the `GET /api/v1/instance` operation.
+     */
+    getInstance: typeof handleGetInstance;
+    /**
+     * Handler for the `GET /api/v1/instance/keys` operation.
+     */
+    listInstanceKeys: typeof handleListInstanceKeys;
     /**
      * Handler for the `GET /api/v1/capabilities` operation.
      */
@@ -5568,6 +6769,18 @@ export type MswHandlerFactories = {
      * Handler for the `GET /api/v1/auth/me` operation.
      */
     getMe: typeof handleGetMe;
+    /**
+     * Handler for the `POST /api/v1/auth/email` operation.
+     */
+    requestSignInEmail: typeof handleRequestSignInEmail;
+    /**
+     * Handler for the `POST /api/v1/auth/email/verify` operation.
+     */
+    verifySignInEmail: typeof handleVerifySignInEmail;
+    /**
+     * Handler for the `POST /api/v1/auth/link` operation.
+     */
+    exchangeSignInLink: typeof handleExchangeSignInLink;
     /**
      * Handler for the `POST /api/v1/auth/logout` operation.
      */
@@ -5645,9 +6858,13 @@ export type MswHandlerFactories = {
      */
     githubAppInstallCallback: typeof handleGithubAppInstallCallback;
     /**
-     * Handler for the `POST /api/v1/github/webhook` operation.
+     * Handler for the `POST /webhooks/github` operation.
      */
     githubWebhook: typeof handleGithubWebhook;
+    /**
+     * Handler for the `POST /webhooks/slack` operation.
+     */
+    receiveSlackInteraction: typeof handleReceiveSlackInteraction;
     /**
      * Handler for the `POST /api/v1/github/checks` operation.
      */
@@ -5741,6 +6958,10 @@ export type MswHandlerFactories = {
      */
     getGateCatalog: typeof handleGetGateCatalog;
     /**
+     * Handler for the `GET /api/v1/gates/catalog/signed` operation.
+     */
+    getSignedGatePolicy: typeof handleGetSignedGatePolicy;
+    /**
      * Handler for the `GET /api/v1/gates/policy` operation.
      */
     getGatePolicy: typeof handleGetGatePolicy;
@@ -5753,9 +6974,17 @@ export type MswHandlerFactories = {
      */
     listApprovals: typeof handleListApprovals;
     /**
+     * Handler for the `GET /api/v1/approvals/queue` operation.
+     */
+    getApprovalQueue: typeof handleGetApprovalQueue;
+    /**
      * Handler for the `GET /api/v1/approvals/{id}` operation.
      */
     getApproval: typeof handleGetApproval;
+    /**
+     * Handler for the `GET /api/v1/approvals/{id}/view` operation.
+     */
+    getApprovalView: typeof handleGetApprovalView;
     /**
      * Handler for the `POST /api/v1/approvals/{id}/answer` operation.
      */
@@ -5969,6 +7198,38 @@ export type MswHandlerFactories = {
      */
     saveMcpServer: typeof handleSaveMcpServer;
     /**
+     * Handler for the `GET /api/v1/mcp/servers/{name}/assignments` operation.
+     */
+    listMcpAssignments: typeof handleListMcpAssignments;
+    /**
+     * Handler for the `DELETE /api/v1/mcp/servers/{name}/assignments/{member}` operation.
+     */
+    unassignMcpServer: typeof handleUnassignMcpServer;
+    /**
+     * Handler for the `PUT /api/v1/mcp/servers/{name}/assignments/{member}` operation.
+     */
+    assignMcpServer: typeof handleAssignMcpServer;
+    /**
+     * Handler for the `GET /api/v1/mcp/servers/{name}/policies` operation.
+     */
+    listMcpArgumentPolicies: typeof handleListMcpArgumentPolicies;
+    /**
+     * Handler for the `POST /api/v1/mcp/servers/{name}/policies` operation.
+     */
+    createMcpArgumentPolicy: typeof handleCreateMcpArgumentPolicy;
+    /**
+     * Handler for the `DELETE /api/v1/mcp/servers/{name}/policies/{policyId}` operation.
+     */
+    deleteMcpArgumentPolicy: typeof handleDeleteMcpArgumentPolicy;
+    /**
+     * Handler for the `GET /api/v1/mcp/settings` operation.
+     */
+    getMcpSettings: typeof handleGetMcpSettings;
+    /**
+     * Handler for the `PUT /api/v1/mcp/settings` operation.
+     */
+    putMcpSettings: typeof handlePutMcpSettings;
+    /**
      * Handler for the `POST /api/v1/mcp/{server}` operation.
      */
     relayMcp: typeof handleRelayMcp;
@@ -5997,9 +7258,17 @@ export type MswHandlerFactories = {
      */
     rotateSecret: typeof handleRotateSecret;
     /**
+     * Handler for the `POST /api/v1/import/teamcode` operation.
+     */
+    importTeamCode: typeof handleImportTeamCode;
+    /**
      * Handler for the `POST /api/v1/inference/v1/messages` operation.
      */
     inferenceMessages: typeof handleInferenceMessages;
+    /**
+     * Handler for the `POST /api/v1/inference/v1/responses` operation.
+     */
+    inferenceResponses: typeof handleInferenceResponses;
     /**
      * Handler for the `POST /api/v1/inference/v1/chat/completions` operation.
      */
@@ -6008,6 +7277,14 @@ export type MswHandlerFactories = {
      * Handler for the `GET /api/v1/inference/v1/models` operation.
      */
     inferenceModels: typeof handleInferenceModels;
+    /**
+     * Handler for the `GET /api/v1/inference/settings` operation.
+     */
+    getInferenceSettings: typeof handleGetInferenceSettings;
+    /**
+     * Handler for the `PUT /api/v1/inference/settings` operation.
+     */
+    setInferenceSettings: typeof handleSetInferenceSettings;
     /**
      * Handler for the `GET /api/v1/policy/models` operation.
      */
@@ -6037,9 +7314,29 @@ export type MswHandlerFactories = {
      */
     setBudget: typeof handleSetBudget;
     /**
+     * Handler for the `GET /api/v1/budgets/me` operation.
+     */
+    getMyBudget: typeof handleGetMyBudget;
+    /**
      * Handler for the `GET /api/v1/usage` operation.
      */
     getUsage: typeof handleGetUsage;
+    /**
+     * Handler for the `GET /api/v1/usage/summary` operation.
+     */
+    getUsageSummary: typeof handleGetUsageSummary;
+    /**
+     * Handler for the `GET /api/v1/usage/events` operation.
+     */
+    listUsageEvents: typeof handleListUsageEvents;
+    /**
+     * Handler for the `POST /api/v1/usage/events` operation.
+     */
+    recordUsageEvents: typeof handleRecordUsageEvents;
+    /**
+     * Handler for the `GET /api/v1/usage/live` operation.
+     */
+    streamUsage: typeof handleStreamUsage;
     /**
      * Handler for the `GET /api/v1/usage/pending` operation.
      */
@@ -6097,6 +7394,26 @@ export type MswHandlerFactories = {
      */
     getCloudSession: typeof handleGetCloudSession;
     /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/pause` operation.
+     */
+    pauseCloudSession: typeof handlePauseCloudSession;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/resume` operation.
+     */
+    resumeCloudSession: typeof handleResumeCloudSession;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/terminal/ticket` operation.
+     */
+    issueCloudTerminalTicket: typeof handleIssueCloudTerminalTicket;
+    /**
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/terminal` operation.
+     */
+    attachCloudTerminal: typeof handleAttachCloudTerminal;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/heartbeat` operation.
+     */
+    cloudRunnerHeartbeat: typeof handleCloudRunnerHeartbeat;
+    /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/messages` operation.
      */
     sendCloudMessage: typeof handleSendCloudMessage;
@@ -6121,6 +7438,10 @@ export type MswHandlerFactories = {
      */
     getArtifact: typeof handleGetArtifact;
     /**
+     * Handler for the `PATCH /api/v1/artifacts/{id}` operation.
+     */
+    updateArtifact: typeof handleUpdateArtifact;
+    /**
      * Handler for the `GET /api/v1/artifacts/{id}/versions` operation.
      */
     listArtifactVersions: typeof handleListArtifactVersions;
@@ -6137,11 +7458,11 @@ export type MswHandlerFactories = {
      */
     listArtifactMembers: typeof handleListArtifactMembers;
     /**
-     * Handler for the `DELETE /api/v1/artifacts/{id}/members/{login}` operation.
+     * Handler for the `DELETE /api/v1/artifacts/{id}/members/{memberId}` operation.
      */
     unshareArtifact: typeof handleUnshareArtifact;
     /**
-     * Handler for the `PUT /api/v1/artifacts/{id}/members/{login}` operation.
+     * Handler for the `PUT /api/v1/artifacts/{id}/members/{memberId}` operation.
      */
     shareArtifact: typeof handleShareArtifact;
     /**
@@ -6280,6 +7601,38 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/tasks/{id}/run` operation.
      */
     runTask: typeof handleRunTask;
+    /**
+     * Handler for the `GET /api/v1/orgs/{orgId}/billing` operation.
+     */
+    getBilling: typeof handleGetBilling;
+    /**
+     * Handler for the `POST /api/v1/orgs/{orgId}/billing/checkout` operation.
+     */
+    startBillingCheckout: typeof handleStartBillingCheckout;
+    /**
+     * Handler for the `POST /api/v1/orgs/{orgId}/billing/portal` operation.
+     */
+    openBillingPortal: typeof handleOpenBillingPortal;
+    /**
+     * Handler for the `POST /api/v1/orgs/{orgId}/billing/plan` operation.
+     */
+    changeBillingPlan: typeof handleChangeBillingPlan;
+    /**
+     * Handler for the `POST /api/v1/orgs/{orgId}/billing/cancel` operation.
+     */
+    cancelBillingSubscription: typeof handleCancelBillingSubscription;
+    /**
+     * Handler for the `POST /api/v1/orgs/{orgId}/billing/resume` operation.
+     */
+    resumeBillingSubscription: typeof handleResumeBillingSubscription;
+    /**
+     * Handler for the `GET /api/v1/orgs/{orgId}/billing/invoices` operation.
+     */
+    listBillingInvoices: typeof handleListBillingInvoices;
+    /**
+     * Handler for the `POST /webhooks/stripe` operation.
+     */
+    receiveStripeWebhook: typeof handleReceiveStripeWebhook;
 };
 
 export type CreateMswHandlersResult = {
@@ -6297,7 +7650,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         return (response, options) => handler(response, { ...config, ...options });
     }
     const pick: CreateMswHandlersResult['pick'] = {
+        healthRoot: wrap(handleHealthRoot),
         health: wrap(handleHealth),
+        getInstance: wrap(handleGetInstance),
+        listInstanceKeys: wrap(handleListInstanceKeys),
         capabilities: wrap(handleCapabilities),
         startGithubLogin: wrap(handleStartGithubLogin),
         mobileToken: wrap(handleMobileToken),
@@ -6310,6 +7666,9 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createLaunch: wrap(handleCreateLaunch),
         checkAgentPolicy: wrap(handleCheckAgentPolicy),
         getMe: wrap(handleGetMe),
+        requestSignInEmail: wrap(handleRequestSignInEmail),
+        verifySignInEmail: wrap(handleVerifySignInEmail),
+        exchangeSignInLink: wrap(handleExchangeSignInLink),
         logout: wrap(handleLogout),
         listAuthSessions: wrap(handleListAuthSessions),
         revokeAuthSession: wrap(handleRevokeAuthSession),
@@ -6330,6 +7689,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         startGithubAppInstall: wrap(handleStartGithubAppInstall),
         githubAppInstallCallback: wrap(handleGithubAppInstallCallback),
         githubWebhook: wrap(handleGithubWebhook),
+        receiveSlackInteraction: wrap(handleReceiveSlackInteraction),
         githubCheck: wrap(handleGithubCheck),
         getOrganization: wrap(handleGetOrganization),
         listMembers: wrap(handleListMembers),
@@ -6353,10 +7713,13 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         getGate: wrap(handleGetGate),
         consumeGate: wrap(handleConsumeGate),
         getGateCatalog: wrap(handleGetGateCatalog),
+        getSignedGatePolicy: wrap(handleGetSignedGatePolicy),
         getGatePolicy: wrap(handleGetGatePolicy),
         setGatePolicy: wrap(handleSetGatePolicy),
         listApprovals: wrap(handleListApprovals),
+        getApprovalQueue: wrap(handleGetApprovalQueue),
         getApproval: wrap(handleGetApproval),
+        getApprovalView: wrap(handleGetApprovalView),
         answerApproval: wrap(handleAnswerApproval),
         listDecisions: wrap(handleListDecisions),
         listReceipts: wrap(handleListReceipts),
@@ -6410,6 +7773,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createMcpServer: wrap(handleCreateMcpServer),
         deleteMcpServer: wrap(handleDeleteMcpServer),
         saveMcpServer: wrap(handleSaveMcpServer),
+        listMcpAssignments: wrap(handleListMcpAssignments),
+        unassignMcpServer: wrap(handleUnassignMcpServer),
+        assignMcpServer: wrap(handleAssignMcpServer),
+        listMcpArgumentPolicies: wrap(handleListMcpArgumentPolicies),
+        createMcpArgumentPolicy: wrap(handleCreateMcpArgumentPolicy),
+        deleteMcpArgumentPolicy: wrap(handleDeleteMcpArgumentPolicy),
+        getMcpSettings: wrap(handleGetMcpSettings),
+        putMcpSettings: wrap(handlePutMcpSettings),
         relayMcp: wrap(handleRelayMcp),
         listMcpCalls: wrap(handleListMcpCalls),
         getMcpUsage: wrap(handleGetMcpUsage),
@@ -6417,9 +7788,13 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createSecret: wrap(handleCreateSecret),
         deleteSecret: wrap(handleDeleteSecret),
         rotateSecret: wrap(handleRotateSecret),
+        importTeamCode: wrap(handleImportTeamCode),
         inferenceMessages: wrap(handleInferenceMessages),
+        inferenceResponses: wrap(handleInferenceResponses),
         inferenceChatCompletions: wrap(handleInferenceChatCompletions),
         inferenceModels: wrap(handleInferenceModels),
+        getInferenceSettings: wrap(handleGetInferenceSettings),
+        setInferenceSettings: wrap(handleSetInferenceSettings),
         getModelPolicy: wrap(handleGetModelPolicy),
         setModelPolicy: wrap(handleSetModelPolicy),
         listInferenceRoutes: wrap(handleListInferenceRoutes),
@@ -6427,7 +7802,12 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         deleteInferenceRoute: wrap(handleDeleteInferenceRoute),
         listBudgets: wrap(handleListBudgets),
         setBudget: wrap(handleSetBudget),
+        getMyBudget: wrap(handleGetMyBudget),
         getUsage: wrap(handleGetUsage),
+        getUsageSummary: wrap(handleGetUsageSummary),
+        listUsageEvents: wrap(handleListUsageEvents),
+        recordUsageEvents: wrap(handleRecordUsageEvents),
+        streamUsage: wrap(handleStreamUsage),
         listPendingUsage: wrap(handleListPendingUsage),
         listUsageReconciliations: wrap(handleListUsageReconciliations),
         reconcileUsage: wrap(handleReconcileUsage),
@@ -6442,12 +7822,18 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createCloudSession: wrap(handleCreateCloudSession),
         stopCloudSession: wrap(handleStopCloudSession),
         getCloudSession: wrap(handleGetCloudSession),
+        pauseCloudSession: wrap(handlePauseCloudSession),
+        resumeCloudSession: wrap(handleResumeCloudSession),
+        issueCloudTerminalTicket: wrap(handleIssueCloudTerminalTicket),
+        attachCloudTerminal: wrap(handleAttachCloudTerminal),
+        cloudRunnerHeartbeat: wrap(handleCloudRunnerHeartbeat),
         sendCloudMessage: wrap(handleSendCloudMessage),
         streamCloudSession: wrap(handleStreamCloudSession),
         listArtifacts: wrap(handleListArtifacts),
         publishArtifact: wrap(handlePublishArtifact),
         deleteArtifact: wrap(handleDeleteArtifact),
         getArtifact: wrap(handleGetArtifact),
+        updateArtifact: wrap(handleUpdateArtifact),
         listArtifactVersions: wrap(handleListArtifactVersions),
         publishArtifactVersion: wrap(handlePublishArtifactVersion),
         getArtifactFile: wrap(handleGetArtifactFile),
@@ -6487,7 +7873,15 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         getReplay: wrap(handleGetReplay),
         startReplay: wrap(handleStartReplay),
         listTasks: wrap(handleListTasks),
-        runTask: wrap(handleRunTask)
+        runTask: wrap(handleRunTask),
+        getBilling: wrap(handleGetBilling),
+        startBillingCheckout: wrap(handleStartBillingCheckout),
+        openBillingPortal: wrap(handleOpenBillingPortal),
+        changeBillingPlan: wrap(handleChangeBillingPlan),
+        cancelBillingSubscription: wrap(handleCancelBillingSubscription),
+        resumeBillingSubscription: wrap(handleResumeBillingSubscription),
+        listBillingInvoices: wrap(handleListBillingInvoices),
+        receiveStripeWebhook: wrap(handleReceiveStripeWebhook)
     };
     const all: CreateMswHandlersResult['all'] = (options = {}) => {
         type OverrideValue<R> = R | [
@@ -6499,6 +7893,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         }
         const overrides = options.pick ?? {};
         return [
+            invoke(pick.issueCloudTerminalTicket, overrides.issueCloudTerminalTicket),
+            invoke(pick.unassignMcpServer, overrides.unassignMcpServer),
+            invoke(pick.assignMcpServer, overrides.assignMcpServer),
+            invoke(pick.deleteMcpArgumentPolicy, overrides.deleteMcpArgumentPolicy),
             invoke(pick.revokeBudgetOverride, overrides.revokeBudgetOverride),
             invoke(pick.getArtifactFile, overrides.getArtifactFile),
             invoke(pick.pauseGroupMember, overrides.pauseGroupMember),
@@ -6507,10 +7905,22 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.startGithubAppInstall, overrides.startGithubAppInstall),
             invoke(pick.githubAppInstallCallback, overrides.githubAppInstallCallback),
             invoke(pick.inferenceChatCompletions, overrides.inferenceChatCompletions),
+            invoke(pick.listMcpAssignments, overrides.listMcpAssignments),
+            invoke(pick.listMcpArgumentPolicies, overrides.listMcpArgumentPolicies),
+            invoke(pick.createMcpArgumentPolicy, overrides.createMcpArgumentPolicy),
             invoke(pick.reconcileUsage, overrides.reconcileUsage),
+            invoke(pick.pauseCloudSession, overrides.pauseCloudSession),
+            invoke(pick.resumeCloudSession, overrides.resumeCloudSession),
+            invoke(pick.attachCloudTerminal, overrides.attachCloudTerminal),
             invoke(pick.sendCloudMessage, overrides.sendCloudMessage),
             invoke(pick.streamCloudSession, overrides.streamCloudSession),
             invoke(pick.rotateAutomationSecret, overrides.rotateAutomationSecret),
+            invoke(pick.startBillingCheckout, overrides.startBillingCheckout),
+            invoke(pick.openBillingPortal, overrides.openBillingPortal),
+            invoke(pick.changeBillingPlan, overrides.changeBillingPlan),
+            invoke(pick.cancelBillingSubscription, overrides.cancelBillingSubscription),
+            invoke(pick.resumeBillingSubscription, overrides.resumeBillingSubscription),
+            invoke(pick.listBillingInvoices, overrides.listBillingInvoices),
             invoke(pick.unshareArtifact, overrides.unshareArtifact),
             invoke(pick.shareArtifact, overrides.shareArtifact),
             invoke(pick.removeGroupMember, overrides.removeGroupMember),
@@ -6522,8 +7932,12 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.refreshToken, overrides.refreshToken),
             invoke(pick.getLauncherConfig, overrides.getLauncherConfig),
             invoke(pick.launcherLogin, overrides.launcherLogin),
+            invoke(pick.verifySignInEmail, overrides.verifySignInEmail),
+            invoke(pick.getSignedGatePolicy, overrides.getSignedGatePolicy),
             invoke(pick.inferenceMessages, overrides.inferenceMessages),
+            invoke(pick.inferenceResponses, overrides.inferenceResponses),
             invoke(pick.inferenceModels, overrides.inferenceModels),
+            invoke(pick.cloudRunnerHeartbeat, overrides.cloudRunnerHeartbeat),
             invoke(pick.revokeAuthSession, overrides.revokeAuthSession),
             invoke(pick.deleteMcpServer, overrides.deleteMcpServer),
             invoke(pick.saveMcpServer, overrides.saveMcpServer),
@@ -6535,6 +7949,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.signWorkflowReceipt, overrides.signWorkflowReceipt),
             invoke(pick.reportSeen, overrides.reportSeen),
             invoke(pick.consumeGate, overrides.consumeGate),
+            invoke(pick.getApprovalView, overrides.getApprovalView),
             invoke(pick.answerApproval, overrides.answerApproval),
             invoke(pick.verifyReceipt, overrides.verifyReceipt),
             invoke(pick.getReceiptBundle, overrides.getReceiptBundle),
@@ -6560,20 +7975,24 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.createArtifactTicket, overrides.createArtifactTicket),
             invoke(pick.listWebhookDeliveries, overrides.listWebhookDeliveries),
             invoke(pick.runTask, overrides.runTask),
+            invoke(pick.getBilling, overrides.getBilling),
+            invoke(pick.listInstanceKeys, overrides.listInstanceKeys),
             invoke(pick.startDeviceLogin, overrides.startDeviceLogin),
             invoke(pick.checkAgentPolicy, overrides.checkAgentPolicy),
             invoke(pick.getMe, overrides.getMe),
+            invoke(pick.requestSignInEmail, overrides.requestSignInEmail),
+            invoke(pick.exchangeSignInLink, overrides.exchangeSignInLink),
             invoke(pick.logout, overrides.logout),
             invoke(pick.listAuthSessions, overrides.listAuthSessions),
             invoke(pick.getNotificationPreferences, overrides.getNotificationPreferences),
             invoke(pick.setNotificationPreferences, overrides.setNotificationPreferences),
             invoke(pick.getGithubApp, overrides.getGithubApp),
-            invoke(pick.githubWebhook, overrides.githubWebhook),
             invoke(pick.githubCheck, overrides.githubCheck),
             invoke(pick.inviteMembers, overrides.inviteMembers),
             invoke(pick.getGateCatalog, overrides.getGateCatalog),
             invoke(pick.getGatePolicy, overrides.getGatePolicy),
             invoke(pick.setGatePolicy, overrides.setGatePolicy),
+            invoke(pick.getApprovalQueue, overrides.getApprovalQueue),
             invoke(pick.listReceiptKeys, overrides.listReceiptKeys),
             invoke(pick.getCurrentPackage, overrides.getCurrentPackage),
             invoke(pick.previewPackage, overrides.previewPackage),
@@ -6581,10 +8000,20 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.bulkUpdateRules, overrides.bulkUpdateRules),
             invoke(pick.listMcpServers, overrides.listMcpServers),
             invoke(pick.createMcpServer, overrides.createMcpServer),
+            invoke(pick.getMcpSettings, overrides.getMcpSettings),
+            invoke(pick.putMcpSettings, overrides.putMcpSettings),
             invoke(pick.listMcpCalls, overrides.listMcpCalls),
             invoke(pick.getMcpUsage, overrides.getMcpUsage),
+            invoke(pick.importTeamCode, overrides.importTeamCode),
+            invoke(pick.getInferenceSettings, overrides.getInferenceSettings),
+            invoke(pick.setInferenceSettings, overrides.setInferenceSettings),
             invoke(pick.getModelPolicy, overrides.getModelPolicy),
             invoke(pick.setModelPolicy, overrides.setModelPolicy),
+            invoke(pick.getMyBudget, overrides.getMyBudget),
+            invoke(pick.getUsageSummary, overrides.getUsageSummary),
+            invoke(pick.listUsageEvents, overrides.listUsageEvents),
+            invoke(pick.recordUsageEvents, overrides.recordUsageEvents),
+            invoke(pick.streamUsage, overrides.streamUsage),
             invoke(pick.listPendingUsage, overrides.listPendingUsage),
             invoke(pick.listUsageReconciliations, overrides.listUsageReconciliations),
             invoke(pick.listCloudSessions, overrides.listCloudSessions),
@@ -6622,6 +8051,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.deleteRunner, overrides.deleteRunner),
             invoke(pick.deleteArtifact, overrides.deleteArtifact),
             invoke(pick.getArtifact, overrides.getArtifact),
+            invoke(pick.updateArtifact, overrides.updateArtifact),
             invoke(pick.removeSharedAccount, overrides.removeSharedAccount),
             invoke(pick.updateSharedAccount, overrides.updateSharedAccount),
             invoke(pick.deleteGroup, overrides.deleteGroup),
@@ -6631,6 +8061,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.publishSkill, overrides.publishSkill),
             invoke(pick.deleteWebhook, overrides.deleteWebhook),
             invoke(pick.health, overrides.health),
+            invoke(pick.getInstance, overrides.getInstance),
             invoke(pick.capabilities, overrides.capabilities),
             invoke(pick.createLaunch, overrides.createLaunch),
             invoke(pick.listServiceKeys, overrides.listServiceKeys),
@@ -6689,7 +8120,11 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.createWebhook, overrides.createWebhook),
             invoke(pick.listAudit, overrides.listAudit),
             invoke(pick.streamEvents, overrides.streamEvents),
-            invoke(pick.listTasks, overrides.listTasks)
+            invoke(pick.listTasks, overrides.listTasks),
+            invoke(pick.githubWebhook, overrides.githubWebhook),
+            invoke(pick.receiveSlackInteraction, overrides.receiveSlackInteraction),
+            invoke(pick.receiveStripeWebhook, overrides.receiveStripeWebhook),
+            invoke(pick.healthRoot, overrides.healthRoot)
         ];
     };
     return { all, pick };
