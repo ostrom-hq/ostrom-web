@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
+import { ready } from '@/shared/api/ready';
 
 export interface ApproversViewModel {
   readonly points: readonly ApprovalPoint[] | undefined;
@@ -20,8 +21,8 @@ export interface ApproversViewModel {
 }
 
 export function useApprovers(): ApproversViewModel {
-  const workflows = useQuery(listWorkflowsOptions());
-  const members = useQuery(listMembersOptions());
+  const workflows = useQuery(ready(listWorkflowsOptions()));
+  const members = useQuery(ready(listMembersOptions()));
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -54,7 +55,7 @@ export interface PolicyViewModel {
 
 export function useSelfApprovalPolicy(): PolicyViewModel {
   const queryClient = useQueryClient();
-  const policy = useQuery(getGatePolicyOptions());
+  const policy = useQuery(ready(getGatePolicyOptions()));
   const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
   const mutation = useMutation({
     ...setGatePolicyMutation(),
