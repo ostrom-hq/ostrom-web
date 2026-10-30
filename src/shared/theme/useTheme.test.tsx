@@ -17,8 +17,12 @@ function mockSystemTheme(dark: boolean): {
           return matches;
         },
         media: query,
-        addEventListener: (_type: string, listener: Listener) => listeners.add(listener),
-        removeEventListener: (_type: string, listener: Listener) => listeners.delete(listener),
+        addEventListener: (_type: string, listener: Listener) => {
+          listeners.add(listener);
+        },
+        removeEventListener: (_type: string, listener: Listener) => {
+          listeners.delete(listener);
+        },
       }) as Partial<MediaQueryList> as MediaQueryList,
   );
   return {
