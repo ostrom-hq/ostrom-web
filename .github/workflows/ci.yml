@@ -24,16 +24,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Generated API client matches the contract
+        run: pnpm gen:check
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm test:coverage
       - run: pnpm build
-      - uses: actions/upload-artifact@v5
-        with:
-          name: dist
-          path: dist
-          retention-days: 3
 
   e2e:
     needs: check
@@ -47,10 +44,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v5
-        with:
-          name: dist
-          path: dist
+      # No Ostrom server yet: the journeys run against the MSW mocks generated from the contract.
+      - run: pnpm build
+        env:
+          VITE_MOCKS: 'true'
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm e2e
       - if: failure()

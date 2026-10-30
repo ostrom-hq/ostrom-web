@@ -4,10 +4,11 @@ import { defineConfig } from 'vitest/config';
 
 const src = fileURLToPath(new URL('./src', import.meta.url));
 const ee = fileURLToPath(new URL('./ee', import.meta.url));
+const gen = fileURLToPath(new URL('./gen', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  resolve: { alias: { '@': src, '@ee': ee } },
+  resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: { port: 4173, strictPort: true },
   build: { sourcemap: true, target: 'es2023' },

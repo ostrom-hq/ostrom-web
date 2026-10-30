@@ -1,0 +1,253 @@
+openapi: 3.1.0
+info:
+  title: Ostrom API (web mirror)
+  version: 0.1.0-draft
+  description: >-
+    Mirror of the Ostrom contract used by ostrom-web until ostrom-core publishes `api/openapi.yaml`
+    (package `@ostrom-hq/api-types`). Written from the prototype server (`mvp/server/src/yes/routes.ts`,
+    `mvp/shared/src/types.ts`). Do not extend it by hand once core owns the contract.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: yes
+    description: Requests for a person's yes (gates) and their decision.
+paths:
+  /yes/queue:
+    get:
+      tags: [yes]
+      operationId: getYesQueue
+      summary: Requests waiting for the viewer, and the last decided ones.
+      responses:
+        '200':
+          description: The viewer's queue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/YesQueue' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /yes/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AskId'
+    get:
+      tags: [yes]
+      operationId: getAsk
+      summary: One request, with its receipt once decided.
+      responses:
+        '200':
+          description: The request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ask' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /yes/{id}/decide:
+    parameters:
+      - $ref: '#/components/parameters/AskId'
+    post:
+      tags: [yes]
+      operationId: decideAsk
+      summary: Say yes or no; signed as the viewer.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecideRequest' }
+      responses:
+        '200':
+          description: The decided request, with its signed receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ask' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: The author of the request said yes while another approver exists.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SelfApprovalRefused' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: An approver account token (`opk_…`) or a signed-in session token.
+  parameters:
+    AskId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+  responses:
+    BadRequest:
+      description: The request body is invalid.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: No valid identity on the request.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Nothing with this id.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
+        code: { type: string }
+    SelfApprovalRefused:
+      type: object
+      required: [error, code, others]
+      properties:
+        error: { type: string }
+        code: { type: string, const: self_approval_refused }
+        others:
+          type: array
+          items: { type: string }
+    ApprovalStatus:
+      type: string
+      enum: [pending, approved, rejected, expired]
+    ApprovalChannel:
+      type: string
+      enum: [slack, console]
+    Decision:
+      type: string
+      enum: [approved, rejected]
+    DecideRequest:
+      type: object
+      required: [result]
+      properties:
+        result: { $ref: '#/components/schemas/Decision' }
+    Viewer:
+      type: object
+      required: [login, via]
+      properties:
+        login: { type: string }
+        via: { type: string, enum: [console, operator-account] }
+        name: { type: string }
+    YesQueue:
+      type: object
+      required: [operator, pending, recent]
+      properties:
+        operator: { type: string, description: Login a yes is signed as. }
+        you: { $ref: '#/components/schemas/Viewer' }
+        pending:
+          type: array
+          items: { $ref: '#/components/schemas/Ask' }
+        recent:
+          type: array
+          items: { $ref: '#/components/schemas/Ask' }
+    Evidence:
+      type: object
+      required: [label, value]
+      properties:
+        label: { type: string }
+        value: { type: string }
+        url: { type: string, format: uri }
+    AskRule:
+      type: object
+      required: [id, statement]
+      properties:
+        id: { type: string }
+        statement: { type: string }
+        strength: { type: string, enum: [required, recommended] }
+        status: { type: string, enum: [proposed, accepted, edited, rejected] }
+    AskReceipt:
+      type: object
+      required: [id, kind, signature, createdAt, valid, digest]
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        signature: { type: string }
+        createdAt: { type: string, format: date-time }
+        valid: { type: boolean }
+        reason: { type: string }
+        digest: { type: string }
+        by: { type: string }
+        result: { type: string }
+        selfApproved: { type: boolean }
+    Ask:
+      type: object
+      required: [id, status, title, channel, who, what, rules, evidence, shownDigest, askedBy]
+      properties:
+        id: { type: string }
+        status: { $ref: '#/components/schemas/ApprovalStatus' }
+        title: { type: string }
+        channel: { $ref: '#/components/schemas/ApprovalChannel' }
+        requestedAt: { type: string, format: date-time }
+        decidedBy: { type: string }
+        decidedAt: { type: string, format: date-time }
+        who:
+          type: object
+          properties:
+            dev: { type: string }
+            agent: { type: string }
+            model: { type: string }
+            session: { type: string }
+        what:
+          type: object
+          properties:
+            action: { type: string }
+            command: { type: string }
+            repo: { type: string, description: Repository the command really runs in. }
+            sessionRepo: { type: string, description: Repository of the session when it differs. }
+            harness: { type: string }
+        gate:
+          type: object
+          required: [label, approvers]
+          properties:
+            label: { type: string }
+            workflow: { type: string }
+            workflowId: { type: string }
+            approvers:
+              type: array
+              items: { type: string }
+        rules:
+          type: array
+          items: { $ref: '#/components/schemas/AskRule' }
+        diff: { type: string }
+        commits:
+          type: array
+          description: The exact commits the yes covers.
+          items: { $ref: '#/components/schemas/Commit' }
+        evidence:
+          type: array
+          items: { $ref: '#/components/schemas/Evidence' }
+        shownDigest: { type: string, description: Digest of what the page showed; signed with the yes. }
+        receipt: { $ref: '#/components/schemas/AskReceipt' }
+        askedBy:
+          type: array
+          items: { type: string }
+        selfApproved: { type: boolean }
+        askedVia:
+          type: array
+          items: { type: string, enum: [hook, ci] }
+        pr:
+          type: object
+          required: [number, sha]
+          properties:
+            number: { type: string }
+            sha: { type: string }
+        you:
+          type: object
+          required: [login, self, canApprove]
+          properties:
+            login: { type: string }
+            self: { type: boolean }
+            canApprove: { type: boolean }
+            reason: { type: string }
+            selfApproval: { type: boolean }
+    Commit:
+      type: object
+      required: [sha, title]
+      properties:
+        sha: { type: string, pattern: '^[0-9a-f]{7,64}$' }
+        title: { type: string }
+        author: { type: string }
