@@ -140,11 +140,7 @@ export interface ShownApprovalViewModel extends ApprovalViewModel {
 export function useShownApproval(id: string): ShownApprovalViewModel {
   const { approval: latest, failure } = useApproval(id);
   const [read, setRead] = useState<Approval | undefined>(undefined);
-  const newer =
-    read !== undefined &&
-    latest !== undefined &&
-    latest.status === 'pending' &&
-    latest.shownDigest !== read.shownDigest;
+  const newer = read !== undefined && latest?.status === 'pending' && latest.shownDigest !== read.shownDigest;
   if (latest !== undefined && !newer && read !== latest) setRead(latest);
   const readNewer = useCallback(() => {
     setRead(latest);
