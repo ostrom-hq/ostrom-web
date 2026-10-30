@@ -153,9 +153,17 @@ describe('the queue', () => {
   });
 
   it('keeps the token and drops it from the address', async () => {
-    const router = visit('/yes?signin=opk_test_12345678');
+    const router = visit('/yes#signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
     expect(useAuthStore.getState().token).toBe('opk_test_12345678');
+    expect(router.state.location.hash).toBe('');
+    expect(router.state.location.href).not.toContain('opk_');
+  });
+
+  it('never takes a token from the query string, which servers log', async () => {
+    const router = visit('/yes?signin=opk_test_12345678');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    expect(useAuthStore.getState().token).toBeUndefined();
     expect(router.state.location.searchStr).toBe('');
   });
 
@@ -404,11 +412,11 @@ describe('safety of what the server and links bring', () => {
   it('signs in from a link only after asking, when another key is in use', async () => {
     const user = userEvent.setup();
     useAuthStore.getState().signIn('opk_current_123456');
-    const router = visit('/yes?signin=opk_other_123456');
+    const router = visit('/yes#signin=opk_other_123456');
     const notice = await screen.findByRole('alert');
     expect(notice).toHaveTextContent('another key');
     expect(useAuthStore.getState().token).toBe('opk_current_123456');
-    expect(router.state.location.searchStr).toBe('');
+    expect(router.state.location.hash).toBe('');
     await user.click(within(notice).getByRole('button', { name: 'Use the new key' }));
     expect(useAuthStore.getState().token).toBe('opk_other_123456');
     expect(screen.queryByText(/another key/)).toBeNull();
@@ -417,7 +425,7 @@ describe('safety of what the server and links bring', () => {
   it('keeps the current key when asked to', async () => {
     const user = userEvent.setup();
     useAuthStore.getState().signIn('opk_current_123456');
-    visit('/yes?signin=opk_other_123456');
+    visit('/yes#signin=opk_other_123456');
     await user.click(await screen.findByRole('button', { name: 'Keep the current one' }));
     expect(useAuthStore.getState().token).toBe('opk_current_123456');
     expect(screen.queryByText(/another key/)).toBeNull();
@@ -425,7 +433,7 @@ describe('safety of what the server and links bring', () => {
 
   it('says a sign-in link is not valid', async () => {
     const user = userEvent.setup();
-    visit('/yes?signin=not%20a%20token');
+    visit('/yes#signin=not%20a%20token');
     expect(await screen.findByText('This sign-in link is not valid. Ask for a new one.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByText(/not valid/)).toBeNull();

@@ -1,4 +1,4 @@
-import { rmSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -25,12 +25,33 @@ function dropMockWorkerUnlessMocks(): Plugin {
   };
 }
 
+/**
+ * The console image's security headers (docker/security-headers.conf), sent by `vite preview` too: the
+ * Playwright journeys run under the very policy the image ships (audit S2-09). The image's one variable, the
+ * analytics origin of connect-src, is empty here, as in an image without analytics.
+ */
+function imageSecurityHeaders(): Record<string, string> {
+  const path = fileURLToPath(new URL('./docker/security-headers.conf', import.meta.url));
+  const conf = readFileSync(path, 'utf8');
+  const headers: Record<string, string> = {};
+  for (const [, name, value] of conf.matchAll(/^add_header\s+(\S+)\s+"([^"]*)"\s+always;$/gm)) {
+    if (name !== undefined && value !== undefined) {
+      headers[name] = value.replace(' $ostrom_csp_connect_extra', '');
+    }
+  }
+  if (headers['Content-Security-Policy'] === undefined) {
+    throw new Error('docker/security-headers.conf: no Content-Security-Policy line');
+  }
+  return headers;
+}
+
 export default defineConfig({
   plugins: [react(), dropMockWorkerUnlessMocks()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
-  preview: { port: 4173, strictPort: true },
-  build: { sourcemap: true, target: 'es2023' },
+  preview: { port: 4173, strictPort: true, headers: imageSecurityHeaders() },
+  // Nothing inlined as a data: URL: fonts and images come from 'self', the only source the CSP allows.
+  build: { sourcemap: true, target: 'es2023', assetsInlineLimit: 0 },
   test: {
     globals: true,
     environment: 'jsdom',
