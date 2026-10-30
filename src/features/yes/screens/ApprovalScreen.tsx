@@ -4,12 +4,13 @@ import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import './yes.css';
+import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
-import { Banner } from '@/shared/ui/Banner';
 import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
+import { FailureBanner } from '../components/FailureBanner';
 import { Skeleton } from '../components/Skeleton';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
 import {
@@ -36,8 +37,13 @@ const CHECK_TONES: Readonly<Record<CheckState, BadgeTone>> = {
 };
 
 export function ApprovalScreen(): ReactElement {
-  const { t } = useTranslation();
   const { approvalId } = useParams({ from: '/yes/$approvalId' });
+  // A new request is a new page: the answer, the receipt and the decline note of the previous one never carry over.
+  return <ApprovalPage key={approvalId} approvalId={approvalId} />;
+}
+
+function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactElement {
+  const { t } = useTranslation();
   const { approval, failure } = useApproval(approvalId);
   const viewer = useViewer();
   const answer = useAnswerApproval(approvalId);
@@ -46,11 +52,7 @@ export function ApprovalScreen(): ReactElement {
       <Link to="/yes" className="ys-back">
         {t('yes.detail.back')}
       </Link>
-      {failure === undefined ? null : (
-        <Banner tone="danger" tag={t('yes.queue.offlineTag')}>
-          {failure.message}
-        </Banner>
-      )}
+      <FailureBanner failure={failure} />
       {approval === undefined ? (
         failure === undefined ? (
           <Skeleton rows={2} />
@@ -104,10 +106,10 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
             <ul className="ys-commits">
               {commits.map((commit) => (
                 <li key={commit.sha}>
-                  {commit.url === undefined ? (
+                  {safeHref(commit.url) === undefined ? (
                     <code>{shortSha(commit.sha)}</code>
                   ) : (
-                    <a href={commit.url} target="_blank" rel="noreferrer noopener">
+                    <a href={safeHref(commit.url)} target="_blank" rel="noreferrer noopener">
                       <code>{shortSha(commit.sha)}</code>
                     </a>
                   )}{' '}
@@ -129,10 +131,10 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
               {checks.map((check) => (
                 <li key={check.name} className="ys-row">
                   <Badge tone={CHECK_TONES[check.state]}>{t(`yes.check.${check.state}`)}</Badge>
-                  {check.url === undefined ? (
+                  {safeHref(check.url) === undefined ? (
                     <span>{check.name}</span>
                   ) : (
-                    <a href={check.url} target="_blank" rel="noreferrer noopener">
+                    <a href={safeHref(check.url)} target="_blank" rel="noreferrer noopener">
                       {check.name}
                     </a>
                   )}
@@ -146,10 +148,10 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
                 <div key={item.label} className="ys-kv__row">
                   <dt>{item.label}</dt>
                   <dd>
-                    {item.url === undefined ? (
+                    {safeHref(item.url) === undefined ? (
                       item.value
                     ) : (
-                      <a href={item.url} target="_blank" rel="noreferrer noopener">
+                      <a href={safeHref(item.url)} target="_blank" rel="noreferrer noopener">
                         {item.value}
                       </a>
                     )}

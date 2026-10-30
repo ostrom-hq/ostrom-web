@@ -27,4 +27,13 @@ describe('formatAbsolute', () => {
       /^Oct 30, 2026, \d{1,2}:04\s[AP]M\s\S+$/,
     );
   });
+
+  it('shows an unreadable date as it came instead of throwing', () => {
+    expect(formatRelative('soon', now, 'en')).toBe('soon');
+    expect(formatAbsolute('', 'en')).toBe('');
+  });
+
+  it('rolls 59.6 s over to the next unit', () => {
+    expect(formatRelative('2026-10-30T08:00:59.600Z', now, 'en')).toBe('in 1 min.');
+  });
 });

@@ -7,10 +7,18 @@ import {
   listApprovalsOptions,
   listApprovalsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Approval, ApprovalAnswer, Me, Receipt } from '@gen/api/types.gen';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type {
+  Approval,
+  ApprovalAnswer,
+  ApprovalStatus,
+  ListApprovalsResponse,
+  Me,
+  Receipt,
+} from '@gen/api/types.gen';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
+import { pollUnlessRefused } from '@/shared/api/poll';
 import { useArrivals } from './useArrivals';
 
 /** The queue polls like the prototype: a request must show up on the phone within seconds. */
@@ -44,22 +52,64 @@ export function useViewer(): ViewerViewModel {
 
 export interface QueueViewModel {
   readonly waiting: readonly Approval[] | undefined;
+  /** The server has more waiting requests than the first page shows. */
+  readonly more: boolean;
   readonly decided: readonly Approval[] | undefined;
   readonly failure: ApiFailure | Error | undefined;
   readonly fresh: ReadonlySet<string>;
 }
 
+/** Asked by status: one page of each holds the latest decisions, whatever is still pending. */
+const DECIDED_STATUSES: readonly ApprovalStatus[] = ['approved', 'rejected', 'expired'];
+
+interface DecidedPages {
+  readonly decided: readonly Approval[] | undefined;
+  readonly error: unknown;
+}
+
+function decidedAt(approval: Approval): string {
+  return approval.decidedAt ?? approval.expiresAt ?? '';
+}
+
+/** The latest decisions first. Stable (module level), so TanStack keeps the result while nothing changes. */
+export function combineDecided(
+  pages: readonly { readonly data: ListApprovalsResponse | undefined; readonly error: unknown }[],
+): DecidedPages {
+  const loaded = pages.flatMap((page) => (page.data === undefined ? [] : [page.data.items]));
+  return {
+    decided:
+      loaded.length === 0
+        ? undefined
+        : loaded
+            .flat()
+            .sort((a, b) => decidedAt(b).localeCompare(decidedAt(a)))
+            .slice(0, DECIDED_SHOWN),
+    error: pages.find((page) => page.error !== null)?.error,
+  };
+}
+
 export function useApprovalsQueue(): QueueViewModel {
-  const waiting = useQuery({ ...listApprovalsOptions({ query: { mine: true } }), refetchInterval: POLL_MS });
-  const all = useQuery({ ...listApprovalsOptions(), refetchInterval: DECIDED_POLL_MS });
+  const waiting = useQuery({
+    ...listApprovalsOptions({ query: { mine: true } }),
+    refetchInterval: pollUnlessRefused(POLL_MS),
+  });
+  const decided = useQueries({
+    queries: DECIDED_STATUSES.map((status) => ({
+      ...listApprovalsOptions({ query: { status } }),
+      refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
+    })),
+    combine: combineDecided,
+  });
   // Query data keeps its identity while nothing changes (structural sharing): the ids follow it.
   const ids = useMemo(() => waiting.data?.items.map((approval) => approval.id), [waiting.data]);
-  const decided = useMemo(
-    () => all.data?.items.filter((approval) => approval.status !== 'pending').slice(0, DECIDED_SHOWN),
-    [all.data],
-  );
   const fresh = useArrivals(ids);
-  return { waiting: waiting.data?.items, decided, failure: failureOf(waiting.error), fresh };
+  return {
+    waiting: waiting.data?.items,
+    more: waiting.data?.next !== undefined,
+    decided: decided.decided,
+    failure: failureOf(waiting.error ?? decided.error),
+    fresh,
+  };
 }
 
 export interface ApprovalViewModel {
@@ -68,7 +118,10 @@ export interface ApprovalViewModel {
 }
 
 export function useApproval(id: string): ApprovalViewModel {
-  const query = useQuery({ ...getApprovalOptions({ path: { id } }), refetchInterval: POLL_MS });
+  const query = useQuery({
+    ...getApprovalOptions({ path: { id } }),
+    refetchInterval: pollUnlessRefused(POLL_MS),
+  });
   return { approval: query.data, failure: failureOf(query.error) };
 }
 

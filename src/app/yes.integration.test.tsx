@@ -10,6 +10,7 @@ import { type AppRouter, createAppRouter } from '@/app/router';
 import { createMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
+import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 const { server, db } = createMockServer();
@@ -26,6 +27,7 @@ afterEach(() => {
   db.approvals = fresh.approvals;
   db.approvers = fresh.approvers;
   useAuthStore.getState().signOut();
+  resetArrivals();
 });
 afterAll(() => {
   server.close();
@@ -176,7 +178,7 @@ describe('a request', () => {
     const sections = ['Changes', 'Checks', 'Who asks', 'Why you are asked'].map((name) =>
       screen.getByRole('heading', { name }),
     );
-    const approve = screen.getByRole('button', { name: 'Approve merge' });
+    const approve = screen.getByRole('button', { name: 'Approve' });
     expectInOrder([title, ...sections, approve]);
     expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute(
       'dateTime',
@@ -200,14 +202,14 @@ describe('a request', () => {
     expect(within(decision).getByText('rcpt-apr-merge-412')).toBeInTheDocument();
     expect(within(decision).getByText('ed25519 · 4f2a9c1b')).toBeInTheDocument();
     expect(within(decision).getByText('ostrom verify rcpt-apr-merge-412')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Approve merge' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Approve' })).toBeNull();
   });
 
   it('says it approves while the answer is on its way', async () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/approvals/:id/answer', async () => delay('infinite')));
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
     expect(await screen.findByRole('button', { name: 'Approving…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Decline & tell the agent…' })).toBeDisabled();
   });
@@ -219,7 +221,7 @@ describe('a request', () => {
     expect(screen.getByText(/If someone else can approve it, Ostrom will ask them/)).toBeInTheDocument();
     expect(screen.getByText('failed')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Approve deployment' }));
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Not allowed');
     expect(alert).toHaveTextContent('You asked for this: samir has to approve it.');
@@ -254,7 +256,7 @@ describe('a request', () => {
     visit('/yes/apr-merge-412');
     await user.click(await screen.findByRole('button', { name: 'Decline & tell the agent…' }));
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
@@ -262,7 +264,7 @@ describe('a request', () => {
     const user = userEvent.setup();
     db.approvers['apr-deploy-88'] = ['maya'];
     visit('/yes/apr-deploy-88');
-    await user.click(await screen.findByRole('button', { name: 'Approve deployment' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent('Self-approved');
     expect(decision).toHaveTextContent('maya asked for this and was the only approver: the receipt says so.');
@@ -271,7 +273,7 @@ describe('a request', () => {
   it('reloads a request that changed since it was opened, and asks to read it again', async () => {
     const user = userEvent.setup();
     visit('/yes/apr-merge-412');
-    const approve = await screen.findByRole('button', { name: 'Approve merge' });
+    const approve = await screen.findByRole('button', { name: 'Approve' });
     db.approvals = db.approvals.map((item) =>
       item.id === 'apr-merge-412'
         ? { ...item, title: 'Merge PR #412 into main (rebased)', shownDigest: 'sha256:new' }
@@ -292,7 +294,7 @@ describe('a request', () => {
       ),
     );
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Error');
     expect(screen.getByRole('alert')).toHaveTextContent('down');
   });
@@ -386,10 +388,98 @@ describe('a request', () => {
       }),
     );
     visit('/yes/apr-merge-412');
-    await user.click(await screen.findByRole('button', { name: 'Approve merge' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent(/someone approved: Run a script · /);
     await user.click(within(decision).getByText('Verify the receipt'));
     expect(within(decision).getByText('ed25519 · ?')).toBeInTheDocument();
+  });
+});
+
+describe('safety of what the server and links bring', () => {
+  it('signs in from a link only after asking, when another key is in use', async () => {
+    const user = userEvent.setup();
+    useAuthStore.getState().signIn('opk_current_123456');
+    const router = visit('/yes?signin=opk_other_123456');
+    const notice = await screen.findByRole('alert');
+    expect(notice).toHaveTextContent('another key');
+    expect(useAuthStore.getState().token).toBe('opk_current_123456');
+    expect(router.state.location.searchStr).toBe('');
+    await user.click(within(notice).getByRole('button', { name: 'Use the new key' }));
+    expect(useAuthStore.getState().token).toBe('opk_other_123456');
+    expect(screen.queryByText(/another key/)).toBeNull();
+  });
+
+  it('keeps the current key when asked to', async () => {
+    const user = userEvent.setup();
+    useAuthStore.getState().signIn('opk_current_123456');
+    visit('/yes?signin=opk_other_123456');
+    await user.click(await screen.findByRole('button', { name: 'Keep the current one' }));
+    expect(useAuthStore.getState().token).toBe('opk_current_123456');
+    expect(screen.queryByText(/another key/)).toBeNull();
+  });
+
+  it('says a sign-in link is not valid', async () => {
+    const user = userEvent.setup();
+    visit('/yes?signin=not%20a%20token');
+    expect(await screen.findByText('This sign-in link is not valid. Ask for a new one.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByText(/not valid/)).toBeNull();
+  });
+
+  it('says the browser is signed out instead of offline', async () => {
+    server.use(
+      http.get('*/api/v1/approvals', () =>
+        HttpResponse.json({ error: { type: 'unauthorized', message: 'token revoked' } }, { status: 401 }),
+      ),
+    );
+    visit('/yes');
+    expect(await screen.findByText(/no longer signed in/)).toBeInTheDocument();
+    expect(screen.queryByText(/does not answer/)).toBeNull();
+  });
+
+  it('says when only the decided list fails', async () => {
+    server.use(
+      http.get('*/api/v1/approvals', ({ request }) =>
+        new URL(request.url).searchParams.has('status')
+          ? HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 })
+          : HttpResponse.json({ items: [] }),
+      ),
+    );
+    visit('/yes');
+    expect(await screen.findByText(/does not answer \(boom\)/, {}, SLOW)).toBeInTheDocument();
+  });
+
+  it('says there are more waiting requests than the first page', async () => {
+    server.use(http.get('*/api/v1/approvals', () => HttpResponse.json({ items: [bare], next: 'cursor-2' })));
+    visit('/yes');
+    expect(await screen.findByRole('heading', { name: 'More than 1 waiting for you' })).toBeInTheDocument();
+  });
+
+  it('never makes a link of a URL that is not http(s)', async () => {
+    addApproval({
+      ...bare,
+      id: 'apr-js',
+      evidence: [{ label: 'Proof', value: 'click me', url: 'javascript:alert(1)' }],
+      checks: [{ name: 'ci', state: 'success', url: 'data:text/html,hi' }],
+      commitDetails: [{ sha: 'abcdef1234567', title: 'x', url: 'javascript:alert(2)' }],
+      commits: ['abcdef1234567'],
+    });
+    visit('/yes/apr-js');
+    expect(await screen.findByText('click me')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'click me' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'ci' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'abcdef1' })).toBeNull();
+  });
+
+  it('starts a new page for another request: nothing of the previous answer carries over', async () => {
+    const user = userEvent.setup();
+    const router = visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: 'Approve' }));
+    expect(await screen.findByRole('region', { name: 'Decision' })).toBeInTheDocument();
+    await router.navigate({ to: '/yes/$approvalId', params: { approvalId: 'apr-migration-7' } });
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).not.toHaveTextContent('Merge PR #412');
+    expect(within(decision).queryByText('rcpt-apr-merge-412')).toBeNull();
   });
 });

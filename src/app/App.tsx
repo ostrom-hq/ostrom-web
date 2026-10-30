@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
-import { type ReactElement, useState } from 'react';
+import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
+import { useAuthStore } from '@/shared/auth/authStore';
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -15,6 +16,14 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   const { t } = useTranslation();
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: retryOnce } } }),
+  );
+  // Everything cached was read as the previous account: a switch of account starts from nothing.
+  useEffect(
+    () =>
+      useAuthStore.subscribe((auth, previous) => {
+        if (auth.token !== previous.token) queryClient.clear();
+      }),
+    [queryClient],
   );
   return (
     <QueryClientProvider client={queryClient}>

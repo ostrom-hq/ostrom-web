@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
-import { actionKind, approvalTone, askedByViewer, checksSummary, keyIdOf, shortSha } from './model';
+import { approvalTone, askedByViewer, checksSummary, keyIdOf, shortSha } from './model';
 
 const base: Approval = {
   id: 'a',
@@ -31,17 +31,6 @@ describe('askedByViewer', () => {
     const anonymous = structuredClone(base);
     delete anonymous.askedBy;
     expect(askedByViewer(anonymous, 'theo')).toBe(false);
-  });
-});
-
-describe('actionKind', () => {
-  it.each([
-    ['Merge PR #412 into main', 'merge'],
-    ['Deploy billing-api to production', 'deployment'],
-    ['Push 2 commits to main', 'push'],
-    ['Run the migration', 'other'],
-  ] as const)('reads "%s" as %s', (title, kind) => {
-    expect(actionKind({ ...base, title })).toBe(kind);
   });
 });
 

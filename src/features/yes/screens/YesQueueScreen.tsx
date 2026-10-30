@@ -3,15 +3,16 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import './yes.css';
 import { useNow } from '@/shared/lib/useNow';
-import { Banner } from '@/shared/ui/Banner';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
+import { FailureBanner } from '../components/FailureBanner';
+import { SignInNotice } from '../components/SignInNotice';
 import { Skeleton } from '../components/Skeleton';
 import { useApprovalsQueue, useViewer } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {
   const { t } = useTranslation();
-  const { waiting, decided, failure, fresh } = useApprovalsQueue();
+  const { waiting, more, decided, failure, fresh } = useApprovalsQueue();
   const viewer = useViewer();
   const now = useNow();
   return (
@@ -22,11 +23,8 @@ export function YesQueueScreen(): ReactElement {
           <p className="ys-meta">{t('yes.signedAs', { name: viewer.name })}</p>
         )}
       </header>
-      {failure === undefined ? null : (
-        <Banner tone="warning" tag={t('yes.queue.offlineTag')}>
-          {t('yes.queue.offline', { reason: failure.message })}
-        </Banner>
-      )}
+      <SignInNotice />
+      <FailureBanner failure={failure} />
       {waiting === undefined ? (
         failure === undefined ? (
           <Skeleton />
@@ -34,7 +32,9 @@ export function YesQueueScreen(): ReactElement {
       ) : (
         <section aria-labelledby="ys-pending">
           <h2 id="ys-pending" className="ys-h2">
-            {t('yes.queue.waiting', { count: waiting.length })}
+            {more
+              ? t('yes.queue.waitingMore', { count: waiting.length })
+              : t('yes.queue.waiting', { count: waiting.length })}
           </h2>
           {waiting.length === 0 ? (
             <div className="o-card ys-empty">
