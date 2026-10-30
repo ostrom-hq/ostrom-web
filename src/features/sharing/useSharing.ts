@@ -49,6 +49,8 @@ export interface ArtifactDetailViewModel {
   readonly readers: readonly string[] | undefined;
   /** The organization's members, to pick a new reader from: asked for its owner only, never in the way. */
   readonly members: readonly Member[] | undefined;
+  /** Why the members could not be read: the owner sees it where the form to add a reader goes. */
+  readonly membersFailure: Error | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -69,6 +71,7 @@ export function useArtifactDetail(id: string, owner: boolean): ArtifactDetailVie
     versions: sorted,
     readers: readers.data?.members,
     members: members.data?.items,
+    membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),
   };
 }
@@ -113,16 +116,18 @@ export function useArtifactChange(): ArtifactChangeViewModel {
       await queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() });
     },
   });
-  const { mutate: shareMutate, reset: resetShare } = shared;
+  const { mutateAsync: shareAsync, reset: resetShare } = shared;
   const { mutate: unshareMutate, reset: resetUnshare } = unshared;
   const { mutate: dropMutate, reset: resetDrop } = dropped;
   const share = useCallback(
     (id: string, login: string, onDone: () => void) => {
       resetUnshare();
       resetDrop();
-      shareMutate({ path: { id, memberId: login } }, { onSuccess: onDone });
+      // Two cards may share at once through this one observer: each call keeps its own callback (a per-call
+      // onSuccess would only reach the latest). A refusal is shown through `failure`, not thrown here.
+      shareAsync({ path: { id, memberId: login } }).then(onDone, () => undefined);
     },
-    [shareMutate, resetUnshare, resetDrop],
+    [shareAsync, resetUnshare, resetDrop],
   );
   const unshare = useCallback(
     (id: string, login: string) => {

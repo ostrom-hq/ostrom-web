@@ -154,6 +154,10 @@ export interface MockDb {
   /** Who reads an artifact shared with people, by artifact. */
   artifactMembers: Record<string, string[]>;
   sharedAccounts: SharedAccount[];
+  /** The run each idempotency key queued, by `automation id:key`: a replay answers it, never a second run. */
+  runsByKey: Record<string, AutomationRun>;
+  /** The next shared account id; ids are never reused, even after a removal. */
+  nextAccountId: number;
 }
 
 export function createMockDb(): MockDb {
@@ -181,6 +185,8 @@ export function createMockDb(): MockDb {
     artifactVersions: initialArtifactVersions(),
     artifactMembers: initialArtifactMembers(),
     sharedAccounts: initialSharedAccounts(),
+    runsByKey: {},
+    nextAccountId: 100,
   };
 }
 
@@ -362,9 +368,6 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
-  const runsByKey = new Map<string, AutomationRun>();
-  /** Ids are never reused, even after a removal. */
-  let nextAccount = 100;
   return [
     handleGetMe({ body: me }),
     // The e-mail sign-in answers the same whether the address has an account or not.
@@ -705,7 +708,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const key = request.headers.get('Idempotency-Key');
       if (key === null) return refusal(400, 'invalid_request', 'a test run needs an Idempotency-Key');
       // A replay of the same key answers the run it already queued, never a second one.
-      const replayed = runsByKey.get(key);
+      const replayed = db.runsByKey[`${automation.id}:${key}`];
       if (replayed !== undefined) return HttpResponse.json(replayed, { status: 202 });
       const at = now().toISOString();
       const run: AutomationRun = {
@@ -719,7 +722,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         updatedAt: at,
       };
       db.automationRuns.unshift(run);
-      runsByKey.set(key, run);
+      db.runsByKey[`${automation.id}:${key}`] = run;
       return HttpResponse.json(run, { status: 202 });
     }),
     handleRotateAutomationSecret(({ params }) => {
@@ -779,7 +782,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
       const account: SharedAccount = {
-        id: `acc-${String(nextAccount++)}`,
+        id: `acc-${String(db.nextAccountId++)}`,
         provider: body.data.provider,
         label: body.data.label.trim(),
         owner: me.dev.login,

@@ -82,7 +82,9 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
               ))}
             </ul>
           )}
-          {change === undefined || candidates.length === 0 ? null : (
+          {change === undefined ? null : detail.membersFailure !== undefined ? (
+            <p className="o-row__meta">{detail.membersFailure.message}</p>
+          ) : candidates.length === 0 ? null : (
             <form
               className="o-inline"
               onSubmit={(event) => {
