@@ -1,4 +1,5 @@
-import { formatClock, formatRelative } from '@/shared/lib/time';
+// SPDX-License-Identifier: AGPL-3.0-only
+import { formatAbsolute, formatRelative } from '@/shared/lib/time';
 
 const now = new Date('2026-10-30T08:00:00.000Z');
 
@@ -20,8 +21,10 @@ describe('formatRelative', () => {
   });
 });
 
-describe('formatClock', () => {
-  it('shows hours, minutes and seconds', () => {
-    expect(formatClock('2026-10-30T08:04:31.000Z', 'en')).toMatch(/\d{2}:04:31/);
+describe('formatAbsolute', () => {
+  it('shows the date, the time and the time zone', () => {
+    expect(formatAbsolute('2026-10-30T08:04:31.000Z', 'en')).toMatch(
+      /^Oct 30, 2026, \d{1,2}:04\s[AP]M\s\S+$/,
+    );
   });
 });

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement, ReactNode } from 'react';
 
 /** `signal` (garnet) is reserved for "a human is awaited"; amber warns, red refuses, green confirms. */

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 const UNITS: readonly (readonly [Intl.RelativeTimeFormatUnit, number])[] = [
   ['second', 60],
   ['minute', 60],
@@ -18,8 +19,14 @@ export function formatRelative(iso: string, now: Date, locale: string): string {
   return format.format(Math.round(value), 'year');
 }
 
-export function formatClock(iso: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(
-    new Date(iso),
-  );
+/** "Oct 30, 2026, 2:02 PM CET": an absolute time always carries its time zone. */
+export function formatAbsolute(iso: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(new Date(iso));
 }

@@ -23,6 +23,10 @@ export type Decision = 'approved' | 'rejected';
 
 export type DecideRequest = {
     result: Decision;
+    /**
+     * What the agent should do instead; sent to its session and written on the receipt. The console requires it to decline.
+     */
+    note?: string;
 };
 
 export type Viewer = {
@@ -114,6 +118,10 @@ export type Ask = {
     receipt?: AskReceipt;
     askedBy: Array<string>;
     selfApproved?: boolean;
+    /**
+     * What the approver told the agent with the decision.
+     */
+    note?: string;
     askedVia?: Array<'hook' | 'ci'>;
     pr?: {
         number: string;

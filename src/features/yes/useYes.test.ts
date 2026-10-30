@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { YesQueue } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf, refusalOf, viewerLabel } from './useYes';

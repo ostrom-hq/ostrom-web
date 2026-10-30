@@ -130,6 +130,11 @@ components:
       required: [result]
       properties:
         result: { $ref: '#/components/schemas/Decision' }
+        note:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: What the agent should do instead; sent to its session and written on the receipt. The console requires it to decline.
     Viewer:
       type: object
       required: [login, via]
@@ -231,6 +236,9 @@ components:
           type: array
           items: { type: string }
         selfApproved: { type: boolean }
+        note:
+          type: string
+          description: What the approver told the agent with the decision.
         askedVia:
           type: array
           items: { type: string, enum: [hook, ci] }

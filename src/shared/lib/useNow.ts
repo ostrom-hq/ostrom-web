@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { useSyncExternalStore } from 'react';
 
 const TICK_MS = 15_000;

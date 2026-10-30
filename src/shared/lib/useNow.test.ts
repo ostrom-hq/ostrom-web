@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { act, renderHook } from '@testing-library/react';
 import { useNow } from '@/shared/lib/useNow';
 

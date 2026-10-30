@@ -1,8 +1,9 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Ask } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatRelative } from '@/shared/lib/time';
+import { formatAbsolute, formatRelative } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { agentLabel, askTone, diffStats, shortSha } from '../model';
@@ -17,10 +18,13 @@ export function AskCard({ ask, fresh, now }: AskCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const mine = askTone(ask) === 'waiting-other';
   const stats = ask.diff === undefined ? undefined : diffStats(ask.diff);
-  const meta = [
-    ask.requestedAt === undefined ? undefined : formatRelative(ask.requestedAt, now, i18n.language),
-    ask.what.repo,
-  ].filter((part) => part !== undefined);
+  const when =
+    ask.requestedAt === undefined
+      ? undefined
+      : {
+          relative: formatRelative(ask.requestedAt, now, i18n.language),
+          absolute: formatAbsolute(ask.requestedAt, i18n.language),
+        };
   return (
     <Link
       to="/yes/$askId"
@@ -34,7 +38,15 @@ export function AskCard({ ask, fresh, now }: AskCardProps): ReactElement {
             <b>{ask.who.dev ?? t('yes.someone')}</b>{' '}
             {t('yes.via', { agent: agentLabel(ask.who.agent) ?? t('yes.anAgent') })}
           </span>
-          <span className="ys-meta ys-ellipsis">{meta.join(' · ')}</span>
+          <span className="ys-meta ys-ellipsis">
+            {when === undefined ? null : (
+              <time dateTime={ask.requestedAt} title={when.absolute}>
+                {when.relative}
+              </time>
+            )}
+            {when !== undefined && ask.what.repo !== undefined ? ' · ' : null}
+            {ask.what.repo}
+          </span>
         </span>
         {mine ? (
           <Badge tone="warning">{t('yes.badge.mine')}</Badge>
@@ -47,7 +59,7 @@ export function AskCard({ ask, fresh, now }: AskCardProps): ReactElement {
       <span className="ys-action">{ask.what.action ?? ask.title}</span>
       {ask.what.command === undefined ? null : <code className="ys-cmd">{ask.what.command}</code>}
       <span className="ys-row ys-wrap ys-small">
-        {ask.gate === undefined ? null : <Chip label={t('yes.chip.gate')} value={ask.gate.label} />}
+        {ask.gate === undefined ? null : <Chip label={t('yes.chip.rule')} value={ask.gate.label} />}
         {ask.rules.length === 0 ? null : (
           <Chip label={t('yes.chip.rules')} value={String(ask.rules.length)} />
         )}

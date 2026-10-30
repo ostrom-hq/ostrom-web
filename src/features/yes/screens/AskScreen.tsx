@@ -1,16 +1,27 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import type { Ask } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
-import './yes.css';
+import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import './yes.css';
+import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { DecisionBar } from '../components/DecisionBar';
 import { DiffView } from '../components/DiffView';
 import { ReceiptCard } from '../components/ReceiptCard';
-import { type AskTone, agentLabel, approversOf, askTone, shortSha } from '../model';
-import { useAsk, useDecideAsk, useYesQueue, viewerLabel } from '../useYes';
+import { Skeleton } from '../components/Skeleton';
+import {
+  type AskTone,
+  DIFF_FOLD_LINES,
+  agentLabel,
+  approversOf,
+  askTone,
+  diffLines,
+  shortSha,
+} from '../model';
+import { type DecideViewModel, useAsk, useDecideAsk, useYesQueue, viewerLabel } from '../useYes';
 
 const TONES: Readonly<Record<AskTone, BadgeTone>> = {
   'waiting-you': 'signal',
@@ -41,12 +52,10 @@ export function AskScreen(): ReactElement {
       )}
       {ask === undefined ? (
         failure === undefined ? (
-          <p className="ys-meta" role="status">
-            {t('yes.queue.loading')}
-          </p>
+          <Skeleton rows={2} />
         ) : null
       ) : (
-        <AskDetail ask={ask} viewer={viewer} decision={decision} />
+        <AskDetail key={ask.id} ask={ask} viewer={viewer} decision={decision} />
       )}
     </div>
   );
@@ -55,31 +64,101 @@ export function AskScreen(): ReactElement {
 interface AskDetailProps {
   readonly ask: Ask;
   readonly viewer: string | undefined;
-  readonly decision: ReturnType<typeof useDecideAsk>;
+  readonly decision: DecideViewModel;
 }
 
+/** The proof in a fixed order, before any button: action, changes, checks, who, why, technical details. */
 function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [diffOpen, setDiffOpen] = useState(false);
   const tone = askTone(ask);
   const { eligible, askers } = approversOf(ask);
   const otherRepo =
     ask.what.sessionRepo !== undefined &&
     ask.what.repo !== undefined &&
     ask.what.sessionRepo !== ask.what.repo;
+  const diffFolded = ask.diff !== undefined && !diffOpen && diffLines(ask.diff).length > DIFF_FOLD_LINES;
+  const hasChanges = ask.diff !== undefined || ask.pr !== undefined || (ask.commits ?? []).length > 0;
   return (
     <>
       <header className="ys-head">
         <Badge tone={TONES[tone]}>{t(`yes.tone.${tone}`)}</Badge>
         <h1 className="ys-h1">{ask.what.action ?? ask.title}</h1>
-        {ask.what.repo === undefined ? null : (
-          <p className="ys-meta">{t('yes.detail.inRepo', { repo: ask.what.repo })}</p>
-        )}
+        <p className="ys-meta">
+          {ask.what.repo === undefined ? null : t('yes.detail.inRepo', { repo: ask.what.repo })}
+          {ask.what.repo !== undefined && ask.requestedAt !== undefined ? ' · ' : null}
+          {ask.requestedAt === undefined ? null : (
+            <time dateTime={ask.requestedAt}>{formatAbsolute(ask.requestedAt, i18n.language)}</time>
+          )}
+        </p>
+        {ask.what.command === undefined ? null : <pre className="ys-cmd">{ask.what.command}</pre>}
       </header>
       {otherRepo ? (
         <Banner tone="warning" tag={t('yes.detail.otherRepoTag')}>
           {t('yes.detail.otherRepo', { session: ask.what.sessionRepo, repo: ask.what.repo })}
         </Banner>
       ) : null}
+
+      {hasChanges ? (
+        <section className="o-card ys-section" aria-labelledby="ys-changes">
+          <h2 id="ys-changes" className="ys-label">
+            {t('yes.detail.changes')}
+          </h2>
+          {ask.pr === undefined ? null : (
+            <p className="ys-small ys-meta">
+              {ask.what.repo === undefined
+                ? t('yes.detail.prAt', { number: ask.pr.number, sha: shortSha(ask.pr.sha) })
+                : t('yes.detail.repoAndPr', {
+                    repo: ask.what.repo,
+                    number: ask.pr.number,
+                    sha: shortSha(ask.pr.sha),
+                  })}
+            </p>
+          )}
+          {ask.commits === undefined || ask.commits.length === 0 ? null : (
+            <ul className="ys-commits">
+              {ask.commits.map((commit) => (
+                <li key={commit.sha}>
+                  <code>{shortSha(commit.sha)}</code> <span>{commit.title}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {ask.diff === undefined ? null : (
+            <DiffView
+              diff={ask.diff}
+              expanded={diffOpen}
+              onExpand={() => {
+                setDiffOpen(true);
+              }}
+            />
+          )}
+        </section>
+      ) : null}
+
+      {ask.evidence.length === 0 ? null : (
+        <section className="o-card ys-section" aria-labelledby="ys-checks">
+          <h2 id="ys-checks" className="ys-label">
+            {t('yes.detail.checks')}
+          </h2>
+          <dl className="ys-kv">
+            {ask.evidence.map((item) => (
+              <div key={item.label} className="ys-kv__row">
+                <dt>{item.label}</dt>
+                <dd>
+                  {item.url === undefined ? (
+                    item.value
+                  ) : (
+                    <a href={item.url} target="_blank" rel="noreferrer noopener">
+                      {item.value}
+                    </a>
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
 
       <section className="o-card ys-section" aria-labelledby="ys-who">
         <h2 id="ys-who" className="ys-label">
@@ -102,45 +181,9 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
             </span>
           </div>
         </div>
+        {ask.you?.self === true ? <p className="ys-small">{t('yes.detail.youAsked')}</p> : null}
         {askers.length === 0 ? null : (
           <p className="ys-small ys-meta">{t('yes.detail.askedBy', { logins: askers.join(', ') })}</p>
-        )}
-      </section>
-
-      <section className="o-card ys-section" aria-labelledby="ys-what">
-        <h2 id="ys-what" className="ys-label">
-          {t('yes.detail.what')}
-        </h2>
-        {ask.what.command === undefined ? null : (
-          <pre className="ys-cmd" tabIndex={0}>
-            {ask.what.command}
-          </pre>
-        )}
-        {ask.what.harness === undefined ? null : (
-          <p className="ys-small ys-meta">{t('yes.detail.underPackage', { harness: ask.what.harness })}</p>
-        )}
-        {ask.pr === undefined ? null : (
-          <p className="ys-small ys-meta">
-            {ask.what.repo === undefined
-              ? t('yes.detail.prAt', { number: ask.pr.number, sha: shortSha(ask.pr.sha) })
-              : t('yes.detail.repoAndPr', {
-                  repo: ask.what.repo,
-                  number: ask.pr.number,
-                  sha: shortSha(ask.pr.sha),
-                })}
-          </p>
-        )}
-        {ask.commits === undefined || ask.commits.length === 0 ? null : (
-          <>
-            <h3 className="ys-label">{t('yes.detail.commits')}</h3>
-            <ul className="ys-commits">
-              {ask.commits.map((commit) => (
-                <li key={commit.sha}>
-                  <code>{shortSha(commit.sha)}</code> <span>{commit.title}</span>
-                </li>
-              ))}
-            </ul>
-          </>
         )}
       </section>
 
@@ -151,9 +194,9 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
           </h2>
           <p>
             {ask.gate.workflow === undefined
-              ? t('yes.detail.gate', { gate: ask.gate.label, approvers: eligible.join(', ') })
-              : t('yes.detail.gateOfWorkflow', {
-                  gate: ask.gate.label,
+              ? t('yes.detail.rule', { rule: ask.gate.label, approvers: eligible.join(', ') })
+              : t('yes.detail.ruleOfWorkflow', {
+                  rule: ask.gate.label,
                   workflow: ask.gate.workflow,
                   approvers: eligible.join(', '),
                 })}{' '}
@@ -162,62 +205,63 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
             )}
           </p>
           {ask.rules.length === 0 ? null : (
-            <ul className="ys-rules">
-              {ask.rules.slice(0, MAX_RULES).map((rule) => (
-                <li key={rule.id}>
-                  {rule.strength === undefined ? null : (
-                    <Badge tone={rule.strength === 'required' ? 'signal' : 'neutral'}>
-                      {t(`yes.detail.strength.${rule.strength}`)}
-                    </Badge>
-                  )}{' '}
-                  {rule.statement}
-                </li>
-              ))}
-            </ul>
+            <details className="ys-details">
+              <summary>{t('yes.detail.rulesCount', { count: ask.rules.length })}</summary>
+              <ul className="ys-rules">
+                {ask.rules.slice(0, MAX_RULES).map((rule) => (
+                  <li key={rule.id}>
+                    {rule.strength === undefined ? null : (
+                      <Badge tone={rule.strength === 'required' ? 'signal' : 'neutral'}>
+                        {t(`yes.detail.strength.${rule.strength}`)}
+                      </Badge>
+                    )}{' '}
+                    {rule.statement}
+                  </li>
+                ))}
+              </ul>
+              {ask.rules.length > MAX_RULES ? (
+                <p className="ys-small ys-meta">
+                  {t('yes.detail.moreRules', { count: ask.rules.length - MAX_RULES })}
+                </p>
+              ) : null}
+            </details>
           )}
-          {ask.rules.length > MAX_RULES ? (
-            <p className="ys-small ys-meta">
-              {t('yes.detail.moreRules', { count: ask.rules.length - MAX_RULES })}
-            </p>
-          ) : null}
         </section>
       )}
 
-      {ask.diff === undefined ? null : (
-        <section className="o-card ys-section" aria-labelledby="ys-diff">
-          <h2 id="ys-diff" className="ys-label">
-            {t('yes.detail.diff')}
-          </h2>
-          <DiffView diff={ask.diff} />
-        </section>
-      )}
-
-      {ask.evidence.length === 0 ? null : (
-        <section className="o-card ys-section" aria-labelledby="ys-evidence">
-          <h2 id="ys-evidence" className="ys-label">
-            {t('yes.detail.evidence')}
-          </h2>
-          <dl className="ys-kv">
-            {ask.evidence.map((item) => (
-              <div key={item.label} className="ys-kv__row">
-                <dt>{item.label}</dt>
-                <dd>
-                  {item.url === undefined ? (
-                    item.value
-                  ) : (
-                    <a href={item.url} target="_blank" rel="noreferrer noopener">
-                      {item.value}
-                    </a>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
+      <details className="o-card ys-section ys-details">
+        <summary>{t('yes.detail.technical')}</summary>
+        <dl className="ys-kv">
+          <div className="ys-kv__row">
+            <dt>{t('yes.detail.requestId')}</dt>
+            <dd>{ask.id}</dd>
+          </div>
+          {ask.pr === undefined ? null : (
+            <div className="ys-kv__row">
+              <dt>{t('yes.detail.commit')}</dt>
+              <dd>{ask.pr.sha}</dd>
+            </div>
+          )}
+          <div className="ys-kv__row">
+            <dt>{t('yes.detail.fingerprint')}</dt>
+            <dd>{ask.shownDigest}</dd>
+          </div>
+          {ask.what.harness === undefined ? null : (
+            <div className="ys-kv__row">
+              <dt>{t('yes.detail.agentPackage')}</dt>
+              <dd>{ask.what.harness}</dd>
+            </div>
+          )}
+        </dl>
+      </details>
 
       {ask.status === 'pending' ? (
-        <DecisionBar ask={ask} viewer={viewer} decision={decision} />
+        <DecisionBar
+          ask={ask}
+          viewer={viewer}
+          decision={decision}
+          blocked={diffFolded ? t('yes.detail.readFirst') : undefined}
+        />
       ) : (
         <ReceiptCard ask={ask} />
       )}

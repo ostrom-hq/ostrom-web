@@ -1,4 +1,10 @@
-import type { Ask, Decision, Error as ApiError, SelfApprovalRefused, YesQueue } from '@gen/api/types.gen';
+import type {
+  Ask,
+  DecideRequest,
+  Error as ApiError,
+  SelfApprovalRefused,
+  YesQueue,
+} from '@gen/api/types.gen';
 import { handleDecideAsk, handleGetAsk, handleGetYesQueue } from '@gen/api/msw.gen';
 import { zDecideRequest } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
@@ -19,11 +25,13 @@ function notFound(): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: 'request not found' }, { status: 404 });
 }
 
-function decide(ask: Ask, result: Decision, at: string): Ask {
+function decide(ask: Ask, request: DecideRequest, at: string): Ask {
+  const { result, note } = request;
   const selfApproved = result === 'approved' && ask.askedBy.includes(viewer.login);
   return {
     ...ask,
     ...(selfApproved ? { selfApproved } : {}),
+    ...(note === undefined ? {} : { note }),
     status: result,
     decidedBy: viewer.login,
     decidedAt: at,
@@ -95,7 +103,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       }
       const refusal = body.data.result === 'approved' ? selfApprovalRefusal(ask, viewer.login) : undefined;
       if (refusal !== undefined) return HttpResponse.json<SelfApprovalRefused>(refusal, { status: 403 });
-      const decided = decide(ask, body.data.result, now().toISOString());
+      const decided = decide(ask, body.data, now().toISOString());
       db.asks[index] = decided;
       return HttpResponse.json<Ask>(decided);
     }, options),
