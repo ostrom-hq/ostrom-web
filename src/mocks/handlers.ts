@@ -7,6 +7,7 @@ import {
   handleDeleteMcpServer,
   handleDeleteSecret,
   handleGetMcpUsage,
+  handleGetSpending,
   handleGetApproval,
   handleGetGatePolicy,
   handleGetMe,
@@ -17,6 +18,7 @@ import {
   handleGetWorkflow,
   handleInviteMembers,
   handleListApprovals,
+  handleListBudgets,
   handleListDecisions,
   handleListMcpCalls,
   handleListMcpServers,
@@ -32,12 +34,14 @@ import {
   handleUpdateRule,
   handleRotateSecret,
   handleSaveMcpServer,
+  handleSetBudget,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
   ApiError,
   Approval,
   ApprovalAnswer,
+  Budget,
   Decision,
   McpCall,
   McpServer,
@@ -54,6 +58,7 @@ import type {
 } from '@gen/api/types.gen';
 import {
   zAnswerApprovalRequest,
+  zBudget,
   zBulkUpdateRulesBody,
   zMcpServer,
   zMemberRole,
@@ -65,6 +70,7 @@ import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
+import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
 import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
@@ -89,6 +95,7 @@ export interface MockDb {
   /** Secrets as the server lists them: names and metadata, never a value. */
   secrets: Secret[];
   mcpCalls: McpCall[];
+  budgets: Budget[];
 }
 
 export function createMockDb(): MockDb {
@@ -107,6 +114,7 @@ export function createMockDb(): MockDb {
     mcpServers: initialMcpServers(),
     secrets: initialSecrets(),
     mcpCalls: initialMcpCalls(),
+    budgets: initialBudgets(),
   };
 }
 
@@ -118,6 +126,15 @@ const zMcpServerWrite = zMcpServer.extend({
 });
 /** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
 const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
+/** A budget names who it limits (no subject for the organization) and at least one positive amount. */
+const zBudgetWrite = zBudget
+  .extend({
+    scope: z.enum(['org', 'member', 'workflow']),
+    usdPerMonth: z.number().positive().optional(),
+    usdPerDay: z.number().positive().optional(),
+  })
+  .refine((budget) => (budget.scope === 'org') === (budget.subject === undefined))
+  .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
@@ -455,6 +472,31 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return db.secrets.length === before
         ? refusal(404, 'not_found', 'secret not found')
         : new HttpResponse(null, { status: 204 });
+    }),
+    handleGetSpending(({ request }) => {
+      const period = new URL(request.url).searchParams.get('period') ?? 'month';
+      return period === 'month' || period === 'week'
+        ? HttpResponse.json(spendingFor(period))
+        : refusal(400, 'invalid_request', 'period is week or month');
+    }),
+    handleListBudgets(() => HttpResponse.json({ items: db.budgets })),
+    handleSetBudget(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set budgets');
+      const body = zBudgetWrite.safeParse(await readJson(request));
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'a scope, a subject outside the organization, and an amount');
+      const budget: Budget = {
+        scope: body.data.scope,
+        hardStop: body.data.hardStop,
+        ...(body.data.subject === undefined ? {} : { subject: body.data.subject }),
+        ...(body.data.usdPerMonth === undefined ? {} : { usdPerMonth: body.data.usdPerMonth }),
+        ...(body.data.usdPerDay === undefined ? {} : { usdPerDay: body.data.usdPerDay }),
+      };
+      const same = (item: Budget): boolean => item.scope === budget.scope && item.subject === budget.subject;
+      db.budgets = db.budgets.some(same)
+        ? db.budgets.map((item) => (same(item) ? budget : item))
+        : [...db.budgets, budget];
+      return HttpResponse.json(budget);
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

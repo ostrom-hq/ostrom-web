@@ -14,9 +14,11 @@ import {
   getReceipt,
   getReceiptBundle,
   getSession,
+  getSpending,
   getWorkflow,
   inviteMembers,
   listApprovals,
+  listBudgets,
   listDecisions,
   listMcpCalls,
   listMcpServers,
@@ -29,6 +31,7 @@ import {
   listWorkflows,
   rotateSecret,
   saveMcpServer,
+  setBudget,
   setGatePolicy,
   updateMember,
   updateRule,
@@ -664,5 +667,48 @@ describe('mock MCP servers and secrets', () => {
     expect(
       await status(async () => deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true })),
     ).toBe(403);
+  });
+});
+
+describe('mock spending and budgets', () => {
+  const send = async (body: unknown): Promise<number> =>
+    (await fetch('http://ostrom.test/api/v1/budgets', { method: 'PUT', body: JSON.stringify(body) })).status;
+
+  it('serves the month by default, the week on request, and refuses another period', async () => {
+    const month = (await getSpending({ throwOnError: true })).data;
+    expect(month).toMatchObject({ period: 'month', budgetUsd: 1_200 });
+    expect(month.daily).toHaveLength(7);
+    expect(month.daily[6]?.date).toBe('2026-10-30');
+    const week = (await getSpending({ query: { period: 'week' }, throwOnError: true })).data;
+    expect(week.budgetUsd).toBeUndefined();
+    expect(week.byAgent[0]).toEqual({ key: 'claude-code', label: 'Claude Code', usd: 201.4, sessions: 38 });
+    const bad = await failureOf(async () => getSpending({ query: { period: 'year' }, throwOnError: true }));
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+  });
+
+  it('adds a budget or replaces the one with the same scope and subject', async () => {
+    expect((await listBudgets({ throwOnError: true })).data.items).toHaveLength(2);
+    await setBudget({ body: { scope: 'org', usdPerMonth: 1_500, hardStop: true }, throwOnError: true });
+    await setBudget({
+      body: { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
+      throwOnError: true,
+    });
+    expect(db.budgets).toEqual([
+      { scope: 'org', usdPerMonth: 1_500, hardStop: true },
+      { scope: 'member', subject: 'theo', usdPerDay: 25, hardStop: true },
+      { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
+    ]);
+  });
+
+  it('refuses a budget without an amount, with a wrong subject or scope, and from a member', async () => {
+    expect(await send({ scope: 'org', hardStop: false })).toBe(400);
+    expect(await send({ scope: 'org', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'member', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'team', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'org', usdPerDay: -1, hardStop: false })).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    expect(await send({ scope: 'org', usdPerDay: 1, hardStop: false })).toBe(403);
   });
 });

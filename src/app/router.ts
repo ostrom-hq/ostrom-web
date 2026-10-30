@@ -15,6 +15,7 @@ import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { RulesScreen } from '@/features/rules';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
+import { SpendScreen } from '@/features/spend';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -97,6 +98,7 @@ const secretsRoute = createRoute({
   path: '/secrets',
   component: SecretsScreen,
 });
+const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -124,6 +126,7 @@ export const routeTree = rootRoute.addChildren([
   workflowRoute,
   mcpRoute,
   secretsRoute,
+  spendRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>
