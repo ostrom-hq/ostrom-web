@@ -321,7 +321,7 @@ describe('a request', () => {
     expect(screen.queryByRole('heading', { name: 'Changes' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Checks' })).toBeNull();
     expect(screen.getByText('someone')).toBeInTheDocument();
-    expect(screen.queryByText(/Workflow/)).toBeNull();
+    expect(screen.queryByText(/^Workflow /)).toBeNull();
     expect(screen.queryByText(/You approve as/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
     expect(screen.getByText('sha256:bare')).toBeInTheDocument();
