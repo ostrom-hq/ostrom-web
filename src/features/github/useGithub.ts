@@ -75,7 +75,9 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     ready(getAnalysisStateOptions(), {
       enabled: installed,
       retry: false,
+      // Only while a run goes on, and never on a failing read: the page says the failure instead of hammering.
       refetchInterval: (query) => {
+        if (query.state.error !== null) return false;
         const read = zAnalysisState.safeParse(query.state.data);
         return read.success && stageOf(read.data) === 'running' ? ANALYSIS_POLL_MS : false;
       },
@@ -88,6 +90,9 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
   };
   const start = useMutation({ ...startAnalysisMutation(), onSettled });
   const restart = useMutation({ ...restartAnalysisMutation(), onSettled });
+  // The stage an attempt was made from: its refusal speaks only while the page still shows that stage. Once the
+  // state read again tells otherwise (another admin's run, a run that ended elsewhere), the page says it.
+  const [attempted, setAttempted] = useState<AnalysisStage>();
   const [query, setQuery] = useState('');
   const items = repos.data?.items;
   const shown = useMemo(() => reposShown(items ?? [], query), [items, query]);
@@ -106,12 +111,13 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
                 // Only the last attempt speaks: an older refusal of the other call never stays on screen.
                 const [used, other] = stage === 'failed' ? [restart, start] : [start, restart];
                 other.reset();
+                setAttempted(stage);
                 used.mutate({});
               },
             }
           : undefined,
       starting: start.isPending || restart.isPending,
-      failure: failureOf(start.error ?? restart.error),
+      failure: attempted === stage ? failureOf(start.error ?? restart.error) : undefined,
     };
   }
   return {

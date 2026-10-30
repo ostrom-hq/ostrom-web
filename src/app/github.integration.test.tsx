@@ -3,6 +3,7 @@ import type { ApiError } from '@gen/api/types.gen';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
@@ -207,6 +208,21 @@ describe('coming back from GitHub', () => {
     expect(screen.queryByText(/^The GitHub App is installed/)).toBeNull();
   });
 
+  it('says it after a person in several organizations chose one', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [otherOrganization()];
+    const router = visit('/github?installed=1');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    const list = await within(picker).findByRole('list', { name: 'Your organizations' });
+    await user.click(within(list).getByRole('button', { name: 'Acme' }));
+    expect(
+      await screen.findByText('The GitHub App is installed. Its repositories show below.'),
+    ).toBeInTheDocument();
+    await vi.waitFor(() => {
+      expect(router.state.location.searchStr).toBe('');
+    });
+  });
+
   it('reads installed=0 as nothing, and cleans the address', async () => {
     const router = visit('/github?installed=0');
     await repoList();
@@ -267,7 +283,7 @@ describe('the analysis of the rules', () => {
     expect(await within(await analysis()).findByText('1 rule and 1 workflow proposed.')).toBeInTheDocument();
   });
 
-  it('reads the state again when a start is refused, as the page was behind', async () => {
+  it('reads the state again when a start is refused, and shows the run instead of the refusal', async () => {
     const user = userEvent.setup();
     visit('/github');
     const section = await analysis();
@@ -275,25 +291,32 @@ describe('the analysis of the rules', () => {
     // Another admin started a run meanwhile.
     db.analyses[ACME] = { phase: 'connect', progress: 0.05, fails: false };
     await user.click(button);
-    expect(await within(section).findByText('An analysis is running.')).toBeInTheDocument();
     expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+    expect(within(section).queryByText('An analysis is running.')).toBeNull();
   });
 
-  it('forgets an older refusal once another attempt starts', async () => {
+  it('learns from a refused start that the last run failed, and restarts it', async () => {
     const user = userEvent.setup();
     visit('/github');
     const section = await analysis();
     const button = await within(section).findByRole('button', { name: 'Analyse the repositories' });
-    // A run failed meanwhile: the start is refused, the page learns it failed, and the restart goes through.
+    // A run failed meanwhile, in another tab: the start is refused.
     db.analyses[ACME] = { phase: 'failed', progress: 1, fails: true };
-    server.use(
-      http.post('*/api/v1/analysis/start', () => refuse(409, 'Restart the failed one.'), { once: true }),
-    );
     await user.click(button);
-    expect(await within(section).findByText('Restart the failed one.')).toBeInTheDocument();
-    await user.click(await within(section).findByRole('button', { name: 'Start again' }));
+    expect(await within(section).findByText('The last analysis stopped.')).toBeInTheDocument();
+    expect(within(section).queryByText('Restart the failed analysis.')).toBeNull();
+    await user.click(within(section).getByRole('button', { name: 'Start again' }));
     expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
-    expect(within(section).queryByText('Restart the failed one.')).toBeNull();
+  });
+
+  it('keeps the refusal of a restart while the run stays failed', async () => {
+    const user = userEvent.setup();
+    db.analyses[ACME] = { phase: 'failed', progress: 1, fails: true };
+    server.use(http.post('*/api/v1/analysis/restart', () => refuse(503, 'No engine yet.')));
+    visit('/github');
+    const section = await analysis();
+    await user.click(await within(section).findByRole('button', { name: 'Start again' }));
+    expect(await within(section).findByText('No engine yet.')).toBeInTheDocument();
   });
 
   it('says what the last analysis proposed, and analyses again', async () => {

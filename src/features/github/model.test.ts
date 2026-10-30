@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Repo } from '@gen/api/types.gen';
-import { githubSearchSchema, installErrorOf, readableDate, reposShown, safeAppPage, stageOf } from './model';
+import { githubSearchSchema, readableDate, reposShown, safeAppPage, stageOf } from './model';
 
 function repo(name: string, extra: Partial<Repo> = {}): Repo {
   return { name, defaultBranch: 'main', archived: false, ...extra };
@@ -22,6 +22,18 @@ describe('the repositories shown', () => {
     expect(shown.map((item) => item.name)).toEqual(['new', 'a', 'b', 'never', 'old', 'older']);
   });
 
+  it('compares push dates as times, whatever their offset, and a date that is not one as never pushed', () => {
+    const shown = reposShown(
+      [
+        repo('paris', { pushedAt: '2026-10-30T01:00:00+02:00' }),
+        repo('utc', { pushedAt: '2026-10-29T23:30:00Z' }),
+        repo('garbled', { pushedAt: 'soon' }),
+      ],
+      '',
+    );
+    expect(shown.map((item) => item.name)).toEqual(['utc', 'paris', 'garbled']);
+  });
+
   it('keeps the ones whose name or description holds every word', () => {
     const repos = [repo('api', { description: 'Billing API' }), repo('billing-web'), repo('docs')];
     expect(reposShown(repos, ' billing ').map((item) => item.name)).toEqual(['api', 'billing-web']);
@@ -40,8 +52,10 @@ describe('the analysis stage', () => {
 
 describe('an install error', () => {
   it('is one the console words, or unknown', () => {
-    expect(installErrorOf('denied')).toBe('denied');
-    expect(installErrorOf('state_mismatch')).toBe('unknown');
+    expect(githubSearchSchema.parse({ error: 'denied' })).toEqual({ error: 'denied' });
+    expect(githubSearchSchema.parse({ error: 'state_mismatch' })).toEqual({ error: 'unknown' });
+    expect(githubSearchSchema.parse({ error: 42 })).toEqual({ error: 'unknown' });
+    expect(githubSearchSchema.parse({})).toEqual({});
   });
 });
 

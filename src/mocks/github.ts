@@ -62,7 +62,8 @@ export function createGithubHandlers(
     if (last !== undefined && last.phase !== 'ready' && !failed)
       return refusal(409, 'analysis_running', 'An analysis is running.');
     if (again && !failed) return refusal(409, 'analysis_not_failed', 'No failed analysis to restart.');
-    s.analyses[organization.id] = { phase: 'connect', progress: 0.05, fails: !again && failed };
+    if (!again && failed) return refusal(409, 'analysis_failed', 'Restart the failed analysis.');
+    s.analyses[organization.id] = { phase: 'connect', progress: 0.05, fails: false };
     return HttpResponse.json<{ runId: string }>({ runId: `run-${organization.id}` }, { status: 202 });
   };
   return [

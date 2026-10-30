@@ -14,25 +14,24 @@ export const githubSearchSchema = z.object({
     // `1` as the server sends it; `true` once read, as the router validates its own output again.
     .transform((value) => value === 1 || value === '1' || value === true)
     .optional(),
-  error: z
-    .unknown()
-    .transform((value) => (typeof value === 'string' && /^[a-z0-9_]{1,40}$/.test(value) ? value : 'unknown'))
-    .optional(),
+  // A type the console words, or `unknown`: never the text of the address.
+  error: z.enum(['denied', 'expired', 'forbidden', 'unknown']).optional().catch('unknown'),
 });
 export type GithubSearch = z.infer<typeof githubSearchSchema>;
 
 /** What the install brought back, kept for the page's life once the address is cleaned. */
 export interface InstallOutcome {
   readonly installed: boolean;
-  readonly error: string | undefined;
+  readonly error: InstallError | undefined;
 }
 
 /** The error types of the install the console puts in its own words; any other reads as `unknown`. */
-export const INSTALL_ERRORS = ['denied', 'expired', 'forbidden', 'unknown'] as const;
-export type InstallError = (typeof INSTALL_ERRORS)[number];
+export type InstallError = NonNullable<GithubSearch['error']>;
 
-export function installErrorOf(type: string): InstallError {
-  return INSTALL_ERRORS.find((known) => known === type) ?? 'unknown';
+/** When a repository was last pushed, for sorting: never pushed, or not a date, sorts last. */
+function pushedTime(repo: Repo): number {
+  const time = repo.pushedAt === undefined ? Number.NaN : Date.parse(repo.pushedAt);
+  return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }
 
 /** The repositories whose name or description holds every word typed: live ones first, then the latest pushed. */
@@ -45,8 +44,9 @@ export function reposShown(repos: readonly Repo[], query: string): Repo[] {
     })
     .sort((a, b) => {
       if (a.archived !== b.archived) return a.archived ? 1 : -1;
-      const pushed = (b.pushedAt ?? '').localeCompare(a.pushedAt ?? '');
-      return pushed === 0 ? a.name.localeCompare(b.name) : pushed;
+      const [first, second] = [pushedTime(a), pushedTime(b)];
+      if (first !== second) return second > first ? 1 : -1;
+      return a.name.localeCompare(b.name);
     });
 }
 

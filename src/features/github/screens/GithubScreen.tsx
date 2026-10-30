@@ -9,7 +9,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, Facts, LoadState, Screen } from '@/shared/ui/Screen';
-import { type InstallOutcome, installErrorOf, readableDate } from '../model';
+import { readableDate } from '../model';
 import { type Analysis, type GithubViewModel, useGithub, useInstallOutcome } from '../useGithub';
 import './github.css';
 
@@ -19,24 +19,15 @@ import './github.css';
  */
 export function GithubScreen(): ReactElement {
   const { t } = useTranslation();
-  const outcome = useInstallOutcome();
   return (
-    <WithOrg title={t('github.title')}>
-      {(org, role) => <GithubPage org={org} role={role} outcome={outcome} />}
-    </WithOrg>
+    <WithOrg title={t('github.title')}>{(org, role) => <GithubPage org={org} role={role} />}</WithOrg>
   );
 }
 
-function GithubPage({
-  org,
-  role,
-  outcome,
-}: {
-  readonly org: OrgView;
-  readonly role: OrgRole | undefined;
-  readonly outcome: InstallOutcome;
-}): ReactElement {
+function GithubPage({ org, role }: { readonly org: OrgView; readonly role: OrgRole | undefined }): ReactElement {
   const { t } = useTranslation();
+  // Read once the organization is known: a person in several chooses first, and the screen mounts again after.
+  const outcome = useInstallOutcome();
   const view = useGithub(org.id, role);
   return (
     <Screen title={t('github.title')} lead={t('github.lead')}>
@@ -48,7 +39,7 @@ function GithubPage({
       ) : null}
       {outcome.error === undefined ? null : (
         <Banner tone="warning" tag={t('github.back.errorTag')} live>
-          {t(`github.back.error.${installErrorOf(outcome.error)}`)}
+          {t(`github.back.error.${outcome.error}`)}
         </Banner>
       )}
       <LoadState data={view.app} failure={view.appFailure} rows={2}>
