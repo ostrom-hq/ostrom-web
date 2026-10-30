@@ -19,12 +19,12 @@ export function setupMockApp(): MockServer {
   const mock = createMockServer();
   beforeAll(() => {
     mock.server.listen({ onUnhandledFrame: 'error' });
-    configureApiClient({ baseUrl: TEST_API, getToken: () => useAuthStore.getState().token });
+    configureApiClient({ baseUrl: TEST_API });
   });
   afterEach(() => {
     mock.server.resetHandlers();
     resetMockDb(mock.db);
-    useAuthStore.getState().signOut();
+    useAuthStore.setState({ link: undefined, notice: undefined });
     resetArrivals();
   });
   afterAll(() => {

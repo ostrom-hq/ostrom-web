@@ -60,9 +60,11 @@ export const en = {
       tag: 'Sign-in',
       invalid: 'This sign-in link is not valid. Ask for a new one.',
       switch:
-        'This link signs in with another key than the one this browser uses. Requests you approve are signed with it.',
-      accept: 'Use the new key',
-      keep: 'Keep the current one',
+        'Someone is already signed in on this browser, and this link may be another account. Requests you approve are signed as the account of the link.',
+      accept: 'Sign in with the link',
+      keep: 'Stay signed in as now',
+      signingIn: 'Signing in with the link…',
+      failed: 'This sign-in link could not be used ({{reason}}). Ask for a new one.',
       dismiss: 'Dismiss',
     },
     signedAs: 'Approving as {{name}}',
@@ -257,6 +259,8 @@ export const en = {
       yourself: 'Verify it yourself',
       yourselfHint: 'Download the bundle, then check it offline with the CLI:',
       download: 'Download the bundle',
+      downloading: 'Downloading…',
+      downloadFailedTag: 'Not downloaded',
     },
   },
   members: {

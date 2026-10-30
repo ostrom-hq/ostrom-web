@@ -7,6 +7,11 @@ describe('csrfToken', () => {
     expect(csrfToken('ostrom_csrf=a%E0%A4%A')).toBe('a%E0%A4%A');
   });
 
+  it('reads the __Host- cookie of HTTPS first, the development one otherwise', () => {
+    expect(csrfToken('ostrom_csrf=dev; __Host-ostrom_csrf=prod')).toBe('prod');
+    expect(csrfToken('__Host-ostrom_csrf=; ostrom_csrf=dev')).toBe('dev');
+  });
+
   it('has none without the cookie or with an empty one', () => {
     expect(csrfToken('')).toBeUndefined();
     expect(csrfToken('ostrom_csrf=')).toBeUndefined();

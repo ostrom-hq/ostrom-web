@@ -17,11 +17,12 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   const [queryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { staleTime: 15_000, retry: retryOnce } } }),
   );
-  // Everything cached was read as the previous account: a switch of account starts from nothing.
+  // Everything cached was read as the previous account: a sign-in or sign-out starts from nothing.
   useEffect(
     () =>
       useAuthStore.subscribe((auth, previous) => {
-        if (auth.token !== previous.token) queryClient.clear();
+        // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
+        if (auth.generation !== previous.generation) void queryClient.resetQueries();
       }),
     [queryClient],
   );

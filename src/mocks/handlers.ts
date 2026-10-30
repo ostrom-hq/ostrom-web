@@ -15,6 +15,7 @@ import {
   handleGetSpending,
   handleGetApproval,
   handleGetGatePolicy,
+  handleExchangeSignInLink,
   handleGetMe,
   handleGetOrganization,
   handleGetReceipt,
@@ -40,6 +41,7 @@ import {
   handleListSecrets,
   handleListSharedAccounts,
   handleRemoveSharedAccount,
+  handleLogout,
   handleRequestSignInEmail,
   handleListSessions,
   handleListTeams,
@@ -102,6 +104,7 @@ import {
   zUpdateSharedAccountBody,
   zUpdateRuleBody,
   zVerifySignInEmailBody,
+  zExchangeSignInLinkBody,
 } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
@@ -162,11 +165,15 @@ export interface MockDb extends BillingState {
   /** The next shared account id; ids are never reused, even after a removal. */
   nextAccountId: number;
   /**
-   * When the person signed in (ms since the epoch): when the demo opened, then each e-mail link. A yes needs a
+   * When the person signed in (ms since the epoch): when the demo opened, then each sign-in link. A yes needs a
    * sign-in of no more than five minutes, as on the server (S2-54), so the demo asks to sign in again once it has been
    * open that long. Opening the link in a new page starts the demo afresh, its data with it.
    */
   signedInAt: number;
+  /** The session cookie holds an account: the demo opens signed in, a sign-out empties it, a link fills it. */
+  signedIn: boolean;
+  /** Approver links already exchanged: each signs in once (server#58). */
+  usedLinks: string[];
 }
 
 export function createMockDb(): MockDb {
@@ -197,6 +204,8 @@ export function createMockDb(): MockDb {
     runsByKey: {},
     nextAccountId: 100,
     signedInAt: Date.now(),
+    signedIn: true,
+    usedLinks: [],
     billing: initialBilling(),
     invoices: initialInvoices(),
   };
@@ -383,7 +392,29 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   return [
-    handleGetMe({ body: me }),
+    handleGetMe(() =>
+      db.signedIn ? HttpResponse.json(me) : refusal(401, 'unauthorized', 'nobody is signed in'),
+    ),
+    // An approver's link (`opk_…`) is exchanged once for the session cookies; the body carries no secret.
+    handleExchangeSignInLink(async ({ request }) => {
+      const body = zExchangeSignInLinkBody.safeParse(await readJson(request));
+      if (!body.success || !body.data.token.startsWith('opk_') || db.usedLinks.includes(body.data.token))
+        return refusal(401, 'invalid_link', 'This link was already used or has expired.');
+      db.usedLinks = [...db.usedLinks, body.data.token];
+      db.signedIn = true;
+      db.signedInAt = now().getTime();
+      return HttpResponse.json(
+        { redirect: '/yes', csrfToken: 'csrf-demo' },
+        { headers: { 'Set-Cookie': 'ostrom_csrf=csrf-demo; Path=/; SameSite=Lax' } },
+      );
+    }),
+    handleLogout(() => {
+      db.signedIn = false;
+      return new HttpResponse(null, {
+        status: 204,
+        headers: { 'Set-Cookie': 'ostrom_csrf=; Path=/; Max-Age=0' },
+      });
+    }),
     // The e-mail sign-in answers the same whether the address has an account or not.
     handleRequestSignInEmail(async ({ request }) => {
       const body = zRequestSignInEmailBody.safeParse(await readJson(request));
@@ -395,6 +426,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
         return refusal(401, 'invalid_link', 'This link was already used or has expired.');
       db.signedInAt = now().getTime();
+      db.signedIn = true;
       return HttpResponse.json(
         { redirect: '/yes', csrfToken: 'csrf-demo' },
         { headers: { 'Set-Cookie': 'ostrom_csrf=csrf-demo; Path=/; SameSite=Lax' } },

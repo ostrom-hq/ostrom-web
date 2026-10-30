@@ -15,6 +15,7 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
 import { FailureBanner } from '../components/FailureBanner';
+import { SignInNotice } from '../components/SignInNotice';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
 import { type AnswerViewModel, useAnswerApproval, useShownApproval } from '../useYes';
 
@@ -50,6 +51,7 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
       <Link to="/yes" className="ys-back">
         {t('yes.detail.back')}
       </Link>
+      <SignInNotice />
       <FailureBanner failure={failure} />
       {newer ? (
         <Banner tone="warning" tag={t('yes.act.changedTag')} live>

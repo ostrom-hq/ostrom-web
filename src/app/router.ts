@@ -23,7 +23,9 @@ import { BillingScreen } from '@/features/billing';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
+import { logout } from '@gen/api/sdk.gen';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { dropFragment } from '@/shared/lib/dropFragment';
 
 const rootRoute = createRootRoute({ component: AppShell });
 
@@ -31,8 +33,9 @@ const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', comp
 
 /**
  * `/yes#signin=opk_…` is the link an approver opens on their phone. The token rides in the fragment, which the
- * browser never sends to a server nor writes in its logs: it is kept in memory, then dropped from the address bar
- * (and the history) at once. `/yes?signout` forgets it.
+ * browser never sends to a server nor writes in its logs: it is wiped from the address bar and the history at once
+ * (`history.replaceState`), held in memory, and the yes screens exchange it for the session cookie
+ * (`POST /auth/link`). `/yes?signout` ends the session (`POST /auth/logout`).
  */
 export const yesSearchSchema = z.object({
   /** A token in the query string is never used (servers log it), only wiped from the address. */
@@ -52,11 +55,16 @@ const yesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/yes',
   validateSearch: yesSearchSchema,
-  beforeLoad: ({ search, location }) => {
+  beforeLoad: async ({ search, location }) => {
     const signin = signInFromHash(location.hash);
-    if (search.signout === true) useAuthStore.getState().signOut();
-    else if (signin !== undefined) useAuthStore.getState().offer(signin);
-    else if (search.signin === undefined) return;
+    if (search.signout === true) {
+      // The page waits for the server: what it shows next is read as nobody, never as the account just ended.
+      const { error } = await logout();
+      if (error === undefined) useAuthStore.getState().changed();
+    } else if (signin !== undefined) {
+      dropFragment();
+      useAuthStore.getState().offer(signin);
+    } else if (search.signin === undefined) return;
     throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
   },
   component: YesQueueScreen,
@@ -69,6 +77,7 @@ const approvalRoute = createRoute({
   beforeLoad: ({ location, params }) => {
     const signin = signInFromHash(location.hash);
     if (signin === undefined) return;
+    dropFragment();
     useAuthStore.getState().offer(signin);
     throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
   },
@@ -170,6 +179,7 @@ const emailLinkRoute = createRoute({
   beforeLoad: ({ location }) => {
     const token = fragmentValue(location.hash, 'token');
     if (token === undefined) return;
+    dropFragment();
     useEmailLinkStore.getState().hold(token);
     throw redirect({ to: '/auth/email', hash: '', replace: true });
   },

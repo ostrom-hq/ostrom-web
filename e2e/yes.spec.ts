@@ -40,14 +40,21 @@ test('the asker cannot approve while another approver exists, but can decline wi
   await expect(decision).toContainText('Wait for samir.');
 });
 
-test('a sign-in link keeps the token in memory and leaves no trace in the address bar or storage', async ({
+test('a sign-in link is wiped from the address at once, asked about, then exchanged for the session cookie', async ({
   page,
 }) => {
   await page.goto('/yes#signin=opk_e2e_token_123');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
   await expect(page).toHaveURL(/\/yes$/);
-  const { origins } = await page.context().storageState();
-  const stored = origins.flatMap((origin) => origin.localStorage).map((entry) => entry.value);
+  // The demo opens signed in: a link may be another account, so it waits for a yes.
+  const notice = page.getByRole('alert').filter({ hasText: 'Someone is already signed in' });
+  await notice.getByRole('button', { name: 'Sign in with the link' }).click();
+  await expect(notice).toBeHidden();
+  const { cookies, origins } = await page.context().storageState();
+  const stored = [
+    ...origins.flatMap((origin) => origin.localStorage).map((entry) => entry.value),
+    ...cookies.map((cookie) => cookie.value),
+  ];
   expect(stored.some((value) => value.includes('opk_e2e_token_123'))).toBe(false);
 });
 
