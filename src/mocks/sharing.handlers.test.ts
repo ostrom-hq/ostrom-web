@@ -123,7 +123,7 @@ describe('mock shared subscriptions', () => {
       throwOnError: true,
     });
     expect(lent.data).toMatchObject({
-      id: 'acc-102',
+      id: 'acc-100',
       label: 'Team Pro',
       owner: 'maya',
       status: 'active',

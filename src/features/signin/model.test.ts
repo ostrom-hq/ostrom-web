@@ -13,7 +13,15 @@ describe('safeRedirect', () => {
       safeRedirect('//evil.example'),
       safeRedirect('/\\evil.example'),
       safeRedirect('yes'),
-    ]).toEqual(['/', '/', '/', '/', '/']);
+      safeRedirect('/\t/evil.example'),
+      safeRedirect('/\n/evil.example'),
+      safeRedirect('/x\u007f'),
+      safeRedirect('/a\\b'),
+    ]).toEqual(['/', '/', '/', '/', '/', '/', '/', '/', '/']);
+  });
+
+  it('normalizes the path it keeps', () => {
+    expect(safeRedirect('/sessions/../yes#top')).toBe('/yes#top');
   });
 });
 

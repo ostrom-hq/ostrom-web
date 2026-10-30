@@ -1,10 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** A console path to go to after signing in: only a path of this site, never another origin. */
+const BASE = 'https://console.invalid';
+
+/**
+ * A console path to go to after signing in: only a path of this site, never another origin. Browsers drop tabs and
+ * line breaks and read a backslash as a slash (`/\t/evil.example` is `//evil.example`), so any control character or
+ * backslash is refused, and the path must still resolve on this site once parsed.
+ */
 export function safeRedirect(path: string | undefined): string {
-  if (path === undefined || !path.startsWith('/') || path.startsWith('//') || path.startsWith('/\\'))
-    return '/';
-  return path;
+  if (path === undefined || !path.startsWith('/') || path.includes('\\')) return '/';
+  if ([...path].some((char) => char < ' ' || char === '\u007f')) return '/';
+  const url = new URL(path, BASE);
+  if (url.origin !== BASE) return '/';
+  return `${url.pathname}${url.search}${url.hash}`;
 }
 
 /** A value an e-mailed or approver link carries in its fragment (`#token=…`), which no server ever receives. */

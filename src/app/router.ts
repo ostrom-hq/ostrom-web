@@ -150,7 +150,8 @@ const receiptRoute = createRoute({
   component: ReceiptScreen,
 });
 
-export const signInSearchSchema = z.object({ redirect: z.string().optional() });
+// A redirect that is not a single string (`?redirect=1`, repeated keys) is dropped, never an error page.
+export const signInSearchSchema = z.object({ redirect: z.string().optional().catch(undefined) });
 
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,

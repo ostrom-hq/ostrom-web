@@ -73,6 +73,26 @@ describe('the sign-in page', () => {
     expect(sent).toEqual({ email: 'maya@acme.dev' });
   });
 
+  it('goes back to the form to send to another address', async () => {
+    const user = userEvent.setup();
+    visit('/signin');
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Your e-mail address' }),
+      'maya@acme.dev{Enter}',
+    );
+    await user.click(await screen.findByRole('button', { name: 'Use another address' }));
+    expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('ignores a page to come back to that is not one string', async () => {
+    visit('/signin?redirect=12');
+    expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toHaveAttribute(
+      'href',
+      `${TEST_API}/api/v1/auth/github/start?redirect=%2F`,
+    );
+  });
+
   it('says why no link was sent', async () => {
     const user = userEvent.setup();
     server.use(

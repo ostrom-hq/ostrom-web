@@ -96,6 +96,9 @@ describe('mock API', () => {
   it('lists what waits for the caller, by status, or everything', async () => {
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
     const approved = await listApprovals({ query: { status: ['approved'] }, throwOnError: true });
+    const decided = await fetch('http://ostrom.test/api/v1/approvals?status=approved,rejected,expired');
+    const body: unknown = await decided.json();
+    expect(body).toMatchObject({ items: [{ id: 'apr-migration-7' }] });
     const all = await listApprovals({ throwOnError: true });
     expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-merge-412', 'apr-deploy-88']);
     expect(approved.data.items.map((approval) => approval.id)).toEqual(['apr-migration-7']);
@@ -746,7 +749,7 @@ describe('mock cloud agents and automations', () => {
     );
   };
 
-  it('starts a cloud session as the viewer, queued, and refuses one without a prompt or a known agent', async () => {
+  it('starts a cloud session as the viewer, queued, interactive without a prompt, and refuses an unknown agent', async () => {
     const started = await createCloudSession({
       body: { agent: 'codex', prompt: 'Fix it', name: '  Fix  ', model: 'gpt-6' },
       throwOnError: true,
@@ -763,14 +766,10 @@ describe('mock cloud agents and automations', () => {
       throwOnError: true,
     });
     expect(bare.data.name).toBeUndefined();
-    expect(
-      await statusOf(async () =>
-        createCloudSession({ body: { agent: 'codex', prompt: ' ' }, throwOnError: true }),
-      ),
-    ).toBe(400);
-    expect(
-      await statusOf(async () => createCloudSession({ body: { agent: 'codex' }, throwOnError: true })),
-    ).toBe(400);
+    const interactive = await createCloudSession({ body: { agent: 'codex' }, throwOnError: true });
+    expect(interactive.data.status).toBe('queued');
+    const bad = await fetch('http://ostrom.test/api/v1/cloud/sessions', { method: 'POST', body: '{}' });
+    expect(bad.status).toBe(400);
     expect(
       await statusOf(async () =>
         createCloudSession({ body: { agent: 'gemini', prompt: 'x' }, throwOnError: true }),
@@ -778,8 +777,8 @@ describe('mock cloud agents and automations', () => {
     ).toBe(400);
     expect(
       (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
-    ).toHaveLength(3);
-    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(6);
+    ).toHaveLength(4);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(7);
   });
 
   it('stops a live session for its owner or a manager, not an ended one or another member', async () => {
@@ -862,6 +861,14 @@ describe('mock cloud agents and automations', () => {
       automationId: 'au-nightly',
       version: 4,
     });
+    expect(db.automationRuns).toHaveLength(3);
+    const replay = await testAutomation({
+      path: { id: 'au-nightly' },
+      body: {},
+      headers: once,
+      throwOnError: true,
+    });
+    expect(replay.data.id).toBe(real.data.id);
     expect(db.automationRuns).toHaveLength(3);
     expect(
       await statusOf(async () =>

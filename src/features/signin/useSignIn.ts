@@ -16,12 +16,14 @@ export interface EmailSignInViewModel {
   readonly sending: boolean;
   /** The address a link went to; the server answers the same whether it has an account or not. */
   readonly sentTo: string | undefined;
+  /** Back to the form, to send to another address. */
+  readonly again: () => void;
   readonly failure: Error | undefined;
 }
 
 export function useEmailSignIn(redirect: string | undefined): EmailSignInViewModel {
   const mutation = useMutation(requestSignInEmailMutation());
-  const { mutate } = mutation;
+  const { mutate, reset } = mutation;
   const send = useCallback(
     (email: string) => {
       const address = email.trim();
@@ -33,6 +35,7 @@ export function useEmailSignIn(redirect: string | undefined): EmailSignInViewMod
     send,
     sending: mutation.isPending,
     sentTo: mutation.isSuccess ? mutation.variables.body.email : undefined,
+    again: reset,
     failure: failureOf(mutation.error),
   };
 }

@@ -245,7 +245,9 @@ describe('the automations', () => {
     const nightly = await card('Nightly dependency upgrades');
     await user.click(within(nightly).getByRole('button', { name: 'Show the runs' }));
     expect(await within(nightly).findAllByRole('listitem')).toHaveLength(2);
-    expect(within(nightly).getByText('cloud_hours_exhausted')).toBeInTheDocument();
+    expect(
+      within(nightly).getByText('The plan’s agent hours are used up for this period.'),
+    ).toBeInTheDocument();
     expect(within(nightly).getByText('Started')).toBeInTheDocument();
     await user.click(within(nightly).getByRole('button', { name: 'Run now' }));
     expect(await screen.findByText('The run is queued (run-102).')).toBeInTheDocument();
@@ -261,7 +263,7 @@ describe('the automations', () => {
     expect(await screen.findByText(/Dry run: the trigger and inputs are valid/)).toBeInTheDocument();
   });
 
-  it('says how many inputs of a dry run do not fit, and shows a run state it has no word for as is', async () => {
+  it('says how many inputs of a dry run do not fit, and shows a run state and a reason it has no word for as is', async () => {
     const user = userEvent.setup();
     server.use(
       http.post('*/api/v1/automations/:id/run', () =>
@@ -284,7 +286,7 @@ describe('the automations', () => {
               source: 'webhook',
               status: 'paused_by_owner',
               version: 1,
-              reason: null,
+              reason: 'quota_frozen',
               problems: [],
               createdAt: '2026-10-30T07:00:00.000Z',
               updatedAt: '2026-10-30T07:00:00.000Z',
@@ -299,6 +301,7 @@ describe('the automations', () => {
     expect(await screen.findByText('Dry run: 2 inputs do not fit, nothing ran.')).toBeInTheDocument();
     await user.click(within(sentry).getByRole('button', { name: 'Show the runs' }));
     expect(await within(sentry).findByText('paused_by_owner')).toBeInTheDocument();
+    expect(within(sentry).getByText('quota_frozen')).toBeInTheDocument();
   });
 
   it('says when an automation has no run yet', async () => {
