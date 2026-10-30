@@ -60,9 +60,16 @@ const yesRoute = createRoute({
   component: YesQueueScreen,
 });
 
+/** A link to one request (`/yes/apr-1#signin=opk_…`) signs in the same way, then shows that request. */
 const approvalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/yes/$approvalId',
+  beforeLoad: ({ location, params }) => {
+    const signin = signInFromHash(location.hash);
+    if (signin === undefined) return;
+    useAuthStore.getState().offer(signin);
+    throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
+  },
   component: ApprovalScreen,
 });
 

@@ -16,12 +16,14 @@ import type {
   Receipt,
 } from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
+import { useAuthStore } from '@/shared/auth/authStore';
 import { meOf } from '@/shared/auth/me';
+import { stillOpen } from './model';
 import { useArrivals } from './useArrivals';
 
 /** The queue polls like the prototype: a request must show up on the phone within seconds. */
@@ -114,11 +116,62 @@ export interface ApprovalViewModel {
   readonly failure: ApiFailure | Error | undefined;
 }
 
+const pollOpen = pollUnlessRefused(POLL_MS);
+
 export function useApproval(id: string): ApprovalViewModel {
   const query = useQuery(
-    ready(getApprovalOptions({ path: { id } }), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+    ready(getApprovalOptions({ path: { id } }), {
+      refetchInterval: (polled) => (stillOpen(polled.state.data) ? pollOpen(polled) : false),
+    }),
   );
   return { approval: query.data, failure: failureOf(query.error) };
+}
+
+export interface ShownApprovalViewModel extends ApprovalViewModel {
+  /** A newer version of the open request arrived: the page keeps what the person read until they ask for it. */
+  readonly newer: boolean;
+  readonly readNewer: () => void;
+}
+
+/**
+ * The version on screen is the one the person read, and its digest is the one an answer sends: a poll never swaps
+ * the proof under their thumb. A decided request, or a newer one they asked for, replaces it.
+ */
+export function useShownApproval(id: string): ShownApprovalViewModel {
+  const { approval: latest, failure } = useApproval(id);
+  const [read, setRead] = useState<Approval | undefined>(undefined);
+  const newer =
+    read !== undefined &&
+    latest !== undefined &&
+    latest.status === 'pending' &&
+    latest.shownDigest !== read.shownDigest;
+  if (latest !== undefined && !newer && read !== latest) setRead(latest);
+  const readNewer = useCallback(() => {
+    setRead(latest);
+  }, [latest]);
+  return { approval: newer ? read : (latest ?? read), failure, newer, readNewer };
+}
+
+export interface SignInNoticeViewModel {
+  /** A link to another account than this browser's, waiting for a yes. */
+  readonly pending: boolean;
+  /** A link that was not a sign-in token. */
+  readonly invalid: boolean;
+  readonly accept: () => void;
+  readonly dismiss: () => void;
+}
+
+export function useSignInNotice(): SignInNoticeViewModel {
+  const pending = useAuthStore((auth) => auth.pending);
+  const notice = useAuthStore((auth) => auth.notice);
+  const accept = useAuthStore((auth) => auth.acceptPending);
+  const dismiss = useAuthStore((auth) => auth.dismiss);
+  return {
+    pending: pending !== undefined,
+    invalid: pending === undefined && notice !== undefined,
+    accept,
+    dismiss,
+  };
 }
 
 /** The server's refusal of this person's answer (they asked for it, or are not an approver). */

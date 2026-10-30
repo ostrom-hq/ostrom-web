@@ -20,4 +20,9 @@ describe('pollUnlessRefused', () => {
     expect(poll({ state: { error: failure('not-found', 404) } })).toBe(false);
     expect(isRefusal(failure('server', 500))).toBe(false);
   });
+
+  it('keeps polling through a timeout or a rate limit, which lift', () => {
+    expect(poll({ state: { error: failure('unexpected', 408) } })).toBe(2_000);
+    expect(poll({ state: { error: failure('unexpected', 429) } })).toBe(2_000);
+  });
 });
