@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   answerApproval,
+  bulkUpdateRules,
   getApproval,
   getGatePolicy,
   getMe,
@@ -10,13 +11,16 @@ import {
   getSession,
   inviteMembers,
   listApprovals,
+  listDecisions,
   listMembers,
   listReceipts,
+  listRules,
   listSessions,
   listTeams,
   listWorkflows,
   setGatePolicy,
   updateMember,
+  updateRule,
   verifyReceipt,
 } from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
@@ -413,5 +417,99 @@ describe('mock workflows and policy', () => {
       setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true }),
     );
     expect(isApiFailure(refused) && refused.status).toBe(403);
+  });
+});
+
+describe('mock rules and decisions', () => {
+  it('lists rules by status and group', async () => {
+    expect((await listRules({ throwOnError: true })).data.items).toHaveLength(4);
+    const proposed = await listRules({ query: { status: 'proposed' }, throwOnError: true });
+    expect(proposed.data.items.map((rule) => rule.id)).toEqual(['R-12', 'R-3']);
+    const tests = await listRules({ query: { group: 'Tests' }, throwOnError: true });
+    expect(tests.data.items.map((rule) => rule.id)).toEqual(['R-3']);
+  });
+
+  it('decides a rule, signs the decision, and reopens it', async () => {
+    const accepted = await updateRule({
+      path: { id: 'R-12' },
+      body: { status: 'accepted' },
+      throwOnError: true,
+    });
+    expect(accepted.data).toMatchObject({ status: 'accepted', decidedBy: 'maya' });
+    expect(db.decisions[0]).toMatchObject({ subject: { kind: 'rule', id: 'R-12' }, action: 'accepted' });
+    expect(db.receipts[0]?.id).toBe(db.decisions[0]?.receiptId);
+    const reopened = await updateRule({
+      path: { id: 'R-12' },
+      body: { status: 'proposed' },
+      throwOnError: true,
+    });
+    expect(reopened.data.status).toBe('proposed');
+    expect(reopened.data.decidedBy).toBeUndefined();
+  });
+
+  it('marks an edited statement as edited, and keeps a strength change without a new decision', async () => {
+    const before = db.decisions.length;
+    const strength = await updateRule({
+      path: { id: 'R-3' },
+      body: { strength: 'required' },
+      throwOnError: true,
+    });
+    expect(strength.data).toMatchObject({ strength: 'required', status: 'proposed' });
+    expect(db.decisions).toHaveLength(before);
+    const edited = await updateRule({
+      path: { id: 'R-3' },
+      body: { statement: 'Run `pnpm test` and `pnpm lint` before pushing.' },
+      throwOnError: true,
+    });
+    expect(edited.data).toMatchObject({ status: 'edited', decidedBy: 'maya' });
+    const again = await updateRule({
+      path: { id: 'R-3' },
+      body: { statement: 'Run the tests.' },
+      throwOnError: true,
+    });
+    expect(again.data.status).toBe('edited');
+    expect(db.decisions).toHaveLength(before + 2);
+  });
+
+  it('refuses an unknown rule, a bad change, and someone who does not decide', async () => {
+    const missing = await failureOf(async () =>
+      updateRule({ path: { id: 'R-0' }, body: {}, throwOnError: true }),
+    );
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+    const bad = await fetch('http://ostrom.test/api/v1/rules/R-3', {
+      method: 'PATCH',
+      body: '{"status":"maybe"}',
+    });
+    expect(bad.status).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'approver' } : member,
+    );
+    const refused = await failureOf(async () =>
+      updateRule({ path: { id: 'R-3' }, body: { status: 'accepted' }, throwOnError: true }),
+    );
+    expect(isApiFailure(refused) && refused.status).toBe(403);
+    const bulk = await failureOf(async () =>
+      bulkUpdateRules({ body: { ids: ['R-3'], status: 'accepted' }, throwOnError: true }),
+    );
+    expect(isApiFailure(bulk) && bulk.status).toBe(403);
+  });
+
+  it('decides several rules at once, skipping those already there', async () => {
+    const { data } = await bulkUpdateRules({
+      body: { ids: ['R-12', 'R-3', 'R-7'], status: 'accepted' },
+      throwOnError: true,
+    });
+    expect(data.updated).toBe(2);
+    const bad = await fetch('http://ostrom.test/api/v1/rules/bulk', { method: 'POST', body: '{"ids":[]}' });
+    expect(bad.status).toBe(400);
+  });
+
+  it('lists signed decisions by subject', async () => {
+    expect((await listDecisions({ throwOnError: true })).data.items.map((item) => item.id)).toEqual([
+      'dec-2',
+      'dec-1',
+    ]);
+    const one = await listDecisions({ query: { subjectKind: 'rule', subjectId: 'R-7' }, throwOnError: true });
+    expect(one.data.items.map((item) => item.id)).toEqual(['dec-1']);
   });
 });

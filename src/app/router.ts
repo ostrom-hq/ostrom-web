@@ -9,8 +9,10 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
+import { DecisionsScreen } from '@/features/decisions';
 import { HomeScreen } from '@/features/home';
 import { MembersScreen } from '@/features/members';
+import { RulesScreen } from '@/features/rules';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -71,6 +73,12 @@ const approversRoute = createRoute({
   path: '/approvers',
   component: ApproversScreen,
 });
+const rulesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rules', component: RulesScreen });
+const decisionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/decisions',
+  component: DecisionsScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -92,6 +100,8 @@ export const routeTree = rootRoute.addChildren([
   receiptRoute,
   membersRoute,
   approversRoute,
+  rulesRoute,
+  decisionsRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>

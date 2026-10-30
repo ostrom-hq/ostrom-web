@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   handleAnswerApproval,
+  handleBulkUpdateRules,
   handleGetApproval,
   handleGetGatePolicy,
   handleGetMe,
@@ -10,32 +11,39 @@ import {
   handleGetSession,
   handleInviteMembers,
   handleListApprovals,
+  handleListDecisions,
   handleListMembers,
   handleListReceipts,
+  handleListRules,
   handleListSessions,
   handleListTeams,
   handleListWorkflows,
   handleSetGatePolicy,
   handleUpdateMember,
+  handleUpdateRule,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
   ApiError,
   Approval,
   ApprovalAnswer,
+  Decision,
   Member,
   Organization,
   PublicKey,
   Receipt,
+  Rule,
+  RuleStatus,
   Session,
   Team,
   Workflow,
 } from '@gen/api/types.gen';
-import { zAnswerApprovalRequest, zMemberRole } from '@gen/api/zod.gen';
+import { zAnswerApprovalRequest, zBulkUpdateRulesBody, zMemberRole, zUpdateRuleBody } from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
+import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
@@ -52,6 +60,9 @@ export interface MockDb {
   workflows: Workflow[];
   /** `sole-approver`: the asker who is the only approver may approve, and the receipt says so; `never`. */
   selfApproval: string;
+  rules: Rule[];
+  /** Signed decisions on rules, workflows, owners and policies; newest first. */
+  decisions: Decision[];
 }
 
 export function createMockDb(): MockDb {
@@ -65,6 +76,8 @@ export function createMockDb(): MockDb {
     teams: initialTeams(),
     workflows: initialWorkflows(),
     selfApproval: 'sole-approver',
+    rules: initialRules(),
+    decisions: initialDecisions(),
   };
 }
 
@@ -154,6 +167,37 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 /** The approvals slice of the contract, served from memory with the server's rules. */
+/** A rule decision is signed like any other: a decision line and its receipt, newest first. */
+function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus, at: string): void {
+  const id = `dec-${String(db.decisions.length + 1)}`;
+  db.decisions.unshift({
+    id,
+    at,
+    by: me.dev.login,
+    subject: { kind: 'rule', id: rule.id, label: rule.statement },
+    action,
+    receiptId: `rcpt-${id}`,
+  });
+  db.receipts.unshift({
+    id: `rcpt-${id}`,
+    subject: { kind: 'rule-change', id: rule.id, digest: `sha256:${id}` },
+    initiator: me.dev.login,
+    rules: [],
+    decisions: [],
+    createdAt: at,
+    signature: `ed25519;kid=${MOCK_KEY.kid};sha256=${id};sig=mock`,
+  });
+}
+
+/** What a rule becomes after a decision: decided by the caller, or back to proposed with no decider. */
+function decided(rule: Rule, status: RuleStatus, at: string): Rule {
+  if (status !== 'proposed') return { ...rule, status, decidedBy: me.dev.login, decidedAt: at };
+  const open: Rule = { ...rule, status };
+  delete open.decidedBy;
+  delete open.decidedAt;
+  return open;
+}
+
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
@@ -228,6 +272,65 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' })),
       ];
       return HttpResponse.json({ invited });
+    }),
+    handleListRules(({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const status = params.get('status');
+      const group = params.get('group');
+      return HttpResponse.json({
+        items: db.rules.filter(
+          (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
+        ),
+      });
+    }),
+    handleUpdateRule(async ({ request, params }) => {
+      const index = db.rules.findIndex((rule) => rule.id === params.id);
+      const rule = db.rules[index];
+      if (rule === undefined) return refusal(404, 'not_found', 'rule not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
+      const body = zUpdateRuleBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'not a rule change');
+      const at = now().toISOString();
+      // The mock applies what the console sends (statement, strength, status); scope and review date are kept.
+      const { statement, strength } = body.data;
+      const edits: Rule = {
+        ...rule,
+        ...(statement === undefined ? {} : { statement }),
+        ...(strength === undefined ? {} : { strength }),
+      };
+      const status = body.data.status ?? (statement === undefined ? rule.status : 'edited');
+      const next = status === rule.status ? edits : decided(edits, status, at);
+      db.rules[index] = next;
+      if (next.status !== rule.status || statement !== undefined)
+        recordRuleDecision(db, next, next.status, at);
+      return HttpResponse.json(next);
+    }),
+    handleBulkUpdateRules(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
+      const body = zBulkUpdateRulesBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'ids and a status are needed');
+      const at = now().toISOString();
+      const ids = new Set(body.data.ids);
+      let updated = 0;
+      db.rules = db.rules.map((rule) => {
+        if (!ids.has(rule.id) || rule.status === body.data.status) return rule;
+        updated += 1;
+        const next = decided(rule, body.data.status, at);
+        recordRuleDecision(db, next, next.status, at);
+        return next;
+      });
+      return HttpResponse.json({ updated });
+    }),
+    handleListDecisions(({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const kind = params.get('subjectKind');
+      const id = params.get('subjectId');
+      return HttpResponse.json({
+        items: db.decisions.filter(
+          (decision) =>
+            (kind === null || decision.subject.kind === kind) && (id === null || decision.subject.id === id),
+        ),
+      });
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

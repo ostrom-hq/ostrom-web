@@ -1,0 +1,18 @@
+.rl-statement {
+  margin: 0;
+  font-size: var(--fs-16);
+  line-height: 1.5;
+}
+.rl-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-14);
+}
+.rl-filters [aria-pressed='true'] {
+  background: var(--surface-sunken);
+  color: var(--text);
+}
