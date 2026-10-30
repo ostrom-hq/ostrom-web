@@ -10,10 +10,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   forbidOnly: true,
-  // Once, as the mock journeys: a mail written a moment late, a server still warming up.
-  retries: 1,
+  // No retry: a journey changes the shared database, and a replay could pass for the wrong reason.
+  retries: 0,
   reporter: [['github'], ['html', { open: 'never', outputFolder: 'playwright-report-real' }]],
-  use: { baseURL: `http://localhost:${String(port)}`, trace: 'on-first-retry' },
+  use: { baseURL: `http://localhost:${String(port)}`, trace: 'retain-on-failure' },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', use: { ...devices['Pixel 7'] } },

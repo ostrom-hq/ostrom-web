@@ -13,18 +13,16 @@ export function freshEmail(who: string): string {
   return `${who}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}@e2e.ostrom.test`;
 }
 
-/** The header lines of a mail, lower-cased: everything before the first blank line. */
-function headersOf(text: string): string[] {
-  return (text.split('\n\n')[0] ?? '').toLowerCase().split('\n');
-}
-
 /** The token of the newest sign-in mail to `email`, if the server wrote one. */
 function signInToken(email: string): string | undefined {
   const mails = readdirSync(mailDir)
     .map((name) => join(mailDir, name))
     .filter((path) => statSync(path).isFile())
-    .map((path) => ({ at: statSync(path).mtimeMs, text: readFileSync(path, 'utf8').replace(/\r\n/g, '\n') }))
-    .filter((mail) => headersOf(mail.text).includes(`to: ${email.toLowerCase()}`))
+    .map((path) => ({ at: statSync(path).mtimeMs, text: readFileSync(path, 'utf8') }))
+    // The server writes `To: …`, `Subject: …`, a blank line, the text.
+    .filter((mail) =>
+      (mail.text.split('\n\n')[0] ?? '').toLowerCase().split('\n').includes(`to: ${email.toLowerCase()}`),
+    )
     .sort((a, b) => b.at - a.at);
   for (const mail of mails) {
     const token = /#token=([A-Za-z0-9._~%-]+)/.exec(mail.text)?.[1];
