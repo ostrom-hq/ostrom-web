@@ -157,7 +157,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleListSessions(({ request }) => {
       const open = new URL(request.url).searchParams.get('open');
-      const items = db.sessions.filter((session) => open === null || (session.endedAt === undefined) === (open === 'true'));
+      const items = db.sessions.filter(
+        (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
+      );
       return HttpResponse.json({ items });
     }),
     handleGetSession(({ params }) => {
@@ -171,7 +173,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const kind = query.get('subjectKind');
       const id = query.get('subjectId');
       const items = db.receipts.filter(
-        (receipt) => (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
+        (receipt) =>
+          (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
       );
       return HttpResponse.json({ items });
     }),

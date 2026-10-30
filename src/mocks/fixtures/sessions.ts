@@ -78,7 +78,14 @@ const receipts: Receipt[] = [
     package: { version: '0.4.1', digest: 'sha256:9e1d77c0' },
     nodes: [
       { id: 'n1', workflowId: 'wf-backend', kind: 'check', label: 'Tests pass', outcome: 'passed' },
-      { id: 'n2', workflowId: 'wf-backend', kind: 'gate', label: 'Merge to main', outcome: 'skipped', detail: 'No merge' },
+      {
+        id: 'n2',
+        workflowId: 'wf-backend',
+        kind: 'gate',
+        label: 'Merge to main',
+        outcome: 'skipped',
+        detail: 'No merge',
+      },
     ],
     createdAt: '2026-10-29T16:31:02.000Z',
     signature: `${SIGNATURE}7d01e5b2;sig=mock`,

@@ -256,14 +256,21 @@ describe('mock receipts', () => {
   it('lists receipts, by subject kind and id', async () => {
     const all = await listReceipts({ throwOnError: true });
     const gates = await listReceipts({ query: { subjectKind: 'gate' }, throwOnError: true });
-    const one = await listReceipts({ query: { subjectKind: 'session', subjectId: 'ses-2b9e' }, throwOnError: true });
+    const one = await listReceipts({
+      query: { subjectKind: 'session', subjectId: 'ses-2b9e' },
+      throwOnError: true,
+    });
     expect(all.data.items).toHaveLength(3);
     expect(gates.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-apr-migration-7']);
     expect(one.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-ses-2b9e']);
   });
 
   it('puts the receipt of an answer at the top', async () => {
-    await answerApproval({ ...merge, body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' }, throwOnError: true });
+    await answerApproval({
+      ...merge,
+      body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+      throwOnError: true,
+    });
     const { data } = await listReceipts({ throwOnError: true });
     expect(data.items[0]?.id).toBe('rcpt-apr-merge-412');
   });

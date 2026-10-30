@@ -49,13 +49,21 @@ const approvalRoute = createRoute({
   component: ApprovalScreen,
 });
 
-const sessionsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/sessions', component: SessionsScreen });
+const sessionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions',
+  component: SessionsScreen,
+});
 const sessionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sessions/$sessionId',
   component: SessionScreen,
 });
-const receiptsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/receipts', component: ReceiptsScreen });
+const receiptsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/receipts',
+  component: ReceiptsScreen,
+});
 const receiptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts/$receiptId',

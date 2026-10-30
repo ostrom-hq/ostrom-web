@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { getReceiptOptions, listReceiptsOptions, verifyReceiptOptions } from '@gen/api/@tanstack/react-query.gen';
+import {
+  getReceiptOptions,
+  listReceiptsOptions,
+  verifyReceiptOptions,
+} from '@gen/api/@tanstack/react-query.gen';
 import { client } from '@gen/api/client.gen';
 import type { GetReceiptBundleData, Receipt, Verification } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';

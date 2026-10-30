@@ -45,7 +45,11 @@ function ReceiptRow({ receipt }: { readonly receipt: Receipt }): ReactElement {
           {t('receipts.list.meta', { initiator: receipt.initiator, count: receipt.decisions.length })}
         </span>
       </span>
-      <time className="o-row__end" dateTime={receipt.createdAt} title={formatAbsolute(receipt.createdAt, i18n.language)}>
+      <time
+        className="o-row__end"
+        dateTime={receipt.createdAt}
+        title={formatAbsolute(receipt.createdAt, i18n.language)}
+      >
         {formatRelative(receipt.createdAt, now, i18n.language)}
       </time>
     </Link>

@@ -46,7 +46,9 @@ describe('the sessions list', () => {
   it('reads a session that carries only what the contract requires', async () => {
     server.use(
       http.get('*/api/v1/sessions', () =>
-        HttpResponse.json({ items: [{ id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:59:00.000Z' }] }),
+        HttpResponse.json({
+          items: [{ id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:59:00.000Z' }],
+        }),
       ),
     );
     visit('/sessions');
@@ -84,7 +86,9 @@ describe('the sessions list', () => {
 describe('a session', () => {
   it('shows who ran it, when, what it did, and the requests it raised', async () => {
     visit('/sessions/ses-7f3a');
-    expect(await screen.findByRole('heading', { level: 1, name: 'claude-code · acme/billing-api' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'claude-code · acme/billing-api' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Started by theo')).toBeInTheDocument();
     expect(screen.getByText('Live')).toBeInTheDocument();
 
@@ -97,7 +101,10 @@ describe('a session', () => {
     const what = screen.getByRole('region', { name: 'What it did' });
     expect(what).toHaveTextContent('Tool calls214');
     expect(what).toHaveTextContent('Model cost$3.42');
-    expect(within(what).getByRole('link', { name: 'apr-merge-412' })).toHaveAttribute('href', '/yes/apr-merge-412');
+    expect(within(what).getByRole('link', { name: 'apr-merge-412' })).toHaveAttribute(
+      'href',
+      '/yes/apr-merge-412',
+    );
     expect(screen.getByText('The receipt is signed when the session ends.')).toBeInTheDocument();
   });
 
@@ -107,7 +114,10 @@ describe('a session', () => {
     expect(when).toHaveTextContent(/Ended.*ran 2 hr 29 min/);
     expect(when).toHaveTextContent('Ended bysamir');
     expect(when).toHaveTextContent('Segment2');
-    expect(within(when).getByRole('link', { name: 'ses-2b9d' })).toHaveAttribute('href', '/sessions/ses-2b9d');
+    expect(within(when).getByRole('link', { name: 'ses-2b9d' })).toHaveAttribute(
+      'href',
+      '/sessions/ses-2b9d',
+    );
     expect(screen.getByRole('region', { name: 'Who and where' })).toHaveTextContent('Developersamir');
     expect(screen.getByRole('region', { name: 'What it did' })).toHaveTextContent('Exit code0');
     expect(screen.getByRole('link', { name: 'Open receipt rcpt-ses-2b9e' })).toHaveAttribute(
@@ -119,7 +129,9 @@ describe('a session', () => {
   it('reads a session with only what the contract requires', async () => {
     server.use(
       http.get('*/api/v1/sessions/:id', () =>
-        HttpResponse.json({ session: { id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:00:00.000Z' } }),
+        HttpResponse.json({
+          session: { id: 'ses-x', agent: 'shell', dev: 'lena', startedAt: '2026-10-30T07:00:00.000Z' },
+        }),
       ),
     );
     visit('/sessions/ses-x');

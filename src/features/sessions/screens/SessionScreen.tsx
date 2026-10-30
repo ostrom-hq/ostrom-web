@@ -59,7 +59,10 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
           facts={[
             {
               label: t('sessions.detail.dev'),
-              value: session.devVerified === true ? t('sessions.detail.verified', { dev: session.dev }) : session.dev,
+              value:
+                session.devVerified === true
+                  ? t('sessions.detail.verified', { dev: session.dev })
+                  : session.dev,
             },
             optional(t('sessions.detail.via'), session.devVia),
             optional(t('sessions.detail.agent'), session.agent),

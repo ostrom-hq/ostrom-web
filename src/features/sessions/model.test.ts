@@ -7,7 +7,9 @@ const at = (iso: string): Date => new Date(iso);
 
 describe('sessionState', () => {
   it('reads an ended session as ended', () => {
-    expect(sessionState({ ...base, endedAt: '2026-10-30T09:00:00.000Z' }, at('2026-10-30T09:01:00.000Z'))).toBe('ended');
+    expect(
+      sessionState({ ...base, endedAt: '2026-10-30T09:00:00.000Z' }, at('2026-10-30T09:01:00.000Z')),
+    ).toBe('ended');
   });
 
   it('is live within five minutes of the last report, quiet after', () => {
