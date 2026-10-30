@@ -122,6 +122,7 @@ export const fr = {
       changed: 'Cette demande a changé depuis que tu l’as ouverte. Relis-la, puis décide.',
       errorTag: 'Erreur',
     },
+  },
   consent: {
     title: 'Statistiques d’usage',
     body: 'Pouvons-nous mesurer l’usage de la console (pages vues et actions, jamais ce que vous tapez) avec PostHog, hébergé dans l’UE ? Rien n’est envoyé sans votre accord, et vous pouvez changer d’avis à tout moment.',
