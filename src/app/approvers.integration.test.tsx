@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -51,6 +51,10 @@ describe('who approves what', () => {
     expect(policy).toHaveTextContent('only when nobody else can');
     await user.selectOptions(within(policy).getByRole('combobox', { name: 'Self-approval' }), 'never');
     expect(await within(policy).findByText(/never approves their own request/)).toBeInTheDocument();
+    expect(db.selfApproval).toBe('never');
+    fireEvent.change(within(policy).getByRole('combobox', { name: 'Self-approval' }), {
+      target: { value: 'sometimes' },
+    });
     expect(db.selfApproval).toBe('never');
   });
 
