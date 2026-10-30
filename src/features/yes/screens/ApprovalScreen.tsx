@@ -10,10 +10,10 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { DecisionBar } from '../components/DecisionBar';
 import { DecisionCard } from '../components/DecisionCard';
 import { FailureBanner } from '../components/FailureBanner';
-import { Skeleton } from '../components/Skeleton';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
 import {
   type AnswerViewModel,

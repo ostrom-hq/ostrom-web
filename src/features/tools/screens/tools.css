@@ -1,0 +1,17 @@
+.tl-name {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+.tl-url {
+  overflow-wrap: anywhere;
+}
+.tl-missing {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-14);
+}
+.tl-secret {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}

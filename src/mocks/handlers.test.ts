@@ -1,10 +1,57 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { answerApproval, getApproval, getMe, listApprovals } from '@gen/api/sdk.gen';
+import {
+  answerApproval,
+  bulkUpdateRules,
+  createCloudSession,
+  createMcpServer,
+  createSecret,
+  deleteMcpServer,
+  deleteSecret,
+  disableAutomation,
+  enableAutomation,
+  getApproval,
+  getGatePolicy,
+  getMcpUsage,
+  getMe,
+  getOrganization,
+  getReceipt,
+  getReceiptBundle,
+  getSession,
+  getSpending,
+  getWorkflow,
+  inviteMembers,
+  listApprovals,
+  listAutomationRuns,
+  listAutomations,
+  listBudgets,
+  listCloudSessions,
+  listDecisions,
+  listMcpCalls,
+  listMcpServers,
+  listMembers,
+  listReceipts,
+  listRules,
+  listRunners,
+  listSecrets,
+  listSessions,
+  listTeams,
+  listWorkflows,
+  rotateAutomationSecret,
+  rotateSecret,
+  saveMcpServer,
+  setBudget,
+  setGatePolicy,
+  stopCloudSession,
+  testAutomation,
+  updateMember,
+  updateRule,
+  verifyReceipt,
+} from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { initialApprovals } from '@/mocks/fixtures/approvals';
-import { createHandlers, createMockDb, selfApprovalRefusal } from '@/mocks/handlers';
+import { createHandlers, resetMockDb, selfApprovalRefusal } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -16,9 +63,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
-  const fresh = createMockDb();
-  db.approvals = fresh.approvals;
-  db.approvers = fresh.approvers;
+  resetMockDb(db);
 });
 afterAll(() => {
   server.close();
@@ -215,10 +260,604 @@ describe('selfApprovalRefusal', () => {
     );
   });
 
+  it('refuses the asker even as the only approver when the policy says never', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya', 'never')).toMatch(
+      /never lets the asker/,
+    );
+    expect(selfApprovalRefusal(fixture('apr-merge-412'), ['maya'], 'maya', 'never')).toBeUndefined();
+  });
+
   it('lets the asker through as the only approver, and treats a missing asker list as nobody', () => {
     expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya')).toBeUndefined();
     const anonymous = fixture('apr-deploy-88');
     delete anonymous.askedBy;
     expect(selfApprovalRefusal(anonymous, ['maya'], 'maya')).toBeUndefined();
+  });
+});
+
+describe('mock sessions', () => {
+  it('lists open sessions, ended ones, or all', async () => {
+    const open = await listSessions({ query: { open: true }, throwOnError: true });
+    const ended = await listSessions({ query: { open: false }, throwOnError: true });
+    const all = await listSessions({ throwOnError: true });
+    expect(open.data.items.map((session) => session.id)).toEqual(['ses-7f3a', 'ses-51c0']);
+    expect(ended.data.items.map((session) => session.id)).toEqual(['ses-2b9e']);
+    expect(all.data.items).toHaveLength(3);
+  });
+
+  it('returns a session with its receipt once it has one, or 404', async () => {
+    const ended = await getSession({ path: { id: 'ses-2b9e' }, throwOnError: true });
+    const open = await getSession({ path: { id: 'ses-7f3a' }, throwOnError: true });
+    expect(ended.data.receipt?.id).toBe('rcpt-ses-2b9e');
+    expect(open.data).not.toHaveProperty('receipt');
+    const error = await failureOf(async () => getSession({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(error) && error.message).toBe('session not found');
+  });
+});
+
+describe('mock receipts', () => {
+  it('lists receipts, by subject kind and id', async () => {
+    const all = await listReceipts({ throwOnError: true });
+    const gates = await listReceipts({ query: { subjectKind: 'gate' }, throwOnError: true });
+    const one = await listReceipts({
+      query: { subjectKind: 'session', subjectId: 'ses-2b9e' },
+      throwOnError: true,
+    });
+    expect(all.data.items).toHaveLength(3);
+    expect(gates.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-apr-migration-7']);
+    expect(one.data.items.map((receipt) => receipt.id)).toEqual(['rcpt-ses-2b9e']);
+  });
+
+  it('puts the receipt of an answer at the top', async () => {
+    await answerApproval({
+      ...merge,
+      body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+      throwOnError: true,
+    });
+    const { data } = await listReceipts({ throwOnError: true });
+    expect(data.items[0]?.id).toBe('rcpt-apr-merge-412');
+  });
+
+  it('returns, verifies and bundles a receipt', async () => {
+    const receipt = await getReceipt({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    const good = await verifyReceipt({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    const bad = await verifyReceipt({ path: { id: 'rcpt-tampered' }, throwOnError: true });
+    const bundle = await getReceiptBundle({ path: { id: 'rcpt-ses-2b9e' }, throwOnError: true });
+    expect(receipt.data.subject.kind).toBe('session');
+    expect(good.data).toEqual({ ok: true, digest: 'sha256:7d01e5b2', kid: '4f2a9c1b' });
+    expect(bad.data.ok).toBe(false);
+    expect(bad.data.reason).toMatch(/does not match/);
+    expect([bundle.data.receipt.id, bundle.data.keys[0]?.kid]).toEqual(['rcpt-ses-2b9e', '4f2a9c1b']);
+  });
+
+  const calls: readonly (readonly [string, (id: string) => Promise<unknown>])[] = [
+    ['get', async (id) => getReceipt({ path: { id }, throwOnError: true })],
+    ['verify', async (id) => verifyReceipt({ path: { id }, throwOnError: true })],
+    ['bundle', async (id) => getReceiptBundle({ path: { id }, throwOnError: true })],
+  ];
+
+  it.each(calls)('answers 404 to %s an unknown receipt', async (_name, call) => {
+    const error = await failureOf(async () => call('nope'));
+    expect(isApiFailure(error) && error.message).toBe('receipt not found');
+  });
+});
+
+describe('mock organization', () => {
+  it('serves the organization, its members and its teams', async () => {
+    const org = await getOrganization({ throwOnError: true });
+    const members = await listMembers({ throwOnError: true });
+    const teams = await listTeams({ throwOnError: true });
+    expect(org.data.name).toBe('Acme');
+    expect(members.data.items.map((member) => member.login)).toContain('samir');
+    expect(teams.data.items.map((team) => team.slug)).toEqual(['billing', 'release']);
+  });
+
+  it('changes the role of a member, and refuses an unknown one, a bad role and the caller’s own', async () => {
+    const { data } = await updateMember({
+      path: { login: 'theo' },
+      body: { role: 'approver' },
+      throwOnError: true,
+    });
+    expect(data.role).toBe('approver');
+    const missing = await failureOf(async () =>
+      updateMember({ path: { login: 'nope' }, body: { role: 'member' }, throwOnError: true }),
+    );
+    const invited = await failureOf(async () =>
+      updateMember({ path: { login: 'theo' }, body: { role: 'invited' }, throwOnError: true }),
+    );
+    const own = await failureOf(async () =>
+      updateMember({ path: { login: 'maya' }, body: { role: 'member' }, throwOnError: true }),
+    );
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+    expect(isApiFailure(invited) && invited.status).toBe(400);
+    expect(isApiFailure(own) && own.code).toBe('own_role');
+  });
+
+  it('invites new emails only, and refuses an invite without one', async () => {
+    const { data } = await inviteMembers({
+      body: { invites: [{ email: 'ana@acme.dev', role: 'member' }, { email: 'theo@acme.dev' }] },
+      throwOnError: true,
+    });
+    expect(data.invited).toEqual(['ana@acme.dev']);
+    const members = await listMembers({ throwOnError: true });
+    expect(members.data.items.at(-1)).toMatchObject({ login: 'ana@acme.dev', role: 'invited' });
+    const bad = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+  });
+
+  it('lets only owners and admins manage members', async () => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    const role = await failureOf(async () =>
+      updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true }),
+    );
+    const invite = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(role) && role.status).toBe(403);
+    expect(isApiFailure(invite) && invite.status).toBe(403);
+    db.members = db.members.filter((member) => member.login !== 'maya');
+    const gone = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(gone) && gone.status).toBe(403);
+  });
+
+  it('lets an owner invite', async () => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'owner' } : member,
+    );
+    const { data } = await inviteMembers({
+      body: { invites: [{ email: 'ana@acme.dev' }] },
+      throwOnError: true,
+    });
+    expect(data.invited).toEqual(['ana@acme.dev']);
+  });
+});
+
+describe('mock workflows and policy', () => {
+  it('serves one workflow, or says it does not exist', async () => {
+    expect((await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data.name).toBe(
+      'Backend changes',
+    );
+    const missing = await failureOf(async () => getWorkflow({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+  });
+
+  it('lists workflows, by status', async () => {
+    const all = await listWorkflows({ throwOnError: true });
+    const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
+    expect(all.data.items).toHaveLength(2);
+    expect(proposed.data.items.map((workflow) => workflow.id)).toEqual(['wf-migrations']);
+  });
+
+  it('reads and sets the self-approval policy, for owners and admins only', async () => {
+    expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('sole-approver');
+    const set = await setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true });
+    expect(set.data.selfApproval).toBe('never');
+    const bad = await failureOf(async () =>
+      setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }),
+    );
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    const refused = await failureOf(async () =>
+      setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true }),
+    );
+    expect(isApiFailure(refused) && refused.status).toBe(403);
+  });
+});
+
+describe('mock rules and decisions', () => {
+  it('lists rules by status and group', async () => {
+    expect((await listRules({ throwOnError: true })).data.items).toHaveLength(4);
+    const proposed = await listRules({ query: { status: 'proposed' }, throwOnError: true });
+    expect(proposed.data.items.map((rule) => rule.id)).toEqual(['R-12', 'R-3']);
+    const tests = await listRules({ query: { group: 'Tests' }, throwOnError: true });
+    expect(tests.data.items.map((rule) => rule.id)).toEqual(['R-3']);
+  });
+
+  it('decides a rule, signs the decision, and reopens it', async () => {
+    const accepted = await updateRule({
+      path: { id: 'R-12' },
+      body: { status: 'accepted' },
+      throwOnError: true,
+    });
+    expect(accepted.data).toMatchObject({ status: 'accepted', decidedBy: 'maya' });
+    expect(db.decisions[0]).toMatchObject({ subject: { kind: 'rule', id: 'R-12' }, action: 'accepted' });
+    expect(db.receipts[0]?.id).toBe(db.decisions[0]?.receiptId);
+    const reopened = await updateRule({
+      path: { id: 'R-12' },
+      body: { status: 'proposed' },
+      throwOnError: true,
+    });
+    expect(reopened.data.status).toBe('proposed');
+    expect(reopened.data.decidedBy).toBeUndefined();
+  });
+
+  it('marks an edited statement as edited, and keeps a strength change without a new decision', async () => {
+    const before = db.decisions.length;
+    const strength = await updateRule({
+      path: { id: 'R-3' },
+      body: { strength: 'required' },
+      throwOnError: true,
+    });
+    expect(strength.data).toMatchObject({ strength: 'required', status: 'proposed' });
+    expect(db.decisions).toHaveLength(before);
+    const edited = await updateRule({
+      path: { id: 'R-3' },
+      body: { statement: 'Run `pnpm test` and `pnpm lint` before pushing.' },
+      throwOnError: true,
+    });
+    expect(edited.data).toMatchObject({ status: 'edited', decidedBy: 'maya' });
+    const again = await updateRule({
+      path: { id: 'R-3' },
+      body: { statement: 'Run the tests.' },
+      throwOnError: true,
+    });
+    expect(again.data.status).toBe('edited');
+    expect(db.decisions).toHaveLength(before + 2);
+  });
+
+  it('refuses an unknown rule, a bad change, and someone who does not decide', async () => {
+    const missing = await failureOf(async () =>
+      updateRule({ path: { id: 'R-0' }, body: {}, throwOnError: true }),
+    );
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+    const bad = await fetch('http://ostrom.test/api/v1/rules/R-3', {
+      method: 'PATCH',
+      body: '{"status":"maybe"}',
+    });
+    expect(bad.status).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'approver' } : member,
+    );
+    const refused = await failureOf(async () =>
+      updateRule({ path: { id: 'R-3' }, body: { status: 'accepted' }, throwOnError: true }),
+    );
+    expect(isApiFailure(refused) && refused.status).toBe(403);
+    const bulk = await failureOf(async () =>
+      bulkUpdateRules({ body: { ids: ['R-3'], status: 'accepted' }, throwOnError: true }),
+    );
+    expect(isApiFailure(bulk) && bulk.status).toBe(403);
+  });
+
+  it('decides several rules at once, skipping those already there', async () => {
+    const { data } = await bulkUpdateRules({
+      body: { ids: ['R-12', 'R-3', 'R-7'], status: 'accepted' },
+      throwOnError: true,
+    });
+    expect(data.updated).toBe(2);
+    const bad = await fetch('http://ostrom.test/api/v1/rules/bulk', { method: 'POST', body: '{"ids":[]}' });
+    expect(bad.status).toBe(400);
+  });
+
+  it('lists signed decisions by subject', async () => {
+    expect((await listDecisions({ throwOnError: true })).data.items.map((item) => item.id)).toEqual([
+      'dec-2',
+      'dec-1',
+    ]);
+    const one = await listDecisions({ query: { subjectKind: 'rule', subjectId: 'R-7' }, throwOnError: true });
+    expect(one.data.items.map((item) => item.id)).toEqual(['dec-1']);
+  });
+});
+
+describe('mock MCP servers and secrets', () => {
+  const notion = {
+    name: 'notion',
+    url: 'https://mcp.notion.com/mcp',
+    transport: 'http',
+    secretNames: [],
+    enabled: true,
+    scope: 'org',
+  };
+  const demote = (): void => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+  };
+  const status = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
+    const error = await failureOf(call);
+    return isApiFailure(error) && error.status;
+  };
+  const send = async (method: string, path: string, body: string): Promise<number> =>
+    (await fetch(`http://ostrom.test/api/v1${path}`, { method, body })).status;
+
+  it('adds, saves and removes an MCP server, refusing a duplicate, a bad URL and an unknown name', async () => {
+    expect((await listMcpServers({ throwOnError: true })).data.items.map((server) => server.name)).toEqual([
+      'linear',
+      'sentry',
+    ]);
+    expect((await createMcpServer({ body: notion, throwOnError: true })).response.status).toBe(201);
+    expect(await status(async () => createMcpServer({ body: notion, throwOnError: true }))).toBe(409);
+    expect(
+      await send('POST', '/mcp/servers', JSON.stringify({ ...notion, name: 'x2', url: 'http://a.b' })),
+    ).toBe(400);
+    const saved = await saveMcpServer({
+      path: { name: 'notion' },
+      body: { ...notion, enabled: false },
+      throwOnError: true,
+    });
+    expect(saved.data.enabled).toBe(false);
+    expect(saved.data).not.toHaveProperty('tools');
+    const listed = await saveMcpServer({
+      path: { name: 'notion' },
+      body: { ...notion, tools: ['search'] },
+      throwOnError: true,
+    });
+    expect(listed.data.tools).toEqual(['search']);
+    expect(await send('PUT', '/mcp/servers/notion', JSON.stringify({ ...notion, url: 'ftp://x' }))).toBe(400);
+    expect(
+      await status(async () => saveMcpServer({ path: { name: 'nope' }, body: notion, throwOnError: true })),
+    ).toBe(404);
+    await deleteMcpServer({ path: { name: 'notion' }, throwOnError: true });
+    expect(await status(async () => deleteMcpServer({ path: { name: 'notion' }, throwOnError: true }))).toBe(
+      404,
+    );
+  });
+
+  it('lets only owners and admins change the MCP servers', async () => {
+    demote();
+    expect(await status(async () => createMcpServer({ body: notion, throwOnError: true }))).toBe(403);
+    expect(
+      await status(async () => saveMcpServer({ path: { name: 'linear' }, body: notion, throwOnError: true })),
+    ).toBe(403);
+    expect(await status(async () => deleteMcpServer({ path: { name: 'linear' }, throwOnError: true }))).toBe(
+      403,
+    );
+  });
+
+  it('lists the calls, by server, and counts them by server and tool', async () => {
+    expect((await listMcpCalls({ throwOnError: true })).data.items).toHaveLength(3);
+    db.mcpCalls = db.mcpCalls.map((call) => (call.id === 'call-3' ? { ...call, server: 'sentry' } : call));
+    expect((await listMcpCalls({ query: { server: 'sentry' }, throwOnError: true })).data.items).toHaveLength(
+      1,
+    );
+    expect((await getMcpUsage({ throwOnError: true })).data).toEqual({
+      byServer: { sentry: 1, linear: 2 },
+      byTool: { create_issue: 1, list_issues: 2 },
+    });
+  });
+
+  it('creates and rotates a secret without ever giving its value back', async () => {
+    const created = await createSecret({ body: { name: 'NPM_TOKEN', value: 's3cret' }, throwOnError: true });
+    expect(created.response.status).toBe(201);
+    expect(created.data).toMatchObject({ name: 'NPM_TOKEN', scope: 'org', updatedBy: 'maya' });
+    expect(JSON.stringify(created.data)).not.toContain('s3cret');
+    const scoped = await createSecret({
+      body: { name: 'TEAM_KEY', value: 'v', scope: 'team:billing' },
+      throwOnError: true,
+    });
+    expect(scoped.data.scope).toBe('team:billing');
+    expect(
+      await status(async () => createSecret({ body: { name: 'NPM_TOKEN', value: 'x' }, throwOnError: true })),
+    ).toBe(409);
+    expect(await send('POST', '/secrets', JSON.stringify({ name: 'lower', value: 'x' }))).toBe(400);
+    expect(await send('POST', '/secrets', JSON.stringify({ name: 'EMPTY', value: '' }))).toBe(400);
+    expect(await send('POST', '/secrets', 'nope')).toBe(400);
+    const rotated = await rotateSecret({
+      path: { name: 'STRIPE_TEST_KEY' },
+      body: { name: 'STRIPE_TEST_KEY', value: 'new' },
+      throwOnError: true,
+    });
+    expect(rotated.data.updatedBy).toBe('maya');
+    expect(rotated.data.createdAt).toBe('2026-10-22T10:00:00.000Z');
+    expect(
+      await send('PUT', '/secrets/STRIPE_TEST_KEY', JSON.stringify({ name: 'STRIPE_TEST_KEY', value: '' })),
+    ).toBe(400);
+    expect(
+      await status(async () =>
+        rotateSecret({ path: { name: 'NOPE' }, body: { name: 'NOPE', value: 'x' }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    expect((await listSecrets({ throwOnError: true })).data.items).toHaveLength(4);
+  });
+
+  it('refuses to delete a secret an MCP server uses, or one that does not exist', async () => {
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'LINEAR_TOKEN' }, throwOnError: true })),
+    ).toBe(409);
+    await deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true });
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true })),
+    ).toBe(404);
+  });
+
+  it('lets only owners and admins change the secrets', async () => {
+    demote();
+    expect(
+      await status(async () => createSecret({ body: { name: 'A', value: 'x' }, throwOnError: true })),
+    ).toBe(403);
+    expect(
+      await status(async () =>
+        rotateSecret({
+          path: { name: 'LINEAR_TOKEN' },
+          body: { name: 'LINEAR_TOKEN', value: 'x' },
+          throwOnError: true,
+        }),
+      ),
+    ).toBe(403);
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true })),
+    ).toBe(403);
+  });
+});
+
+describe('mock spending and budgets', () => {
+  const send = async (body: unknown): Promise<number> =>
+    (await fetch('http://ostrom.test/api/v1/budgets', { method: 'PUT', body: JSON.stringify(body) })).status;
+
+  it('serves the month by default, the week on request, and refuses another period', async () => {
+    const month = (await getSpending({ throwOnError: true })).data;
+    expect(month).toMatchObject({ period: 'month', budgetUsd: 1_200 });
+    expect(month.daily).toHaveLength(7);
+    expect(month.daily[6]?.date).toBe('2026-10-30');
+    const week = (await getSpending({ query: { period: 'week' }, throwOnError: true })).data;
+    expect(week.budgetUsd).toBeUndefined();
+    expect(week.byAgent[0]).toEqual({ key: 'claude-code', label: 'Claude Code', usd: 201.4, sessions: 38 });
+    const bad = await failureOf(async () => getSpending({ query: { period: 'year' }, throwOnError: true }));
+    expect(isApiFailure(bad) && bad.status).toBe(400);
+  });
+
+  it('adds a budget or replaces the one with the same scope and subject', async () => {
+    expect((await listBudgets({ throwOnError: true })).data.items).toHaveLength(2);
+    await setBudget({ body: { scope: 'org', usdPerMonth: 1_500, hardStop: true }, throwOnError: true });
+    await setBudget({
+      body: { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
+      throwOnError: true,
+    });
+    expect(db.budgets).toEqual([
+      { scope: 'org', usdPerMonth: 1_500, hardStop: true },
+      { scope: 'member', subject: 'theo', usdPerDay: 25, hardStop: true },
+      { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
+    ]);
+  });
+
+  it('refuses a budget without an amount, with a wrong subject or scope, and from a member', async () => {
+    expect(await send({ scope: 'org', hardStop: false })).toBe(400);
+    expect(await send({ scope: 'org', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'member', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'team', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'org', usdPerDay: -1, hardStop: false })).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    expect(await send({ scope: 'org', usdPerDay: 1, hardStop: false })).toBe(403);
+  });
+});
+
+describe('mock cloud agents and automations', () => {
+  const statusOf = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
+    const error = await failureOf(call);
+    return isApiFailure(error) && error.status;
+  };
+  const demote = (): void => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+  };
+
+  it('starts a cloud session as the viewer, queued, and refuses one without a prompt or a known agent', async () => {
+    const started = await createCloudSession({
+      body: { agent: 'codex', prompt: 'Fix it', name: '  Fix  ', model: 'gpt-6' },
+      throwOnError: true,
+    });
+    expect(started.data).toMatchObject({
+      owner: 'maya',
+      agent: 'codex',
+      status: 'queued',
+      name: 'Fix',
+      model: 'gpt-6',
+    });
+    const bare = await createCloudSession({
+      body: { agent: 'claude-code', prompt: 'x', name: ' ' },
+      throwOnError: true,
+    });
+    expect(bare.data.name).toBeUndefined();
+    expect(
+      await statusOf(async () =>
+        createCloudSession({ body: { agent: 'codex', prompt: ' ' }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    expect(
+      await statusOf(async () =>
+        createCloudSession({ body: { agent: 'gemini', prompt: 'x' }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    expect(
+      (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
+    ).toHaveLength(3);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(6);
+  });
+
+  it('stops a live session for its owner or a manager, not an ended one or another member', async () => {
+    await stopCloudSession({ path: { id: 'cs-31' }, throwOnError: true });
+    expect(db.cloudSessions.find((session) => session.id === 'cs-31')?.status).toBe('stopped');
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'cs-27' }, throwOnError: true }))).toBe(
+      409,
+    );
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'nope' }, throwOnError: true }))).toBe(
+      404,
+    );
+    demote();
+    expect(await statusOf(async () => stopCloudSession({ path: { id: 'cs-30' }, throwOnError: true }))).toBe(
+      403,
+    );
+  });
+
+  it('lists the runners and the automations, and an automation’s runs', async () => {
+    expect((await listRunners({ throwOnError: true })).data.items).toHaveLength(2);
+    expect((await listAutomations({ throwOnError: true })).data.items).toHaveLength(2);
+    expect(
+      (await listAutomationRuns({ path: { id: 'au-nightly' }, throwOnError: true })).data.items,
+    ).toHaveLength(2);
+    expect((await listAutomationRuns({ path: { id: 'au-sentry' }, throwOnError: true })).data.items).toEqual(
+      [],
+    );
+  });
+
+  it('turns an automation on and off for its owner, and refuses another member or an unknown one', async () => {
+    expect((await enableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      true,
+    );
+    expect((await disableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      false,
+    );
+    expect(await statusOf(async () => enableAutomation({ path: { id: 'nope' }, throwOnError: true }))).toBe(
+      404,
+    );
+    demote();
+    expect(
+      await statusOf(async () => enableAutomation({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(403);
+    expect((await enableAutomation({ path: { id: 'au-sentry' }, throwOnError: true })).data.enabled).toBe(
+      true,
+    );
+  });
+
+  it('runs an automation now or dry, keeping only the real run', async () => {
+    const dry = await testAutomation({
+      path: { id: 'au-sentry' },
+      body: { dryRun: true },
+      throwOnError: true,
+    });
+    expect(dry.data).toMatchObject({ status: 'succeeded', source: 'dry-run', workflowId: 'wf-backend' });
+    const real = await testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true });
+    expect(real.data).toMatchObject({ status: 'queued', source: 'manual', workflowId: 'wf-au-nightly' });
+    expect(db.automationRuns).toHaveLength(3);
+    expect(
+      await statusOf(async () => testAutomation({ path: { id: 'nope' }, body: {}, throwOnError: true })),
+    ).toBe(404);
+    const bad = await fetch('http://ostrom.test/api/v1/automations/au-nightly/run', {
+      method: 'POST',
+      body: '{"dryRun":"yes"}',
+    });
+    expect(bad.status).toBe(400);
+    demote();
+    expect(
+      await statusOf(async () =>
+        testAutomation({ path: { id: 'au-nightly' }, body: {}, throwOnError: true }),
+      ),
+    ).toBe(403);
+  });
+
+  it('gives a new webhook secret once, only for a webhook automation', async () => {
+    expect(
+      (await rotateAutomationSecret({ path: { id: 'au-sentry' }, throwOnError: true })).data.secret,
+    ).toMatch(/^whsec_mock_1/);
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(409);
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'nope' }, throwOnError: true })),
+    ).toBe(404);
+    demote();
+    expect(
+      await statusOf(async () => rotateAutomationSecret({ path: { id: 'au-nightly' }, throwOnError: true })),
+    ).toBe(403);
   });
 });

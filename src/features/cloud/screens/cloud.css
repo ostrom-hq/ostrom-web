@@ -1,0 +1,16 @@
+.cl-name {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+.cl-action {
+  margin: 0;
+  line-height: 1.5;
+}
+.cl-url,
+.cl-secret {
+  overflow-wrap: anywhere;
+}
+.cl-session {
+  flex-wrap: wrap;
+}

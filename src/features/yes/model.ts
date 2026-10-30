@@ -45,8 +45,3 @@ export function stillOpen(data: unknown): boolean {
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
-
-/** The key id written in a receipt signature (`ed25519;kid=…;sha256=…;sig=…`). */
-export function keyIdOf(signature: string): string | undefined {
-  return /(?:^|;)kid=([0-9a-f]+)(?:;|$)/.exec(signature)?.[1];
-}

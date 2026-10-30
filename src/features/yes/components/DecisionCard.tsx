@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval, Receipt } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { keyIdOf } from '@/shared/lib/signature';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
-import { keyIdOf } from '../model';
 
 export interface DecisionCardProps {
   readonly approval: Approval;
@@ -56,6 +57,9 @@ export function DecisionCard({ approval, receipt, comment }: DecisionCardProps):
           </dl>
           <p className="ys-small ys-meta">{t('yes.receipt.verifyHint')}</p>
           <pre className="ys-cmd">{`ostrom verify ${receipt.id}`}</pre>
+          <Link to="/receipts/$receiptId" params={{ receiptId: receipt.id }}>
+            {t('yes.receipt.open')}
+          </Link>
         </details>
       )}
     </section>

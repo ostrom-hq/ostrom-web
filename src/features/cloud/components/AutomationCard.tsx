@@ -1,0 +1,163 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { Automation } from '@gen/api/types.gen';
+import { type ReactElement, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatRelative } from '@/shared/lib/time';
+import { Badge } from '@/shared/ui/Badge';
+import { Button } from '@/shared/ui/Button';
+import { isCloudAgent, isWebhook, RUN_TONES } from '../model';
+import { useAutomationRuns } from '../useCloud';
+import { SecretOnce } from './SecretOnce';
+
+export interface AutomationCardProps {
+  readonly automation: Automation;
+  readonly now: Date;
+  readonly busy: boolean;
+  /** A webhook secret just rotated, shown here once. */
+  readonly secret: string | undefined;
+  /** Present when the viewer may change this automation. */
+  readonly actions:
+    | {
+        readonly toggle: () => void;
+        readonly run: (dry: boolean) => void;
+        readonly rotate: () => void;
+      }
+    | undefined;
+}
+
+function Runs({ id, now }: { readonly id: string; readonly now: Date }): ReactElement {
+  const { t, i18n } = useTranslation();
+  const { runs, failure } = useAutomationRuns(id);
+  if (failure !== undefined) return <p className="o-row__meta">{failure.message}</p>;
+  if (runs === undefined) return <p className="o-row__meta">{t('automations.runs.loading')}</p>;
+  if (runs.length === 0) return <p className="o-row__meta">{t('automations.runs.empty')}</p>;
+  return (
+    <ul className="o-rows">
+      {runs.map((run) => (
+        <li key={run.id} className="o-row">
+          <span className="o-row__main">
+            <span className="o-row__title">
+              {t('automations.runs.line', {
+                when: formatRelative(run.startedAt, now, i18n.language),
+                source: run.source,
+              })}
+            </span>
+            {run.failure === undefined ? null : <span className="o-row__meta">{run.failure}</span>}
+          </span>
+          <Badge tone={RUN_TONES[run.status]}>{t(`automations.runStatus.${run.status}`)}</Badge>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** What starts it, what it does, its limits, then its runs on demand. */
+export function AutomationCard({
+  automation,
+  now,
+  busy,
+  secret,
+  actions,
+}: AutomationCardProps): ReactElement {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const headingId = useId();
+  const runsId = useId();
+  const { trigger, action } = automation;
+  const agent =
+    action.agent === undefined
+      ? undefined
+      : isCloudAgent(action.agent)
+        ? t(`cloud.agent.${action.agent}`)
+        : action.agent;
+  return (
+    <article className="o-card o-stack" aria-labelledby={headingId}>
+      <div className="o-inline">
+        <h3 id={headingId} className="cl-name">
+          {automation.name}
+        </h3>
+        <Badge tone={automation.enabled ? 'success' : 'neutral'}>
+          {automation.enabled ? t('automations.on') : t('automations.off')}
+        </Badge>
+      </div>
+      <p className="o-row__meta">
+        {isWebhook(automation)
+          ? t('automations.trigger.webhook')
+          : t('automations.trigger.cron', {
+              schedule: [trigger.cron, trigger.timezone].filter((part) => part !== undefined).join(' · '),
+            })}
+      </p>
+      <p className="cl-action">
+        {action.workflowId !== undefined
+          ? t('automations.action.workflow', { workflow: action.workflowId })
+          : t('automations.action.prompt', {
+              agent: agent ?? t('automations.action.defaultAgent'),
+              prompt: action.prompt ?? '',
+            })}
+      </p>
+      <p className="o-row__meta">
+        {[
+          t('automations.owner', { owner: automation.owner }),
+          t('automations.version', { version: automation.version }),
+          automation.maxRunsPerDay === undefined
+            ? undefined
+            : t('automations.perDay', { count: automation.maxRunsPerDay }),
+          action.maxRuntimeMinutes === undefined
+            ? undefined
+            : t('automations.runtime', { minutes: action.maxRuntimeMinutes }),
+          automation.overlap === 'skip' ? t('automations.overlapSkip') : undefined,
+        ]
+          .filter((part) => part !== undefined)
+          .join(' · ')}
+      </p>
+      {automation.webhookUrl === undefined ? null : (
+        <p className="o-row__meta o-mono cl-url">{automation.webhookUrl}</p>
+      )}
+      {secret === undefined ? null : <SecretOnce name={automation.name} value={secret} />}
+      <div className="o-inline">
+        <Button
+          aria-expanded={open}
+          aria-controls={runsId}
+          variant="ghost"
+          onClick={() => {
+            setOpen(!open);
+          }}
+        >
+          {open ? t('automations.runs.hide') : t('automations.runs.show')}
+        </Button>
+        {actions === undefined ? null : (
+          <>
+            <Button disabled={busy} onClick={actions.toggle}>
+              {automation.enabled ? t('automations.turnOff') : t('automations.turnOn')}
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                actions.run(false);
+              }}
+            >
+              {t('automations.runNow')}
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                actions.run(true);
+              }}
+            >
+              {t('automations.dryRun')}
+            </Button>
+            {isWebhook(automation) ? (
+              <Button variant="ghost" disabled={busy} onClick={actions.rotate}>
+                {t('automations.rotate')}
+              </Button>
+            ) : null}
+          </>
+        )}
+      </div>
+      <div id={runsId} hidden={!open}>
+        {open ? <Runs id={automation.id} now={now} /> : null}
+      </div>
+    </article>
+  );
+}

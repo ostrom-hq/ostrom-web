@@ -1,18 +1,217 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { handleAnswerApproval, handleGetApproval, handleGetMe, handleListApprovals } from '@gen/api/msw.gen';
-import type { ApiError, Approval, ApprovalAnswer, Receipt } from '@gen/api/types.gen';
-import { zAnswerApprovalRequest } from '@gen/api/zod.gen';
+import {
+  handleAnswerApproval,
+  handleBulkUpdateRules,
+  handleCreateCloudSession,
+  handleCreateMcpServer,
+  handleCreateSecret,
+  handleDeleteMcpServer,
+  handleDeleteSecret,
+  handleDisableAutomation,
+  handleEnableAutomation,
+  handleGetMcpUsage,
+  handleGetSpending,
+  handleGetApproval,
+  handleGetGatePolicy,
+  handleGetMe,
+  handleGetOrganization,
+  handleGetReceipt,
+  handleGetReceiptBundle,
+  handleGetSession,
+  handleGetWorkflow,
+  handleInviteMembers,
+  handleListApprovals,
+  handleListAutomationRuns,
+  handleListAutomations,
+  handleListBudgets,
+  handleListCloudSessions,
+  handleListDecisions,
+  handleListMcpCalls,
+  handleListMcpServers,
+  handleListMembers,
+  handleListReceipts,
+  handleListRules,
+  handleListRunners,
+  handleListSecrets,
+  handleListSessions,
+  handleListTeams,
+  handleListWorkflows,
+  handleSetGatePolicy,
+  handleUpdateMember,
+  handleUpdateRule,
+  handleRotateAutomationSecret,
+  handleRotateSecret,
+  handleSaveMcpServer,
+  handleSetBudget,
+  handleStopCloudSession,
+  handleTestAutomation,
+  handleVerifyReceipt,
+} from '@gen/api/msw.gen';
+import type {
+  ApiError,
+  Approval,
+  ApprovalAnswer,
+  Automation,
+  Budget,
+  CloudSession,
+  Decision,
+  McpCall,
+  McpServer,
+  Member,
+  Organization,
+  PublicKey,
+  Receipt,
+  Rule,
+  RuleStatus,
+  Runner,
+  Secret,
+  Session,
+  Team,
+  Workflow,
+  WorkflowRun,
+} from '@gen/api/types.gen';
+import {
+  zAnswerApprovalRequest,
+  zBudget,
+  zCreateCloudSessionBody,
+  zBulkUpdateRulesBody,
+  zMcpServer,
+  zMemberRole,
+  zSecretWrite,
+  zTestAutomationBody,
+  zUpdateRuleBody,
+} from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
+import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
+import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
+import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
+import {
+  initialAutomationRuns,
+  initialAutomations,
+  initialCloudSessions,
+  initialRunners,
+} from '@/mocks/fixtures/cloud';
+import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
+import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
+import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
+import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
 export interface MockDb {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
+  sessions: Session[];
+  /** Newest first, as the server lists them; an answer adds its receipt at the top. */
+  receipts: Receipt[];
+  organization: Organization;
+  members: Member[];
+  teams: Team[];
+  workflows: Workflow[];
+  /** `sole-approver`: the asker who is the only approver may approve, and the receipt says so; `never`. */
+  selfApproval: string;
+  rules: Rule[];
+  /** Signed decisions on rules, workflows, owners and policies; newest first. */
+  decisions: Decision[];
+  mcpServers: McpServer[];
+  /** Secrets as the server lists them: names and metadata, never a value. */
+  secrets: Secret[];
+  mcpCalls: McpCall[];
+  budgets: Budget[];
+  cloudSessions: CloudSession[];
+  runners: Runner[];
+  automations: Automation[];
+  automationRuns: WorkflowRun[];
 }
 
 export function createMockDb(): MockDb {
-  return { approvals: initialApprovals(), approvers: initialApprovers() };
+  return {
+    approvals: initialApprovals(),
+    approvers: initialApprovers(),
+    sessions: initialSessions(),
+    receipts: initialReceipts(),
+    organization: initialOrganization(),
+    members: initialMembers(),
+    teams: initialTeams(),
+    workflows: initialWorkflows(),
+    selfApproval: 'sole-approver',
+    rules: initialRules(),
+    decisions: initialDecisions(),
+    mcpServers: initialMcpServers(),
+    secrets: initialSecrets(),
+    mcpCalls: initialMcpCalls(),
+    budgets: initialBudgets(),
+    cloudSessions: initialCloudSessions(),
+    runners: initialRunners(),
+    automations: initialAutomations(),
+    automationRuns: initialAutomationRuns(),
+  };
+}
+
+const zUpdateMember = z.object({ role: zMemberRole.exclude(['invited']) });
+/** The server's own checks on top of the contract's shape: a name it can route to, an https URL. */
+const zMcpServerWrite = zMcpServer.extend({
+  name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+  url: z.url({ protocol: /^https$/ }),
+});
+/** A parsed write as the contract's server: an absent tool list stays absent, never `undefined`. */
+function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
+  const { tools, ...fields } = write;
+  return tools === undefined ? fields : { ...fields, tools };
+}
+/** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
+const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
+/** A budget names who it limits (no subject for the organization) and at least one positive amount. */
+const zBudgetWrite = zBudget
+  .extend({
+    scope: z.enum(['org', 'member', 'workflow']),
+    usdPerMonth: z.number().positive().optional(),
+    usdPerDay: z.number().positive().optional(),
+  })
+  .refine((budget) => (budget.scope === 'org') === (budget.subject === undefined))
+  .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
+const CLOUD_AGENTS = new Set(['claude-code', 'codex']);
+/** A session that still holds a runner: it can be stopped. */
+const LIVE = new Set(['queued', 'starting', 'running']);
+const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
+const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
+
+/** Owners and admins manage the members, as the server's `orgs:write` scope does. */
+function canManage(db: MockDb): boolean {
+  const role = db.members.find((member) => member.login === me.dev.login)?.role;
+  return role === 'owner' || role === 'admin';
+}
+
+/** An automation changes by its owner, or by an owner or an admin of the organization. */
+function mayChange(db: MockDb, automation: Automation): boolean {
+  return automation.owner === me.dev.login || canManage(db);
+}
+
+function switchAutomation(
+  db: MockDb,
+  id: string,
+  enabled: boolean,
+  at: string,
+): HttpResponse<Automation | ApiError> {
+  const index = db.automations.findIndex((item) => item.id === id);
+  const automation = db.automations[index];
+  if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+  if (!mayChange(db, automation)) return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
+  const switched: Automation = { ...automation, enabled, updatedAt: at };
+  db.automations[index] = switched;
+  return HttpResponse.json(switched);
+}
+
+/** The mock's stand-in for the server's check: a receipt whose signature names no key does not verify. */
+export const MOCK_KEY: PublicKey = {
+  kid: '4f2a9c1b',
+  alg: 'ed25519',
+  publicKeyPem: '-----BEGIN PUBLIC KEY-----\nmock\n-----END PUBLIC KEY-----',
+};
+
+/** Puts a database back to its first state in place: the running handlers keep their reference. */
+export function resetMockDb(db: MockDb): void {
+  Object.assign(db, createMockDb());
 }
 
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
@@ -31,9 +230,11 @@ export function selfApprovalRefusal(
   approval: Approval,
   approvers: readonly string[],
   login: string,
+  policy = 'sole-approver',
 ): string | undefined {
   const asked = new Set((approval.askedBy ?? []).map((author) => author.toLowerCase()));
   if (!asked.has(login.toLowerCase())) return undefined;
+  if (policy === 'never') return 'You asked for this: your organization never lets the asker approve.';
   const others = approvers.filter((approver) => !asked.has(approver.toLowerCase()));
   return others.length === 0 ? undefined : `You asked for this: ${others.join(' or ')} has to approve it.`;
 }
@@ -77,9 +278,42 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 /** The approvals slice of the contract, served from memory with the server's rules. */
+/** A rule decision is signed like any other: a decision line and its receipt, newest first. */
+function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus, at: string): void {
+  const id = `dec-${String(db.decisions.length + 1)}`;
+  db.decisions.unshift({
+    id,
+    at,
+    by: me.dev.login,
+    subject: { kind: 'rule', id: rule.id, label: rule.statement },
+    action,
+    receiptId: `rcpt-${id}`,
+  });
+  db.receipts.unshift({
+    id: `rcpt-${id}`,
+    subject: { kind: 'rule-change', id: rule.id, digest: `sha256:${id}` },
+    initiator: me.dev.login,
+    rules: [],
+    decisions: [],
+    createdAt: at,
+    signature: `ed25519;kid=${MOCK_KEY.kid};sha256=${id};sig=mock`,
+  });
+}
+
+/** What a rule becomes after a decision: decided by the caller, or back to proposed with no decider. */
+function decided(rule: Rule, status: RuleStatus, at: string): Rule {
+  if (status !== 'proposed') return { ...rule, status, decidedBy: me.dev.login, decidedAt: at };
+  const open: Rule = { ...rule, status };
+  delete open.decidedBy;
+  delete open.decidedAt;
+  return open;
+}
+
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
+  const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
+  const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
   return [
     handleGetMe({ body: me }),
     handleListApprovals(({ request }) => {
@@ -111,13 +345,367 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!approvers.includes(me.dev.login))
         return refusal(403, 'not_an_approver', 'you cannot answer this approval');
       const refused =
-        body.data.answer === 'approve' ? selfApprovalRefusal(approval, approvers, me.dev.login) : undefined;
+        body.data.answer === 'approve'
+          ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval)
+          : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
       const at = now().toISOString();
       const selfApproved = body.data.answer === 'approve' && isAsker(approval, me.dev.login);
       const next = answered(approval, body.data.answer, selfApproved, at);
       db.approvals = db.approvals.map((item) => (item.id === next.id ? next : item));
-      return HttpResponse.json({ approval: next, receipt: receiptOf(next, at) });
+      const receipt = receiptOf(next, at);
+      db.receipts = [receipt, ...db.receipts];
+      return HttpResponse.json({ approval: next, receipt });
+    }),
+    handleGetOrganization(() => HttpResponse.json(db.organization)),
+    handleListMembers(() => HttpResponse.json({ items: db.members })),
+    handleListTeams(() => HttpResponse.json({ items: db.teams })),
+    handleUpdateMember(async ({ params, request }) => {
+      const member = db.members.find((item) => item.login === params.login);
+      if (member === undefined) return refusal(404, 'not_found', 'member not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change roles');
+      const body = zUpdateMember.safeParse(await readJson(request));
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'role must be owner, admin, approver or member');
+      if (member.login === me.dev.login) return refusal(409, 'own_role', 'you cannot change your own role');
+      const next: Member = { ...member, role: body.data.role };
+      db.members = db.members.map((item) => (item.login === next.login ? next : item));
+      return HttpResponse.json(next);
+    }),
+    handleInviteMembers(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins invite people');
+      const body = zInvites.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'each invite needs an email');
+      const known = new Set(db.members.map((member) => member.email ?? member.login));
+      const invited = body.data.invites.map((invite) => invite.email).filter((email) => !known.has(email));
+      db.members = [
+        ...db.members,
+        ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' })),
+      ];
+      return HttpResponse.json({ invited });
+    }),
+    handleListRules(({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const status = params.get('status');
+      const group = params.get('group');
+      return HttpResponse.json({
+        items: db.rules.filter(
+          (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
+        ),
+      });
+    }),
+    handleUpdateRule(async ({ request, params }) => {
+      const index = db.rules.findIndex((rule) => rule.id === params.id);
+      const rule = db.rules[index];
+      if (rule === undefined) return refusal(404, 'not_found', 'rule not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
+      const body = zUpdateRuleBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'not a rule change');
+      const at = now().toISOString();
+      // The mock applies what the console sends (statement, strength, status); scope and review date are kept.
+      const { statement, strength } = body.data;
+      const edits: Rule = {
+        ...rule,
+        ...(statement === undefined ? {} : { statement }),
+        ...(strength === undefined ? {} : { strength }),
+      };
+      const status = body.data.status ?? (statement === undefined ? rule.status : 'edited');
+      const next = status === rule.status ? edits : decided(edits, status, at);
+      db.rules[index] = next;
+      if (next.status !== rule.status || statement !== undefined)
+        recordRuleDecision(db, next, next.status, at);
+      return HttpResponse.json(next);
+    }),
+    handleBulkUpdateRules(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
+      const body = zBulkUpdateRulesBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'ids and a status are needed');
+      const at = now().toISOString();
+      const ids = new Set(body.data.ids);
+      let updated = 0;
+      db.rules = db.rules.map((rule) => {
+        if (!ids.has(rule.id) || rule.status === body.data.status) return rule;
+        updated += 1;
+        const next = decided(rule, body.data.status, at);
+        recordRuleDecision(db, next, next.status, at);
+        return next;
+      });
+      return HttpResponse.json({ updated });
+    }),
+    handleListDecisions(({ request }) => {
+      const params = new URL(request.url).searchParams;
+      const kind = params.get('subjectKind');
+      const id = params.get('subjectId');
+      return HttpResponse.json({
+        items: db.decisions.filter(
+          (decision) =>
+            (kind === null || decision.subject.kind === kind) && (id === null || decision.subject.id === id),
+        ),
+      });
+    }),
+    handleListMcpServers(() => HttpResponse.json({ items: db.mcpServers })),
+    handleCreateMcpServer(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const body = zMcpServerWrite.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
+      if (db.mcpServers.some((server) => server.name === body.data.name))
+        return refusal(409, 'already_exists', `an MCP server named ${body.data.name} exists`);
+      const created = serverFrom(body.data);
+      db.mcpServers.push(created);
+      return HttpResponse.json(created, { status: 201 });
+    }),
+    handleSaveMcpServer(async ({ request, params }) => {
+      const index = db.mcpServers.findIndex((server) => server.name === params.name);
+      if (index === -1) return refusal(404, 'not_found', 'MCP server not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const body = zMcpServerWrite.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
+      const saved = serverFrom(body.data);
+      db.mcpServers[index] = saved;
+      return HttpResponse.json(saved);
+    }),
+    handleDeleteMcpServer(({ params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const before = db.mcpServers.length;
+      db.mcpServers = db.mcpServers.filter((server) => server.name !== params.name);
+      return db.mcpServers.length === before
+        ? refusal(404, 'not_found', 'MCP server not found')
+        : new HttpResponse(null, { status: 204 });
+    }),
+    handleListMcpCalls(({ request }) => {
+      const server = new URL(request.url).searchParams.get('server');
+      return HttpResponse.json({
+        items: db.mcpCalls.filter((call) => server === null || call.server === server),
+      });
+    }),
+    handleGetMcpUsage(() => {
+      const byServer: Record<string, number> = {};
+      const byTool: Record<string, number> = {};
+      for (const call of db.mcpCalls) {
+        byServer[call.server] = (byServer[call.server] ?? 0) + 1;
+        byTool[call.tool] = (byTool[call.tool] ?? 0) + 1;
+      }
+      return HttpResponse.json({ byServer, byTool });
+    }),
+    handleListSecrets(() => HttpResponse.json({ items: db.secrets })),
+    handleCreateSecret(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const body = zSecretWrite.safeParse(await readJson(request));
+      if (!body.success || !SECRET_NAME.test(body.data.name) || body.data.value === '')
+        return refusal(400, 'invalid_request', 'a name in CAPITALS and a value are needed');
+      if (db.secrets.some((secret) => secret.name === body.data.name))
+        return refusal(409, 'already_exists', `a secret named ${body.data.name} exists`);
+      const at = now().toISOString();
+      const secret: Secret = {
+        name: body.data.name,
+        scope: body.data.scope ?? 'org',
+        createdAt: at,
+        updatedAt: at,
+        updatedBy: me.dev.login,
+      };
+      db.secrets.push(secret);
+      return HttpResponse.json(secret, { status: 201 });
+    }),
+    handleRotateSecret(async ({ request, params }) => {
+      const index = db.secrets.findIndex((secret) => secret.name === params.name);
+      const secret = db.secrets[index];
+      if (secret === undefined) return refusal(404, 'not_found', 'secret not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const body = zSecretWrite.safeParse(await readJson(request));
+      if (!body.success || body.data.value === '')
+        return refusal(400, 'invalid_request', 'a new value is needed');
+      const rotated: Secret = { ...secret, updatedAt: now().toISOString(), updatedBy: me.dev.login };
+      db.secrets[index] = rotated;
+      return HttpResponse.json(rotated);
+    }),
+    handleDeleteSecret(({ params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const user = db.mcpServers.find((server) => server.secretNames.includes(params.name));
+      if (user !== undefined)
+        return refusal(
+          409,
+          'secret_in_use',
+          `the MCP server ${user.name} uses this secret: remove it there first`,
+        );
+      const before = db.secrets.length;
+      db.secrets = db.secrets.filter((secret) => secret.name !== params.name);
+      return db.secrets.length === before
+        ? refusal(404, 'not_found', 'secret not found')
+        : new HttpResponse(null, { status: 204 });
+    }),
+    handleGetSpending(({ request }) => {
+      const period = new URL(request.url).searchParams.get('period') ?? 'month';
+      return period === 'month' || period === 'week'
+        ? HttpResponse.json(spendingFor(period))
+        : refusal(400, 'invalid_request', 'period is week or month');
+    }),
+    handleListBudgets(() => HttpResponse.json({ items: db.budgets })),
+    handleSetBudget(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set budgets');
+      const body = zBudgetWrite.safeParse(await readJson(request));
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'a scope, a subject outside the organization, and an amount');
+      const budget: Budget = {
+        scope: body.data.scope,
+        hardStop: body.data.hardStop,
+        ...(body.data.subject === undefined ? {} : { subject: body.data.subject }),
+        ...(body.data.usdPerMonth === undefined ? {} : { usdPerMonth: body.data.usdPerMonth }),
+        ...(body.data.usdPerDay === undefined ? {} : { usdPerDay: body.data.usdPerDay }),
+      };
+      const same = (item: Budget): boolean => item.scope === budget.scope && item.subject === budget.subject;
+      db.budgets = db.budgets.some(same)
+        ? db.budgets.map((item) => (same(item) ? budget : item))
+        : [...db.budgets, budget];
+      return HttpResponse.json(budget);
+    }),
+    handleListCloudSessions(({ request }) => {
+      const status = new URL(request.url).searchParams.get('status');
+      return HttpResponse.json({
+        items: db.cloudSessions.filter((session) => status === null || session.status === status),
+      });
+    }),
+    handleCreateCloudSession(async ({ request }) => {
+      const body = zCreateCloudSessionBody.safeParse(await readJson(request));
+      if (!body.success || body.data.prompt.trim() === '')
+        return refusal(400, 'invalid_request', 'an agent and a prompt are needed');
+      if (!CLOUD_AGENTS.has(body.data.agent))
+        return refusal(400, 'invalid_request', `no cloud agent ${body.data.agent}`);
+      const session: CloudSession = {
+        id: `cs-${String(db.cloudSessions.length + 100)}`,
+        owner: me.dev.login,
+        agent: body.data.agent,
+        status: 'queued',
+        createdAt: now().toISOString(),
+        ...(body.data.name === undefined || body.data.name.trim() === ''
+          ? {}
+          : { name: body.data.name.trim() }),
+        ...(body.data.model === undefined ? {} : { model: body.data.model }),
+      };
+      db.cloudSessions.unshift(session);
+      return HttpResponse.json(session, { status: 201 });
+    }),
+    handleStopCloudSession(({ params }) => {
+      const index = db.cloudSessions.findIndex((session) => session.id === params.id);
+      const session = db.cloudSessions[index];
+      if (session === undefined) return refusal(404, 'not_found', 'cloud session not found');
+      if (session.owner !== me.dev.login && !canManage(db))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin stops a session');
+      if (!LIVE.has(session.status)) return refusal(409, 'conflict', 'the session has already ended');
+      db.cloudSessions[index] = { ...session, status: 'stopped', endedAt: now().toISOString() };
+      return new HttpResponse(null, { status: 204 });
+    }),
+    handleListRunners(() => HttpResponse.json({ items: db.runners })),
+    handleListAutomations(() => HttpResponse.json({ items: db.automations })),
+    handleEnableAutomation(({ params }) => switchAutomation(db, params.id, true, now().toISOString())),
+    handleDisableAutomation(({ params }) => switchAutomation(db, params.id, false, now().toISOString())),
+    handleListAutomationRuns(({ params }) =>
+      HttpResponse.json({ items: db.automationRuns.filter((run) => run.automationId === params.id) }),
+    ),
+    handleTestAutomation(async ({ request, params }) => {
+      const automation = db.automations.find((item) => item.id === params.id);
+      if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+      if (!mayChange(db, automation))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin runs it');
+      const body = zTestAutomationBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'payload and dryRun');
+      const dry = body.data.dryRun === true;
+      const run: WorkflowRun = {
+        id: `run-${String(db.automationRuns.length + 100)}`,
+        workflowId: automation.action.workflowId ?? `wf-${automation.id}`,
+        workflowName: automation.name,
+        workflowVersion: automation.version,
+        status: dry ? 'succeeded' : 'queued',
+        startedBy: me.dev.login,
+        source: dry ? 'dry-run' : 'manual',
+        automationId: automation.id,
+        startedAt: now().toISOString(),
+        ...(dry
+          ? { endedAt: now().toISOString(), output: 'Dry run: the trigger and inputs are valid.' }
+          : {}),
+      };
+      if (!dry) db.automationRuns.unshift(run);
+      return HttpResponse.json(run);
+    }),
+    handleRotateAutomationSecret(({ params }) => {
+      const automation = db.automations.find((item) => item.id === params.id);
+      if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
+      if (!mayChange(db, automation))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
+      if (automation.trigger.kind !== 'webhook')
+        return refusal(409, 'conflict', 'this automation has no webhook');
+      return HttpResponse.json({
+        secret: `whsec_mock_${String(automation.version)}${now().getTime().toString(36)}`,
+      });
+    }),
+    handleListWorkflows(({ request }) => {
+      const status = new URL(request.url).searchParams.get('status');
+      return HttpResponse.json({
+        items: db.workflows.filter((workflow) => status === null || workflow.status === status),
+      });
+    }),
+    handleGetWorkflow(({ params }) => {
+      const workflow = db.workflows.find((item) => item.id === params.id);
+      return workflow === undefined
+        ? refusal(404, 'not_found', 'workflow not found')
+        : HttpResponse.json(workflow);
+    }),
+    handleGetGatePolicy(() => HttpResponse.json({ selfApproval: db.selfApproval })),
+    handleSetGatePolicy(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set the policy');
+      const body = zPolicy.safeParse(await readJson(request));
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'selfApproval must be sole-approver or never');
+      db.selfApproval = body.data.selfApproval;
+      return HttpResponse.json({ selfApproval: db.selfApproval });
+    }),
+    handleListSessions(({ request }) => {
+      const open = new URL(request.url).searchParams.get('open');
+      const items = db.sessions.filter(
+        (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
+      );
+      return HttpResponse.json({ items });
+    }),
+    handleGetSession(({ params }) => {
+      const session = db.sessions.find((item) => item.id === params.id);
+      if (session === undefined) return refusal(404, 'not_found', 'session not found');
+      const receipt = db.receipts.find((item) => item.id === session.receiptId);
+      return HttpResponse.json(receipt === undefined ? { session } : { session, receipt });
+    }),
+    handleListReceipts(({ request }) => {
+      const query = new URL(request.url).searchParams;
+      const kind = query.get('subjectKind');
+      const id = query.get('subjectId');
+      const items = db.receipts.filter(
+        (receipt) =>
+          (kind === null || receipt.subject.kind === kind) && (id === null || receipt.subject.id === id),
+      );
+      return HttpResponse.json({ items });
+    }),
+    handleGetReceipt(({ params }) => {
+      const receipt = findReceipt(params.id);
+      return receipt === undefined ? receiptNotFound() : HttpResponse.json(receipt);
+    }),
+    handleVerifyReceipt(({ params }) => {
+      const receipt = findReceipt(params.id);
+      if (receipt === undefined) return receiptNotFound();
+      const ok = receipt.signature.includes(`kid=${MOCK_KEY.kid}`);
+      return HttpResponse.json(
+        ok
+          ? { ok, digest: receipt.subject.digest, kid: MOCK_KEY.kid }
+          : { ok, reason: 'the signature does not match any key of this instance' },
+      );
+    }),
+    handleGetReceiptBundle(({ params }) => {
+      const receipt = findReceipt(params.id);
+      if (receipt === undefined) return receiptNotFound();
+      return HttpResponse.json({
+        format: 'ostrom-receipt-bundle/1',
+        receipt,
+        chain: [],
+        package: null,
+        keys: [MOCK_KEY],
+        exportedAt: now().toISOString(),
+      });
     }),
   ];
 }

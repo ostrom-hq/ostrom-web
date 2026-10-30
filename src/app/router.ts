@@ -8,7 +8,17 @@ import {
 import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
+import { ApproversScreen } from '@/features/approvers';
+import { AutomationsScreen, CloudScreen } from '@/features/cloud';
+import { DecisionsScreen } from '@/features/decisions';
 import { HomeScreen } from '@/features/home';
+import { MembersScreen } from '@/features/members';
+import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
+import { RulesScreen } from '@/features/rules';
+import { SessionScreen, SessionsScreen } from '@/features/sessions';
+import { SpendScreen } from '@/features/spend';
+import { McpScreen, SecretsScreen } from '@/features/tools';
+import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
@@ -62,7 +72,86 @@ const approvalRoute = createRoute({
   component: ApprovalScreen,
 });
 
-export const routeTree = rootRoute.addChildren([homeRoute, yesRoute, approvalRoute]);
+const sessionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions',
+  component: SessionsScreen,
+});
+const sessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sessions/$sessionId',
+  component: SessionScreen,
+});
+const membersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/members',
+  component: MembersScreen,
+});
+const approversRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/approvers',
+  component: ApproversScreen,
+});
+const rulesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rules', component: RulesScreen });
+const decisionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/decisions',
+  component: DecisionsScreen,
+});
+const workflowsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows',
+  component: WorkflowsScreen,
+});
+const workflowRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows/$workflowId',
+  component: WorkflowScreen,
+});
+const mcpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/mcp', component: McpScreen });
+const secretsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/secrets',
+  component: SecretsScreen,
+});
+const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
+const cloudRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cloud', component: CloudScreen });
+const automationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/automations',
+  component: AutomationsScreen,
+});
+const receiptsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/receipts',
+  component: ReceiptsScreen,
+});
+const receiptRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/receipts/$receiptId',
+  component: ReceiptScreen,
+});
+
+export const routeTree = rootRoute.addChildren([
+  homeRoute,
+  yesRoute,
+  approvalRoute,
+  sessionsRoute,
+  sessionRoute,
+  receiptsRoute,
+  receiptRoute,
+  membersRoute,
+  approversRoute,
+  rulesRoute,
+  decisionsRoute,
+  workflowsRoute,
+  workflowRoute,
+  mcpRoute,
+  secretsRoute,
+  spendRoute,
+  cloudRoute,
+  automationsRoute,
+]);
 
 const buildRouter = (history?: RouterHistory) =>
   createRouter({

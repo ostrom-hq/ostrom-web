@@ -10,9 +10,9 @@ export interface SkeletonProps {
 export function Skeleton({ rows = 3 }: SkeletonProps): ReactElement {
   const { t } = useTranslation();
   return (
-    <div className="ys-skeleton" role="status" aria-label={t('yes.queue.loading')}>
+    <div className="o-skeleton" role="status" aria-label={t('app.loading')}>
       {Array.from({ length: rows }, (_, index) => (
-        <div key={index} className="ys-skeleton__row o-card" />
+        <div key={index} className="o-skeleton__row o-card" />
       ))}
     </div>
   );

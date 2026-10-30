@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatRelative } from '@/shared/lib/time';
+import { useNow } from '@/shared/lib/useNow';
+import { Banner } from '@/shared/ui/Banner';
+import { Badge } from '@/shared/ui/Badge';
+import { LoadState, Screen, Section } from '@/shared/ui/Screen';
+import { AddServerForm } from '../components/AddServerForm';
+import { ServerCard } from '../components/ServerCard';
+import { missingSecrets } from '../model';
+import { useMcp, useMcpChange } from '../useTools';
+import './tools.css';
+
+/** The MCP servers Ostrom relays to every agent of the organization, and what the agents called. */
+export function McpScreen(): ReactElement {
+  const { t, i18n } = useTranslation();
+  const view = useMcp();
+  const change = useMcpChange();
+  const now = useNow();
+  return (
+    <Screen title={t('tools.mcp.title')} lead={t('tools.mcp.lead')}>
+      {change.failure === undefined ? null : (
+        <Banner tone="danger" tag={t('tools.errorTag')} live>
+          {change.failure.message}
+        </Banner>
+      )}
+      {view.canManage ? <AddServerForm change={change} /> : null}
+      <LoadState data={view.servers} failure={view.failure}>
+        {(servers) =>
+          servers.length === 0 ? (
+            <p className="o-empty">{t('tools.mcp.empty')}</p>
+          ) : (
+            <div className="o-stack">
+              {servers.map((server) => (
+                <ServerCard
+                  key={server.name}
+                  server={server}
+                  calls={view.callsByServer?.[server.name] ?? 0}
+                  missing={view.secrets === undefined ? [] : missingSecrets(server, view.secrets)}
+                  busy={change.pending !== undefined}
+                  actions={
+                    view.canManage
+                      ? {
+                          toggle: () => {
+                            change.toggle(server);
+                          },
+                          remove: () => {
+                            change.remove(server.name);
+                          },
+                        }
+                      : undefined
+                  }
+                />
+              ))}
+            </div>
+          )
+        }
+      </LoadState>
+      {view.calls === undefined || view.calls.length === 0 ? null : (
+        <Section label={t('tools.mcp.recent')}>
+          <ul className="o-card o-rows">
+            {view.calls.map((call) => (
+              <li key={call.id} className="o-row">
+                <span className="o-row__main">
+                  <span className="o-row__title o-mono">{`${call.server} · ${call.tool}`}</span>
+                  <span className="o-row__meta">
+                    {[
+                      call.dev,
+                      formatRelative(call.at, now, i18n.language),
+                      call.durationMs === undefined ? undefined : t('tools.mcp.ms', { ms: call.durationMs }),
+                    ]
+                      .filter((part) => part !== undefined)
+                      .join(' · ')}
+                  </span>
+                </span>
+                <Badge tone={call.ok ? 'success' : 'danger'}>
+                  {call.ok ? t('tools.mcp.ok') : t('tools.mcp.failed')}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+    </Screen>
+  );
+}

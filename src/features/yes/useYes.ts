@@ -18,6 +18,7 @@ import type {
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
+import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useAuthStore } from '@/shared/auth/authStore';
@@ -29,13 +30,6 @@ import { useArrivals } from './useArrivals';
 export const POLL_MS = 2_000;
 const DECIDED_POLL_MS = 10_000;
 const DECIDED_SHOWN = 10;
-
-/** A failure the screens can render: typed when the client produced it, generic otherwise. */
-export function failureOf(error: unknown): ApiFailure | Error | undefined {
-  if (error === null || error === undefined) return undefined;
-  if (isApiFailure(error) || error instanceof Error) return error;
-  return new Error(typeof error === 'string' ? error : JSON.stringify(error));
-}
 
 /** "Maya Lind (maya)", or the login alone: who an approval from this browser is signed as. */
 export function viewerName(me: Me | undefined): string | undefined {

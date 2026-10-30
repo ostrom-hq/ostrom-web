@@ -302,28 +302,6 @@
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
-.ys-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.ys-skeleton__row {
-  height: 112px;
-  background: linear-gradient(90deg, var(--surface) 0%, var(--bg-subtle) 50%, var(--surface) 100%);
-  background-size: 200% 100%;
-  animation: ys-shimmer 1.4s linear infinite;
-}
-@keyframes ys-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ys-skeleton__row {
-    animation: none;
-  }
-}
-
 .ys-signin {
   display: flex;
   flex-direction: column;

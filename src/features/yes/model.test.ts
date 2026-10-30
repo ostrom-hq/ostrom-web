@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
-import { approvalTone, askedByViewer, checksSummary, keyIdOf, shortSha, stillOpen } from './model';
+import { approvalTone, askedByViewer, checksSummary, shortSha, stillOpen } from './model';
 
 describe('stillOpen', () => {
   it('is open until the request is decided', () => {
@@ -59,9 +59,7 @@ describe('checksSummary', () => {
 });
 
 describe('labels', () => {
-  it('shortens a sha and reads the key id of a signature', () => {
+  it('shortens a sha', () => {
     expect(shortSha('9c1e4b2a7d')).toBe('9c1e4b2');
-    expect(keyIdOf('ed25519;kid=4f2a9c1b;sha256=0c;sig=ME')).toBe('4f2a9c1b');
-    expect(keyIdOf('ed25519;sha256=0c')).toBeUndefined();
   });
 });

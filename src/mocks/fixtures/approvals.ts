@@ -4,7 +4,7 @@ import type { Approval, Me } from '@gen/api/types.gen';
 /** The person signed in to the demo console. */
 export const me: Me = {
   dev: { login: 'maya', verified: true, via: 'github' },
-  member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'approver' },
+  member: { login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin' },
   capabilities: [],
 };
 

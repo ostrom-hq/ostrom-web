@@ -3,11 +3,11 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import './yes.css';
 import { useNow } from '@/shared/lib/useNow';
+import { Skeleton } from '@/shared/ui/Skeleton';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
 import { FailureBanner } from '../components/FailureBanner';
 import { SignInNotice } from '../components/SignInNotice';
-import { Skeleton } from '../components/Skeleton';
 import { useApprovalsQueue, useViewer } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {

@@ -35,6 +35,18 @@ export function AppShell(): ReactElement {
             {t('app.nav.home')}
           </Link>
           <Link to="/yes">{t('app.nav.yes')}</Link>
+          <Link to="/sessions">{t('app.nav.sessions')}</Link>
+          <Link to="/receipts">{t('app.nav.receipts')}</Link>
+          <Link to="/members">{t('app.nav.members')}</Link>
+          <Link to="/workflows">{t('app.nav.workflows')}</Link>
+          <Link to="/approvers">{t('app.nav.approvers')}</Link>
+          <Link to="/rules">{t('app.nav.rules')}</Link>
+          <Link to="/decisions">{t('app.nav.decisions')}</Link>
+          <Link to="/mcp">{t('app.nav.mcp')}</Link>
+          <Link to="/secrets">{t('app.nav.secrets')}</Link>
+          <Link to="/spend">{t('app.nav.spend')}</Link>
+          <Link to="/cloud">{t('app.nav.cloud')}</Link>
+          <Link to="/automations">{t('app.nav.automations')}</Link>
         </nav>
         <div className="o-topbar__end">
           <ThemeToggle />
