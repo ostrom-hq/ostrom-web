@@ -150,6 +150,7 @@ export const en = {
       cancel: 'Cancel',
       signedAs: 'You approve as {{name}}.',
       refusedTag: 'Not allowed',
+      signInAgain: 'Sign in again',
       youAskedTag: 'You asked',
       youAsked:
         'You asked for this. If someone else can approve it, Ostrom will ask them; if you are the only approver, the receipt will say you approved your own request.',

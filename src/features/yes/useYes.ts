@@ -156,6 +156,15 @@ export function refusalOf(error: unknown): string | undefined {
   return isApiFailure(error) && error.kind === 'forbidden' ? error.message : undefined;
 }
 
+/**
+ * A yes refused until the person signs in again: a yes needs a sign-in of less than five minutes (S2-54), and the
+ * server says so with `error.type` `step_up_required` (core, `answerApproval`). Any other 403 (not an approver, the
+ * asker who has to wait) is a refusal that signing in again would not change.
+ */
+export function stepUpOf(error: unknown): boolean {
+  return isApiFailure(error) && error.kind === 'forbidden' && error.code === 'step_up_required';
+}
+
 /** The approval changed after it was shown: the answer was not taken, the page reloads it. */
 export function changedOf(error: unknown): boolean {
   return isApiFailure(error) && error.code === 'shown_digest_mismatch';
@@ -167,6 +176,8 @@ export interface AnswerViewModel {
   /** The answer being sent, while the call runs. */
   readonly sending: ApprovalAnswer | undefined;
   readonly refusal: string | undefined;
+  /** The refusal asks to sign in again before saying yes. */
+  readonly stepUp: boolean;
   readonly changed: boolean;
   readonly failure: ApiFailure | Error | undefined;
   /** The receipt the server signed for this answer, and what the agent was told. */
@@ -201,6 +212,7 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     answer,
     sending: mutation.isPending ? mutation.variables.body.answer : undefined,
     refusal,
+    stepUp: stepUpOf(mutation.error),
     changed,
     failure: refusal === undefined && !changed ? failureOf(mutation.error) : undefined,
     receipt: mutation.data?.receipt,

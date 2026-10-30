@@ -317,6 +317,7 @@ describe('a request', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Not allowed');
     expect(alert).toHaveTextContent('You asked for this: samir has to approve it.');
+    expect(screen.queryByRole('link', { name: 'Sign in again' })).toBeNull();
     expect(screen.queryByText(/If someone else can approve it/)).toBeNull();
 
     await user.click(screen.getByRole('button', { name: 'Decline & tell the agent…' }));
@@ -330,6 +331,39 @@ describe('a request', () => {
     const decision = await screen.findByRole('region', { name: 'Decision' });
     expect(decision).toHaveTextContent('maya declined: Deploy billing-api 2.14.0 to production');
     expect(decision).toHaveTextContent('The agent was told: “Wait for samir.”');
+  });
+
+  it('offers a fresh sign-in, back to the request, when the server wants one for the yes', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/approvals/:id/answer', () =>
+        HttpResponse.json(
+          { error: { type: 'step_up_required', message: 'Sign in again to approve.' } },
+          { status: 403 },
+        ),
+      ),
+    );
+    visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sign in again to approve.');
+    const again = within(alert).getByRole('link', { name: 'Sign in again' });
+    const target = new URL(again.getAttribute('href') ?? '', 'https://console.invalid');
+    expect(target.pathname).toBe('/signin');
+    expect(target.searchParams.get('redirect')).toBe('/yes/apr-merge-412');
+  });
+
+  it('offers no sign-in for a refusal it would not change', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/approvals/:id/answer', () =>
+        HttpResponse.json({ error: { type: 'forbidden', message: 'Not an approver.' } }, { status: 403 }),
+      ),
+    );
+    visit('/yes/apr-merge-412');
+    await user.click(await screen.findByRole('button', { name: /^Approve/ }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Not an approver.');
+    expect(screen.queryByRole('link', { name: 'Sign in again' })).toBeNull();
   });
 
   it('says it declines while the refusal is on its way', async () => {
