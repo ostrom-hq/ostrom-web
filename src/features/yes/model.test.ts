@@ -1,13 +1,5 @@
 import type { Ask } from '@gen/api/types.gen';
-import {
-  agentLabel,
-  approversOf,
-  askTone,
-  diffLineKind,
-  diffStats,
-  keyIdOf,
-  shortSha,
-} from './model';
+import { agentLabel, approversOf, askTone, diffLineKind, diffStats, keyIdOf, shortSha } from './model';
 
 const base: Ask = {
   id: 'a',
@@ -23,9 +15,16 @@ const base: Ask = {
 };
 
 describe('diff', () => {
-  const diff = ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -1,2 +1,2 @@', ' same', '-old', '+new', '+more'].join(
-    '\n',
-  );
+  const diff = [
+    'diff --git a/x b/x',
+    '--- a/x',
+    '+++ b/x',
+    '@@ -1,2 +1,2 @@',
+    ' same',
+    '-old',
+    '+new',
+    '+more',
+  ].join('\n');
 
   it('classifies each line', () => {
     expect(diff.split('\n').map(diffLineKind)).toEqual([
@@ -94,5 +93,4 @@ describe('labels', () => {
     expect(keyIdOf('ed25519;kid=4f2a9c1b;sha256=0c;sig=ME')).toBe('4f2a9c1b');
     expect(keyIdOf('ed25519;sha256=0c')).toBeUndefined();
   });
-
 });

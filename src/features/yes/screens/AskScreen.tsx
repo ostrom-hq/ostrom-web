@@ -63,7 +63,9 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
   const tone = askTone(ask);
   const { eligible, askers } = approversOf(ask);
   const otherRepo =
-    ask.what.sessionRepo !== undefined && ask.what.repo !== undefined && ask.what.sessionRepo !== ask.what.repo;
+    ask.what.sessionRepo !== undefined &&
+    ask.what.repo !== undefined &&
+    ask.what.sessionRepo !== ask.what.repo;
   return (
     <>
       <header className="ys-head">
@@ -91,7 +93,9 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
               {[
                 t('yes.detail.through', { agent: agentLabel(ask.who.agent) ?? t('yes.anAgent') }),
                 ask.who.model === undefined ? undefined : t('yes.detail.model', { model: ask.who.model }),
-                ask.who.session === undefined ? undefined : t('yes.detail.session', { session: ask.who.session }),
+                ask.who.session === undefined
+                  ? undefined
+                  : t('yes.detail.session', { session: ask.who.session }),
               ]
                 .filter((part) => part !== undefined)
                 .join(' ')}
@@ -117,7 +121,13 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
         )}
         {ask.pr === undefined ? null : (
           <p className="ys-small ys-meta">
-            {t('yes.detail.repoAndPr', { repo: ask.what.repo ?? '', number: ask.pr.number, sha: shortSha(ask.pr.sha) })}
+            {ask.what.repo === undefined
+              ? t('yes.detail.prAt', { number: ask.pr.number, sha: shortSha(ask.pr.sha) })
+              : t('yes.detail.repoAndPr', {
+                  repo: ask.what.repo,
+                  number: ask.pr.number,
+                  sha: shortSha(ask.pr.sha),
+                })}
           </p>
         )}
         {ask.commits === undefined || ask.commits.length === 0 ? null : (
@@ -166,7 +176,9 @@ function AskDetail({ ask, viewer, decision }: AskDetailProps): ReactElement {
             </ul>
           )}
           {ask.rules.length > MAX_RULES ? (
-            <p className="ys-small ys-meta">{t('yes.detail.moreRules', { count: ask.rules.length - MAX_RULES })}</p>
+            <p className="ys-small ys-meta">
+              {t('yes.detail.moreRules', { count: ask.rules.length - MAX_RULES })}
+            </p>
           ) : null}
         </section>
       )}

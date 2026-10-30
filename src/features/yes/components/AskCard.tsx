@@ -48,7 +48,9 @@ export function AskCard({ ask, fresh, now }: AskCardProps): ReactElement {
       {ask.what.command === undefined ? null : <code className="ys-cmd">{ask.what.command}</code>}
       <span className="ys-row ys-wrap ys-small">
         {ask.gate === undefined ? null : <Chip label={t('yes.chip.gate')} value={ask.gate.label} />}
-        {ask.rules.length === 0 ? null : <Chip label={t('yes.chip.rules')} value={String(ask.rules.length)} />}
+        {ask.rules.length === 0 ? null : (
+          <Chip label={t('yes.chip.rules')} value={String(ask.rules.length)} />
+        )}
         {stats === undefined ? null : (
           <Chip label={t('yes.chip.diff')} value={`+${String(stats.added)} −${String(stats.removed)}`} />
         )}

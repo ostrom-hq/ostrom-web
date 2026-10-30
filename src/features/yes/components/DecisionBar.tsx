@@ -36,7 +36,9 @@ export function DecisionBar({ ask, viewer, decision }: DecisionBarProps): ReactE
       {ask.you?.selfApproval === true ? (
         <Banner tag={t('yes.act.onlyApproverTag')}>{t('yes.act.onlyApprover')}</Banner>
       ) : null}
-      {viewer === undefined ? null : <p className="ys-small ys-meta">{t('yes.act.signedAs', { login: viewer })}</p>}
+      {viewer === undefined ? null : (
+        <p className="ys-small ys-meta">{t('yes.act.signedAs', { login: viewer })}</p>
+      )}
       <div className="ys-act__buttons">
         <Button
           variant="danger"
