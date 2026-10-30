@@ -24,7 +24,9 @@ get /api/health | grep -q '"status":"ok"' || fail "/api/ proxied to the server"
 cfg=$(get /config.js)
 echo "$cfg" | grep -q '^window.__OSTROM_CONFIG__={"OSTROM_API_URL":"https://api.example.com","OSTROM_APP_URL":"https://app.example.com/\\"x"};$' \
   || fail "config.js: $cfg"
-curl -fsSI http://127.0.0.1:18080/ | grep -qi '^x-frame-options: DENY' || fail "security headers"
+for path in / /config.js /some/route; do
+  curl -fsSI "http://127.0.0.1:18080$path" | grep -qi '^x-frame-options: DENY' || fail "security headers on $path"
+done
 if curl -fsS -o /dev/null http://127.0.0.1:18080/assets/missing.js; then fail "missing asset must be 404"; fi
 if docker exec web sh -c 'ls /usr/share/nginx/html/assets/*.map' >/dev/null 2>&1; then fail "source maps shipped"; fi
 echo "web image smoke test: ok"

@@ -6,10 +6,7 @@ server {
     root /usr/share/nginx/html;
     server_tokens off;
 
-    add_header X-Content-Type-Options nosniff always;
-    add_header Referrer-Policy strict-origin-when-cross-origin always;
-    add_header X-Frame-Options DENY always;
-    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    include /etc/nginx/ostrom/security-headers.conf;
 
     location = /healthz {
         access_log off;
@@ -22,6 +19,7 @@ server {
         alias /var/run/ostrom/config.js;
         default_type application/javascript;
         add_header Cache-Control "no-store" always;
+        include /etc/nginx/ostrom/security-headers.conf;
     }
 
     # The API on the same origin: /api/v1/… → <server>/v1/…, streaming kept (SSE).
@@ -40,12 +38,14 @@ server {
     # Hashed assets: cached for a year.
     location /assets/ {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
+        include /etc/nginx/ostrom/security-headers.conf;
         try_files $uri =404;
     }
 
     # The single-page app: every other path serves index.html, never cached.
     location / {
         add_header Cache-Control "no-cache" always;
+        include /etc/nginx/ostrom/security-headers.conf;
         try_files $uri /index.html;
     }
 }

@@ -12,6 +12,7 @@ RUN pnpm build && find dist -name '*.map' -delete
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 USER root
 RUN rm -f /etc/nginx/conf.d/default.conf && mkdir -p /var/run/ostrom && chown 101:101 /var/run/ostrom
+COPY docker/security-headers.conf /etc/nginx/ostrom/security-headers.conf
 COPY docker/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --chmod=0755 docker/40-ostrom-config.sh /docker-entrypoint.d/40-ostrom-config.sh
 COPY --from=build /src/dist /usr/share/nginx/html
