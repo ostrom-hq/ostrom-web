@@ -157,8 +157,15 @@ export function useSignInNotice(): SignInNoticeViewModel {
   const notice = useAuthStore((auth) => auth.notice);
   const drop = useAuthStore((auth) => auth.dismiss);
   const changed = useAuthStore((auth) => auth.changed);
-  const me = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
-  const signedIn = meOf(me.data) !== undefined;
+  // Asked afresh and once: the switch of account rests on this answer, never on a cached or failed one.
+  const me = useQuery(ready(getMeOptions(), { retry: false }));
+  const known = !me.isFetching;
+  // Nobody is signed in only when the server says so (401, or 204 with no body); an error of any other kind may
+  // hide a session, so the link then waits for a yes.
+  const signedOut =
+    known &&
+    ((isApiFailure(me.error) && me.error.kind === 'unauthorized') ||
+      (me.isSuccess && meOf(me.data) === undefined));
   const mutation = useMutation({ ...exchangeSignInLinkMutation(), onSuccess: changed });
   const { mutate, reset } = mutation;
   // Spent once: the link leaves memory as it goes to the server, even when a screen mounts twice.
@@ -170,15 +177,18 @@ export function useSignInNotice(): SignInNoticeViewModel {
     [drop, mutate],
   );
   useEffect(() => {
-    if (link !== undefined && !me.isPending && !signedIn) exchange(link);
-  }, [link, me.isPending, signedIn, exchange]);
+    if (!signedOut) return;
+    // Read from the store, not the render: a second run of the effect (StrictMode) finds the link already spent.
+    const token = useAuthStore.getState().link;
+    if (token !== undefined) exchange(token);
+  }, [link, signedOut, exchange]);
   const dismiss = useCallback(() => {
     drop();
     reset();
   }, [drop, reset]);
   return {
     accept:
-      link !== undefined && signedIn
+      link !== undefined && known && !signedOut
         ? () => {
             exchange(link);
           }

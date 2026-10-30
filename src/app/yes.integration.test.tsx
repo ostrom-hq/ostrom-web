@@ -169,6 +169,38 @@ describe('the queue', () => {
     expect(router.state.location.href).not.toContain('opk_');
   });
 
+  it('takes a 204 with no body as nobody signed in, and exchanges the link at once', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
+    visit('/yes#signin=opk_test_12345678');
+    await vi.waitFor(() => {
+      expect(db.usedLinks).toEqual(['opk_test_12345678']);
+    });
+  });
+
+  it('asks before using a link when it cannot tell whether someone is signed in', async () => {
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    visit('/yes#signin=opk_test_12345678');
+    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(db.usedLinks).toEqual([]);
+  });
+
+  it('keeps everything as it was when the sign-out fails', async () => {
+    server.use(
+      http.post('*/api/v1/auth/logout', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    const generation = useAuthStore.getState().generation;
+    visit('/yes?signout');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    expect(useAuthStore.getState().generation).toBe(generation);
+    expect(db.signedIn).toBe(true);
+  });
+
   it('says it signs in while the link is exchanged', async () => {
     db.signedIn = false;
     server.use(http.post('*/api/v1/auth/link', async () => delay('infinite')));

@@ -13,8 +13,8 @@ export function saveFile(blob: Blob, name: string, doc: Document = document): vo
   doc.body.append(link);
   link.click();
   link.remove();
-  // The browser has started the download by now; the address of the file is let go on the next turn.
+  // Some browsers read the file after `click` returns: its address is let go a minute later, not at once.
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  }, 0);
+  }, 60_000);
 }

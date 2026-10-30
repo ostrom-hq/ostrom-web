@@ -21,7 +21,8 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(
     () =>
       useAuthStore.subscribe((auth, previous) => {
-        if (auth.generation !== previous.generation) queryClient.clear();
+        // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
+        if (auth.generation !== previous.generation) void queryClient.resetQueries();
       }),
     [queryClient],
   );

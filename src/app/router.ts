@@ -55,12 +55,16 @@ const yesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/yes',
   validateSearch: yesSearchSchema,
-  beforeLoad: ({ search, location }) => {
+  beforeLoad: async ({ search, location }) => {
     const signin = signInFromHash(location.hash);
-    dropFragment();
-    if (search.signout === true) void logout().then(useAuthStore.getState().changed);
-    else if (signin !== undefined) useAuthStore.getState().offer(signin);
-    else if (search.signin === undefined) return;
+    if (search.signout === true) {
+      // The page waits for the server: what it shows next is read as nobody, never as the account just ended.
+      const { error } = await logout();
+      if (error === undefined) useAuthStore.getState().changed();
+    } else if (signin !== undefined) {
+      dropFragment();
+      useAuthStore.getState().offer(signin);
+    } else if (search.signin === undefined) return;
     throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
   },
   component: YesQueueScreen,

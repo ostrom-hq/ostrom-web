@@ -3,6 +3,7 @@
 /**
  * The readable cookies the server sets with the session; the value goes back in `X-CSRF-Token` (double submit).
  * Over HTTPS the cookie is `__Host-` prefixed (Secure, no Domain, Path=/); in plain-HTTP development it is not.
+ * The page reads it, so the API is served from the console's own origin (the console image proxies `/api/v1`).
  */
 export const CSRF_COOKIES = ['__Host-ostrom_csrf', 'ostrom_csrf'] as const;
 export const CSRF_HEADER = 'X-CSRF-Token';

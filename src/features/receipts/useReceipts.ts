@@ -5,7 +5,7 @@ import {
   verifyReceiptOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import { client } from '@gen/api/client.gen';
-import type { Receipt, Verification } from '@gen/api/types.gen';
+import type { GetReceiptBundleData, Receipt, Verification } from '@gen/api/types.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -39,8 +39,8 @@ export interface ReceiptViewModel {
  */
 async function bundleOf(id: string): Promise<Blob> {
   const { data } = await client.get<{ 200: Blob }, unknown, true>({
-    url: '/api/v1/receipts/{id}/bundle',
-    path: { id },
+    url: '/api/v1/receipts/{id}/bundle' satisfies GetReceiptBundleData['url'],
+    path: { id } satisfies GetReceiptBundleData['path'],
     parseAs: 'blob',
     throwOnError: true,
   });
