@@ -8,7 +8,13 @@ import { currentStep, type SetupStep } from '../model';
 import type { SetupViewModel } from '../useOnboarding';
 
 /** Where each step is done in the console; a step only an owner or an admin can do says so to anyone else. */
-function actionOf(step: SetupStep, setup: SetupViewModel, label: string, onlyAdmins: string): ReactNode {
+function actionOf(
+  step: SetupStep,
+  setup: SetupViewModel,
+  label: string,
+  words: { readonly onlyAdmins: string; readonly undo: string },
+): ReactNode {
+  const { onlyAdmins } = words;
   const button = 'o-btn o-btn--secondary o-btn--md';
   switch (step.id) {
     case 'github':
@@ -41,8 +47,23 @@ function actionOf(step: SetupStep, setup: SetupViewModel, label: string, onlyAdm
         </Link>
       );
     case 'cli':
-      return step.state === 'done' ? null : (
-        <Button variant="secondary" onClick={setup.cliDone}>
+      // Nothing the console reads can tell: the person says so, and can take it back.
+      return step.state === 'done' ? (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setup.cliDone(false);
+          }}
+        >
+          {words.undo}
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setup.cliDone(true);
+          }}
+        >
           {label}
         </Button>
       );
@@ -63,7 +84,7 @@ export function SetupGuide({ setup }: { readonly setup: SetupViewModel }): React
         </h2>
         <span className="o-row__meta">
           {open === undefined
-            ? t('onboarding.guide.complete')
+            ? t('onboarding.guide.complete', { total: setup.steps.length })
             : t('onboarding.guide.progress', { done: setup.done, total: setup.steps.length })}
         </span>
         <progress className="o-setup__bar" max={setup.steps.length} value={setup.done}>
@@ -108,12 +129,10 @@ export function SetupGuide({ setup }: { readonly setup: SetupViewModel }): React
               ) : null}
             </span>
             <span className="o-setup__action">
-              {actionOf(
-                step,
-                setup,
-                t(`onboarding.steps.${step.id}.action`),
-                t('onboarding.guide.onlyAdmins'),
-              )}
+              {actionOf(step, setup, t(`onboarding.steps.${step.id}.action`), {
+                onlyAdmins: t('onboarding.guide.onlyAdmins'),
+                undo: t('onboarding.steps.cli.undo'),
+              })}
             </span>
           </li>
         ))}

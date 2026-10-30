@@ -42,6 +42,8 @@ export interface InvitationViewModel {
   readonly accepting: boolean;
   /** The person is already in the organization (the server answers 409). */
   readonly already: boolean;
+  /** The organization is being opened. */
+  readonly entering: boolean;
   /**
    * The server refused this account. An e-mail invitation for another address answers 404, as a dead one does: only
    * an e-mail invitation can be refused, a link that answers 404 is dead.
@@ -70,6 +72,7 @@ export function useInvitation(): InvitationViewModel {
     },
   });
   const accept = useMutation(acceptInvitationMutation());
+  const [entering, setEntering] = useState(false);
   /** Once joined: the organization is the person's choice, kept with their login, and the console opens. */
   const joined = useCallback(
     async (org: OrgView | string, login: string) => {
@@ -143,6 +146,7 @@ export function useInvitation(): InvitationViewModel {
             login === undefined
               ? undefined
               : () => {
+                  setEntering(true);
                   void joined(seen.orgSlug, login);
                 },
         }
@@ -153,6 +157,7 @@ export function useInvitation(): InvitationViewModel {
     signedIn: me.isPending ? undefined : viewer !== undefined,
     accepting: accept.isPending || accept.isSuccess,
     already,
+    entering,
     refused,
     failure: dead ? undefined : (previewFailure ?? (already || refused ? undefined : acceptFailure)),
   };

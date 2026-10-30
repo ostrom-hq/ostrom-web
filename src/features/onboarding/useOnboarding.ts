@@ -45,8 +45,11 @@ export interface CreateOrgViewModel {
   /** The short name asked for is someone else's. */
   readonly slugTaken: boolean;
   readonly failure: Error | undefined;
-  /** Forgets the last refusal, once what was refused is changed. */
-  readonly edited: () => void;
+  /**
+   * Forgets the last refusal once what was refused changes: any field for a failure, only the short name for a taken
+   * one (only a chosen short name can be taken). Nothing while the organization is being created.
+   */
+  readonly edited: (field: 'name' | 'slug') => void;
 }
 
 /** Creates the organization, acts in it at once, and reads every list of organizations again. */
@@ -85,7 +88,9 @@ export function useCreateOrg(): CreateOrgViewModel {
     creating: mutation.isPending || mutation.isSuccess,
     slugTaken,
     failure: slugTaken ? undefined : failure,
-    edited: reset,
+    edited: (field) => {
+      if (mutation.isError && (field === 'slug' || !slugTaken)) reset();
+    },
   };
 }
 
@@ -104,8 +109,8 @@ export interface SetupViewModel {
   readonly hidden: boolean;
   readonly hide: () => void;
   readonly show: () => void;
-  /** Says the CLI is set up. */
-  readonly cliDone: () => void;
+  /** Says the CLI is set up, or not yet after all. */
+  readonly cliDone: (done: boolean) => void;
 }
 
 /**
@@ -151,9 +156,10 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
       safeLocalStorage.removeItem(key);
       setHidden(false);
     },
-    cliDone: () => {
-      safeLocalStorage.setItem(cliKey, '1');
-      setCli(true);
+    cliDone: (done) => {
+      if (done) safeLocalStorage.setItem(cliKey, '1');
+      else safeLocalStorage.removeItem(cliKey);
+      setCli(done);
     },
   };
 }

@@ -153,13 +153,16 @@ describe('creating an organization', () => {
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
     expect(await screen.findByText('This short name is taken. Choose another.')).toBeInTheDocument();
     expect(slug).toHaveAttribute('aria-invalid', 'true');
-    // Changed, it is no longer the one refused.
+    // The name changed, the short name refused did not: still said.
+    await user.type(screen.getByRole('textbox', { name: 'Organization name' }), ' Labs');
+    expect(screen.getByText('This short name is taken. Choose another.')).toBeInTheDocument();
+    // The short name changed: no longer the one refused.
     await user.type(slug, 'x');
     expect(screen.queryByText('This short name is taken. Choose another.')).toBeNull();
     await user.clear(slug);
     await user.type(slug, 'acme-labs');
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Acme' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Labs' })).toBeInTheDocument();
     expect(db.slugs[db.organization.id]).toBe('acme-labs');
   });
 
@@ -202,8 +205,16 @@ describe('creating an organization', () => {
     await user.type(await screen.findByRole('textbox', { name: 'Organization name' }), 'Wayne');
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('creation is down');
+    // Any change forgets a failure.
+    const name = screen.getByRole('textbox', { name: 'Organization name' });
+    await user.type(name, ' Inc');
+    expect(screen.queryByRole('alert')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Create the organization' }));
     expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
+    // A change while it is created sends nothing more.
+    await user.type(name, 'x');
+    expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
+    expect(answer).toBe(2);
   });
 });
 
@@ -295,13 +306,15 @@ describe('the setup guide', () => {
     const section = await guide();
     expect(await within(section).findByText('5 of 6 done')).toBeInTheDocument();
     await user.click(within(section).getByRole('button', { name: 'It is set up' }));
-    expect(
-      within(section).getByText('All set: protected agent changes now wait for a yes.'),
-    ).toBeInTheDocument();
+    expect(within(section).getByText('All 6 done')).toBeInTheDocument();
     expect(step(section, 'Install the CLI')).toHaveTextContent('(done)');
     expect(within(section).queryByRole('button', { name: 'It is set up' })).toBeNull();
     expect(section.querySelector('[aria-current]')).toBeNull();
     expect(localStorage.getItem(`${GUIDE_CLI_KEY}.${ACME}`)).toBe('1');
+    // Said too soon: taken back.
+    await user.click(within(section).getByRole('button', { name: 'Not yet' }));
+    expect(within(section).getByText('5 of 6 done')).toBeInTheDocument();
+    expect(localStorage.getItem(`${GUIDE_CLI_KEY}.${ACME}`)).toBeNull();
   });
 
   it('counts the invitations waiting as a team invited', async () => {

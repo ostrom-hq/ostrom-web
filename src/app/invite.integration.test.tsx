@@ -127,7 +127,15 @@ describe('the invitation page', () => {
     expect(await screen.findByText('You are already a member of Initech.')).toBeInTheDocument();
     expect(sessionStorage.getItem(INVITE_TOKEN_KEY)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Join Initech' })).toBeNull();
+    // The organizations are read again before it is opened: the button holds meanwhile.
+    server.use(
+      http.get('*/api/v1/orgs', async () => {
+        await delay(100);
+        return undefined;
+      }),
+    );
     await user.click(screen.getByRole('button', { name: 'Open Initech' }));
+    expect(screen.getByRole('button', { name: 'Open Initech' })).toBeDisabled();
     await vi.waitFor(() => {
       expect(router.state.location.pathname).toBe('/');
     });
@@ -178,7 +186,7 @@ describe('the invitation page', () => {
     await user.click(screen.getByRole('button', { name: 'Join Acme' }));
     expect(
       await screen.findByText(
-        'This invitation was sent to another e-mail address. Sign in with the account that holds it.',
+        'This invitation was sent to another e-mail address, or no longer works. Sign in with the account it was sent to, or ask for a new one.',
       ),
     ).toBeInTheDocument();
     // Kept for the account that holds it.

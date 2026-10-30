@@ -899,7 +899,7 @@ export const en = {
       title: 'Set up',
       lead: 'From an empty organization to a first agent change approved.',
       progress: '{{done}} of {{total}} done',
-      complete: 'All set: protected agent changes now wait for a yes.',
+      complete: 'All {{total}} done',
       onlyAdmins: 'An owner or an admin does this.',
       done: '(done)',
       hide: 'Hide the guide',
@@ -935,6 +935,7 @@ export const en = {
         title: 'Install the CLI',
         body: 'Each developer signs in once, then runs their agent through Ostrom.',
         action: 'It is set up',
+        undo: 'Not yet',
       },
     },
     cli: {
@@ -960,7 +961,8 @@ export const en = {
     alreadyTag: 'Already in',
     already: 'You are already a member of {{org}}.',
     refusedTag: 'Not for this account',
-    refused: 'This invitation was sent to another e-mail address. Sign in with the account that holds it.',
+    refused:
+      'This invitation was sent to another e-mail address, or no longer works. Sign in with the account it was sent to, or ask for a new one.',
     failedTag: 'Not joined',
     missing: {
       title: 'No invitation here',

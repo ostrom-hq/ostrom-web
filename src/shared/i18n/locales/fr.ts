@@ -918,7 +918,7 @@ export const fr = {
       title: 'Mise en route',
       lead: 'D’une organisation vide à un premier changement d’agent validé.',
       progress: '{{done}} sur {{total}} faites',
-      complete: 'Tout est prêt : les changements protégés des agents attendent maintenant un oui.',
+      complete: 'Les {{total}} sont faites',
       onlyAdmins: 'Un propriétaire ou un admin s’en charge.',
       done: '(fait)',
       hide: 'Masquer le guide',
@@ -954,6 +954,7 @@ export const fr = {
         title: 'Installer la CLI',
         body: 'Chaque développeur se connecte une fois, puis lance son agent à travers Ostrom.',
         action: 'C’est fait',
+        undo: 'Pas encore',
       },
     },
     cli: {
@@ -980,7 +981,7 @@ export const fr = {
     already: 'Tu es déjà membre de {{org}}.',
     refusedTag: 'Pas pour ce compte',
     refused:
-      'Cette invitation a été envoyée à une autre adresse e-mail. Connecte-toi avec le compte qui la détient.',
+      'Cette invitation a été envoyée à une autre adresse e-mail, ou ne marche plus. Connecte-toi avec le compte qui l’a reçue, ou demande-en une nouvelle.',
     failedTag: 'Non rejoint',
     missing: {
       title: 'Pas d’invitation ici',
