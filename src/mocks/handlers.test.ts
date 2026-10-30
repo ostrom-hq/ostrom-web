@@ -46,12 +46,19 @@ import {
   updateMember,
   updateRule,
   verifyReceipt,
+  verifySignInEmail,
 } from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { initialApprovals } from '@/mocks/fixtures/approvals';
-import { createHandlers, resetMockDb, selfApprovalRefusal } from '@/mocks/handlers';
+import {
+  createHandlers,
+  DEMO_EMAIL_TOKEN,
+  FRESH_SIGN_IN_MS,
+  resetMockDb,
+  selfApprovalRefusal,
+} from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -143,6 +150,35 @@ describe('mock API', () => {
       throwOnError: true,
     });
     expect([data.approval.status, data.approval.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
+  });
+
+  it('asks for a fresh sign-in before a yes once the sign-in is five minutes old, never before a no', async () => {
+    let clock = NOW.getTime();
+    server.use(...createHandlers(db, () => new Date(clock)));
+    clock += FRESH_SIGN_IN_MS;
+    const stale = await failureOf(async () =>
+      answerApproval({
+        ...merge,
+        body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+        throwOnError: true,
+      }),
+    );
+    expect(isApiFailure(stale) && [stale.status, stale.code]).toEqual([403, 'step_up_required']);
+    await verifySignInEmail({ body: { token: DEMO_EMAIL_TOKEN }, throwOnError: true });
+    clock += FRESH_SIGN_IN_MS - 1;
+    const { data } = await answerApproval({
+      ...merge,
+      body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+      throwOnError: true,
+    });
+    expect(data.approval.status).toBe('approved');
+    clock += 1;
+    const no = await answerApproval({
+      ...deploy,
+      body: { answer: 'reject', shownDigest: 'sha256:a91d0e44' },
+      throwOnError: true,
+    });
+    expect(no.data.approval.status).toBe('rejected');
   });
 
   it('refuses the asker’s own approval while another approver exists, and lets their refusal through', async () => {

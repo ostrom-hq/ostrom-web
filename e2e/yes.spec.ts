@@ -50,3 +50,26 @@ test('a sign-in link keeps the token in memory and leaves no trace in the addres
   const stored = origins.flatMap((origin) => origin.localStorage).map((entry) => entry.value);
   expect(stored.some((value) => value.includes('opk_e2e_token_123'))).toBe(false);
 });
+
+test('a yes from a sign-in five minutes old asks to sign in again, then goes through', async ({ page }) => {
+  await page.clock.install();
+  await page.goto('/yes/apr-merge-412');
+  await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
+  // The demo signed in when it opened: six minutes later, a yes needs a fresh sign-in (S2-54).
+  await page.clock.fastForward('06:00');
+  await page.getByRole('button', { name: /^Approve/ }).click();
+  const alert = page.getByRole('alert');
+  await expect(alert).toContainText('your sign-in is more than five minutes old');
+  await alert.getByRole('link', { name: 'Sign in again' }).click();
+  await expect(page).toHaveURL(/\/signin\?redirect=%2Fyes%2Fapr-merge-412$/);
+
+  await page.getByRole('textbox', { name: 'Your e-mail address' }).fill('maya@acme.dev');
+  await page.getByRole('button', { name: 'E-mail me a link' }).click();
+  await page.goto('/auth/email#token=ml_demo');
+  await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
+  await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
+  await page.getByRole('button', { name: /^Approve/ }).click();
+  await expect(page.getByRole('region', { name: 'Decision' })).toContainText(
+    'maya approved: Merge PR #412 into main',
+  );
+});
