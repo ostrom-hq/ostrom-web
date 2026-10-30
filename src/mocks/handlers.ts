@@ -459,8 +459,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       // The server's own checks: an invitation never makes an owner, and `invited` is a state, not a role.
       if (body.data.invites.some((invite) => invite.role === 'owner' || invite.role === 'invited'))
         return refusal(400, 'invalid_request', 'an invitation is for admin, approver or member');
+      if (
+        body.data.invites.some(
+          (invite) => invite.team !== undefined && !db.teams.some((team) => team.slug === invite.team),
+        )
+      )
+        return refusal(400, 'invalid_request', 'no such team');
+      // One invitation per login, whatever its case, and none for someone already in the organization.
       const known = new Set(db.members.map((member) => member.login.toLowerCase()));
-      const fresh = body.data.invites.filter((invite) => !known.has(invite.login.toLowerCase()));
+      const fresh = body.data.invites.filter((invite) => {
+        const login = invite.login.toLowerCase();
+        if (known.has(login)) return false;
+        known.add(login);
+        return true;
+      });
       db.members = [
         ...db.members,
         ...fresh.map((invite): Member => ({

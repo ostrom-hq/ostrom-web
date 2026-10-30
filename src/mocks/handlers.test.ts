@@ -376,10 +376,15 @@ describe('mock organization', () => {
     expect(isApiFailure(own) && own.code).toBe('own_role');
   });
 
-  it('invites new GitHub logins only, into a team if asked, and refuses an owner or nobody', async () => {
+  it('invites each new GitHub login once, into a team if it exists, and refuses an owner or nobody', async () => {
     const { data } = await inviteMembers({
       body: {
-        invites: [{ login: 'ana', role: 'member', team: 'release' }, { login: 'Theo' }, { login: 'bo' }],
+        invites: [
+          { login: 'ana', role: 'member', team: 'release' },
+          { login: 'Theo' },
+          { login: 'bo' },
+          { login: 'BO' },
+        ],
       },
       throwOnError: true,
     });
@@ -391,6 +396,10 @@ describe('mock organization', () => {
       inviteMembers({ body: { invites: [{ login: 'cy', role: 'owner' }] }, throwOnError: true }),
     );
     expect(isApiFailure(owner) && owner.status).toBe(400);
+    const team = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ login: 'cy', team: 'nowhere' }] }, throwOnError: true }),
+    );
+    expect(isApiFailure(team) && team.status).toBe(400);
     const nobody = await fetch('http://ostrom.test/api/v1/members/invites', {
       method: 'POST',
       body: '{"invites":[]}',

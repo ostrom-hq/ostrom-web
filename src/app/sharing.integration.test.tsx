@@ -65,7 +65,8 @@ describe('the artifacts', () => {
     expect(within(study).queryByRole('button', { name: 'Stop sharing with maya' })).toBeNull();
     const reader = within(study).getByRole('combobox', { name: 'Add a reader' });
     expect(within(reader).getByRole('option', { name: 'Lena Ortiz (lena)' })).toBeInTheDocument();
-    expect(within(reader).getByRole('option', { name: 'jo@acme.dev' })).toBeInTheDocument();
+    // jo has not accepted the invitation yet: no account to share with.
+    expect(within(reader).queryByRole('option', { name: 'jo' })).toBeNull();
     expect(within(reader).queryByRole('option', { name: 'theo' })).toBeNull();
     expect(within(study).getByRole('button', { name: 'Share' })).toBeDisabled();
     await user.selectOptions(reader, 'Samir Haddad (samir)');
@@ -141,6 +142,19 @@ describe('the artifacts', () => {
     expect(draft).toHaveTextContent('Anyone with the link');
     await user.click(within(draft).getByRole('button', { name: 'Versions and readers' }));
     expect(await within(draft).findByText('Anyone with its link reads it.')).toBeInTheDocument();
+  });
+
+  it('names a reader no member has any more, and lets the owner remove them', async () => {
+    const user = userEvent.setup();
+    const gone = '9dcf5a7e-81a2-4de4-9f70-718293a4b5c6';
+    db.artifactMembers['art-7'] = [MEMBER_IDS.maya, gone];
+    visit('/artifacts');
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    await user.click(await within(study).findByRole('button', { name: 'Stop sharing with A former member' }));
+    await vi.waitFor(() => {
+      expect(db.artifactMembers['art-7']).toEqual([MEMBER_IDS.maya]);
+    });
   });
 
   it('lists the readers of someone else’s artifact without buttons', async () => {

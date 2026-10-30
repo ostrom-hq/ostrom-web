@@ -10,6 +10,10 @@ export const ASSIGNABLE_ROLES = [
 ] as const satisfies readonly MemberRole[];
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
+/** The roles an invitation can carry: the server refuses `owner` (and `invited`, a state). */
+export const INVITABLE_ROLES = ['admin', 'approver', 'member'] as const satisfies readonly AssignableRole[];
+export type InvitableRole = (typeof INVITABLE_ROLES)[number];
+
 const ORDER: Readonly<Record<MemberRole, number>> = {
   owner: 0,
   admin: 1,
@@ -35,8 +39,11 @@ export interface ParsedInvites {
   readonly invalid: readonly string[];
 }
 
-/** GitHub's own rule: letters, digits and single inner hyphens, 39 characters at most. */
-const GITHUB_LOGIN = /^[a-z\d](?:[a-z\d]|-(?=[a-z\d])){0,38}$/;
+/**
+ * A light check, the server has the last word: letters, digits, single inner hyphens, and the underscore of the
+ * managed users of GitHub Enterprise (`ana_acme`), 100 characters at most.
+ */
+const GITHUB_LOGIN = /^[a-z\d](?:[a-z\d_]|-(?=[a-z\d_])){0,99}$/;
 
 /** What a person typed (commas, spaces or lines, `@` allowed), as distinct GitHub logins and what is not one. */
 export function parseInvites(text: string): ParsedInvites {

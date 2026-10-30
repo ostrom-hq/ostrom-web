@@ -4,18 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { ASSIGNABLE_ROLES, type AssignableRole, parseInvites } from '../model';
+import { INVITABLE_ROLES, type InvitableRole, parseInvites } from '../model';
 import type { InviteViewModel } from '../useMembers';
 
-function isAssignable(value: string): value is AssignableRole {
-  return ASSIGNABLE_ROLES.some((role) => role === value);
+function isInvitable(value: string): value is InvitableRole {
+  return INVITABLE_ROLES.some((role) => role === value);
 }
 
 /** Paste a list of addresses; what is not an address is shown before anything is sent. */
 export function InviteForm({ invite }: { readonly invite: InviteViewModel }): ReactElement {
   const { t } = useTranslation();
   const [text, setText] = useState('');
-  const [role, setRole] = useState<AssignableRole>('member');
+  const [role, setRole] = useState<InvitableRole>('member');
   const textId = useId();
   const roleId = useId();
   const { logins, invalid } = parseInvites(text);
@@ -57,11 +57,11 @@ export function InviteForm({ invite }: { readonly invite: InviteViewModel }): Re
             className="o-input o-select"
             value={role}
             onChange={(event) => {
-              if (isAssignable(event.target.value)) setRole(event.target.value);
+              if (isInvitable(event.target.value)) setRole(event.target.value);
             }}
           >
             {/* An invitation never makes an owner: the server refuses it. */}
-            {ASSIGNABLE_ROLES.filter((option) => option !== 'owner').map((option) => (
+            {INVITABLE_ROLES.map((option) => (
               <option key={option} value={option}>
                 {t(`members.role.${option}`)}
               </option>

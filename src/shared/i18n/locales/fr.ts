@@ -681,6 +681,7 @@ export const fr = {
       readersTeam: 'Toute l’organisation le lit, et les personnes ci-dessous.',
       readersLink: 'Toute personne qui a son lien le lit.',
       readersNone: 'Personne d’autre sur la liste.',
+      formerMember: 'Un ancien membre',
       membersFailed: 'Impossible d’ajouter un lecteur : les membres n’ont pas pu être lus ({{reason}}).',
       unshare: 'Ne plus partager',
       unshareLabel: 'Ne plus partager avec {{login}}',

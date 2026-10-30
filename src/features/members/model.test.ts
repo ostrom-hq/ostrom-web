@@ -27,9 +27,9 @@ describe('displayName and sortMembers', () => {
 
 describe('parseInvites', () => {
   it('splits on commas, spaces and lines, drops duplicates and sets aside what is not a GitHub login', () => {
-    expect(parseInvites('@Ana, bo-dev\nana  no_pe; -x; @')).toEqual({
-      logins: ['ana', 'bo-dev'],
-      invalid: ['no_pe', '-x'],
+    expect(parseInvites('@Ana, bo-dev\nana  ana_acme; no.pe; -x; @')).toEqual({
+      logins: ['ana', 'bo-dev', 'ana_acme'],
+      invalid: ['no.pe', '-x'],
     });
     expect(parseInvites('  ')).toEqual({ logins: [], invalid: [] });
   });

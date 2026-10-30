@@ -672,6 +672,7 @@ export const en = {
       readersTeam: 'Everyone in the organization reads it, and the people below.',
       readersLink: 'Anyone with its link reads it.',
       readersNone: 'Nobody else is on the list.',
+      formerMember: 'A former member',
       membersFailed: 'No reader can be added: the members could not be read ({{reason}}).',
       unshare: 'Stop sharing',
       unshareLabel: 'Stop sharing with {{login}}',

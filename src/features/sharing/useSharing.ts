@@ -49,6 +49,8 @@ export interface ArtifactDetailViewModel {
   readonly readers: readonly string[] | undefined;
   /** The organization's members, to name the readers (ids) and pick a new one: never in the way when missing. */
   readonly members: readonly Member[] | undefined;
+  /** The members came back or failed: the readers are named only then, never shown as ids in between. */
+  readonly membersSettled: boolean;
   /** Why the members could not be read: the owner sees it where the form to add a reader goes. */
   readonly membersFailure: Error | undefined;
   readonly failure: Error | undefined;
@@ -62,7 +64,8 @@ export function newestFirst(versions: readonly ArtifactVersion[]): ArtifactVersi
 export function useArtifactDetail(id: string): ArtifactDetailViewModel {
   const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
   const readers = useQuery(ready(listArtifactMembersOptions({ path: { id } })));
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000 }));
+  // Only names: a refusal is not asked again, the detail opens without them.
+  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
   const sorted = useMemo(
     () => (versions.data === undefined ? undefined : newestFirst(versions.data.items)),
     [versions.data],
@@ -71,6 +74,7 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
     versions: sorted,
     readers: readers.data?.members,
     members: members.data?.items,
+    membersSettled: !members.isPending,
     membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),
   };

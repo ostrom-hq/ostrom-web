@@ -41,7 +41,7 @@ describe('the members screen', () => {
       'Maya Lind (you)',
       'Samir Haddad',
       'theo',
-      'jo@acme.dev',
+      'jo',
     ]);
     expect(row(2)).toHaveTextContent('@samir · team billing · team release');
     expect(row(3)).toHaveTextContent('theo@acme.dev · team billing');

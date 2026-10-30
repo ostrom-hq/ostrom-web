@@ -2,6 +2,7 @@
 import type { Artifact } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useViewer } from '@/shared/auth/useViewer';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
 import type { ArtifactChangeViewModel } from '../useSharing';
@@ -28,16 +29,22 @@ const ACCESS_NOTE = {
 export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const detail = useArtifactDetail(artifact.id);
+  const viewer = useViewer();
   const [reader, setReader] = useState('');
   const readerId = useId();
   if (detail.failure !== undefined) return <p className="o-row__meta">{detail.failure.message}</p>;
-  if (detail.versions === undefined || detail.readers === undefined)
+  if (detail.versions === undefined || detail.readers === undefined || !detail.membersSettled)
     return <p className="o-row__meta">{t('sharing.artifacts.loading')}</p>;
   const readers = detail.readers;
   const members = detail.members;
-  const loginOf = (id: string): string => members?.find((member) => member.id === id)?.login ?? id;
+  // Without the members, a reader is its id; with them, an id no member has is someone who left.
+  const nameOf = (id: string): string =>
+    members === undefined
+      ? id
+      : (members.find((member) => member.id === id)?.login ?? t('sharing.artifacts.formerMember'));
+  // Never its owner, nor someone already reading it, nor an invitation not accepted yet (no account to share with).
   const candidates = (members ?? []).filter(
-    (member) => member.login !== artifact.owner && !readers.includes(member.id),
+    (member) => member.login !== artifact.owner && member.role !== 'invited' && !readers.includes(member.id),
   );
   const busy = change?.pending === artifact.id;
   return (
@@ -72,13 +79,13 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
       ) : (
         <ul className="o-rows">
           {readers.map((id) => {
-            const login = loginOf(id);
+            const login = nameOf(id);
             return (
               <li key={id} className="o-row">
                 <span className="o-row__main">
                   <span className="o-row__title">{login}</span>
                 </span>
-                {change === undefined || login === artifact.owner ? null : (
+                {change === undefined || id === viewer.memberId ? null : (
                   <Button
                     variant="ghost"
                     disabled={busy}
