@@ -11,7 +11,7 @@ import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { DecisionsScreen } from '@/features/decisions';
-import { HomeScreen } from '@/features/home';
+import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
 import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
 import { RulesScreen } from '@/features/rules';
@@ -195,8 +195,28 @@ const emailLinkRoute = createRoute({
   component: EmailLinkScreen,
 });
 
+/**
+ * `/invite#token=…` is the link an invitation carries (the server's `$consoleUrl/invite#token=…`). The token leaves
+ * the address bar before the page renders and waits in this tab while its person signs in (onboarding/inviteLink.ts).
+ */
+const inviteRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/invite',
+  // Read signed out as well: the preview needs no session.
+  staticData: { anonymous: true },
+  beforeLoad: ({ location }) => {
+    const token = fragmentValue(location.hash, 'token');
+    if (token === undefined) return;
+    dropFragment();
+    inviteToken.hold(token);
+    throw redirect({ to: '/invite', hash: '', replace: true });
+  },
+  component: InviteScreen,
+});
+
 export const routeTree = rootRoute.addChildren([
   homeRoute,
+  inviteRoute,
   signInRoute,
   emailLinkRoute,
   yesRoute,
