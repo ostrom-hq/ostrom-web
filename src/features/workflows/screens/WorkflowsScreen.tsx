@@ -8,10 +8,11 @@ import { failureOf } from '@/shared/api/failureOf';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { approvalSteps, STATUS_TONES } from '../model';
+import { ready } from '@/shared/api/ready';
 
 export function WorkflowsScreen(): ReactElement {
   const { t } = useTranslation();
-  const query = useQuery(listWorkflowsOptions());
+  const query = useQuery(ready(listWorkflowsOptions()));
   return (
     <Screen title={t('workflows.title')} lead={t('workflows.lead')}>
       <LoadState data={query.data?.items} failure={failureOf(query.error)}>

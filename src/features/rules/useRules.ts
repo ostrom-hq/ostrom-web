@@ -11,6 +11,7 @@ import type { Rule, RuleStatus, RuleStrength } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { ready } from '@/shared/api/ready';
 
 export interface RulesViewModel {
   readonly rules: readonly Rule[] | undefined;
@@ -20,7 +21,7 @@ export interface RulesViewModel {
 }
 
 export function useRules(): RulesViewModel {
-  const rules = useQuery(listRulesOptions());
+  const rules = useQuery(ready(listRulesOptions()));
   const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
   const role = me.data?.member?.role;
   return {

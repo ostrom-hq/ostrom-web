@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { failureOf } from '@/shared/api/failureOf';
 import { formatAbsolute } from '@/shared/lib/time';
 import { LoadState, Screen } from '@/shared/ui/Screen';
+import { ready } from '@/shared/api/ready';
 
 const ACTIONS = ['accepted', 'rejected', 'edited', 'proposed'] as const;
 const KINDS = ['rule', 'workflow', 'owner', 'policy'] as const;
@@ -18,7 +19,7 @@ function known<T extends string>(list: readonly T[], value: string): value is T 
 /** Every signed decision on a rule, a workflow, an owner or a policy, newest first, each with its receipt. */
 export function DecisionsScreen(): ReactElement {
   const { t, i18n } = useTranslation();
-  const query = useQuery(listDecisionsOptions());
+  const query = useQuery(ready(listDecisionsOptions()));
   return (
     <Screen title={t('decisions.title')} lead={t('decisions.lead')}>
       <LoadState data={query.data?.items} failure={failureOf(query.error)}>
