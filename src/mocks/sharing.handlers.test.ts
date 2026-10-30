@@ -30,7 +30,7 @@ afterAll(() => {
   server.close();
 });
 
-async function statusOf(call: () => Promise<unknown>): Promise<number | false> {
+async function statusOf(call: () => Promise<unknown>): Promise<number | false | undefined> {
   try {
     await call();
   } catch (error) {

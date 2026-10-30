@@ -32,7 +32,10 @@ export function sortBudgets(budgets: readonly Budget[]): Budget[] {
     const index = BUDGET_SCOPES.findIndex((scope) => scope === budget.scope);
     return index === -1 ? BUDGET_SCOPES.length : index;
   };
-  return [...budgets].sort((a, b) => rank(a) - rank(b) || (a.subject ?? '').localeCompare(b.subject ?? ''));
+  return [...budgets].sort((a, b) => {
+    const byScope = rank(a) - rank(b);
+    return byScope !== 0 ? byScope : (a.subject ?? '').localeCompare(b.subject ?? '');
+  });
 }
 
 /** The budget to send, or undefined while the form does not describe one yet. */

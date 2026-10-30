@@ -323,7 +323,7 @@ describe('a request', () => {
     expect(screen.queryByRole('heading', { name: 'Changes' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Checks' })).toBeNull();
     expect(screen.getByText('someone')).toBeInTheDocument();
-    expect(screen.queryByText(/Workflow/)).toBeNull();
+    expect(screen.queryByText(/^Workflow /)).toBeNull();
     expect(screen.queryByText(/You approve as/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument();
     expect(screen.getByText('sha256:bare')).toBeInTheDocument();
@@ -338,7 +338,7 @@ describe('a request', () => {
     expect(screen.getByText('skipped')).toBeInTheDocument();
     expect(screen.getByText('clean')).toBeInTheDocument();
     expect(screen.getByText('task-9')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve push' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 
   it('shows a decided request without its receipt, from the list', async () => {

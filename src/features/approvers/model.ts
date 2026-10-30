@@ -45,7 +45,10 @@ export function byPerson(points: readonly ApprovalPoint[]): PersonApprovals[] {
   }
   return [...people.entries()]
     .map(([login, list]) => ({ login, points: list }))
-    .sort((a, b) => b.points.length - a.points.length || a.login.localeCompare(b.login, 'en'));
+    .sort((a, b) => {
+      const byCount = b.points.length - a.points.length;
+      return byCount !== 0 ? byCount : a.login.localeCompare(b.login, 'en');
+    });
 }
 
 /** A gate nobody may approve stops the agent for good: it is shown first, as a problem. */

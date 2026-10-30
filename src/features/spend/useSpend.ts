@@ -52,7 +52,9 @@ export function useBudgetChange(): BudgetChangeViewModel {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...setBudgetMutation(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() });
+    },
   });
   const { mutate } = mutation;
   const save = useCallback(

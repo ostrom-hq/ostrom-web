@@ -68,10 +68,9 @@ export interface SessionChangeViewModel {
 
 export function useSessionChange(): SessionChangeViewModel {
   const queryClient = useQueryClient();
-  const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: listCloudSessionsQueryKey() }),
-    [queryClient],
-  );
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listCloudSessionsQueryKey() });
+  }, [queryClient]);
   const create = useMutation({ ...createCloudSessionMutation(), onSuccess: refresh });
   const halt = useMutation({ ...stopCloudSessionMutation(), onSettled: refresh });
   const { mutate: createMutate, reset: resetCreate } = create;
@@ -145,18 +144,18 @@ export interface AutomationChangeViewModel {
 
 export function useAutomationChange(): AutomationChangeViewModel {
   const queryClient = useQueryClient();
-  const refresh = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: listAutomationsQueryKey() }),
-    [queryClient],
-  );
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listAutomationsQueryKey() });
+  }, [queryClient]);
   const enable = useMutation({ ...enableAutomationMutation(), onSettled: refresh });
   const disable = useMutation({ ...disableAutomationMutation(), onSettled: refresh });
   const test = useMutation({
     ...testAutomationMutation(),
-    onSuccess: (_data, variables) =>
-      queryClient.invalidateQueries({
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
         queryKey: listAutomationRunsQueryKey({ path: { id: variables.path.id } }),
-      }),
+      });
+    },
   });
   const rotation = useMutation(rotateAutomationSecretMutation());
   const { mutate: enableMutate, reset: resetEnable } = enable;

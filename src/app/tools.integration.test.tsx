@@ -87,7 +87,7 @@ describe('the MCP servers', () => {
   it('adds a server once what is typed is right, then clears the form', async () => {
     const user = userEvent.setup();
     visit('/mcp');
-    const form = screen.getByRole('region', { name: 'Add a server' });
+    const form = await screen.findByRole('region', { name: 'Add a server' });
     const add = within(form).getByRole('button', { name: 'Add the server' });
     await user.click(add);
     expect(within(form).getByText(/The name is lowercase/)).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('the MCP servers', () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/mcp/servers', async () => delay('infinite')));
     visit('/mcp');
-    const form = screen.getByRole('region', { name: 'Add a server' });
+    const form = await screen.findByRole('region', { name: 'Add a server' });
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'linear');
     await user.type(within(form).getByRole('textbox', { name: 'URL' }), 'https://a.dev');
     await user.click(within(form).getByRole('button', { name: 'Add the server' }));
@@ -126,7 +126,7 @@ describe('the MCP servers', () => {
   it('says when a server with that name exists', async () => {
     const user = userEvent.setup();
     visit('/mcp');
-    const form = screen.getByRole('region', { name: 'Add a server' });
+    const form = await screen.findByRole('region', { name: 'Add a server' });
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'linear');
     await user.type(within(form).getByRole('textbox', { name: 'URL' }), 'https://a.dev');
     await user.click(within(form).getByRole('button', { name: 'Add the server' }));
@@ -229,7 +229,7 @@ describe('the secrets', () => {
   it('saves a new secret only with a right name and a value, and empties the value', async () => {
     const user = userEvent.setup();
     visit('/secrets');
-    const form = screen.getByRole('region', { name: 'Add a secret' });
+    const form = await screen.findByRole('region', { name: 'Add a secret' });
     const save = within(form).getByRole('button', { name: 'Save the secret' });
     expect(save).toBeDisabled();
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'npm token');
@@ -250,7 +250,7 @@ describe('the secrets', () => {
     const user = userEvent.setup();
     server.use(http.post('*/api/v1/secrets', async () => delay('infinite')));
     visit('/secrets');
-    const form = screen.getByRole('region', { name: 'Add a secret' });
+    const form = await screen.findByRole('region', { name: 'Add a secret' });
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'A');
     await user.type(within(form).getByLabelText('Value'), 'v');
     await user.click(within(form).getByRole('button', { name: 'Save the secret' }));
@@ -260,7 +260,7 @@ describe('the secrets', () => {
   it('says when a secret with that name exists', async () => {
     const user = userEvent.setup();
     visit('/secrets');
-    const form = screen.getByRole('region', { name: 'Add a secret' });
+    const form = await screen.findByRole('region', { name: 'Add a secret' });
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'LINEAR_TOKEN');
     await user.type(within(form).getByLabelText('Value'), 'v');
     await user.click(within(form).getByRole('button', { name: 'Save the secret' }));
