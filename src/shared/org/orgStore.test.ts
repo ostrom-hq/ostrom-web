@@ -128,20 +128,31 @@ describe('useOrgStore', () => {
 
   it('follows a choice made or dropped in another tab, and nothing else stored there', () => {
     const before = useOrgStore.getState().generation;
+    const event = (key: string | null): StorageEvent => new StorageEvent('storage', { key });
+    // Half written: the id first, its owner in the next event.
     window.localStorage.setItem(ORG_STORAGE_KEY, 'org-globex');
-    window.localStorage.setItem(ORG_OWNER_STORAGE_KEY, 'maya');
-    followOtherTab(new StorageEvent('storage', { key: 'ostrom.theme' }));
+    followOtherTab(event(ORG_STORAGE_KEY));
     expect(useOrgStore.getState().current).toBeUndefined();
-    window.dispatchEvent(new StorageEvent('storage', { key: ORG_STORAGE_KEY }));
+    window.localStorage.setItem(ORG_OWNER_STORAGE_KEY, 'maya');
+    followOtherTab(event('ostrom.theme'));
+    expect(useOrgStore.getState().current).toBeUndefined();
+    followOtherTab(event(ORG_OWNER_STORAGE_KEY));
     expect([useOrgStore.getState().current, useOrgStore.getState().owner]).toEqual(['org-globex', 'maya']);
     expect(useOrgStore.getState().generation).toBe(before + 1);
     // The same again changes nothing.
-    followOtherTab(new StorageEvent('storage', { key: ORG_OWNER_STORAGE_KEY }));
+    followOtherTab(event(ORG_STORAGE_KEY));
     expect(useOrgStore.getState().generation).toBe(before + 1);
-    // Storage cleared in another tab.
+    // Dropped in another tab (storage cleared).
     window.localStorage.clear();
-    followOtherTab(new StorageEvent('storage', { key: null }));
+    followOtherTab(event(null));
     expect(useOrgStore.getState().current).toBeUndefined();
     expect(useOrgStore.getState().generation).toBe(before + 2);
+  });
+
+  it('keeps the only organization of this tab when nothing is chosen anywhere', () => {
+    useOrgStore.getState().only('org-acme');
+    const before = useOrgStore.getState().generation;
+    followOtherTab(new StorageEvent('storage', { key: null }));
+    expect([useOrgStore.getState().current, useOrgStore.getState().generation]).toEqual(['org-acme', before]);
   });
 });

@@ -210,6 +210,29 @@ describe('the organization the console acts in', () => {
     expect(picker).toHaveTextContent('You are no longer a member of the organization chosen last.');
   });
 
+  it('follows the organization chosen in another tab', async () => {
+    db.otherOrganizations = [globex];
+    chosenBefore(db.organization.id, 'maya');
+    visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    act(() => {
+      window.localStorage.setItem(ORG_STORAGE_KEY, globex.id);
+      window.dispatchEvent(new StorageEvent('storage', { key: ORG_STORAGE_KEY }));
+    });
+    expect(await screen.findByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    expect(await screen.findByText('No artifact yet.')).toBeInTheDocument();
+  });
+
+  it('keeps the organization of someone signed in who opens the sign-in page', async () => {
+    const router = visit('/artifacts');
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    await act(async () => {
+      await router.navigate({ to: '/signin' });
+    });
+    expect(await screen.findByRole('textbox', { name: 'Your e-mail address' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+  });
+
   it('asks nobody who is signing in who they are', async () => {
     const asked = watch('/api/v1/auth/me');
     visit('/signin');

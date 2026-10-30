@@ -6,6 +6,13 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
+
+declare module '@tanstack/react-router' {
+  interface StaticDataRouteOption {
+    /** A page for people not signed in yet: the top bar asks nobody who they are. */
+    readonly anonymous?: boolean;
+  }
+}
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
@@ -165,6 +172,7 @@ export const signInSearchSchema = z.object({ redirect: z.string().optional().cat
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/signin',
+  staticData: { anonymous: true },
   validateSearch: signInSearchSchema,
   component: SignInScreen,
 });
@@ -176,6 +184,7 @@ const signInRoute = createRoute({
 const emailLinkRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/auth/email',
+  staticData: { anonymous: true },
   beforeLoad: ({ location }) => {
     const token = fragmentValue(location.hash, 'token');
     if (token === undefined) return;

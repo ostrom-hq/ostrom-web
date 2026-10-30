@@ -7,7 +7,7 @@ import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
 import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
-import { useOrgStore } from '@/shared/org/orgStore';
+import { followOtherTab, useOrgStore } from '@/shared/org/orgStore';
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -36,6 +36,15 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(
     () =>
       useOrgStore.subscribe((org, previous) => {
+        // A call in the organization named found nothing: the person's list is read again, if it is on screen. A
+        // refetch already under way is joined, not restarted. The contract answers 404 alike for "not a member"
+        // and "no such thing", so a plain not-found costs one list request too.
+        if (org.doubts !== previous.doubts) {
+          void queryClient.refetchQueries(
+            { queryKey: listMyOrganizationsQueryKey(), type: 'active' },
+            { cancelRefetch: false },
+          );
+        }
         if (org.generation === previous.generation) return;
         // Another organization has another queue: nothing in it is new because of what the other one showed.
         resetArrivals();
@@ -44,6 +53,13 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
       }),
     [queryClient],
   );
+  // A choice made in another tab of the same browser is followed here.
+  useEffect(() => {
+    window.addEventListener('storage', followOtherTab);
+    return () => {
+      window.removeEventListener('storage', followOtherTab);
+    };
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       {mocks ? (

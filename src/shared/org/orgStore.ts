@@ -123,15 +123,26 @@ export const useOrgStore = create<OrgState>()((set) => ({
   },
 }));
 
-/** Another tab chose or dropped an organization: this one follows, and reads everything again if it changed. */
+/**
+ * Another tab chose or dropped an organization: this one follows, and reads everything again if it changed. The two
+ * keys are written one after the other, so a half-written pair waits for the second event. A tab acting in its only
+ * organization keeps it when nothing is chosen anywhere. Listened to by App.tsx.
+ */
 export function followOtherTab(event: StorageEvent): void {
   if (event.key !== null && event.key !== ORG_STORAGE_KEY && event.key !== ORG_OWNER_STORAGE_KEY) return;
-  const next = kept();
+  const id = readStoredId(safeLocalStorage, ORG_STORAGE_KEY);
+  const owner = readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY);
+  if ((id === undefined) !== (owner === undefined)) return;
   useOrgStore.setState((state) =>
-    next.current === state.current && next.owner === state.owner
+    (id === undefined && state.owner === undefined) || (id === state.current && owner === state.owner)
       ? state
-      : { ...next, asked: false, picking: false, unknown: false, generation: state.generation + 1 },
+      : {
+          current: id,
+          owner,
+          asked: false,
+          picking: false,
+          unknown: false,
+          generation: state.generation + 1,
+        },
   );
 }
-
-window.addEventListener('storage', followOtherTab);

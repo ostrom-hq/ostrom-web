@@ -39,19 +39,15 @@ export interface OrgPickerViewModel {
  * `Ostrom-Org`): the only one is taken, several are asked about, a choice that is no longer theirs is dropped. A 409
  * `org_required` on any call asks too (shared/api/apiClient.ts).
  */
-export function useOrgPicker(): OrgPickerViewModel {
-  // The same freshness as `useViewer`: one `/me` for both.
-  const me = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
+export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolean }): OrgPickerViewModel {
+  // The same freshness as `useViewer`: one `/me` for both. A sign-in page asks nobody who they are; someone who came
+  // to it signed in keeps what was read before.
+  const me = useQuery(ready(getMeOptions(), { staleTime: 60_000, enabled: !anonymousPage }));
   const login = meOf(me.data)?.dev.login;
   const list = useQuery(
     ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: login !== undefined }),
   );
   const organizations = list.data?.items;
-  const { refetch } = list;
-  const doubts = useOrgStore((state) => state.doubts);
-  useEffect(() => {
-    if (doubts > 0) void refetch();
-  }, [doubts, refetch]);
   const { current, owner, asked, picking, unknown, choose, only, ask, forget, open, close } = useOrgStore(
     useShallow((state) => ({
       current: state.current,

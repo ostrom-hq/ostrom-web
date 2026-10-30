@@ -6,10 +6,15 @@ import { Button } from '@/shared/ui/Button';
 import { useOrgPicker } from '../useOrgPicker';
 import { OrgPicker } from './OrgPicker';
 
+export interface OrgControlsProps {
+  /** A page for people not signed in yet (sign-in, e-mail link): nobody is asked who they are. */
+  readonly anonymousPage: boolean;
+}
+
 /** The organization the console acts in, in the top bar, and the picker it opens. */
-export function OrgControls(): ReactElement | null {
+export function OrgControls({ anonymousPage }: OrgControlsProps): ReactElement | null {
   const { t } = useTranslation();
-  const org = useOrgPicker();
+  const org = useOrgPicker({ anonymousPage });
   if (!org.relevant) return null;
   const name = org.current?.name;
   return (
