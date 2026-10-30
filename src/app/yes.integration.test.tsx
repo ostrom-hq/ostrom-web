@@ -336,7 +336,7 @@ describe('a request', () => {
     expect(screen.getByText('skipped')).toBeInTheDocument();
     expect(screen.getByText('clean')).toBeInTheDocument();
     expect(screen.getByText('task-9')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Approve push' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Approve push' })).toBeInTheDocument();
   });
 
   it('shows a decided request without its receipt, from the list', async () => {
