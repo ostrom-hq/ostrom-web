@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { type ReactElement, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Analytics } from '@/shared/analytics/analytics';
@@ -37,7 +38,8 @@ export function ConsentBanner({
         {t('consent.title')}
       </h2>
       <p className="o-consent__body">
-        {t('consent.body')} <a href={privacyUrl} target="_blank" rel="noopener noreferrer">
+        {t('consent.body')}{' '}
+        <a href={privacyUrl} target="_blank" rel="noopener noreferrer">
           {t('consent.learnMore')}
         </a>
       </p>

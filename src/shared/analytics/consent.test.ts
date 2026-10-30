@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import {
   CONSENT_MAX_AGE_MS,
   CONSENT_STORAGE_KEY,
@@ -110,7 +111,12 @@ describe('createConsentStore', () => {
   });
 
   it('starts from a stored choice with its date', () => {
-    const storage = memoryStorage({ [CONSENT_STORAGE_KEY]: JSON.stringify({ analytics: false, at: NOW - 5 }) });
-    expect(createConsentStore(storage, () => NOW).getState()).toMatchObject({ status: 'denied', decidedAt: NOW - 5 });
+    const storage = memoryStorage({
+      [CONSENT_STORAGE_KEY]: JSON.stringify({ analytics: false, at: NOW - 5 }),
+    });
+    expect(createConsentStore(storage, () => NOW).getState()).toMatchObject({
+      status: 'denied',
+      decidedAt: NOW - 5,
+    });
   });
 });

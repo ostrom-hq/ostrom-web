@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 /** Where product analytics go: a PostHog project. Absent (self-hosted, local dev) means analytics are off. */
 export interface AnalyticsConfig {
   readonly key: string;

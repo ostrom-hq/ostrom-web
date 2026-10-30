@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { renderHook } from '@testing-library/react';
 import type { Analytics } from '@/shared/analytics/analytics';
 import type { ConsentStatus } from '@/shared/analytics/consent';
