@@ -20,10 +20,12 @@ export function budgetLevel(spent: number, budget: number): BudgetLevel {
   return ratio >= 1 ? 'over' : ratio >= 0.8 ? 'near' : 'calm';
 }
 
-/** Each line's share of the largest one, for bars drawn to a true scale (0 to 1). */
-export function shares(lines: readonly SpendingLine[]): number[] {
+/** Each line with its share of the largest one, for bars drawn to a true scale (0 to 1). */
+export function shares(
+  lines: readonly SpendingLine[],
+): { readonly line: SpendingLine; readonly share: number }[] {
   const largest = Math.max(0, ...lines.map((line) => line.usd));
-  return lines.map((line) => (largest === 0 ? 0 : line.usd / largest));
+  return lines.map((line) => ({ line, share: largest === 0 ? 0 : line.usd / largest }));
 }
 
 /** The organization's budget first, then members, then workflows, each by subject. */

@@ -15,20 +15,19 @@ export function Breakdown({
   readonly lines: readonly SpendingLine[];
 }): ReactElement {
   const { t, i18n } = useTranslation();
-  const scale = shares(lines);
   return (
     <Section label={label}>
       {lines.length === 0 ? (
         <p className="o-empty">{t('spend.nothing')}</p>
       ) : (
         <ul className="o-card o-rows">
-          {lines.map((line, index) => (
+          {shares(lines).map(({ line, share }) => (
             <li key={line.key} className="o-row sp-line">
               <span className="o-row__main">
                 <span className="o-row__title">{line.label}</span>
                 <span className="o-row__meta">{t('spend.sessions', { count: line.sessions })}</span>
                 <span className="sp-bar" aria-hidden="true">
-                  <span style={{ inlineSize: `${String(Math.round((scale[index] ?? 0) * 100))}%` }} />
+                  <span style={{ inlineSize: `${String(Math.round(share * 100))}%` }} />
                 </span>
               </span>
               <span className="sp-usd">{formatUsd(line.usd, i18n.language)}</span>

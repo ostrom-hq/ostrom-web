@@ -35,6 +35,14 @@ describe('useArrivals', () => {
     expect([...result.current]).toEqual(['b']);
   });
 
+  it('reads the same list once, however many screens show it', () => {
+    const ids = ['a'];
+    const first = renderHook(() => useArrivals(ids));
+    const second = renderHook(() => useArrivals(ids));
+    expect(second.result.current).toBe(first.result.current);
+    expect(second.result.current.size).toBe(0);
+  });
+
   it('keeps what it saw when the screen unmounts, and marks what came in meanwhile', () => {
     const first = renderHook(() => useArrivals(['a']));
     first.unmount();

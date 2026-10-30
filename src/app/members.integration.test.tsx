@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -60,6 +60,8 @@ describe('the members screen', () => {
     expect(screen.queryByRole('combobox', { name: 'Role of Maya Lind' })).toBeNull();
     await user.selectOptions(select, 'approver');
     expect(await screen.findByRole('combobox', { name: 'Role of theo' })).toHaveValue('approver');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Role of theo' }), { target: { value: 'king' } });
+    expect(db.members.find((member) => member.login === 'theo')?.role).toBe('approver');
     expect(db.members.find((member) => member.login === 'theo')?.role).toBe('approver');
   });
 
@@ -99,6 +101,9 @@ describe('the members screen', () => {
     );
     expect(within(invite).getByText('Not an email address: nope')).toBeInTheDocument();
     await user.selectOptions(within(invite).getByRole('combobox', { name: 'Invite as' }), 'approver');
+    fireEvent.change(within(invite).getByRole('combobox', { name: 'Invite as' }), {
+      target: { value: 'king' },
+    });
     await user.click(within(invite).getByRole('button', { name: 'Send 2 invitations' }));
     expect(await within(invite).findByRole('alert')).toHaveTextContent('Invitation sent to ana@acme.dev.');
     expect(await screen.findByText('ana@acme.dev')).toBeInTheDocument();
