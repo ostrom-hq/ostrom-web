@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { getMeQueryKey, listMyOrganizationsQueryKey } from '@gen/api/@tanstack/react-query.gen';
+import { hashKey, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,15 +24,20 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
     () =>
       useAuthStore.subscribe((auth, previous) => {
         // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
-        if (auth.generation !== previous.generation) void queryClient.resetQueries();
+        if (auth.generation === previous.generation) return;
+        useOrgStore.getState().signedInOrOut();
+        void queryClient.resetQueries();
       }),
     [queryClient],
   );
-  // Read in another organization, or refused for want of one: everything is read again in the one chosen.
+  // Read in another organization, or refused for want of one: everything is read again in the one chosen. Who is
+  // signed in and their organizations do not depend on it, and the organization switch needs them to stay on screen.
   useEffect(
     () =>
       useOrgStore.subscribe((org, previous) => {
-        if (org.generation !== previous.generation) void queryClient.resetQueries();
+        if (org.generation === previous.generation) return;
+        const kept = new Set([hashKey(getMeQueryKey()), hashKey(listMyOrganizationsQueryKey())]);
+        void queryClient.resetQueries({ predicate: (query) => !kept.has(query.queryHash) });
       }),
     [queryClient],
   );

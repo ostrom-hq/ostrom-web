@@ -2,7 +2,8 @@
 import { getMeOptions, listMyOrganizationsOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { Organization } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
@@ -22,6 +23,8 @@ export interface OrgPickerViewModel {
   readonly options: readonly OrgOption[];
   readonly loading: boolean;
   readonly failure: Error | undefined;
+  /** Reads the list again, after a failure. */
+  readonly retry: () => void;
   /** Someone is signed in and has an organization to show or to choose: nothing in the top bar otherwise. */
   readonly relevant: boolean;
   readonly picking: boolean;
@@ -44,34 +47,53 @@ export function useOrgPicker(): OrgPickerViewModel {
     ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: login !== undefined }),
   );
   const organizations = list.data?.items;
-  const state = useOrgStore();
-  const { current, owner, only, ask, forget } = state;
+  const { current, owner, asked, picking, unknown, choose, only, ask, forget, open, close } = useOrgStore(
+    useShallow((state) => ({
+      current: state.current,
+      owner: state.owner,
+      asked: state.asked,
+      picking: state.picking,
+      unknown: state.unknown,
+      choose: state.choose,
+      only: state.only,
+      ask: state.ask,
+      forget: state.forget,
+      open: state.open,
+      close: state.close,
+    })),
+  );
   useEffect(() => {
     if (login === undefined || organizations === undefined) return;
     const step = nextStep({ current, owner, login, organizations });
     if (step.kind === 'forget') forget(step.reason);
-    else if (step.kind === 'only') only(step.id);
+    else if (step.kind === 'only') only(step.id, login);
     else if (step.kind === 'ask') ask();
   }, [login, organizations, current, owner, only, ask, forget]);
-  const options =
-    login === undefined || organizations === undefined
-      ? []
-      : organizations.map((organization) => ({
-          organization,
-          current: organization.id === current,
-          choose: () => {
-            state.choose(organization.id, login);
-          },
-        }));
+  const options = useMemo(
+    () =>
+      login === undefined || organizations === undefined
+        ? []
+        : organizations.map((organization) => ({
+            organization,
+            current: organization.id === current,
+            choose: () => {
+              choose(organization.id, login);
+            },
+          })),
+    [login, organizations, current, choose],
+  );
   return {
-    current: options.find((option) => option.current)?.organization,
+    current: organizations?.find((organization) => organization.id === current),
     options,
     loading: list.isLoading,
     failure: failureOf(list.error),
-    relevant: login !== undefined && (current !== undefined || state.asked || state.unknown),
-    picking: state.picking,
-    unknown: state.unknown,
-    open: state.open,
-    close: state.close,
+    retry: () => {
+      void list.refetch();
+    },
+    relevant: login !== undefined && (current !== undefined || asked || unknown),
+    picking,
+    unknown,
+    open,
+    close,
   };
 }

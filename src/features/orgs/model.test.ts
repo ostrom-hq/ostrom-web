@@ -31,7 +31,7 @@ describe('nextStep', () => {
     });
   });
 
-  it('takes the only organization, asks about several, and does nothing with none', () => {
+  it('takes the only organization, asks about several, and changes nothing on an empty list', () => {
     expect(nextStep({ current: undefined, owner: undefined, login: 'maya', organizations: [acme] })).toEqual({
       kind: 'only',
       id: 'org-acme',
@@ -42,6 +42,9 @@ describe('nextStep', () => {
       kind: 'ask',
     });
     expect(nextStep({ current: undefined, owner: undefined, login: 'maya', organizations: [] })).toEqual({
+      kind: 'keep',
+    });
+    expect(nextStep({ current: 'org-acme', owner: 'maya', login: 'maya', organizations: [] })).toEqual({
       kind: 'keep',
     });
   });

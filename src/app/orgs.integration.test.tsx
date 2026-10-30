@@ -53,10 +53,10 @@ describe('the organization the console acts in', () => {
     expect(screen.getByRole('button', { name: 'Choose an organization' })).toHaveTextContent('Organization');
     const list = await within(picker).findByRole('list', { name: 'Your organizations' });
     await user.click(within(list).getByRole('button', { name: 'Globex' }));
-    expect(
-      await screen.findByRole('heading', { level: 3, name: 'Billing API: latency study' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeInTheDocument();
+    // Acme's artifacts are not Globex's: none of them shows.
+    expect(await screen.findByText('No artifact yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: 'Billing API: latency study' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Organization: Globex. Switch' })).toHaveFocus();
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(named).toContain(globex.id);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBe(globex.id);
@@ -87,8 +87,11 @@ describe('the organization the console acts in', () => {
 
     await user.click(opener);
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Acme' }));
-    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toHaveFocus();
     expect(useOrgStore.getState().current).toBe(db.organization.id);
+    expect(
+      await screen.findByRole('heading', { level: 3, name: 'Billing API: latency study' }),
+    ).toBeInTheDocument();
   });
 
   it('does not reopen the picker the person closed, until they ask for it', async () => {
@@ -129,7 +132,8 @@ describe('the organization the console acts in', () => {
     chosenBefore(db.organization.id, 'lena');
     visit('/artifacts');
     expect(await screen.findByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
-    expect(useOrgStore.getState().owner).toBeUndefined();
+    // Taken as Maya's only organization, for this session: Lena's choice is gone.
+    expect(useOrgStore.getState().owner).toBe('maya');
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
   });
 
@@ -142,12 +146,15 @@ describe('the organization the console acts in', () => {
     expect(picker).toHaveAttribute('aria-busy', 'true');
   });
 
-  it('says when the organizations cannot be read', async () => {
+  it('says when the organizations cannot be read, and reads them again on demand', async () => {
+    const user = userEvent.setup();
     db.otherOrganizations = [globex];
+    const down = (): Response =>
+      HttpResponse.json({ error: { type: 'unavailable', message: 'down' } }, { status: 503 });
+    // The first try and its one retry fail; the list answers when asked again.
     server.use(
-      http.get('*/api/v1/me/organizations', () =>
-        HttpResponse.json({ error: { type: 'unavailable', message: 'down' } }, { status: 503 }),
-      ),
+      http.get('*/api/v1/me/organizations', down, { once: true }),
+      http.get('*/api/v1/me/organizations', down, { once: true }),
     );
     visit('/artifacts');
     const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
@@ -155,5 +162,17 @@ describe('the organization the console acts in', () => {
       'Your organizations could not be read.',
     );
     expect(within(picker).queryByRole('list')).toBeNull();
+    await user.click(within(picker).getByRole('button', { name: 'Try again' }));
+    expect(await within(picker).findByRole('list', { name: 'Your organizations' })).toBeInTheDocument();
+  });
+
+  it('says when the person has no organization to choose', async () => {
+    db.otherOrganizations = [globex];
+    server.use(http.get('*/api/v1/me/organizations', () => HttpResponse.json({ items: [] })));
+    visit('/artifacts');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    expect(
+      await within(picker).findByText(/You are not a member of any organization yet\./),
+    ).toBeInTheDocument();
   });
 });

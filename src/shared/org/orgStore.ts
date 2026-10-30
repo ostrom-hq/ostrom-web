@@ -37,7 +37,7 @@ export interface OrgState {
   /** Bumped when what was read belongs to another organization, or to none: everything is read again. */
   readonly generation: number;
   /** The only organization of the person, acted in for this session without asking. */
-  readonly only: (id: string) => void;
+  readonly only: (id: string, login: string) => void;
   /** The person's choice, kept with their login. */
   readonly choose: (id: string, login: string) => void;
   /** The person has to choose: the picker opens unless they closed it. */
@@ -46,19 +46,27 @@ export interface OrgState {
   readonly close: () => void;
   /** Drops the choice; `unknown` when it is not one of the person's organizations any more. */
   readonly forget: (reason?: 'unknown') => void;
+  /** Someone signed in or out: back to what is kept, checked again against whoever is signed in now. */
+  readonly signedInOrOut: () => void;
+}
+
+function kept(): Pick<OrgState, 'current' | 'owner'> {
+  return {
+    current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
+    owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
+  };
 }
 
 export const useOrgStore = create<OrgState>()((set) => ({
-  current: readStoredId(safeLocalStorage, ORG_STORAGE_KEY),
-  owner: readStoredId(safeLocalStorage, ORG_OWNER_STORAGE_KEY),
+  ...kept(),
   asked: false,
   picking: false,
   dismissed: false,
   unknown: false,
   generation: 0,
-  only: (id) => {
+  only: (id, login) => {
     // What was read before, without the header, was read in this same organization: nothing to read again.
-    set({ current: id, asked: false, picking: false, unknown: false });
+    set({ current: id, owner: login, asked: false, picking: false, unknown: false });
   },
   choose: (id, login) => {
     safeLocalStorage.setItem(ORG_STORAGE_KEY, id);
@@ -94,5 +102,9 @@ export const useOrgStore = create<OrgState>()((set) => ({
       unknown: reason === 'unknown',
       generation: state.generation + 1,
     }));
+  },
+  signedInOrOut: () => {
+    // The queries are reset by the sign-in itself (App.tsx): no generation here.
+    set({ ...kept(), asked: false, picking: false, dismissed: false, unknown: false });
   },
 }));

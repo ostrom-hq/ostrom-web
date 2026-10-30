@@ -112,7 +112,7 @@ import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
-import { ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
+import { actsInOrganization, ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
 import {
   initialAutomationRuns,
@@ -143,7 +143,7 @@ export interface MockDb extends BillingState {
   /**
    * The person's other active memberships. With none, a call that names no organization acts in `organization`; with
    * any, it must name one with `Ostrom-Org` or is refused with 409 `org_required`, as `MembershipOrgResolver` does.
-   * The demo keeps one set of data: every organization reads the same screens.
+   * The demo keeps one set of data, Acme's; another organization reads none of its artifacts.
    */
   otherOrganizations: Organization[];
   members: Member[];
@@ -298,19 +298,15 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
 
-/** The routes that do not act in the caller's organization: no `Ostrom-Org` in the contract. */
-const ORG_FREE: readonly RegExp[] = [
-  /^\/api\/v1\/auth\//,
-  /^\/api\/v1\/orgs\//,
-  /^\/api\/v1\/me\/(?:organizations|notifications)$/,
-  /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys)$/,
-  /^\/api\/v1\/github\/app\/(?:manifest|install)\/callback$/,
-  /^\/api\/v1\/automations\/[^/]+\/trigger$/,
-];
-
 /** The person's organizations: the demo's own first. */
 function membershipsOf(db: MockDb): Organization[] {
   return [db.organization, ...db.otherOrganizations];
+}
+
+/** The organization a call acts in, once the first handler let it through. */
+function organizationOf(db: MockDb, request: Request): Organization {
+  const named = request.headers.get(ORG_HEADER);
+  return membershipsOf(db).find((organization) => organization.id === named) ?? db.organization;
 }
 
 /** The organization a call acts in, as `MembershipOrgResolver` resolves it; a refusal when it cannot. */
@@ -435,7 +431,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
-      if (ORG_FREE.some((route) => route.test(new URL(request.url).pathname))) return undefined;
+      if (!actsInOrganization(new URL(request.url).pathname)) return undefined;
       const organization = resolveOrganization(db, request);
       return organization instanceof HttpResponse ? organization : undefined;
     }),
@@ -537,12 +533,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       return HttpResponse.json(view);
     }),
-    handleGetOrganization(({ request }) =>
-      HttpResponse.json(
-        membershipsOf(db).find((organization) => organization.id === request.headers.get(ORG_HEADER)) ??
-          db.organization,
-      ),
-    ),
+    handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
     handleListTeams(() => HttpResponse.json({ items: db.teams })),
     handleUpdateMember(async ({ params, request }) => {
@@ -868,7 +859,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         secret: `whsec_mock_${String(automation.version)}${now().getTime().toString(36)}`,
       });
     }),
-    handleListArtifacts(() => HttpResponse.json({ items: db.artifacts })),
+    // The demo's artifacts are Acme's: another organization never sees them (CONVENTIONS § 16).
+    handleListArtifacts(({ request }) =>
+      HttpResponse.json({ items: organizationOf(db, request).id === db.organization.id ? db.artifacts : [] }),
+    ),
     handleDeleteArtifact(({ params }) => {
       const artifact = db.artifacts.find((item) => item.id === params.id);
       if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');

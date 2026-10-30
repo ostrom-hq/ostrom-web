@@ -28,6 +28,7 @@ export function OrgControls(): ReactElement | null {
           options={org.options}
           loading={org.loading}
           failure={org.failure}
+          onRetry={org.retry}
           unknown={org.unknown}
           onClose={org.close}
         />

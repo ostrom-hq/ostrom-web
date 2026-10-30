@@ -1,14 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
+import contract from '../../../contract/openapi.yaml?raw';
+import { actsInOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
+
+/** Each path of the vendored contract, and whether it takes `Ostrom-Org`. */
+function contractPaths(): { readonly path: string; readonly takesOrg: boolean }[] {
+  const paths = contract.split('\npaths:\n')[1]?.split('\ncomponents:\n')[0] ?? '';
+  return paths.split(/\n(?= {2}\/)/).flatMap((block) => {
+    const path = /^ {2}(\/[^:]*):/.exec(block)?.[1];
+    return path === undefined
+      ? []
+      : [{ path, takesOrg: block.includes('#/components/parameters/OstromOrg') }];
+  });
+}
 
 describe('withOrg', () => {
-  it('names the organization when there is one', () => {
+  it('names the organization on a route that acts in one', () => {
     const request = withOrg(new Request('http://ostrom.test/api/v1/artifacts'), 'org-acme');
     expect(request.headers.get(ORG_HEADER)).toBe('org-acme');
   });
 
-  it('sends no header before there is one: a person with one organization needs none', () => {
-    const request = withOrg(new Request('http://ostrom.test/api/v1/artifacts'), undefined);
-    expect(request.headers.has(ORG_HEADER)).toBe(false);
+  it('sends no header before there is an organization, nor to a route that acts in none', () => {
+    expect(
+      withOrg(new Request('http://ostrom.test/api/v1/artifacts'), undefined).headers.has(ORG_HEADER),
+    ).toBe(false);
+    expect(
+      withOrg(new Request('http://ostrom.test/api/v1/auth/me'), 'org-acme').headers.has(ORG_HEADER),
+    ).toBe(false);
+    expect(
+      withOrg(new Request('http://ostrom.test/api/v1/me/organizations'), 'org-acme').headers.has(ORG_HEADER),
+    ).toBe(false);
+  });
+
+  it('agrees with the contract on every route', () => {
+    const paths = contractPaths();
+    expect(paths.length).toBeGreaterThan(100);
+    const disagreements = paths.filter(
+      ({ path, takesOrg }) => actsInOrganization(path.replaceAll(/\{[^}]+\}/g, 'x')) !== takesOrg,
+    );
+    expect(disagreements).toEqual([]);
   });
 });

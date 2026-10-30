@@ -11,13 +11,21 @@ export interface OrgPickerProps {
   readonly options: readonly OrgOption[];
   readonly loading: boolean;
   readonly failure: Error | undefined;
+  readonly onRetry: () => void;
   /** The organization chosen before is not one of the person's any more. */
   readonly unknown: boolean;
   readonly onClose: () => void;
 }
 
 /** Which of the person's organizations the console acts in: a dialog over the console, a sheet on a phone. */
-export function OrgPicker({ options, loading, failure, unknown, onClose }: OrgPickerProps): ReactElement {
+export function OrgPicker({
+  options,
+  loading,
+  failure,
+  onRetry,
+  unknown,
+  onClose,
+}: OrgPickerProps): ReactElement {
   const { t } = useTranslation();
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -61,11 +69,19 @@ export function OrgPicker({ options, loading, failure, unknown, onClose }: OrgPi
           </Banner>
         ) : null}
         {failure === undefined ? null : (
-          <Banner tone="danger" tag={t('orgs.picker.problemTag')} live>
-            {t('orgs.picker.failed')}
-          </Banner>
+          <>
+            <Banner tone="danger" tag={t('orgs.picker.problemTag')} live>
+              {t('orgs.picker.failed')}
+            </Banner>
+            <div className="o-inline">
+              <Button onClick={onRetry}>{t('orgs.picker.retry')}</Button>
+            </div>
+          </>
         )}
         {loading ? <p className="o-org-picker__body">{t('app.loading')}</p> : null}
+        {!loading && failure === undefined && options.length === 0 ? (
+          <p className="o-org-picker__body">{t('orgs.picker.none')}</p>
+        ) : null}
         {options.length > 0 ? (
           <ul className="o-org-picker__list" aria-label={t('orgs.picker.known')}>
             {options.map((option) => (

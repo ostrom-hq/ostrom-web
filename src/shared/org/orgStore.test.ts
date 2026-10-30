@@ -25,9 +25,9 @@ describe('readStoredId', () => {
 describe('useOrgStore', () => {
   it('acts in the only organization without keeping it or reading anything again', () => {
     const before = useOrgStore.getState().generation;
-    useOrgStore.getState().only('org-acme');
+    useOrgStore.getState().only('org-acme', 'maya');
     const state = useOrgStore.getState();
-    expect([state.current, state.generation]).toEqual(['org-acme', before]);
+    expect([state.current, state.owner, state.generation]).toEqual(['org-acme', 'maya', before]);
     expect(window.localStorage.getItem(ORG_STORAGE_KEY)).toBeNull();
   });
 
@@ -70,5 +70,22 @@ describe('useOrgStore', () => {
     expect(window.localStorage.getItem(ORG_OWNER_STORAGE_KEY)).toBeNull();
     useOrgStore.getState().forget();
     expect(useOrgStore.getState().unknown).toBe(false);
+  });
+
+  it('goes back to what is kept when someone signs in or out, without reading anything again itself', () => {
+    useOrgStore.getState().choose('org-globex', 'maya');
+    useOrgStore.getState().only('org-acme', 'lena');
+    useOrgStore.getState().ask();
+    useOrgStore.getState().close();
+    const before = useOrgStore.getState().generation;
+    useOrgStore.getState().signedInOrOut();
+    const state = useOrgStore.getState();
+    expect([state.current, state.owner, state.asked, state.dismissed, state.generation]).toEqual([
+      'org-globex',
+      'maya',
+      false,
+      false,
+      before,
+    ]);
   });
 });

@@ -851,7 +851,9 @@ export const fr = {
       notNow: 'Plus tard',
       problemTag: 'À vérifier',
       unknown: 'Tu n’es plus membre de la dernière organisation choisie. Choisis-en une autre.',
-      failed: 'Impossible de lire tes organisations. Réessaie dans un instant.',
+      failed: 'Impossible de lire tes organisations.',
+      retry: 'Réessayer',
+      none: 'Tu n’es encore membre d’aucune organisation. Demande à un propriétaire de t’inviter.',
     },
   },
   home: {

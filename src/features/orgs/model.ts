@@ -16,16 +16,17 @@ export interface OrgFacts {
 
 /**
  * A choice made by another account is dropped, so is one that is no longer the person's; with none, the only
- * organization is taken and several are asked about.
+ * organization is taken and several are asked about. An empty list changes nothing.
  */
 export function nextStep({ current, owner, login, organizations }: OrgFacts): OrgStep {
+  if (current !== undefined && owner !== undefined && owner !== login) return { kind: 'forget' };
+  const [first, ...others] = organizations;
+  // An empty list says nothing about a choice: it is kept for when the list is back.
+  if (first === undefined) return { kind: 'keep' };
   if (current !== undefined) {
-    if (owner !== undefined && owner !== login) return { kind: 'forget' };
     return organizations.some((organization) => organization.id === current)
       ? { kind: 'keep' }
       : { kind: 'forget', reason: 'unknown' };
   }
-  const [first, ...others] = organizations;
-  if (first === undefined) return { kind: 'keep' };
   return others.length === 0 ? { kind: 'only', id: first.id } : { kind: 'ask' };
 }

@@ -21,13 +21,15 @@ test('a person in two organizations is asked which one, and the console keeps ac
   const picker = page.getByRole('dialog', { name: 'Which organization?' });
   await picker.getByRole('button', { name: 'Globex' }).click();
   await expect(picker).toBeHidden();
-  await expect(study).toBeVisible();
+  // Acme's artifacts are not Globex's: none of them shows.
+  await expect(page.getByText('No artifact yet.')).toBeVisible();
+  await expect(study).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeVisible();
   expect(named).toContain(GLOBEX);
 
   // A reload keeps acting in Globex: nothing to choose again.
   await page.reload();
-  await expect(study).toBeVisible();
+  await expect(page.getByText('No artifact yet.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Organization: Globex. Switch' })).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 
@@ -36,6 +38,7 @@ test('a person in two organizations is asked which one, and the console keeps ac
   await expect(picker.getByRole('button', { name: 'Globex' })).toHaveAttribute('aria-current', 'true');
   await picker.getByRole('button', { name: 'Acme' }).click();
   await expect(page.getByRole('button', { name: 'Organization: Acme. Switch' })).toBeVisible();
+  await expect(study).toBeVisible();
   await expect.poll(() => named.at(-1)).toBe(ACME);
 });
 

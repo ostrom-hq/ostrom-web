@@ -121,18 +121,24 @@ describe('generated client, configured', () => {
     expect(isApiFailure(error) && error.kind).toBe('network');
   });
 
-  it('names the organization it acts in on every call, once there is one', async () => {
+  it('names the organization it acts in on every call that acts in one, once there is one', async () => {
     const seen: (string | null)[] = [];
     server.use(
+      http.get('*/api/v1/approvals/:id', ({ request }) => {
+        seen.push(request.headers.get('ostrom-org'));
+        return HttpResponse.json(notFound, { status: 404 });
+      }),
       http.get('*/api/v1/auth/me', ({ request }) => {
         seen.push(request.headers.get('ostrom-org'));
         return HttpResponse.json(me);
       }),
     );
-    await getMe({ throwOnError: true });
+    await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
     useOrgStore.getState().choose('org-acme', 'maya');
+    await failureOf(async () => getApproval({ path: { id: 'missing' }, throwOnError: true }));
+    // `/me` acts in no organization: it never carries one, so a stale choice can always be checked.
     await getMe({ throwOnError: true });
-    expect(seen).toEqual([null, 'org-acme']);
+    expect(seen).toEqual([null, 'org-acme', null]);
   });
 
   it('opens the organization picker when the server asks which organization', async () => {

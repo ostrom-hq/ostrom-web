@@ -834,7 +834,9 @@ export const en = {
       notNow: 'Not now',
       problemTag: 'Check',
       unknown: 'You are no longer a member of the organization chosen last. Choose another one.',
-      failed: 'Your organizations could not be read. Try again in a moment.',
+      failed: 'Your organizations could not be read.',
+      retry: 'Try again',
+      none: 'You are not a member of any organization yet. Ask an owner to invite you.',
     },
   },
   home: {
