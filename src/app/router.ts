@@ -12,10 +12,11 @@ import { ApproversScreen } from '@/features/approvers';
 import { DecisionsScreen } from '@/features/decisions';
 import { HomeScreen } from '@/features/home';
 import { MembersScreen } from '@/features/members';
-import { RulesScreen } from '@/features/rules';
-import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
+import { RulesScreen } from '@/features/rules';
 import { SessionScreen, SessionsScreen } from '@/features/sessions';
+import { McpScreen, SecretsScreen } from '@/features/tools';
+import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
@@ -90,6 +91,12 @@ const workflowRoute = createRoute({
   path: '/workflows/$workflowId',
   component: WorkflowScreen,
 });
+const mcpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/mcp', component: McpScreen });
+const secretsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/secrets',
+  component: SecretsScreen,
+});
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
@@ -115,6 +122,8 @@ export const routeTree = rootRoute.addChildren([
   decisionsRoute,
   workflowsRoute,
   workflowRoute,
+  mcpRoute,
+  secretsRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>

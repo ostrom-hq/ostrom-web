@@ -19,10 +19,6 @@ const ORDER: Readonly<Record<MemberRole, number>> = {
   invited: 4,
 };
 
-export function canManage(role: MemberRole | undefined): boolean {
-  return role === 'owner' || role === 'admin';
-}
-
 export function displayName(member: Member): string {
   return member.name === undefined || member.name === '' ? member.login : member.name;
 }

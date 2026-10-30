@@ -1,20 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Member } from '@gen/api/types.gen';
-import { canManage, displayName, parseInvites, sortMembers } from './model';
+import { displayName, parseInvites, sortMembers } from './model';
 
 const member = (login: string, role: Member['role'], name?: string): Member =>
   name === undefined ? { login, role, avatarUrl: '' } : { login, role, avatarUrl: '', name };
-
-describe('canManage', () => {
-  it('is for owners and admins only', () => {
-    expect([canManage('owner'), canManage('admin'), canManage('approver'), canManage(undefined)]).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
-  });
-});
 
 describe('displayName and sortMembers', () => {
   it('names a member, or falls back to the login', () => {

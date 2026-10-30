@@ -30,6 +30,8 @@ export function AppShell(): ReactElement {
           <Link to="/approvers">{t('app.nav.approvers')}</Link>
           <Link to="/rules">{t('app.nav.rules')}</Link>
           <Link to="/decisions">{t('app.nav.decisions')}</Link>
+          <Link to="/mcp">{t('app.nav.mcp')}</Link>
+          <Link to="/secrets">{t('app.nav.secrets')}</Link>
         </nav>
         <div className="o-topbar__end">
           <ThemeToggle />

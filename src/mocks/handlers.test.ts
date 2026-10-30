@@ -2,8 +2,13 @@
 import {
   answerApproval,
   bulkUpdateRules,
+  createMcpServer,
+  createSecret,
+  deleteMcpServer,
+  deleteSecret,
   getApproval,
   getGatePolicy,
+  getMcpUsage,
   getMe,
   getOrganization,
   getReceipt,
@@ -13,12 +18,17 @@ import {
   inviteMembers,
   listApprovals,
   listDecisions,
+  listMcpCalls,
+  listMcpServers,
   listMembers,
   listReceipts,
   listRules,
+  listSecrets,
   listSessions,
   listTeams,
   listWorkflows,
+  rotateSecret,
+  saveMcpServer,
   setGatePolicy,
   updateMember,
   updateRule,
@@ -520,5 +530,139 @@ describe('mock rules and decisions', () => {
     ]);
     const one = await listDecisions({ query: { subjectKind: 'rule', subjectId: 'R-7' }, throwOnError: true });
     expect(one.data.items.map((item) => item.id)).toEqual(['dec-1']);
+  });
+});
+
+describe('mock MCP servers and secrets', () => {
+  const notion = {
+    name: 'notion',
+    url: 'https://mcp.notion.com/mcp',
+    transport: 'http',
+    secretNames: [],
+    enabled: true,
+    scope: 'org',
+  };
+  const demote = (): void => {
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+  };
+  const status = async (call: () => Promise<unknown>): Promise<number | false> => {
+    const error = await failureOf(call);
+    return isApiFailure(error) && error.status;
+  };
+  const send = async (method: string, path: string, body: string): Promise<number> =>
+    (await fetch(`http://ostrom.test/api/v1${path}`, { method, body })).status;
+
+  it('adds, saves and removes an MCP server, refusing a duplicate, a bad URL and an unknown name', async () => {
+    expect((await listMcpServers({ throwOnError: true })).data.items.map((server) => server.name)).toEqual([
+      'linear',
+      'sentry',
+    ]);
+    expect((await createMcpServer({ body: notion, throwOnError: true })).response.status).toBe(201);
+    expect(await status(async () => createMcpServer({ body: notion, throwOnError: true }))).toBe(409);
+    expect(
+      await send('POST', '/mcp/servers', JSON.stringify({ ...notion, name: 'x2', url: 'http://a.b' })),
+    ).toBe(400);
+    const saved = await saveMcpServer({
+      path: { name: 'notion' },
+      body: { ...notion, enabled: false },
+      throwOnError: true,
+    });
+    expect(saved.data.enabled).toBe(false);
+    expect(await send('PUT', '/mcp/servers/notion', JSON.stringify({ ...notion, url: 'ftp://x' }))).toBe(400);
+    expect(
+      await status(async () => saveMcpServer({ path: { name: 'nope' }, body: notion, throwOnError: true })),
+    ).toBe(404);
+    await deleteMcpServer({ path: { name: 'notion' }, throwOnError: true });
+    expect(await status(async () => deleteMcpServer({ path: { name: 'notion' }, throwOnError: true }))).toBe(
+      404,
+    );
+  });
+
+  it('lets only owners and admins change the MCP servers', async () => {
+    demote();
+    expect(await status(async () => createMcpServer({ body: notion, throwOnError: true }))).toBe(403);
+    expect(
+      await status(async () => saveMcpServer({ path: { name: 'linear' }, body: notion, throwOnError: true })),
+    ).toBe(403);
+    expect(await status(async () => deleteMcpServer({ path: { name: 'linear' }, throwOnError: true }))).toBe(
+      403,
+    );
+  });
+
+  it('lists the calls, by server, and counts them by server and tool', async () => {
+    expect((await listMcpCalls({ throwOnError: true })).data.items).toHaveLength(3);
+    db.mcpCalls = db.mcpCalls.map((call) => (call.id === 'call-3' ? { ...call, server: 'sentry' } : call));
+    expect((await listMcpCalls({ query: { server: 'sentry' }, throwOnError: true })).data.items).toHaveLength(
+      1,
+    );
+    expect((await getMcpUsage({ throwOnError: true })).data).toEqual({
+      byServer: { sentry: 1, notion: 2 },
+      byTool: { create_issue: 1, list_issues: 2 },
+    });
+  });
+
+  it('creates and rotates a secret without ever giving its value back', async () => {
+    const created = await createSecret({ body: { name: 'NPM_TOKEN', value: 's3cret' }, throwOnError: true });
+    expect(created.response.status).toBe(201);
+    expect(created.data).toMatchObject({ name: 'NPM_TOKEN', scope: 'org', updatedBy: 'maya' });
+    expect(JSON.stringify(created.data)).not.toContain('s3cret');
+    const scoped = await createSecret({
+      body: { name: 'TEAM_KEY', value: 'v', scope: 'team:billing' },
+      throwOnError: true,
+    });
+    expect(scoped.data.scope).toBe('team:billing');
+    expect(
+      await status(async () => createSecret({ body: { name: 'NPM_TOKEN', value: 'x' }, throwOnError: true })),
+    ).toBe(409);
+    expect(await send('POST', '/secrets', JSON.stringify({ name: 'lower', value: 'x' }))).toBe(400);
+    expect(await send('POST', '/secrets', JSON.stringify({ name: 'EMPTY', value: '' }))).toBe(400);
+    expect(await send('POST', '/secrets', 'nope')).toBe(400);
+    const rotated = await rotateSecret({
+      path: { name: 'STRIPE_TEST_KEY' },
+      body: { name: 'STRIPE_TEST_KEY', value: 'new' },
+      throwOnError: true,
+    });
+    expect(rotated.data.updatedBy).toBe('maya');
+    expect(rotated.data.createdAt).toBe('2026-10-22T10:00:00.000Z');
+    expect(
+      await send('PUT', '/secrets/STRIPE_TEST_KEY', JSON.stringify({ name: 'STRIPE_TEST_KEY', value: '' })),
+    ).toBe(400);
+    expect(
+      await status(async () =>
+        rotateSecret({ path: { name: 'NOPE' }, body: { name: 'NOPE', value: 'x' }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    expect((await listSecrets({ throwOnError: true })).data.items).toHaveLength(4);
+  });
+
+  it('refuses to delete a secret an MCP server uses, or one that does not exist', async () => {
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'LINEAR_TOKEN' }, throwOnError: true })),
+    ).toBe(409);
+    await deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true });
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true })),
+    ).toBe(404);
+  });
+
+  it('lets only owners and admins change the secrets', async () => {
+    demote();
+    expect(
+      await status(async () => createSecret({ body: { name: 'A', value: 'x' }, throwOnError: true })),
+    ).toBe(403);
+    expect(
+      await status(async () =>
+        rotateSecret({
+          path: { name: 'LINEAR_TOKEN' },
+          body: { name: 'LINEAR_TOKEN', value: 'x' },
+          throwOnError: true,
+        }),
+      ),
+    ).toBe(403);
+    expect(
+      await status(async () => deleteSecret({ path: { name: 'STRIPE_TEST_KEY' }, throwOnError: true })),
+    ).toBe(403);
   });
 });

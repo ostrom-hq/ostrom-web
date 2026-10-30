@@ -2,6 +2,11 @@
 import {
   handleAnswerApproval,
   handleBulkUpdateRules,
+  handleCreateMcpServer,
+  handleCreateSecret,
+  handleDeleteMcpServer,
+  handleDeleteSecret,
+  handleGetMcpUsage,
   handleGetApproval,
   handleGetGatePolicy,
   handleGetMe,
@@ -13,15 +18,20 @@ import {
   handleInviteMembers,
   handleListApprovals,
   handleListDecisions,
+  handleListMcpCalls,
+  handleListMcpServers,
   handleListMembers,
   handleListReceipts,
   handleListRules,
+  handleListSecrets,
   handleListSessions,
   handleListTeams,
   handleListWorkflows,
   handleSetGatePolicy,
   handleUpdateMember,
   handleUpdateRule,
+  handleRotateSecret,
+  handleSaveMcpServer,
   handleVerifyReceipt,
 } from '@gen/api/msw.gen';
 import type {
@@ -29,22 +39,33 @@ import type {
   Approval,
   ApprovalAnswer,
   Decision,
+  McpCall,
+  McpServer,
   Member,
   Organization,
   PublicKey,
   Receipt,
   Rule,
   RuleStatus,
+  Secret,
   Session,
   Team,
   Workflow,
 } from '@gen/api/types.gen';
-import { zAnswerApprovalRequest, zBulkUpdateRulesBody, zMemberRole, zUpdateRuleBody } from '@gen/api/zod.gen';
+import {
+  zAnswerApprovalRequest,
+  zBulkUpdateRulesBody,
+  zMcpServer,
+  zMemberRole,
+  zSecretWrite,
+  zUpdateRuleBody,
+} from '@gen/api/zod.gen';
 import { HttpResponse, type HttpHandler } from 'msw';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import { initialMembers, initialOrganization, initialTeams } from '@/mocks/fixtures/organization';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
+import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
@@ -64,6 +85,10 @@ export interface MockDb {
   rules: Rule[];
   /** Signed decisions on rules, workflows, owners and policies; newest first. */
   decisions: Decision[];
+  mcpServers: McpServer[];
+  /** Secrets as the server lists them: names and metadata, never a value. */
+  secrets: Secret[];
+  mcpCalls: McpCall[];
 }
 
 export function createMockDb(): MockDb {
@@ -79,10 +104,20 @@ export function createMockDb(): MockDb {
     selfApproval: 'sole-approver',
     rules: initialRules(),
     decisions: initialDecisions(),
+    mcpServers: initialMcpServers(),
+    secrets: initialSecrets(),
+    mcpCalls: initialMcpCalls(),
   };
 }
 
 const zUpdateMember = z.object({ role: zMemberRole.exclude(['invited']) });
+/** The server's own checks on top of the contract's shape: a name it can route to, an https URL. */
+const zMcpServerWrite = zMcpServer.extend({
+  name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+  url: z.url({ protocol: /^https$/ }),
+});
+/** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
+const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 const zInvites = z.object({ invites: z.array(z.object({ email: z.email() })).min(1) });
 
@@ -332,6 +367,94 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
             (kind === null || decision.subject.kind === kind) && (id === null || decision.subject.id === id),
         ),
       });
+    }),
+    handleListMcpServers(() => HttpResponse.json({ items: db.mcpServers })),
+    handleCreateMcpServer(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const body = zMcpServerWrite.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
+      if (db.mcpServers.some((server) => server.name === body.data.name))
+        return refusal(409, 'already_exists', `an MCP server named ${body.data.name} exists`);
+      db.mcpServers.push(body.data);
+      return HttpResponse.json(body.data, { status: 201 });
+    }),
+    handleSaveMcpServer(async ({ request, params }) => {
+      const index = db.mcpServers.findIndex((server) => server.name === params.name);
+      if (index === -1) return refusal(404, 'not_found', 'MCP server not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const body = zMcpServerWrite.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a name and an https URL are needed');
+      db.mcpServers[index] = body.data;
+      return HttpResponse.json(body.data);
+    }),
+    handleDeleteMcpServer(({ params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      const before = db.mcpServers.length;
+      db.mcpServers = db.mcpServers.filter((server) => server.name !== params.name);
+      return db.mcpServers.length === before
+        ? refusal(404, 'not_found', 'MCP server not found')
+        : new HttpResponse(null, { status: 204 });
+    }),
+    handleListMcpCalls(({ request }) => {
+      const server = new URL(request.url).searchParams.get('server');
+      return HttpResponse.json({
+        items: db.mcpCalls.filter((call) => server === null || call.server === server),
+      });
+    }),
+    handleGetMcpUsage(() => {
+      const byServer: Record<string, number> = {};
+      const byTool: Record<string, number> = {};
+      for (const call of db.mcpCalls) {
+        byServer[call.server] = (byServer[call.server] ?? 0) + 1;
+        byTool[call.tool] = (byTool[call.tool] ?? 0) + 1;
+      }
+      return HttpResponse.json({ byServer, byTool });
+    }),
+    handleListSecrets(() => HttpResponse.json({ items: db.secrets })),
+    handleCreateSecret(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const body = zSecretWrite.safeParse(await readJson(request));
+      if (!body.success || !SECRET_NAME.test(body.data.name) || body.data.value === '')
+        return refusal(400, 'invalid_request', 'a name in CAPITALS and a value are needed');
+      if (db.secrets.some((secret) => secret.name === body.data.name))
+        return refusal(409, 'already_exists', `a secret named ${body.data.name} exists`);
+      const at = now().toISOString();
+      const secret: Secret = {
+        name: body.data.name,
+        scope: body.data.scope ?? 'org',
+        createdAt: at,
+        updatedAt: at,
+        updatedBy: me.dev.login,
+      };
+      db.secrets.push(secret);
+      return HttpResponse.json(secret, { status: 201 });
+    }),
+    handleRotateSecret(async ({ request, params }) => {
+      const index = db.secrets.findIndex((secret) => secret.name === params.name);
+      const secret = db.secrets[index];
+      if (secret === undefined) return refusal(404, 'not_found', 'secret not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const body = zSecretWrite.safeParse(await readJson(request));
+      if (!body.success || body.data.value === '')
+        return refusal(400, 'invalid_request', 'a new value is needed');
+      const rotated: Secret = { ...secret, updatedAt: now().toISOString(), updatedBy: me.dev.login };
+      db.secrets[index] = rotated;
+      return HttpResponse.json(rotated);
+    }),
+    handleDeleteSecret(({ params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
+      const user = db.mcpServers.find((server) => server.secretNames.includes(params.name));
+      if (user !== undefined)
+        return refusal(
+          409,
+          'secret_in_use',
+          `the MCP server ${user.name} uses this secret: remove it there first`,
+        );
+      const before = db.secrets.length;
+      db.secrets = db.secrets.filter((secret) => secret.name !== params.name);
+      return db.secrets.length === before
+        ? refusal(404, 'not_found', 'secret not found')
+        : new HttpResponse(null, { status: 204 });
     }),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

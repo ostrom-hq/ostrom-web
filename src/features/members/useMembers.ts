@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
-  getMeOptions,
   getOrganizationOptions,
   inviteMembersMutation,
   listMembersOptions,
@@ -12,7 +11,8 @@ import type { Member, Organization, Team } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { type AssignableRole, canManage, sortMembers } from './model';
+import { useViewer } from '@/shared/auth/useViewer';
+import { type AssignableRole, sortMembers } from './model';
 
 export interface MembersViewModel {
   readonly organization: Organization | undefined;
@@ -28,7 +28,7 @@ export function useMembers(): MembersViewModel {
   const organization = useQuery(getOrganizationOptions());
   const members = useQuery(listMembersOptions());
   const teams = useQuery(listTeamsOptions());
-  const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
+  const viewer = useViewer();
   const sorted = useMemo(
     () => (members.data === undefined ? undefined : sortMembers(members.data.items)),
     [members.data],
@@ -38,8 +38,8 @@ export function useMembers(): MembersViewModel {
     members: sorted,
     teams: teams.data?.items,
     failure: failureOf(members.error ?? organization.error),
-    viewer: me.data?.dev.login,
-    canManage: canManage(me.data?.member?.role),
+    viewer: viewer.login,
+    canManage: viewer.canManage,
   };
 }
 

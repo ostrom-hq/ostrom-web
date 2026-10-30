@@ -2,7 +2,6 @@
 import {
   getGatePolicyOptions,
   getGatePolicyQueryKey,
-  getMeOptions,
   listMembersOptions,
   listWorkflowsOptions,
   setGatePolicyMutation,
@@ -10,6 +9,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 
 export interface ApproversViewModel {
@@ -55,7 +55,7 @@ export interface PolicyViewModel {
 export function useSelfApprovalPolicy(): PolicyViewModel {
   const queryClient = useQueryClient();
   const policy = useQuery(getGatePolicyOptions());
-  const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
+  const viewer = useViewer();
   const mutation = useMutation({
     ...setGatePolicyMutation(),
     onSuccess: (data) => {
@@ -69,10 +69,9 @@ export function useSelfApprovalPolicy(): PolicyViewModel {
     },
     [mutate],
   );
-  const role = me.data?.member?.role;
   return {
     policy: policy.data?.selfApproval,
-    canEdit: role === 'owner' || role === 'admin',
+    canEdit: viewer.canManage,
     set,
     saving: mutation.isPending,
     failure: failureOf(mutation.error ?? policy.error),

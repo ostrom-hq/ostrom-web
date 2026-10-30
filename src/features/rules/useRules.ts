@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   bulkUpdateRulesMutation,
-  getMeOptions,
   listDecisionsQueryKey,
   listRulesOptions,
   listRulesQueryKey,
@@ -11,6 +10,7 @@ import type { Rule, RuleStatus, RuleStrength } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { useViewer } from '@/shared/auth/useViewer';
 
 export interface RulesViewModel {
   readonly rules: readonly Rule[] | undefined;
@@ -21,12 +21,11 @@ export interface RulesViewModel {
 
 export function useRules(): RulesViewModel {
   const rules = useQuery(listRulesOptions());
-  const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
-  const role = me.data?.member?.role;
+  const viewer = useViewer();
   return {
     rules: rules.data?.items,
     failure: failureOf(rules.error),
-    canDecide: role === 'owner' || role === 'admin',
+    canDecide: viewer.canManage,
   };
 }
 
