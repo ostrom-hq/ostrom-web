@@ -43,7 +43,9 @@ describe('browserAnalyticsOptions', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe('https://ph.example/batch/');
-    const body = JSON.parse(String(init?.body)) as { batch: { distinct_id: string; timestamp: string }[] };
+    const sentBody = init?.body;
+    expect(typeof sentBody).toBe('string');
+    const body = JSON.parse(sentBody as string) as { batch: { distinct_id: string; timestamp: string }[] };
     expect(body.batch[0]?.distinct_id).toMatch(/^[0-9a-f-]{36}$/);
     expect(body.batch[0]?.timestamp).toBe('2027-01-15T08:00:00.000Z');
     client.forget();
