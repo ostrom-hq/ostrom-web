@@ -195,7 +195,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (member === undefined) return refusal(404, 'not_found', 'member not found');
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change roles');
       const body = zUpdateMember.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'role must be owner, admin, approver or member');
+      if (!body.success)
+        return refusal(400, 'invalid_request', 'role must be owner, admin, approver or member');
       if (member.login === me.dev.login) return refusal(409, 'own_role', 'you cannot change your own role');
       const next: Member = { ...member, role: body.data.role };
       db.members = db.members.map((item) => (item.login === next.login ? next : item));
@@ -207,7 +208,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!body.success) return refusal(400, 'invalid_request', 'each invite needs an email');
       const known = new Set(db.members.map((member) => member.email ?? member.login));
       const invited = body.data.invites.map((invite) => invite.email).filter((email) => !known.has(email));
-      db.members = [...db.members, ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' }))];
+      db.members = [
+        ...db.members,
+        ...invited.map((email): Member => ({ login: email, email, avatarUrl: '', role: 'invited' })),
+      ];
       return HttpResponse.json({ invited });
     }),
     handleListSessions(({ request }) => {

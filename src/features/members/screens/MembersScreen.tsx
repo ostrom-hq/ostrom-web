@@ -13,16 +13,18 @@ export function MembersScreen(): ReactElement {
   const roles = useRoleChange();
   const invite = useInvite();
   const org = view.organization;
+  const leadOf = (count: number, via: string | undefined): string =>
+    via === undefined ? t('members.count', { count }) : t('members.lead', { count, via });
   return (
     <Screen
       title={org?.name ?? t('members.title')}
       lead={
         view.members === undefined
           ? undefined
-          : t('members.lead', {
-              count: view.members.filter((member) => member.role !== 'invited').length,
-              via: org === undefined ? '' : t(`members.via.${org.connectedVia}`),
-            })
+          : leadOf(
+              view.members.filter((member) => member.role !== 'invited').length,
+              org === undefined ? undefined : t(`members.via.${org.connectedVia}`),
+            )
       }
     >
       {view.canManage ? <InviteForm invite={invite} /> : null}

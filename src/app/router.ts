@@ -60,8 +60,16 @@ const sessionRoute = createRoute({
   path: '/sessions/$sessionId',
   component: SessionScreen,
 });
-const membersRoute = createRoute({ getParentRoute: () => rootRoute, path: '/members', component: MembersScreen });
-const receiptsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/receipts', component: ReceiptsScreen });
+const membersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/members',
+  component: MembersScreen,
+});
+const receiptsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/receipts',
+  component: ReceiptsScreen,
+});
 const receiptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts/$receiptId',

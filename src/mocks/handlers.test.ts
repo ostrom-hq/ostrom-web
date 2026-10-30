@@ -315,7 +315,11 @@ describe('mock organization', () => {
   });
 
   it('changes the role of a member, and refuses an unknown one, a bad role and the caller’s own', async () => {
-    const { data } = await updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true });
+    const { data } = await updateMember({
+      path: { login: 'theo' },
+      body: { role: 'approver' },
+      throwOnError: true,
+    });
     expect(data.role).toBe('approver');
     const missing = await failureOf(async () =>
       updateMember({ path: { login: 'nope' }, body: { role: 'member' }, throwOnError: true }),
@@ -339,12 +343,16 @@ describe('mock organization', () => {
     expect(data.invited).toEqual(['ana@acme.dev']);
     const members = await listMembers({ throwOnError: true });
     expect(members.data.items.at(-1)).toMatchObject({ login: 'ana@acme.dev', role: 'invited' });
-    const bad = await failureOf(async () => inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }));
+    const bad = await failureOf(async () =>
+      inviteMembers({ body: { invites: [{ login: 'ana' }] }, throwOnError: true }),
+    );
     expect(isApiFailure(bad) && bad.status).toBe(400);
   });
 
   it('lets only owners and admins manage members', async () => {
-    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
     const role = await failureOf(async () =>
       updateMember({ path: { login: 'theo' }, body: { role: 'approver' }, throwOnError: true }),
     );
@@ -361,8 +369,13 @@ describe('mock organization', () => {
   });
 
   it('lets an owner invite', async () => {
-    db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'owner' } : member));
-    const { data } = await inviteMembers({ body: { invites: [{ email: 'ana@acme.dev' }] }, throwOnError: true });
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'owner' } : member,
+    );
+    const { data } = await inviteMembers({
+      body: { invites: [{ email: 'ana@acme.dev' }] },
+      throwOnError: true,
+    });
     expect(data.invited).toEqual(['ana@acme.dev']);
   });
 });

@@ -25,8 +25,9 @@ export function InviteForm({ invite }: { readonly invite: InviteViewModel }): Re
         className="o-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          invite.invite(emails, role);
-          setText('');
+          invite.invite(emails, role, () => {
+            setText('');
+          });
         }}
       >
         <label htmlFor={textId} className="o-field-label">
@@ -66,7 +67,9 @@ export function InviteForm({ invite }: { readonly invite: InviteViewModel }): Re
             ))}
           </select>
           <Button type="submit" variant="primary" disabled={invite.sending || emails.length === 0}>
-            {invite.sending ? t('members.invite.sending') : t('members.invite.send', { count: emails.length })}
+            {invite.sending
+              ? t('members.invite.sending')
+              : t('members.invite.send', { count: emails.length })}
           </Button>
         </div>
       </form>

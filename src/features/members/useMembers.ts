@@ -29,7 +29,10 @@ export function useMembers(): MembersViewModel {
   const members = useQuery(listMembersOptions());
   const teams = useQuery(listTeamsOptions());
   const me = useQuery({ ...getMeOptions(), staleTime: 60_000 });
-  const sorted = useMemo(() => (members.data === undefined ? undefined : sortMembers(members.data.items)), [members.data]);
+  const sorted = useMemo(
+    () => (members.data === undefined ? undefined : sortMembers(members.data.items)),
+    [members.data],
+  );
   return {
     organization: organization.data,
     members: sorted,
@@ -70,7 +73,8 @@ export function useRoleChange(): RoleChangeViewModel {
 }
 
 export interface InviteViewModel {
-  readonly invite: (emails: readonly string[], role: AssignableRole) => void;
+  /** Sends the invitations; `onSent` runs once the server took them (the form clears then, not before). */
+  readonly invite: (emails: readonly string[], role: AssignableRole, onSent: () => void) => void;
   readonly sending: boolean;
   /** The addresses the server sent an invitation to; those already in the organization are left out. */
   readonly invited: readonly string[] | undefined;
@@ -82,8 +86,8 @@ export function useInvite(): InviteViewModel {
   const mutation = useMutation({ ...inviteMembersMutation(), onSuccess: invalidate });
   const { mutate } = mutation;
   const invite = useCallback(
-    (emails: readonly string[], role: AssignableRole) => {
-      mutate({ body: { invites: emails.map((email) => ({ email, role })) } });
+    (emails: readonly string[], role: AssignableRole, onSent: () => void) => {
+      mutate({ body: { invites: emails.map((email) => ({ email, role })) } }, { onSuccess: onSent });
     },
     [mutate],
   );

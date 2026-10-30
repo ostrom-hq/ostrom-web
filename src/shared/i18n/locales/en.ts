@@ -6,7 +6,14 @@ export const en = {
     loading: 'Loading',
     failure: { tag: 'Offline' },
     skipToContent: 'Skip to content',
-    nav: { label: 'Main', home: 'Home', yes: 'Requests', sessions: 'Sessions', receipts: 'Receipts', members: 'Members' },
+    nav: {
+      label: 'Main',
+      home: 'Home',
+      yes: 'Requests',
+      sessions: 'Sessions',
+      receipts: 'Receipts',
+      members: 'Members',
+    },
     theme: {
       switch: 'Theme: {{current}}. Switch to {{next}}',
       names: { system: 'system', light: 'light', dark: 'dark' },
@@ -196,6 +203,8 @@ export const en = {
   },
   members: {
     title: 'Members',
+    count_one: '{{count}} person',
+    count_other: '{{count}} people',
     lead_one: '{{count}} person · {{via}}',
     lead_other: '{{count}} people · {{via}}',
     via: { 'github-app': 'connected with the GitHub App', 'gh-token': 'connected with a GitHub token' },
@@ -213,7 +222,7 @@ export const en = {
       placeholder: 'ana@acme.dev, bo@acme.dev',
       invalidTag: 'Check',
       invalid: 'Not an email address: {{list}}',
-      as: 'as',
+      as: 'Invite as',
       send_one: 'Send {{count}} invitation',
       send_other: 'Send {{count}} invitations',
       sending: 'Sending…',
