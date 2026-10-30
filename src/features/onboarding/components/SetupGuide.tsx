@@ -18,21 +18,21 @@ function actionOf(
   const button = 'o-btn o-btn--secondary o-btn--md';
   switch (step.id) {
     case 'github':
-      // GitHub's install page, then back to the console through the server's callback.
-      return setup.install === undefined ? (
-        <span className="o-row__meta">{onlyAdmins}</span>
-      ) : (
-        <a className={button} href={setup.install}>
+      // The GitHub screen says what the App does, then sends to GitHub's install page.
+      return setup.manages ? (
+        <Link to="/github" className={button}>
           {label}
-        </a>
+        </Link>
+      ) : (
+        <span className="o-row__meta">{onlyAdmins}</span>
       );
     case 'team':
-      return setup.install === undefined ? (
-        <span className="o-row__meta">{onlyAdmins}</span>
-      ) : (
+      return setup.manages ? (
         <Link to="/members" className={button}>
           {label}
         </Link>
+      ) : (
+        <span className="o-row__meta">{onlyAdmins}</span>
       );
     case 'accounts':
       return (

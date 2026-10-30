@@ -230,10 +230,7 @@ describe('the setup guide', () => {
     expect(await within(section).findByText('5 of 6 done')).toBeInTheDocument();
     expect(within(section).getByRole('progressbar')).toHaveAttribute('value', '5');
     expect(step(section, 'Install the CLI')).toHaveAttribute('aria-current', 'step');
-    expect(within(section).getByRole('link', { name: 'Install the app' })).toHaveAttribute(
-      'href',
-      `${TEST_API}/api/v1/github/app/install/start?org=${ACME}`,
-    );
+    expect(within(section).getByRole('link', { name: 'Connect' })).toHaveAttribute('href', '/github');
     expect(within(section).getByRole('link', { name: 'Invite' })).toHaveAttribute('href', '/members');
     expect(within(section).getByRole('link', { name: 'Add an account' })).toHaveAttribute(
       'href',
@@ -296,7 +293,7 @@ describe('the setup guide', () => {
     expect(
       within(step(section, 'Invite your team')).getByText('An owner or an admin does this.'),
     ).toBeInTheDocument();
-    expect(within(section).queryByRole('link', { name: 'Install the app' })).toBeNull();
+    expect(within(section).queryByRole('link', { name: 'Connect' })).toBeNull();
     expect(within(section).queryByRole('link', { name: 'Invite' })).toBeNull();
   });
 
