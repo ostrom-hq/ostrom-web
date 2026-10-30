@@ -11,6 +11,7 @@ import type { Member, Organization, Team } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { type AssignableRole, sortMembers } from './model';
 
@@ -25,9 +26,9 @@ export interface MembersViewModel {
 }
 
 export function useMembers(): MembersViewModel {
-  const organization = useQuery(getOrganizationOptions());
-  const members = useQuery(listMembersOptions());
-  const teams = useQuery(listTeamsOptions());
+  const organization = useQuery(ready(getOrganizationOptions()));
+  const members = useQuery(ready(listMembersOptions()));
+  const teams = useQuery(ready(listTeamsOptions()));
   const viewer = useViewer();
   const sorted = useMemo(
     () => (members.data === undefined ? undefined : sortMembers(members.data.items)),

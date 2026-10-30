@@ -9,7 +9,7 @@ import type { Budget, Spending } from '@gen/api/types.gen';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { tuned } from '@/shared/api/tuned';
+import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { type Period, sortBudgets } from './model';
 
@@ -24,9 +24,9 @@ export interface SpendViewModel {
 
 export function useSpend(period: Period): SpendViewModel {
   const spending = useQuery(
-    tuned(getSpendingOptions({ query: { period } }), { placeholderData: keepPreviousData }),
+    ready(getSpendingOptions({ query: { period } }), { placeholderData: keepPreviousData }),
   );
-  const budgets = useQuery(listBudgetsOptions());
+  const budgets = useQuery(ready(listBudgetsOptions()));
   const viewer = useViewer();
   const sorted = useMemo(
     () => (budgets.data === undefined ? undefined : sortBudgets(budgets.data.items)),

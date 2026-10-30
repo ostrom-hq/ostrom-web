@@ -10,11 +10,12 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { readSteps, STATUS_TONES, type Step } from '../model';
+import { ready } from '@/shared/api/ready';
 
 export function WorkflowScreen(): ReactElement {
   const { t } = useTranslation();
   const { workflowId } = useParams({ from: '/workflows/$workflowId' });
-  const query = useQuery(getWorkflowOptions({ path: { id: workflowId } }));
+  const query = useQuery(ready(getWorkflowOptions({ path: { id: workflowId } })));
   return (
     <LoadState data={query.data} failure={failureOf(query.error)} rows={2}>
       {(workflow) => (

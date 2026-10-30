@@ -2,7 +2,7 @@
 import { getMeOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { MemberRole } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
-import { tuned } from '@/shared/api/tuned';
+import { ready } from '@/shared/api/ready';
 import { meOf } from './me';
 
 export interface Viewer {
@@ -14,7 +14,7 @@ export interface Viewer {
 
 /** The person looking at the console, as the server knows them; who they are rarely changes in a session. */
 export function useViewer(): Viewer {
-  const query = useQuery(tuned(getMeOptions(), { staleTime: 60_000 }));
+  const query = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
   const me = meOf(query.data);
   const role = me?.member?.role;
   return { login: me?.dev.login, role, canManage: role === 'owner' || role === 'admin' };
