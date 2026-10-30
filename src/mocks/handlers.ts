@@ -62,6 +62,7 @@ import {
 import type {
   ApiError,
   Approval,
+  ApprovalView,
   ApprovalAnswer,
   Artifact,
   ArtifactVersion,
@@ -417,7 +418,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       db.approvals = db.approvals.map((item) => (item.id === next.id ? next : item));
       const receipt = receiptOf(next, at);
       db.receipts = [receipt, ...db.receipts];
-      return HttpResponse.json({ approval: next, receipt });
+      const view: ApprovalView = {
+        approval: next,
+        receipt,
+        you: { login: me.dev.login, self: isAsker(approval, me.dev.login), canApprove: false },
+      };
+      return HttpResponse.json(view);
     }),
     handleGetOrganization(() => HttpResponse.json(db.organization)),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
@@ -607,7 +613,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ? HttpResponse.json(spendingFor(period))
         : refusal(400, 'invalid_request', 'period is week or month');
     }),
-    handleListBudgets(() => HttpResponse.json({ items: db.budgets })),
+    handleListBudgets(() =>
+      HttpResponse.json({
+        items: db.budgets,
+        orgSpentUsd: spendingFor('month').totalUsd,
+        periodStart: '2026-10-01T00:00:00.000Z',
+        resetsAt: '2026-11-01T00:00:00.000Z',
+      }),
+    ),
     handleSetBudget(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins set budgets');
       const body = zBudgetWrite.safeParse(await readJson(request));
