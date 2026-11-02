@@ -11,6 +11,7 @@ import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { ActivityScreen, activitySearchSchema } from '@/features/activity';
+import { AuditScreen } from '@/features/audit';
 import { DecisionsScreen } from '@/features/decisions';
 import { GithubScreen, githubSearchSchema } from '@/features/github';
 import { ImportScreen } from '@/features/import';
@@ -137,6 +138,11 @@ const decisionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/decisions',
   component: DecisionsScreen,
+});
+const auditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/audit',
+  component: AuditScreen,
 });
 const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -281,6 +287,7 @@ export const routeTree = rootRoute.addChildren([
   rulesRoute,
   activityRoute,
   decisionsRoute,
+  auditRoute,
   workflowsRoute,
   newWorkflowRoute,
   workflowRoute,
