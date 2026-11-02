@@ -4,8 +4,8 @@
 // whose gate node names the approvers of pushes to main of a repository, and a personal token with `gates:ask` that
 // asks for such a push. The yes, the refusal and the receipt are then read and given in the console.
 import { expect, type Page, request, test } from '@playwright/test';
-import { z } from 'zod';
 import {
+  zAnswerApprovalResponse,
   zAskGateResponse,
   zCreateLaunchResponse,
   zCreateTokenResponse,
@@ -13,16 +13,15 @@ import {
   zGetGatePolicyResponse,
   zListApprovalsResponse,
   zMe,
-  zReceipt,
   zSignWorkflowReceiptResponse,
   zVerifyReceiptResponse,
 } from '../gen/api/zod.gen';
-import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
+import { anotherPerson, bodyOf, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 test.afterEach(closeOthers);
 
-/** The receipt an answer carries, whatever else the answer holds (the contract and the server differ on the rest). */
-const zAnswerReceipt = z.object({ receipt: zReceipt });
+/** The answer to a yes: the contract's `ApprovalView`, which then always carries its signed receipt. */
+const zSignedAnswer = zAnswerApprovalResponse.required({ receipt: true });
 
 /** The GitHub login the server knows the person signed in on `page` by: what a gate node names. */
 async function loginOf(page: Page): Promise<string> {
@@ -84,17 +83,6 @@ async function askingToken(page: Page, org: string): Promise<string> {
   );
   expect(token.status, JSON.stringify(token.body)).toBe(201);
   return zCreateTokenResponse.pick({ secret: true }).parse(token.body).secret;
-}
-
-/** A body as JSON when it is JSON, else its text: a proxy's error page still shows in the failure. */
-function bodyOf(text: string): unknown {
-  if (text === '') return undefined;
-  try {
-    const parsed: unknown = JSON.parse(text);
-    return parsed;
-  } catch {
-    return text;
-  }
 }
 
 /**
@@ -212,14 +200,13 @@ test('5.4 a member opens another person’s request in the console queue and say
   await expect(decision).toContainText(` approved: ${asked.title}`);
 
   // The yes is signed: the answer carries its receipt (ostrom-server#127), which the server verifies.
-  const { receipt } = zAnswerReceipt.parse(await response.json());
+  const { receipt } = zSignedAnswer.parse(await response.json());
   const verified = await callFromPage(page, 'GET', `/api/v1/receipts/${receipt.id}/verify`, undefined, org);
   expect(verified.status, JSON.stringify(verified.body)).toBe(200);
   expect(zVerifyReceiptResponse.parse(verified.body).ok).toBe(true);
-  // Known defect, written in ostrom-web#48: the contract's `answerApproval` 200 is `ApprovalView`, whose `you` is
-  // required, and the server answers `{approval, receipt}`, so the console's client refuses the answer and shows no
-  // receipt. When this line fails, the two agree: check « Verify the receipt » and `ostrom verify` here instead.
-  await expect(decision.getByText('Verify the receipt')).toHaveCount(0);
+  // The decision shows it too, one click from the command that checks it offline (ostrom-server#148).
+  await decision.getByText('Verify the receipt').click();
+  await expect(decision).toContainText(`ostrom verify ${receipt.id}`);
 
   // What the hook reads: the gate itself has passed.
   const read = await withToken(token, org, 'GET', `/api/v1/gates/${gate}`);
@@ -338,9 +325,11 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   expect(signed.status, JSON.stringify(signed.body)).toBe(200);
   const { receipt, verification } = zSignWorkflowReceiptResponse.parse(signed.body);
   expect(verification.ok).toBe(true);
-  expect(receipt.nodes, JSON.stringify(receipt)).toBeDefined();
-  const checks = (receipt.nodes ?? []).filter((node) => node.kind === 'check');
-  expect(checks.map((node) => node.id).toSorted((a, b) => a.localeCompare(b))).toEqual(['lint', 'tests']);
+  const checks = receipt.nodes?.filter((node) => node.kind === 'check').map((node) => node.id);
+  expect(
+    checks?.toSorted((a, b) => a.localeCompare(b)),
+    JSON.stringify(receipt),
+  ).toEqual(['lint', 'tests']);
 
   // The console: the list, the receipt, the badge on every check, the signature the server verifies.
   await page.goto('/receipts');

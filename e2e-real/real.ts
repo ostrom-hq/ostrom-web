@@ -102,7 +102,7 @@ export async function callFromPage(
   const csrf = (await page.context().cookies()).find((cookie) =>
     /^(?:__Host-)?ostrom_csrf$/.test(cookie.name),
   )?.value;
-  return page.evaluate(
+  const answer = await page.evaluate(
     async ({ method, path, body, csrf, org }) => {
       const headers: Record<string, string> = { accept: 'application/json' };
       if (org !== undefined) headers['Ostrom-Org'] = org;
@@ -114,11 +114,23 @@ export async function callFromPage(
         credentials: 'include',
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      const text = await response.text();
-      return { status: response.status, body: text === '' ? undefined : (JSON.parse(text) as unknown) };
+      return { status: response.status, text: await response.text() };
     },
     { method, path, body, csrf, org },
   );
+  // Parsed here, not in the page: a proxy's or server's error page keeps its status and text in the failure.
+  return { status: answer.status, body: bodyOf(answer.text) };
+}
+
+/** A body as JSON when it is JSON, else its text: a proxy's error page still shows in the failure. */
+export function bodyOf(text: string): unknown {
+  if (text === '') return undefined;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed;
+  } catch {
+    return text;
+  }
 }
 
 const others: BrowserContext[] = [];
