@@ -21,6 +21,7 @@ import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
+import { stepUpOf } from '@/shared/api/stepUp';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { meOf } from '@/shared/auth/me';
 import { stillOpen } from './model';
@@ -203,15 +204,6 @@ export function useSignInNotice(): SignInNoticeViewModel {
 /** The server's refusal of this person's answer (they asked for it, or are not an approver). */
 export function refusalOf(error: unknown): string | undefined {
   return isApiFailure(error) && error.kind === 'forbidden' ? error.message : undefined;
-}
-
-/**
- * A yes refused until the person signs in again: a yes needs a sign-in of less than five minutes (S2-54), and the
- * server says so with `error.type` `step_up_required` (core, `answerApproval`). Any other 403 (not an approver, the
- * asker who has to wait) is a refusal that signing in again would not change.
- */
-export function stepUpOf(error: unknown): boolean {
-  return isApiFailure(error) && error.kind === 'forbidden' && error.code === 'step_up_required';
 }
 
 /** The approval changed after it was shown: the answer was not taken, the page reloads it. */
