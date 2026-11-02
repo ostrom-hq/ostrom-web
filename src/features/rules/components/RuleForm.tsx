@@ -63,8 +63,10 @@ function GateFields({
         };
   // Enter in these two fields adds the action; it never sends the whole rule.
   const onEnter = (event: KeyboardEvent<HTMLInputElement>): void => {
-    // Enter that confirms an input method's candidate (Japanese, Chinese…) is still typing.
-    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    // Enter that confirms an input method's candidate (Japanese, Chinese…) is still typing; Safari sends it after the
+    // composition ended, marked only by its key code 229 (an old field, read as the browser still sends it).
+    const composing = event.nativeEvent.isComposing || Reflect.get(event.nativeEvent, 'keyCode') === 229;
+    if (event.key !== 'Enter' || composing) return;
     event.preventDefault();
     add?.();
   };

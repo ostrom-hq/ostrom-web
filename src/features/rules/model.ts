@@ -224,17 +224,27 @@ export function addCheck(checks: readonly CheckDraft[]): CheckDraft[] {
   return [...checks, { key, check: '', attested: false }];
 }
 
+/** The code points of some text, written short: what tells two labels apart when no ASCII letter does. */
+function codesOf(text: string): string {
+  return Array.from(text, (char) => Number(char.codePointAt(0)).toString(36)).join('');
+}
+
 /**
- * "Déployer en prod" → "deployer-en-prod": the class of an action written by hand. Accents are dropped; letters and
- * digits of any script are kept, so two labels that differ by a word of another script stay two actions.
+ * "Déployer en prod" → "deployer-en-prod": the class of an action written by hand, kept in ASCII for the hooks that
+ * match it. Latin accents are dropped; any other character, a mark of kana or Devanagari included, is kept as its code
+ * point after the ASCII part, so two labels that differ by a word of another script stay two actions.
  */
 export function actionClass(label: string): string {
-  return label
+  const folded = label
     .normalize('NFD')
-    .replace(/\p{M}/gu, '')
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+  const ascii = folded.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const others = codesOf(folded.replace(/[\s!-~]/gu, ''));
+  if (others !== '') return `${ascii === '' ? 'action' : ascii}-${others}`;
+  if (ascii !== '' || label.trim() === '') return ascii;
+  // Punctuation alone (">>>") still names an action of its own.
+  return `action-${codesOf(label.trim())}`;
 }
 
 /**
@@ -262,7 +272,7 @@ export function listOfCommands(text: string): string[] {
 
 /**
  * Every action the form offers: the catalogue's, the rule's own, then those written here. An action written here keeps
- * the commands the person typed, even when the catalogue later brings the same class with others.
+ * the commands the person typed; when the catalogue or the rule brings the same class, their commands are kept too.
  */
 export function offeredActions(
   catalog: readonly GateAction[],
@@ -271,7 +281,11 @@ export function offeredActions(
 ): GateAction[] {
   const repos = listOf(draft.scope);
   const written = new Map(draft.extra.map((action) => [action.class, { ...action, repos }]));
-  const offered = gateActions(catalog, rule).map((action) => written.get(action.class) ?? action);
+  const offered = gateActions(catalog, rule).map((action) => {
+    const typed = written.get(action.class);
+    if (typed === undefined) return action;
+    return { ...typed, patterns: Array.from(new Set([...typed.patterns, ...action.patterns])) };
+  });
   const known = new Set(offered.map((action) => action.class));
   return [...offered, ...[...written.values()].filter((action) => !known.has(action.class))];
 }

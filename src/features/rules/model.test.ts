@@ -143,9 +143,17 @@ describe('a rule draft', () => {
   it('writes an action by hand, its commands kept whole, held on the rule repositories when saved', () => {
     expect(actionClass('  Run a Migration! ')).toBe('run-a-migration');
     expect(actionClass('Déployer en prod')).toBe('deployer-en-prod');
-    expect(actionClass('部署')).toBe('部署');
+    expect(actionClass('部署')).toBe('action-smgp6a');
+    // The ASCII part stays readable; a word of another script keeps two labels apart.
+    expect(actionClass('Déployer 生产')).toMatch(/^deployer-/);
     expect(actionClass('Déployer 生产')).not.toBe(actionClass('Déployer 测试'));
-    expect(actionClass('Straße')).toBe('straße');
+    // A kana or Devanagari mark is part of the letter: it is not dropped like a Latin accent.
+    expect(actionClass('ガ')).not.toBe(actionClass('カ'));
+    expect(actionClass('कि')).not.toBe(actionClass('कु'));
+    // Symbols alone still name an action.
+    expect(actionClass('🚀')).toMatch(/^action-/);
+    expect(actionClass('>>>')).toMatch(/^action-/);
+    expect(actionClass('>>>')).not.toBe(actionClass('<<<'));
     expect(actionClass('  ')).toBe('');
     expect(customAction('Run a migration', 'flyway migrate,\n rails db:migrate, flyway migrate')).toEqual({
       class: 'run-a-migration',
@@ -166,6 +174,18 @@ describe('a rule draft', () => {
     // Written here, an action keeps its commands when the catalogue brings the same class with others.
     const typed = { class: 'merge-main', label: 'Merge', patterns: ['git merge'], repos: [] };
     expect(offeredActions([merge], undefined, { ...draftOf(), extra: [typed] })).toEqual([typed]);
+    // The catalogue's commands for the same class are kept with the typed ones, never lost.
+    const typedDeploy = { ...deploy, patterns: ['make deploy', 'helm upgrade'] };
+    expect(offeredActions([deploy], undefined, { ...draftOf(), extra: [typedDeploy] })[0]?.patterns).toEqual([
+      'make deploy',
+      'helm upgrade',
+    ]);
+    expect(
+      offeredActions([deploy], undefined, {
+        ...draftOf(),
+        extra: [{ ...deploy, patterns: ['make deploy'] }],
+      })[0]?.patterns,
+    ).toEqual(['make deploy', 'helm upgrade']);
   });
 
   it('accepts a proposed rule as it saves, fixed or not, and sends nothing for an unchanged decided one', () => {

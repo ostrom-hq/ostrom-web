@@ -461,6 +461,7 @@ export const fr = {
       check: 'Une vérification à passer',
       gate: 'Une porte : demande un oui',
     },
+    refusedElsewhere: '« {{statement}} » n’a pas été enregistrée : {{message}}',
     delete: {
       label: 'Supprimer',
       confirm: 'Supprimer cette règle',

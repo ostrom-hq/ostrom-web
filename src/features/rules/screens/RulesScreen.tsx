@@ -121,6 +121,17 @@ export function RulesScreen(): ReactElement {
                   </Button>
                 ) : null}
               </div>
+              {/* A refusal that came back once its rule left the list is still said, here. */}
+              {rules
+                .filter((rule) => !shown.includes(rule))
+                .map((rule) => {
+                  const refused = decision.failure(rule.id);
+                  return refused === undefined ? null : (
+                    <Banner key={rule.id} tone="danger" tag={t('rules.errorTag')} live>
+                      {t('rules.refusedElsewhere', { statement: rule.statement, message: refused.message })}
+                    </Banner>
+                  );
+                })}
               {shown.length === 0 ? (
                 <p className="o-empty">{t(`rules.empty.${filter}`)}</p>
               ) : (

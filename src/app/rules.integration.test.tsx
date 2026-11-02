@@ -188,6 +188,29 @@ describe('the rules', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
+  it('still says a refusal that comes back once its rule left the list', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.patch('*/api/v1/rules/:id', async () => {
+        await held;
+        return HttpResponse.json({ error: { type: 'forbidden', message: 'owners only' } }, { status: 403 });
+      }),
+    );
+    visit('/rules');
+    await user.click(
+      within(await findCard(/one review from an owner/)).getByRole('button', { name: 'Accept' }),
+    );
+    await user.click(screen.getByRole('button', { name: /^Rejected/ }));
+    release();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '“A pull request into main needs one review from an owner of the repository.” was not saved: owners only',
+    );
+  });
+
   it('accepts every sure proposal in one gesture', async () => {
     const user = userEvent.setup();
     visit('/rules');
@@ -455,6 +478,8 @@ describe('writing and gating rules', () => {
     await user.type(commands, 'kubectl apply');
     // The Enter that ends a composition picks the word; it does not add the action.
     fireEvent.keyDown(commands, { key: 'Enter', isComposing: true });
+    // Safari sends it once the composition ended, with the key code of an input method.
+    fireEvent.keyDown(commands, { key: 'Enter', keyCode: 229 });
     expect(within(gate).queryByRole('checkbox', { name: /部署/ })).toBeNull();
     fireEvent.keyDown(commands, { key: 'Enter' });
     expect(within(gate).getByRole('checkbox', { name: /部署/ })).toBeChecked();

@@ -447,6 +447,7 @@ export const en = {
       },
     },
     output: { note: 'Guides the agents', check: 'A check to pass', gate: 'A gate: asks for a yes' },
+    refusedElsewhere: '“{{statement}}” was not saved: {{message}}',
     delete: {
       label: 'Delete',
       confirm: 'Delete this rule',

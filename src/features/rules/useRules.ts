@@ -71,7 +71,11 @@ export function useRuleDecision(): RuleDecisionViewModel {
           setFailures((current) => new Map([...current, [id, error]]));
         })
         .finally(() => {
-          setPending((ids) => ids.filter((pendingId) => pendingId !== id));
+          // Only this save is done: another of the same rule may still be on its way.
+          setPending((ids) => {
+            const at = ids.indexOf(id);
+            return [...ids.slice(0, at), ...ids.slice(at + 1)];
+          });
         });
     },
     [mutateAsync],
