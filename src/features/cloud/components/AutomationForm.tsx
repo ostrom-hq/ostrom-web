@@ -256,7 +256,7 @@ export function AutomationForm({
           >
             {agents.map((agent) => (
               <option key={agent} value={agent}>
-                {isAutomationAgent(agent) ? t(`automations.form.agents.${agent}`) : agent}
+                {isAutomationAgent(agent) ? t(`cloud.agent.${agent}`) : agent}
               </option>
             ))}
           </select>

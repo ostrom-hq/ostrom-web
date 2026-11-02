@@ -404,6 +404,9 @@ export type AuthSession = {
 export type AuthToken = {
     token: string;
     login: string;
+    /**
+     * When the token expires; for a token of `ostrom login --admin`, 8 hours after the yes at most
+     */
     expiresAt?: string;
     scopes: Array<string>;
 };
@@ -807,6 +810,11 @@ export type CheckRun = {
 export type CheckState = 'success' | 'failure' | 'pending' | 'skipped';
 
 /**
+ * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
+ */
+export type CloudAgentKind = 'claude' | 'codex' | 'opencode' | 'gemini' | 'shell';
+
+/**
  * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
  */
 export type CloudSession = {
@@ -1029,11 +1037,25 @@ export type DeviceAnswer = {
 };
 
 /**
+ * What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for `ostrom login --admin`
+ */
+export type DeviceLoginStart = {
+    /**
+     * Every one of them, or the request is malformed (400). Absent or empty: the ordinary sign-in
+     */
+    scopes?: Array<'policy:write' | 'harness:write' | 'gates:policy'>;
+};
+
+/**
  * A pending `ostrom login`, as the console shows it
  */
 export type DeviceAuthorization = {
     userCode: string;
     clientName: string;
+    /**
+     * The governance write scopes an `ostrom login --admin` asks for, shown before the yes; only an owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary sign-in
+     */
+    scopes?: Array<string>;
     expiresAt: string;
 };
 
@@ -1666,7 +1688,7 @@ export type MemberInvite = {
     team?: string;
 };
 
-export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited';
+export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited' | 'billing';
 
 /**
  * Models allowed, and the default
@@ -1931,7 +1953,10 @@ export type Organization = {
     name: string;
     avatarUrl: string;
     description?: string;
-    connectedVia: GitHubConnection;
+    /**
+     * How GitHub is connected; absent when the answer does not say (an organization linked to no GitHub organization, or a list that does not carry it)
+     */
+    connectedVia?: GitHubConnection;
     createdAt?: string;
 };
 
@@ -3598,7 +3623,7 @@ export type GetDeviceLoginResponses = {
 export type GetDeviceLoginResponse = GetDeviceLoginResponses[keyof GetDeviceLoginResponses];
 
 export type StartDeviceLoginData = {
-    body?: never;
+    body?: DeviceLoginStart;
     path?: never;
     query?: never;
     url: '/api/v1/auth/device';
@@ -3912,6 +3937,12 @@ export type CheckAgentPolicyResponse = CheckAgentPolicyResponses[keyof CheckAgen
 
 export type GetMeData = {
     body?: never;
+    headers?: {
+        /**
+         * The organization whose member and organization the answer adds, when the caller is a member of it. An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a 404. Without it the answer has neither, even for a person with one organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/auth/me';
@@ -12850,7 +12881,7 @@ export type ListCloudSessionsResponse = ListCloudSessionsResponses[keyof ListClo
 
 export type CreateCloudSessionData = {
     body: {
-        agent: string;
+        agent: CloudAgentKind;
         model?: string;
         /**
          * https://github.com/<owner>/<name>, cloned through the organization's GitHub App

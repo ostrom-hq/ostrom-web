@@ -94,7 +94,7 @@ export function AutomationCard({
     action.agent === undefined
       ? undefined
       : isAutomationAgent(action.agent)
-        ? t(`automations.form.agents.${action.agent}`)
+        ? t(`cloud.agent.${action.agent}`)
         : action.agent;
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>

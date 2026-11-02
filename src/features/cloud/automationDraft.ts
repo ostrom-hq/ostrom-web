@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
+import { zCloudAgentKind } from '@gen/api/zod.gen';
 
-/** The agents the server starts for an automation (its runner image carries each); `claude` is its default. */
-export const AUTOMATION_AGENTS = ['claude', 'codex', 'opencode', 'gemini'] as const;
+/**
+ * The agents an automation runs: the contract's (`CloudAgentKind`) but the plain shell, which has no prompt to follow;
+ * `claude` is the server's default.
+ */
+const AUTOMATION_AGENT = zCloudAgentKind.exclude(['shell']);
+export const AUTOMATION_AGENTS = AUTOMATION_AGENT.options;
 export type AutomationAgent = (typeof AUTOMATION_AGENTS)[number];
 
 export function isAutomationAgent(value: string): value is AutomationAgent {
-  return AUTOMATION_AGENTS.some((agent) => agent === value);
+  return AUTOMATION_AGENT.safeParse(value).success;
 }
 
 export const TRIGGER_KINDS = ['cron', 'webhook'] as const;

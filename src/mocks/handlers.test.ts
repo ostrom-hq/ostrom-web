@@ -853,7 +853,7 @@ describe('mock cloud agents and automations', () => {
       model: 'gpt-6',
     });
     const bare = await createCloudSession({
-      body: { agent: 'claude-code', prompt: 'x', name: ' ' },
+      body: { agent: 'claude', prompt: 'x', name: ' ' },
       throwOnError: true,
     });
     expect(bare.data.name).toBeUndefined();
@@ -861,15 +861,26 @@ describe('mock cloud agents and automations', () => {
     expect(interactive.data.status).toBe('queued');
     const bad = await fetch('http://ostrom.test/api/v1/cloud/sessions', { method: 'POST', body: '{}' });
     expect(bad.status).toBe(400);
-    expect(
-      await statusOf(async () =>
-        createCloudSession({ body: { agent: 'gemini', prompt: 'x' }, throwOnError: true }),
-      ),
-    ).toBe(400);
+    // A name outside the contract's CloudAgentKind is refused in the server's words (AgentKind.fromWire).
+    const unknown = await fetch('http://ostrom.test/api/v1/cloud/sessions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ agent: 'claude-code', prompt: 'x' }),
+    });
+    expect(unknown.status).toBe(400);
+    expect(await unknown.json()).toEqual({
+      error: {
+        type: 'invalid_request',
+        message: 'Unknown agent claude-code: use claude, codex, opencode, gemini, shell.',
+      },
+    });
+    expect((await createCloudSession({ body: { agent: 'shell' }, throwOnError: true })).data.agent).toBe(
+      'shell',
+    );
     expect(
       (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
-    ).toHaveLength(4);
-    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(7);
+    ).toHaveLength(5);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(8);
   });
 
   it('stops a live session for its owner or a manager, not an ended one or another member', async () => {

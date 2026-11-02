@@ -1,12 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Automation, AutomationDryRun, AutomationRun, CloudSession } from '@gen/api/types.gen';
+import type {
+  CloudAgentKind,
+  Automation,
+  AutomationDryRun,
+  AutomationRun,
+  CloudSession,
+} from '@gen/api/types.gen';
+import { zCloudAgentKind } from '@gen/api/zod.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
-export const CLOUD_AGENTS = ['claude-code', 'codex'] as const;
-export type CloudAgent = (typeof CLOUD_AGENTS)[number];
+/**
+ * The agents a cloud session starts, read from the contract (`CloudAgentKind`): the console never offers, and so never sends,
+ * a name the server refuses. A new agent in the contract shows here at the next resync.
+ */
+export const CLOUD_AGENTS: readonly CloudAgentKind[] = zCloudAgentKind.options;
+export type CloudAgent = CloudAgentKind;
 
 export function isCloudAgent(value: string): value is CloudAgent {
-  return CLOUD_AGENTS.some((agent) => agent === value);
+  return zCloudAgentKind.safeParse(value).success;
 }
 
 export const CLOUD_STATUSES = ['queued', 'starting', 'running', 'ended', 'stopped', 'failed'] as const;

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation, CloudSession } from '@gen/api/types.gen';
+import { zCloudAgentKind } from '@gen/api/zod.gen';
 import {
+  CLOUD_AGENTS,
   idempotencyKey,
   isCloudAgent,
   isKnownRunReason,
@@ -24,10 +26,12 @@ const session = (parts: Partial<CloudSession>): CloudSession => ({
 
 describe('cloud sessions', () => {
   it('knows the agents it can start', () => {
-    expect([isCloudAgent('codex'), isCloudAgent('claude-code'), isCloudAgent('gemini')]).toEqual([
-      true,
+    // The contract's names (CloudAgentKind), as the server reads them: claude-code was never one.
+    expect(CLOUD_AGENTS).toEqual(zCloudAgentKind.options);
+    expect([isCloudAgent('codex'), isCloudAgent('claude-code'), isCloudAgent('shell')]).toEqual([
       true,
       false,
+      true,
     ]);
   });
   it('has words for the statuses it knows', () => {

@@ -9,7 +9,7 @@ import type { SessionChangeViewModel } from '../useCloud';
 /** An agent on one of the organization's runners: what to do, where, and a name to find it again. */
 export function StartSessionForm({ change }: { readonly change: SessionChangeViewModel }): ReactElement {
   const { t } = useTranslation();
-  const [agent, setAgent] = useState<CloudAgent>('claude-code');
+  const [agent, setAgent] = useState<CloudAgent>('claude');
   const [prompt, setPrompt] = useState('');
   const [repo, setRepo] = useState('');
   const [name, setName] = useState('');

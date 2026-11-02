@@ -95,6 +95,7 @@ import type {
 import {
   zAnswerApprovalRequest,
   zBudget,
+  zCloudAgentKind,
   zCreateCloudSessionBody,
   zEnrollSharedAccountBody,
   zBulkUpdateRulesBody,
@@ -315,7 +316,8 @@ const zBudgetWrite = zBudget
   })
   .refine((budget) => (budget.scope === 'org') === (budget.subject === undefined))
   .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
-const CLOUD_AGENTS = new Set(['claude-code', 'codex']);
+// The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
+const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() });
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
 const PROVIDERS = new Set(['anthropic', 'openai']);
@@ -927,15 +929,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       });
     }),
     handleCreateCloudSession(async ({ request }) => {
-      const body = zCreateCloudSessionBody.safeParse(await readJson(request));
+      const body = SENT_CLOUD_SESSION.safeParse(await readJson(request));
       // Without a prompt the session is an interactive agent (contract): only the agent is required.
       if (!body.success) return refusal(400, 'invalid_request', 'an agent is needed');
-      if (!CLOUD_AGENTS.has(body.data.agent))
-        return refusal(400, 'invalid_request', `no cloud agent ${body.data.agent}`);
+      const agent = zCloudAgentKind.safeParse(body.data.agent);
+      if (!agent.success)
+        return refusal(
+          400,
+          'invalid_request',
+          `Unknown agent ${body.data.agent}: use ${zCloudAgentKind.options.join(', ')}.`,
+        );
       const session: CloudSession = {
         id: `cs-${String(db.cloudSessions.length + 100)}`,
         owner: me.dev.login,
-        agent: body.data.agent,
+        agent: agent.data,
         status: 'queued',
         createdAt: now().toISOString(),
         ...(body.data.name === undefined || body.data.name.trim() === ''

@@ -952,7 +952,13 @@ export const fr = {
     errorTag: 'Non fait',
     sessions: 'Sessions',
     empty: 'Pas encore de session cloud.',
-    agent: { 'claude-code': 'Claude Code', codex: 'Codex' },
+    agent: {
+      claude: 'Claude Code',
+      codex: 'Codex',
+      opencode: 'OpenCode',
+      gemini: 'Gemini CLI',
+      shell: 'Shell',
+    },
     status: {
       queued: 'En file',
       starting: 'Démarrage',
@@ -1049,7 +1055,6 @@ export const fr = {
       workflowNote:
         'Cette automatisation lance le workflow {{workflow}}. Une automatisation ne lance pas encore de workflow : l’enregistrer ici lui donne une consigne à la place.',
       agent: 'Agent',
-      agents: { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini CLI' },
       model: 'Modèle',
       modelPlaceholder: 'Celui de l’agent par défaut',
       runtime: 'S’arrête après (minutes)',
