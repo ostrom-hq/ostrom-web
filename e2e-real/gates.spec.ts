@@ -3,7 +3,7 @@
 // through the API in the setup, as the QA bench does it (ostrom-e2e `scripts/load-setup.ts`): an accepted workflow
 // whose gate node names the approvers of pushes to main of a repository, and a personal token with `gates:ask` that
 // asks for such a push. The yes, the refusal and the receipt are then read and given in the console.
-import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
 import {
   zAskGateResponse,
@@ -17,16 +17,7 @@ import {
   zSignWorkflowReceiptResponse,
   zVerifyReceiptResponse,
 } from '../gen/api/zod.gen';
-import {
-  accept,
-  anotherPerson,
-  callFromPage,
-  closeOthers,
-  freshEmail,
-  invitationTo,
-  ownerOfNewOrganization,
-  signIn,
-} from './real';
+import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 test.afterEach(closeOthers);
 
@@ -40,34 +31,45 @@ async function loginOf(page: Page): Promise<string> {
   return zMe.parse(me.body).dev.login;
 }
 
-/** A new repository of `org` whose pushes to main need a yes from `approvers` (workflow made by its owner). */
-async function gatedRepository(owner: Page, org: string, approvers: readonly string[]): Promise<string> {
-  const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-  const repo = `acme/api-${run}`;
-  const workflow = await callFromPage(
+/** A name no other journey uses. */
+function uniqueRun(): string {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+/** An accepted workflow of `org`, written by its owner on `owner`, as the console's workflow screen saves one. */
+async function acceptedWorkflow(
+  owner: Page,
+  org: string,
+  workflow: { readonly id: string; readonly name: string; readonly nodes: unknown; readonly edges: unknown },
+): Promise<void> {
+  const saved = await callFromPage(
     owner,
     'POST',
     '/api/v1/workflows',
-    {
-      id: `push-main-${run}`,
-      name: `Push to main ${run}`,
-      domain: 'delivery',
-      status: 'accepted',
-      foundAt: new Date().toISOString(),
-      nodes: [
-        {
-          id: 'push-main',
-          kind: 'gate',
-          label: 'Push to main',
-          approvers,
-          actions: [{ class: 'push-main', label: 'Push to the main branch', patterns: [], repos: [repo] }],
-        },
-      ],
-      edges: [],
-    },
+    { ...workflow, domain: 'delivery', status: 'accepted', foundAt: new Date().toISOString() },
     org,
   );
-  expect(workflow.status, JSON.stringify(workflow.body)).toBeLessThan(300);
+  expect(saved.status, JSON.stringify(saved.body)).toBeLessThan(300);
+}
+
+/** A new repository of `org` whose pushes to main need a yes from `approvers` (workflow made by its owner). */
+async function gatedRepository(owner: Page, org: string, approvers: readonly string[]): Promise<string> {
+  const run = uniqueRun();
+  const repo = `acme/api-${run}`;
+  await acceptedWorkflow(owner, org, {
+    id: `push-main-${run}`,
+    name: `Push to main ${run}`,
+    nodes: [
+      {
+        id: 'push-main',
+        kind: 'gate',
+        label: 'Push to main',
+        approvers,
+        actions: [{ class: 'push-main', label: 'Push to the main branch', patterns: [], repos: [repo] }],
+      },
+    ],
+    edges: [],
+  });
   return repo;
 }
 
@@ -84,30 +86,47 @@ async function askingToken(page: Page, org: string): Promise<string> {
   return zCreateTokenResponse.pick({ secret: true }).parse(token.body).secret;
 }
 
-/** Calls the API with a bearer token, through the console's own origin (the preview proxies /api to the server). */
+/** A body as JSON when it is JSON, else its text: a proxy's error page still shows in the failure. */
+function bodyOf(text: string): unknown {
+  if (text === '') return undefined;
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed;
+  } catch {
+    return text;
+  }
+}
+
+/**
+ * Calls the API with a bearer token alone, through the console's own origin (the preview proxies /api to the server):
+ * a context of its own, without the browser's session cookie, so the token is the only credential.
+ */
 async function withToken(
-  page: Page,
   token: string,
   org: string,
   method: 'GET' | 'POST',
   path: string,
   body?: unknown,
 ): Promise<{ status: number; body: unknown }> {
-  const response = await page.request.fetch(path, {
-    method,
-    headers: { authorization: `Bearer ${token}`, 'Ostrom-Org': org, accept: 'application/json' },
-    ...(body === undefined ? {} : { data: body }),
-    failOnStatusCode: false,
-  });
-  const text = await response.text();
-  const answer: unknown = text === '' ? undefined : JSON.parse(text);
-  return { status: response.status(), body: answer };
+  const { baseURL } = test.info().project.use;
+  const context = await request.newContext(baseURL === undefined ? {} : { baseURL });
+  try {
+    const response = await context.fetch(path, {
+      method,
+      headers: { authorization: `Bearer ${token}`, 'Ostrom-Org': org, accept: 'application/json' },
+      ...(body === undefined ? {} : { data: body }),
+      failOnStatusCode: false,
+    });
+    return { status: response.status(), body: bodyOf(await response.text()) };
+  } finally {
+    await context.dispose();
+  }
 }
 
 /** Asks for a push of a new commit to main of `repo`, as the hook would: the gate, still waiting for a yes. */
-async function askPushToMain(page: Page, token: string, org: string, repo: string): Promise<string> {
+async function askPushToMain(token: string, org: string, repo: string): Promise<string> {
   const sha = Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
-  const asked = await withToken(page, token, org, 'POST', '/api/v1/gates', {
+  const asked = await withToken(token, org, 'POST', '/api/v1/gates', {
     repo,
     class: 'git.push',
     tool: 'Bash',
@@ -143,11 +162,11 @@ async function requestOf(page: Page, org: string, gate: string): Promise<{ id: s
 }
 
 /** Opens the request from the queue, as a person does: the queue, then its line. */
-async function openFromQueue(page: Page, request: { id: string; title: string }): Promise<void> {
+async function openFromQueue(page: Page, approval: { id: string; title: string }): Promise<void> {
   await page.goto('/yes');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
-  await page.locator(`a[href$="/yes/${request.id}"]`).first().click();
-  await expect(page).toHaveURL(new RegExp(`/yes/${request.id}$`));
+  await page.locator(`a[href$="/yes/${approval.id}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`/yes/${approval.id}$`));
 }
 
 /** The organization's self-approval setting, as the server reads it. */
@@ -164,66 +183,48 @@ async function ownerAndMember(
   role: string,
 ): Promise<{ org: string; owner: string; member: string }> {
   const { id } = await ownerOfNewOrganization(page, 'ada');
-  const token = await invitationTo(page, id, role);
-  await signIn(other, freshEmail('ben'));
-  await accept(other, token);
+  await joinAs(page, id, other, 'ben', role);
   return { org: id, owner: await loginOf(page), member: await loginOf(other) };
-}
-
-/**
- * 5.4's journey up to the decision: Ada owns the organization and asks for a push to main through her token, Ben is
- * its approver and says yes from his queue. Returns Ben's page, the decision region, Ada's token and the gate.
- */
-async function memberSaysYes(
-  page: Page,
-  browser: Browser,
-): Promise<{ ben: Page; decision: Locator; token: string; org: string; gate: string; receipt: unknown }> {
-  const ben = await anotherPerson(browser);
-  const { org, member } = await ownerAndMember(page, ben, 'member');
-  const repo = await gatedRepository(page, org, [member]);
-  const token = await askingToken(page, org);
-  const gate = await askPushToMain(page, token, org, repo);
-
-  // Ben signed in a moment ago: his yes carries a sign-in of less than five minutes (step-up, S2-54).
-  const request = await requestOf(ben, org, gate);
-  await openFromQueue(ben, request);
-  await expect(ben.getByText('You asked for this yourself.')).toHaveCount(0);
-  const answered = ben.waitForResponse(
-    (response) => response.request().method() === 'POST' && response.url().endsWith(`/${request.id}/answer`),
-  );
-  await ben.getByRole('button', { name: /^Approve/ }).click();
-  const response = await answered;
-  expect(response.status()).toBe(200);
-  const body: unknown = await response.json();
-  const decision = ben.getByRole('region', { name: 'Decision' });
-  await expect(decision).toContainText(` approved: ${request.title}`);
-  return { ben, decision, token, org, gate, receipt: zAnswerReceipt.parse(body).receipt };
 }
 
 test('5.4 a member opens another person’s request in the console queue and says yes; the gate is open', async ({
   page,
   browser,
 }) => {
-  const { token, org, gate, receipt } = await memberSaysYes(page, browser);
-  // The server signs the yes and answers with its receipt (ostrom-server#127).
-  expect(receipt).toBeDefined();
+  const ben = await anotherPerson(browser);
+  const { org, member } = await ownerAndMember(page, ben, 'member');
+  const token = await askingToken(page, org);
+  const gate = await askPushToMain(token, org, await gatedRepository(page, org, [member]));
+
+  // Ben signed in a moment ago: his yes carries a sign-in of less than five minutes (step-up, S2-54).
+  const asked = await requestOf(ben, org, gate);
+  await openFromQueue(ben, asked);
+  const approve = ben.getByRole('button', { name: /^Approve/ });
+  await expect(approve).toBeVisible();
+  await expect(ben.getByText('You asked for this yourself.')).toHaveCount(0);
+  const answered = ben.waitForResponse(
+    (response) => response.request().method() === 'POST' && response.url().endsWith(`/${asked.id}/answer`),
+  );
+  await approve.click();
+  const response = await answered;
+  expect(response.status()).toBe(200);
+  const decision = ben.getByRole('region', { name: 'Decision' });
+  await expect(decision).toContainText(` approved: ${asked.title}`);
+
+  // The yes is signed: the answer carries its receipt (ostrom-server#127), which the server verifies.
+  const { receipt } = zAnswerReceipt.parse(await response.json());
+  const verified = await callFromPage(page, 'GET', `/api/v1/receipts/${receipt.id}/verify`, undefined, org);
+  expect(verified.status, JSON.stringify(verified.body)).toBe(200);
+  expect(zVerifyReceiptResponse.parse(verified.body).ok).toBe(true);
+  // Known defect, written in ostrom-web#48: the contract's `answerApproval` 200 is `ApprovalView`, whose `you` is
+  // required, and the server answers `{approval, receipt}`, so the console's client refuses the answer and shows no
+  // receipt. When this line fails, the two agree: check « Verify the receipt » and `ostrom verify` here instead.
+  await expect(decision.getByText('Verify the receipt')).toHaveCount(0);
 
   // What the hook reads: the gate itself has passed.
-  const read = await withToken(page, token, org, 'GET', `/api/v1/gates/${gate}`);
+  const read = await withToken(token, org, 'GET', `/api/v1/gates/${gate}`);
   expect(read.status, JSON.stringify(read.body)).toBe(200);
   expect(zAskGateResponse.parse(read.body).gate.status).toBe('approved');
-});
-
-test('5.4 the decision shows the signed receipt of the yes', async ({ page, browser }) => {
-  // Known defect (JOURNAL 02/11, WEB → GATES, CORE-CONTRAT): the server answers `{approval, receipt}` but the
-  // contract's `answerApproval` 200 is `ApprovalView`, whose `you` is required, so the console's client refuses the
-  // answer and keeps no receipt. Remove `test.fail` once the contract and the server agree.
-  test.fail(true, 'answerApproval 200 lacks ApprovalView.you: the console drops the receipt');
-  const { decision } = await memberSaysYes(page, browser);
-  const verify = decision.getByText('Verify the receipt');
-  await expect(verify).toBeVisible({ timeout: 5_000 });
-  await verify.click();
-  await expect(decision).toContainText('ostrom verify ');
 });
 
 test('5.6 the asker sees their own request and is refused the yes with a clear message, per the organization’s setting', async ({
@@ -235,7 +236,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   const token = await askingToken(page, org);
 
   // Two approvers, and Ada asked: whatever the setting, Ben has to say yes.
-  const shared = await askPushToMain(page, token, org, await gatedRepository(page, org, [owner, member]));
+  const shared = await askPushToMain(token, org, await gatedRepository(page, org, [owner, member]));
   const own = await requestOf(page, org, shared);
   await openFromQueue(page, own);
   await expect(page.getByText('You asked for this yourself.')).toBeVisible();
@@ -252,7 +253,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   await setting.selectOption('never');
   await expect(page.getByText('Someone who asked never approves their own request')).toBeVisible();
   await expect.poll(() => selfApprovalOf(page, org)).toBe('never');
-  const alone = await askPushToMain(page, token, org, await gatedRepository(page, org, [owner]));
+  const alone = await askPushToMain(token, org, await gatedRepository(page, org, [owner]));
   const refused = await requestOf(page, org, alone);
   await openFromQueue(page, refused);
   await page.getByRole('button', { name: /^Approve/ }).click();
@@ -264,7 +265,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   await page.getByRole('combobox', { name: 'Self-approval' }).selectOption('sole-approver');
   await expect(page.getByText('Someone who asked may approve only when nobody else can')).toBeVisible();
   await expect.poll(() => selfApprovalOf(page, org)).toBe('sole-approver');
-  const sole = await askPushToMain(page, token, org, await gatedRepository(page, org, [owner]));
+  const sole = await askPushToMain(token, org, await gatedRepository(page, org, [owner]));
   const self = await requestOf(page, org, sole);
   await openFromQueue(page, self);
   await page.getByRole('button', { name: /^Approve/ }).click();
@@ -277,30 +278,20 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   page,
 }) => {
   const { id: org } = await ownerOfNewOrganization(page, 'ada');
-  const run = Date.now().toString(36);
-  const workflow = await callFromPage(
-    page,
-    'POST',
-    '/api/v1/workflows',
-    {
-      id: `checks-${run}`,
-      name: `Checks before push ${run}`,
-      domain: 'delivery',
-      status: 'accepted',
-      foundAt: new Date().toISOString(),
-      nodes: [
-        { id: 'start', kind: 'trigger', label: 'Session start' },
-        { id: 'tests', kind: 'check', label: 'Tests', run: { command: 'npm test' } },
-        { id: 'lint', kind: 'check', label: 'Lint', run: { command: 'npm run lint' } },
-      ],
-      edges: [
-        { from: 'start', to: 'tests' },
-        { from: 'tests', to: 'lint' },
-      ],
-    },
-    org,
-  );
-  expect(workflow.status, JSON.stringify(workflow.body)).toBeLessThan(300);
+  const run = uniqueRun();
+  await acceptedWorkflow(page, org, {
+    id: `checks-${run}`,
+    name: `Checks before push ${run}`,
+    nodes: [
+      { id: 'start', kind: 'trigger', label: 'Session start' },
+      { id: 'tests', kind: 'check', label: 'Tests', run: { command: 'npm test' } },
+      { id: 'lint', kind: 'check', label: 'Lint', run: { command: 'npm run lint' } },
+    ],
+    edges: [
+      { from: 'start', to: 'tests' },
+      { from: 'tests', to: 'lint' },
+    ],
+  });
   const current = await callFromPage(page, 'GET', '/api/v1/packages/current', undefined, org);
   expect(current.status, JSON.stringify(current.body)).toBe(200);
   const { digest } = zGetCurrentPackageResponse.pick({ digest: true }).parse(current.body);
@@ -316,7 +307,7 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   expect(launch.status, JSON.stringify(launch.body)).toBe(201);
   const { launchId, agentToken } = zCreateLaunchResponse.parse(launch.body);
   const session = crypto.randomUUID();
-  const opened = await withToken(page, agentToken, org, 'POST', '/api/v1/sessions', {
+  const opened = await withToken(agentToken, org, 'POST', '/api/v1/sessions', {
     id: session,
     launchId,
     repo: 'acme/att',
@@ -325,7 +316,7 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   });
   expect(opened.status, JSON.stringify(opened.body)).toBeLessThan(300);
   for (const node of ['tests', 'lint']) {
-    const reported = await withToken(page, agentToken, org, 'POST', '/api/v1/checks', {
+    const reported = await withToken(agentToken, org, 'POST', '/api/v1/checks', {
       sessionId: session,
       digest,
       nodeId: node,
@@ -336,31 +327,25 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
     });
     expect(reported.status, JSON.stringify(reported.body)).toBe(201);
   }
-  const ended = await withToken(page, agentToken, org, 'POST', `/api/v1/sessions/${session}/end`, {
+  const ended = await withToken(agentToken, org, 'POST', `/api/v1/sessions/${session}/end`, {
     exitCode: 0,
   });
   expect(ended.status, JSON.stringify(ended.body)).toBeLessThan(300);
-  const signed = await withToken(
-    page,
-    agentToken,
-    org,
-    'POST',
-    `/api/v1/sessions/${session}/workflow-receipt`,
-    {
-      digest,
-      agent: 'claude',
-    },
-  );
+  const signed = await withToken(agentToken, org, 'POST', `/api/v1/sessions/${session}/workflow-receipt`, {
+    digest,
+    agent: 'claude',
+  });
   expect(signed.status, JSON.stringify(signed.body)).toBe(200);
   const { receipt, verification } = zSignWorkflowReceiptResponse.parse(signed.body);
   expect(verification.ok).toBe(true);
+  expect(receipt.nodes, JSON.stringify(receipt)).toBeDefined();
   const checks = (receipt.nodes ?? []).filter((node) => node.kind === 'check');
   expect(checks.map((node) => node.id).toSorted((a, b) => a.localeCompare(b))).toEqual(['lint', 'tests']);
 
   // The console: the list, the receipt, the badge on every check, the signature the server verifies.
   await page.goto('/receipts');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Receipts');
-  await page.getByText(receipt.subject.id, { exact: true }).click();
+  await page.getByRole('link').filter({ hasText: receipt.subject.id }).first().click();
   await expect(page).toHaveURL(new RegExp(`/receipts/${receipt.id}$`));
   await expect(page.getByText('Signature verified')).toBeVisible();
   const steps = page.getByRole('region', { name: 'Workflow steps' });
