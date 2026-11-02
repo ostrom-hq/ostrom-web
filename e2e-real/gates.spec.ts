@@ -76,7 +76,7 @@ async function askingToken(page: Page, org: string): Promise<string> {
     org,
   );
   expect(token.status, JSON.stringify(token.body)).toBe(201);
-  return zCreateTokenResponse.parse(token.body).secret;
+  return zCreateTokenResponse.pick({ secret: true }).parse(token.body).secret;
 }
 
 /** Calls the API with a bearer token, through the console's own origin (the preview proxies /api to the server). */
@@ -262,7 +262,7 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   expect(workflow.status, JSON.stringify(workflow.body)).toBeLessThan(300);
   const current = await callFromPage(page, 'GET', '/api/v1/packages/current', undefined, org);
   expect(current.status, JSON.stringify(current.body)).toBe(200);
-  const { digest } = zGetCurrentPackageResponse.parse(current.body);
+  const { digest } = zGetCurrentPackageResponse.pick({ digest: true }).parse(current.body);
 
   // What a workstation does: a launch, its session, the checks it ran, the end, the receipt.
   const launch = await callFromPage(
