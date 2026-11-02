@@ -6,7 +6,7 @@ import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 const ACME = '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c';
 const GLOBEX = otherOrganization().id;
 
@@ -367,7 +367,7 @@ describe('another organization', () => {
       },
     ];
     const seen: (string | null)[] = [];
-    server.events.on('request:start', ({ request }) => {
+    traffic.onRequest((request) => {
       if (request.url.includes('/import/teamcode')) seen.push(request.headers.get('Ostrom-Org'));
     });
     visit('/import');
@@ -383,6 +383,5 @@ describe('another organization', () => {
     expect(counts).not.toHaveTextContent('unchanged');
     expect(seen).toEqual([GLOBEX]);
     expect(screen.queryByText(/Acme/)).toBeNull();
-    server.events.removeAllListeners();
   });
 });

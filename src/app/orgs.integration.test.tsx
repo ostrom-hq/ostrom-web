@@ -6,13 +6,13 @@ import { otherOrganization } from '@/mocks/fixtures/organization';
 import { ORG_STORAGE_KEY, readStoredChoice, storedChoice, useOrgStore } from '@/shared/org/orgStore';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 const globex = otherOrganization();
 
 /** Every `Ostrom-Org` the console sent to a route, in order; `null` for a call that named none. */
 function watch(path: string): (string | null)[] {
   const named: (string | null)[] = [];
-  server.events.on('request:start', ({ request }) => {
+  traffic.onRequest((request) => {
     if (new URL(request.url).pathname === path) named.push(request.headers.get('ostrom-org'));
   });
   return named;
@@ -23,10 +23,6 @@ function chosenBefore(id: string, login: string): void {
     useOrgStore.getState().choose(id, login);
   });
 }
-
-afterEach(() => {
-  server.events.removeAllListeners();
-});
 
 describe('the organization the console acts in', () => {
   it('takes the only organization without asking, names it on the calls after, and keeps nothing', async () => {
@@ -105,7 +101,7 @@ describe('the organization the console acts in', () => {
     const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
     await user.click(within(picker).getByRole('button', { name: 'Not now' }));
     let refused = false;
-    server.events.on('response:mocked', ({ request, response }) => {
+    traffic.onResponse((request, response) => {
       if (new URL(request.url).pathname === '/api/v1/workflows' && response.status === 409) refused = true;
     });
     await user.click(screen.getByRole('link', { name: 'Workflows' }));
