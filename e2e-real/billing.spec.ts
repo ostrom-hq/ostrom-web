@@ -22,7 +22,10 @@ test('an owner reads a new organization’s free plan and is sent to Stripe’s 
 
   await page.goto('/billing');
   await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
-  await expect(page.getByRole('region', { name: 'Plan' })).toContainText('Free');
+  const plan = page.getByRole('region', { name: 'Plan', exact: true });
+  await expect(plan).toContainText('Free');
+  await expect(plan).toContainText('No subscription');
+  await expect(page.getByRole('region', { name: 'Invoices' })).toContainText('No invoice yet.');
   await expect(page.getByRole('meter', { name: 'Agent hours used' })).toBeVisible();
   const plans = page.getByRole('region', { name: 'Plans' });
   await expect(plans.getByRole('button', { name: 'Choose Team' })).toBeEnabled();
