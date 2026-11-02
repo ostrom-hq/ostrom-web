@@ -61,6 +61,8 @@ server {
     location /assets/ {
         gzip_static on;
         gzip_vary on;
+        # Behind an ingress or a CDN too (a request with `Via`): the default would send them whole there.
+        gzip_proxied any;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         include /etc/nginx/ostrom/security-headers.conf;
         try_files $uri =404;

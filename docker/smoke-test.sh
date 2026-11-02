@@ -53,10 +53,23 @@ js=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.js' | head -n 1)
 [ -n "$js" ] || fail "no entry script in index.html"
 h=$(curl -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$js")
 [ "$(header "$h" content-encoding)" = gzip ] || fail "$js not compressed: $h"
-[ "$(header "$h" vary)" = Accept-Encoding ] || fail "no Vary: Accept-Encoding on $js"
+header "$h" vary | grep -qi 'accept-encoding' || fail "no Vary: Accept-Encoding on $js"
 [ "$(header "$h" cache-control)" = 'public, max-age=31536000, immutable' ] || fail "cache of $js: $h"
 [ "$(header "$h" content-security-policy)" = "$csp" ] || fail "CSP on a compressed $js"
-whole=$(curl -fsS "http://127.0.0.1:18080$js" | wc -c)
+# Behind a proxy (a request with `Via`) as well.
+h=$(curl -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' -H 'Via: 1.1 ingress' "http://127.0.0.1:18080$js")
+[ "$(header "$h" content-encoding)" = gzip ] || fail "$js not compressed behind a proxy: $h"
+# A browser that does not accept gzip gets the whole file, and the compressed one is the same file.
+h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$js")
+[ -z "$(header "$h" content-encoding)" ] || fail "$js compressed for a client that did not ask: $h"
+wholejs=$(mktemp)
+curl -fsS "http://127.0.0.1:18080$js" > "$wholejs"
+curl -fsS --compressed "http://127.0.0.1:18080$js" | cmp -s - "$wholejs" || fail "$js: the compressed file is not the whole one"
+css=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.css' | head -n 1)
+[ "$(header "$(curl -fsSI -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$css")" content-encoding)" = gzip ] \
+  || fail "$css not compressed"
+whole=$(wc -c < "$wholejs")
+rm -f "$wholejs"
 packed=$(curl -fsS -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$js" | wc -c)
 [ "$packed" -lt "$whole" ] || fail "$js: $packed bytes compressed, $whole whole"
 echo "entry script: $whole bytes whole, $packed sent compressed"
