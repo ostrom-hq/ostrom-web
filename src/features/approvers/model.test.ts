@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Workflow } from '@gen/api/types.gen';
-import { approvalPoints, byPerson, isSelfApprovalPolicy, unanswerable } from './model';
+import type { ApproverGate, Workflow } from '@gen/api/types.gen';
+import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy, readGraph } from './model';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
   id,
@@ -27,33 +27,60 @@ describe('approvalPoints', () => {
   it('keeps the gates of every workflow, with their approvers', () => {
     const points = approvalPoints(workflows);
     expect(points.map((point) => point.key)).toEqual(['a/g1', 'b/g2', 'b/g3']);
-    expect(points[0]).toMatchObject({ workflowName: 'Workflow a', reason: 'Owners', actions: [] });
+    expect(points[0]).toMatchObject({
+      workflowName: 'Workflow a',
+      reason: 'Owners',
+      actions: [],
+      enforced: true,
+    });
     expect(points[2]?.approvers).toEqual([]);
   });
 });
 
-describe('byPerson', () => {
-  it('reads the map per person, the busiest first, then by login', () => {
-    const people = byPerson(approvalPoints(workflows));
-    expect(people.map((person) => [person.login, person.points.map((point) => point.label)])).toEqual([
-      ['samir', ['Merge', 'Deploy']],
-      ['maya', ['Merge']],
+const gate = (label: string, enforce: boolean): ApproverGate => ({
+  workflowId: 'w',
+  workflowName: 'W',
+  nodeId: label,
+  label,
+  enforce,
+  actions: ['deploy'],
+});
+
+describe('the server graph, read for people', () => {
+  it('blocks only on an enforced gate naming nobody', () => {
+    expect(blocking([gate('Deploy', true), gate('Drop', false)]).map((item) => item.label)).toEqual([
+      'Deploy',
     ]);
   });
 
-  it('orders people with as many gates by login', () => {
-    const people = byPerson(
-      approvalPoints([workflow('c', [{ id: 'g', kind: 'gate', label: 'X', approvers: ['zed', 'amy'] }])]),
-    );
-    expect(people.map((person) => person.login)).toEqual(['amy', 'zed']);
+  it('puts the busiest approver first, then by name', () => {
+    const lines = [
+      { approver: 'zoe', gates: [gate('A', true)] },
+      { approver: 'amy', gates: [gate('B', true)] },
+      { approver: 'max', gates: [gate('A', true), gate('B', true)] },
+    ];
+    expect(busiestFirst(lines).map((line) => line.approver)).toEqual(['max', 'amy', 'zoe']);
   });
 });
 
-describe('unanswerable and the policy', () => {
-  it('finds the gates nobody may approve', () => {
-    expect(unanswerable(approvalPoints(workflows)).map((point) => point.label)).toEqual(['Drop a table']);
+describe('readGraph', () => {
+  it('reads who answers each gate as the server resolves it, and which gates block', () => {
+    const deploy = gate('Deploy', true);
+    const reading = readGraph({
+      approvers: [
+        { approver: 'amy', gates: [deploy] },
+        { approver: 'max', gates: [deploy] },
+      ],
+      unanswered: [gate('Drop', true), gate('Seed', false)],
+      ungated: [],
+    });
+    expect(reading.answeredBy.get('w/Deploy')).toEqual(['amy', 'max']);
+    expect(reading.answeredBy.get('w/Drop')).toEqual([]);
+    expect([...reading.blocked]).toEqual(['w/Drop']);
   });
+});
 
+describe('the self-approval policy', () => {
   it('knows the two self-approval policies', () => {
     expect([
       isSelfApprovalPolicy('never'),

@@ -20,6 +20,7 @@ export const fr = {
       sessions: 'Sessions',
       receipts: 'Reçus',
       members: 'Membres',
+      github: 'GitHub',
       approvers: 'Approbateurs',
       rules: 'Règles',
       decisions: 'Décisions',
@@ -223,6 +224,11 @@ export const fr = {
     },
   },
   receipts: {
+    attestation: {
+      workstation_declared: 'Déclaré par le poste',
+      isolated_runner: 'Exécuté par Ostrom',
+      ci: 'Exécuté en CI',
+    },
     list: {
       title: 'Reçus',
       lead: 'Les traces signées de ce que les agents ont fait et de qui a dit oui. Tout le monde peut les vérifier sans Ostrom.',
@@ -341,8 +347,27 @@ export const fr = {
         'Personne ne peut approuver {{count}} étapes ({{list}}) : un agent qui y arrive attend pour toujours.',
     },
     gates: { title: 'Par étape' },
-    people: { title: 'Par personne', count_one: '{{count}} étape', count_other: '{{count}} étapes' },
-    point: { nobody: 'Personne', hours: 'de {{hours}}', days: 'le {{days}}' },
+    people: {
+      title: 'Par personne',
+      count_one: '{{count}} étape',
+      count_other: '{{count}} étapes',
+      proposed: '{{label}} (pas encore appliquée)',
+    },
+    ungated: {
+      tag: 'Sans porte',
+      text_one: 'Aucune porte ne couvre {{list}} : un agent le fait sans rien demander à personne.',
+      text_other:
+        'Aucune porte ne couvre {{count}} actions ({{list}}) : un agent les fait sans rien demander à personne.',
+    },
+    point: {
+      nobody: 'Personne',
+      hours: 'de {{hours}}',
+      days: 'le {{days}}',
+      noAction: 'ne couvre aucune action, donc n’arrête rien',
+      proposed: 'proposée, pas encore appliquée',
+    },
+    graphUnavailable: 'Le serveur ne dit pas encore qui approuve quoi, personne par personne.',
+    graphFailedTag: 'Non chargé',
     policy: {
       title: 'Quand le demandeur est approbateur',
       label: 'Auto-approbation',
@@ -1247,7 +1272,7 @@ export const fr = {
       github: {
         title: 'Connecter GitHub',
         body: 'Installe l’app GitHub Ostrom sur les dépôts où travaillent tes agents.',
-        action: 'Installer l’app',
+        action: 'Connecter',
       },
       team: {
         title: 'Inviter ton équipe',
@@ -1276,6 +1301,74 @@ export const fr = {
       init: 'Commande de préparation du dépôt',
       run: 'Commande de l’agent',
       install: 'Comment installer la commande ostrom',
+    },
+  },
+  github: {
+    title: 'GitHub',
+    lead: 'L’app GitHub Ostrom lit les dépôts que tu lui donnes et signale les changements des agents sur leurs pull requests.',
+    back: {
+      installedTag: 'Installée',
+      installed: 'L’app GitHub est installée. Ses dépôts s’affichent plus bas.',
+      errorTag: 'Pas terminée',
+      error: {
+        denied: 'L’installation a été annulée sur GitHub.',
+        expired: 'L’installation a pris trop de temps. Relance-la.',
+        forbidden: 'Seul un propriétaire ou un admin de l’organisation installe l’app.',
+        unknown: 'GitHub n’a pas terminé l’installation. Relance-la.',
+      },
+    },
+    app: {
+      title: 'App GitHub',
+      installed: 'Installée',
+      notInstalled: 'Non installée',
+      installedBody:
+        'Ostrom gouverne les dépôts donnés à l’app : les changements des agents y passent par tes règles. Change-les sur GitHub.',
+      notInstalledBody:
+        'Installe l’app sur ton organisation GitHub et choisis les dépôts qu’Ostrom gouverne : tous, ou seulement certains.',
+      name: 'App',
+      install: 'Installer sur GitHub',
+      choose: 'Choisir les dépôts sur GitHub',
+      onlyAdmins: 'Un propriétaire ou un admin installe l’app et choisit ses dépôts.',
+    },
+    repos: {
+      title: 'Dépôts gouvernés',
+      lead_one: 'L’app lit {{count}} dépôt.',
+      lead_other: 'L’app lit {{count}} dépôts.',
+      leadMore_one: 'L’app lit plus de {{count}} dépôt ; les premiers sont affichés.',
+      leadMore_other: 'L’app lit plus de {{count}} dépôts ; les premiers sont affichés.',
+      noneTitle: 'Aucun dépôt pour l’instant',
+      none: 'L’app n’a reçu aucun dépôt. Choisis-en sur GitHub.',
+      search: 'Trouver un dépôt',
+      noMatch: 'Aucun dépôt ne correspond.',
+      searchFirst: 'La recherche ne lit que les dépôts affichés.',
+      branch: 'branche {{branch}}',
+      pushed: 'poussé le {{date}}',
+      owners: 'équipes {{teams}}',
+      archived: 'Archivé',
+    },
+    analysis: {
+      title: 'Les règles de tes dépôts',
+      never:
+        'Ostrom lit les dépôts gouvernés (code owners, protections de branche, CI) et propose les règles et workflows que ton équipe suit déjà. Tu relis chacun avant qu’il s’applique.',
+      running: 'Lecture des dépôts…',
+      ready: 'La dernière analyse est terminée. Ses propositions attendent dans Règles.',
+      failed: 'La dernière analyse s’est arrêtée.',
+      progress: 'Analyse faite à {{percent}} %',
+      found: '{{rules}} et {{workflows}} proposés.',
+      rules_one: '{{count}} règle',
+      rules_other: '{{count}} règles',
+      workflows_one: '{{count}} workflow',
+      workflows_other: '{{count}} workflows',
+      failedTag: 'Arrêtée',
+      failedUnknown: 'Le serveur n’a pas dit pourquoi.',
+      notStartedTag: 'Non lancée',
+      review: 'Relire les règles',
+      starting: 'Lancement…',
+      run: {
+        never: 'Analyser les dépôts',
+        ready: 'Analyser à nouveau',
+        failed: 'Relancer',
+      },
     },
   },
   invite: {

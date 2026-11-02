@@ -66,6 +66,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.{ts,tsx}', 'ee/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // Dates read as people see them depend on the zone: every run reads them in UTC, as the CI does.
+    env: { TZ: 'UTC' },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
