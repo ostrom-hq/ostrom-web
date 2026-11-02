@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Member, Secret } from '@gen/api/types.gen';
+import type { OrgMember, Secret } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,7 +14,7 @@ export interface EnrollFormProps {
   readonly change: AccountChangeViewModel;
   readonly secrets: readonly Secret[];
   /** The other members, to lend the subscription to. */
-  readonly members: readonly Member[];
+  readonly members: readonly OrgMember[];
 }
 
 /** The token is never typed here: it is a secret already stored, named by the form and encrypted by the server. */
@@ -134,7 +134,7 @@ export function EnrollForm({ change, secrets, members }: EnrollFormProps): React
             <fieldset className="o-stack sh-people">
               <legend className="o-field-label">{t('sharing.enroll.sharedWith')}</legend>
               {members.map((member) => (
-                <label key={member.id} className="o-inline">
+                <label key={member.login} className="o-inline">
                   <input
                     type="checkbox"
                     checked={sharedWith.includes(member.login)}
@@ -146,7 +146,7 @@ export function EnrollForm({ change, secrets, members }: EnrollFormProps): React
                       );
                     }}
                   />
-                  <span>{member.name === undefined ? member.login : `${member.name} (${member.login})`}</span>
+                  <span>{member.name === '' ? member.login : `${member.name} (${member.login})`}</span>
                 </label>
               ))}
             </fieldset>

@@ -413,7 +413,9 @@ describe('the shared subscriptions', () => {
   });
 
   it('has nobody to lend to in an organization of one', async () => {
-    db.members = db.members.filter((member) => member.login === 'maya');
+    // The organization's own list, the one the form lends from.
+    const org = db.organization.id;
+    db.orgMembers[org] = (db.orgMembers[org] ?? []).filter((member) => member.login === 'maya');
     visit('/accounts');
     const form = await screen.findByRole('region', { name: 'Share a subscription' });
     expect(within(form).queryByRole('group')).toBeNull();
