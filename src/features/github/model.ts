@@ -75,14 +75,21 @@ export function stageOf(state: { readonly phase?: string | undefined }): Analysi
 
 /** A running analysis is read again this often. */
 export const ANALYSIS_POLL_MS = 2_000;
-/** After a failing read (a server error, the network), the next one waits this long. */
+/** After a passing failure (a server error, the network, a rate limit, a route missing midway), the next read waits this long. */
 export const ANALYSIS_RETRY_MS = 15_000;
 
 /**
- * How long until the analysis is read again: only while a run goes on. A failing read is said on the page and slows
- * the poll down, so a passing blip (a server error, the network, a rate limit, a route missing while the server
- * deploys) never freezes a run the server finishes. Only a lost session or right (401, 403) stops it: reading again
- * changes nothing until the person signs in again.
+ * The answers worth reading again: the server or the network failing, a timeout, a rate limit, and a route missing
+ * while the server deploys (404). Any other refusal (a lost session or right, a bad request, a conflict) stays the same
+ * however often it is asked.
+ */
+function passes(status: number | undefined): boolean {
+  return status === undefined || status >= 500 || [404, 408, 425, 429].includes(status);
+}
+
+/**
+ * How long until the analysis is read again: only while a run goes on. A failing read is said on the page; a passing
+ * one slows the poll down, so a blip never freezes a run the server finishes, and any other refusal stops it.
  */
 export function analysisPollDelay(
   state: { readonly phase?: string | undefined } | undefined,
@@ -90,8 +97,7 @@ export function analysisPollDelay(
 ): number | false {
   if (state === undefined || stageOf(state) !== 'running') return false;
   if (error === null || error === undefined) return ANALYSIS_POLL_MS;
-  const status = isApiFailure(error) ? error.status : undefined;
-  return status === 401 || status === 403 ? false : ANALYSIS_RETRY_MS;
+  return passes(isApiFailure(error) ? error.status : undefined) ? ANALYSIS_RETRY_MS : false;
 }
 
 /**

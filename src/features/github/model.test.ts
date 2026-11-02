@@ -100,10 +100,12 @@ describe('the poll of a run', () => {
     expect(analysisPollDelay(undefined, null)).toBe(false);
   });
 
-  it('slows down after a server error, the network, a rate limit or a route missing midway, and goes on', () => {
+  it('slows down after a server error, the network, a timeout, a rate limit or a route missing midway, and goes on', () => {
     for (const failure of [
       new ApiFailure('server', 'down', 503, undefined),
       new ApiFailure('network', 'gone', undefined, undefined),
+      new ApiFailure('unexpected', 'too slow', 408, undefined),
+      new ApiFailure('unexpected', 'too early', 425, undefined),
       new ApiFailure('unexpected', 'slow down', 429, undefined),
       new ApiFailure('not-found', 'deploying', 404, undefined),
       new Error('odd'),
@@ -111,10 +113,14 @@ describe('the poll of a run', () => {
       expect(analysisPollDelay(running, failure)).toBe(ANALYSIS_RETRY_MS);
   });
 
-  it('stops once the session or the right is lost, which reading again does not change', () => {
+  it('stops on a refusal that reading again does not change', () => {
     for (const failure of [
       new ApiFailure('unauthorized', 'signed out', 401, undefined),
       new ApiFailure('forbidden', 'no longer admin', 403, undefined),
+      new ApiFailure('bad-request', 'bad request', 400, undefined),
+      new ApiFailure('conflict', 'org required', 409, undefined),
+      new ApiFailure('unexpected', 'gone', 410, undefined),
+      new ApiFailure('bad-request', 'unprocessable', 422, undefined),
     ])
       expect(analysisPollDelay(running, failure)).toBe(false);
   });
