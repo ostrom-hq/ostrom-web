@@ -196,7 +196,9 @@ function PolicyForm({
           </Button>
         </span>
       </fieldset>
-      {problem === undefined ? null : <p className="o-screen__lead">{t(`policy.models.problem.${problem}`)}</p>}
+      {problem === undefined ? null : (
+        <p className="o-screen__lead">{t(`policy.models.problem.${problem}`)}</p>
+      )}
       <div className="o-inline">
         <Button type="submit" disabled={change.saving || problem !== undefined}>
           {change.saving ? t('policy.saving') : t('policy.save')}
