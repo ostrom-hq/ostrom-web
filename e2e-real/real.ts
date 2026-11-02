@@ -35,8 +35,22 @@ function signInToken(email: string): string | undefined {
   return undefined;
 }
 
+/**
+ * An address of its own for one person, in the private range nobody's journey shares (10.0.0.0/8). The server limits
+ * sign-ins per source address (10 every 10 minutes, `SignInUseCases.SOURCE_LIMIT`), and every journey reaches it from
+ * the same machine: each person then reads as their own network, as people do. The server believes the header only from
+ * a trusted proxy (`OSTROM_TRUSTED_PROXIES`: the runner's `vite preview`, in `console-journey.yml`); elsewhere it is
+ * ignored and the socket's address counts.
+ */
+function addressOfAPerson(): string {
+  const byte = (): string => Math.floor(Math.random() * 254 + 1).toString();
+  return `10.${byte()}.${byte()}.${byte()}`;
+}
+
 /** Signs `email` in through the console: the form, the e-mailed link, the queue. */
 export async function signIn(page: Page, email: string): Promise<void> {
+  // Every request of this person, the console's calls through the proxy included, comes from their own address.
+  await page.setExtraHTTPHeaders({ 'X-Forwarded-For': addressOfAPerson() });
   // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
   await page.goto('/signin?redirect=%2Fyes');
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
