@@ -9,6 +9,7 @@ import { AddSecretForm } from '../components/AddSecretForm';
 import { SecretRow } from '../components/SecretRow';
 import { useSecretChange, useSecrets } from '../useTools';
 import './tools.css';
+import { FailureText } from '@/shared/ui/FailureText';
 
 /** The organization's secrets: written here, given to the agents' sandboxes and MCP servers, never read back. */
 export function SecretsScreen(): ReactElement {
@@ -29,7 +30,7 @@ function Secrets({ canManage }: { readonly canManage: boolean }): ReactElement {
     <Screen title={t('tools.secrets.title')} lead={t('tools.secrets.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('tools.errorTag')} live>
-          {change.failure.message}
+          <FailureText failure={change.failure} />
         </Banner>
       )}
       {canManage ? <AddSecretForm change={change} /> : null}

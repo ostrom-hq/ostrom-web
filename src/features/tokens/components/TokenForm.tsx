@@ -16,6 +16,7 @@ import {
 } from '../model';
 import type { CreateTokenViewModel } from '../useTokens';
 import { NewSecret } from './NewSecret';
+import { FailureText } from '@/shared/ui/FailureText';
 
 export interface TokenFormProps {
   readonly create: CreateTokenViewModel;
@@ -121,7 +122,7 @@ export function TokenForm({ create, locked }: TokenFormProps): ReactElement {
       {create.created === undefined ? null : <NewSecret created={create.created} onDone={create.dismiss} />}
       {create.failure === undefined ? null : (
         <Banner tone="danger" tag={t('tokens.form.errorTag')} live>
-          {create.failure.message}
+          <FailureText failure={create.failure} />
         </Banner>
       )}
     </Section>
