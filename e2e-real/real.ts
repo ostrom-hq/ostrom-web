@@ -118,30 +118,30 @@ export async function callFromPage(
     },
     { method, path, body, csrf, org },
   );
-  // Parsed here, not in the page. A success must be JSON: the callers read fields from it, so a 2xx page of text
-  // fails here, at its cause. A refusal may be a proxy's page of text: it keeps its status and text in the failure.
-  if (answer.status >= 200 && answer.status < 300 && answer.text !== '') {
-    try {
-      const parsed: unknown = JSON.parse(answer.text);
-      return { status: answer.status, body: parsed };
-    } catch {
-      throw new Error(
-        `${method} ${path} answered ${String(answer.status)} with a body that is not JSON: ${answer.text}`,
-      );
-    }
-  }
-  return { status: answer.status, body: bodyOf(answer.text) };
+  return { status: answer.status, body: bodyOf(`${method} ${path}`, answer.status, answer.text) };
 }
 
-/** A body as JSON when it is JSON, else its text: a proxy's error page still shows in the failure. */
-export function bodyOf(text: string): unknown {
-  if (text === '') return undefined;
+/**
+ * An answer's body, read in Node. A success (2xx but 204) must be JSON: the callers read fields from it, so a page of
+ * text or an empty body fails here, at its cause. A refusal may be a proxy's page of text: it is kept, cut short, so
+ * its status and words show in the failure.
+ */
+export function bodyOf(call: string, status: number, text: string): unknown {
+  const shown = text.length > 300 ? `${text.slice(0, 300)}…` : text;
+  let parsed: { json: unknown } | undefined;
   try {
-    const parsed: unknown = JSON.parse(text);
-    return parsed;
+    parsed = text === '' ? undefined : { json: JSON.parse(text) };
   } catch {
-    return text;
+    parsed = undefined;
   }
+  const success = status >= 200 && status < 300 && status !== 204;
+  if (success && parsed === undefined) {
+    throw new Error(
+      `${call} answered ${String(status)} without a JSON body: ${shown === '' ? '(empty)' : shown}`,
+    );
+  }
+  if (parsed !== undefined) return parsed.json;
+  return shown === '' ? undefined : shown;
 }
 
 const others: BrowserContext[] = [];
