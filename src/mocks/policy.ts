@@ -75,11 +75,12 @@ export function createPolicyHandlers(
       if (refused !== undefined) return refused;
       const body = zModelPolicy.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'The policy is not valid.');
-      const { allowed, byMember, default: model } = body.data;
-      // No default while none is set (ostrom-core#48): the field is absent, never empty.
+      // No default reads as an empty one, which the gateway's model names refuse, as before the contract made it
+      // optional (ostrom-core#48).
+      const { allowed, byMember, default: model = '' } = body.data;
       const policy: ModelPolicy = {
         allowed,
-        ...(model === undefined ? {} : { default: model }),
+        default: model,
         ...(byMember === undefined ? {} : { byMember }),
       };
       const problem = policyRefusal(policy);

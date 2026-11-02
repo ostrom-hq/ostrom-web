@@ -16,8 +16,13 @@ import {
 
 /** Why a run failed, as the screen words it: the cases the contract names, or the server's message. */
 export type ImportFailure =
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'ownersOnly' }
+  /** The server refused the cutover before writing anything: an owner only, no audit log, no shared accounts. */
+  | { readonly kind: CutoverRefusal }
+  /**
+   * Any other cutover failure: unless it is known to come before the audit entry, it may have run, so the screen says to
+   * look first. A refusal before the write that is not one of the three known ones lands here too, on the safe side.
+   */
+  | { readonly kind: 'cutoverUnknown'; readonly message: string }
   | { readonly kind: 'other'; readonly message: string };
 
 export interface TeamCodeImportViewModel {
@@ -47,15 +52,59 @@ interface Loaded {
   readonly summary: ExportSummary;
 }
 
-function failureFrom(mode: ImportMode | undefined, error: unknown): ImportFailure | undefined {
+export type CutoverRefusal = 'ownersOnly' | 'noAudit' | 'noSharing';
+
+/**
+ * The three refusals the server raises before the cutover writes anything (ostrom-server `ImportTeamCodeUseCase`,
+ * `startCutover`), by their status, error type and message: the error type alone (`forbidden`, `unavailable`) is
+ * shared with failures that may come after a write, and the server has no code of its own for these yet.
+ */
+const CUTOVER_REFUSALS: readonly {
+  readonly status: number;
+  readonly code: string;
+  readonly message: string;
+  readonly kind: CutoverRefusal;
+}[] = [
+  {
+    status: 403,
+    code: 'forbidden',
+    message: 'Only an owner of the organization runs the cutover import.',
+    kind: 'ownersOnly',
+  },
+  {
+    status: 503,
+    code: 'unavailable',
+    message: 'This server keeps no audit log, so it cannot record a cutover import.',
+    kind: 'noAudit',
+  },
+  {
+    status: 503,
+    code: 'unavailable',
+    message: 'This server does not import shared accounts, so it has no cutover to run.',
+    kind: 'noSharing',
+  },
+];
+
+export function failureFrom(mode: ImportMode | undefined, error: unknown): ImportFailure | undefined {
   const failure = failureOf(error);
   if (failure === undefined) return undefined;
-  if (mode === 'cutover' && isApiFailure(failure)) {
-    // The cutover is owners only, and needs an audit log and the shared accounts (contract, `cutover`).
-    if (failure.status === 503) return { kind: 'unavailable' };
-    if (failure.status === 403) return { kind: 'ownersOnly' };
-  }
-  return { kind: 'other', message: failure.message };
+  if (mode !== 'cutover') return { kind: 'other', message: failure.message };
+  const refusal = isApiFailure(failure)
+    ? CUTOVER_REFUSALS.find(
+        (known) =>
+          known.status === failure.status && known.code === failure.code && known.message === failure.message,
+      )
+    : undefined;
+  if (refusal !== undefined) return { kind: refusal.kind };
+  // The server writes the audit entry first, and anything after it may still fail, 4xx included: only what is known
+  // to come before (a request the client never sent, a session refused at the door) wrote nothing.
+  return wroteNothing(failure)
+    ? { kind: 'other', message: failure.message }
+    : { kind: 'cutoverUnknown', message: failure.message };
+}
+
+function wroteNothing(failure: Error): boolean {
+  return isApiFailure(failure) && (failure.kind === 'invalid-request' || failure.kind === 'unauthorized');
 }
 
 export function useTeamCodeImport(): TeamCodeImportViewModel {

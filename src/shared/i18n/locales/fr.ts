@@ -854,9 +854,14 @@ export const fr = {
     },
     failure: {
       tag: 'Non importé',
-      unavailable:
-        'Ce serveur ne peut pas lancer la bascule : il lui faut un journal d’audit et des comptes partagés. Rien n’a été écrit.',
       ownersOnly: 'Seul un propriétaire lance la bascule. Rien n’a été écrit.',
+      noAudit:
+        'Ce serveur ne tient pas de journal d’audit, il ne peut donc pas lancer la bascule. Rien n’a été écrit.',
+      noSharing:
+        'Ce serveur n’importe pas les comptes partagés, il n’a donc pas de bascule à lancer. Rien n’a été écrit.',
+      mayHaveRunTag: 'Peut-être lancée',
+      cutoverUnknown:
+        'La bascule a peut-être tourné : regarde le journal d’audit avant de la relancer. Erreur : {{message}}',
     },
     report: {
       empty: 'Rien à importer.',
@@ -1019,9 +1024,72 @@ export const fr = {
     secret: {
       tag: 'Affiché une fois',
       once: 'Le nouveau secret de webhook de {{name}}. Copie-le maintenant : il ne s’affiche plus jamais. L’ancien marche encore 10 minutes.',
+      created:
+        'Le secret de webhook de {{name}}. Copie-le maintenant : il ne s’affiche plus jamais. L’appelant signe chaque requête avec.',
       copy: 'Copier',
       copied: 'Copié.',
       copyFailed: 'Copie impossible : sélectionne-le à la main.',
+    },
+    form: {
+      new: 'Nouvelle automatisation',
+      newTitle: 'Une nouvelle automatisation',
+      create: 'Créer l’automatisation',
+      edit: 'Modifier',
+      save: 'Enregistrer',
+      saving: 'Enregistrement…',
+      cancel: 'Annuler',
+      name: 'Nom',
+      namePlaceholder: 'Mises à jour des dépendances, la nuit',
+      trigger: 'Démarre sur',
+      kind: { cron: 'Un horaire', webhook: 'Un webhook signé' },
+      cron: 'Horaire (cron)',
+      timezone: 'Fuseau horaire',
+      webhookLead:
+        'Ostrom donne au webhook son adresse et un secret une fois l’automatisation créée ; l’appelant signe chaque requête avec ce secret.',
+      workflowNote:
+        'Cette automatisation lance le workflow {{workflow}}. Une automatisation ne lance pas encore de workflow : l’enregistrer ici lui donne une consigne à la place.',
+      agent: 'Agent',
+      agents: { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini CLI' },
+      model: 'Modèle',
+      modelPlaceholder: 'Celui de l’agent par défaut',
+      runtime: 'S’arrête après (minutes)',
+      prompt: 'Ce que fait l’agent',
+      promptPlaceholder:
+        'Mets à jour les dépendances qui ont une version corrective et ouvre une seule pull request.',
+      promptHint: 'L’agent démarre avec cette consigne à chaque exécution, dans sa propre session cloud.',
+      promptHintWebhook: 'Nomme une variable du payload entre doubles accolades, par exemple {{example}}.',
+      runsPerDay: 'Exécutions par jour, au plus',
+      overlap: 'Pendant qu’une exécution tourne encore',
+      overlaps: { skip: 'Ignorer le nouveau déclenchement', allow: 'Lancer une autre exécution' },
+      variables: 'Variables du payload',
+      variablesLead:
+        'Valeurs lues dans le corps JSON du webhook : une variable requise absente refuse l’exécution, une variable sensible est masquée dans un essai à blanc.',
+      addVariable: 'Ajouter une variable',
+      sample: 'Payload d’exemple (JSON, facultatif)',
+      variable: {
+        name: 'Nom de la variable {{number}}',
+        namePlaceholder: 'issue.title',
+        path: 'Chemin de la variable {{number}}',
+        type: 'Type de la variable {{number}}',
+        values: 'Valeurs de la variable {{number}}',
+        valuesPlaceholder: 'basse, haute',
+        required: 'Requise',
+        sensitive: 'Sensible',
+        remove: 'Retirer la variable {{number}}',
+        removeShort: 'Retirer',
+      },
+      problem: {
+        name: 'Donne-lui un nom de 1 à 120 caractères.',
+        cron: 'Écris l’horaire en cron à cinq champs (0 9 * * 1-5) ou en macro (@hourly).',
+        timezone: 'Indique le fuseau horaire de l’horaire, comme Europe/Paris.',
+        prompt: 'Dis ce que fait l’agent, en 1 à 32 000 caractères.',
+        runtime: 'L’exécution s’arrête après 1 à 1 440 minutes.',
+        runsPerDay: 'Autorise de 1 à 1 000 exécutions par jour.',
+        variables: '32 variables au plus.',
+        variable: 'Chaque variable a un nom et un chemin.',
+        enum: 'Une variable enum liste ses valeurs, séparées par des virgules.',
+        sample: 'Le payload d’exemple est un objet JSON.',
+      },
     },
     runs: {
       show: 'Voir les exécutions',

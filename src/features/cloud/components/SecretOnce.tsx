@@ -4,14 +4,27 @@ import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 
-/** A secret the server returns once: shown in full with a copy button, and gone when the screen is left. */
-export function SecretOnce({ name, value }: { readonly name: string; readonly value: string }): ReactElement {
+/**
+ * A secret the server returns once: shown in full with a copy button, and gone when the screen is left. `created`, it
+ * is a new webhook's first secret; otherwise a rotation's, and the old one still works for a while.
+ */
+export function SecretOnce({
+  name,
+  value,
+  created,
+}: {
+  readonly name: string;
+  readonly value: string;
+  readonly created: boolean;
+}): ReactElement {
   const { t } = useTranslation();
   const [copied, setCopied] = useState<'yes' | 'no' | undefined>(undefined);
   return (
     <Banner tone="warning" tag={t('automations.secret.tag')} live>
       <span className="o-stack">
-        <span>{t('automations.secret.once', { name })}</span>
+        <span>
+          {created ? t('automations.secret.created', { name }) : t('automations.secret.once', { name })}
+        </span>
         <code className="o-cmd cl-secret">{value}</code>
         <span className="o-inline">
           <Button

@@ -85,10 +85,10 @@ test('the cutover is the owner’s, and the server says when it cannot run it', 
   await cutover.getByRole('checkbox', { name: 'TeamCode is stopped' }).check();
   await cutover.getByRole('button', { name: 'Run the cutover' }).click();
   await cutover.getByRole('button', { name: /^Cut .* over, in my name$/ }).click();
-  // A server with an audit log and shared accounts runs it; one without says so (503), nothing written.
+  // A server with an audit log and shared accounts runs it; one without says which is missing (503), nothing written.
   await expect(
     page.getByText(
-      /The cutover ran and is in the audit log\.|This server cannot run the cutover: it needs an audit log and shared accounts\./,
+      /The cutover ran and is in the audit log\.|This server keeps no audit log, so it cannot run the cutover\. Nothing was written\.|This server does not import shared accounts, so it has no cutover to run\. Nothing was written\./,
     ),
   ).toBeVisible();
 });

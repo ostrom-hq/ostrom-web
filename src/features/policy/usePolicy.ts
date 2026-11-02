@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { defaultModelOf, keySecrets, readModelPolicy } from './model';
+import { keySecrets, readModelPolicy } from './model';
 
 export interface SaveViewModel<T> {
   /** Saves; `onSaved` runs once the server took it, so a form shows the saved value then, not before. */
@@ -159,7 +159,9 @@ export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckView
   useEffect(() => {
     const question = last.current;
     if (question === undefined || policy === undefined) return;
-    mutate(question.named ? question : { ...question, model: defaultModelOf(policy) });
+    // No default set (ostrom-core#48) asks as `ostrom <agent>` does then: with no model.
+    const { default: model = '' } = policy;
+    mutate(question.named ? question : { ...question, model });
   }, [policy, mutate]);
   return {
     ask,
