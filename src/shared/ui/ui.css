@@ -77,11 +77,12 @@
 }
 .o-badge--success {
   background: var(--success-tint);
-  color: var(--success);
+  /* Text on a tint: the darker shade, AA at 12 px (4.5:1). */
+  color: var(--success-text);
 }
 .o-badge--danger {
   background: var(--danger-tint);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .o-banner {
@@ -120,7 +121,7 @@
   background: var(--danger-tint);
 }
 .o-banner--danger .o-banner__tag {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .o-avatar {

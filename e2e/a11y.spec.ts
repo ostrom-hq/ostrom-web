@@ -9,11 +9,12 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 /** What axe finds on the page as it is now: each rule broken, with the elements that break it. */
 async function violationsOn(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
-  return results.violations.map(
-    (violation) =>
-      `${violation.id} (${violation.impact ?? 'unknown'}): ${violation.help} — ${violation.nodes
-        .map((node) => node.target.join(' '))
-        .join(', ')}`,
+  // Each element with its markup and axe's reason (the colours and ratio, the name and the text), cut short.
+  return results.violations.flatMap((violation) =>
+    violation.nodes.map(
+      (node) =>
+        `${violation.id} (${violation.impact ?? 'unknown'}): ${node.html.slice(0, 160)} — ${(node.failureSummary ?? '').replaceAll('\n', ' ').slice(0, 240)}`,
+    ),
   );
 }
 
