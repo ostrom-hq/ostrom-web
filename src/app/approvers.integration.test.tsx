@@ -47,12 +47,13 @@ describe('who approves what', () => {
     expect(people[0]).toHaveTextContent('Merge to main · Run a migration (proposed)');
     expect(people[0]).toHaveTextContent('2 steps');
     expect(people[1]).toHaveTextContent('Deploy to production · Merge to main');
-    // What no enforced gate covers runs without asking anyone, a proposed gate's actions included.
+    // What no gate covers runs without asking anyone.
     expect(
-      screen.getByText(
-        'No gate covers 3 actions (drop-table, migrate, push-main): an agent does them without asking anyone.',
-      ),
+      screen.getByText('No gate covers push-main: an agent does it without asking anyone.'),
     ).toBeInTheDocument();
+    // The proposed gate naming nobody says it stops nobody yet, and is not marked as blocking.
+    expect(rows[3]).toHaveTextContent('proposed, stops nobody yet');
+    expect(within(rows[3] ?? document.body).getByText('Nobody')).not.toHaveClass('o-badge--danger');
   });
 
   it('says how self-approval works and lets an admin change it', async () => {
@@ -239,5 +240,16 @@ describe('who approves what', () => {
     server.use(http.get('*/api/v1/workflows', () => HttpResponse.error()));
     visit('/approvers');
     expect(await screen.findByText('Offline', {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
+
+  it('says why who approves what does not come, rather than blaming an older server', async () => {
+    server.use(
+      http.get('*/api/v1/gates/approvers', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'graph is down' } }, { status: 500 }),
+      ),
+    );
+    visit('/approvers');
+    expect(await screen.findByText('graph is down')).toBeInTheDocument();
+    expect(screen.queryByText(/does not say who approves/)).toBeNull();
   });
 });

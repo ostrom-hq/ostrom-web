@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Workflow } from '@gen/api/types.gen';
-import type { ApproverGate } from '@gen/api/types.gen';
+import type { ApproverGate, Workflow } from '@gen/api/types.gen';
 import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy } from './model';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
@@ -28,7 +27,12 @@ describe('approvalPoints', () => {
   it('keeps the gates of every workflow, with their approvers', () => {
     const points = approvalPoints(workflows);
     expect(points.map((point) => point.key)).toEqual(['a/g1', 'b/g2', 'b/g3']);
-    expect(points[0]).toMatchObject({ workflowName: 'Workflow a', reason: 'Owners', actions: [] });
+    expect(points[0]).toMatchObject({
+      workflowName: 'Workflow a',
+      reason: 'Owners',
+      actions: [],
+      enforced: true,
+    });
     expect(points[2]?.approvers).toEqual([]);
   });
 });

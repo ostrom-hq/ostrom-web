@@ -29,9 +29,12 @@ function PointRow({
     ...point.actions.map((action) => action.label),
     point.when?.hours === undefined ? undefined : t('approvers.point.hours', { hours: point.when.hours }),
     point.when?.days === undefined ? undefined : t('approvers.point.days', { days: point.when.days }),
+    point.enforced ? undefined : t('approvers.point.proposed'),
     // The gates decide on the actions they cover: one that covers none stops nothing.
     point.actions.length === 0 ? t('approvers.point.noAction') : undefined,
   ].filter((part) => part !== undefined);
+  // Red only where it blocks for good, as the warning above says: an enforced gate that covers an action.
+  const blocks = point.enforced && point.actions.length > 0;
   return (
     <div className="o-row">
       <span className="o-row__main">
@@ -40,7 +43,7 @@ function PointRow({
         {point.reason === undefined ? null : <span className="o-row__meta">{point.reason}</span>}
       </span>
       {point.approvers.length === 0 ? (
-        <Badge tone="danger">{t('approvers.point.nobody')}</Badge>
+        <Badge tone={blocks ? 'danger' : 'neutral'}>{t('approvers.point.nobody')}</Badge>
       ) : (
         <span className="o-row__meta">{point.approvers.map(nameOf).join(', ')}</span>
       )}
@@ -157,28 +160,31 @@ export function ApproversScreen(): ReactElement {
   const policy = useSelfApprovalPolicy();
   return (
     <Screen title={t('approvers.title')} lead={t('approvers.lead')}>
-      {view.graph === undefined ? null : <GraphNotes graph={view.graph} />}
       <LoadState data={view.points} failure={view.failure}>
-        {(points) =>
-          points.length === 0 ? (
-            <p className="o-empty">{t('approvers.empty')}</p>
-          ) : (
-            <section aria-labelledby="ap-gates" className="o-stack">
-              <h2 id="ap-gates" className="o-label">
-                {t('approvers.gates.title')}
-              </h2>
-              <ul className="o-card o-rows">
-                {points.map((point) => (
-                  <li key={point.key}>
-                    <PointRow point={point} nameOf={view.nameOf} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )
-        }
+        {(points) => (
+          <>
+            {/* The graph shows with the steps, never before them: the page does not jump. */}
+            {view.graph === undefined ? null : <GraphNotes graph={view.graph} />}
+            {points.length === 0 ? (
+              <p className="o-empty">{t('approvers.empty')}</p>
+            ) : (
+              <section aria-labelledby="ap-gates" className="o-stack">
+                <h2 id="ap-gates" className="o-label">
+                  {t('approvers.gates.title')}
+                </h2>
+                <ul className="o-card o-rows">
+                  {points.map((point) => (
+                    <li key={point.key}>
+                      <PointRow point={point} nameOf={view.nameOf} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {view.graph === undefined ? null : <People graph={view.graph} nameOf={view.nameOf} />}
+          </>
+        )}
       </LoadState>
-      {view.graph === undefined ? null : <People graph={view.graph} nameOf={view.nameOf} />}
       {view.graphUnavailable ? <p className="o-row__meta">{t('approvers.graphUnavailable')}</p> : null}
       <PolicySection policy={policy} />
     </Screen>

@@ -352,6 +352,7 @@ export const en = {
       hours: 'from {{hours}}',
       days: 'on {{days}}',
       noAction: 'covers no action, so it stops nothing',
+      proposed: 'proposed, stops nobody yet',
     },
     graphUnavailable: 'The server does not say who approves what person by person yet.',
     policy: {

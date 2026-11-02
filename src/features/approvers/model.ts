@@ -12,6 +12,8 @@ export interface ApprovalPoint {
   readonly owner: string | undefined;
   readonly actions: readonly GateAction[];
   readonly when: NodeWhen | undefined;
+  /** False while its workflow is only proposed: the gate stops nobody yet. */
+  readonly enforced: boolean;
 }
 
 export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] {
@@ -28,6 +30,7 @@ export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] 
         owner: node.owner,
         actions: node.actions ?? [],
         when: node.when,
+        enforced: workflow.status !== 'proposed',
       })),
   );
 }

@@ -362,6 +362,7 @@ export const fr = {
       hours: 'de {{hours}}',
       days: 'le {{days}}',
       noAction: 'ne couvre aucune action, donc n’arrête rien',
+      proposed: 'proposée, n’arrête encore personne',
     },
     graphUnavailable: 'Le serveur ne dit pas encore qui approuve quoi, personne par personne.',
     policy: {

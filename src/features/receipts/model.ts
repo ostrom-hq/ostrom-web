@@ -13,5 +13,11 @@ export function attestationOf(node: ReceiptNode): CheckAttestation | undefined {
 
 /** A declaration warns: only a run Ostrom or the CI did itself is shown as proven. */
 export function attestationTone(attestation: CheckAttestation): BadgeTone {
-  return attestation === 'ci' || attestation === 'isolated_runner' ? 'success' : 'warning';
+  switch (attestation) {
+    case 'ci':
+    case 'isolated_runner':
+      return 'success';
+    case 'workstation_declared':
+      return 'warning';
+  }
 }

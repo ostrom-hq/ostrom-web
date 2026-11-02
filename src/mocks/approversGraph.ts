@@ -8,8 +8,8 @@ export interface ApproversGraphState {
 }
 
 /**
- * The action classes the demo's catalogue knows; those no enforced gate covers run without asking anyone. The real
- * server reads them from its compiled catalogue: this list is the demo's.
+ * The action classes the demo's catalogue knows; those no gate covers run without asking anyone. The real server
+ * reads them from its compiled catalogue: this list is the demo's.
  */
 const KNOWN_ACTIONS = ['deploy', 'drop-table', 'merge-main', 'migrate', 'push-main'];
 
@@ -30,7 +30,7 @@ export function createApproversGraphHandlers(state: () => ApproversGraphState): 
               workflowName: workflow.name,
               nodeId: node.id,
               label: node.label,
-              enforce: workflow.status === 'accepted',
+              enforce: workflow.status !== 'proposed',
               actions,
             };
             return [{ gate, approvers: [...new Set(node.approvers ?? [])] }];
@@ -47,8 +47,8 @@ export function createApproversGraphHandlers(state: () => ApproversGraphState): 
       const approvers: ApproverLine[] = [...byApprover.entries()]
         .map(([approver, list]) => ({ approver, gates: list }))
         .sort((a, b) => a.approver.localeCompare(b.approver, 'en'));
-      // A proposed gate stops nothing yet: its actions still run without asking anyone.
-      const covered = new Set(gates.flatMap(({ gate }) => (gate.enforce ? gate.actions : [])));
+      // As the server: a class a gate covers is not "ungated", even while its workflow is only proposed.
+      const covered = new Set(gates.flatMap(({ gate }) => gate.actions));
       return HttpResponse.json({
         approvers,
         unanswered: gates.filter(({ approvers: names }) => names.length === 0).map(({ gate }) => gate),
