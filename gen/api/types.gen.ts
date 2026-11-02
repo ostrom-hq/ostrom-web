@@ -1900,7 +1900,7 @@ export type Organization = {
     avatarUrl: string;
     description?: string;
     /**
-     * How GitHub is connected; absent for an organization linked to no GitHub organization
+     * How GitHub is connected; absent when the answer does not say (an organization linked to no GitHub organization, or a list that does not carry it)
      */
     connectedVia?: GitHubConnection;
     createdAt?: string;
@@ -3885,7 +3885,7 @@ export type GetMeData = {
     body?: never;
     headers?: {
         /**
-         * The organization whose member and organization the answer adds, when the caller is a member of it. An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a 404
+         * The organization whose member and organization the answer adds, when the caller is a member of it. An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a 404. Without it the answer has neither, even for a person with one organization
          */
         'Ostrom-Org'?: string;
     };

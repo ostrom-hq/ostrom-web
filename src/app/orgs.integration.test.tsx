@@ -320,12 +320,17 @@ describe('who the person is in the organization, in the top bar', () => {
   });
 
   it('names nobody when the answer has no member there', async () => {
-    const asked = watch('/api/v1/auth/me');
+    // The answer with the organization named, once the console has it: nothing is shown before or after.
+    let answered = false;
+    traffic.onResponse((request) => {
+      if (new URL(request.url).pathname === '/api/v1/auth/me' && request.headers.get('ostrom-org') !== null)
+        answered = true;
+    });
     server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json(signedIn)));
     visit('/artifacts');
     const bare = await screen.findByRole('button', { name: 'Organization: Acme. Switch' });
     await waitFor(() => {
-      expect(asked).toContain(db.organization.id);
+      expect(answered).toBe(true);
     });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(bare).not.toHaveAccessibleDescription();

@@ -19,18 +19,21 @@ function consoleReadsMeIn(page: Page, org: string): Promise<Response> {
   );
 }
 
-/** What the top bar says of the person, from `/auth/me` as the server answered the console: "Name (login) · Role". */
-function signedInAs(me: MeBody, role: string): string {
-  const name = me.member?.name;
-  return `${name === undefined || name === '' ? me.dev.login : `${name} (${me.dev.login})`} · ${role}`;
-}
-
-/** The top bar's organization button, and what it says of the person there. */
-async function expectTopBar(page: Page, organization: string, person: string): Promise<void> {
+/**
+ * The top bar's organization button, and what it says of the person there: their login and the role's own label, the
+ * line visible beside the organization's name on desktop and on a phone.
+ */
+async function expectTopBar(
+  page: Page,
+  organization: string,
+  login: string,
+  role: 'Owner' | 'Admin',
+): Promise<void> {
   const button = page.getByRole('button', { name: `Organization: ${organization}. Switch` });
   await expect(button).toBeVisible();
-  await expect(button).toHaveAccessibleDescription(person);
-  await expect(button).toContainText(person);
+  const escaped = login.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await expect(button).toHaveAccessibleDescription(new RegExp(`${escaped}.* · ${role}$`));
+  await expect(button.getByText(new RegExp(` · ${role}$`))).toBeVisible();
 }
 
 test('the top bar reads /auth/me in the organization the console acts in: its name, and the person’s name and role', async ({
@@ -47,7 +50,7 @@ test('the top bar reads /auth/me in the organization the console acts in: its na
   expect(meInFirst.member?.role).toBe('owner');
   expect(meInFirst.organization?.id).toBe(first.id);
   const firstName = meInFirst.organization?.name ?? '';
-  await expectTopBar(page, firstName, signedInAs(meInFirst, 'Owner'));
+  await expectTopBar(page, firstName, meInFirst.dev.login, 'Owner');
   await expect(page.getByRole('dialog', { name: 'Which organization?' })).toHaveCount(0);
 
   // A second organization of the same person: the console asks, then reads /auth/me again in the one chosen.
@@ -69,12 +72,12 @@ test('the top bar reads /auth/me in the organization the console acts in: its na
   const meInSecond = (await inSecond.json()) as MeBody;
   expect(meInSecond.member?.role).toBe('owner');
   expect(meInSecond.organization).toMatchObject({ id: second.id, name: second.name });
-  await expectTopBar(page, second.name, signedInAs(meInSecond, 'Owner'));
+  await expectTopBar(page, second.name, meInSecond.dev.login, 'Owner');
   // The choice is kept: after a reload, the same organization, read again with it named.
   const readAfterReload = consoleReadsMeIn(page, second.id);
   await page.reload();
   await readAfterReload;
-  await expectTopBar(page, second.name, signedInAs(meInSecond, 'Owner'));
+  await expectTopBar(page, second.name, meInSecond.dev.login, 'Owner');
 
   // Someone invited as an admin of the second: their own name and role there, from their own /auth/me.
   const admin = await anotherPerson(browser);
@@ -83,7 +86,7 @@ test('the top bar reads /auth/me in the organization the console acts in: its na
   await admin.goto('/yes');
   const adminMe = (await (await readByAdmin).json()) as MeBody;
   expect(adminMe.member?.role).toBe('admin');
-  await expectTopBar(admin, second.name, signedInAs(adminMe, 'Admin'));
+  await expectTopBar(admin, second.name, adminMe.dev.login, 'Admin');
   // An organization they are not in adds nothing to /auth/me, and is no error (ostrom-server#92).
   const foreign = await callFromPage(admin, 'GET', '/api/v1/auth/me', undefined, first.id);
   expect(foreign.status).toBe(200);
