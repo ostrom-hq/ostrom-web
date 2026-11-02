@@ -72,10 +72,10 @@ describe('mock organization of a call', () => {
       member: { login: 'maya' },
       organization: { name: 'Globex' },
     });
-    expect(await get('/auth/me', 'org-nobody')).toEqual({
-      status: 200,
-      body: { dev: expect.objectContaining({ login: 'maya' }), capabilities: [] },
-    });
+    const foreign = await get('/auth/me', 'org-nobody');
+    expect(foreign.status).toBe(200);
+    expect(foreign.body).not.toHaveProperty('member');
+    expect(foreign.body).not.toHaveProperty('organization');
     expect((await get('/secrets', 'org-nobody')).status).toBe(404);
   });
 

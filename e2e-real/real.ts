@@ -10,7 +10,9 @@ const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
 /** A fresh address per journey: no two journeys share a person. */
 export function freshEmail(who: string): string {
-  return `${who}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}@e2e.ostrom.test`;
+  // A domain of its own: the server gives one free organization per company domain (`freeClaimOf`), so people of one
+  // shared domain could not each create theirs.
+  return `${who}@${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}.e2e.ostrom.test`;
 }
 
 /** The token of the newest sign-in mail to `email`, if the server wrote one. */
@@ -151,6 +153,13 @@ export async function joinAs(
   who: string,
   role: string,
 ): Promise<void> {
+  const token = await invitationTo(owner, org, role);
+  await signIn(joiner, freshEmail(who));
+  await accept(joiner, token);
+}
+
+/** An invitation link to `org` with `role`, made by an owner: its token. */
+export async function invitationTo(owner: Page, org: string, role: string): Promise<string> {
   const link = await callFromPage(owner, 'POST', `/api/v1/orgs/${org}/invitations/links`, {
     role,
     maxUses: 1,
@@ -158,9 +167,11 @@ export async function joinAs(
   expect(link.status).toBe(201);
   const token = /token=([^&#\s]+)/.exec((link.body as { url: string }).url)?.[1];
   expect(token).toBeDefined();
-  await signIn(joiner, freshEmail(who));
-  const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', {
-    token: decodeURIComponent(token ?? ''),
-  });
+  return decodeURIComponent(token ?? '');
+}
+
+/** The person signed in in `joiner` joins with an invitation's token. */
+export async function accept(joiner: Page, token: string): Promise<void> {
+  const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', { token });
   expect(accepted.status).toBe(200);
 }
