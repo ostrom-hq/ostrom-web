@@ -25,3 +25,10 @@ export function parseEnv(raw: Record<string, unknown>): AppEnv {
   const env = envSchema.parse(raw);
   return { apiBaseUrl: env.VITE_OSTROM_API_URL, mocks: env.VITE_MOCKS === 'true' };
 }
+
+declare global {
+  interface ImportMetaEnv {
+    /** `'true'` in the demo and Playwright builds; read by main.tsx as written, so a real build drops the mocks. */
+    readonly VITE_MOCKS?: string;
+  }
+}

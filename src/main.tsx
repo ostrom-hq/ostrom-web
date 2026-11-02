@@ -29,7 +29,9 @@ async function startMocksOrWarn(): Promise<void> {
 }
 
 async function boot(container: HTMLElement): Promise<void> {
-  if (env.mocks) await startMocksOrWarn();
+  // Read as the build wrote it, not through `env`: Vite then drops the mock API (handlers and demo data) from a build
+  // without VITE_MOCKS, instead of shipping it unused (audit AUDIT-SECU-WEB-2 B7). `env.mocks` says the same.
+  if (import.meta.env.VITE_MOCKS === 'true') await startMocksOrWarn();
   createRoot(container).render(
     <StrictMode>
       <App router={createAppRouter()} mocks={env.mocks} />

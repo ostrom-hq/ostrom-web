@@ -48,6 +48,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # What ships in the console: a known advisory of moderate severity or above in a runtime dependency fails the
+      # job (audit AUDIT-SECU-WEB-2 B9). Build tools are kept patched by pnpm-workspace.yaml overrides.
+      - name: No known vulnerability in the runtime dependencies (pnpm audit --prod)
+        run: pnpm audit --prod --audit-level=moderate
       - name: Generated API client matches the contract
         run: pnpm gen:check
       - run: pnpm typecheck
