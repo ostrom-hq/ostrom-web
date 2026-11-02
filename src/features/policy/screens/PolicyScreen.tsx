@@ -14,12 +14,15 @@ function PolicyBody({ role }: { readonly role: OrgRole | undefined }): ReactElem
   const canChange = managesMembers(role);
   const models = useModelPolicy();
   const providers = useProviders(canChange);
-  const check = useLaunchCheck();
+  const check = useLaunchCheck(models.policy);
   return (
     <>
       <ModelsSection view={models} canChange={canChange} />
       <ProvidersSection view={providers} canChange={canChange} />
-      <LaunchCheck check={check} defaultModel={models.policy?.default} />
+      <LaunchCheck
+        check={check}
+        defaultModel={models.failure === undefined ? models.policy?.default : null}
+      />
     </>
   );
 }

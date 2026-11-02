@@ -21,8 +21,11 @@ export function LaunchCheck({
   defaultModel,
 }: {
   readonly check: LaunchCheckViewModel;
-  /** The organization's default model, asked when none is typed: the one a launch without a model gets. */
-  readonly defaultModel: string | undefined;
+  /**
+   * The organization's default model, asked when none is typed: the one a launch without a model gets. Undefined while
+   * the policy loads (asking waits for it), null when it cannot be read, `""` when none is set.
+   */
+  readonly defaultModel: string | null | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   const [agent, setAgent] = useState('claude');
@@ -80,7 +83,10 @@ export function LaunchCheck({
           />
         </span>
         <span className="pl-check__go">
-          <Button type="submit" disabled={agent.trim() === '' || check.checking}>
+          <Button
+            type="submit"
+            disabled={agent.trim() === '' || check.checking || defaultModel === undefined}
+          >
             {check.checking ? t('policy.check.checking') : t('policy.check.ask')}
           </Button>
         </span>

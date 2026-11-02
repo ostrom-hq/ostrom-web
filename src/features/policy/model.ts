@@ -3,16 +3,15 @@ import type { InferenceSettings, Member, ModelPolicy, Secret } from '@gen/api/ty
 import { zModelPolicy } from '@gen/api/zod.gen';
 import { z } from 'zod';
 
+// The contract's policy, with `default` as the server may send it: left out (or null) until one is set.
+const SENT_POLICY = zModelPolicy.extend({ default: z.string().nullish() });
+
 /**
  * The policy as the server sends it. A new organization's has no `default` until one is set (the server leaves the
  * field out while the contract requires it): it reads as no default, `""`, rather than as a broken answer.
  */
 export async function readModelPolicy(data: unknown): Promise<ModelPolicy> {
-  const {
-    allowed,
-    default: model,
-    byMember,
-  } = await zModelPolicy.extend({ default: z.string().optional() }).parseAsync(data);
+  const { allowed, default: model, byMember } = await SENT_POLICY.parseAsync(data);
   return { allowed, default: model ?? '', ...(byMember === undefined ? {} : { byMember }) };
 }
 

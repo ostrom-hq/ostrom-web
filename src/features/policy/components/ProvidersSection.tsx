@@ -19,9 +19,9 @@ function ProvidersForm({
 }): ReactElement {
   const { t } = useTranslation();
   const [draft, setDraftState] = useState<ProvidersDraft>(() => providersDraftOf(settings));
-  // An edit after a save is not saved yet: its banner goes.
+  // An edit after a save is not saved yet: its banner goes. A save still going keeps its answer coming.
   const setDraft = (next: ProvidersDraft): void => {
-    view.change.reset();
+    if (!view.change.saving) view.change.reset();
     setDraftState(next);
   };
   const listId = useId();

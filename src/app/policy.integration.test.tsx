@@ -247,6 +247,31 @@ describe('the provider keys', () => {
     expect(within(keys).queryByText('Provider keys saved.')).toBeNull();
   });
 
+  it('keeps the answer of a save still going when a key is typed meanwhile', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.put(
+        '*/api/v1/inference/settings',
+        async () => {
+          await answered;
+          return refused('A key is named by a secret', 400);
+        },
+        { once: true },
+      ),
+    );
+    visit('/policy');
+    const keys = await section('Provider keys');
+    await within(keys).findByRole('combobox', { name: 'Anthropic key' });
+    await user.click(within(keys).getByRole('button', { name: 'Save' }));
+    await user.type(within(keys).getByRole('combobox', { name: 'OpenAI key' }), 'X');
+    release();
+    expect(await within(keys).findByRole('alert')).toHaveTextContent('A key is named by a secret');
+  });
+
   it('holds the keys while they save, and still names them when the secrets cannot be read', async () => {
     const user = userEvent.setup();
     server.use(
@@ -309,6 +334,43 @@ describe('the launch check', () => {
     await waitFor(() => {
       expect(asked).toBe(2);
     });
+  });
+
+  it('waits for the policy before asking, and drops an answer once the policy changes', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const loaded = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get(
+        '*/api/v1/policy/models',
+        async () => {
+          await loaded;
+          return HttpResponse.json(db.modelPolicies[db.organization.id]);
+        },
+        { once: true },
+      ),
+    );
+    visit('/policy');
+    const check = await section('Would a launch pass?');
+    // The default model is not known yet: an empty model cannot be asked for it.
+    expect(within(check).getByRole('button', { name: 'Ask' })).toBeDisabled();
+    release();
+    await waitFor(() => {
+      expect(within(check).getByRole('button', { name: 'Ask' })).toBeEnabled();
+    });
+    await user.click(within(check).getByRole('button', { name: 'Ask' }));
+    expect(
+      await within(check).findByText('You may launch claude with the default model, claude-sonnet-4-5.'),
+    ).toBeInTheDocument();
+    const models = await section('Models');
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    await user.clear(within(models).getByRole('textbox', { name: 'Default model' }));
+    await user.type(within(models).getByRole('textbox', { name: 'Default model' }), 'claude-opus-4-1');
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
+    expect(within(check).queryByText(/You may launch/)).toBeNull();
   });
 
   it('shows a refusal without a reason, a note, the wait, and a failure', async () => {

@@ -64,6 +64,7 @@ describe('a model policy', () => {
 
   it('reads a policy without a default as no default, and refuses what is not a policy', async () => {
     expect(await readModelPolicy({ allowed: ['claude-'] })).toEqual({ allowed: ['claude-'], default: '' });
+    expect(await readModelPolicy({ allowed: [], default: null })).toEqual({ allowed: [], default: '' });
     expect(await readModelPolicy({ allowed: [], default: 'x', byMember: { m1: ['y'] } })).toEqual({
       allowed: [],
       default: 'x',

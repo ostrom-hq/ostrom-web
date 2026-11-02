@@ -10,7 +10,7 @@ import {
 import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api/sdk.gen';
 import type { InferenceSettings, Member, ModelPolicy } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
@@ -131,7 +131,11 @@ export interface LaunchCheckViewModel {
   readonly failure: Error | undefined;
 }
 
-export function useLaunchCheck(): LaunchCheckViewModel {
+/**
+ * @param policy The policy the answer is about: once it changes (a save), the last answer goes, so no answer speaks of
+ *   a policy that is no longer the organization's.
+ */
+export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckViewModel {
   // A question asked, not a state kept fresh: a mutation never asks again on its own (a focus, a remount).
   const mutation = useMutation({
     mutationFn: async (question: LaunchQuestion): Promise<LaunchAnswer> =>
@@ -142,13 +146,16 @@ export function useLaunchCheck(): LaunchCheckViewModel {
         })
       ).data,
   });
-  const { mutate } = mutation;
+  const { mutate, reset } = mutation;
   const ask = useCallback(
     (question: LaunchQuestion) => {
       mutate(question);
     },
     [mutate],
   );
+  useEffect(() => {
+    reset();
+  }, [policy, reset]);
   return {
     ask,
     asked: mutation.variables,
