@@ -744,6 +744,11 @@ export type Capacity = {
 export type CheckOutcome = 'passed' | 'failed' | 'timeout' | 'skipped';
 
 /**
+ * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: an Ostrom runner ran it in an isolated session. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
+ */
+export type CheckAttestation = 'workstation_declared' | 'isolated_runner' | 'ci';
+
+/**
  * A run of a check script, reported by the launcher. A failed enforced check blocks the action it guards
  */
 export type CheckRun = {
@@ -1223,9 +1228,12 @@ export type ImportItem = {
      */
     kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account';
     name: string;
-    action: 'planned' | 'created' | 'updated' | 'unchanged' | 'skipped';
     /**
-     * Why it was skipped
+     * `revive_at_cutover`: a shared account waiting for a reconnection, left so while TeamCode runs; the cutover run revives it.
+     */
+    action: 'planned' | 'created' | 'updated' | 'unchanged' | 'skipped' | 'revive_at_cutover';
+    /**
+     * Why it was skipped, or why a `revive_at_cutover` line waits for the cutover run
      */
     reason?: string;
 };
@@ -1239,6 +1247,10 @@ export type ImportReport = {
     updated: number;
     unchanged: number;
     skipped: number;
+    /**
+     * Shared accounts left waiting for a reconnection until the cutover run (`revive_at_cutover` lines)
+     */
+    reviveAtCutover: number;
 };
 
 /**
@@ -2113,6 +2125,10 @@ export type ReceiptNode = {
     outcome: string;
     detail?: string;
     ref?: string;
+    /**
+     * Where the check run comes from. Required on a check node (`kind` is `check`), absent on the others; part of the signed receipt (the receipt's signature and the workflow subject's preimage). A check node of a receipt signed before this field has none, and reads as `workstation_declared`.
+     */
+    attestation?: CheckAttestation;
 };
 
 /**
@@ -2195,6 +2211,55 @@ export type Rule = {
     decidedBy?: string;
     decidedAt?: string;
     origin?: string;
+    gate?: RuleGate;
+};
+
+/**
+ * The gate a rule puts on boundary actions. An accepted or edited rule blocks the actions until one of the approvers says yes; a proposed rule only records them (shadow); a rejected rule gates nothing.
+ */
+export type RuleGate = {
+    actions: Array<GateAction>;
+    /**
+     * GitHub logins
+     */
+    approvers: Array<string>;
+    reason?: string;
+    /**
+     * Checks the gated actions need, each with the attestation it requires. Absent or empty, a check run declared by the workstation is accepted, and shown as declared.
+     */
+    checks?: Array<RuleGateCheck>;
+};
+
+/**
+ * A check a rule gate requires before its actions pass
+ */
+export type RuleGateCheck = {
+    /**
+     * Id of the check node in the organization's workflows
+     */
+    check: string;
+    /**
+     * When true, only a run attested by an Ostrom runner or the CI (`isolated_runner`, `ci`) satisfies the gate; a run declared by the workstation (`workstation_declared`) does not. False by default.
+     */
+    attested?: boolean;
+};
+
+/**
+ * A rule written by the team
+ */
+export type NewRule = {
+    statement: string;
+    group: string;
+    output?: string;
+    scope?: Array<string>;
+    strength?: RuleStrength;
+    why?: string;
+    /**
+     * Only proposed or accepted are accepted; accepted by default
+     */
+    status?: RuleStatus;
+    reviewBy?: string;
+    gate?: RuleGate;
 };
 
 /**
@@ -8583,6 +8648,102 @@ export type ListRulesResponses = {
 
 export type ListRulesResponse = ListRulesResponses[keyof ListRulesResponses];
 
+export type CreateRuleData = {
+    body: NewRule;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/rules';
+};
+
+export type CreateRuleErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateRuleError = CreateRuleErrors[keyof CreateRuleErrors];
+
+export type CreateRuleResponses = {
+    /**
+     * Created
+     */
+    201: Rule;
+};
+
+export type CreateRuleResponse = CreateRuleResponses[keyof CreateRuleResponses];
+
+export type DeleteRuleData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/rules/{id}';
+};
+
+export type DeleteRuleErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteRuleError = DeleteRuleErrors[keyof DeleteRuleErrors];
+
+export type DeleteRuleResponses = {
+    /**
+     * Deleted
+     */
+    204: void;
+};
+
+export type DeleteRuleResponse = DeleteRuleResponses[keyof DeleteRuleResponses];
+
 export type GetRuleData = {
     body?: never;
     headers?: {
@@ -8639,6 +8800,13 @@ export type UpdateRuleData = {
         strength?: RuleStrength;
         reviewBy?: string;
         scope?: Array<string>;
+        group?: string;
+        why?: string;
+        output?: string;
+        /**
+         * The gate of the rule; JSON null removes it
+         */
+        gate?: RuleGate | null;
     };
     headers?: {
         /**
@@ -11081,6 +11249,10 @@ export type ImportTeamCodeData = {
          * Report the plan without writing anything
          */
         dryRun?: boolean;
+        /**
+         * The final run, once TeamCode is stopped: owners only (403 otherwise), recorded in the audit log in the name of the person who runs it, before anything is written (503 on a server without an audit log or without shared accounts). It also revives the shared accounts waiting for a reconnection, testing TeamCode's tokens first (renewing rotates them, so a normal run never does).
+         */
+        cutover?: boolean;
     };
     url: '/api/v1/import/teamcode';
 };
@@ -11106,6 +11278,10 @@ export type ImportTeamCodeErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type ImportTeamCodeError = ImportTeamCodeErrors[keyof ImportTeamCodeErrors];

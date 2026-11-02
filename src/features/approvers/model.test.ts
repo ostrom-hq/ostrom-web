@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Workflow } from '@gen/api/types.gen';
-import { approvalPoints, byPerson, isSelfApprovalPolicy, unanswerable } from './model';
+import { approvalPoints, isSelfApprovalPolicy } from './model';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
   id,
@@ -32,28 +32,7 @@ describe('approvalPoints', () => {
   });
 });
 
-describe('byPerson', () => {
-  it('reads the map per person, the busiest first, then by login', () => {
-    const people = byPerson(approvalPoints(workflows));
-    expect(people.map((person) => [person.login, person.points.map((point) => point.label)])).toEqual([
-      ['samir', ['Merge', 'Deploy']],
-      ['maya', ['Merge']],
-    ]);
-  });
-
-  it('orders people with as many gates by login', () => {
-    const people = byPerson(
-      approvalPoints([workflow('c', [{ id: 'g', kind: 'gate', label: 'X', approvers: ['zed', 'amy'] }])]),
-    );
-    expect(people.map((person) => person.login)).toEqual(['amy', 'zed']);
-  });
-});
-
-describe('unanswerable and the policy', () => {
-  it('finds the gates nobody may approve', () => {
-    expect(unanswerable(approvalPoints(workflows)).map((point) => point.label)).toEqual(['Drop a table']);
-  });
-
+describe('the self-approval policy', () => {
   it('knows the two self-approval policies', () => {
     expect([
       isSelfApprovalPolicy('never'),

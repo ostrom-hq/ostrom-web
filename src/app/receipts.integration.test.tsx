@@ -90,7 +90,9 @@ describe('a receipt', () => {
       'R-3sha256:33ccR-12sha256:11aa',
     );
     const steps = screen.getByRole('region', { name: 'Workflow steps' });
-    expect(steps).toHaveTextContent('Tests passpassed');
+    // A check says where it ran: one signed before that is the workstation's word, never shown as proven.
+    expect(steps).toHaveTextContent('Tests passDeclared by the workstationpassed');
+    expect(steps).toHaveTextContent('LintRun in CIpassed');
     expect(steps).toHaveTextContent('Merge to mainNo mergeskipped');
     expect(screen.queryByRole('region', { name: 'Decisions' })).toBeNull();
 

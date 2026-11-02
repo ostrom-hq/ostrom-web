@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  getApproversGraphOptions,
   getGatePolicyOptions,
   getGatePolicyQueryKey,
   listMembersOptions,
   listWorkflowsOptions,
   setGatePolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
+import type { ApproversGraph } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -15,6 +17,8 @@ import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './m
 
 export interface ApproversViewModel {
   readonly points: readonly ApprovalPoint[] | undefined;
+  /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
+  readonly graph: ApproversGraph | undefined;
   readonly failure: Error | undefined;
   /** A login with the name the organization knows, or the login alone. */
   readonly nameOf: (login: string) => string;
@@ -23,6 +27,7 @@ export interface ApproversViewModel {
 export function useApprovers(): ApproversViewModel {
   const workflows = useQuery(ready(listWorkflowsOptions()));
   const members = useQuery(ready(listMembersOptions()));
+  const graph = useQuery(ready(getApproversGraphOptions()));
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -40,7 +45,8 @@ export function useApprovers(): ApproversViewModel {
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
     points,
-    failure: failureOf(workflows.error ?? members.error),
+    graph: graph.data,
+    failure: failureOf(workflows.error ?? graph.error ?? members.error),
     nameOf,
   };
 }

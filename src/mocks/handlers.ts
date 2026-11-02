@@ -104,6 +104,7 @@ import {
   zExchangeSignInLinkBody,
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
 import { z } from 'zod';
@@ -553,6 +554,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
     ...createOrgsHandlers(() => db, now),
+    ...createApproversGraphHandlers(() => db),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');

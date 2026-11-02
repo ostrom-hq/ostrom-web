@@ -220,6 +220,11 @@ export const fr = {
     },
   },
   receipts: {
+    attestation: {
+      workstation_declared: 'Déclaré par le poste',
+      isolated_runner: 'Exécuté par Ostrom',
+      ci: 'Exécuté en CI',
+    },
     list: {
       title: 'Reçus',
       lead: 'Les traces signées de ce que les agents ont fait et de qui a dit oui. Tout le monde peut les vérifier sans Ostrom.',
@@ -338,7 +343,18 @@ export const fr = {
         'Personne ne peut approuver {{count}} étapes ({{list}}) : un agent qui y arrive attend pour toujours.',
     },
     gates: { title: 'Par étape' },
-    people: { title: 'Par personne', count_one: '{{count}} étape', count_other: '{{count}} étapes' },
+    people: {
+      title: 'Par personne',
+      count_one: '{{count}} étape',
+      count_other: '{{count}} étapes',
+      proposed: '{{label}} (proposée)',
+    },
+    ungated: {
+      tag: 'Sans porte',
+      text_one: 'Aucune porte ne couvre {{list}} : un agent le fait sans rien demander à personne.',
+      text_other:
+        'Aucune porte ne couvre {{count}} actions ({{list}}) : un agent les fait sans rien demander à personne.',
+    },
     point: { nobody: 'Personne', hours: 'de {{hours}}', days: 'le {{days}}' },
     policy: {
       title: 'Quand le demandeur est approbateur',

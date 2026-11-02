@@ -29,6 +29,7 @@ describe('who approves what', () => {
       'Drop a table',
     ]);
     expect(rows[0]).toHaveTextContent('Backend changes · Merge into main');
+    expect(rows[2]).toHaveTextContent('Database migrations · Migrate');
     expect(rows[0]).toHaveTextContent('Owners of acme/billing-api');
     expect(rows[0]).toHaveTextContent('Maya Lind, Samir Haddad');
     expect(rows[1]).toHaveTextContent('from 09:00-18:00 · on mon-fri');
@@ -41,8 +42,14 @@ describe('who approves what', () => {
       'Maya Lind',
       'Samir Haddad',
     ]);
-    expect(people[0]).toHaveTextContent('Merge to main · Run a migration');
+    // As the server reads its catalogue: a gate of a proposed workflow does not stop anyone yet.
+    expect(people[0]).toHaveTextContent('Merge to main · Run a migration (proposed)');
     expect(people[0]).toHaveTextContent('2 steps');
+    expect(people[1]).toHaveTextContent('Deploy to production · Merge to main');
+    // What no gate covers runs without asking anyone.
+    expect(
+      screen.getByText('No gate covers push-main: an agent does it without asking anyone.'),
+    ).toBeInTheDocument();
   });
 
   it('says how self-approval works and lets an admin change it', async () => {
@@ -134,22 +141,28 @@ describe('who approves what', () => {
           ],
         }),
       ),
-      http.get('*/api/v1/workflows', () =>
-        HttpResponse.json({
-          items: [
-            {
-              id: 'w',
-              name: 'Docs',
-              domain: 'acme/docs',
-              status: 'accepted',
-              foundAt: '2026-10-01T00:00:00.000Z',
-              nodes: [{ id: 'g', kind: 'gate', label: 'Publish', approvers: ['ana', 'zoe'] }],
-              edges: [],
-            },
-          ],
-        }),
-      ),
     );
+    db.workflows = [
+      {
+        id: 'w',
+        name: 'Docs',
+        domain: 'acme/docs',
+        status: 'accepted',
+        foundAt: '2026-10-01T00:00:00.000Z',
+        nodes: [
+          {
+            id: 'g',
+            kind: 'gate',
+            label: 'Publish',
+            approvers: ['ana', 'zoe'],
+            actions: [
+              { class: 'publish', label: 'Publish', patterns: ['npm publish'], repos: ['acme/docs'] },
+            ],
+          },
+        ],
+        edges: [],
+      },
+    ];
     visit('/approvers');
     const gates = await screen.findByRole('region', { name: 'By step' });
     expect(within(gates).getByRole('listitem')).toHaveTextContent('ana, zoe');
@@ -158,7 +171,7 @@ describe('who approves what', () => {
   });
 
   it('says when no workflow has a gate yet', async () => {
-    server.use(http.get('*/api/v1/workflows', () => HttpResponse.json({ items: [] })));
+    db.workflows = [];
     visit('/approvers');
     expect(await screen.findByText('No workflow asks for an approval yet.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'By person' })).toBeNull();

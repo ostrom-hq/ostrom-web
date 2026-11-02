@@ -77,7 +77,16 @@ const receipts: Receipt[] = [
     costUsd: 1.07,
     package: { version: '0.4.1', digest: 'sha256:9e1d77c0' },
     nodes: [
+      // Signed before receipts said where a check ran: it reads as the workstation's word.
       { id: 'n1', workflowId: 'wf-backend', kind: 'check', label: 'Tests pass', outcome: 'passed' },
+      {
+        id: 'n3',
+        workflowId: 'wf-backend',
+        kind: 'check',
+        label: 'Lint',
+        outcome: 'passed',
+        attestation: 'ci',
+      },
       {
         id: 'n2',
         workflowId: 'wf-backend',

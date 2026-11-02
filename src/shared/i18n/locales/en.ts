@@ -220,6 +220,11 @@ export const en = {
     },
   },
   receipts: {
+    attestation: {
+      workstation_declared: 'Declared by the workstation',
+      isolated_runner: 'Run by Ostrom',
+      ci: 'Run in CI',
+    },
     list: {
       title: 'Receipts',
       lead: 'Signed records of what agents did and who said yes. Anyone can verify them without Ostrom.',
@@ -329,7 +334,17 @@ export const en = {
       text_other: 'Nobody may approve {{count}} steps ({{list}}): an agent that reaches one waits for good.',
     },
     gates: { title: 'By step' },
-    people: { title: 'By person', count_one: '{{count}} step', count_other: '{{count}} steps' },
+    people: {
+      title: 'By person',
+      count_one: '{{count}} step',
+      count_other: '{{count}} steps',
+      proposed: '{{label}} (proposed)',
+    },
+    ungated: {
+      tag: 'No gate',
+      text_one: 'No gate covers {{list}}: an agent does it without asking anyone.',
+      text_other: 'No gate covers {{count}} actions ({{list}}): an agent does them without asking anyone.',
+    },
     point: { nobody: 'Nobody', hours: 'from {{hours}}', days: 'on {{days}}' },
     policy: {
       title: 'When the asker is an approver',

@@ -14,6 +14,12 @@ test('from an ended session to its receipt, verified by the server and ready to 
 
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Session ses-2b9e');
   await expect(page.getByRole('region', { name: 'Signature' })).toContainText('Signature verified');
+  // A check says where it ran; the workstation's word is never shown as proven.
+  const steps = page.getByRole('region', { name: 'Workflow steps' });
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Tests pass' })).toContainText(
+    'Declared by the workstation',
+  );
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Lint' })).toContainText('Run in CI');
   await expect(page.getByText('ostrom verify rcpt-ses-2b9e')).toBeVisible();
 });
 

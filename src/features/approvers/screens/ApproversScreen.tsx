@@ -6,13 +6,7 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
-import {
-  type ApprovalPoint,
-  byPerson,
-  isSelfApprovalPolicy,
-  SELF_APPROVAL_POLICIES,
-  unanswerable,
-} from '../model';
+import { type ApprovalPoint, isSelfApprovalPolicy, SELF_APPROVAL_POLICIES } from '../model';
 import { type PolicyViewModel, useApprovers, useSelfApprovalPolicy } from '../useApprovers';
 
 function PointRow({
@@ -91,10 +85,18 @@ export function ApproversScreen(): ReactElement {
   const policy = useSelfApprovalPolicy();
   return (
     <Screen title={t('approvers.title')} lead={t('approvers.lead')}>
-      <LoadState data={view.points} failure={view.failure}>
-        {(points) => {
-          const stuck = unanswerable(points);
-          const people = byPerson(points);
+      <LoadState
+        data={
+          view.points === undefined || view.graph === undefined
+            ? undefined
+            : { points: view.points, graph: view.graph }
+        }
+        failure={view.failure}
+      >
+        {({ points, graph }) => {
+          // The server's graph says who approves what: the same catalogue the gates decide on.
+          const stuck = graph.unanswered;
+          const people = graph.approvers;
           return points.length === 0 ? (
             <p className="o-empty">{t('approvers.empty')}</p>
           ) : (
@@ -103,7 +105,15 @@ export function ApproversScreen(): ReactElement {
                 <Banner tone="warning" tag={t('approvers.stuck.tag')}>
                   {t('approvers.stuck.text', {
                     count: stuck.length,
-                    list: stuck.map((p) => p.label).join(', '),
+                    list: stuck.map((gate) => gate.label).join(', '),
+                  })}
+                </Banner>
+              )}
+              {graph.ungated.length === 0 ? null : (
+                <Banner tone="info" tag={t('approvers.ungated.tag')}>
+                  {t('approvers.ungated.text', {
+                    count: graph.ungated.length,
+                    list: graph.ungated.join(', '),
                   })}
                 </Banner>
               )}
@@ -126,16 +136,22 @@ export function ApproversScreen(): ReactElement {
                   </h2>
                   <ul className="o-card o-rows">
                     {people.map((person) => (
-                      <li key={person.login}>
+                      <li key={person.approver}>
                         <div className="o-row">
-                          <Avatar login={person.login} size={32} />
+                          <Avatar login={person.approver} size={32} />
                           <span className="o-row__main">
-                            <span className="o-row__title">{view.nameOf(person.login)}</span>
+                            <span className="o-row__title">{view.nameOf(person.approver)}</span>
                             <span className="o-row__meta">
-                              {person.points.map((point) => point.label).join(' · ')}
+                              {person.gates
+                                .map((gate) =>
+                                  gate.enforce
+                                    ? gate.label
+                                    : t('approvers.people.proposed', { label: gate.label }),
+                                )
+                                .join(' · ')}
                             </span>
                           </span>
-                          <Badge>{t('approvers.people.count', { count: person.points.length })}</Badge>
+                          <Badge>{t('approvers.people.count', { count: person.gates.length })}</Badge>
                         </div>
                       </li>
                     ))}

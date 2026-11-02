@@ -32,30 +32,6 @@ export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] 
   );
 }
 
-export interface PersonApprovals {
-  readonly login: string;
-  readonly points: readonly ApprovalPoint[];
-}
-
-/** The same map read the other way: for each person, what they can say yes to; most first. */
-export function byPerson(points: readonly ApprovalPoint[]): PersonApprovals[] {
-  const people = new Map<string, ApprovalPoint[]>();
-  for (const point of points) {
-    for (const login of point.approvers) people.set(login, [...(people.get(login) ?? []), point]);
-  }
-  return [...people.entries()]
-    .map(([login, list]) => ({ login, points: list }))
-    .sort((a, b) => {
-      const byCount = b.points.length - a.points.length;
-      return byCount !== 0 ? byCount : a.login.localeCompare(b.login, 'en');
-    });
-}
-
-/** A gate nobody may approve stops the agent for good: it is shown first, as a problem. */
-export function unanswerable(points: readonly ApprovalPoint[]): ApprovalPoint[] {
-  return points.filter((point) => point.approvers.length === 0);
-}
-
 export const SELF_APPROVAL_POLICIES = ['sole-approver', 'never'] as const;
 export type SelfApprovalPolicy = (typeof SELF_APPROVAL_POLICIES)[number];
 

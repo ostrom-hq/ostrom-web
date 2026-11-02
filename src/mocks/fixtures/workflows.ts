@@ -73,8 +73,34 @@ const workflows: Workflow[] = [
     status: 'proposed',
     foundAt: '2026-10-20T08:00:00.000Z',
     nodes: [
-      { id: 'm-gate', kind: 'gate', label: 'Run a migration', owner: 'billing-owners', approvers: ['maya'] },
-      { id: 'm-orphan', kind: 'gate', label: 'Drop a table' },
+      {
+        id: 'm-gate',
+        kind: 'gate',
+        label: 'Run a migration',
+        owner: 'billing-owners',
+        approvers: ['maya'],
+        actions: [
+          {
+            class: 'migrate',
+            label: 'Migrate',
+            patterns: ['prisma migrate deploy'],
+            repos: ['acme/billing-api'],
+          },
+        ],
+      },
+      {
+        id: 'm-orphan',
+        kind: 'gate',
+        label: 'Drop a table',
+        actions: [
+          {
+            class: 'drop-table',
+            label: 'Drop a table',
+            patterns: ['DROP TABLE'],
+            repos: ['acme/billing-api'],
+          },
+        ],
+      },
     ],
     edges: [{ from: 'm-gate', to: 'm-orphan' }],
   },
