@@ -11,6 +11,7 @@ import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { DecisionsScreen } from '@/features/decisions';
+import { GithubScreen, githubSearchSchema } from '@/features/github';
 import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
 import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
@@ -107,6 +108,13 @@ const membersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/members',
   component: MembersScreen,
+});
+/** `/github`, where GitHub's install comes back through the server's callback (`?installed=1` or `?error=<type>`). */
+const githubRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/github',
+  validateSearch: githubSearchSchema,
+  component: GithubScreen,
 });
 const approversRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -238,6 +246,7 @@ export const routeTree = rootRoute.addChildren([
   receiptsRoute,
   receiptRoute,
   membersRoute,
+  githubRoute,
   approversRoute,
   rulesRoute,
   decisionsRoute,

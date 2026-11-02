@@ -16,7 +16,6 @@ import {
   handleGetApproval,
   handleGetGatePolicy,
   handleExchangeSignInLink,
-  handleGetGithubApp,
   handleGetMe,
   handleGetOrganization,
   handleGetReceipt,
@@ -106,6 +105,8 @@ import {
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createGithubHandlers, type GithubState } from '@/mocks/github';
+import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
@@ -141,7 +142,7 @@ import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixt
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
-export interface MockDb extends AccountState, BillingState, OrgsState, TokensState {
+export interface MockDb extends AccountState, BillingState, GithubState, OrgsState, TokensState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -208,6 +209,8 @@ export function createMockDb(): MockDb {
     elsewhere: [invitedOrganization()],
     nextInvitation: 1,
     githubInstalled: { [initialOrganization().id]: true },
+    repos: { [initialOrganization().id]: initialRepos() },
+    analyses: {},
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
@@ -930,19 +933,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       db.sharedAccounts = db.sharedAccounts.filter((item) => item.id !== params.id);
       return new HttpResponse(null, { status: 204 });
     }),
-    handleGetGithubApp(({ request }) => {
-      const organization = organizationOf(db, request);
-      return HttpResponse.json(
-        db.githubInstalled[organization.id] === true
-          ? {
-              installed: true,
-              slug: 'ostrom-dev',
-              installationId: 4242,
-              htmlUrl: 'https://github.com/apps/ostrom-dev',
-            }
-          : { installed: false },
-      );
-    }),
+    ...createGithubHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+    ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');
       return HttpResponse.json({
