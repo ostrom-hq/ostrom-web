@@ -39,4 +39,20 @@ describe('readPrivacyUrl', () => {
     expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: ' ' })).toBe(DEFAULT_PRIVACY_URL);
     expect(readPrivacyUrl(undefined)).toBe('https://ostrom.run/privacy');
   });
+
+  it('never makes a link of an address that is not http(s): it would run in the console at the click', () => {
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: 'javascript:alert(document.domain)' })).toBe(
+      DEFAULT_PRIVACY_URL,
+    );
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: 'data:text/html,<script>1</script>' })).toBe(
+      DEFAULT_PRIVACY_URL,
+    );
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: 'http://[::1' })).toBe(DEFAULT_PRIVACY_URL);
+  });
+
+  it('takes a path as one on the console site', () => {
+    expect(readPrivacyUrl({ OSTROM_PRIVACY_URL: '/legal/privacy' }, 'https://console.acme.dev')).toBe(
+      'https://console.acme.dev/legal/privacy',
+    );
+  });
 });
