@@ -60,14 +60,18 @@ describe('who approves what', () => {
     const user = userEvent.setup();
     visit('/approvers');
     const policy = await screen.findByRole('region', { name: 'When the asker is an approver' });
-    expect(policy).toHaveTextContent('only when nobody else can');
-    await user.selectOptions(within(policy).getByRole('combobox', { name: 'Self-approval' }), 'never');
-    expect(await within(policy).findByText(/never approves their own request/)).toBeInTheDocument();
-    expect(db.selfApproval).toBe('never');
+    // Never, by default (S2-15): the organization may let a sole approver approve their own request.
+    expect(policy).toHaveTextContent('never approves their own request');
+    await user.selectOptions(
+      within(policy).getByRole('combobox', { name: 'Self-approval' }),
+      'sole-approver',
+    );
+    expect(await within(policy).findByText(/only when nobody else can/)).toBeInTheDocument();
+    expect(db.selfApproval).toBe('sole-approver');
     fireEvent.change(within(policy).getByRole('combobox', { name: 'Self-approval' }), {
       target: { value: 'sometimes' },
     });
-    expect(db.selfApproval).toBe('never');
+    expect(db.selfApproval).toBe('sole-approver');
   });
 
   it('holds the policy while it saves, and says when it was not saved', async () => {
@@ -79,7 +83,10 @@ describe('who approves what', () => {
     );
     visit('/approvers');
     const policy = await screen.findByRole('region', { name: 'When the asker is an approver' });
-    await user.selectOptions(within(policy).getByRole('combobox', { name: 'Self-approval' }), 'never');
+    await user.selectOptions(
+      within(policy).getByRole('combobox', { name: 'Self-approval' }),
+      'sole-approver',
+    );
     expect(await within(policy).findByRole('alert')).toHaveTextContent('owners only');
   });
 
@@ -88,7 +95,7 @@ describe('who approves what', () => {
     server.use(http.put('*/api/v1/gates/policy', async () => delay('infinite')));
     visit('/approvers');
     const select = await screen.findByRole('combobox', { name: 'Self-approval' });
-    await user.selectOptions(select, 'never');
+    await user.selectOptions(select, 'sole-approver');
     expect(select).toBeDisabled();
   });
 

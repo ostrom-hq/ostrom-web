@@ -297,9 +297,9 @@ describe('selfApprovalRefusal', () => {
   });
 
   it('refuses the asker, case-insensitively, and names the other approvers', () => {
-    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya', 'samir', 'lena'], 'MAYA')).toBe(
-      'You asked for this: samir or lena has to approve it.',
-    );
+    expect(
+      selfApprovalRefusal(fixture('apr-deploy-88'), ['maya', 'samir', 'lena'], 'MAYA', 'sole-approver'),
+    ).toBe('You asked for this: samir or lena has to approve it.');
   });
 
   it('refuses the asker even as the only approver when the policy says never', () => {
@@ -309,11 +309,15 @@ describe('selfApprovalRefusal', () => {
     expect(selfApprovalRefusal(fixture('apr-merge-412'), ['maya'], 'maya', 'never')).toBeUndefined();
   });
 
-  it('lets the asker through as the only approver, and treats a missing asker list as nobody', () => {
-    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya')).toBeUndefined();
+  it('lets the asker through as the only approver when the organization chose it, and treats a missing asker list as nobody', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya', 'sole-approver')).toBeUndefined();
     const anonymous = fixture('apr-deploy-88');
     delete anonymous.askedBy;
     expect(selfApprovalRefusal(anonymous, ['maya'], 'maya')).toBeUndefined();
+  });
+
+  it('refuses the asker by default, as the server does (never)', () => {
+    expect(selfApprovalRefusal(fixture('apr-deploy-88'), ['maya'], 'maya')).toMatch(/never lets the asker/);
   });
 });
 

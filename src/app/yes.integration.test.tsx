@@ -436,6 +436,7 @@ describe('a request', () => {
 
   it('refuses the asker while another approver exists, and declines with what the agent should do', async () => {
     const user = userEvent.setup();
+    db.selfApproval = 'sole-approver';
     visit('/yes/apr-deploy-88');
     expect(await screen.findByText('You asked for this yourself.')).toBeInTheDocument();
     expect(screen.getByText(/If someone else can approve it, Ostrom will ask them/)).toBeInTheDocument();
@@ -509,6 +510,7 @@ describe('a request', () => {
 
   it('records a self-approval in plain words when the asker is the only approver', async () => {
     const user = userEvent.setup();
+    db.selfApproval = 'sole-approver';
     db.approvers['apr-deploy-88'] = ['maya'];
     visit('/yes/apr-deploy-88');
     await user.click(await screen.findByRole('button', { name: /^Approve/ }));

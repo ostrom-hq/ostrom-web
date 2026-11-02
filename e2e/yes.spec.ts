@@ -23,14 +23,15 @@ test('an approver opens a request from the queue, reads the proof, approves and 
   await expect(page.getByRole('heading', { name: '1 waiting for you' })).toBeVisible();
 });
 
-test('the asker cannot approve while another approver exists, but can decline with what to do instead', async ({
+test('the asker cannot approve their own request, but can decline with what to do instead', async ({
   page,
 }) => {
   await page.goto('/yes/apr-deploy-88');
   await expect(page.getByText('You asked for this yourself.')).toBeVisible();
 
   await page.getByRole('button', { name: /^Approve/ }).click();
-  await expect(page.getByRole('alert')).toContainText('samir has to approve it');
+  // The organization never lets the asker approve, the default (S2-15).
+  await expect(page.getByRole('alert')).toContainText('never lets the asker approve');
 
   await page.getByRole('button', { name: 'Decline & tell the agent…' }).click();
   await page.getByRole('textbox', { name: 'What should the agent do instead?' }).fill('Wait for samir.');
