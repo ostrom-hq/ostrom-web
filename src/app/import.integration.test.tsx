@@ -360,13 +360,13 @@ describe('the cutover', () => {
     await cutAgain();
     expect(
       await screen.findByText(
-        'Agent sessions are not available. — the cutover may have run: look at the audit log before running it again.',
+        'The cutover may have run: look at the audit log before running it again. The server said: Agent sessions are not available.',
       ),
     ).toBeInTheDocument();
     await cutAgain();
     expect(
       await screen.findByText(
-        'HTTP 503 — the cutover may have run: look at the audit log before running it again.',
+        'The cutover may have run: look at the audit log before running it again. The server said: HTTP 503',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Nothing was written/)).toBeNull();

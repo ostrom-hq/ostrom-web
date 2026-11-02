@@ -45,7 +45,11 @@ function ImportSteps({
   return (
     <Screen title={t('imports.title')} lead={t('imports.lead', { org: orgName })}>
       {failure === undefined ? null : (
-        <Banner tone="danger" tag={t('imports.failure.tag')} live>
+        <Banner
+          tone={failure.kind === 'cutoverUnknown' ? 'warning' : 'danger'}
+          tag={failure.kind === 'cutoverUnknown' ? t('imports.failure.unknownTag') : t('imports.failure.tag')}
+          live
+        >
           {failure.kind === 'other'
             ? failure.message
             : failure.kind === 'cutoverUnknown'

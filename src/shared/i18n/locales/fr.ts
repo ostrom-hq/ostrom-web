@@ -859,8 +859,9 @@ export const fr = {
         'Ce serveur ne tient pas de journal d’audit, il ne peut donc pas lancer la bascule. Rien n’a été écrit.',
       noSharing:
         'Ce serveur n’importe pas les comptes partagés, il n’a donc pas de bascule à lancer. Rien n’a été écrit.',
+      unknownTag: 'Incertain',
       cutoverUnknown:
-        '{{message}} — la bascule a peut-être tourné : regarde le journal d’audit avant de la relancer.',
+        'La bascule a peut-être tourné : regarde le journal d’audit avant de la relancer. Le serveur a répondu : {{message}}',
     },
     report: {
       empty: 'Rien à importer.',
