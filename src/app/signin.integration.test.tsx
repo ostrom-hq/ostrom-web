@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';
-import { EMAIL_ASKED_KEY, EMAIL_LINK_LIFETIME_MS, emailAsked, useEmailLinkStore } from '@/features/signin';
+import { useEmailLinkStore } from '@/features/signin';
 import { DEMO_EMAIL_TOKEN } from '@/mocks/handlers';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
@@ -10,7 +11,6 @@ const { server } = setupMockApp();
 
 afterEach(() => {
   useEmailLinkStore.setState({ token: undefined });
-  emailAsked.clear();
 });
 
 describe('the sign-in page', () => {
@@ -51,7 +51,6 @@ describe('the sign-in page', () => {
       'If maya@acme.dev may sign in, a link is on its way.',
     );
     expect(sent).toEqual({ email: 'maya@acme.dev', redirect: '/spend' });
-    expect(emailAsked.recent(Date.now())).toBe(true);
   });
 
   it('sends no page to come back to when none was asked, and ignores an incomplete address', async () => {
@@ -165,21 +164,38 @@ describe('the e-mailed link', () => {
     expect(spent).toHaveLength(1);
   });
 
-  it('spends at once a link this browser asked for, even with someone signed in (a sign-in again)', async () => {
+  it('keeps the question on screen while it reads who is signed in again', async () => {
     const spent = spentLinks();
-    emailAsked.mark(Date.now());
-    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
-    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/yes');
-    expect(spent).toHaveLength(1);
-    expect(window.localStorage.getItem(EMAIL_ASKED_KEY)).toBeNull();
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await screen.findByRole('button', { name: 'Sign in with the link' });
+    let readAgain = false;
+    server.use(
+      http.get('*/api/v1/auth/me', async () => {
+        readAgain = true;
+        return delay('infinite');
+      }),
+    );
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await vi.waitFor(() => {
+      expect(readAgain).toBe(true);
+    });
+    expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(screen.queryByText('Signing you in…')).toBeNull();
+    expect(spent).toEqual([]);
   });
 
-  it('asks again once the link this browser asked for is past its life', async () => {
+  it('drops a link left unanswered with the page: never spent later, when nobody would be asked', async () => {
     const spent = spentLinks();
-    emailAsked.mark(Date.now() - EMAIL_LINK_LIFETIME_MS - 1_000);
-    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
-    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await screen.findByRole('button', { name: 'Sign in with the link' });
+    await router.navigate({ to: '/yes' });
+    expect(useEmailLinkStore.getState().token).toBeUndefined();
+    signedOut();
+    await router.navigate({ to: '/auth/email' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This link was already used or is incomplete.',
+    );
     expect(spent).toEqual([]);
   });
 

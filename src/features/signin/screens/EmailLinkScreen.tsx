@@ -32,7 +32,12 @@ export function EmailLinkScreen(): ReactElement {
             </span>
             <span className="o-inline">
               <Button onClick={accept}>{t('signin.link.accept')}</Button>
-              <Button variant="ghost" onClick={keep}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  void keep();
+                }}
+              >
                 {t('signin.link.keep')}
               </Button>
             </span>

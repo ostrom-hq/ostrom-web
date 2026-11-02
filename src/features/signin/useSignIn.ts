@@ -12,7 +12,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { meOf, signedInName } from '@/shared/auth/me';
-import { emailAsked, useEmailLinkStore } from './emailLink';
+import { useEmailLinkStore } from './emailLink';
 import { safeRedirect } from './model';
 
 export interface EmailSignInViewModel {
@@ -26,13 +26,7 @@ export interface EmailSignInViewModel {
 }
 
 export function useEmailSignIn(redirect: string | undefined): EmailSignInViewModel {
-  const mutation = useMutation({
-    ...requestSignInEmailMutation(),
-    // The link this browser asked for is expected here: opened within its life, it is spent without a question.
-    onSuccess: () => {
-      emailAsked.mark(Date.now());
-    },
-  });
+  const mutation = useMutation(requestSignInEmailMutation());
   const { mutate, reset } = mutation;
   const send = useCallback(
     (email: string) => {
@@ -59,26 +53,25 @@ export interface EmailLinkViewModel {
   readonly signedInAs: string | undefined;
   /** Spends the link, replacing the session in this browser: only offered while asking. */
   readonly accept: () => void;
-  /** Drops the link unspent and keeps the session as it is. */
-  readonly keep: () => void;
+  /** Leaves with the link unspent, the session as it is. */
+  readonly keep: () => Promise<void>;
 }
 
 /**
- * Spends the e-mailed token once, then opens the page the link was asked from. Nobody signed in, or a link this browser
- * asked for (`emailAsked`): at once. Someone signed in, or no way to tell: only after a yes, since the link may be
- * another account's. A link opened from another
- * site would otherwise replace the session in this browser without a word (login CSRF), and what the person does next
- * (a secret saved, a GitHub installation, a yes) would land in that account.
+ * Spends the e-mailed token once, then opens the page the link was asked from: at once when nobody is signed in,
+ * only after a yes when someone is or when there is no way to tell. A page of another site can open a link of its
+ * own account here (login CSRF): spent silently, it would replace the session, and what the person does next (a
+ * secret saved, a GitHub installation, a yes) would land in that account.
  */
 export function useEmailLink(): EmailLinkViewModel {
   const navigate = useNavigate();
   const token = useEmailLinkStore((store) => store.token);
-  const take = useEmailLinkStore((store) => store.take);
-  const give = useEmailLinkStore((store) => store.spend);
+  const spendOnce = useEmailLinkStore((store) => store.spend);
   const changed = useAuthStore((auth) => auth.changed);
-  // Asked afresh and once: replacing a session rests on this answer, never on a cached or failed one.
+  // Asked afresh: replacing a session rests on this answer, never on a cached one. Read again later (a window
+  // focused again), the answer stays known, so the question on screen never turns into a wait.
   const me = useQuery(ready(getMeOptions(), { retry: false, staleTime: 0 }));
-  const known = !me.isFetching;
+  const known = me.isFetchedAfterMount;
   // Nobody is signed in only when the server says so (401, or 204 with no body); any other failure may hide a session.
   const signedOut =
     known &&
@@ -95,21 +88,19 @@ export function useEmailLink(): EmailLinkViewModel {
     },
   });
   const { mutate } = mutation;
-  const spend = useCallback(() => {
+  const accept = useCallback(() => {
     // Given once: a link signs in a single time, even when a screen mounts twice.
-    emailAsked.clear();
-    give((held) => {
+    spendOnce((held) => {
       mutate({ body: { token: held } });
     });
-  }, [give, mutate]);
+  }, [spendOnce, mutate]);
   useEffect(() => {
-    if (token !== undefined && (signedOut || emailAsked.recent(Date.now()))) spend();
-  }, [signedOut, token, spend]);
-  const keep = useCallback(() => {
-    take();
-    emailAsked.clear();
-    void navigate({ to: '/', replace: true });
-  }, [take, navigate]);
+    if (signedOut && token !== undefined) accept();
+  }, [signedOut, token, accept]);
+  // The link stays on screen until the page is left; leaving drops it (the route's onLeave, router.ts).
+  const keep = useCallback(async () => {
+    await navigate({ to: '/', replace: true });
+  }, [navigate]);
   let state: EmailLinkState = 'missing';
   if (mutation.isError) state = 'failed';
   else if (!mutation.isIdle) state = 'verifying';
@@ -118,7 +109,7 @@ export function useEmailLink(): EmailLinkViewModel {
     state,
     failure: failureOf(mutation.error),
     signedInAs: current === undefined ? undefined : signedInName(current),
-    accept: spend,
+    accept,
     keep,
   };
 }
