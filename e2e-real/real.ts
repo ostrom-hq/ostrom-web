@@ -4,7 +4,7 @@
 // console image. Sign-in links are read from the directory the server writes its mails to (OSTROM_MAIL_DIR).
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { expect, type Page } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
@@ -55,19 +55,24 @@ export async function served(page: Page, method: string, path: string): Promise<
   return response.status() !== 404 && response.status() !== 405;
 }
 
-/** Calls the API from the page, as the console does: same origin, the session cookie and its CSRF token. */
+/**
+ * Calls the API from the page, as the console does: same origin, the session cookie and its CSRF token, and the
+ * organization it acts in (`Ostrom-Org`) when one is named.
+ */
 export async function callFromPage(
   page: Page,
   method: string,
   path: string,
   body?: unknown,
+  org?: string,
 ): Promise<{ status: number; body: unknown }> {
   const csrf = (await page.context().cookies()).find((cookie) =>
     /^(?:__Host-)?ostrom_csrf$/.test(cookie.name),
   )?.value;
   return page.evaluate(
-    async ({ method, path, body, csrf }) => {
+    async ({ method, path, body, csrf, org }) => {
       const headers: Record<string, string> = { accept: 'application/json' };
+      if (org !== undefined) headers['Ostrom-Org'] = org;
       if (csrf !== undefined) headers['X-CSRF-Token'] = decodeURIComponent(csrf);
       if (body !== undefined) headers['content-type'] = 'application/json';
       const response = await fetch(path, {
@@ -79,6 +84,82 @@ export async function callFromPage(
       const text = await response.text();
       return { status: response.status, body: text === '' ? undefined : (JSON.parse(text) as unknown) };
     },
-    { method, path, body, csrf },
+    { method, path, body, csrf, org },
   );
+}
+
+const others: BrowserContext[] = [];
+
+/**
+ * A second person's browser: its own cookies, the same console on the same device as the project (a Pixel 7 in
+ * `mobile`), traced like the test's own page. A spec that uses it calls `closeOthers` after each test.
+ */
+export async function anotherPerson(browser: Browser): Promise<Page> {
+  const { baseURL, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, locale } =
+    test.info().project.use;
+  const context = await browser.newContext({
+    ...(baseURL === undefined ? {} : { baseURL }),
+    ...(viewport === undefined ? {} : { viewport }),
+    ...(userAgent === undefined ? {} : { userAgent }),
+    ...(deviceScaleFactor === undefined ? {} : { deviceScaleFactor }),
+    ...(isMobile === undefined ? {} : { isMobile }),
+    ...(hasTouch === undefined ? {} : { hasTouch }),
+    ...(locale === undefined ? {} : { locale }),
+  });
+  await context.tracing.start({ screenshots: true, snapshots: true });
+  others.push(context);
+  return context.newPage();
+}
+
+/** Closes the other people's browsers, keeping their traces when the test failed (as `retain-on-failure`). */
+export async function closeOthers(): Promise<void> {
+  const info = test.info();
+  const failed = info.status !== info.expectedStatus;
+  for (const [index, context] of others.splice(0).entries()) {
+    const path = info.outputPath(`other-person-${String(index + 1)}.zip`);
+    try {
+      await context.tracing.stop(failed ? { path } : {});
+      if (failed)
+        await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
+    } finally {
+      // A trace that cannot be kept never leaves a browser open for the next test.
+      await context.close();
+    }
+  }
+}
+
+/** A new person signed in with an organization of their own, which they own; returns its id and short name. */
+export async function ownerOfNewOrganization(page: Page, who: string): Promise<{ id: string; slug: string }> {
+  await signIn(page, freshEmail(who));
+  const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
+    name: `${who} ${Date.now().toString(36)}`,
+  });
+  expect(created.status).toBe(201);
+  const { id, slug } = created.body as { id: string; slug: string };
+  return { id, slug };
+}
+
+/**
+ * Brings a new person into `org` with `role`, as an owner does: an invitation link, then its token accepted by the
+ * new person, signed in in `joiner`.
+ */
+export async function joinAs(
+  owner: Page,
+  org: string,
+  joiner: Page,
+  who: string,
+  role: string,
+): Promise<void> {
+  const link = await callFromPage(owner, 'POST', `/api/v1/orgs/${org}/invitations/links`, {
+    role,
+    maxUses: 1,
+  });
+  expect(link.status).toBe(201);
+  const token = /token=([^&#\s]+)/.exec((link.body as { url: string }).url)?.[1];
+  expect(token).toBeDefined();
+  await signIn(joiner, freshEmail(who));
+  const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', {
+    token: decodeURIComponent(token ?? ''),
+  });
+  expect(accepted.status).toBe(200);
 }
