@@ -54,8 +54,10 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   browser,
 }) => {
   const org = await ownerOfNewOrganization(page, 'pia');
+  const orgName = (await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}`)).body as { name: string };
   await page.goto('/members');
-  await expect(page.getByRole('heading', { level: 1, name: 'Members' })).toBeVisible();
+  // The members screen is titled with the organization's name.
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(orgName.name);
   await expect(page.getByText('1 person · you are Owner')).toBeVisible();
 
   // By e-mail: the server takes the address and lists it as waiting.
@@ -81,7 +83,6 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   const joiner = await anotherPerson(browser);
   await signIn(joiner, freshEmail('remy'));
   await joiner.goto(`${url.pathname}${url.hash}`);
-  const orgName = (await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}`)).body as { name: string };
   await expect(joiner.getByRole('heading', { level: 1 })).toHaveText(`Join ${orgName.name}`);
   // The secret leaves the address bar once read.
   expect(new URL(joiner.url()).hash).toBe('');
