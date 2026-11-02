@@ -5,7 +5,7 @@ set -eu
 image=$1
 net=ostrom-web-smoke
 fail() { echo "FAIL: $*" >&2; docker logs web >&2 || true; exit 1; }
-cleanup() { docker rm -f web web-bad api >/dev/null 2>&1 || true; docker network rm "$net" >/dev/null 2>&1 || true; }
+cleanup() { docker rm -f web web-bad web-proxied api >/dev/null 2>&1 || true; docker network rm "$net" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 cleanup
 docker network create "$net" >/dev/null
@@ -56,6 +56,25 @@ code=$?
 set -e
 { [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; } || fail "an invalid OSTROM_POSTHOG_HOST must stop the start (exit $code)"
 echo "$bad" | grep -q 'OSTROM_POSTHOG_HOST must be an http(s) URL' || fail "no reason given for the refused start: $bad"
+# B5 (web audit 2): a client's X-Forwarded-Proto never reaches the server; nginx sends its own scheme instead.
+xfp() { curl -fsS --retry 20 --retry-all-errors --retry-delay 1 -H "X-Forwarded-Proto: $2" "http://127.0.0.1:$1/api/v1/health" \
+  | tr -d '\r' | sed -n 's/^X-Forwarded-Proto: //p'; }
+[ "$(xfp 18080 https)" = http ] || fail "a client's X-Forwarded-Proto reached the server: $(xfp 18080 https)"
+# From a proxy of OSTROM_TRUSTED_PROXIES (here every address), its https passes; a value other than http(s) does not.
+docker run -d --name web-proxied --network "$net" -p 18081:8080 --read-only --cap-drop ALL --security-opt no-new-privileges \
+  --tmpfs /tmp:uid=101,gid=101 --tmpfs /var/run/ostrom:uid=101,gid=101 --tmpfs /etc/nginx/conf.d:uid=101,gid=101 \
+  -e OSTROM_API_UPSTREAM=http://api:8080 -e OSTROM_TRUSTED_PROXIES=0.0.0.0/0,::/0 "$image" >/dev/null
+[ "$(xfp 18081 https)" = https ] || fail "a trusted proxy's X-Forwarded-Proto was dropped: $(xfp 18081 https)"
+[ "$(xfp 18081 gopher)" = http ] || fail "an X-Forwarded-Proto other than http(s) passed: $(xfp 18081 gopher)"
+# An entry that is not an address or a CIDR never reaches the nginx configuration: the container refuses to start.
+set +e
+bad=$(timeout 30 docker run --rm --name web-bad --network "$net" --read-only --tmpfs /tmp:uid=101,gid=101 \
+  --tmpfs /var/run/ostrom:uid=101,gid=101 --tmpfs /etc/nginx/conf.d:uid=101,gid=101 -e OSTROM_API_UPSTREAM=http://api:8080 \
+  -e "OSTROM_TRUSTED_PROXIES=10.0.0.0/8; 0.0.0.0/0 1" "$image" 2>&1)
+code=$?
+set -e
+{ [ "$code" -ne 0 ] && [ "$code" -ne 124 ]; } || fail "an invalid OSTROM_TRUSTED_PROXIES must stop the start (exit $code)"
+echo "$bad" | grep -q 'OSTROM_TRUSTED_PROXIES must list addresses or CIDRs' || fail "no reason given for the refused start: $bad"
 if curl -fsS -o /dev/null http://127.0.0.1:18080/assets/missing.js; then fail "missing asset must be 404"; fi
 if docker exec web sh -c 'ls /usr/share/nginx/html/assets/*.map' >/dev/null 2>&1; then fail "source maps shipped"; fi
 echo "web image smoke test: ok"
