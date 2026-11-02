@@ -12,7 +12,7 @@ COPY . .
 # the shell's exit on), each .gz is tested whole, and one no smaller than its file is dropped: the file goes as it is.
 RUN pnpm build && find dist -name '*.map' -delete \
  && find dist/assets -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' \) \
-      -exec sh -c 'for f; do gzip -9 -n -c "$f" > "$f.gz" && gzip -t "$f.gz" || exit 1; [ "$(wc -c < "$f.gz")" -lt "$(wc -c < "$f")" ] || rm "$f.gz"; done' _ {} +
+      -exec sh -c 'for f; do gzip -9 -n -c "$f" > "$f.gz" && gzip -t "$f.gz" || exit 1; [ "$(wc -c < "$f.gz")" -lt "$(wc -c < "$f")" ] || rm "$f.gz" || exit 1; done' _ {} +
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 USER root

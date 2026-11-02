@@ -60,25 +60,38 @@ header "$h" vary | grep -qi 'accept-encoding' || fail "no Vary: Accept-Encoding 
 # Behind a proxy (a request with `Via`) as well.
 h=$(curl -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' -H 'Via: 1.1 ingress' "http://127.0.0.1:18080$js")
 [ "$(header "$h" content-encoding)" = gzip ] || fail "$js not compressed behind a proxy: $h"
-# From an HTTP/1.0 proxy too (gzip_http_version).
+# From an HTTP/1.0 proxy too (gzip_http_version), and what it gets decodes to the whole file (checked below).
 h=$(curl -0 -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' -H 'Via: 1.0 proxy' "http://127.0.0.1:18080$js")
 [ "$(header "$h" content-encoding)" = gzip ] || fail "$js not compressed over HTTP/1.0: $h"
+curl -0 -fsS --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' -H 'Via: 1.0 proxy' -o "$tmp/packed10.js.gz" \
+  "http://127.0.0.1:18080$js" || fail "$js over HTTP/1.0: the request failed"
 # A browser that does not accept gzip gets the whole file, still marked as varying (a shared cache keeps both apart),
 # and the compressed one is the same file. Bodies go to files: a failed request fails here, never reads as 0 bytes.
 h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$js")
 [ -z "$(header "$h" content-encoding)" ] || fail "$js compressed for a client that did not ask: $h"
 header "$h" vary | grep -qi 'accept-encoding' || fail "no Vary: Accept-Encoding on the whole $js"
-curl -fsS -o "$tmp/whole.js" "http://127.0.0.1:18080$js"
-curl -fsS -H 'Accept-Encoding: gzip' -o "$tmp/packed.js.gz" "http://127.0.0.1:18080$js"
+curl -fsS --retry 5 --retry-all-errors -o "$tmp/whole.js" "http://127.0.0.1:18080$js" || fail "$js: the request failed"
+curl -fsS --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' -o "$tmp/packed.js.gz" "http://127.0.0.1:18080$js" \
+  || fail "$js compressed: the request failed"
 gzip -dc "$tmp/packed.js.gz" | cmp -s - "$tmp/whole.js" || fail "$js: the compressed file is not the whole one"
-css=$(printf '%s' "$html" | grep -o '<link[^>]*rel="stylesheet"[^>]*>' | grep -o 'href="[^"]*"' | sed 's/^href="//; s/"$//' | head -n 1)
-[ -n "$css" ] || fail "no stylesheet in index.html"
+gzip -dc "$tmp/packed10.js.gz" | cmp -s - "$tmp/whole.js" || fail "$js over HTTP/1.0: not the whole file"
+# The stylesheet Vite links from /assets/ (the only place gzip_static serves).
+css=$(printf '%s' "$html" | grep -o '<link[^>]*rel="stylesheet"[^>]*>' | grep -o 'href="/assets/[^"]*\.css"' \
+  | sed 's/^href="//; s/"$//' | head -n 1)
+[ -n "$css" ] || fail "no stylesheet from /assets/ in index.html"
 [ "$(header "$(curl -fsSI -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$css")" content-encoding)" = gzip ] \
   || fail "$css not compressed"
 whole=$(wc -c < "$tmp/whole.js")
 packed=$(wc -c < "$tmp/packed.js.gz")
 [ "$packed" -gt 0 ] && [ "$packed" -lt "$whole" ] || fail "$js: $packed bytes compressed, $whole whole"
 echo "entry script: $whole bytes whole, $packed sent compressed"
+# In the image, every .gz is smaller than its file (the build drops the others) and has its file next to it.
+docker run --rm --entrypoint sh "$image" -c '
+  for gz in /usr/share/nginx/html/assets/*.gz; do
+    f=${gz%.gz}
+    [ -f "$f" ] || { echo "$gz without $f"; exit 1; }
+    [ "$(wc -c < "$gz")" -lt "$(wc -c < "$f")" ] || { echo "$gz is not smaller than $f"; exit 1; }
+  done' || fail "a compressed asset that should not ship"
 # A PostHog host that is not an http(s) URL never reaches the header: the container refuses to start.
 set +e
 bad=$(timeout 30 docker run --rm --name web-bad --network "$net" --read-only --tmpfs /tmp:uid=101,gid=101 \
