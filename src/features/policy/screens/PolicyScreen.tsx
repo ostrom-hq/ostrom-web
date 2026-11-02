@@ -21,7 +21,7 @@ function PolicyBody({ role }: { readonly role: OrgRole | undefined }): ReactElem
       <ProvidersSection view={providers} canChange={canChange} />
       <LaunchCheck
         check={check}
-        defaultModel={models.failure === undefined ? models.policy?.default : null}
+        defaultModel={models.policy?.default ?? (models.failure === undefined ? undefined : null)}
       />
     </>
   );

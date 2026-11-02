@@ -10,7 +10,7 @@ import {
 import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api/sdk.gen';
 import type { InferenceSettings, Member, ModelPolicy } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
@@ -132,8 +132,8 @@ export interface LaunchCheckViewModel {
 }
 
 /**
- * @param policy The policy the answer is about: once it changes (a save), the last answer goes, so no answer speaks of
- *   a policy that is no longer the organization's.
+ * @param policy The policy the answer is about: once it changes (a save), the last question is asked again, its default
+ *   model read anew, so no answer speaks of a policy that is no longer the organization's.
  */
 export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckViewModel {
   // A question asked, not a state kept fresh: a mutation never asks again on its own (a focus, a remount).
@@ -146,16 +146,21 @@ export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckView
         })
       ).data,
   });
-  const { mutate, reset } = mutation;
+  const { mutate } = mutation;
+  // The last question, asked again by the effect below once the policy changes.
+  const last = useRef<LaunchQuestion | undefined>(undefined);
   const ask = useCallback(
     (question: LaunchQuestion) => {
+      last.current = question;
       mutate(question);
     },
     [mutate],
   );
   useEffect(() => {
-    reset();
-  }, [policy, reset]);
+    const question = last.current;
+    if (question === undefined || policy === undefined) return;
+    mutate(question.named ? question : { ...question, model: policy.default });
+  }, [policy, mutate]);
   return {
     ask,
     asked: mutation.variables,

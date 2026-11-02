@@ -272,6 +272,34 @@ describe('the provider keys', () => {
     expect(await within(keys).findByRole('alert')).toHaveTextContent('A key is named by a secret');
   });
 
+  it('does not say saved when a key was typed while the save went', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.put(
+        '*/api/v1/inference/settings',
+        async ({ request }) => {
+          await answered;
+          return HttpResponse.json(await request.json());
+        },
+        { once: true },
+      ),
+    );
+    visit('/policy');
+    const keys = await section('Provider keys');
+    await within(keys).findByRole('combobox', { name: 'Anthropic key' });
+    await user.click(within(keys).getByRole('button', { name: 'Save' }));
+    await user.type(within(keys).getByRole('combobox', { name: 'OpenAI key' }), 'X');
+    release();
+    await waitFor(() => {
+      expect(within(keys).getByRole('button', { name: 'Save' })).toBeEnabled();
+    });
+    expect(within(keys).queryByText('Provider keys saved.')).toBeNull();
+  });
+
   it('holds the keys while they save, and still names them when the secrets cannot be read', async () => {
     const user = userEvent.setup();
     server.use(
@@ -336,7 +364,7 @@ describe('the launch check', () => {
     });
   });
 
-  it('waits for the policy before asking, and drops an answer once the policy changes', async () => {
+  it('waits for the policy before asking, and asks again once the policy changes', async () => {
     const user = userEvent.setup();
     let release: () => void = () => undefined;
     const loaded = new Promise<void>((resolve) => {
@@ -370,7 +398,19 @@ describe('the launch check', () => {
     await user.type(within(models).getByRole('textbox', { name: 'Default model' }), 'claude-opus-4-1');
     await user.click(within(models).getByRole('button', { name: 'Save' }));
     expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
-    expect(within(check).queryByText(/You may launch/)).toBeNull();
+    // The question asked the default: asked again, it names the new one.
+    expect(
+      await within(check).findByText('You may launch claude with the default model, claude-opus-4-1.'),
+    ).toBeInTheDocument();
+    // A question that named its model is asked again as it was.
+    await user.type(within(check).getByRole('textbox', { name: 'Model' }), 'gpt-5');
+    await user.click(within(check).getByRole('button', { name: 'Ask' }));
+    expect(await within(check).findByText('You may launch claude with gpt-5.')).toBeInTheDocument();
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    await user.clear(within(models).getByRole('textbox', { name: 'Allowed models' }));
+    await user.type(within(models).getByRole('textbox', { name: 'Allowed models' }), 'claude-');
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(check).findByText('The organization does not allow gpt-5.')).toBeInTheDocument();
   });
 
   it('shows a refusal without a reason, a note, the wait, and a failure', async () => {

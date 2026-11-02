@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { InferenceSettings } from '@gen/api/types.gen';
-import { type ReactElement, useId, useState } from 'react';
+import { type ReactElement, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
@@ -19,9 +19,12 @@ function ProvidersForm({
 }): ReactElement {
   const { t } = useTranslation();
   const [draft, setDraftState] = useState<ProvidersDraft>(() => providersDraftOf(settings));
+  // What is on screen, read when a save answers.
+  const current = useRef(draft);
   // An edit after a save is not saved yet: its banner goes. A save still going keeps its answer coming.
   const setDraft = (next: ProvidersDraft): void => {
     if (!view.change.saving) view.change.reset();
+    current.current = next;
     setDraftState(next);
   };
   const listId = useId();
@@ -31,7 +34,11 @@ function ProvidersForm({
       className="o-stack"
       onSubmit={(event) => {
         event.preventDefault();
-        view.change.save(settingsOf(draft), () => undefined);
+        const sent = draft;
+        // Typed while the save went: what is on screen is not what was saved, so "saved" is not said.
+        view.change.save(settingsOf(sent), () => {
+          if (current.current !== sent) view.change.reset();
+        });
       }}
     >
       <datalist id={listId}>
