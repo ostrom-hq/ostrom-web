@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   bulkUpdateRulesMutation,
+  createRuleMutation,
+  deleteRuleMutation,
+  getGateCatalogOptions,
   listDecisionsQueryKey,
   listRulesOptions,
   listRulesQueryKey,
   updateRuleMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Rule, RuleStatus, RuleStrength } from '@gen/api/types.gen';
+import type { GateAction, NewRule, Rule } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
+import type { RuleChange } from './model';
 
 export interface RulesViewModel {
   readonly rules: readonly Rule[] | undefined;
@@ -38,12 +42,6 @@ function useInvalidate(): () => Promise<void> {
       queryClient.invalidateQueries({ queryKey: listDecisionsQueryKey() }),
     ]);
   }, [queryClient]);
-}
-
-export interface RuleChange {
-  readonly status?: RuleStatus;
-  readonly statement?: string;
-  readonly strength?: RuleStrength;
 }
 
 export interface RuleDecisionViewModel {
@@ -94,4 +92,59 @@ export function useBulkAccept(): BulkViewModel {
     updated: mutation.data?.updated,
     failure: failureOf(mutation.error),
   };
+}
+
+export interface CreateRuleViewModel {
+  /** Writes the rule; `onSaved` runs once the server signed it, so the form empties then, not before. */
+  readonly create: (rule: NewRule, onSaved: () => void) => void;
+  readonly creating: boolean;
+  readonly failure: Error | undefined;
+}
+
+export function useCreateRule(): CreateRuleViewModel {
+  const invalidate = useInvalidate();
+  const mutation = useMutation({ ...createRuleMutation(), onSettled: invalidate });
+  const { mutate } = mutation;
+  const create = useCallback(
+    (rule: NewRule, onSaved: () => void) => {
+      mutate({ body: rule }, { onSuccess: onSaved });
+    },
+    [mutate],
+  );
+  return { create, creating: mutation.isPending, failure: failureOf(mutation.error) };
+}
+
+export interface DeleteRuleViewModel {
+  readonly remove: (id: string) => void;
+  /** The rule being deleted. */
+  readonly deleting: string | undefined;
+  readonly failure: Error | undefined;
+}
+
+export function useDeleteRule(): DeleteRuleViewModel {
+  const invalidate = useInvalidate();
+  const mutation = useMutation({ ...deleteRuleMutation(), onSettled: invalidate });
+  const { mutate } = mutation;
+  const remove = useCallback(
+    (id: string) => {
+      mutate({ path: { id } });
+    },
+    [mutate],
+  );
+  return {
+    remove,
+    deleting: mutation.isPending ? mutation.variables.path.id : undefined,
+    failure: failureOf(mutation.error),
+  };
+}
+
+export interface GateCatalogViewModel {
+  readonly actions: readonly GateAction[] | undefined;
+  readonly failure: Error | undefined;
+}
+
+/** The actions a gate can cover, read from the catalogue the hooks and the gates decide on; only once a gate is drawn. */
+export function useGateCatalog(enabled: boolean): GateCatalogViewModel {
+  const catalog = useQuery(ready(getGateCatalogOptions(), { enabled, retry: false }));
+  return { actions: catalog.data?.actions, failure: failureOf(catalog.error) };
 }

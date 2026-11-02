@@ -274,6 +274,227 @@ describe('the decisions', () => {
   });
 });
 
+describe('writing and gating rules', () => {
+  function newRule(): HTMLElement {
+    return screen.getByRole('region', { name: 'A new rule' });
+  }
+
+  it('writes a rule, signed, found among the accepted ones', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    const form = newRule();
+    expect(within(form).getByRole('button', { name: 'Add the rule' })).toBeDisabled();
+    await user.type(within(form).getByRole('textbox', { name: 'Rule' }), 'Read the runbook before a deploy.');
+    expect(within(form).getByRole('button', { name: 'Add the rule' })).toBeDisabled();
+    await user.type(within(form).getByRole('combobox', { name: 'Group' }), 'Ops');
+    await user.type(within(form).getByRole('textbox', { name: 'Repositories' }), 'acme/web, acme/api');
+    await user.type(within(form).getByRole('textbox', { name: 'Why' }), 'It saves an hour.');
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'Strength' }), 'recommended');
+    expect(form.querySelector('datalist option[value="Releases"]')).not.toBeNull();
+    await user.click(within(form).getByRole('button', { name: 'Add the rule' }));
+    expect(await screen.findByRole('button', { name: 'Accepted 2' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('region', { name: 'A new rule' })).toBeNull();
+    const written = card(/Read the runbook/);
+    expect(written).toHaveTextContent('Recommended');
+    expect(written).toHaveTextContent('acme/web · acme/api');
+    expect(db.rules[0]).toMatchObject({ group: 'Ops', output: 'note', why: 'It saves an hour.' });
+    expect(db.decisions[0]).toMatchObject({ subject: { id: db.rules[0]?.id }, action: 'accepted' });
+  });
+
+  it('puts a gate with a rule: the actions of the catalogue, who says yes, the checks it needs', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    const form = newRule();
+    await user.type(within(form).getByRole('textbox', { name: 'Rule' }), 'A deploy waits for a yes.');
+    await user.type(within(form).getByRole('combobox', { name: 'Group' }), 'Releases');
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'What it does' }), 'gate');
+    const gate = within(form).getByRole('group', { name: 'Gate' });
+    expect(within(form).getByText('Pick at least one action for the gate.')).toBeInTheDocument();
+    await user.click(await within(gate).findByRole('checkbox', { name: /Deploy/ }));
+    expect(within(form).getByText('Name at least one person who may say yes.')).toBeInTheDocument();
+    await user.click(within(gate).getByRole('checkbox', { name: /Merge into main/ }));
+    await user.click(within(gate).getByRole('checkbox', { name: /Merge into main/ }));
+    await user.type(within(gate).getByRole('textbox', { name: 'Who may say yes' }), 'samir, maya');
+    await user.type(within(gate).getByRole('textbox', { name: 'Shown with the request' }), 'Release owners');
+    await user.click(within(gate).getByRole('button', { name: 'Add a check' }));
+    expect(within(form).getByText('Give each check its id, or remove it.')).toBeInTheDocument();
+    await user.type(within(gate).getByRole('textbox', { name: 'Check 1' }), 'n-tests');
+    await user.click(within(gate).getByRole('checkbox', { name: 'Only a run on a runner or in CI counts' }));
+    await user.click(within(gate).getByRole('button', { name: 'Add a check' }));
+    await user.type(within(gate).getByRole('textbox', { name: 'Check 2' }), 'n-lint');
+    await user.click(within(gate).getByRole('button', { name: 'Add a check' }));
+    await user.click(within(gate).getByRole('button', { name: 'Remove check 3' }));
+    expect(within(gate).queryByRole('textbox', { name: 'Check 3' })).toBeNull();
+    await user.click(within(form).getByRole('button', { name: 'Add the rule' }));
+    const gated = await findCard(/A deploy waits for a yes/);
+    expect(gated).toHaveTextContent('Gate: Deploy, waits for a yes from samir, maya');
+    expect(gated).toHaveTextContent('Needs: n-tests (runner or CI), n-lint');
+    expect(db.rules[0]?.gate).toEqual({
+      actions: [
+        {
+          class: 'deploy',
+          label: 'Deploy',
+          patterns: ['helm upgrade', 'kubectl apply'],
+          repos: ['acme/billing-api'],
+        },
+      ],
+      approvers: ['samir', 'maya'],
+      reason: 'Release owners',
+      checks: [
+        { check: 'n-tests', attested: true },
+        { check: 'n-lint', attested: false },
+      ],
+    });
+  });
+
+  it('says while the catalogue loads, when it is empty, and when it fails', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/gates/catalog', never));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.selectOptions(within(newRule()).getByRole('combobox', { name: 'What it does' }), 'gate');
+    expect(within(newRule()).getByText('Reading the actions of the catalogue…')).toBeInTheDocument();
+    await user.click(within(newRule()).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('region', { name: 'A new rule' })).toBeNull();
+
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [] })));
+    await user.click(screen.getByRole('button', { name: 'New rule' }));
+    await user.selectOptions(within(newRule()).getByRole('combobox', { name: 'What it does' }), 'gate');
+    expect(await within(newRule()).findByText(/The catalogue has no action yet/)).toBeInTheDocument();
+  });
+
+  it('says when the catalogue fails', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/gates/catalog', () =>
+        HttpResponse.json({ error: { type: 'unavailable', message: 'No catalogue.' } }, { status: 503 }),
+      ),
+    );
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.selectOptions(within(newRule()).getByRole('combobox', { name: 'What it does' }), 'gate');
+    expect(await within(newRule()).findByText('No catalogue.')).toBeInTheDocument();
+  });
+
+  it('says when a rule cannot be written, and keeps the form', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/rules', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Already a rule.' } }, { status: 409 }),
+      ),
+    );
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.type(within(newRule()).getByRole('textbox', { name: 'Rule' }), 'Twice.');
+    await user.type(within(newRule()).getByRole('combobox', { name: 'Group' }), 'Ops');
+    await user.click(within(newRule()).getByRole('button', { name: 'Add the rule' }));
+    expect(await screen.findByText('Already a rule.')).toBeInTheDocument();
+    expect(newRule()).toBeInTheDocument();
+  });
+
+  it('holds a new rule while it is written', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/rules', never));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.type(within(newRule()).getByRole('textbox', { name: 'Rule' }), 'Slow.');
+    await user.type(within(newRule()).getByRole('combobox', { name: 'Group' }), 'Ops');
+    await user.click(within(newRule()).getByRole('button', { name: 'Add the rule' }));
+    expect(await within(newRule()).findByRole('button', { name: 'Saving…' })).toBeDisabled();
+  });
+
+  it('edits a decided rule: where it holds, why, and takes its gate off', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'Accepted 1' }));
+    const migrations = card(/Migrations run only/);
+    expect(migrations).toHaveTextContent('Gate: Run a migration, waits for a yes from lena');
+    expect(migrations).toHaveTextContent('Needs: n-tests (runner or CI)');
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    const gate = within(migrations).getByRole('group', { name: 'Gate' });
+    // The rule gates an action the catalogue no longer has: it stays offered, ticked.
+    expect(await within(gate).findByRole('checkbox', { name: /Run a migration/ })).toBeChecked();
+    expect(within(gate).getByRole('checkbox', { name: /Deploy/ })).not.toBeChecked();
+    // Nothing changed: the editor closes and nothing is signed.
+    const before = db.decisions.length;
+    await user.click(within(migrations).getByRole('button', { name: 'Save' }));
+    expect(within(migrations).queryByRole('group', { name: 'Gate' })).toBeNull();
+    expect(db.decisions).toHaveLength(before);
+
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    const why = within(migrations).getByRole('textbox', { name: 'Why' });
+    await user.type(why, 'Two outages in May.');
+    await user.selectOptions(within(migrations).getByRole('combobox', { name: 'What it does' }), 'note');
+    await user.click(within(migrations).getByRole('button', { name: 'Save' }));
+    expect(await within(migrations).findByText('Why: Two outages in May.')).toBeInTheDocument();
+    expect(migrations).not.toHaveTextContent('Gate:');
+    expect(db.rules.find((rule) => rule.id === 'R-7')?.gate).toBeUndefined();
+  });
+
+  it('shows a gate without checks, and an action without commands by its label alone', async () => {
+    const user = userEvent.setup();
+    const push = { class: 'push', label: 'Push', patterns: [], repos: [] };
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [push] })));
+    db.rules = db.rules.map((rule) =>
+      rule.id === 'R-3'
+        ? { ...rule, output: 'gate', gate: { actions: [push], approvers: ['maya'], checks: [] } }
+        : rule,
+    );
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    expect(tests).toHaveTextContent('Gate: Push, waits for a yes from maya');
+    expect(tests).not.toHaveTextContent('Needs:');
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    expect(await within(tests).findByRole('checkbox', { name: 'Push' })).toBeChecked();
+  });
+
+  it('keeps an output it has no words for, shown as the server wrote it', async () => {
+    const user = userEvent.setup();
+    db.rules = db.rules.map((rule) => (rule.id === 'R-3' ? { ...rule, output: 'banner' } : rule));
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    expect(within(tests).getByRole('combobox', { name: 'What it does' })).toHaveDisplayValue('banner');
+  });
+
+  it('deletes a rule after asking, signed', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Delete' }));
+    await user.click(within(tests).getByRole('button', { name: 'Keep' }));
+    await user.click(within(tests).getByRole('button', { name: 'Delete' }));
+    await user.click(within(tests).getByRole('button', { name: 'Delete this rule' }));
+    expect(await screen.findByRole('button', { name: 'To review 1' })).toBeInTheDocument();
+    expect(screen.queryByText(/Run `pnpm test`/)).toBeNull();
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-3' }, action: 'deleted' });
+  });
+
+  it('says when a rule cannot be deleted', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/rules/:id', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Still used by a gate.' } }, { status: 409 }),
+      ),
+    );
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Delete' }));
+    await user.click(within(tests).getByRole('button', { name: 'Delete this rule' }));
+    expect(await screen.findByText('Still used by a gate.')).toBeInTheDocument();
+  });
+
+  it('gives someone who does not decide neither a new rule nor a delete', async () => {
+    viewerIs('member');
+    visit('/rules');
+    await findCard(/Run `pnpm test`/);
+    expect(screen.queryByRole('button', { name: 'New rule' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+  });
+});
+
 async function findCard(text: RegExp): Promise<HTMLElement> {
   await screen.findByText(text);
   return card(text);

@@ -6,7 +6,7 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { useDecisions } from '../useDecisions';
 
-const ACTIONS = ['accepted', 'rejected', 'edited', 'proposed'] as const;
+const ACTIONS = ['accepted', 'rejected', 'edited', 'proposed', 'deleted'] as const;
 const KINDS = ['rule', 'workflow', 'owner', 'policy'] as const;
 
 function known<T extends string>(list: readonly T[], value: string): value is T {

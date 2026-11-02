@@ -16,3 +16,38 @@
   background: var(--surface-sunken);
   color: var(--text);
 }
+.rl-new {
+  align-self: flex-start;
+}
+.rl-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+.rl-form__grid > * {
+  min-width: 0;
+}
+.rl-gate {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.rl-form,
+.rl-form fieldset {
+  min-width: 0;
+}
+.rl-gate fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.rl-gate__check .o-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.rl-gate__action {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}

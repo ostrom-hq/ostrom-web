@@ -1,98 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Rule, RuleStrength } from '@gen/api/types.gen';
-import { type ReactElement, useId, useState } from 'react';
+import type { Rule } from '@gen/api/types.gen';
+import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
-import { isAccepted, percent } from '../model';
-import type { RuleChange } from '../useRules';
-
-const STRENGTHS: readonly RuleStrength[] = ['required', 'recommended'];
-
-function isStrength(value: string): value is RuleStrength {
-  return STRENGTHS.some((strength) => strength === value);
-}
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
+import { changeOf, isAccepted, percent, type RuleChange } from '../model';
+import { RuleForm } from './RuleForm';
 
 export interface RuleCardProps {
   readonly rule: Rule;
+  /** Groups already in use, offered when the rule is edited. */
+  readonly groups: readonly string[];
   /** Present when the viewer decides rules. */
   readonly onDecide: ((change: RuleChange, onSaved?: () => void) => void) | undefined;
+  /** Deletes the rule; offered only with the decisions. */
+  readonly onDelete: () => void;
   readonly saving: boolean;
-}
-
-function RuleEditor({
-  rule,
-  saving,
-  onSave,
-  onCancel,
-}: {
-  readonly rule: Rule;
-  readonly saving: boolean;
-  readonly onSave: (change: RuleChange) => void;
-  readonly onCancel: () => void;
-}): ReactElement {
-  const { t } = useTranslation();
-  const [statement, setStatement] = useState(rule.statement);
-  const [strength, setStrength] = useState<RuleStrength>(rule.strength);
-  const statementId = useId();
-  const strengthId = useId();
-  const trimmed = statement.trim();
-  return (
-    <form
-      className="o-stack"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSave({
-          ...(trimmed === rule.statement ? {} : { statement: trimmed }),
-          ...(strength === rule.strength ? {} : { strength }),
-        });
-      }}
-    >
-      <label htmlFor={statementId} className="o-field-label">
-        {t('rules.edit.statement')}
-      </label>
-      <textarea
-        id={statementId}
-        className="o-input"
-        rows={3}
-        value={statement}
-        onChange={(event) => {
-          setStatement(event.target.value);
-        }}
-      />
-      <div className="o-inline">
-        <label htmlFor={strengthId} className="o-field-label">
-          {t('rules.edit.strength')}
-        </label>
-        <select
-          id={strengthId}
-          className="o-input o-select"
-          value={strength}
-          onChange={(event) => {
-            if (isStrength(event.target.value)) setStrength(event.target.value);
-          }}
-        >
-          {STRENGTHS.map((option) => (
-            <option key={option} value={option}>
-              {t(`rules.strength.${option}`)}
-            </option>
-          ))}
-        </select>
-        <Button type="submit" disabled={saving || trimmed === ''}>
-          {saving ? t('rules.edit.saving') : t('rules.edit.save')}
-        </Button>
-        <Button variant="ghost" onClick={onCancel}>
-          {t('rules.edit.cancel')}
-        </Button>
-      </div>
-    </form>
-  );
 }
 
 /** A rule with its evidence, then the decision: accept what is true, fix what is close, reject the rest. */
-export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElement {
+export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const accepted = isAccepted(rule);
@@ -109,16 +39,22 @@ export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElemen
         <span className="o-row__meta">{t('rules.card.confidence', { value: percent(rule.confidence) })}</span>
       </div>
       {editing && onDecide !== undefined ? (
-        <RuleEditor
+        <RuleForm
           rule={rule}
+          groups={groups}
           saving={saving}
+          submit={rule.status === 'proposed' ? t('rules.edit.save') : t('rules.form.save')}
           onCancel={() => {
             setEditing(false);
           }}
-          onSave={(change) => {
-            onDecide(change, () => {
-              setEditing(false);
-            });
+          onSave={(draft, actions) => {
+            const change = changeOf(rule, draft, actions);
+            // Nothing changed: nothing to sign.
+            if (Object.keys(change).length === 0) setEditing(false);
+            else
+              onDecide(change, () => {
+                setEditing(false);
+              });
           }}
         />
       ) : (
@@ -129,6 +65,27 @@ export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElemen
       )}
       {rule.scope === undefined || rule.scope.length === 0 ? null : (
         <p className="o-row__meta o-mono">{rule.scope.join(' · ')}</p>
+      )}
+      {rule.gate === undefined ? null : (
+        <div className="o-stack rl-gate-read" aria-label={t('rules.form.gate.title')}>
+          <p className="o-row__meta">
+            {t('rules.card.gate', {
+              actions: rule.gate.actions.map((action) => action.label).join(', '),
+              approvers: rule.gate.approvers.join(', '),
+            })}
+          </p>
+          {rule.gate.checks === undefined || rule.gate.checks.length === 0 ? null : (
+            <p className="o-row__meta">
+              {t('rules.card.checks', {
+                checks: rule.gate.checks
+                  .map((check) =>
+                    check.attested === true ? t('rules.card.attested', { check: check.check }) : check.check,
+                  )
+                  .join(', '),
+              })}
+            </p>
+          )}
+        </div>
       )}
       {rule.sources === undefined || rule.sources.length === 0 ? null : (
         <ul className="rl-sources" aria-label={t('rules.card.sources')}>
@@ -187,16 +144,33 @@ export function RuleCard({ rule, onDecide, saving }: RuleCardProps): ReactElemen
               </Button>
             </>
           ) : (
-            <Button
-              variant="ghost"
-              disabled={saving}
-              onClick={() => {
-                onDecide({ status: 'proposed' });
-              }}
-            >
-              {t('rules.act.reopen')}
-            </Button>
+            <>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  setEditing(true);
+                }}
+              >
+                {t('rules.act.edit')}
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={saving}
+                onClick={() => {
+                  onDecide({ status: 'proposed' });
+                }}
+              >
+                {t('rules.act.reopen')}
+              </Button>
+            </>
           )}
+          <ConfirmButton
+            label={t('rules.delete.label')}
+            confirm={t('rules.delete.confirm')}
+            keep={t('rules.delete.keep')}
+            disabled={saving}
+            onConfirm={onDelete}
+          />
         </div>
       )}
     </article>
