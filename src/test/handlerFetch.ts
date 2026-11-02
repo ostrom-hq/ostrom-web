@@ -28,30 +28,36 @@ export interface HandlerFetch {
  *
  * What it does not do, as no handler here needs it: `passthrough()`, `bypass()`, storing `Set-Cookie`. An aborted
  * call is rejected at once, but its handler still runs to the end, as a server would. Remove it, and answer through
- * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed.
+ * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed. Each answer waits for one real
+ * `setTimeout`: a test that fakes timers leaves `setTimeout` real (`toFake: ['Date']`), or no call ever answers.
  */
+/** What an aborted fetch rejects with: the signal's reason, an AbortError when it gave none that is an Error. */
+function abortError(signal: AbortSignal): Error {
+  const reason: unknown = signal.reason;
+  return reason instanceof Error ? reason : new DOMException('The operation was aborted.', 'AbortError');
+}
+
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
   const requestListeners = new Set<(request: Request) => void>();
   const responseListeners = new Set<(request: Request, response: Response) => void>();
   const answer = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    // The client sends a ready Request: it is answered as is, so the one it keeps for its interceptors stays readable.
-    const request = input instanceof Request && init === undefined ? input : new Request(input, init);
+    // The client sends a ready Request: its copy is answered, so the one it keeps for its interceptors stays readable
+    // and no handler or listener can read its body away.
+    const request = input instanceof Request && init === undefined ? input.clone() : new Request(input, init);
     const { signal } = request;
-    signal.throwIfAborted();
-    for (const listener of requestListeners) listener(request);
+    if (signal.aborted) throw abortError(signal);
     // A network answer always comes a task later, never in the same microtask flush: a screen renders its pending
     // state (a held button, "Saving…") before the answer, as it does against a server.
     await new Promise((resolve) => setTimeout(resolve, 0));
-    signal.throwIfAborted();
+    if (signal.aborted) throw abortError(signal);
+    // Only the calls that reach a handler: an aborted one never left.
+    for (const listener of requestListeners) listener(request);
     const handlers = server.listHandlers().filter((handler) => handler instanceof RequestHandler);
     const pending = getResponse(handlers, request);
     // A handler that never answers (`delay('infinite')`) still lets the caller give up, as a real fetch does.
     const response = await new Promise<Response | undefined>((resolve, reject) => {
       const abort = (): void => {
-        const reason: unknown = signal.reason;
-        reject(
-          reason instanceof Error ? reason : new DOMException('The operation was aborted.', 'AbortError'),
-        );
+        reject(abortError(signal));
       };
       signal.addEventListener('abort', abort, { once: true });
       pending.then(
@@ -61,7 +67,8 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
         },
         (error: unknown) => {
           signal.removeEventListener('abort', abort);
-          // As MSW does: a handler that throws is a server error, not a failed network.
+          // As MSW does: a handler that throws is a server error, not a failed network, and its stack is shown.
+          console.error('Unhandled exception in a mock handler', error);
           const message = error instanceof Error ? error.message : String(error);
           resolve(Response.json({ name: 'Unhandled exception in a mock handler', message }, { status: 500 }));
         },
