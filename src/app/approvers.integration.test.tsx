@@ -35,7 +35,8 @@ describe('who approves what', () => {
     expect(rows[1]).toHaveTextContent('from 09:00-18:00 · on mon-fri');
     expect(within(gates).getAllByText('Nobody')).toHaveLength(1);
     expect(rows[3]).toHaveTextContent('Nobody');
-    expect(screen.getByText(/Nobody may approve Drop a table/)).toBeInTheDocument();
+    // Drop a table names nobody, but its workflow is only proposed: it stops nobody yet, so nothing is blocked.
+    expect(screen.queryByText(/Nobody may approve/)).toBeNull();
 
     const people = within(region('By person')).getAllByRole('listitem');
     expect(people.map((row) => row.querySelector('.o-row__title')?.textContent)).toEqual([
@@ -46,9 +47,11 @@ describe('who approves what', () => {
     expect(people[0]).toHaveTextContent('Merge to main · Run a migration (proposed)');
     expect(people[0]).toHaveTextContent('2 steps');
     expect(people[1]).toHaveTextContent('Deploy to production · Merge to main');
-    // What no gate covers runs without asking anyone.
+    // What no enforced gate covers runs without asking anyone, a proposed gate's actions included.
     expect(
-      screen.getByText('No gate covers push-main: an agent does it without asking anyone.'),
+      screen.getByText(
+        'No gate covers 3 actions (drop-table, migrate, push-main): an agent does them without asking anyone.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -175,6 +178,8 @@ describe('who approves what', () => {
     visit('/approvers');
     expect(await screen.findByText('No workflow asks for an approval yet.')).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'By person' })).toBeNull();
+    // This is when it matters most: every action runs without asking anyone.
+    expect(await screen.findByText(/No gate covers 5 actions/)).toBeInTheDocument();
   });
 
   it('counts several gates nobody may approve', async () => {
@@ -183,7 +188,10 @@ describe('who approves what', () => {
       nodes: workflow.nodes.map((node) => ({ ...node, approvers: [] })),
     }));
     visit('/approvers');
-    expect(await screen.findByText(/Nobody may approve 4 steps/)).toBeInTheDocument();
+    // Only the gates of the accepted workflow block: those of the proposed one stop nobody yet.
+    expect(
+      await screen.findByText(/Nobody may approve 2 steps \(Deploy to production, Merge to main\)/),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'By person' })).toBeNull();
   });
 
@@ -191,6 +199,40 @@ describe('who approves what', () => {
     server.use(http.get('*/api/v1/workflows', never), http.get('*/api/v1/gates/policy', never));
     visit('/approvers');
     expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
+  });
+
+  it('keeps the steps when the server does not say who approves what, and a gate covering no action says so', async () => {
+    server.use(http.get('*/api/v1/gates/approvers', () => new HttpResponse(null, { status: 404 })));
+    db.workflows = db.workflows.map((workflow) => ({
+      ...workflow,
+      nodes: workflow.nodes.map((node) => (node.id === 'm-orphan' ? { ...node, actions: [] } : node)),
+    }));
+    visit('/approvers');
+    expect(
+      await screen.findByText('The server does not say who approves what person by person yet.'),
+    ).toBeInTheDocument();
+    const rows = within(region('By step')).getAllByRole('listitem');
+    expect(rows[3]).toHaveTextContent('covers no action, so it stops nothing');
+    expect(screen.queryByRole('region', { name: 'By person' })).toBeNull();
+  });
+
+  it('puts the busiest approver first', async () => {
+    db.workflows = db.workflows.map((workflow) => ({
+      ...workflow,
+      nodes: workflow.nodes.map((node) => {
+        if (node.id === 'n-deploy') return { ...node, approvers: ['zed'] };
+        if (node.id === 'n-merge') return { ...node, approvers: ['maya', 'samir', 'zed'] };
+        return node.id === 'm-gate' ? { ...node, approvers: ['maya', 'zed'] } : node;
+      }),
+    }));
+    visit('/approvers');
+    const section = await screen.findByRole('region', { name: 'By person' });
+    const people = within(section).getAllByRole('listitem');
+    expect(people.map((row) => row.querySelector('.o-row__title')?.textContent)).toEqual([
+      'zed',
+      'Maya Lind',
+      'Samir Haddad',
+    ]);
   });
 
   it('says why the page does not come', async () => {

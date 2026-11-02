@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Workflow } from '@gen/api/types.gen';
-import { approvalPoints, isSelfApprovalPolicy } from './model';
+import type { ApproverGate } from '@gen/api/types.gen';
+import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy } from './model';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
   id,
@@ -29,6 +30,32 @@ describe('approvalPoints', () => {
     expect(points.map((point) => point.key)).toEqual(['a/g1', 'b/g2', 'b/g3']);
     expect(points[0]).toMatchObject({ workflowName: 'Workflow a', reason: 'Owners', actions: [] });
     expect(points[2]?.approvers).toEqual([]);
+  });
+});
+
+const gate = (label: string, enforce: boolean): ApproverGate => ({
+  workflowId: 'w',
+  workflowName: 'W',
+  nodeId: label,
+  label,
+  enforce,
+  actions: ['deploy'],
+});
+
+describe('the server graph, read for people', () => {
+  it('blocks only on an enforced gate naming nobody', () => {
+    expect(blocking([gate('Deploy', true), gate('Drop', false)]).map((item) => item.label)).toEqual([
+      'Deploy',
+    ]);
+  });
+
+  it('puts the busiest approver first, then by name', () => {
+    const lines = [
+      { approver: 'zoe', gates: [gate('A', true)] },
+      { approver: 'amy', gates: [gate('B', true)] },
+      { approver: 'max', gates: [gate('A', true), gate('B', true)] },
+    ];
+    expect(busiestFirst(lines).map((line) => line.approver)).toEqual(['max', 'amy', 'zoe']);
   });
 });
 

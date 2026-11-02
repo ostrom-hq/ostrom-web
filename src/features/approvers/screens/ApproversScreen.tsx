@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { ApproversGraph } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,13 @@ import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
-import { type ApprovalPoint, isSelfApprovalPolicy, SELF_APPROVAL_POLICIES } from '../model';
+import {
+  type ApprovalPoint,
+  blocking,
+  busiestFirst,
+  isSelfApprovalPolicy,
+  SELF_APPROVAL_POLICIES,
+} from '../model';
 import { type PolicyViewModel, useApprovers, useSelfApprovalPolicy } from '../useApprovers';
 
 function PointRow({
@@ -22,6 +29,8 @@ function PointRow({
     ...point.actions.map((action) => action.label),
     point.when?.hours === undefined ? undefined : t('approvers.point.hours', { hours: point.when.hours }),
     point.when?.days === undefined ? undefined : t('approvers.point.days', { days: point.when.days }),
+    // The gates decide on the actions they cover: one that covers none stops nothing.
+    point.actions.length === 0 ? t('approvers.point.noAction') : undefined,
   ].filter((part) => part !== undefined);
   return (
     <div className="o-row">
@@ -78,6 +87,69 @@ function PolicySection({ policy }: { readonly policy: PolicyViewModel }): ReactE
   );
 }
 
+/** What the server's graph warns about: gates that stop an agent for good, and actions no gate covers. */
+function GraphNotes({ graph }: { readonly graph: ApproversGraph }): ReactElement {
+  const { t } = useTranslation();
+  const stuck = blocking(graph.unanswered);
+  return (
+    <>
+      {stuck.length === 0 ? null : (
+        <Banner tone="warning" tag={t('approvers.stuck.tag')}>
+          {t('approvers.stuck.text', {
+            count: stuck.length,
+            list: stuck.map((gate) => gate.label).join(', '),
+          })}
+        </Banner>
+      )}
+      {graph.ungated.length === 0 ? null : (
+        <Banner tone="info" tag={t('approvers.ungated.tag')}>
+          {t('approvers.ungated.text', { count: graph.ungated.length, list: graph.ungated.join(', ') })}
+        </Banner>
+      )}
+    </>
+  );
+}
+
+/** Who approves what, person by person, as the gates decide it; a gate of a proposed workflow says so. */
+function People({
+  graph,
+  nameOf,
+}: {
+  readonly graph: ApproversGraph;
+  readonly nameOf: (login: string) => string;
+}): ReactElement | null {
+  const { t } = useTranslation();
+  const people = busiestFirst(graph.approvers);
+  if (people.length === 0) return null;
+  return (
+    <section aria-labelledby="ap-people" className="o-stack">
+      <h2 id="ap-people" className="o-label">
+        {t('approvers.people.title')}
+      </h2>
+      <ul className="o-card o-rows">
+        {people.map((person) => (
+          <li key={person.approver}>
+            <div className="o-row">
+              <Avatar login={person.approver} size={32} />
+              <span className="o-row__main">
+                <span className="o-row__title">{nameOf(person.approver)}</span>
+                <span className="o-row__meta">
+                  {person.gates
+                    .map((gate) =>
+                      gate.enforce ? gate.label : t('approvers.people.proposed', { label: gate.label }),
+                    )
+                    .join(' · ')}
+                </span>
+              </span>
+              <Badge>{t('approvers.people.count', { count: person.gates.length })}</Badge>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Who may say yes to what: the gates of every workflow, read by gate and by person. */
 export function ApproversScreen(): ReactElement {
   const { t } = useTranslation();
@@ -85,83 +157,29 @@ export function ApproversScreen(): ReactElement {
   const policy = useSelfApprovalPolicy();
   return (
     <Screen title={t('approvers.title')} lead={t('approvers.lead')}>
-      <LoadState
-        data={
-          view.points === undefined || view.graph === undefined
-            ? undefined
-            : { points: view.points, graph: view.graph }
-        }
-        failure={view.failure}
-      >
-        {({ points, graph }) => {
-          // The server's graph says who approves what: the same catalogue the gates decide on.
-          const stuck = graph.unanswered;
-          const people = graph.approvers;
-          return points.length === 0 ? (
+      {view.graph === undefined ? null : <GraphNotes graph={view.graph} />}
+      <LoadState data={view.points} failure={view.failure}>
+        {(points) =>
+          points.length === 0 ? (
             <p className="o-empty">{t('approvers.empty')}</p>
           ) : (
-            <>
-              {stuck.length === 0 ? null : (
-                <Banner tone="warning" tag={t('approvers.stuck.tag')}>
-                  {t('approvers.stuck.text', {
-                    count: stuck.length,
-                    list: stuck.map((gate) => gate.label).join(', '),
-                  })}
-                </Banner>
-              )}
-              {graph.ungated.length === 0 ? null : (
-                <Banner tone="info" tag={t('approvers.ungated.tag')}>
-                  {t('approvers.ungated.text', {
-                    count: graph.ungated.length,
-                    list: graph.ungated.join(', '),
-                  })}
-                </Banner>
-              )}
-              <section aria-labelledby="ap-gates" className="o-stack">
-                <h2 id="ap-gates" className="o-label">
-                  {t('approvers.gates.title')}
-                </h2>
-                <ul className="o-card o-rows">
-                  {points.map((point) => (
-                    <li key={point.key}>
-                      <PointRow point={point} nameOf={view.nameOf} />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-              {people.length === 0 ? null : (
-                <section aria-labelledby="ap-people" className="o-stack">
-                  <h2 id="ap-people" className="o-label">
-                    {t('approvers.people.title')}
-                  </h2>
-                  <ul className="o-card o-rows">
-                    {people.map((person) => (
-                      <li key={person.approver}>
-                        <div className="o-row">
-                          <Avatar login={person.approver} size={32} />
-                          <span className="o-row__main">
-                            <span className="o-row__title">{view.nameOf(person.approver)}</span>
-                            <span className="o-row__meta">
-                              {person.gates
-                                .map((gate) =>
-                                  gate.enforce
-                                    ? gate.label
-                                    : t('approvers.people.proposed', { label: gate.label }),
-                                )
-                                .join(' · ')}
-                            </span>
-                          </span>
-                          <Badge>{t('approvers.people.count', { count: person.gates.length })}</Badge>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </>
-          );
-        }}
+            <section aria-labelledby="ap-gates" className="o-stack">
+              <h2 id="ap-gates" className="o-label">
+                {t('approvers.gates.title')}
+              </h2>
+              <ul className="o-card o-rows">
+                {points.map((point) => (
+                  <li key={point.key}>
+                    <PointRow point={point} nameOf={view.nameOf} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )
+        }
       </LoadState>
+      {view.graph === undefined ? null : <People graph={view.graph} nameOf={view.nameOf} />}
+      {view.graphUnavailable ? <p className="o-row__meta">{t('approvers.graphUnavailable')}</p> : null}
       <PolicySection policy={policy} />
     </Screen>
   );

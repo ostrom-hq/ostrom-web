@@ -355,7 +355,13 @@ export const fr = {
       text_other:
         'Aucune porte ne couvre {{count}} actions ({{list}}) : un agent les fait sans rien demander à personne.',
     },
-    point: { nobody: 'Personne', hours: 'de {{hours}}', days: 'le {{days}}' },
+    point: {
+      nobody: 'Personne',
+      hours: 'de {{hours}}',
+      days: 'le {{days}}',
+      noAction: 'ne couvre aucune action, donc n’arrête rien',
+    },
+    graphUnavailable: 'Le serveur ne dit pas encore qui approuve quoi, personne par personne.',
     policy: {
       title: 'Quand le demandeur est approbateur',
       label: 'Auto-approbation',

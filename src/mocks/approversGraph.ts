@@ -7,7 +7,10 @@ export interface ApproversGraphState {
   workflows: Workflow[];
 }
 
-/** The action classes the demo's catalogue knows; those no gate covers run without asking anyone. */
+/**
+ * The action classes the demo's catalogue knows; those no enforced gate covers run without asking anyone. The real
+ * server reads them from its compiled catalogue: this list is the demo's.
+ */
 const KNOWN_ACTIONS = ['deploy', 'drop-table', 'merge-main', 'migrate', 'push-main'];
 
 /**
@@ -44,7 +47,8 @@ export function createApproversGraphHandlers(state: () => ApproversGraphState): 
       const approvers: ApproverLine[] = [...byApprover.entries()]
         .map(([approver, list]) => ({ approver, gates: list }))
         .sort((a, b) => a.approver.localeCompare(b.approver, 'en'));
-      const covered = new Set(gates.flatMap(({ gate }) => gate.actions));
+      // A proposed gate stops nothing yet: its actions still run without asking anyone.
+      const covered = new Set(gates.flatMap(({ gate }) => (gate.enforce ? gate.actions : [])));
       return HttpResponse.json({
         approvers,
         unanswered: gates.filter(({ approvers: names }) => names.length === 0).map(({ gate }) => gate),

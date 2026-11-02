@@ -19,6 +19,8 @@ export interface ApproversViewModel {
   readonly points: readonly ApprovalPoint[] | undefined;
   /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
   readonly graph: ApproversGraph | undefined;
+  /** The server does not say it (an older server, or a failure): the steps of the workflows still show. */
+  readonly graphUnavailable: boolean;
   readonly failure: Error | undefined;
   /** A login with the name the organization knows, or the login alone. */
   readonly nameOf: (login: string) => string;
@@ -27,7 +29,8 @@ export interface ApproversViewModel {
 export function useApprovers(): ApproversViewModel {
   const workflows = useQuery(ready(listWorkflowsOptions()));
   const members = useQuery(ready(listMembersOptions()));
-  const graph = useQuery(ready(getApproversGraphOptions()));
+  // Read again on every visit: a workflow changed elsewhere changes who approves what.
+  const graph = useQuery({ ...ready(getApproversGraphOptions()), staleTime: 0, retry: false });
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -46,7 +49,8 @@ export function useApprovers(): ApproversViewModel {
   return {
     points,
     graph: graph.data,
-    failure: failureOf(workflows.error ?? graph.error ?? members.error),
+    graphUnavailable: graph.isError,
+    failure: failureOf(workflows.error ?? members.error),
     nameOf,
   };
 }

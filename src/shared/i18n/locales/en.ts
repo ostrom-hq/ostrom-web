@@ -345,7 +345,13 @@ export const en = {
       text_one: 'No gate covers {{list}}: an agent does it without asking anyone.',
       text_other: 'No gate covers {{count}} actions ({{list}}): an agent does them without asking anyone.',
     },
-    point: { nobody: 'Nobody', hours: 'from {{hours}}', days: 'on {{days}}' },
+    point: {
+      nobody: 'Nobody',
+      hours: 'from {{hours}}',
+      days: 'on {{days}}',
+      noAction: 'covers no action, so it stops nothing',
+    },
+    graphUnavailable: 'The server does not say who approves what person by person yet.',
     policy: {
       title: 'When the asker is an approver',
       label: 'Self-approval',
