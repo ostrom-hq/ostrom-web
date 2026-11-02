@@ -104,11 +104,13 @@ import {
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
+import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
+import { initialActivity } from '@/mocks/fixtures/activity';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
@@ -154,6 +156,7 @@ import { initialWorkflows } from '@/mocks/fixtures/workflows';
 export interface MockDb
   extends
     AccountState,
+    ActivityState,
     BillingState,
     GithubState,
     OrgsState,
@@ -213,6 +216,7 @@ export interface MockDb
 
 export function createMockDb(): MockDb {
   return {
+    activity: initialActivity(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
     sessions: initialSessions(),
@@ -594,6 +598,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
     ...createApproversGraphHandlers(() => db),
+    ...createActivityHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+    ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');
