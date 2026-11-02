@@ -1215,6 +1215,13 @@ export const fr = {
       failedTag: 'Pas connecté',
       missing: 'Ce lien a déjà servi ou il est incomplet.',
       again: 'Demander un nouveau lien',
+      switchTag: 'Un autre compte ?',
+      switch:
+        'Quelqu’un est peut-être déjà connecté sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',
+      switchFrom:
+        'Tu es connecté en tant que {{name}} sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',
+      accept: 'Me connecter avec le lien',
+      keep: 'Rester connecté comme maintenant',
     },
   },
   sharing: {

@@ -238,6 +238,10 @@ const emailLinkRoute = createRoute({
     useEmailLinkStore.getState().hold(token);
     throw redirect({ to: '/auth/email', hash: '', replace: true });
   },
+  // A link left unanswered goes with the page: never spent later, when nobody would be asked any more.
+  onLeave: () => {
+    useEmailLinkStore.getState().take();
+  },
   component: EmailLinkScreen,
 });
 

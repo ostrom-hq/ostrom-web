@@ -78,6 +78,8 @@ test('a yes from a sign-in more than five minutes old asks to sign in again, the
   await page.evaluate(
     "history.pushState({}, '', '/auth/email#token=ml_demo'); dispatchEvent(new PopStateEvent('popstate'))",
   );
+  // Someone is signed in (the old session): the link replaces it after a yes.
+  await page.getByRole('button', { name: 'Sign in with the link' }).click();
   await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await page.getByRole('button', { name: /^Approve/ }).click();
