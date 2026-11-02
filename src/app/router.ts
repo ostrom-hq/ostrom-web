@@ -2,33 +2,17 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  lazyRouteComponent,
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
-import { ApproversScreen } from '@/features/approvers';
-import { AutomationsScreen, CloudScreen } from '@/features/cloud';
-import { ActivityScreen, activitySearchSchema } from '@/features/activity';
-import { DecisionsScreen } from '@/features/decisions';
-import { GithubScreen, githubSearchSchema } from '@/features/github';
-import { ImportScreen } from '@/features/import';
-import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
-import { MembersScreen } from '@/features/members';
-import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
-import { RulesScreen } from '@/features/rules';
-import { SessionScreen, SessionsScreen } from '@/features/sessions';
-import { SettingsScreen } from '@/features/settings';
-import { AccountsScreen, ArtifactsScreen } from '@/features/sharing';
-import { EmailLinkScreen, fragmentValue, SignInScreen, useEmailLinkStore } from '@/features/signin';
-import { SpendScreen } from '@/features/spend';
-import { TokensScreen } from '@/features/tokens';
-import { BillingScreen } from '@/features/billing';
-import { PolicyScreen } from '@/features/policy';
-import { McpScreen, SecretsScreen } from '@/features/tools';
-import { NewWorkflowScreen, WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
-import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
+import { activitySearchSchema } from '@/features/activity/route';
+import { githubSearchSchema } from '@/features/github/route';
+import { inviteToken } from '@/features/onboarding/route';
+import { fragmentValue, useEmailLinkStore } from '@/features/signin/route';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
@@ -41,7 +25,11 @@ declare module '@tanstack/react-router' {
 
 const rootRoute = createRootRoute({ component: AppShell });
 
-const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen });
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: lazyRouteComponent(async () => import('@/features/onboarding'), 'HomeScreen'),
+});
 
 /**
  * `/yes#signin=opk_…` is the link an approver opens on their phone. The token rides in the fragment, which the
@@ -82,7 +70,7 @@ const yesRoute = createRoute({
       replace: true,
     });
   },
-  component: YesQueueScreen,
+  component: lazyRouteComponent(async () => import('@/features/yes'), 'YesQueueScreen'),
 });
 
 /** A link to one request (`/yes/apr-1#signin=opk_…`) signs in the same way, then shows that request. */
@@ -96,120 +84,136 @@ const approvalRoute = createRoute({
     useAuthStore.getState().offer(signin);
     throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
   },
-  component: ApprovalScreen,
+  component: lazyRouteComponent(async () => import('@/features/yes'), 'ApprovalScreen'),
 });
 
 const sessionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sessions',
-  component: SessionsScreen,
+  component: lazyRouteComponent(async () => import('@/features/sessions'), 'SessionsScreen'),
 });
 const sessionRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sessions/$sessionId',
-  component: SessionScreen,
+  component: lazyRouteComponent(async () => import('@/features/sessions'), 'SessionScreen'),
 });
 const membersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/members',
-  component: MembersScreen,
+  component: lazyRouteComponent(async () => import('@/features/members'), 'MembersScreen'),
 });
 /** `/github`, where GitHub's install comes back through the server's callback (`?installed=1` or `?error=<type>`). */
 const githubRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/github',
   validateSearch: githubSearchSchema,
-  component: GithubScreen,
+  component: lazyRouteComponent(async () => import('@/features/github'), 'GithubScreen'),
 });
 const approversRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/approvers',
-  component: ApproversScreen,
+  component: lazyRouteComponent(async () => import('@/features/approvers'), 'ApproversScreen'),
 });
-const rulesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rules', component: RulesScreen });
+const rulesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/rules',
+  component: lazyRouteComponent(async () => import('@/features/rules'), 'RulesScreen'),
+});
 const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activity',
   validateSearch: activitySearchSchema,
-  component: ActivityScreen,
+  component: lazyRouteComponent(async () => import('@/features/activity'), 'ActivityScreen'),
 });
 const decisionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/decisions',
-  component: DecisionsScreen,
+  component: lazyRouteComponent(async () => import('@/features/decisions'), 'DecisionsScreen'),
 });
 const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows',
-  component: WorkflowsScreen,
+  component: lazyRouteComponent(async () => import('@/features/workflows'), 'WorkflowsScreen'),
 });
 const newWorkflowRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows/new',
-  component: NewWorkflowScreen,
+  component: lazyRouteComponent(async () => import('@/features/workflows'), 'NewWorkflowScreen'),
 });
 const workflowRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows/$workflowId',
-  component: WorkflowScreen,
+  component: lazyRouteComponent(async () => import('@/features/workflows'), 'WorkflowScreen'),
 });
-const mcpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/mcp', component: McpScreen });
+const mcpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mcp',
+  component: lazyRouteComponent(async () => import('@/features/tools'), 'McpScreen'),
+});
 const policyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/policy',
-  component: PolicyScreen,
+  component: lazyRouteComponent(async () => import('@/features/policy'), 'PolicyScreen'),
 });
 const secretsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/secrets',
-  component: SecretsScreen,
+  component: lazyRouteComponent(async () => import('@/features/tools'), 'SecretsScreen'),
 });
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/import',
-  component: ImportScreen,
+  component: lazyRouteComponent(async () => import('@/features/import'), 'ImportScreen'),
 });
-const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
+const spendRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/spend',
+  component: lazyRouteComponent(async () => import('@/features/spend'), 'SpendScreen'),
+});
 const billingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/billing',
-  component: BillingScreen,
+  component: lazyRouteComponent(async () => import('@/features/billing'), 'BillingScreen'),
 });
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
-  component: SettingsScreen,
+  component: lazyRouteComponent(async () => import('@/features/settings'), 'SettingsScreen'),
 });
 const tokensRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tokens',
-  component: TokensScreen,
+  component: lazyRouteComponent(async () => import('@/features/tokens'), 'TokensScreen'),
 });
-const cloudRoute = createRoute({ getParentRoute: () => rootRoute, path: '/cloud', component: CloudScreen });
+const cloudRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cloud',
+  component: lazyRouteComponent(async () => import('@/features/cloud'), 'CloudScreen'),
+});
 const automationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/automations',
-  component: AutomationsScreen,
+  component: lazyRouteComponent(async () => import('@/features/cloud'), 'AutomationsScreen'),
 });
 const artifactsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/artifacts',
-  component: ArtifactsScreen,
+  component: lazyRouteComponent(async () => import('@/features/sharing'), 'ArtifactsScreen'),
 });
 const accountsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/accounts',
-  component: AccountsScreen,
+  component: lazyRouteComponent(async () => import('@/features/sharing'), 'AccountsScreen'),
 });
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts',
-  component: ReceiptsScreen,
+  component: lazyRouteComponent(async () => import('@/features/receipts'), 'ReceiptsScreen'),
 });
 const receiptRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/receipts/$receiptId',
-  component: ReceiptScreen,
+  component: lazyRouteComponent(async () => import('@/features/receipts'), 'ReceiptScreen'),
 });
 
 // A redirect that is not a single string (`?redirect=1`, repeated keys) is dropped, never an error page.
@@ -220,7 +224,7 @@ const signInRoute = createRoute({
   path: '/signin',
   staticData: { anonymous: true },
   validateSearch: signInSearchSchema,
-  component: SignInScreen,
+  component: lazyRouteComponent(async () => import('@/features/signin'), 'SignInScreen'),
 });
 
 /**
@@ -242,7 +246,7 @@ const emailLinkRoute = createRoute({
   onLeave: () => {
     useEmailLinkStore.getState().take();
   },
-  component: EmailLinkScreen,
+  component: lazyRouteComponent(async () => import('@/features/signin'), 'EmailLinkScreen'),
 });
 
 /**
@@ -261,7 +265,7 @@ const inviteRoute = createRoute({
     inviteToken.hold(token);
     throw redirect({ to: '/invite', hash: '', replace: true });
   },
-  component: InviteScreen,
+  component: lazyRouteComponent(async () => import('@/features/onboarding'), 'InviteScreen'),
 });
 
 export const routeTree = rootRoute.addChildren([
