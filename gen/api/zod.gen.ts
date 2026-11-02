@@ -576,6 +576,17 @@ export const zApprovalCheck = z.object({
 });
 
 /**
+ * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
+ */
+export const zCloudAgentKind = z.enum([
+    'claude',
+    'codex',
+    'opencode',
+    'gemini',
+    'shell'
+]);
+
+/**
  * Why a cloud session failed or paused on its own
  */
 export const zCloudSessionFailure = z.object({
@@ -5404,7 +5415,7 @@ export const zListCloudSessionsResponse = z.object({
 });
 
 export const zCreateCloudSessionBody = z.object({
-    agent: z.string(),
+    agent: zCloudAgentKind,
     model: z.string().optional(),
     repo: z.string().optional(),
     ref: z.string().optional(),

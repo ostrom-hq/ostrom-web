@@ -996,7 +996,13 @@ export const en = {
     errorTag: 'Not done',
     sessions: 'Sessions',
     empty: 'No cloud session yet.',
-    agent: { 'claude-code': 'Claude Code', codex: 'Codex' },
+    agent: {
+      claude: 'Claude Code',
+      codex: 'Codex',
+      opencode: 'OpenCode',
+      gemini: 'Gemini CLI',
+      shell: 'Shell',
+    },
     status: {
       queued: 'Queued',
       starting: 'Starting',
@@ -1092,7 +1098,6 @@ export const en = {
       workflowNote:
         'This automation runs the workflow {{workflow}}. Workflow runs cannot be started by an automation yet: saving it here gives it a prompt instead.',
       agent: 'Agent',
-      agents: { claude: 'Claude Code', codex: 'Codex', opencode: 'OpenCode', gemini: 'Gemini CLI' },
       model: 'Model',
       modelPlaceholder: 'The agent’s default',
       runtime: 'Stops after (minutes)',

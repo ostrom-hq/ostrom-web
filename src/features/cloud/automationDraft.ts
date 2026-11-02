@@ -1,14 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
 
-/** The agents the server starts for an automation (its runner image carries each); `claude` is its default. */
-export const AUTOMATION_AGENTS = ['claude', 'codex', 'opencode', 'gemini'] as const;
-export type AutomationAgent = (typeof AUTOMATION_AGENTS)[number];
-
-export function isAutomationAgent(value: string): value is AutomationAgent {
-  return AUTOMATION_AGENTS.some((agent) => agent === value);
-}
-
 export const TRIGGER_KINDS = ['cron', 'webhook'] as const;
 export type TriggerKind = (typeof TRIGGER_KINDS)[number];
 
