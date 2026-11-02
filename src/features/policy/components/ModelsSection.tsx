@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   addMemberRow,
+  defaultModelOf,
   defaultRefusedFor,
   type MemberModels,
   memberName,
@@ -38,7 +39,9 @@ function PolicyFacts({
       </div>
       <div className="o-facts__row">
         <dt>{t('policy.models.default')}</dt>
-        <dd className="o-mono">{policy.default === '' ? t('policy.models.noDefault') : policy.default}</dd>
+        <dd className="o-mono">
+          {defaultModelOf(policy) === '' ? t('policy.models.noDefault') : defaultModelOf(policy)}
+        </dd>
       </div>
       {own.map(([member, models]) => (
         <div key={member} className="o-facts__row">

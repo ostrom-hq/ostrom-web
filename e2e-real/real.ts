@@ -12,7 +12,8 @@ const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 export function freshEmail(who: string): string {
   // A domain of its own: the server gives one free organization per company domain (`freeClaimOf`), so people of one
   // shared domain could not each create theirs.
-  return `${who}@${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}.e2e.ostrom.test`;
+  const run = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  return `${who}-${run}@${run}.e2e.ostrom.test`;
 }
 
 /** The token of the newest sign-in mail to `email`, if the server wrote one. */

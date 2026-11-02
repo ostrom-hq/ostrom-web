@@ -7,6 +7,7 @@ import { Screen } from '@/shared/ui/Screen';
 import { LaunchCheck } from '../components/LaunchCheck';
 import { ModelsSection } from '../components/ModelsSection';
 import { ProvidersSection } from '../components/ProvidersSection';
+import { defaultModelOf } from '../model';
 import { useLaunchCheck, useModelPolicy, useProviders } from '../usePolicy';
 import './policy.css';
 
@@ -21,7 +22,13 @@ function PolicyBody({ role }: { readonly role: OrgRole | undefined }): ReactElem
       <ProvidersSection view={providers} canChange={canChange} />
       <LaunchCheck
         check={check}
-        defaultModel={models.policy?.default ?? (models.failure === undefined ? undefined : null)}
+        defaultModel={
+          models.policy === undefined
+            ? models.failure === undefined
+              ? undefined
+              : null
+            : defaultModelOf(models.policy)
+        }
       />
     </>
   );
