@@ -2,6 +2,9 @@
 import {
   answerApproval,
   bulkUpdateRules,
+  createRule,
+  deleteRule,
+  getGateCatalog,
   createCloudSession,
   createMcpServer,
   createSecret,
@@ -468,6 +471,14 @@ describe('mock rules and decisions', () => {
     });
     expect(again.data.status).toBe('edited');
     expect(db.decisions).toHaveLength(before + 2);
+    // A rejected rule reworded stays rejected: rewording is not accepting.
+    const rejected = await updateRule({
+      path: { id: 'R-9' },
+      body: { statement: 'Commit messages are in English.' },
+      throwOnError: true,
+    });
+    expect(rejected.data.status).toBe('rejected');
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-9' }, action: 'rejected' });
   });
 
   it('refuses an unknown rule, a bad change, and someone who does not decide', async () => {
@@ -501,6 +512,118 @@ describe('mock rules and decisions', () => {
     expect(data.updated).toBe(2);
     const bad = await fetch('http://ostrom.test/api/v1/rules/bulk', { method: 'POST', body: '{"ids":[]}' });
     expect(bad.status).toBe(400);
+  });
+
+  it('writes a rule accepted by default, signed, with its gate', async () => {
+    const gate = {
+      actions: [{ class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: [] }],
+      approvers: ['samir'],
+    };
+    const { data, response } = await createRule({
+      body: { statement: 'Deploys wait for a yes.', group: 'Releases', output: 'gate', gate },
+      throwOnError: true,
+    });
+    expect(response.status).toBe(201);
+    expect(data).toMatchObject({ id: 'R-13', status: 'accepted', decidedBy: 'maya', origin: 'team', gate });
+    expect(db.rules[0]?.id).toBe('R-13');
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-13' }, action: 'accepted' });
+    const full = await createRule({
+      body: {
+        statement: 'Read the runbook.',
+        group: 'Ops',
+        status: 'proposed',
+        strength: 'recommended',
+        why: 'It saves time.',
+        scope: ['acme/web'],
+        reviewBy: '2027-01-01',
+        gate: {
+          actions: [{ class: 'x', label: 'X', patterns: [], repos: [], tools: ['Bash'] }],
+          approvers: [],
+          reason: 'because',
+          checks: [{ check: 'n-a' }, { check: 'n-b', attested: true }],
+        },
+      },
+      throwOnError: true,
+    });
+    expect(full.data).toMatchObject({
+      id: 'R-14',
+      status: 'proposed',
+      output: 'note',
+      strength: 'recommended',
+    });
+    expect(full.data.decidedBy).toBeUndefined();
+    expect(full.data.gate?.checks).toEqual([{ check: 'n-a' }, { check: 'n-b', attested: true }]);
+  });
+
+  it('refuses a rule without its words, a status it cannot start with, and someone who does not decide', async () => {
+    const bad = await fetch('http://ostrom.test/api/v1/rules', { method: 'POST', body: '{"group":"x"}' });
+    expect(bad.status).toBe(400);
+    const rejected = await failureOf(async () =>
+      createRule({ body: { statement: 's', group: 'g', status: 'rejected' }, throwOnError: true }),
+    );
+    expect(isApiFailure(rejected) && rejected.status).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'approver' } : member,
+    );
+    const refused = await failureOf(async () =>
+      createRule({ body: { statement: 's', group: 'g' }, throwOnError: true }),
+    );
+    expect(isApiFailure(refused) && refused.status).toBe(403);
+    const remove = await failureOf(async () => deleteRule({ path: { id: 'R-3' }, throwOnError: true }));
+    expect(isApiFailure(remove) && remove.status).toBe(403);
+  });
+
+  it('deletes a rule with a signed decision, and refuses one it does not know', async () => {
+    const { response } = await deleteRule({ path: { id: 'R-3' }, throwOnError: true });
+    expect(response.status).toBe(204);
+    expect(db.rules.map((rule) => rule.id)).not.toContain('R-3');
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-3' }, action: 'deleted' });
+    const missing = await failureOf(async () => deleteRule({ path: { id: 'R-3' }, throwOnError: true }));
+    expect(isApiFailure(missing) && missing.status).toBe(404);
+  });
+
+  it('edits where a rule holds and what it does, and takes its gate off with null', async () => {
+    const before = db.decisions.length;
+    const moved = await updateRule({
+      path: { id: 'R-7' },
+      body: { group: 'Deploys', why: 'Two outages.', scope: ['acme/web'], output: 'gate' },
+      throwOnError: true,
+    });
+    expect(moved.data).toMatchObject({ group: 'Deploys', why: 'Two outages.', scope: ['acme/web'] });
+    expect(moved.data.gate?.approvers).toEqual(['lena']);
+    const gated = await updateRule({
+      path: { id: 'R-7' },
+      body: { gate: { actions: [], approvers: ['samir'] } },
+      throwOnError: true,
+    });
+    expect(gated.data.gate).toEqual({ actions: [], approvers: ['samir'] });
+    const off = await updateRule({
+      path: { id: 'R-7' },
+      body: { output: 'note', gate: null },
+      throwOnError: true,
+    });
+    expect(off.data.gate).toBeUndefined();
+    expect(off.data.output).toBe('note');
+    expect(db.decisions).toHaveLength(before + 3);
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-7' }, action: 'edited' });
+    // A rejected rule reworded stays rejected, and is signed so.
+    await updateRule({ path: { id: 'R-9' }, body: { group: 'Tone' }, throwOnError: true });
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-9' }, action: 'rejected' });
+  });
+
+  it('serves the catalogue of the actions the gates of the workflows and of the decided rules cover', async () => {
+    // An accepted rule without a gate adds nothing.
+    db.rules = db.rules.map((rule) => (rule.id === 'R-12' ? { ...rule, status: 'accepted' } : rule));
+    const { data } = await getGateCatalog({ throwOnError: true });
+    expect(data.actions.map((action) => action.class)).toEqual([
+      'merge-main',
+      'deploy',
+      'migrate',
+      'drop-table',
+    ]);
+    db.workflows = [];
+    db.rules = db.rules.map((rule) => ({ ...rule, status: 'proposed' }));
+    expect((await getGateCatalog({ throwOnError: true })).data).toEqual({ gates: [], actions: [] });
   });
 
   it('lists signed decisions by subject', async () => {

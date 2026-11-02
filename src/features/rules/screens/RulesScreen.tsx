@@ -5,8 +5,17 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { RuleCard } from '../components/RuleCard';
-import { countRules, groupRules, matches, RULE_FILTERS, type RuleFilter, sureProposals } from '../model';
-import { useBulkAccept, useRuleDecision, useRules } from '../useRules';
+import { RuleForm } from '../components/RuleForm';
+import {
+  countRules,
+  groupRules,
+  matches,
+  newRuleOf,
+  RULE_FILTERS,
+  type RuleFilter,
+  sureProposals,
+} from '../model';
+import { useBulkAccept, useCreateRule, useDeleteRule, useRuleDecision, useRules } from '../useRules';
 import './rules.css';
 
 export function RulesScreen(): ReactElement {
@@ -14,14 +23,62 @@ export function RulesScreen(): ReactElement {
   const view = useRules();
   const decision = useRuleDecision();
   const bulk = useBulkAccept();
+  const create = useCreateRule();
+  const removal = useDeleteRule();
   const [filter, setFilter] = useState<RuleFilter>('todo');
+  const [writing, setWriting] = useState(false);
+  const groups = [...new Set((view.rules ?? []).map((rule) => rule.group))].sort((a, b) =>
+    a.localeCompare(b, 'en'),
+  );
   return (
     <Screen title={t('rules.title')} lead={t('rules.lead')}>
-      {decision.failure === undefined ? null : (
+      {create.failure === undefined ? null : (
         <Banner tone="danger" tag={t('rules.errorTag')} live>
-          {decision.failure.message}
+          {create.failure.message}
         </Banner>
       )}
+      {removal.deleted ? (
+        <Banner tag={t('rules.delete.doneTag')} live>
+          {t('rules.delete.done')}
+        </Banner>
+      ) : null}
+      {removal.failure === undefined ? null : (
+        <Banner tone="danger" tag={t('rules.errorTag')} live>
+          {removal.failure.message}
+        </Banner>
+      )}
+      {view.canDecide && !writing ? (
+        <span className="rl-new">
+          <Button
+            onClick={() => {
+              removal.dismiss();
+              setWriting(true);
+            }}
+          >
+            {t('rules.form.new')}
+          </Button>
+        </span>
+      ) : null}
+      {writing ? (
+        <section className="o-card o-stack" aria-label={t('rules.form.newTitle')}>
+          <h2 className="o-label">{t('rules.form.newTitle')}</h2>
+          <RuleForm
+            groups={groups}
+            saving={create.creating}
+            submit={t('rules.form.add')}
+            onCancel={() => {
+              setWriting(false);
+            }}
+            onSave={(draft, actions) => {
+              create.create(newRuleOf(draft, actions), () => {
+                setWriting(false);
+                // A rule written by the team is accepted: it is found where accepted rules are.
+                setFilter('accepted');
+              });
+            }}
+          />
+        </section>
+      ) : null}
       {bulk.failure === undefined ? null : (
         <Banner tone="danger" tag={t('rules.errorTag')} live>
           {bulk.failure.message}
@@ -46,6 +103,7 @@ export function RulesScreen(): ReactElement {
                     variant="ghost"
                     aria-pressed={filter === option}
                     onClick={() => {
+                      removal.dismiss();
                       setFilter(option);
                     }}
                   >
@@ -63,6 +121,17 @@ export function RulesScreen(): ReactElement {
                   </Button>
                 ) : null}
               </div>
+              {/* A refusal that came back once its rule left the list is still said, here. */}
+              {rules
+                .filter((rule) => !shown.includes(rule))
+                .map((rule) => {
+                  const refused = decision.failure(rule.id);
+                  return refused === undefined ? null : (
+                    <Banner key={rule.id} tone="danger" tag={t('rules.errorTag')} live>
+                      {t('rules.refusedElsewhere', { statement: rule.statement, message: refused.message })}
+                    </Banner>
+                  );
+                })}
               {shown.length === 0 ? (
                 <p className="o-empty">{t(`rules.empty.${filter}`)}</p>
               ) : (
@@ -73,10 +142,16 @@ export function RulesScreen(): ReactElement {
                       <RuleCard
                         key={rule.id}
                         rule={rule}
-                        saving={decision.saving === rule.id}
+                        groups={groups}
+                        saving={decision.saving(rule.id) || removal.deleting === rule.id}
+                        failure={decision.failure(rule.id)}
+                        onDelete={() => {
+                          removal.remove(rule.id);
+                        }}
                         onDecide={
                           view.canDecide
                             ? (change, onSaved) => {
+                                removal.dismiss();
                                 decision.decide(rule.id, change, onSaved);
                               }
                             : undefined
