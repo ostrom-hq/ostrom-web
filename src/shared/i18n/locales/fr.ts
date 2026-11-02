@@ -349,7 +349,7 @@ export const fr = {
       title: 'Par personne',
       count_one: '{{count}} étape',
       count_other: '{{count}} étapes',
-      proposed: '{{label}} (proposée)',
+      proposed: '{{label}} (pas encore appliquée)',
     },
     ungated: {
       tag: 'Sans porte',

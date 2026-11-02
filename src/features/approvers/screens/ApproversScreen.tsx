@@ -12,6 +12,7 @@ import {
   blocking,
   busiestFirst,
   isSelfApprovalPolicy,
+  readGraph,
   SELF_APPROVAL_POLICIES,
 } from '../model';
 import { type PolicyViewModel, useApprovers, useSelfApprovalPolicy } from '../useApprovers';
@@ -182,7 +183,11 @@ export function ApproversScreen(): ReactElement {
                       <PointRow
                         point={point}
                         approvers={reading?.answeredBy.get(point.key) ?? point.approvers}
-                        blocks={reading?.blocked.has(point.key) ?? false}
+                        blocks={
+                          reading?.blocked.has(point.key) ??
+                          // Without the server's reading, the workflow's own: enforced, covering an action, nobody.
+                          (point.enforced && point.actions.length > 0 && point.approvers.length === 0)
+                        }
                         nameOf={view.nameOf}
                       />
                     </li>

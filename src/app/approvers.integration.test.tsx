@@ -35,7 +35,7 @@ describe('who approves what', () => {
     expect(rows[1]).toHaveTextContent('from 09:00-18:00 · on mon-fri');
     expect(within(gates).getAllByText('Nobody')).toHaveLength(1);
     expect(rows[3]).toHaveTextContent('Nobody');
-    // Drop a table names nobody, but its workflow is only proposed: it stops nobody yet, so nothing is blocked.
+    // Drop a table names nobody, but its workflow is only proposed: it is not enforced yet, so nothing is blocked.
     expect(screen.queryByText(/Nobody may approve/)).toBeNull();
 
     const people = within(region('By person')).getAllByRole('listitem');
@@ -44,14 +44,14 @@ describe('who approves what', () => {
       'Samir Haddad',
     ]);
     // As the server reads its catalogue: a gate of a proposed workflow does not stop anyone yet.
-    expect(people[0]).toHaveTextContent('Merge to main · Run a migration (proposed)');
+    expect(people[0]).toHaveTextContent('Merge to main · Run a migration (not enforced yet)');
     expect(people[0]).toHaveTextContent('2 steps');
     expect(people[1]).toHaveTextContent('Deploy to production · Merge to main');
     // What no gate covers runs without asking anyone.
     expect(
       screen.getByText('No gate covers push-main: an agent does it without asking anyone.'),
     ).toBeInTheDocument();
-    // The proposed gate naming nobody says it stops nobody yet, and is not marked as blocking.
+    // The proposed gate naming nobody says it is not enforced yet, and is not marked as blocking.
     expect(rows[3]).toHaveTextContent('proposed, not enforced yet');
     expect(within(rows[3] ?? document.body).getByText('Nobody')).not.toHaveClass('o-badge--danger');
   });
@@ -240,6 +240,20 @@ describe('who approves what', () => {
     server.use(http.get('*/api/v1/workflows', () => HttpResponse.error()));
     visit('/approvers');
     expect(await screen.findByText('Offline', {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
+
+  it('says nothing about uncovered actions when every action has a gate', async () => {
+    server.use(
+      http.get('*/api/v1/gates/approvers', () =>
+        HttpResponse.json({ approvers: [], unanswered: [], ungated: [] }),
+      ),
+    );
+    visit('/approvers');
+    expect(
+      await within(await screen.findByRole('region', { name: 'By step' })).findAllByRole('listitem'),
+    ).toHaveLength(4);
+    expect(screen.queryByText(/No gate covers/)).toBeNull();
+    expect(screen.queryByText(/Nobody may approve/)).toBeNull();
   });
 
   it('says why who approves what does not come, rather than blaming an older server', async () => {

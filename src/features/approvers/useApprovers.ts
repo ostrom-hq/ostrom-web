@@ -17,7 +17,7 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 
 export interface ApproversViewModel {
-  /** The steps, once the graph has answered too (or failed): the page shows in one piece, nothing pops in after. */
+  /** The steps, as soon as the workflows come: a slow graph never holds them. */
   readonly points: readonly ApprovalPoint[] | undefined;
   /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
   readonly graph: ApproversGraph | undefined;
@@ -37,7 +37,6 @@ export function useApprovers(): ApproversViewModel {
   const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));
   // A server without the route says nothing; any other failure says why. Neither leaves a stale graph on screen.
   const graphUnavailable = isApiFailure(graph.error) && graph.error.kind === 'not-found';
-  const graphSettled = graph.data !== undefined || graph.isError;
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -54,7 +53,7 @@ export function useApprovers(): ApproversViewModel {
   );
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
-    points: graphSettled ? points : undefined,
+    points,
     graph: graph.isError ? undefined : graph.data,
     graphUnavailable,
     graphFailure: graphUnavailable ? undefined : failureOf(graph.error),

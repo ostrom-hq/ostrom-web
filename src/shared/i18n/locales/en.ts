@@ -340,7 +340,7 @@ export const en = {
       title: 'By person',
       count_one: '{{count}} step',
       count_other: '{{count}} steps',
-      proposed: '{{label}} (proposed)',
+      proposed: '{{label}} (not enforced yet)',
     },
     ungated: {
       tag: 'No gate',

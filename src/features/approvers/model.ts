@@ -19,7 +19,7 @@ export interface ApprovalPoint {
   readonly owner: string | undefined;
   readonly actions: readonly GateAction[];
   readonly when: NodeWhen | undefined;
-  /** False while its workflow is only proposed: the gate stops nobody yet. */
+  /** False while its workflow is only proposed: the gate is not enforced yet. */
   readonly enforced: boolean;
 }
 
@@ -42,7 +42,7 @@ export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] 
   );
 }
 
-/** The gates that stop an agent for good: enforced, and naming nobody. A proposed gate stops nothing yet. */
+/** The gates that stop an agent for good: enforced, and naming nobody. A proposed gate is not enforced yet. */
 export function blocking(unanswered: readonly ApproverGate[]): ApproverGate[] {
   return unanswered.filter((gate) => gate.enforce);
 }
