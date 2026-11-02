@@ -1,8 +1,4 @@
-import {
-  getMeQueryKey,
-  listMyOrganizationsQueryKey,
-  listOrgsQueryKey,
-} from '@gen/api/@tanstack/react-query.gen';
+import { getMeQueryKey, listMyOrganizationsQueryKey } from '@gen/api/@tanstack/react-query.gen';
 import { hashKey, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { type ReactElement, useEffect, useState } from 'react';
@@ -56,15 +52,8 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
       if (org.generation === previous.generation) return;
       // Another organization has another queue: nothing in it is new because of what the other one showed.
       resetArrivals();
-      // The person's own lists are not the organization's: kept, and `GET /orgs` read again (it gives the person's role
-      // in each, which the screens of the next organization take until `/auth/me` answers in it).
-      const kept = new Set([
-        hashKey(getMeQueryKey()),
-        hashKey(listMyOrganizationsQueryKey()),
-        hashKey(listOrgsQueryKey()),
-      ]);
+      const kept = new Set([hashKey(getMeQueryKey()), hashKey(listMyOrganizationsQueryKey())]);
       void queryClient.resetQueries({ predicate: (query) => !kept.has(query.queryHash) });
-      void queryClient.invalidateQueries({ queryKey: listOrgsQueryKey() });
     });
   }, [queryClient]);
   // A choice made in another tab of the same browser is followed here.
