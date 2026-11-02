@@ -109,6 +109,8 @@ describe('writing an automation', () => {
     await user.click(within(form).getByRole('checkbox', { name: 'Sensitive' }));
     await user.click(within(form).getByRole('checkbox', { name: 'Required' }));
     await user.click(within(form).getByRole('button', { name: 'Add a variable' }));
+    await user.type(within(form).getByRole('textbox', { name: 'Name of variable 2' }), 'gone');
+    expect(within(form).getByRole('textbox', { name: 'Name of variable 1' })).toHaveValue('level');
     await user.click(within(form).getByRole('button', { name: 'Remove variable 2' }));
     expect(within(form).queryByRole('textbox', { name: 'Name of variable 2' })).toBeNull();
     const sample = within(form).getByRole('textbox', { name: 'Sample payload (JSON, optional)' });

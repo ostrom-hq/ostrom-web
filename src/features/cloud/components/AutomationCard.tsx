@@ -6,7 +6,7 @@ import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
+import { isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
 import { isAutomationAgent } from '../automationDraft';
 import { useAutomationRuns } from '../useCloud';
 import { AutomationForm } from './AutomationForm';
@@ -95,9 +95,7 @@ export function AutomationCard({
       ? undefined
       : isAutomationAgent(action.agent)
         ? t(`automations.form.agents.${action.agent}`)
-        : isCloudAgent(action.agent)
-          ? t(`cloud.agent.${action.agent}`)
-          : action.agent;
+        : action.agent;
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
       <div className="o-inline">
