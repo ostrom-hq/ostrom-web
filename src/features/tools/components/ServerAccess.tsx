@@ -11,6 +11,7 @@ import { ANY_TOOL, memberLabel } from '../model';
 import { useServerAccess, useServerAccessChange } from '../useMcpAccess';
 import { AssignForm } from './AssignForm';
 import { PolicyForm } from './PolicyForm';
+import { FailureText } from '@/shared/ui/FailureText';
 
 /** Who may use a server and which calls it refuses or holds, behind a button: nothing is read until it opens. */
 export function ServerAccess({ server }: { readonly server: string }): ReactElement {
@@ -52,7 +53,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
     <>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('tools.errorTag')} live>
-          {change.failure.message}
+          <FailureText failure={change.failure} />
         </Banner>
       )}
       <LoadState data={loaded} failure={view.failure} rows={2}>

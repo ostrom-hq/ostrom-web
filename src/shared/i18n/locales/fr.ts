@@ -6,6 +6,10 @@ export const fr = {
     mocks: 'Données de démo : cette console n’est reliée à aucun serveur Ostrom.',
     loading: 'Chargement',
     failure: { tag: 'Hors ligne' },
+    stepUp: {
+      body: 'Ce changement demande une connexion de moins de cinq minutes.',
+      signIn: 'Se reconnecter',
+    },
     skipToContent: 'Aller au contenu',
     copy: {
       action: 'Copier',

@@ -5,6 +5,7 @@ export const en = {
     mocks: 'Demo data: this console is not connected to an Ostrom server.',
     loading: 'Loading',
     failure: { tag: 'Offline' },
+    stepUp: { body: 'This change needs a sign-in less than five minutes old.', signIn: 'Sign in again' },
     skipToContent: 'Skip to content',
     copy: {
       action: 'Copy',

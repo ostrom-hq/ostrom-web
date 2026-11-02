@@ -11,6 +11,7 @@ import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
 import { MemberRow } from '../components/MemberRow';
 import { useInvite, useInviteLink, useMembers, useRevokeInvitation, useRoleChange } from '../useMembers';
+import { FailureText } from '@/shared/ui/FailureText';
 
 export function MembersScreen(): ReactElement {
   const { t } = useTranslation();
@@ -51,7 +52,7 @@ function MembersPage({
       {manager ? <InviteLink link={link} roles={roles} /> : null}
       {changes.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.list.errorTag')} live>
-          {changes.failure.message}
+          <FailureText failure={changes.failure} />
         </Banner>
       )}
       <LoadState data={view.members} failure={view.failure}>
