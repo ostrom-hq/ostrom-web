@@ -25,15 +25,24 @@ export interface HandlerFetch {
  * #881, open on 0.45.11). A read survived it through its retry; a POST, sent once, was lost, and a test waited four
  * seconds for a change that never came. Answering here keeps every handler and `server.use()` override, and a call
  * no handler answers fails loudly instead of leaving for the network.
+ *
+ * What it does not do, as no handler here needs it: `passthrough()`, `bypass()`, storing `Set-Cookie`. An aborted
+ * call is rejected at once, but its handler still runs to the end, as a server would. Remove it, and answer through
+ * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed.
  */
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
   const requestListeners = new Set<(request: Request) => void>();
   const responseListeners = new Set<(request: Request, response: Response) => void>();
   const answer = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-    const request = new Request(input, init);
+    // The client sends a ready Request: it is answered as is, so the one it keeps for its interceptors stays readable.
+    const request = input instanceof Request && init === undefined ? input : new Request(input, init);
     const { signal } = request;
     signal.throwIfAborted();
     for (const listener of requestListeners) listener(request);
+    // A network answer always comes a task later, never in the same microtask flush: a screen renders its pending
+    // state (a held button, "Saving…") before the answer, as it does against a server.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    signal.throwIfAborted();
     const handlers = server.listHandlers().filter((handler) => handler instanceof RequestHandler);
     const pending = getResponse(handlers, request);
     // A handler that never answers (`delay('infinite')`) still lets the caller give up, as a real fetch does.
@@ -52,11 +61,18 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
         },
         (error: unknown) => {
           signal.removeEventListener('abort', abort);
-          reject(error instanceof Error ? error : new Error(String(error)));
+          // As MSW does: a handler that throws is a server error, not a failed network.
+          const message = error instanceof Error ? error.message : String(error);
+          resolve(Response.json({ name: 'Unhandled exception in a mock handler', message }, { status: 500 }));
         },
       );
     });
-    if (response === undefined) throw new Error(`no mock handler answers ${request.method} ${request.url}`);
+    if (response === undefined) {
+      const missing = `no mock handler answers ${request.method} ${request.url}`;
+      // Said in the test's output too: the console may show only a failure banner.
+      console.error(missing);
+      throw new Error(missing);
+    }
     // `HttpResponse.error()`: the network failed, as fetch says it.
     if (response.type === 'error') throw new TypeError('Failed to fetch');
     for (const listener of responseListeners) listener(request, response);
