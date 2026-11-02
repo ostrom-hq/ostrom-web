@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { acceptInvitation, addGroupMember, answerApproval, answerDeviceLogin, answerWait, artifactsMcp, askGate, assignMcpServer, attachCloudTerminal, attachRunnerTerminal, bulkUpdateRules, cancelBillingSubscription, cancelRun, cancelWait, capabilities, changeBillingPlan, checkAgentPolicy, cloudRunnerHeartbeat, consumeGate, createArtifactTicket, createAutomation, createBudgetOverride, createCloudSession, createGroup, createInferenceRoute, createInvitationLink, createLaunch, createMcpArgumentPolicy, createMcpServer, createOrg, createRule, createSecret, createServiceKey, createSignInLink, createToken, createWait, createWebhook, createWorkflow, deleteArtifact, deleteAutomation, deleteDevice, deleteGroup, deleteInferenceRoute, deleteMcpArgumentPolicy, deleteMcpServer, deleteOrg, deletePushDevice, deleteRule, deleteRunner, deleteSecret, deleteServiceKey, deleteSkill, deleteWebhook, deleteWorkflow, disableAutomation, enableAutomation, endSession, enrollSharedAccount, exchangeSignInLink, getAnalysisState, getApproval, getApprovalQueue, getApprovalView, getApproversGraph, getArtifact, getArtifactContent, getArtifactFile, getArtifactLinkContent, getAutomation, getBilling, getCapacity, getCloudSession, getCurrentPackage, getDeviceLogin, getGate, getGateCatalog, getGatePolicy, getGithubApp, getGroup, getHookDelivery, getInferenceSettings, getInstance, getLauncherConfig, getMcpSettings, getMcpUsage, getMe, getMember, getModelPolicy, getMyBudget, getNotificationPreferences, getOrg, getOrganization, getOrgMember, getPackage, getPackageStatus, getReceipt, getReceiptBundle, getReplay, getRule, getRun, getSession, getSettings, getSignedGatePolicy, getSkillDelivery, getSpending, getUsage, getUsageSummary, getWait, getWorkflow, githubAppInstallCallback, githubAppManifestCallback, githubCheck, githubLoginCallback, githubWebhook, health, healthRoot, importTeamCode, inferenceChatCompletions, inferenceMessages, inferenceModels, inferenceResponses, inviteMembers, inviteOrgMembers, issueCloudTerminalTicket, launcherLogin, leaveOrg, linkSignInProvider, listActivity, listApprovals, listArtifactMembers, listArtifacts, listArtifactVersions, listAudit, listAuthSessions, listAutomationRuns, listAutomations, listBillingInvoices, listBudgetOverrides, listBudgets, listChecks, listCloudSessions, listDecisions, listDevices, listEvents, listGates, listGroups, listHooks, listInferenceRoutes, listInstanceKeys, listInvitations, listMcpArgumentPolicies, listMcpAssignments, listMcpCalls, listMcpServers, listMembers, listMyAudit, listMyOrganizations, listNotifications, listOrgMembers, listOrgs, listPackageAudit, listPackages, listPendingUsage, listReceiptKeys, listReceipts, listRepos, listRules, listRunners, listRuns, listSecrets, listServiceKeys, listSessions, listSharedAccounts, listSignInMethods, listSkills, listTasks, listTeams, listTokens, listUsageEvents, listUsageReconciliations, listWaits, listWebhookDeliveries, listWebhooks, listWorkflowRuns, listWorkflows, logout, logoutEverywhere, mobileToken, oauthLoginCallback, openBillingPortal, type Options, pauseCloudSession, pauseGroupMember, pollDeviceLogin, previewInvitation, previewPackage, publishArtifact, publishArtifactVersion, publishSkill, putMcpSettings, ready, receiveSlackInteraction, receiveStripeWebhook, receiveStripeWebhookAlias, reconcileUsage, recordUsageEvents, refreshToken, registerPushDevice, registerRunner, relayMcp, releaseGate, removeGroupMember, removeMember, removeOrgMember, removeSharedAccount, renameOrg, reopenSession, reportCheck, reportSeen, requestSignInEmail, reserveGate, restartAnalysis, restorePackage, resumeBillingSubscription, resumeCloudSession, revokeAuthSession, revokeBudgetOverride, revokeInvitation, revokePackage, revokeToken, rotateAutomationSecret, rotateSecret, rotateToken, runnerHeartbeat, runTask, saveAutomation, saveMcpServer, saveWorkflow, sendCloudMessage, sendNotification, sessionAlive, setBudget, setGatePolicy, setInferenceSettings, setModelPolicy, setNotificationPreferences, shareArtifact, signWorkflowReceipt, startAnalysis, startBillingCheckout, startDeviceLogin, startGithubAppInstall, startGithubAppManifest, startGithubLogin, startOAuthLogin, startReplay, startSession, startWorkflowRun, stopCloudSession, testAutomation, transferOrg, triggerAutomation, unassignMcpServer, unshareArtifact, updateArtifact, updateGroup, updateMember, updateOrgMember, updateRule, updateSettings, updateSharedAccount, verifyReceipt, verifySignInEmail, waitsMcp } from '../sdk.gen';
-import type { AcceptInvitationData, AcceptInvitationError, AcceptInvitationResponse, AddGroupMemberData, AddGroupMemberError, AddGroupMemberResponse, AnswerApprovalData, AnswerApprovalError, AnswerApprovalResponse, AnswerDeviceLoginData, AnswerDeviceLoginError, AnswerDeviceLoginResponse, AnswerWaitData, AnswerWaitError, AnswerWaitResponse, ArtifactsMcpData, ArtifactsMcpError, AskGateData, AskGateError, AskGateResponse, AssignMcpServerData, AssignMcpServerError, AssignMcpServerResponse, AttachCloudTerminalData, AttachCloudTerminalError, AttachRunnerTerminalData, AttachRunnerTerminalError, BulkUpdateRulesData, BulkUpdateRulesError, BulkUpdateRulesResponse, CancelBillingSubscriptionData, CancelBillingSubscriptionError, CancelBillingSubscriptionResponse, CancelRunData, CancelRunError, CancelRunResponse, CancelWaitData, CancelWaitError, CancelWaitResponse, CapabilitiesData, CapabilitiesError, CapabilitiesResponse, ChangeBillingPlanData, ChangeBillingPlanError, ChangeBillingPlanResponse, CheckAgentPolicyData, CheckAgentPolicyError, CheckAgentPolicyResponse, CloudRunnerHeartbeatData, CloudRunnerHeartbeatError, CloudRunnerHeartbeatResponse, ConsumeGateData, ConsumeGateError, ConsumeGateResponse, CreateArtifactTicketData, CreateArtifactTicketError, CreateArtifactTicketResponse, CreateAutomationData, CreateAutomationError, CreateAutomationResponse, CreateBudgetOverrideData, CreateBudgetOverrideError, CreateBudgetOverrideResponse, CreateCloudSessionData, CreateCloudSessionError, CreateCloudSessionResponse, CreateGroupData, CreateGroupError, CreateGroupResponse, CreateInferenceRouteData, CreateInferenceRouteError, CreateInferenceRouteResponse, CreateInvitationLinkData, CreateInvitationLinkError, CreateInvitationLinkResponse, CreateLaunchData, CreateLaunchError, CreateLaunchResponse, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyError, CreateMcpArgumentPolicyResponse, CreateMcpServerData, CreateMcpServerError, CreateMcpServerResponse, CreateOrgData, CreateOrgError, CreateOrgResponse, CreateRuleData, CreateRuleError, CreateRuleResponse, CreateSecretData, CreateSecretError, CreateSecretResponse, CreateServiceKeyData, CreateServiceKeyError, CreateServiceKeyResponse, CreateSignInLinkData, CreateSignInLinkError, CreateSignInLinkResponse, CreateTokenData, CreateTokenError, CreateTokenResponse, CreateWaitData, CreateWaitError, CreateWaitResponse, CreateWebhookData, CreateWebhookError, CreateWebhookResponse, CreateWorkflowData, CreateWorkflowError, CreateWorkflowResponse, DeleteArtifactData, DeleteArtifactError, DeleteArtifactResponse, DeleteAutomationData, DeleteAutomationError, DeleteAutomationResponse, DeleteDeviceData, DeleteDeviceError, DeleteDeviceResponse, DeleteGroupData, DeleteGroupError, DeleteGroupResponse, DeleteInferenceRouteData, DeleteInferenceRouteError, DeleteInferenceRouteResponse, DeleteMcpArgumentPolicyData, DeleteMcpArgumentPolicyError, DeleteMcpArgumentPolicyResponse, DeleteMcpServerData, DeleteMcpServerError, DeleteMcpServerResponse, DeleteOrgData, DeleteOrgError, DeleteOrgResponse, DeletePushDeviceData, DeletePushDeviceError, DeletePushDeviceResponse, DeleteRuleData, DeleteRuleError, DeleteRuleResponse, DeleteRunnerData, DeleteRunnerError, DeleteRunnerResponse, DeleteSecretData, DeleteSecretError, DeleteSecretResponse, DeleteServiceKeyData, DeleteServiceKeyError, DeleteServiceKeyResponse, DeleteSkillData, DeleteSkillError, DeleteSkillResponse, DeleteWebhookData, DeleteWebhookError, DeleteWebhookResponse, DeleteWorkflowData, DeleteWorkflowError, DeleteWorkflowResponse, DisableAutomationData, DisableAutomationError, DisableAutomationResponse, EnableAutomationData, EnableAutomationError, EnableAutomationResponse, EndSessionData, EndSessionError, EndSessionResponse, EnrollSharedAccountData, EnrollSharedAccountError, EnrollSharedAccountResponse, ExchangeSignInLinkData, ExchangeSignInLinkError, ExchangeSignInLinkResponse, GetAnalysisStateData, GetAnalysisStateError, GetAnalysisStateResponse, GetApprovalData, GetApprovalError, GetApprovalQueueData, GetApprovalQueueError, GetApprovalQueueResponse, GetApprovalResponse, GetApprovalViewData, GetApprovalViewError, GetApprovalViewResponse, GetApproversGraphData, GetApproversGraphError, GetApproversGraphResponse, GetArtifactContentData, GetArtifactContentError, GetArtifactContentResponse, GetArtifactData, GetArtifactError, GetArtifactFileData, GetArtifactFileError, GetArtifactFileResponse, GetArtifactLinkContentData, GetArtifactLinkContentError, GetArtifactLinkContentResponse, GetArtifactResponse, GetAutomationData, GetAutomationError, GetAutomationResponse, GetBillingData, GetBillingError, GetBillingResponse, GetCapacityData, GetCapacityError, GetCapacityResponse, GetCloudSessionData, GetCloudSessionError, GetCloudSessionResponse, GetCurrentPackageData, GetCurrentPackageError, GetCurrentPackageResponse, GetDeviceLoginData, GetDeviceLoginError, GetDeviceLoginResponse, GetGateCatalogData, GetGateCatalogError, GetGateCatalogResponse, GetGateData, GetGateError, GetGatePolicyData, GetGatePolicyError, GetGatePolicyResponse, GetGateResponse, GetGithubAppData, GetGithubAppError, GetGithubAppResponse, GetGroupData, GetGroupError, GetGroupResponse, GetHookDeliveryData, GetHookDeliveryError, GetHookDeliveryResponse, GetInferenceSettingsData, GetInferenceSettingsError, GetInferenceSettingsResponse, GetInstanceData, GetInstanceResponse, GetLauncherConfigData, GetLauncherConfigError, GetLauncherConfigResponse, GetMcpSettingsData, GetMcpSettingsError, GetMcpSettingsResponse, GetMcpUsageData, GetMcpUsageError, GetMcpUsageResponse, GetMeData, GetMeError, GetMemberData, GetMemberError, GetMemberResponse, GetMeResponse, GetModelPolicyData, GetModelPolicyError, GetModelPolicyResponse, GetMyBudgetData, GetMyBudgetError, GetMyBudgetResponse, GetNotificationPreferencesData, GetNotificationPreferencesError, GetNotificationPreferencesResponse, GetOrganizationData, GetOrganizationError, GetOrganizationResponse, GetOrgData, GetOrgError, GetOrgMemberData, GetOrgMemberError, GetOrgMemberResponse, GetOrgResponse, GetPackageData, GetPackageError, GetPackageResponse, GetPackageStatusData, GetPackageStatusError, GetPackageStatusResponse, GetReceiptBundleData, GetReceiptBundleError, GetReceiptBundleResponse, GetReceiptData, GetReceiptError, GetReceiptResponse, GetReplayData, GetReplayError, GetReplayResponse, GetRuleData, GetRuleError, GetRuleResponse, GetRunData, GetRunError, GetRunResponse, GetSessionData, GetSessionError, GetSessionResponse, GetSettingsData, GetSettingsError, GetSettingsResponse, GetSignedGatePolicyData, GetSignedGatePolicyError, GetSignedGatePolicyResponse, GetSkillDeliveryData, GetSkillDeliveryError, GetSkillDeliveryResponse, GetSpendingData, GetSpendingError, GetSpendingResponse, GetUsageData, GetUsageError, GetUsageResponse, GetUsageSummaryData, GetUsageSummaryError, GetUsageSummaryResponse, GetWaitData, GetWaitError, GetWaitResponse, GetWorkflowData, GetWorkflowError, GetWorkflowResponse, GithubAppInstallCallbackData, GithubAppInstallCallbackError, GithubAppManifestCallbackData, GithubAppManifestCallbackError, GithubCheckData, GithubCheckError, GithubCheckResponse, GithubLoginCallbackData, GithubLoginCallbackError, GithubWebhookData, GithubWebhookError, GithubWebhookResponse, HealthData, HealthError, HealthResponse, HealthRootData, HealthRootError, HealthRootResponse, ImportTeamCodeData, ImportTeamCodeError, ImportTeamCodeResponse, InferenceChatCompletionsData, InferenceChatCompletionsError, InferenceMessagesData, InferenceMessagesError, InferenceModelsData, InferenceModelsError, InferenceModelsResponse, InferenceResponsesData, InferenceResponsesError, InviteMembersData, InviteMembersError, InviteMembersResponse, InviteOrgMembersData, InviteOrgMembersError, InviteOrgMembersResponse, IssueCloudTerminalTicketData, IssueCloudTerminalTicketError, IssueCloudTerminalTicketResponse, LauncherLoginData, LauncherLoginError, LauncherLoginResponse, LeaveOrgData, LeaveOrgError, LeaveOrgResponse, LinkSignInProviderData, LinkSignInProviderError, LinkSignInProviderResponse, ListActivityData, ListActivityError, ListActivityResponse, ListApprovalsData, ListApprovalsError, ListApprovalsResponse, ListArtifactMembersData, ListArtifactMembersError, ListArtifactMembersResponse, ListArtifactsData, ListArtifactsError, ListArtifactsResponse, ListArtifactVersionsData, ListArtifactVersionsError, ListArtifactVersionsResponse, ListAuditData, ListAuditError, ListAuditResponse, ListAuthSessionsData, ListAuthSessionsError, ListAuthSessionsResponse, ListAutomationRunsData, ListAutomationRunsError, ListAutomationRunsResponse, ListAutomationsData, ListAutomationsError, ListAutomationsResponse, ListBillingInvoicesData, ListBillingInvoicesError, ListBillingInvoicesResponse, ListBudgetOverridesData, ListBudgetOverridesError, ListBudgetOverridesResponse, ListBudgetsData, ListBudgetsError, ListBudgetsResponse, ListChecksData, ListChecksError, ListChecksResponse, ListCloudSessionsData, ListCloudSessionsError, ListCloudSessionsResponse, ListDecisionsData, ListDecisionsError, ListDecisionsResponse, ListDevicesData, ListDevicesError, ListDevicesResponse, ListEventsData, ListEventsError, ListEventsResponse, ListGatesData, ListGatesError, ListGatesResponse, ListGroupsData, ListGroupsError, ListGroupsResponse, ListHooksData, ListHooksError, ListHooksResponse, ListInferenceRoutesData, ListInferenceRoutesError, ListInferenceRoutesResponse, ListInstanceKeysData, ListInstanceKeysResponse, ListInvitationsData, ListInvitationsError, ListInvitationsResponse, ListMcpArgumentPoliciesData, ListMcpArgumentPoliciesError, ListMcpArgumentPoliciesResponse, ListMcpAssignmentsData, ListMcpAssignmentsError, ListMcpAssignmentsResponse, ListMcpCallsData, ListMcpCallsError, ListMcpCallsResponse, ListMcpServersData, ListMcpServersError, ListMcpServersResponse, ListMembersData, ListMembersError, ListMembersResponse, ListMyAuditData, ListMyAuditError, ListMyAuditResponse, ListMyOrganizationsData, ListMyOrganizationsError, ListMyOrganizationsResponse, ListNotificationsData, ListNotificationsError, ListNotificationsResponse, ListOrgMembersData, ListOrgMembersError, ListOrgMembersResponse, ListOrgsData, ListOrgsError, ListOrgsResponse, ListPackageAuditData, ListPackageAuditError, ListPackageAuditResponse, ListPackagesData, ListPackagesError, ListPackagesResponse, ListPendingUsageData, ListPendingUsageError, ListPendingUsageResponse, ListReceiptKeysData, ListReceiptKeysError, ListReceiptKeysResponse, ListReceiptsData, ListReceiptsError, ListReceiptsResponse, ListReposData, ListReposError, ListReposResponse, ListRulesData, ListRulesError, ListRulesResponse, ListRunnersData, ListRunnersError, ListRunnersResponse, ListRunsData, ListRunsError, ListRunsResponse, ListSecretsData, ListSecretsError, ListSecretsResponse, ListServiceKeysData, ListServiceKeysError, ListServiceKeysResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListSharedAccountsData, ListSharedAccountsError, ListSharedAccountsResponse, ListSignInMethodsData, ListSignInMethodsResponse, ListSkillsData, ListSkillsError, ListSkillsResponse, ListTasksData, ListTasksError, ListTasksResponse, ListTeamsData, ListTeamsError, ListTeamsResponse, ListTokensData, ListTokensError, ListTokensResponse, ListUsageEventsData, ListUsageEventsError, ListUsageEventsResponse, ListUsageReconciliationsData, ListUsageReconciliationsError, ListUsageReconciliationsResponse, ListWaitsData, ListWaitsError, ListWaitsResponse, ListWebhookDeliveriesData, ListWebhookDeliveriesError, ListWebhookDeliveriesResponse, ListWebhooksData, ListWebhooksError, ListWebhooksResponse, ListWorkflowRunsData, ListWorkflowRunsError, ListWorkflowRunsResponse, ListWorkflowsData, ListWorkflowsError, ListWorkflowsResponse, LogoutData, LogoutError, LogoutEverywhereData, LogoutEverywhereError, LogoutEverywhereResponse, LogoutResponse, MobileTokenData, MobileTokenError, MobileTokenResponse, OauthLoginCallbackData, OpenBillingPortalData, OpenBillingPortalError, OpenBillingPortalResponse, PauseCloudSessionData, PauseCloudSessionError, PauseCloudSessionResponse, PauseGroupMemberData, PauseGroupMemberError, PauseGroupMemberResponse, PollDeviceLoginData, PollDeviceLoginError, PollDeviceLoginResponse, PreviewInvitationData, PreviewInvitationError, PreviewInvitationResponse, PreviewPackageData, PreviewPackageError, PreviewPackageResponse, PublishArtifactData, PublishArtifactError, PublishArtifactResponse, PublishArtifactVersionData, PublishArtifactVersionError, PublishArtifactVersionResponse, PublishSkillData, PublishSkillError, PublishSkillResponse, PutMcpSettingsData, PutMcpSettingsError, PutMcpSettingsResponse, ReadyData, ReadyError, ReadyResponse, ReceiveSlackInteractionData, ReceiveSlackInteractionError, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasError, ReceiveStripeWebhookAliasResponse, ReceiveStripeWebhookData, ReceiveStripeWebhookError, ReceiveStripeWebhookResponse, ReconcileUsageData, ReconcileUsageError, ReconcileUsageResponse, RecordUsageEventsData, RecordUsageEventsError, RecordUsageEventsResponse, RefreshTokenData, RefreshTokenError, RefreshTokenResponse, RegisterPushDeviceData, RegisterPushDeviceError, RegisterPushDeviceResponse, RegisterRunnerData, RegisterRunnerError, RegisterRunnerResponse, RelayMcpData, RelayMcpError, ReleaseGateData, ReleaseGateError, ReleaseGateResponse, RemoveGroupMemberData, RemoveGroupMemberError, RemoveGroupMemberResponse, RemoveMemberData, RemoveMemberError, RemoveMemberResponse, RemoveOrgMemberData, RemoveOrgMemberError, RemoveOrgMemberResponse, RemoveSharedAccountData, RemoveSharedAccountError, RemoveSharedAccountResponse, RenameOrgData, RenameOrgError, RenameOrgResponse, ReopenSessionData, ReopenSessionError, ReopenSessionResponse, ReportCheckData, ReportCheckError, ReportCheckResponse, ReportSeenData, ReportSeenError, ReportSeenResponse, RequestSignInEmailData, RequestSignInEmailError, ReserveGateData, ReserveGateError, ReserveGateResponse, RestartAnalysisData, RestartAnalysisError, RestartAnalysisResponse, RestorePackageData, RestorePackageError, RestorePackageResponse, ResumeBillingSubscriptionData, ResumeBillingSubscriptionError, ResumeBillingSubscriptionResponse, ResumeCloudSessionData, ResumeCloudSessionError, ResumeCloudSessionResponse, RevokeAuthSessionData, RevokeAuthSessionError, RevokeAuthSessionResponse, RevokeBudgetOverrideData, RevokeBudgetOverrideError, RevokeBudgetOverrideResponse, RevokeInvitationData, RevokeInvitationError, RevokeInvitationResponse, RevokePackageData, RevokePackageError, RevokePackageResponse, RevokeTokenData, RevokeTokenError, RevokeTokenResponse, RotateAutomationSecretData, RotateAutomationSecretError, RotateAutomationSecretResponse, RotateSecretData, RotateSecretError, RotateSecretResponse, RotateTokenData, RotateTokenError, RotateTokenResponse, RunnerHeartbeatData, RunnerHeartbeatError, RunnerHeartbeatResponse, RunTaskData, RunTaskError, RunTaskResponse, SaveAutomationData, SaveAutomationError, SaveAutomationResponse, SaveMcpServerData, SaveMcpServerError, SaveMcpServerResponse, SaveWorkflowData, SaveWorkflowError, SaveWorkflowResponse, SendCloudMessageData, SendCloudMessageError, SendCloudMessageResponse, SendNotificationData, SendNotificationError, SendNotificationResponse, SessionAliveData, SessionAliveError, SessionAliveResponse, SetBudgetData, SetBudgetError, SetBudgetResponse, SetGatePolicyData, SetGatePolicyError, SetGatePolicyResponse, SetInferenceSettingsData, SetInferenceSettingsError, SetInferenceSettingsResponse, SetModelPolicyData, SetModelPolicyError, SetModelPolicyResponse, SetNotificationPreferencesData, SetNotificationPreferencesError, SetNotificationPreferencesResponse, ShareArtifactData, ShareArtifactError, ShareArtifactResponse, SignWorkflowReceiptData, SignWorkflowReceiptError, SignWorkflowReceiptResponse, StartAnalysisData, StartAnalysisError, StartAnalysisResponse, StartBillingCheckoutData, StartBillingCheckoutError, StartBillingCheckoutResponse, StartDeviceLoginData, StartDeviceLoginError, StartDeviceLoginResponse, StartGithubAppInstallData, StartGithubAppInstallError, StartGithubAppManifestData, StartGithubAppManifestError, StartGithubLoginData, StartGithubLoginError, StartOAuthLoginData, StartReplayData, StartReplayError, StartReplayResponse, StartSessionData, StartSessionError, StartSessionResponse, StartWorkflowRunData, StartWorkflowRunError, StartWorkflowRunResponse, StopCloudSessionData, StopCloudSessionError, StopCloudSessionResponse, TestAutomationData, TestAutomationError, TestAutomationResponse, TransferOrgData, TransferOrgError, TransferOrgResponse, TriggerAutomationData, TriggerAutomationError, TriggerAutomationResponse, UnassignMcpServerData, UnassignMcpServerError, UnassignMcpServerResponse, UnshareArtifactData, UnshareArtifactError, UnshareArtifactResponse, UpdateArtifactData, UpdateArtifactError, UpdateArtifactResponse, UpdateGroupData, UpdateGroupError, UpdateGroupResponse, UpdateMemberData, UpdateMemberError, UpdateMemberResponse, UpdateOrgMemberData, UpdateOrgMemberError, UpdateOrgMemberResponse, UpdateRuleData, UpdateRuleError, UpdateRuleResponse, UpdateSettingsData, UpdateSettingsError, UpdateSettingsResponse, UpdateSharedAccountData, UpdateSharedAccountError, UpdateSharedAccountResponse, VerifyReceiptData, VerifyReceiptError, VerifyReceiptResponse, VerifySignInEmailData, VerifySignInEmailError, VerifySignInEmailResponse, WaitsMcpData, WaitsMcpError } from '../types.gen';
+import { acceptInvitation, addGroupMember, answerApproval, answerDeviceLogin, answerGovernanceConfirmation, answerWait, artifactsMcp, askGate, assignMcpServer, attachCloudTerminal, attachRunnerTerminal, bulkUpdateRules, cancelBillingSubscription, cancelRun, cancelWait, capabilities, changeBillingPlan, checkAgentPolicy, cloudRunnerHeartbeat, consumeGate, createArtifactTicket, createAutomation, createBudgetOverride, createCloudSession, createGroup, createInferenceRoute, createInvitationLink, createLaunch, createMcpArgumentPolicy, createMcpServer, createOrg, createRule, createSecret, createServiceKey, createSignInLink, createToken, createWait, createWebhook, createWorkflow, deleteArtifact, deleteAutomation, deleteDevice, deleteGroup, deleteInferenceRoute, deleteMcpArgumentPolicy, deleteMcpServer, deleteOrg, deletePushDevice, deleteRule, deleteRunner, deleteSecret, deleteServiceKey, deleteSkill, deleteWebhook, deleteWorkflow, disableAutomation, enableAutomation, endSession, enrollSharedAccount, exchangeSignInLink, getAnalysisState, getApproval, getApprovalQueue, getApprovalView, getApproversGraph, getArtifact, getArtifactContent, getArtifactFile, getArtifactLinkContent, getAutomation, getBilling, getCapacity, getCloudSession, getCurrentPackage, getDeviceLogin, getGate, getGateCatalog, getGatePolicy, getGithubApp, getGovernanceConfirmation, getGroup, getHookDelivery, getInferenceSettings, getInstance, getLauncherConfig, getMcpSettings, getMcpUsage, getMe, getMember, getModelPolicy, getMyAccount, getMyBudget, getNotificationPreferences, getOrg, getOrganization, getOrgMember, getPackage, getPackageStatus, getReceipt, getReceiptBundle, getReplay, getRule, getRun, getSession, getSettings, getSignedGatePolicy, getSkillDelivery, getSpending, getUsage, getUsageSummary, getWait, getWorkflow, githubAppInstallCallback, githubAppManifestCallback, githubCheck, githubLoginCallback, githubWebhook, health, healthRoot, importTeamCode, inferenceChatCompletions, inferenceMessages, inferenceModels, inferenceResponses, inviteMembers, inviteOrgMembers, issueCloudTerminalTicket, launcherLogin, leaveOrg, linkSignInProvider, listActivity, listApprovals, listArtifactMembers, listArtifacts, listArtifactVersions, listAudit, listAuthSessions, listAutomationRuns, listAutomations, listBillingInvoices, listBudgetOverrides, listBudgets, listChecks, listCloudSessions, listDecisions, listDevices, listEvents, listGates, listGroups, listHooks, listInferenceRoutes, listInstanceKeys, listInvitations, listMcpArgumentPolicies, listMcpAssignments, listMcpCalls, listMcpServers, listMembers, listMyAudit, listMyOrganizations, listNotifications, listOrgMembers, listOrgs, listPackageAudit, listPackages, listPendingUsage, listReceiptKeys, listReceipts, listRepos, listRules, listRunners, listRuns, listSecrets, listServiceKeys, listSessions, listSharedAccounts, listSignInMethods, listSkills, listTasks, listTeams, listTokens, listTokenScopes, listUsageEvents, listUsageReconciliations, listWaits, listWebhookDeliveries, listWebhooks, listWorkflowRuns, listWorkflows, logout, logoutEverywhere, mobileToken, oauthLoginCallback, openBillingPortal, openRunnerLaunch, type Options, pauseCloudSession, pauseGroupMember, pollDeviceLogin, previewInvitation, previewPackage, publishArtifact, publishArtifactVersion, publishSkill, putMcpSettings, ready, receiveSlackInteraction, receiveStripeWebhook, receiveStripeWebhookAlias, reconcileUsage, recordUsageEvents, refreshToken, registerPushDevice, registerRunner, relayMcp, releaseGate, removeGroupMember, removeMember, removeOrgMember, removeSharedAccount, renameOrg, reopenSession, reportCheck, reportRunnerCheck, reportSeen, requestSignInEmail, reserveGate, restartAnalysis, restorePackage, resumeBillingSubscription, resumeCloudSession, revokeAuthSession, revokeBudgetOverride, revokeInvitation, revokePackage, revokeToken, rotateAutomationSecret, rotateSecret, rotateToken, runnerHeartbeat, runTask, saveAutomation, saveMcpServer, saveWorkflow, sendCloudMessage, sendNotification, sessionAlive, setBudget, setGatePolicy, setInferenceSettings, setModelPolicy, setNotificationPreferences, shareArtifact, signWorkflowReceipt, startAnalysis, startBillingCheckout, startDeviceLogin, startGithubAppInstall, startGithubAppManifest, startGithubLogin, startOAuthLogin, startReplay, startSession, startWorkflowRun, stopCloudSession, testAutomation, transferOrg, triggerAutomation, unassignMcpServer, unlockMobileApp, unshareArtifact, updateArtifact, updateGroup, updateMember, updateOrgMember, updateRule, updateSettings, updateSharedAccount, verifyReceipt, verifySignInEmail, waitsMcp } from '../sdk.gen';
+import type { AcceptInvitationData, AcceptInvitationError, AcceptInvitationResponse, AddGroupMemberData, AddGroupMemberError, AddGroupMemberResponse, AnswerApprovalData, AnswerApprovalError, AnswerApprovalResponse, AnswerDeviceLoginData, AnswerDeviceLoginError, AnswerDeviceLoginResponse, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationError, AnswerGovernanceConfirmationResponse, AnswerWaitData, AnswerWaitError, AnswerWaitResponse, ArtifactsMcpData, ArtifactsMcpError, AskGateData, AskGateError, AskGateResponse, AssignMcpServerData, AssignMcpServerError, AssignMcpServerResponse, AttachCloudTerminalData, AttachCloudTerminalError, AttachRunnerTerminalData, AttachRunnerTerminalError, BulkUpdateRulesData, BulkUpdateRulesError, BulkUpdateRulesResponse, CancelBillingSubscriptionData, CancelBillingSubscriptionError, CancelBillingSubscriptionResponse, CancelRunData, CancelRunError, CancelRunResponse, CancelWaitData, CancelWaitError, CancelWaitResponse, CapabilitiesData, CapabilitiesError, CapabilitiesResponse, ChangeBillingPlanData, ChangeBillingPlanError, ChangeBillingPlanResponse, CheckAgentPolicyData, CheckAgentPolicyError, CheckAgentPolicyResponse, CloudRunnerHeartbeatData, CloudRunnerHeartbeatError, CloudRunnerHeartbeatResponse, ConsumeGateData, ConsumeGateError, ConsumeGateResponse, CreateArtifactTicketData, CreateArtifactTicketError, CreateArtifactTicketResponse, CreateAutomationData, CreateAutomationError, CreateAutomationResponse, CreateBudgetOverrideData, CreateBudgetOverrideError, CreateBudgetOverrideResponse, CreateCloudSessionData, CreateCloudSessionError, CreateCloudSessionResponse, CreateGroupData, CreateGroupError, CreateGroupResponse, CreateInferenceRouteData, CreateInferenceRouteError, CreateInferenceRouteResponse, CreateInvitationLinkData, CreateInvitationLinkError, CreateInvitationLinkResponse, CreateLaunchData, CreateLaunchError, CreateLaunchResponse, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyError, CreateMcpArgumentPolicyResponse, CreateMcpServerData, CreateMcpServerError, CreateMcpServerResponse, CreateOrgData, CreateOrgError, CreateOrgResponse, CreateRuleData, CreateRuleError, CreateRuleResponse, CreateSecretData, CreateSecretError, CreateSecretResponse, CreateServiceKeyData, CreateServiceKeyError, CreateServiceKeyResponse, CreateSignInLinkData, CreateSignInLinkError, CreateSignInLinkResponse, CreateTokenData, CreateTokenError, CreateTokenResponse, CreateWaitData, CreateWaitError, CreateWaitResponse, CreateWebhookData, CreateWebhookError, CreateWebhookResponse, CreateWorkflowData, CreateWorkflowError, CreateWorkflowResponse, DeleteArtifactData, DeleteArtifactError, DeleteArtifactResponse, DeleteAutomationData, DeleteAutomationError, DeleteAutomationResponse, DeleteDeviceData, DeleteDeviceError, DeleteDeviceResponse, DeleteGroupData, DeleteGroupError, DeleteGroupResponse, DeleteInferenceRouteData, DeleteInferenceRouteError, DeleteInferenceRouteResponse, DeleteMcpArgumentPolicyData, DeleteMcpArgumentPolicyError, DeleteMcpArgumentPolicyResponse, DeleteMcpServerData, DeleteMcpServerError, DeleteMcpServerResponse, DeleteOrgData, DeleteOrgError, DeleteOrgResponse, DeletePushDeviceData, DeletePushDeviceError, DeletePushDeviceResponse, DeleteRuleData, DeleteRuleError, DeleteRuleResponse, DeleteRunnerData, DeleteRunnerError, DeleteRunnerResponse, DeleteSecretData, DeleteSecretError, DeleteSecretResponse, DeleteServiceKeyData, DeleteServiceKeyError, DeleteServiceKeyResponse, DeleteSkillData, DeleteSkillError, DeleteSkillResponse, DeleteWebhookData, DeleteWebhookError, DeleteWebhookResponse, DeleteWorkflowData, DeleteWorkflowError, DeleteWorkflowResponse, DisableAutomationData, DisableAutomationError, DisableAutomationResponse, EnableAutomationData, EnableAutomationError, EnableAutomationResponse, EndSessionData, EndSessionError, EndSessionResponse, EnrollSharedAccountData, EnrollSharedAccountError, EnrollSharedAccountResponse, ExchangeSignInLinkData, ExchangeSignInLinkError, ExchangeSignInLinkResponse, GetAnalysisStateData, GetAnalysisStateError, GetAnalysisStateResponse, GetApprovalData, GetApprovalError, GetApprovalQueueData, GetApprovalQueueError, GetApprovalQueueResponse, GetApprovalResponse, GetApprovalViewData, GetApprovalViewError, GetApprovalViewResponse, GetApproversGraphData, GetApproversGraphError, GetApproversGraphResponse, GetArtifactContentData, GetArtifactContentError, GetArtifactContentResponse, GetArtifactData, GetArtifactError, GetArtifactFileData, GetArtifactFileError, GetArtifactFileResponse, GetArtifactLinkContentData, GetArtifactLinkContentError, GetArtifactLinkContentResponse, GetArtifactResponse, GetAutomationData, GetAutomationError, GetAutomationResponse, GetBillingData, GetBillingError, GetBillingResponse, GetCapacityData, GetCapacityError, GetCapacityResponse, GetCloudSessionData, GetCloudSessionError, GetCloudSessionResponse, GetCurrentPackageData, GetCurrentPackageError, GetCurrentPackageResponse, GetDeviceLoginData, GetDeviceLoginError, GetDeviceLoginResponse, GetGateCatalogData, GetGateCatalogError, GetGateCatalogResponse, GetGateData, GetGateError, GetGatePolicyData, GetGatePolicyError, GetGatePolicyResponse, GetGateResponse, GetGithubAppData, GetGithubAppError, GetGithubAppResponse, GetGovernanceConfirmationData, GetGovernanceConfirmationError, GetGovernanceConfirmationResponse, GetGroupData, GetGroupError, GetGroupResponse, GetHookDeliveryData, GetHookDeliveryError, GetHookDeliveryResponse, GetInferenceSettingsData, GetInferenceSettingsError, GetInferenceSettingsResponse, GetInstanceData, GetInstanceResponse, GetLauncherConfigData, GetLauncherConfigError, GetLauncherConfigResponse, GetMcpSettingsData, GetMcpSettingsError, GetMcpSettingsResponse, GetMcpUsageData, GetMcpUsageError, GetMcpUsageResponse, GetMeData, GetMeError, GetMemberData, GetMemberError, GetMemberResponse, GetMeResponse, GetModelPolicyData, GetModelPolicyError, GetModelPolicyResponse, GetMyAccountData, GetMyAccountError, GetMyAccountResponse, GetMyBudgetData, GetMyBudgetError, GetMyBudgetResponse, GetNotificationPreferencesData, GetNotificationPreferencesError, GetNotificationPreferencesResponse, GetOrganizationData, GetOrganizationError, GetOrganizationResponse, GetOrgData, GetOrgError, GetOrgMemberData, GetOrgMemberError, GetOrgMemberResponse, GetOrgResponse, GetPackageData, GetPackageError, GetPackageResponse, GetPackageStatusData, GetPackageStatusError, GetPackageStatusResponse, GetReceiptBundleData, GetReceiptBundleError, GetReceiptBundleResponse, GetReceiptData, GetReceiptError, GetReceiptResponse, GetReplayData, GetReplayError, GetReplayResponse, GetRuleData, GetRuleError, GetRuleResponse, GetRunData, GetRunError, GetRunResponse, GetSessionData, GetSessionError, GetSessionResponse, GetSettingsData, GetSettingsError, GetSettingsResponse, GetSignedGatePolicyData, GetSignedGatePolicyError, GetSignedGatePolicyResponse, GetSkillDeliveryData, GetSkillDeliveryError, GetSkillDeliveryResponse, GetSpendingData, GetSpendingError, GetSpendingResponse, GetUsageData, GetUsageError, GetUsageResponse, GetUsageSummaryData, GetUsageSummaryError, GetUsageSummaryResponse, GetWaitData, GetWaitError, GetWaitResponse, GetWorkflowData, GetWorkflowError, GetWorkflowResponse, GithubAppInstallCallbackData, GithubAppManifestCallbackData, GithubAppManifestCallbackError, GithubCheckData, GithubCheckError, GithubCheckResponse, GithubLoginCallbackData, GithubLoginCallbackError, GithubWebhookData, GithubWebhookError, GithubWebhookResponse, HealthData, HealthError, HealthResponse, HealthRootData, HealthRootError, HealthRootResponse, ImportTeamCodeData, ImportTeamCodeError, ImportTeamCodeResponse, InferenceChatCompletionsData, InferenceChatCompletionsError, InferenceMessagesData, InferenceMessagesError, InferenceModelsData, InferenceModelsError, InferenceModelsResponse, InferenceResponsesData, InferenceResponsesError, InviteMembersData, InviteMembersError, InviteMembersResponse, InviteOrgMembersData, InviteOrgMembersError, InviteOrgMembersResponse, IssueCloudTerminalTicketData, IssueCloudTerminalTicketError, IssueCloudTerminalTicketResponse, LauncherLoginData, LauncherLoginError, LauncherLoginResponse, LeaveOrgData, LeaveOrgError, LeaveOrgResponse, LinkSignInProviderData, LinkSignInProviderError, LinkSignInProviderResponse, ListActivityData, ListActivityError, ListActivityResponse, ListApprovalsData, ListApprovalsError, ListApprovalsResponse, ListArtifactMembersData, ListArtifactMembersError, ListArtifactMembersResponse, ListArtifactsData, ListArtifactsError, ListArtifactsResponse, ListArtifactVersionsData, ListArtifactVersionsError, ListArtifactVersionsResponse, ListAuditData, ListAuditError, ListAuditResponse, ListAuthSessionsData, ListAuthSessionsError, ListAuthSessionsResponse, ListAutomationRunsData, ListAutomationRunsError, ListAutomationRunsResponse, ListAutomationsData, ListAutomationsError, ListAutomationsResponse, ListBillingInvoicesData, ListBillingInvoicesError, ListBillingInvoicesResponse, ListBudgetOverridesData, ListBudgetOverridesError, ListBudgetOverridesResponse, ListBudgetsData, ListBudgetsError, ListBudgetsResponse, ListChecksData, ListChecksError, ListChecksResponse, ListCloudSessionsData, ListCloudSessionsError, ListCloudSessionsResponse, ListDecisionsData, ListDecisionsError, ListDecisionsResponse, ListDevicesData, ListDevicesError, ListDevicesResponse, ListEventsData, ListEventsError, ListEventsResponse, ListGatesData, ListGatesError, ListGatesResponse, ListGroupsData, ListGroupsError, ListGroupsResponse, ListHooksData, ListHooksError, ListHooksResponse, ListInferenceRoutesData, ListInferenceRoutesError, ListInferenceRoutesResponse, ListInstanceKeysData, ListInstanceKeysResponse, ListInvitationsData, ListInvitationsError, ListInvitationsResponse, ListMcpArgumentPoliciesData, ListMcpArgumentPoliciesError, ListMcpArgumentPoliciesResponse, ListMcpAssignmentsData, ListMcpAssignmentsError, ListMcpAssignmentsResponse, ListMcpCallsData, ListMcpCallsError, ListMcpCallsResponse, ListMcpServersData, ListMcpServersError, ListMcpServersResponse, ListMembersData, ListMembersError, ListMembersResponse, ListMyAuditData, ListMyAuditError, ListMyAuditResponse, ListMyOrganizationsData, ListMyOrganizationsError, ListMyOrganizationsResponse, ListNotificationsData, ListNotificationsError, ListNotificationsResponse, ListOrgMembersData, ListOrgMembersError, ListOrgMembersResponse, ListOrgsData, ListOrgsError, ListOrgsResponse, ListPackageAuditData, ListPackageAuditError, ListPackageAuditResponse, ListPackagesData, ListPackagesError, ListPackagesResponse, ListPendingUsageData, ListPendingUsageError, ListPendingUsageResponse, ListReceiptKeysData, ListReceiptKeysError, ListReceiptKeysResponse, ListReceiptsData, ListReceiptsError, ListReceiptsResponse, ListReposData, ListReposError, ListReposResponse, ListRulesData, ListRulesError, ListRulesResponse, ListRunnersData, ListRunnersError, ListRunnersResponse, ListRunsData, ListRunsError, ListRunsResponse, ListSecretsData, ListSecretsError, ListSecretsResponse, ListServiceKeysData, ListServiceKeysError, ListServiceKeysResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListSharedAccountsData, ListSharedAccountsError, ListSharedAccountsResponse, ListSignInMethodsData, ListSignInMethodsResponse, ListSkillsData, ListSkillsError, ListSkillsResponse, ListTasksData, ListTasksError, ListTasksResponse, ListTeamsData, ListTeamsError, ListTeamsResponse, ListTokenScopesData, ListTokenScopesError, ListTokenScopesResponse, ListTokensData, ListTokensError, ListTokensResponse, ListUsageEventsData, ListUsageEventsError, ListUsageEventsResponse, ListUsageReconciliationsData, ListUsageReconciliationsError, ListUsageReconciliationsResponse, ListWaitsData, ListWaitsError, ListWaitsResponse, ListWebhookDeliveriesData, ListWebhookDeliveriesError, ListWebhookDeliveriesResponse, ListWebhooksData, ListWebhooksError, ListWebhooksResponse, ListWorkflowRunsData, ListWorkflowRunsError, ListWorkflowRunsResponse, ListWorkflowsData, ListWorkflowsError, ListWorkflowsResponse, LogoutData, LogoutError, LogoutEverywhereData, LogoutEverywhereError, LogoutEverywhereResponse, LogoutResponse, MobileTokenData, MobileTokenError, MobileTokenResponse, OauthLoginCallbackData, OpenBillingPortalData, OpenBillingPortalError, OpenBillingPortalResponse, OpenRunnerLaunchData, OpenRunnerLaunchError, OpenRunnerLaunchResponse, PauseCloudSessionData, PauseCloudSessionError, PauseCloudSessionResponse, PauseGroupMemberData, PauseGroupMemberError, PauseGroupMemberResponse, PollDeviceLoginData, PollDeviceLoginError, PollDeviceLoginResponse, PreviewInvitationData, PreviewInvitationError, PreviewInvitationResponse, PreviewPackageData, PreviewPackageError, PreviewPackageResponse, PublishArtifactData, PublishArtifactError, PublishArtifactResponse, PublishArtifactVersionData, PublishArtifactVersionError, PublishArtifactVersionResponse, PublishSkillData, PublishSkillError, PublishSkillResponse, PutMcpSettingsData, PutMcpSettingsError, PutMcpSettingsResponse, ReadyData, ReadyError, ReadyResponse, ReceiveSlackInteractionData, ReceiveSlackInteractionError, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasError, ReceiveStripeWebhookAliasResponse, ReceiveStripeWebhookData, ReceiveStripeWebhookError, ReceiveStripeWebhookResponse, ReconcileUsageData, ReconcileUsageError, ReconcileUsageResponse, RecordUsageEventsData, RecordUsageEventsError, RecordUsageEventsResponse, RefreshTokenData, RefreshTokenError, RefreshTokenResponse, RegisterPushDeviceData, RegisterPushDeviceError, RegisterPushDeviceResponse, RegisterRunnerData, RegisterRunnerError, RegisterRunnerResponse, RelayMcpData, RelayMcpError, ReleaseGateData, ReleaseGateError, ReleaseGateResponse, RemoveGroupMemberData, RemoveGroupMemberError, RemoveGroupMemberResponse, RemoveMemberData, RemoveMemberError, RemoveMemberResponse, RemoveOrgMemberData, RemoveOrgMemberError, RemoveOrgMemberResponse, RemoveSharedAccountData, RemoveSharedAccountError, RemoveSharedAccountResponse, RenameOrgData, RenameOrgError, RenameOrgResponse, ReopenSessionData, ReopenSessionError, ReopenSessionResponse, ReportCheckData, ReportCheckError, ReportCheckResponse, ReportRunnerCheckData, ReportRunnerCheckError, ReportRunnerCheckResponse, ReportSeenData, ReportSeenError, ReportSeenResponse, RequestSignInEmailData, RequestSignInEmailError, ReserveGateData, ReserveGateError, ReserveGateResponse, RestartAnalysisData, RestartAnalysisError, RestartAnalysisResponse, RestorePackageData, RestorePackageError, RestorePackageResponse, ResumeBillingSubscriptionData, ResumeBillingSubscriptionError, ResumeBillingSubscriptionResponse, ResumeCloudSessionData, ResumeCloudSessionError, ResumeCloudSessionResponse, RevokeAuthSessionData, RevokeAuthSessionError, RevokeAuthSessionResponse, RevokeBudgetOverrideData, RevokeBudgetOverrideError, RevokeBudgetOverrideResponse, RevokeInvitationData, RevokeInvitationError, RevokeInvitationResponse, RevokePackageData, RevokePackageError, RevokePackageResponse, RevokeTokenData, RevokeTokenError, RevokeTokenResponse, RotateAutomationSecretData, RotateAutomationSecretError, RotateAutomationSecretResponse, RotateSecretData, RotateSecretError, RotateSecretResponse, RotateTokenData, RotateTokenError, RotateTokenResponse, RunnerHeartbeatData, RunnerHeartbeatError, RunnerHeartbeatResponse, RunTaskData, RunTaskError, RunTaskResponse, SaveAutomationData, SaveAutomationError, SaveAutomationResponse, SaveMcpServerData, SaveMcpServerError, SaveMcpServerResponse, SaveWorkflowData, SaveWorkflowError, SaveWorkflowResponse, SendCloudMessageData, SendCloudMessageError, SendCloudMessageResponse, SendNotificationData, SendNotificationError, SendNotificationResponse, SessionAliveData, SessionAliveError, SessionAliveResponse, SetBudgetData, SetBudgetError, SetBudgetResponse, SetGatePolicyData, SetGatePolicyError, SetGatePolicyResponse, SetInferenceSettingsData, SetInferenceSettingsError, SetInferenceSettingsResponse, SetModelPolicyData, SetModelPolicyError, SetModelPolicyResponse, SetNotificationPreferencesData, SetNotificationPreferencesError, SetNotificationPreferencesResponse, ShareArtifactData, ShareArtifactError, ShareArtifactResponse, SignWorkflowReceiptData, SignWorkflowReceiptError, SignWorkflowReceiptResponse, StartAnalysisData, StartAnalysisError, StartAnalysisResponse, StartBillingCheckoutData, StartBillingCheckoutError, StartBillingCheckoutResponse, StartDeviceLoginData, StartDeviceLoginError, StartDeviceLoginResponse, StartGithubAppInstallData, StartGithubAppInstallError, StartGithubAppManifestData, StartGithubAppManifestError, StartGithubAppManifestResponse, StartGithubLoginData, StartGithubLoginError, StartOAuthLoginData, StartOAuthLoginError, StartReplayData, StartReplayError, StartReplayResponse, StartSessionData, StartSessionError, StartSessionResponse, StartWorkflowRunData, StartWorkflowRunError, StartWorkflowRunResponse, StopCloudSessionData, StopCloudSessionError, StopCloudSessionResponse, TestAutomationData, TestAutomationError, TestAutomationResponse, TransferOrgData, TransferOrgError, TransferOrgResponse, TriggerAutomationData, TriggerAutomationError, TriggerAutomationResponse, UnassignMcpServerData, UnassignMcpServerError, UnassignMcpServerResponse, UnlockMobileAppData, UnlockMobileAppError, UnlockMobileAppResponse, UnshareArtifactData, UnshareArtifactError, UnshareArtifactResponse, UpdateArtifactData, UpdateArtifactError, UpdateArtifactResponse, UpdateGroupData, UpdateGroupError, UpdateGroupResponse, UpdateMemberData, UpdateMemberError, UpdateMemberResponse, UpdateOrgMemberData, UpdateOrgMemberError, UpdateOrgMemberResponse, UpdateRuleData, UpdateRuleError, UpdateRuleResponse, UpdateSettingsData, UpdateSettingsError, UpdateSettingsResponse, UpdateSharedAccountData, UpdateSharedAccountError, UpdateSharedAccountResponse, VerifyReceiptData, VerifyReceiptError, VerifyReceiptResponse, VerifySignInEmailData, VerifySignInEmailError, VerifySignInEmailResponse, WaitsMcpData, WaitsMcpError } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -152,7 +152,7 @@ export const startGithubLoginQueryKey = (options?: Options<StartGithubLoginData>
 /**
  * Start the GitHub OAuth sign-in. Browser: `redirect`. Mobile app: `redirect_uri` (ostrom://auth/callback), `state`, PKCE `code_challenge` and `code_challenge_method=S256`; the server redirects back with a one-time `code`
  *
- * Main serves this path through `startOAuthLogin` (`provider=github`): `redirect` and `reauth`, not the mobile PKCE parameters. Planned until the server takes them.
+ * Served through `startOAuthLogin` (`provider=github`), with the mobile PKCE parameters since ostrom-server#75. This literal path stays `planned` for the served check, which lists the `{provider}` route.
  */
 export const startGithubLoginOptions = (options?: Options<StartGithubLoginData>) => queryOptions<unknown, StartGithubLoginError, unknown, ReturnType<typeof startGithubLoginQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -169,6 +169,8 @@ export const startGithubLoginOptions = (options?: Options<StartGithubLoginData>)
 
 /**
  * Exchange the one-time code of the mobile sign-in (PKCE) for a token
+ *
+ * The code works once (a wrong verifier spends it), for 60 s, with the exact `redirectUri` of the start. The token (`osm_…`, 30 days) answers a gate only within 5 minutes of `unlockMobileApp`. A person keeps 5 phones: a sixth sign-in revokes the oldest app token.
  */
 export const mobileTokenMutation = (options?: Partial<Options<MobileTokenData>>): UseMutationOptions<MobileTokenResponse, MobileTokenError, Options<MobileTokenData>> => {
     const mutationOptions: UseMutationOptions<MobileTokenResponse, MobileTokenError, Options<MobileTokenData>> = {
@@ -184,12 +186,31 @@ export const mobileTokenMutation = (options?: Partial<Options<MobileTokenData>>)
     return mutationOptions;
 };
 
+/**
+ * Record the phone's biometric unlock: the app's token answers a gate for 5 minutes after it (S2-54)
+ *
+ * The app's token only (403 for a browser session or another token, or a wrong key).
+ */
+export const unlockMobileAppMutation = (options?: Partial<Options<UnlockMobileAppData>>): UseMutationOptions<UnlockMobileAppResponse, UnlockMobileAppError, Options<UnlockMobileAppData>> => {
+    const mutationOptions: UseMutationOptions<UnlockMobileAppResponse, UnlockMobileAppError, Options<UnlockMobileAppData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await unlockMobileApp({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
 export const githubLoginCallbackQueryKey = (options?: Options<GithubLoginCallbackData>) => createQueryKey('githubLoginCallback', options);
 
 /**
  * GitHub OAuth callback
  *
- * Main serves this path through `oauthLoginCallback` (`provider=github`), for the browser sign-in only. Planned until the mobile sign-in is served.
+ * Served through `oauthLoginCallback` (`provider=github`), browser and mobile sign-ins, since ostrom-server#75. This literal path stays `planned` for the served check, which lists the `{provider}` route.
  */
 export const githubLoginCallbackOptions = (options?: Options<GithubLoginCallbackData>) => queryOptions<unknown, GithubLoginCallbackError, unknown, ReturnType<typeof githubLoginCallbackQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -227,7 +248,7 @@ export const startOAuthLoginQueryKey = (options: Options<StartOAuthLoginData>) =
 /**
  * Send the browser to the provider's consent page (sets the state cookie). On a refusal, a redirect to the console's `/login?error=` (`unavailable`, `rate_limited`, `expired`, `refused`, `link_required`, `identity_taken`)
  */
-export const startOAuthLoginOptions = (options: Options<StartOAuthLoginData>) => queryOptions<unknown, DefaultError, unknown, ReturnType<typeof startOAuthLoginQueryKey>>({
+export const startOAuthLoginOptions = (options: Options<StartOAuthLoginData>) => queryOptions<unknown, StartOAuthLoginError, unknown, ReturnType<typeof startOAuthLoginQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await startOAuthLogin({
             ...options,
@@ -400,6 +421,8 @@ export const launcherLoginMutation = (options?: Partial<Options<LauncherLoginDat
 
 /**
  * Start an agent launch: returns an agent token scoped to the sessions of this launch, expiring at its end. The device token never enters the agent environment
+ *
+ * Scope `sessions:write` (the CLI's device token, a browser session). A person's only: an agent token never launches. The person and the organization come from the credential. 403 when the organization's policy refuses the agent or the model, or the credential may not launch; 404 when it is no member of an organization the request can act in.
  */
 export const createLaunchMutation = (options?: Partial<Options<CreateLaunchData>>): UseMutationOptions<CreateLaunchResponse, CreateLaunchError, Options<CreateLaunchData>> => {
     const mutationOptions: UseMutationOptions<CreateLaunchResponse, CreateLaunchError, Options<CreateLaunchData>> = {
@@ -431,6 +454,42 @@ export const checkAgentPolicyOptions = (options?: Options<CheckAgentPolicyData>)
         return data;
     },
     queryKey: checkAgentPolicyQueryKey(options)
+});
+
+export const getMyAccountQueryKey = (options?: Options<GetMyAccountData>) => createQueryKey('getMyAccount', options);
+
+/**
+ * The signed-in person's account: e-mails and ways in (scope `profile:read`)
+ */
+export const getMyAccountOptions = (options?: Options<GetMyAccountData>) => queryOptions<GetMyAccountResponse, GetMyAccountError, GetMyAccountResponse, ReturnType<typeof getMyAccountQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getMyAccount({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getMyAccountQueryKey(options)
+});
+
+export const listTokenScopesQueryKey = (options?: Options<ListTokenScopesData>) => createQueryKey('listTokenScopes', options);
+
+/**
+ * The scopes a personal token may be given, `POST /api/v1/tokens` refuses any other (browser session only)
+ */
+export const listTokenScopesOptions = (options?: Options<ListTokenScopesData>) => queryOptions<ListTokenScopesResponse, ListTokenScopesError, ListTokenScopesResponse, ReturnType<typeof listTokenScopesQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listTokenScopes({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listTokenScopesQueryKey(options)
 });
 
 export const getMeQueryKey = (options?: Options<GetMeData>) => createQueryKey('getMe', options);
@@ -866,7 +925,7 @@ export const listMyOrganizationsQueryKey = (options?: Options<ListMyOrganization
 /**
  * The organizations the caller is an active member of, to choose the one sent in `Ostrom-Org`. Needs no `Ostrom-Org` itself
  *
- * Not served: main serves `listOrgs` (`GET /api/v1/orgs`).
+ * Scope `orgs:read`.
  */
 export const listMyOrganizationsOptions = (options?: Options<ListMyOrganizationsData>) => queryOptions<ListMyOrganizationsResponse, ListMyOrganizationsError, ListMyOrganizationsResponse, ReturnType<typeof listMyOrganizationsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -1003,9 +1062,9 @@ export const getGithubAppOptions = (options?: Options<GetGithubAppData>) => quer
 export const startGithubAppManifestQueryKey = (options?: Options<StartGithubAppManifestData>) => createQueryKey('startGithubAppManifest', options);
 
 /**
- * Create the GitHub App by the manifest flow
+ * Create the GitHub App by the manifest flow. An administrator of the instance's browser session only (403 otherwise, 409 when an App exists); the answer is a page that posts the manifest to GitHub, which takes it by POST only, with a CSP and `no-store`
  */
-export const startGithubAppManifestOptions = (options?: Options<StartGithubAppManifestData>) => queryOptions<unknown, StartGithubAppManifestError, unknown, ReturnType<typeof startGithubAppManifestQueryKey>>({
+export const startGithubAppManifestOptions = (options?: Options<StartGithubAppManifestData>) => queryOptions<StartGithubAppManifestResponse, StartGithubAppManifestError, StartGithubAppManifestResponse, ReturnType<typeof startGithubAppManifestQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await startGithubAppManifest({
             ...options,
@@ -1021,7 +1080,7 @@ export const startGithubAppManifestOptions = (options?: Options<StartGithubAppMa
 export const githubAppManifestCallbackQueryKey = (options?: Options<GithubAppManifestCallbackData>) => createQueryKey('githubAppManifestCallback', options);
 
 /**
- * Manifest flow callback
+ * Manifest flow callback: the state is bound to the browser session that started the flow. On success the browser goes to the console's settings; a refusal is the usual error body (400 malformed or unknown code, 401 no session, 403 expired or another session's state, 409 an App exists, 503 GitHub unavailable)
  */
 export const githubAppManifestCallbackOptions = (options?: Options<GithubAppManifestCallbackData>) => queryOptions<unknown, GithubAppManifestCallbackError, unknown, ReturnType<typeof githubAppManifestCallbackQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -1039,7 +1098,7 @@ export const githubAppManifestCallbackOptions = (options?: Options<GithubAppMani
 export const startGithubAppInstallQueryKey = (options?: Options<StartGithubAppInstallData>) => createQueryKey('startGithubAppInstall', options);
 
 /**
- * Install the GitHub App on the organization
+ * Install the GitHub App on the organization (a browser session of an owner or an admin: 403 for another role or an organization the caller is not in; 503 when the App is not configured)
  */
 export const startGithubAppInstallOptions = (options?: Options<StartGithubAppInstallData>) => queryOptions<unknown, StartGithubAppInstallError, unknown, ReturnType<typeof startGithubAppInstallQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -1057,9 +1116,9 @@ export const startGithubAppInstallOptions = (options?: Options<StartGithubAppIns
 export const githubAppInstallCallbackQueryKey = (options?: Options<GithubAppInstallCallbackData>) => createQueryKey('githubAppInstallCallback', options);
 
 /**
- * Installation callback
+ * Installation callback. The browser is always sent back to the console's `/github` page, with `installed=1` or `error=<error.type>`: this route never answers with an error body
  */
-export const githubAppInstallCallbackOptions = (options?: Options<GithubAppInstallCallbackData>) => queryOptions<unknown, GithubAppInstallCallbackError, unknown, ReturnType<typeof githubAppInstallCallbackQueryKey>>({
+export const githubAppInstallCallbackOptions = (options?: Options<GithubAppInstallCallbackData>) => queryOptions<unknown, DefaultError, unknown, ReturnType<typeof githubAppInstallCallbackQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await githubAppInstallCallback({
             ...options,
@@ -1534,12 +1593,12 @@ export const inviteMembersMutation = (options?: Partial<Options<InviteMembersDat
     return mutationOptions;
 };
 
-export const listTeamsQueryKey = (options?: Options<ListTeamsData>) => createQueryKey('listTeams', options);
+export const listTeamsQueryKey = (options: Options<ListTeamsData>) => createQueryKey('listTeams', options);
 
 /**
- * Teams
+ * Teams of an organization the caller is a member of (scope `orgs:read`). People only: an agent, device or service token gets 403
  */
-export const listTeamsOptions = (options?: Options<ListTeamsData>) => queryOptions<ListTeamsResponse, ListTeamsError, ListTeamsResponse, ReturnType<typeof listTeamsQueryKey>>({
+export const listTeamsOptions = (options: Options<ListTeamsData>) => queryOptions<ListTeamsResponse, ListTeamsError, ListTeamsResponse, ReturnType<typeof listTeamsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
         const { data } = await listTeams({
             ...options,
@@ -1552,10 +1611,42 @@ export const listTeamsOptions = (options?: Options<ListTeamsData>) => queryOptio
     queryKey: listTeamsQueryKey(options)
 });
 
+export const listTeamsInfiniteQueryKey = (options: Options<ListTeamsData>): QueryKey<Options<ListTeamsData>> => createQueryKey('listTeams', options, true);
+
+/**
+ * Teams of an organization the caller is a member of (scope `orgs:read`). People only: an agent, device or service token gets 403
+ */
+export const listTeamsInfiniteOptions = (options: Options<ListTeamsData>) => {
+    const opts = infiniteQueryOptions<ListTeamsResponse, ListTeamsError, InfiniteData<ListTeamsResponse>, QueryKey<Options<ListTeamsData>>, string | Pick<QueryKey<Options<ListTeamsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<ListTeamsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    after: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await listTeams({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: listTeamsInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
+};
+
 export const listReposQueryKey = (options?: Options<ListReposData>) => createQueryKey('listRepos', options);
 
 /**
  * Repositories
+ *
+ * Scope `orgs:read`, or a browser session. An agent token gets 403.
  */
 export const listReposOptions = (options?: Options<ListReposData>) => queryOptions<ListReposResponse, ListReposError, ListReposResponse, ReturnType<typeof listReposQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -1569,6 +1660,38 @@ export const listReposOptions = (options?: Options<ListReposData>) => queryOptio
     },
     queryKey: listReposQueryKey(options)
 });
+
+export const listReposInfiniteQueryKey = (options?: Options<ListReposData>): QueryKey<Options<ListReposData>> => createQueryKey('listRepos', options, true);
+
+/**
+ * Repositories
+ *
+ * Scope `orgs:read`, or a browser session. An agent token gets 403.
+ */
+export const listReposInfiniteOptions = (options?: Options<ListReposData>) => {
+    const opts = infiniteQueryOptions<ListReposResponse, ListReposError, InfiniteData<ListReposResponse>, QueryKey<Options<ListReposData>>, string | Pick<QueryKey<Options<ListReposData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<ListReposData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    after: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await listRepos({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: listReposInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
+};
 
 export const getSettingsQueryKey = (options?: Options<GetSettingsData>) => createQueryKey('getSettings', options);
 
@@ -1823,6 +1946,8 @@ export const listGatesInfiniteOptions = (options?: Options<ListGatesData>) => {
 
 /**
  * Ask the gate of a boundary action (hook PreToolUse, CI, MCP); 409 session_closed in a closed session
+ *
+ * 409 session_closed in a closed session. 409 check_not_attested when the gate is enforced and its rule needs a check attested (RuleGateCheck.attested) whose last run is not proven by an Ostrom runner (isolated_runner) or by the CI on the commit the gate covers (ci); the message names each such check and why (declared by the workstation, failed, or not run). No approver is asked until the check is proven.
  */
 export const askGateMutation = (options?: Partial<Options<AskGateData>>): UseMutationOptions<AskGateResponse, AskGateError, Options<AskGateData>> => {
     const mutationOptions: UseMutationOptions<AskGateResponse, AskGateError, Options<AskGateData>> = {
@@ -1971,6 +2096,8 @@ export const getGatePolicyQueryKey = (options?: Options<GetGatePolicyData>) => c
 
 /**
  * Self-approval policy
+ *
+ * `never` for an organization that never chose: a yes always comes from another person (S2-15). `sole-approver`, which lets the gate's only approver approve their own action, marked self-approved in the receipt, applies only once an owner or an admin sets it
  */
 export const getGatePolicyOptions = (options?: Options<GetGatePolicyData>) => queryOptions<GetGatePolicyResponse, GetGatePolicyError, GetGatePolicyResponse, ReturnType<typeof getGatePolicyQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -2105,12 +2232,67 @@ export const getApprovalViewOptions = (options: Options<GetApprovalViewData>) =>
 });
 
 /**
- * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old (sign in again, then answer)
+ * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval, with its signed `receipt`, a no's included
  */
 export const answerApprovalMutation = (options?: Partial<Options<AnswerApprovalData>>): UseMutationOptions<AnswerApprovalResponse, AnswerApprovalError, Options<AnswerApprovalData>> => {
     const mutationOptions: UseMutationOptions<AnswerApprovalResponse, AnswerApprovalError, Options<AnswerApprovalData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await answerApproval({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getGovernanceConfirmationQueryKey = (options: Options<GetGovernanceConfirmationData>) => createQueryKey('getGovernanceConfirmation', options);
+
+/**
+ * A governance confirmation, with the exact change it makes; `wait` long-polls up to that many seconds
+ *
+ * Read by its requester (with any of their credentials) and by the owners and admins of its organization; anyone
+ * else, and another organization, gets 404. A pending confirmation past its 15 minutes reads as `expired`.
+ *
+ * With `wait`, a pending confirmation is waited on for its answer: the response comes as soon as it is no longer
+ * pending, or with it still pending when the wait ends; the caller then asks again until `expiresAt`. A
+ * confirmation that is not pending answers at once. The server caps the wait at 30 seconds and reads a value
+ * outside 0 to 30 as the nearest bound. A waiting request holds no database connection. A client sets its HTTP
+ * timeout above the wait.
+ */
+export const getGovernanceConfirmationOptions = (options: Options<GetGovernanceConfirmationData>) => queryOptions<GetGovernanceConfirmationResponse, GetGovernanceConfirmationError, GetGovernanceConfirmationResponse, ReturnType<typeof getGovernanceConfirmationQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getGovernanceConfirmation({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getGovernanceConfirmationQueryKey(options)
+});
+
+/**
+ * Confirm or refuse a governance confirmation, as an owner or an admin signed in to the console
+ *
+ * Only a browser session answers (a token gets 403 `forbidden`), of an owner or an admin of the organization (403
+ * `forbidden` otherwise), once (409 `confirmation_closed`), within its 15 minutes (410 `confirmation_expired`).
+ *
+ * `confirm` needs a sign-in less than 5 minutes old (403 `step_up_required`: sign in again, then confirm), as a
+ * yes does; `refuse` does not. A confirmation applies the change exactly as it was shown, as a signed decision of
+ * the person who confirms (the requester is kept in the confirmation and the audit log). When what it changes is
+ * no longer what it showed as `before`, nothing is written and the confirmation closes as `failed` with 409
+ * `confirmation_stale`. When the write itself is refused (a version conflict, a rule deleted meanwhile), the
+ * confirmation closes as `failed` with that error, and the answer is that error. Each step (created, confirmed,
+ * refused, expired, failed) is an event of the organization's signed audit log.
+ */
+export const answerGovernanceConfirmationMutation = (options?: Partial<Options<AnswerGovernanceConfirmationData>>): UseMutationOptions<AnswerGovernanceConfirmationResponse, AnswerGovernanceConfirmationError, Options<AnswerGovernanceConfirmationData>> => {
+    const mutationOptions: UseMutationOptions<AnswerGovernanceConfirmationResponse, AnswerGovernanceConfirmationError, Options<AnswerGovernanceConfirmationData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await answerGovernanceConfirmation({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -4114,6 +4296,8 @@ export const listRunnersQueryKey = (options?: Options<ListRunnersData>) => creat
 
 /**
  * Runners
+ *
+ * The organization's registered runners, by name, then the runners at work for the caller's cloud sessions (one per execution). Any member, or a credential with `cloud:read`. A runner is `online` when it gave a sign of life within the last 90 seconds, `offline` otherwise. A registered runner's `token` is never listed.
  */
 export const listRunnersOptions = (options?: Options<ListRunnersData>) => queryOptions<ListRunnersResponse, ListRunnersError, ListRunnersResponse, ReturnType<typeof listRunnersQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -4130,6 +4314,8 @@ export const listRunnersOptions = (options?: Options<ListRunnersData>) => queryO
 
 /**
  * Register a runner (service key)
+ *
+ * An owner or an admin of the organization, from a signed-in console session (a personal, CLI or service token gets 403), registers a machine. The answer carries the runner's `token`, shown this once: only its hash is kept. The name is unique in the organization and an organization registers at most 100 runners (409 otherwise). The name is 1 to 64 characters; at most 16 labels, each 1 to 64 letters, digits, `.`, `_`, `:` or `-`, starting with a letter or a digit (400 otherwise). The name is unique whatever its case and refuses control and invisible formatting characters. The answer is not cached (`Cache-Control: no-store`).
  */
 export const registerRunnerMutation = (options?: Partial<Options<RegisterRunnerData>>): UseMutationOptions<RegisterRunnerResponse, RegisterRunnerError, Options<RegisterRunnerData>> => {
     const mutationOptions: UseMutationOptions<RegisterRunnerResponse, RegisterRunnerError, Options<RegisterRunnerData>> = {
@@ -4147,6 +4333,8 @@ export const registerRunnerMutation = (options?: Partial<Options<RegisterRunnerD
 
 /**
  * Remove a runner
+ *
+ * An owner or an admin, from a signed-in console session, removes a registered runner and its token. A runner of another organization, or a malformed id, is not found (404).
  */
 export const deleteRunnerMutation = (options?: Partial<Options<DeleteRunnerData>>): UseMutationOptions<DeleteRunnerResponse, DeleteRunnerError, Options<DeleteRunnerData>> => {
     const mutationOptions: UseMutationOptions<DeleteRunnerResponse, DeleteRunnerError, Options<DeleteRunnerData>> = {
@@ -4373,6 +4561,40 @@ export const cloudRunnerHeartbeatMutation = (options?: Partial<Options<CloudRunn
     const mutationOptions: UseMutationOptions<CloudRunnerHeartbeatResponse, CloudRunnerHeartbeatError, Options<CloudRunnerHeartbeatData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await cloudRunnerHeartbeat({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * The runner of a cloud session opens its session's launch with the execution's runner token: the launch is the session owner's, under the organization's policy and launch limit, and the agent in the pod gets its agent token, never the runner token. A shell session opens none (400)
+ */
+export const openRunnerLaunchMutation = (options?: Partial<Options<OpenRunnerLaunchData>>): UseMutationOptions<OpenRunnerLaunchResponse, OpenRunnerLaunchError, Options<OpenRunnerLaunchData>> => {
+    const mutationOptions: UseMutationOptions<OpenRunnerLaunchResponse, OpenRunnerLaunchError, Options<OpenRunnerLaunchData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await openRunnerLaunch({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * The runner of a cloud session reports a check it ran itself, with the execution's runner token: the run is recorded `isolated_runner` for a session of a launch that cloud session opened (404 otherwise), and the receipt's check node takes the attestation of its last run. It proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched
+ */
+export const reportRunnerCheckMutation = (options?: Partial<Options<ReportRunnerCheckData>>): UseMutationOptions<ReportRunnerCheckResponse, ReportRunnerCheckError, Options<ReportRunnerCheckData>> => {
+    const mutationOptions: UseMutationOptions<ReportRunnerCheckResponse, ReportRunnerCheckError, Options<ReportRunnerCheckData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await reportRunnerCheck({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -5099,6 +5321,8 @@ export const listAuditQueryKey = (options?: Options<ListAuditData>) => createQue
 
 /**
  * Audit log (admins)
+ *
+ * The organization's signed audit log, newest first, 50 lines a page: governance changes (budgets, model policy, inference settings, MCP servers, assignments and policies), organization and membership changes, the import cutover and the deletion of the organization. Readable by an owner or an admin only (403 otherwise), with a browser session or a token holding `audit:read`; another organization's log is never read (404). `actor` is a person's login (their id once they no longer exist), or `<kind>:<id>` for a credential that is not a person's (`service:…`, `agent:…`), or `server:ostrom` for the server itself; the `actor` filter takes a login only. `subject` is `<type>:<id>`; `meta` holds the event's facts as strings, with `credential` (`browser`, `api_token`…) for a change made through the API. `next` is absent on the last page.
  */
 export const listAuditOptions = (options?: Options<ListAuditData>) => queryOptions<ListAuditResponse, ListAuditError, ListAuditResponse, ReturnType<typeof listAuditQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -5117,6 +5341,8 @@ export const listAuditInfiniteQueryKey = (options?: Options<ListAuditData>): Que
 
 /**
  * Audit log (admins)
+ *
+ * The organization's signed audit log, newest first, 50 lines a page: governance changes (budgets, model policy, inference settings, MCP servers, assignments and policies), organization and membership changes, the import cutover and the deletion of the organization. Readable by an owner or an admin only (403 otherwise), with a browser session or a token holding `audit:read`; another organization's log is never read (404). `actor` is a person's login (their id once they no longer exist), or `<kind>:<id>` for a credential that is not a person's (`service:…`, `agent:…`), or `server:ostrom` for the server itself; the `actor` filter takes a login only. `subject` is `<type>:<id>`; `meta` holds the event's facts as strings, with `credential` (`browser`, `api_token`…) for a change made through the API. `next` is absent on the last page.
  */
 export const listAuditInfiniteOptions = (options?: Options<ListAuditData>) => {
     const opts = infiniteQueryOptions<ListAuditResponse, ListAuditError, InfiniteData<ListAuditResponse>, QueryKey<Options<ListAuditData>>, string | Pick<QueryKey<Options<ListAuditData>>[0], 'body' | 'headers' | 'path' | 'query'>>(

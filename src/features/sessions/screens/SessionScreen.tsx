@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Receipt, Session } from '@gen/api/types.gen';
+import type { Receipt, Session, SessionGateAnswer } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
+import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';
 import { type Fact, Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { StateBadge } from '../components/StateBadge';
@@ -122,9 +124,7 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
             <ul className="o-rows">
               {gates.map((gate) => (
                 <li key={gate}>
-                  <Link to="/yes/$approvalId" params={{ approvalId: gate }} className="o-row o-mono">
-                    {gate}
-                  </Link>
+                  <GateLine gate={gate} answer={session.gateAnswers?.find((item) => item.gateId === gate)} />
                 </li>
               ))}
             </ul>
@@ -142,5 +142,49 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
         )}
       </Section>
     </>
+  );
+}
+
+interface GateLineProps {
+  readonly gate: string;
+  /** The server's answer to the gate, once someone said yes or no; nothing while it waits. */
+  readonly answer: SessionGateAnswer | undefined;
+}
+
+function toneOf(answer: SessionGateAnswer | undefined): BadgeTone {
+  if (answer === undefined) return 'neutral';
+  return answer.outcome === 'approved' ? 'success' : 'danger';
+}
+
+function labelOf(answer: SessionGateAnswer | undefined, t: TFunction): string {
+  if (answer === undefined) return t('sessions.detail.unanswered');
+  return answer.outcome === 'approved' ? t('sessions.detail.approved') : t('sessions.detail.refused');
+}
+
+/** A request the session made, and who answered it: the thread of the session, read on its own page. */
+function GateLine({ gate, answer }: GateLineProps): ReactElement {
+  const { t, i18n } = useTranslation();
+  return (
+    <span className="o-row">
+      <Badge tone={toneOf(answer)}>{labelOf(answer, t)}</Badge>
+      <span className="o-row__main">
+        <Link to="/yes/$approvalId" params={{ approvalId: gate }} className="o-row__title o-mono">
+          {answer?.actionClass ?? gate}
+        </Link>
+        {answer === undefined ? null : (
+          <span className="o-row__meta">
+            {t('sessions.detail.answeredBy', {
+              by: answer.by,
+              when: formatAbsolute(answer.at, i18n.language),
+            })}
+          </span>
+        )}
+      </span>
+      {answer?.receiptId === undefined ? null : (
+        <Link to="/receipts/$receiptId" params={{ receiptId: answer.receiptId }} className="o-row__end">
+          {t('sessions.detail.answerReceipt')}
+        </Link>
+      )}
+    </span>
   );
 }

@@ -163,6 +163,9 @@ export type ApprovalAnswer = 'approve' | 'reject';
 export type ApprovalCallerView = {
     login: string;
     self: boolean;
+    /**
+     * Whether the person may answer: their role, being an approver, not their own gate. It does not wait for a fresh sign-in or the phone's unlock: a locked app reads `true`, and its yes is refused at the answer with 403 `step_up_required` until `unlockMobileApp`
+     */
     canApprove: boolean;
     reason?: string;
     selfApproval?: boolean;
@@ -382,8 +385,11 @@ export type AuditEvent = {
     event: string;
     actor: string;
     subject: string;
+    /**
+     * The event's facts, every value a string
+     */
     meta?: {
-        [key: string]: unknown;
+        [key: string]: string;
     };
 };
 
@@ -779,7 +785,7 @@ export type Capacity = {
 export type CheckOutcome = 'passed' | 'failed' | 'timeout' | 'skipped';
 
 /**
- * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: an Ostrom runner ran it in an isolated session. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
+ * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: the runner of an Ostrom cloud session ran it and reported it with its own token, which the agent cannot read (reportRunnerCheck); it proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
  */
 export type CheckAttestation = 'workstation_declared' | 'isolated_runner' | 'ci';
 
@@ -1023,9 +1029,19 @@ export type Dev = {
 export type Device = {
     id: string;
     name: string;
-    platform: string;
+    platform?: string;
     cliVersion?: string;
     lastSeenAt?: string;
+    /**
+     * `admin` for the elevated token of `ostrom login --admin`; absent means `cli`
+     */
+    kind?: 'cli' | 'admin';
+    /**
+     * The organization an elevated token is bound to
+     */
+    orgId?: string;
+    scopes?: Array<string>;
+    expiresAt?: string;
 };
 
 /**
@@ -1241,6 +1257,99 @@ export type GateResponse = {
 export type GateStatus = 'pending' | 'approved' | 'rejected' | 'shadow' | 'ungated' | 'consumed';
 
 export type GitHubConnection = 'github-app' | 'gh-token';
+
+/**
+ * The governance write a confirmation holds: the operation that opened it
+ */
+export type GovernanceChangeKind = 'rules.create' | 'rules.update' | 'rules.delete' | 'rules.bulk' | 'gates.policy' | 'models.policy' | 'workflows.create' | 'workflows.save' | 'workflows.delete';
+
+/**
+ * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
+ */
+export type GovernanceConfirmation = {
+    id: string;
+    kind: GovernanceChangeKind;
+    status: GovernanceConfirmationStatus;
+    /**
+     * The method of the write, such as `PUT`
+     */
+    method: string;
+    /**
+     * The path of the write, such as `/api/v1/gates/policy`
+     */
+    path: string;
+    /**
+     * The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`)
+     */
+    scope: string;
+    /**
+     * One line saying what the change does
+     */
+    summary: string;
+    /**
+     * What the change replaces, as the read routes show it; JSON null for nothing (a creation)
+     */
+    before: unknown;
+    /**
+     * What the change writes, as the read routes show it; JSON null for nothing (a deletion)
+     */
+    after: unknown;
+    requestedBy: GovernanceConfirmationPerson;
+    /**
+     * The person's token that asked: `admin` when it holds a governance scope (`ostrom login --admin`), `device` otherwise (`ostrom login`, a personal token). An agent, a runner or a service key never opens one
+     */
+    credential: 'admin' | 'device';
+    createdAt: string;
+    expiresAt: string;
+    /**
+     * Who confirmed or refused it; a confirmed change is their signed decision
+     */
+    answeredBy?: GovernanceConfirmationPerson;
+    answeredAt?: string;
+    /**
+     * What the write returned once confirmed (absent when it returns nothing, as a deletion)
+     */
+    result?: unknown;
+    /**
+     * Why a confirmed change was not written (`failed`)
+     */
+    error?: ErrorDetail;
+};
+
+export type GovernanceConfirmationAnswer = 'confirm' | 'refuse';
+
+export type GovernanceConfirmationAnswerRequest = {
+    answer: GovernanceConfirmationAnswer;
+};
+
+/**
+ * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
+ */
+export type GovernanceConfirmationPending = {
+    confirmationId: string;
+    /**
+     * The absolute URL of the console page that confirms it (`<console>/confirm/<id>`)
+     */
+    confirmUrl: string;
+    expiresAt: string;
+};
+
+/**
+ * A member who asked for or answered a confirmation
+ */
+export type GovernanceConfirmationPerson = {
+    memberId: string;
+    /**
+     * Their GitHub login, when known
+     */
+    login?: string;
+    name?: string;
+};
+
+/**
+ * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ */
+export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed';
 
 /**
  * A group of members sharing subscriptions
@@ -1686,6 +1795,66 @@ export type MemberInvite = {
      * The slug of a team they join; none when absent
      */
     team?: string;
+};
+
+/**
+ * One of the caller's organizations, to choose the one `Ostrom-Org` names
+ */
+export type MyOrganization = {
+    id: string;
+    slug: string;
+    name: string;
+    /**
+     * The picture of the linked GitHub organization, empty when none
+     */
+    avatarUrl: string;
+    /**
+     * The caller's role there
+     */
+    role: MemberRole;
+};
+
+/**
+ * The signed-in person's account
+ */
+export type Account = {
+    id: string;
+    /**
+     * The handle, unique on the instance
+     */
+    login: string;
+    displayName: string;
+    /**
+     * The main e-mail; absent when there is none
+     */
+    primaryEmail?: string;
+    /**
+     * The picture; absent when there is none
+     */
+    avatarUrl?: string;
+    createdAt: string;
+    emails: Array<AccountEmail>;
+    /**
+     * How the person signs in: `github`, `google`, `email` or `oidc:<connection>`
+     */
+    providers: Array<string>;
+};
+
+export type AccountEmail = {
+    email: string;
+    verified: boolean;
+};
+
+export type TokenScope = {
+    /**
+     * `resource:action`
+     */
+    scope: string;
+    description: string;
+};
+
+export type TokenScopes = {
+    scopes: Array<TokenScope>;
 };
 
 export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited' | 'billing';
@@ -2299,11 +2468,11 @@ export type RuleGate = {
  */
 export type RuleGateCheck = {
     /**
-     * Id of the check node in the organization's workflows
+     * Id of the check node in the organization's workflows; the CI's proof is its check run of the same name on the commit the gate covers
      */
     check: string;
     /**
-     * When true, only a run attested by an Ostrom runner or the CI (`isolated_runner`, `ci`) satisfies the gate; a run declared by the workstation (`workstation_declared`) does not. False by default.
+     * When true, only a run attested by an Ostrom runner or the CI (`isolated_runner`, `ci`) satisfies the gate; a run declared by the workstation (`workstation_declared`) does not. False by default. An `isolated_runner` run proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched.
      */
     attested?: boolean;
 };
@@ -2353,6 +2522,10 @@ export type Runner = {
     status: string;
     lastSeenAt?: string;
     version?: string;
+    /**
+     * The runner's key, `ostrom_runner_` and 64 hex characters, only in registerRunner's answer
+     */
+    token?: string;
 };
 
 /**
@@ -2423,6 +2596,7 @@ export type ServiceKey = {
     name: string;
     scopes: Array<string>;
     createdAt: string;
+    expiresAt?: string;
     lastUsedAt?: string;
     secret?: string;
 };
@@ -2452,11 +2626,36 @@ export type Session = {
     endedBy?: string;
     lastSeenAt?: string;
     gates?: Array<string>;
+    /**
+     * On a single read only, the answers to those of `gates` someone answered, oldest gate first. A token that reads sessions without reading gates (the device of `ostrom login`) sees them here; nothing of another session's gates.
+     */
+    gateAnswers?: Array<SessionGateAnswer>;
     receiptId?: string;
     tools?: number;
     costUsd?: number;
     exitCode?: number;
     runId?: string;
+};
+
+/**
+ * The answer to a gate a session asked or joined, as the session's thread shows it.
+ */
+export type SessionGateAnswer = {
+    gateId: string;
+    actionClass: string;
+    /**
+     * `approved` stays once the session reserved or used the yes.
+     */
+    outcome: 'approved' | 'refused';
+    /**
+     * Who answered, the approver whose yes or no decided the gate.
+     */
+    by: string;
+    at: string;
+    /**
+     * The gate's signed receipt, once signed.
+     */
+    receiptId?: string;
 };
 
 /**
@@ -2645,7 +2844,7 @@ export type StartSessionRequest = {
 };
 
 /**
- * 403 step_up_required: a yes needs a sign-in less than 5 minutes old (a sign-in of unknown age is refused too); sign in again, then answer. A no never needs it
+ * 403 step_up_required: a yes, and a sensitive write from the console or the app (a personal token, a service key, a sign-in link, an invitation, a role, a member removed, a transfer, a secret, an MCP server, its assignments, policies and settings, the model keys), need a sign-in less than 5 minutes old (a sign-in of unknown age is refused too); sign in again, then send it again. A no never needs it, and an API token is never asked: it has no sign-in to renew
  */
 export type StepUpRequired = {
     error: ErrorDetail;
@@ -2792,7 +2991,7 @@ export type Token = {
     id: string;
     name: string;
     /**
-     * `personal` or `cli`
+     * `personal`, `cli` or `mobile` (the phone app's)
      */
     kind: string;
     scopes: Array<string>;
@@ -3440,6 +3639,10 @@ export type MobileTokenErrors = {
      * A refusal
      */
     404: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
 };
 
 export type MobileTokenError = MobileTokenErrors[keyof MobileTokenErrors];
@@ -3452,10 +3655,51 @@ export type MobileTokenResponses = {
         token: string;
         user: AuthUser;
         expiresAt?: string;
+        /**
+         * Kept by the app behind the phone's biometrics (keychain item that requires them), presented to `unlockMobileApp` before a yes; never sent anywhere else
+         */
+        unlockKey?: string;
     };
 };
 
 export type MobileTokenResponse = MobileTokenResponses[keyof MobileTokenResponses];
+
+export type UnlockMobileAppData = {
+    body: {
+        unlockKey: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/mobile/unlock';
+};
+
+export type UnlockMobileAppErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type UnlockMobileAppError = UnlockMobileAppErrors[keyof UnlockMobileAppErrors];
+
+export type UnlockMobileAppResponses = {
+    /**
+     * OK
+     */
+    200: {
+        authenticatedAt: string;
+    };
+};
+
+export type UnlockMobileAppResponse = UnlockMobileAppResponses[keyof UnlockMobileAppResponses];
 
 export type GithubLoginCallbackData = {
     body?: never;
@@ -3513,9 +3757,34 @@ export type StartOAuthLoginData = {
          * Sign in again before a yes: the provider asks again
          */
         reauth?: boolean;
+        /**
+         * Mobile app: its deep link, exactly `ostrom://auth/callback`. With `state`, `code_challenge` and `code_challenge_method=S256`, the callback returns a one-time `code` (or an `error`) and the app's `state` to it; any invalid mobile parameter answers 400
+         */
+        redirect_uri?: string;
+        /**
+         * Mobile app: its state, returned with the code
+         */
+        state?: string;
+        /**
+         * Mobile app: the S256 PKCE challenge (43 characters)
+         */
+        code_challenge?: string;
+        /**
+         * Mobile app: `S256` only
+         */
+        code_challenge_method?: string;
     };
     url: '/api/v1/auth/{provider}/start';
 };
+
+export type StartOAuthLoginErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+};
+
+export type StartOAuthLoginError = StartOAuthLoginErrors[keyof StartOAuthLoginErrors];
 
 export type OauthLoginCallbackData = {
     body?: never;
@@ -3863,6 +4132,10 @@ export type CreateLaunchErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an organization and per organization, over a sliding hour
+     */
+    429: ApiError;
 };
 
 export type CreateLaunchError = CreateLaunchErrors[keyof CreateLaunchErrors];
@@ -3934,6 +4207,64 @@ export type CheckAgentPolicyResponses = {
 };
 
 export type CheckAgentPolicyResponse = CheckAgentPolicyResponses[keyof CheckAgentPolicyResponses];
+
+export type GetMyAccountData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/auth/me/account';
+};
+
+export type GetMyAccountErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type GetMyAccountError = GetMyAccountErrors[keyof GetMyAccountErrors];
+
+export type GetMyAccountResponses = {
+    /**
+     * OK
+     */
+    200: Account;
+};
+
+export type GetMyAccountResponse = GetMyAccountResponses[keyof GetMyAccountResponses];
+
+export type ListTokenScopesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/tokens/scopes';
+};
+
+export type ListTokenScopesErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListTokenScopesError = ListTokenScopesErrors[keyof ListTokenScopesErrors];
+
+export type ListTokenScopesResponses = {
+    /**
+     * OK
+     */
+    200: TokenScopes;
+};
+
+export type ListTokenScopesResponse = ListTokenScopesResponses[keyof ListTokenScopesResponses];
 
 export type GetMeData = {
     body?: never;
@@ -4258,9 +4589,9 @@ export type CreateSignInLinkErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -4415,9 +4746,9 @@ export type CreateTokenErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
 };
 
 export type CreateTokenError = CreateTokenErrors[keyof CreateTokenErrors];
@@ -4481,9 +4812,9 @@ export type RotateTokenErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -4555,6 +4886,10 @@ export type CreateServiceKeyData = {
     body: {
         name: string;
         scopes: Array<string>;
+        /**
+         * Lifetime in days, 1 to 366; absent for a key that does not expire
+         */
+        expiresInDays?: number;
     };
     headers?: {
         /**
@@ -4577,9 +4912,9 @@ export type CreateServiceKeyErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -4887,7 +5222,7 @@ export type ListMyOrganizationsResponses = {
      * OK
      */
     200: {
-        items: Array<Organization>;
+        items: Array<MyOrganization>;
     };
 };
 
@@ -5131,14 +5466,13 @@ export type GetGithubAppResponse = GetGithubAppResponses[keyof GetGithubAppRespo
 
 export type StartGithubAppManifestData = {
     body?: never;
-    headers?: {
-        /**
-         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
-         */
-        'Ostrom-Org'?: string;
-    };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * The GitHub organization that will own the App; the caller's own account when absent
+         */
+        owner?: string;
+    };
     url: '/api/v1/github/app/manifest/start';
 };
 
@@ -5167,6 +5501,15 @@ export type StartGithubAppManifestErrors = {
 
 export type StartGithubAppManifestError = StartGithubAppManifestErrors[keyof StartGithubAppManifestErrors];
 
+export type StartGithubAppManifestResponses = {
+    /**
+     * The HTML page that posts the manifest to GitHub
+     */
+    200: string;
+};
+
+export type StartGithubAppManifestResponse = StartGithubAppManifestResponses[keyof StartGithubAppManifestResponses];
+
 export type GithubAppManifestCallbackData = {
     body?: never;
     path?: never;
@@ -5185,7 +5528,23 @@ export type GithubAppManifestCallbackErrors = {
     /**
      * A refusal
      */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
     404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type GithubAppManifestCallbackError = GithubAppManifestCallbackErrors[keyof GithubAppManifestCallbackErrors];
@@ -5199,7 +5558,12 @@ export type StartGithubAppInstallData = {
         'Ostrom-Org'?: string;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * The organization to install it on (its id or short name); the caller's organization when absent
+         */
+        org?: string;
+    };
     url: '/api/v1/github/app/install/start';
 };
 
@@ -5233,23 +5597,14 @@ export type GithubAppInstallCallbackData = {
     path?: never;
     query?: {
         installation_id?: string;
+        /**
+         * The authorization of the person who installed
+         */
+        code?: string;
         state?: string;
     };
     url: '/api/v1/github/app/install/callback';
 };
-
-export type GithubAppInstallCallbackErrors = {
-    /**
-     * A refusal
-     */
-    400: ApiError;
-    /**
-     * A refusal
-     */
-    404: ApiError;
-};
-
-export type GithubAppInstallCallbackError = GithubAppInstallCallbackErrors[keyof GithubAppInstallCallbackErrors];
 
 export type GithubWebhookData = {
     body: unknown;
@@ -5263,6 +5618,10 @@ export type GithubWebhookErrors = {
      * A refusal
      */
     400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
     /**
      * A refusal
      */
@@ -5587,9 +5946,9 @@ export type TransferOrgErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -5713,9 +6072,9 @@ export type InviteOrgMembersErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -5760,9 +6119,9 @@ export type RemoveOrgMemberErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -5846,9 +6205,9 @@ export type UpdateOrgMemberErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -5930,9 +6289,9 @@ export type CreateInvitationLinkErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -6368,15 +6727,23 @@ export type InviteMembersResponse = InviteMembersResponses[keyof InviteMembersRe
 
 export type ListTeamsData = {
     body?: never;
-    headers?: {
+    path: {
         /**
-         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         * The organization's id or short name
          */
-        'Ostrom-Org'?: string;
+        org: string;
     };
-    path?: never;
-    query?: never;
-    url: '/api/v1/teams';
+    query?: {
+        /**
+         * The `next` of the previous page
+         */
+        after?: string;
+        /**
+         * The page size, 1 to 100 (100 by default)
+         */
+        limit?: number;
+    };
+    url: '/api/v1/orgs/{org}/teams';
 };
 
 export type ListTeamsErrors = {
@@ -6425,7 +6792,16 @@ export type ListReposData = {
         'Ostrom-Org'?: string;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * The `next` of the previous page
+         */
+        after?: string;
+        /**
+         * The page size, 1 to 100 (100 by default)
+         */
+        limit?: number;
+    };
     url: '/api/v1/repos';
 };
 
@@ -7467,6 +7843,9 @@ export type GetGatePolicyResponses = {
      * OK
      */
     200: {
+        /**
+         * `never` (the default) or `sole-approver`
+         */
         selfApproval: string;
     };
 };
@@ -7509,6 +7888,10 @@ export type SetGatePolicyErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SetGatePolicyError = SetGatePolicyErrors[keyof SetGatePolicyErrors];
@@ -7520,6 +7903,14 @@ export type SetGatePolicyResponses = {
     200: {
         selfApproval: string;
     };
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SetGatePolicyResponse = SetGatePolicyResponses[keyof SetGatePolicyResponses];
@@ -7778,6 +8169,113 @@ export type AnswerApprovalResponses = {
 };
 
 export type AnswerApprovalResponse = AnswerApprovalResponses[keyof AnswerApprovalResponses];
+
+export type GetGovernanceConfirmationData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * Seconds to wait on a pending confirmation for its answer; absent or 0 reads at once.
+         */
+        wait?: number;
+    };
+    url: '/api/v1/confirmations/{id}';
+};
+
+export type GetGovernanceConfirmationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetGovernanceConfirmationError = GetGovernanceConfirmationErrors[keyof GetGovernanceConfirmationErrors];
+
+export type GetGovernanceConfirmationResponses = {
+    /**
+     * OK
+     */
+    200: GovernanceConfirmation;
+};
+
+export type GetGovernanceConfirmationResponse = GetGovernanceConfirmationResponses[keyof GetGovernanceConfirmationResponses];
+
+export type AnswerGovernanceConfirmationData = {
+    body: GovernanceConfirmationAnswerRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/confirmations/{id}/answer';
+};
+
+export type AnswerGovernanceConfirmationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (sign in again, then confirm), or forbidden (a token, not an owner or admin)
+     */
+    403: StepUpRequired | ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * confirmation_closed, confirmation_stale, or the confirmed write's own error (key `error.type`)
+     */
+    409: ApiError;
+    /**
+     * confirmation_expired
+     */
+    410: ApiError;
+};
+
+export type AnswerGovernanceConfirmationError = AnswerGovernanceConfirmationErrors[keyof AnswerGovernanceConfirmationErrors];
+
+export type AnswerGovernanceConfirmationResponses = {
+    /**
+     * The answered confirmation; when confirmed, `result` holds what the write returned
+     */
+    200: GovernanceConfirmation;
+};
+
+export type AnswerGovernanceConfirmationResponse = AnswerGovernanceConfirmationResponses[keyof AnswerGovernanceConfirmationResponses];
 
 export type ListDecisionsData = {
     body?: never;
@@ -8759,6 +9257,10 @@ export type CreateRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type CreateRuleError = CreateRuleErrors[keyof CreateRuleErrors];
@@ -8768,6 +9270,14 @@ export type CreateRuleResponses = {
      * Created
      */
     201: Rule;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type CreateRuleResponse = CreateRuleResponses[keyof CreateRuleResponses];
@@ -8808,11 +9318,23 @@ export type DeleteRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type DeleteRuleError = DeleteRuleErrors[keyof DeleteRuleErrors];
 
 export type DeleteRuleResponses = {
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
     /**
      * Deleted
      */
@@ -8919,6 +9441,10 @@ export type UpdateRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type UpdateRuleError = UpdateRuleErrors[keyof UpdateRuleErrors];
@@ -8928,6 +9454,14 @@ export type UpdateRuleResponses = {
      * OK
      */
     200: Rule;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type UpdateRuleResponse = UpdateRuleResponses[keyof UpdateRuleResponses];
@@ -8969,6 +9503,10 @@ export type BulkUpdateRulesErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type BulkUpdateRulesError = BulkUpdateRulesErrors[keyof BulkUpdateRulesErrors];
@@ -8980,6 +9518,14 @@ export type BulkUpdateRulesResponses = {
     200: {
         updated: number;
     };
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type BulkUpdateRulesResponse = BulkUpdateRulesResponses[keyof BulkUpdateRulesResponses];
@@ -9071,6 +9617,10 @@ export type CreateWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type CreateWorkflowError = CreateWorkflowErrors[keyof CreateWorkflowErrors];
@@ -9080,6 +9630,14 @@ export type CreateWorkflowResponses = {
      * OK
      */
     201: Workflow;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type CreateWorkflowResponse = CreateWorkflowResponses[keyof CreateWorkflowResponses];
@@ -9120,11 +9678,23 @@ export type DeleteWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type DeleteWorkflowError = DeleteWorkflowErrors[keyof DeleteWorkflowErrors];
 
 export type DeleteWorkflowResponses = {
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
     /**
      * Done
      */
@@ -9221,6 +9791,10 @@ export type SaveWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SaveWorkflowError = SaveWorkflowErrors[keyof SaveWorkflowErrors];
@@ -9230,6 +9804,14 @@ export type SaveWorkflowResponses = {
      * OK
      */
     200: Workflow;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SaveWorkflowResponse = SaveWorkflowResponses[keyof SaveWorkflowResponses];
@@ -10443,9 +11025,9 @@ export type CreateMcpServerErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10492,9 +11074,9 @@ export type DeleteMcpServerErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10541,9 +11123,9 @@ export type SaveMcpServerErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10643,9 +11225,9 @@ export type UnassignMcpServerErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10696,9 +11278,9 @@ export type AssignMcpServerErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10794,9 +11376,9 @@ export type CreateMcpArgumentPolicyErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10844,9 +11426,9 @@ export type DeleteMcpArgumentPolicyErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -10938,9 +11520,9 @@ export type PutMcpSettingsErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -11190,9 +11772,9 @@ export type CreateSecretErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -11239,9 +11821,9 @@ export type DeleteSecretErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -11288,9 +11870,9 @@ export type RotateSecretErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -11327,7 +11909,7 @@ export type ImportTeamCodeData = {
          */
         dryRun?: boolean;
         /**
-         * The final run, once TeamCode is stopped: owners only (403 otherwise), recorded in the audit log in the name of the person who runs it, before anything is written (503 on a server without an audit log or without shared accounts). It also revives the shared accounts waiting for a reconnection, testing TeamCode's tokens first (renewing rotates them, so a normal run never does).
+         * The final run, once TeamCode is stopped: owners only (403 `cutover_owner_required` otherwise), recorded in the audit log in the name of the person who runs it, before anything is written (503 `cutover_audit_unavailable` on a server without an audit log, 503 `cutover_sharing_unavailable` on a server without shared accounts; the key is `error.type`). It also revives the shared accounts waiting for a reconnection, testing TeamCode's tokens first (renewing rotates them, so a normal run never does).
          */
         cutover?: boolean;
     };
@@ -11406,6 +11988,18 @@ export type InferenceMessagesErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of two fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
+     */
+    429: ApiError;
+    /**
+     * A refusal
+     */
+    502: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type InferenceMessagesError = InferenceMessagesErrors[keyof InferenceMessagesErrors];
@@ -11451,6 +12045,18 @@ export type InferenceResponsesErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of two fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
+     */
+    429: ApiError;
+    /**
+     * A refusal
+     */
+    502: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type InferenceResponsesError = InferenceResponsesErrors[keyof InferenceResponsesErrors];
@@ -11496,6 +12102,18 @@ export type InferenceChatCompletionsErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of two fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
+     */
+    429: ApiError;
+    /**
+     * A refusal
+     */
+    502: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type InferenceChatCompletionsError = InferenceChatCompletionsErrors[keyof InferenceChatCompletionsErrors];
@@ -11628,9 +12246,9 @@ export type SetInferenceSettingsErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpRequired | ApiError;
     /**
      * A refusal
      */
@@ -11733,6 +12351,10 @@ export type SetModelPolicyErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SetModelPolicyError = SetModelPolicyErrors[keyof SetModelPolicyErrors];
@@ -11742,6 +12364,14 @@ export type SetModelPolicyResponses = {
      * OK
      */
     200: ModelPolicy;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SetModelPolicyResponse = SetModelPolicyResponses[keyof SetModelPolicyResponses];
@@ -13313,6 +13943,127 @@ export type CloudRunnerHeartbeatResponses = {
 };
 
 export type CloudRunnerHeartbeatResponse = CloudRunnerHeartbeatResponses[keyof CloudRunnerHeartbeatResponses];
+
+export type OpenRunnerLaunchData = {
+    body: {
+        /**
+         * The cloud session the runner was started for
+         */
+        sessionId: string;
+        /**
+         * The execution it was started for; an older one is fenced (409)
+         */
+        epoch: number;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/launch';
+};
+
+export type OpenRunnerLaunchErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an organization and per organization, over a sliding hour
+     */
+    429: ApiError;
+};
+
+export type OpenRunnerLaunchError = OpenRunnerLaunchErrors[keyof OpenRunnerLaunchErrors];
+
+export type OpenRunnerLaunchResponses = {
+    /**
+     * OK
+     */
+    201: {
+        launchId: string;
+        agentToken: string;
+        expiresAt: string;
+    };
+};
+
+export type OpenRunnerLaunchResponse = OpenRunnerLaunchResponses[keyof OpenRunnerLaunchResponses];
+
+export type ReportRunnerCheckData = {
+    body: {
+        /**
+         * The cloud session the runner was started for
+         */
+        sessionId: string;
+        /**
+         * The execution it was started for; an older one is fenced (409)
+         */
+        epoch: number;
+        check: ReportCheckRequest;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/checks';
+};
+
+export type ReportRunnerCheckErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReportRunnerCheckError = ReportRunnerCheckErrors[keyof ReportRunnerCheckErrors];
+
+export type ReportRunnerCheckResponses = {
+    /**
+     * OK
+     */
+    201: CheckRun;
+};
+
+export type ReportRunnerCheckResponse = ReportRunnerCheckResponses[keyof ReportRunnerCheckResponses];
 
 export type SendCloudMessageData = {
     body: {
@@ -15323,8 +16074,17 @@ export type ListAuditData = {
     };
     path?: never;
     query?: {
+        /**
+         * Only this person's events, by login.
+         */
         actor?: string;
+        /**
+         * Only this event, by its exact name (`budget.changed`).
+         */
         event?: string;
+        /**
+         * The `next` of the previous page (400 when it is not one).
+         */
         before?: string;
     };
     url: '/api/v1/audit';
