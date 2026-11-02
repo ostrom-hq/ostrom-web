@@ -2,6 +2,9 @@
 import {
   handleAnswerApproval,
   handleBulkUpdateRules,
+  handleCreateRule,
+  handleDeleteRule,
+  handleGetGateCatalog,
   handleCreateCloudSession,
   handleCreateMcpServer,
   handleDeleteArtifact,
@@ -80,6 +83,8 @@ import type {
   Receipt,
   Rule,
   RuleStatus,
+  GateAction,
+  RuleGate,
   Runner,
   Secret,
   SharedAccount,
@@ -99,6 +104,8 @@ import {
   zTestAutomationBody,
   zUpdateSharedAccountBody,
   zUpdateRuleBody,
+  zCreateRuleBody,
+  type zRuleGate,
   zVerifySignInEmailBody,
   zExchangeSignInLinkBody,
 } from '@gen/api/zod.gen';
@@ -448,7 +455,7 @@ async function readJson(request: Request): Promise<unknown> {
 
 /** The approvals slice of the contract, served from memory with the server's rules. */
 /** A rule decision is signed like any other: a decision line and its receipt, newest first. */
-function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus, at: string): void {
+function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus | 'deleted', at: string): void {
   const id = `dec-${String(db.decisions.length + 1)}`;
   db.decisions.unshift({
     id,
@@ -467,6 +474,26 @@ function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus, at: stri
     createdAt: at,
     signature: `ed25519;kid=${MOCK_KEY.kid};sha256=${id};sig=mock`,
   });
+}
+
+/** A gate as the zod schema reads it, with the optional fields it left out really absent. */
+function ruleGateOf(gate: z.infer<typeof zRuleGate>): RuleGate {
+  return {
+    actions: gate.actions.map(({ tools, ...action }) => ({
+      ...action,
+      ...(tools === undefined ? {} : { tools }),
+    })),
+    approvers: gate.approvers,
+    ...(gate.reason === undefined ? {} : { reason: gate.reason }),
+    ...(gate.checks === undefined
+      ? {}
+      : {
+          checks: gate.checks.map(({ check, attested }) => ({
+            check,
+            ...(attested === undefined ? {} : { attested }),
+          })),
+        }),
+  };
 }
 
 /** What a rule becomes after a decision: decided by the caller, or back to proposed with no decider. */
@@ -627,19 +654,96 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = zUpdateRuleBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'not a rule change');
       const at = now().toISOString();
-      // The mock applies what the console sends (statement, strength, status); scope and review date are kept.
-      const { statement, strength } = body.data;
+      // The mock applies what the console sends; a gate sent as null is taken off, as on the server.
+      const { statement, strength, group, why, output, scope, gate } = body.data;
       const edits: Rule = {
         ...rule,
         ...(statement === undefined ? {} : { statement }),
         ...(strength === undefined ? {} : { strength }),
+        ...(group === undefined ? {} : { group }),
+        ...(why === undefined ? {} : { why }),
+        ...(output === undefined ? {} : { output }),
+        ...(scope === undefined ? {} : { scope }),
+        ...(gate === undefined || gate === null ? {} : { gate: ruleGateOf(gate) }),
       };
-      const status = body.data.status ?? (statement === undefined ? rule.status : 'edited');
+      if (gate === null) delete edits.gate;
+      // New words accept a rule as fixed, unless it was rejected: a rejected rule reworded stays rejected.
+      const status =
+        body.data.status ?? (statement === undefined || rule.status === 'rejected' ? rule.status : 'edited');
       const next = status === rule.status ? edits : decided(edits, status, at);
       db.rules[index] = next;
-      if (next.status !== rule.status || statement !== undefined)
-        recordRuleDecision(db, next, next.status, at);
+      // A new strength alone is no new decision; new words, a new place or a new gate are.
+      const reworded = [statement, group, why, output, scope, gate].some((field) => field !== undefined);
+      // A decided rule edited without a new decision is signed as an edit.
+      if (next.status !== rule.status) recordRuleDecision(db, next, next.status, at);
+      else if (reworded)
+        recordRuleDecision(
+          db,
+          next,
+          next.status === 'accepted' || next.status === 'edited' ? 'edited' : next.status,
+          at,
+        );
       return HttpResponse.json(next);
+    }),
+    handleCreateRule(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins write rules');
+      const body = zCreateRuleBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a rule needs a statement and a group');
+      const {
+        status = 'accepted',
+        statement,
+        group,
+        output,
+        strength,
+        why,
+        scope,
+        reviewBy,
+        gate,
+      } = body.data;
+      if (status !== 'accepted' && status !== 'proposed')
+        return refusal(400, 'invalid_request', 'a new rule is proposed or accepted');
+      const at = now().toISOString();
+      // Ids are R- and digits: the next one follows the highest.
+      const last = db.rules.reduce((max, rule) => Math.max(max, Number(rule.id.replace(/\D/g, ''))), 0);
+      const written: Rule = {
+        id: `R-${String(last + 1)}`,
+        statement,
+        group,
+        output: output ?? 'note',
+        strength: strength ?? 'required',
+        ...(why === undefined ? {} : { why }),
+        ...(scope === undefined ? {} : { scope }),
+        ...(reviewBy === undefined ? {} : { reviewBy }),
+        ...(gate === undefined ? {} : { gate: ruleGateOf(gate) }),
+        confidence: 1,
+        status: 'proposed',
+        foundBy: me.dev.login,
+        foundAt: at,
+        origin: 'team',
+      };
+      const rule = decided(written, status, at);
+      db.rules.unshift(rule);
+      recordRuleDecision(db, rule, status, at);
+      return HttpResponse.json(rule, { status: 201 });
+    }),
+    handleDeleteRule(({ params }) => {
+      const rule = db.rules.find((candidate) => candidate.id === params.id);
+      if (rule === undefined) return refusal(404, 'not_found', 'rule not found');
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins delete rules');
+      db.rules = db.rules.filter((candidate) => candidate.id !== rule.id);
+      recordRuleDecision(db, rule, 'deleted', now().toISOString());
+      return new HttpResponse(null, { status: 204 });
+    }),
+    // The catalogue the gates decide on: the actions of the workflows' gates and of the accepted rules' gates.
+    handleGetGateCatalog(() => {
+      const actions = new Map<string, GateAction>();
+      for (const workflow of db.workflows)
+        for (const node of workflow.nodes)
+          for (const action of node.actions ?? []) actions.set(action.class, action);
+      for (const rule of db.rules)
+        if (rule.status !== 'proposed' && rule.status !== 'rejected')
+          for (const action of rule.gate?.actions ?? []) actions.set(action.class, action);
+      return HttpResponse.json({ gates: [], actions: [...actions.values()] });
     }),
     handleBulkUpdateRules(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');

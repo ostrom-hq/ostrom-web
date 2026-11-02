@@ -42,6 +42,19 @@ const rules: Rule[] = [
     status: 'accepted',
     foundBy: 'deep-pass',
     foundAt: '2026-10-28T10:00:00.000Z',
+    gate: {
+      actions: [
+        {
+          class: 'migrate',
+          label: 'Run a migration',
+          patterns: ['flyway migrate'],
+          repos: ['acme/billing-api'],
+        },
+      ],
+      approvers: ['lena'],
+      reason: 'Release owners',
+      checks: [{ check: 'n-tests', attested: true }],
+    },
     decidedBy: 'lena',
     decidedAt: '2026-10-28T16:00:00.000Z',
   },
