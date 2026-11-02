@@ -48,6 +48,18 @@ html=$(get /)
 [ "$(printf '%s' "$html" | grep -o '<script' | wc -l)" = "$(printf '%s' "$html" | grep -o '<script[^>]* src=' | wc -l)" ] \
   || fail "inline script in index.html: $html"
 get /theme.js | grep -q "dataset.theme" || fail "/theme.js"
+# A script leaves compressed when the browser accepts it, still whole otherwise, with its year of cache.
+js=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.js' | head -n 1)
+[ -n "$js" ] || fail "no entry script in index.html"
+h=$(curl -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$js")
+[ "$(header "$h" content-encoding)" = gzip ] || fail "$js not compressed: $h"
+[ "$(header "$h" vary)" = Accept-Encoding ] || fail "no Vary: Accept-Encoding on $js"
+[ "$(header "$h" cache-control)" = 'public, max-age=31536000, immutable' ] || fail "cache of $js: $h"
+[ "$(header "$h" content-security-policy)" = "$csp" ] || fail "CSP on a compressed $js"
+whole=$(curl -fsS "http://127.0.0.1:18080$js" | wc -c)
+packed=$(curl -fsS -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$js" | wc -c)
+[ "$packed" -lt "$whole" ] || fail "$js: $packed bytes compressed, $whole whole"
+echo "entry script: $whole bytes whole, $packed sent compressed"
 # A PostHog host that is not an http(s) URL never reaches the header: the container refuses to start.
 set +e
 bad=$(timeout 30 docker run --rm --name web-bad --network "$net" --read-only --tmpfs /tmp:uid=101,gid=101 \
