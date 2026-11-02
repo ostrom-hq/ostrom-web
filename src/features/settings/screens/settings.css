@@ -1,0 +1,10 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+.st-name {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+/* The gesture that cannot be undone sits apart, under a red edge. */
+.st-danger {
+  border-color: var(--danger);
+}
