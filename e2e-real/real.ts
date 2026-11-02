@@ -4,7 +4,7 @@
 // console image. Sign-in links are read from the directory the server writes its mails to (OSTROM_MAIL_DIR).
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Browser, expect, type Page, test } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
 
 const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
@@ -88,11 +88,40 @@ export async function callFromPage(
   );
 }
 
-/** A second person's browser: its own cookies, the same console. */
+const others: BrowserContext[] = [];
+
+/**
+ * A second person's browser: its own cookies, the same console on the same device as the project (a Pixel 7 in
+ * `mobile`), traced like the test's own page. A spec that uses it calls `closeOthers` after each test.
+ */
 export async function anotherPerson(browser: Browser): Promise<Page> {
-  const { baseURL } = test.info().project.use;
-  const context = await browser.newContext(baseURL === undefined ? {} : { baseURL });
+  const { baseURL, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, locale } =
+    test.info().project.use;
+  const context = await browser.newContext({
+    ...(baseURL === undefined ? {} : { baseURL }),
+    ...(viewport === undefined ? {} : { viewport }),
+    ...(userAgent === undefined ? {} : { userAgent }),
+    ...(deviceScaleFactor === undefined ? {} : { deviceScaleFactor }),
+    ...(isMobile === undefined ? {} : { isMobile }),
+    ...(hasTouch === undefined ? {} : { hasTouch }),
+    ...(locale === undefined ? {} : { locale }),
+  });
+  await context.tracing.start({ screenshots: true, snapshots: true });
+  others.push(context);
   return context.newPage();
+}
+
+/** Closes the other people's browsers, keeping their traces when the test failed (as `retain-on-failure`). */
+export async function closeOthers(): Promise<void> {
+  const info = test.info();
+  const failed = info.status !== info.expectedStatus;
+  for (const [index, context] of others.splice(0).entries()) {
+    const path = info.outputPath(`other-person-${String(index + 1)}.zip`);
+    await context.tracing.stop(failed ? { path } : {});
+    if (failed)
+      await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
+    await context.close();
+  }
 }
 
 /** A new person signed in with an organization of their own, which they own; returns its id and short name. */
@@ -129,9 +158,4 @@ export async function joinAs(
     token: decodeURIComponent(token ?? ''),
   });
   expect(accepted.status).toBe(200);
-}
-
-/** Whether a call named an organization the person is not in was refused: never answered from that organization. */
-export function refusedOutside(status: number): boolean {
-  return status === 403 || status === 404;
 }

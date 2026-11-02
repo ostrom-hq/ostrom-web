@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
-import { anotherPerson, callFromPage, freshEmail, served, signIn } from './real';
+import { anotherPerson, callFromPage, closeOthers, freshEmail, served, signIn } from './real';
 
 interface Feed {
   readonly items: { readonly summary: string; readonly repo?: string }[];
   readonly next?: string;
 }
+
+// The other people's browsers are closed after each test, their traces kept when it failed.
+test.afterEach(closeOthers);
 
 /** A person with an organization of their own and one accepted workflow, which the feed may show. */
 async function owner(page: Page, who: string, run: string): Promise<string> {
@@ -48,7 +51,6 @@ test('an owner reads their organization’s activity as the server lists it, and
   // Another organization, with its own person and its own workflow.
   const other = await anotherPerson(browser);
   const otherSlug = await owner(other, 'umbra', run);
-  await other.context().close();
   const slug = await owner(page, 'ines', run);
 
   // The screen first, then the API: a line the screen shows was there when the API is read after it.

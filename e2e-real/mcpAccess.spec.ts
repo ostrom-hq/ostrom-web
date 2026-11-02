@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { callFromPage, ownerOfNewOrganization, refusedOutside, served } from './real';
+import { callFromPage, ownerOfNewOrganization, served } from './real';
 
 /** Adds a server through the form, as an owner does, and returns its card. */
 async function addServer(page: Page, name: string): Promise<Locator> {
@@ -102,10 +102,7 @@ test('another organization never sees the first one’s servers, people or polic
     ['PUT', '/api/v1/mcp/servers/vault/assignments/all', {}],
     ['DELETE', '/api/v1/mcp/servers/vault/assignments/all', undefined],
   ] as const) {
-    const answer = await callFromPage(page, method, path, body, ada.id);
-    expect(
-      refusedOutside(answer.status),
-      `${method} ${path} as another organization: ${String(answer.status)}`,
-    ).toBe(true);
+    // 404, as for an organization that does not exist: the answer does not tell that it does.
+    expect((await callFromPage(page, method, path, body, ada.id)).status, `${method} ${path}`).toBe(404);
   }
 });

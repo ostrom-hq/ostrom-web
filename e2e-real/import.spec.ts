@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
-import { anotherPerson, callFromPage, joinAs, ownerOfNewOrganization, refusedOutside, served } from './real';
+import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization, served } from './real';
 
 const EXPORT = {
   members: [{ id: 'tc-1', username: 'ghost' }],
@@ -8,6 +8,9 @@ const EXPORT = {
   assignments: [{ memberId: 'tc-1', serverId: 'v-1' }],
   memberMap: {},
 };
+
+// The other people's browsers are closed after each test, their traces kept when it failed.
+test.afterEach(closeOthers);
 
 async function chooseExport(page: Page): Promise<void> {
   await page.getByLabel('Export file (JSON)').setInputFiles({
@@ -113,11 +116,8 @@ test('another organization’s plan never shows the first one’s import', async
     ['POST', '/api/v1/import/teamcode?cutover=true', EXPORT],
     ['GET', '/api/v1/mcp/servers', undefined],
   ] as const) {
-    const answer = await callFromPage(page, method, path, body, dora.id);
-    expect(
-      refusedOutside(answer.status),
-      `${method} ${path} as another organization: ${String(answer.status)}`,
-    ).toBe(true);
+    // 404, as for an organization that does not exist: the answer does not tell that it does.
+    expect((await callFromPage(page, method, path, body, dora.id)).status, `${method} ${path}`).toBe(404);
   }
 });
 
@@ -144,10 +144,19 @@ test('an admin plans and imports, but the cutover is the owner’s, on screen an
   const cutover = admin.getByRole('region', { name: '3. The cutover' });
   await expect(cutover).toContainText('Only an owner runs the cutover.');
   await expect(cutover.getByRole('button', { name: 'Run the cutover' })).toHaveCount(0);
-  expect((await callFromPage(admin, 'POST', '/api/v1/import/teamcode?cutover=true', EXPORT)).status).toBe(
+  // A server only this refused cutover carries: refused, it is nowhere afterwards.
+  const withMore = {
+    ...EXPORT,
+    mcpServers: [
+      ...EXPORT.mcpServers,
+      { id: 'v-2', target: 'refused-cutover', variant: 'default', url: 'https://mcp.linear.app/mcp' },
+    ],
+  };
+  expect((await callFromPage(admin, 'POST', '/api/v1/import/teamcode?cutover=true', withMore)).status).toBe(
     403,
   );
-  await admin.context().close();
+  const servers = await callFromPage(page, 'GET', '/api/v1/mcp/servers');
+  expect(JSON.stringify(servers.body)).not.toContain('refused-cutover');
 
   const member = await anotherPerson(browser);
   await joinAs(page, org.id, member, 'ines', 'member');
@@ -156,5 +165,4 @@ test('an admin plans and imports, but the cutover is the owner’s, on screen an
   for (const query of ['?dryRun=true', '', '?cutover=true']) {
     expect((await callFromPage(member, 'POST', `/api/v1/import/teamcode${query}`, EXPORT)).status).toBe(403);
   }
-  await member.context().close();
 });
