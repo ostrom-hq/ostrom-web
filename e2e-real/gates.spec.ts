@@ -206,7 +206,7 @@ test('5.4 a member opens another person’s request in the console queue and say
   expect(zVerifyReceiptResponse.parse(verified.body).ok).toBe(true);
   // The decision shows it too, one click from the command that checks it offline (ostrom-server#148).
   await decision.getByText('Verify the receipt').click();
-  await expect(decision).toContainText(`ostrom verify ${receipt.id}`);
+  await expect(decision.getByText(`ostrom verify ${receipt.id}`)).toBeVisible();
 
   // What the hook reads: the gate itself has passed.
   const read = await withToken(token, org, 'GET', `/api/v1/gates/${gate}`);

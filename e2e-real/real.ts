@@ -118,7 +118,18 @@ export async function callFromPage(
     },
     { method, path, body, csrf, org },
   );
-  // Parsed here, not in the page: a proxy's or server's error page keeps its status and text in the failure.
+  // Parsed here, not in the page. A success must be JSON: the callers read fields from it, so a 2xx page of text
+  // fails here, at its cause. A refusal may be a proxy's page of text: it keeps its status and text in the failure.
+  if (answer.status >= 200 && answer.status < 300 && answer.text !== '') {
+    try {
+      const parsed: unknown = JSON.parse(answer.text);
+      return { status: answer.status, body: parsed };
+    } catch {
+      throw new Error(
+        `${method} ${path} answered ${String(answer.status)} with a body that is not JSON: ${answer.text}`,
+      );
+    }
+  }
   return { status: answer.status, body: bodyOf(answer.text) };
 }
 
