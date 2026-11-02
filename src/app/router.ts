@@ -13,6 +13,7 @@ import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { ActivityScreen, activitySearchSchema } from '@/features/activity';
 import { DecisionsScreen } from '@/features/decisions';
 import { GithubScreen, githubSearchSchema } from '@/features/github';
+import { ImportScreen } from '@/features/import';
 import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
 import { MembersScreen } from '@/features/members';
 import { ReceiptScreen, ReceiptsScreen } from '@/features/receipts';
@@ -150,6 +151,11 @@ const secretsRoute = createRoute({
   path: '/secrets',
   component: SecretsScreen,
 });
+const importRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/import',
+  component: ImportScreen,
+});
 const spendRoute = createRoute({ getParentRoute: () => rootRoute, path: '/spend', component: SpendScreen });
 const billingRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -262,6 +268,7 @@ export const routeTree = rootRoute.addChildren([
   workflowRoute,
   mcpRoute,
   secretsRoute,
+  importRoute,
   spendRoute,
   billingRoute,
   settingsRoute,

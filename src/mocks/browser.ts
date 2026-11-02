@@ -1,6 +1,8 @@
 import { setupWorker } from 'msw/browser';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { createHandlers, createMockDb, freshAccount } from '@/mocks/handlers';
+import { setDemoRole } from '@/mocks/orgs';
+import { orgRoleOf } from '@/shared/org/roles';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 
 /* v8 ignore start -- a Service Worker only runs in a real browser: the Playwright build with VITE_MOCKS covers it. */
@@ -9,12 +11,16 @@ import { safeLocalStorage } from '@/shared/lib/safeStorage';
  * fresh account in no organization, with nothing set up yet.
  */
 const MOCK_MEMBERSHIPS_KEY = 'ostrom.mock.memberships';
+/** Set before the demo loads: the demo person's role in Acme (`owner`, `member`…), admin otherwise. */
+const MOCK_ROLE_KEY = 'ostrom.mock.role';
 
 export async function startMocks(): Promise<void> {
   const db = createMockDb();
   const memberships = safeLocalStorage.getItem(MOCK_MEMBERSHIPS_KEY);
   if (memberships === 'two') db.otherOrganizations = [otherOrganization()];
   if (memberships === 'none') freshAccount(db);
+  const role = orgRoleOf(safeLocalStorage.getItem(MOCK_ROLE_KEY) ?? undefined);
+  if (role !== undefined) setDemoRole(db, role);
   const worker = setupWorker(...createHandlers(db));
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true });
 }
