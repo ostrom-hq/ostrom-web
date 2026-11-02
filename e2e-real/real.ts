@@ -35,8 +35,17 @@ function signInToken(email: string): string | undefined {
   return undefined;
 }
 
+/** An address of the benchmarking range (198.18.0.0/15, RFC 2544), new for each person. */
+function addressOfAPerson(): string {
+  const byte = (): number => Math.floor(Math.random() * 254) + 1;
+  return `198.18.${String(byte())}.${String(byte())}`;
+}
+
 /** Signs `email` in through the console: the form, the e-mailed link, the queue. */
 export async function signIn(page: Page, email: string): Promise<void> {
+  // A person's own address: the server allows 10 sign-in links per source in 10 minutes, and every journey runs on
+  // one machine. It believes the header only from a proxy it trusts (`OSTROM_TRUSTED_PROXIES`, console-journey.yml).
+  await page.context().setExtraHTTPHeaders({ 'X-Forwarded-For': addressOfAPerson() });
   // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
   await page.goto('/signin?redirect=%2Fyes');
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
