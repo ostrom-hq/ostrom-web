@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ApproversGraph } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
@@ -18,9 +18,15 @@ import { type PolicyViewModel, useApprovers, useSelfApprovalPolicy } from '../us
 
 function PointRow({
   point,
+  approvers,
+  blocks,
   nameOf,
 }: {
   readonly point: ApprovalPoint;
+  /** Who answers it: the server's reading when it gives one (a node naming nobody may fall back to an approver). */
+  readonly approvers: readonly string[];
+  /** It stops an agent for good, as the warning above says. */
+  readonly blocks: boolean;
   readonly nameOf: (login: string) => string;
 }): ReactElement {
   const { t } = useTranslation();
@@ -33,8 +39,6 @@ function PointRow({
     // The gates decide on the actions they cover: one that covers none stops nothing.
     point.actions.length === 0 ? t('approvers.point.noAction') : undefined,
   ].filter((part) => part !== undefined);
-  // Red only where it blocks for good, as the warning above says: an enforced gate that covers an action.
-  const blocks = point.enforced && point.actions.length > 0;
   return (
     <div className="o-row">
       <span className="o-row__main">
@@ -42,10 +46,10 @@ function PointRow({
         <span className="o-row__meta">{meta.join(' · ')}</span>
         {point.reason === undefined ? null : <span className="o-row__meta">{point.reason}</span>}
       </span>
-      {point.approvers.length === 0 ? (
+      {approvers.length === 0 ? (
         <Badge tone={blocks ? 'danger' : 'neutral'}>{t('approvers.point.nobody')}</Badge>
       ) : (
-        <span className="o-row__meta">{point.approvers.map(nameOf).join(', ')}</span>
+        <span className="o-row__meta">{approvers.map(nameOf).join(', ')}</span>
       )}
     </div>
   );
@@ -157,13 +161,13 @@ function People({
 export function ApproversScreen(): ReactElement {
   const { t } = useTranslation();
   const view = useApprovers();
+  const reading = useMemo(() => (view.graph === undefined ? undefined : readGraph(view.graph)), [view.graph]);
   const policy = useSelfApprovalPolicy();
   return (
     <Screen title={t('approvers.title')} lead={t('approvers.lead')}>
       <LoadState data={view.points} failure={view.failure}>
         {(points) => (
           <>
-            {/* The graph shows with the steps, never before them: the page does not jump. */}
             {view.graph === undefined ? null : <GraphNotes graph={view.graph} />}
             {points.length === 0 ? (
               <p className="o-empty">{t('approvers.empty')}</p>
@@ -175,17 +179,27 @@ export function ApproversScreen(): ReactElement {
                 <ul className="o-card o-rows">
                   {points.map((point) => (
                     <li key={point.key}>
-                      <PointRow point={point} nameOf={view.nameOf} />
+                      <PointRow
+                        point={point}
+                        approvers={reading?.answeredBy.get(point.key) ?? point.approvers}
+                        blocks={reading?.blocked.has(point.key) ?? false}
+                        nameOf={view.nameOf}
+                      />
                     </li>
                   ))}
                 </ul>
               </section>
             )}
             {view.graph === undefined ? null : <People graph={view.graph} nameOf={view.nameOf} />}
+            {view.graphUnavailable ? <p className="o-row__meta">{t('approvers.graphUnavailable')}</p> : null}
+            {view.graphFailure === undefined ? null : (
+              <Banner tone="danger" tag={t('approvers.graphFailedTag')} live>
+                {view.graphFailure.message}
+              </Banner>
+            )}
           </>
         )}
       </LoadState>
-      {view.graphUnavailable ? <p className="o-row__meta">{t('approvers.graphUnavailable')}</p> : null}
       <PolicySection policy={policy} />
     </Screen>
   );

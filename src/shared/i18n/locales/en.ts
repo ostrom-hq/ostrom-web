@@ -352,9 +352,10 @@ export const en = {
       hours: 'from {{hours}}',
       days: 'on {{days}}',
       noAction: 'covers no action, so it stops nothing',
-      proposed: 'proposed, stops nobody yet',
+      proposed: 'proposed, not enforced yet',
     },
     graphUnavailable: 'The server does not say who approves what person by person yet.',
+    graphFailedTag: 'Not loaded',
     policy: {
       title: 'When the asker is an approver',
       label: 'Self-approval',

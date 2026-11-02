@@ -17,11 +17,14 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 
 export interface ApproversViewModel {
+  /** The steps, once the graph has answered too (or failed): the page shows in one piece, nothing pops in after. */
   readonly points: readonly ApprovalPoint[] | undefined;
   /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
   readonly graph: ApproversGraph | undefined;
   /** The server does not serve it (an older server): the steps of the workflows still show. */
   readonly graphUnavailable: boolean;
+  /** Why the graph did not come; the steps still show, with this in place of the notes and the people. */
+  readonly graphFailure: Error | undefined;
   readonly failure: Error | undefined;
   /** A login with the name the organization knows, or the login alone. */
   readonly nameOf: (login: string) => string;
@@ -32,8 +35,9 @@ export function useApprovers(): ApproversViewModel {
   const members = useQuery(ready(listMembersOptions()));
   // Read again on every visit: a workflow changed elsewhere changes who approves what.
   const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));
-  // Only a server without the route says nothing; any other failure is the page's, and no stale graph shows.
+  // A server without the route says nothing; any other failure says why. Neither leaves a stale graph on screen.
   const graphUnavailable = isApiFailure(graph.error) && graph.error.kind === 'not-found';
+  const graphSettled = graph.data !== undefined || graph.isError;
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -50,10 +54,11 @@ export function useApprovers(): ApproversViewModel {
   );
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
-    points,
+    points: graphSettled ? points : undefined,
     graph: graph.isError ? undefined : graph.data,
     graphUnavailable,
-    failure: failureOf(workflows.error ?? (graphUnavailable ? null : graph.error) ?? members.error),
+    graphFailure: graphUnavailable ? undefined : failureOf(graph.error),
+    failure: failureOf(workflows.error ?? members.error),
     nameOf,
   };
 }

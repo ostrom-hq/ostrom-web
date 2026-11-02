@@ -52,7 +52,7 @@ describe('who approves what', () => {
       screen.getByText('No gate covers push-main: an agent does it without asking anyone.'),
     ).toBeInTheDocument();
     // The proposed gate naming nobody says it stops nobody yet, and is not marked as blocking.
-    expect(rows[3]).toHaveTextContent('proposed, stops nobody yet');
+    expect(rows[3]).toHaveTextContent('proposed, not enforced yet');
     expect(within(rows[3] ?? document.body).getByText('Nobody')).not.toHaveClass('o-badge--danger');
   });
 
@@ -251,5 +251,8 @@ describe('who approves what', () => {
     visit('/approvers');
     expect(await screen.findByText('graph is down')).toBeInTheDocument();
     expect(screen.queryByText(/does not say who approves/)).toBeNull();
+    // The steps still show; only what the graph says is missing.
+    expect(within(region('By step')).getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.queryByRole('region', { name: 'By person' })).toBeNull();
   });
 });

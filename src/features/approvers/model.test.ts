@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ApproverGate, Workflow } from '@gen/api/types.gen';
-import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy } from './model';
+import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy, readGraph } from './model';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
   id,
@@ -60,6 +60,23 @@ describe('the server graph, read for people', () => {
       { approver: 'max', gates: [gate('A', true), gate('B', true)] },
     ];
     expect(busiestFirst(lines).map((line) => line.approver)).toEqual(['max', 'amy', 'zoe']);
+  });
+});
+
+describe('readGraph', () => {
+  it('reads who answers each gate as the server resolves it, and which gates block', () => {
+    const deploy = gate('Deploy', true);
+    const reading = readGraph({
+      approvers: [
+        { approver: 'amy', gates: [deploy] },
+        { approver: 'max', gates: [deploy] },
+      ],
+      unanswered: [gate('Drop', true), gate('Seed', false)],
+      ungated: [],
+    });
+    expect(reading.answeredBy.get('w/Deploy')).toEqual(['amy', 'max']);
+    expect(reading.answeredBy.get('w/Drop')).toEqual([]);
+    expect([...reading.blocked]).toEqual(['w/Drop']);
   });
 });
 

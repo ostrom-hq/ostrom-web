@@ -362,9 +362,10 @@ export const fr = {
       hours: 'de {{hours}}',
       days: 'le {{days}}',
       noAction: 'ne couvre aucune action, donc n’arrête rien',
-      proposed: 'proposée, n’arrête encore personne',
+      proposed: 'proposée, pas encore appliquée',
     },
     graphUnavailable: 'Le serveur ne dit pas encore qui approuve quoi, personne par personne.',
+    graphFailedTag: 'Non chargé',
     policy: {
       title: 'Quand le demandeur est approbateur',
       label: 'Auto-approbation',
