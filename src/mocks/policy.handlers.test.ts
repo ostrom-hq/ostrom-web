@@ -70,6 +70,12 @@ describe('the mock agent policy, as the gateway keeps it', () => {
     expect(refused).toEqual([403, 403, 403]);
   });
 
+  it('saves a policy with no default, which it leaves out', async () => {
+    const saved = await setModelPolicy({ body: { allowed: ['claude-'] }, throwOnError: true });
+    expect(saved.data).toEqual({ allowed: ['claude-'] });
+    expect((await getModelPolicy({ throwOnError: true })).data).toEqual({ allowed: ['claude-'] });
+  });
+
   it('saves a policy and the keys, and refuses what the gateway refuses', async () => {
     const saved = await setModelPolicy({
       body: { allowed: ['claude-'], default: 'claude-opus-4-1', byMember: { [MEMBER_IDS.lena]: ['gpt-5'] } },

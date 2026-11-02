@@ -3,6 +3,7 @@ import type { Member, Secret } from '@gen/api/types.gen';
 import {
   addMemberRow,
   allows,
+  defaultModelOf,
   defaultRefusedFor,
   keySecrets,
   listOf,
@@ -129,5 +130,13 @@ describe('the provider keys', () => {
       'A_KEY',
       'Z_KEY',
     ]);
+  });
+});
+
+describe('defaultModelOf', () => {
+  it('reads the default, or nothing while none is set', () => {
+    expect(defaultModelOf({ allowed: ['claude-'], default: 'claude-opus' })).toBe('claude-opus');
+    expect(defaultModelOf({ allowed: ['claude-'] })).toBe('');
+    expect(policyDraftOf({ allowed: ['claude-'] }).defaultModel).toBe('');
   });
 });

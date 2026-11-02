@@ -3,19 +3,11 @@ import { hashKey, QueryClient, QueryClientProvider } from '@tanstack/react-query
 import { RouterProvider } from '@tanstack/react-router';
 import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { z } from 'zod';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
 import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { followOtherTab, useOrgStore } from '@/shared/org/orgStore';
-
-/**
- * `/auth/me`, with or without an organization named: who is signed in does not depend on the organization, and the
- * answer with one named is keyed by it, so it never shows the next organization another one's member. Kept when the
- * organization changes, like the person's list.
- */
-const ME_QUERY = z.tuple([z.object({ _id: z.literal(getMeQueryKey()[0]._id) })]);
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -60,10 +52,8 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
       if (org.generation === previous.generation) return;
       // Another organization has another queue: nothing in it is new because of what the other one showed.
       resetArrivals();
-      const list = hashKey(listMyOrganizationsQueryKey());
-      void queryClient.resetQueries({
-        predicate: (query) => query.queryHash !== list && !ME_QUERY.safeParse(query.queryKey).success,
-      });
+      const kept = new Set([hashKey(getMeQueryKey()), hashKey(listMyOrganizationsQueryKey())]);
+      void queryClient.resetQueries({ predicate: (query) => !kept.has(query.queryHash) });
     });
   }, [queryClient]);
   // A choice made in another tab of the same browser is followed here.
