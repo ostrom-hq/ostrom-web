@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { handleRotateToken } from '@gen/api/msw.gen';
+import { handleRevokeToken, handleRotateToken } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
@@ -109,6 +109,21 @@ describe('the tokens screen', () => {
     await waitFor(() => {
       expect(within(cli ?? document.body).getByRole('button', { name: 'Revoke' })).toBeDisabled();
     });
+  });
+
+  it('holds the tokens while one is being revoked', async () => {
+    const user = userEvent.setup();
+    server.use(handleRevokeToken(async () => delay('infinite')));
+    visit('/tokens');
+    const tokens = await liveTokens();
+    const ci = tokens.find((item) => item.textContent.includes('GitHub Actions'));
+    const row = tokens.find((item) => item.textContent.includes('ostrom on maya-mbp')) ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(row).getByRole('button', { name: 'Revoke ostrom on maya-mbp' }));
+    await waitFor(() => {
+      expect(within(ci ?? document.body).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
+    });
+    expect(screen.queryByRole('textbox', { name: /^Secret of / })).toBeNull();
   });
 
   it('replaces a secret, shown once, and revokes a token', async () => {
