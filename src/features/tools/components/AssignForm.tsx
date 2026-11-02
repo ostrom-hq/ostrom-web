@@ -24,10 +24,12 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
   const [memberId, setMemberId] = useState('');
   const [onlySome, setOnlySome] = useState(false);
   const [tools, setTools] = useState('');
-  const [credential, setCredential] = useState('');
+  // A credential is typed for one member: it is kept with that member and never follows to another.
+  const [typed, setTyped] = useState({ member: '', value: '' });
   const [tried, setTried] = useState(false);
   const ids = { who: useId(), id: useId(), mode: useId(), tools: useId(), credential: useId() };
   const member = who === BY_ID ? memberId : who;
+  const credential = typed.member === member ? typed.value : '';
   const checked = checkAssignment({ member, onlySome, tools, credentialSecret: credential });
   // An invitation not accepted yet has no account to give a server to.
   const candidates = (members ?? []).filter((item) => item.role !== 'invited');
@@ -45,7 +47,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
             setMemberId('');
             setOnlySome(false);
             setTools('');
-            setCredential('');
+            setTyped({ member: '', value: '' });
             setTried(false);
           });
       }}
@@ -60,8 +62,6 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
           value={who}
           onChange={(event) => {
             setWho(event.target.value);
-            // A credential is one member's: another choice starts without the last one's.
-            setCredential('');
           }}
         >
           <option value={EVERYONE}>{t('tools.mcp.access.everyone')}</option>
@@ -137,7 +137,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
             placeholder="LINEAR_TOKEN"
             value={credential}
             onChange={(event) => {
-              setCredential(event.target.value);
+              setTyped({ member, value: event.target.value });
             }}
           />
         </>

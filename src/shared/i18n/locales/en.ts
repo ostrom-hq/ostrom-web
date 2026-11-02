@@ -567,7 +567,7 @@ export const en = {
             noTool: 'Name the tools allowed, or give every tool.',
             tool: '{{detail}} is not a tool name: letters, digits, dots, dashes and underscores.',
             credential:
-              'A personal credential is a secret name: CAPITALS, digits and underscores, starting with a letter.',
+              'A personal credential is a secret name: up to 64 CAPITALS, digits and underscores, starting with a letter.',
             credentialEveryone: 'A personal credential goes to one member, never to everyone.',
           },
         },
