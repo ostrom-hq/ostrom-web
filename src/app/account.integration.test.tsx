@@ -4,10 +4,10 @@ import { ACCOUNT_CHANGED_KEY } from '@/app/App';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { setupMockApp, visit } from '@/test/mockApp';
-import type * as Yes from '@/features/yes';
+import type * as Yes from '@/features/yes/route';
 
 const arrivals = vi.hoisted(() => ({ resets: 0 }));
-vi.mock('@/features/yes', async (original) => {
+vi.mock('@/features/yes/route', async (original) => {
   const real = await original<typeof Yes>();
   return {
     ...real,

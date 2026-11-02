@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
-import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
+import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens';
 import { activitySearchSchema } from '@/features/activity/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
@@ -308,6 +308,8 @@ const buildRouter = (history?: RouterHistory) =>
     defaultPreload: 'intent',
     defaultNotFoundComponent: NotFoundScreen,
     defaultErrorComponent: ErrorScreen,
+    // A screen whose chunk takes more than a second shows the shape of a page, not an empty main area.
+    defaultPendingComponent: PendingScreen,
     ...(history === undefined ? {} : { history }),
   });
 

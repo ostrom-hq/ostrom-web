@@ -40,16 +40,30 @@ function filesOf(manifest: Manifest, key: string, seen = new Set<string>()): Set
   return seen;
 }
 
-/** Each route path of the router with the feature its screen loads from, if it loads lazily. */
-function routesOf(router: string): { path: string; feature: string | undefined }[] {
-  // Each `path:` up to the next one is a route's definition: its screen's lazy import, if any, is in it.
+/**
+ * Each route of the router with the feature its screen loads from. Every route loads its screen lazily: one that does
+ * not would put its screen back in the first download, so it fails here, as does a route this reading cannot follow.
+ */
+function routesOf(router: string): { path: string; feature: string }[] {
+  // Each `path:` up to the next one is a route's definition, its screen's lazy import in it.
   return router
-    .split(/(?=path: ')/)
+    .split(/(?=path: ['"`])/)
     .slice(1)
-    .map((definition) => ({
-      path: /^path: '([^']+)'/.exec(definition)?.[1] ?? '?',
-      feature: /import\('@\/features\/([a-z-]+)'\)/.exec(definition)?.[1],
-    }));
+    .map((definition) => {
+      const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
+      const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
+      if (path === undefined || feature === undefined) {
+        throw new Error(`src/app/router.ts: a route without a lazy screen: ${definition.slice(0, 120)}`);
+      }
+      return { path, feature };
+    });
+}
+
+/** The manifest key of a feature's index, whatever its extension. */
+function indexOf(manifest: Manifest, feature: string): string {
+  const key = Object.keys(manifest).find((name) => name.startsWith(`src/features/${feature}/index.`));
+  if (key === undefined) throw new Error(`manifest: no chunk for the feature ${feature}`);
+  return key;
 }
 
 function main(dist: string): void {
@@ -82,12 +96,9 @@ function main(dist: string): void {
   rows.push(`| (first download) | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
-    const own =
-      route.feature === undefined
-        ? new Set<string>()
-        : new Set(
-            [...filesOf(manifest, `src/features/${route.feature}/index.ts`)].filter((f) => !entry.has(f)),
-          );
+    const own = new Set(
+      [...filesOf(manifest, indexOf(manifest, route.feature))].filter((f) => !entry.has(f)),
+    );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
     rows.push(
