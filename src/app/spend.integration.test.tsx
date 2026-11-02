@@ -193,16 +193,17 @@ describe('the budgets', () => {
 
   it('reads the spending again once a budget is saved, for the meter carries it', async () => {
     const user = userEvent.setup();
-    let reads = 0;
+    db.budgets = [];
+    // The spending carries the organization's budget once the server holds one, as the real server does.
     server.use(
-      http.get('*/api/v1/spending', () => {
-        reads += 1;
-        return HttpResponse.json({
-          ...spendingFor('month'),
+      http.get('*/api/v1/spending', () =>
+        HttpResponse.json({
+          // The week's fixture: it carries no budget of its own.
+          ...spendingFor('week'),
           totalUsd: 10,
-          ...(reads === 1 ? {} : { budgetUsd: 100 }),
-        });
-      }),
+          ...(db.budgets.some((budget) => budget.scope === 'org') ? { budgetUsd: 100 } : {}),
+        }),
+      ),
     );
     visit('/spend');
     expect(
