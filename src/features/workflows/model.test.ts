@@ -293,17 +293,22 @@ describe('the workflow editor’s model', () => {
     expect(nodeOf(step({ label: 'G', kind: 'gate', approvers: '' }))).not.toHaveProperty('approvers');
   });
 
-  it('draws one line through a linear draft, keeping a path’s words while it goes to the same step', () => {
+  it('draws one line through a linear draft, keeping a path’s words and how the workflow ends', () => {
     const draft = workflowDraftOf(line);
+    // The workflow ends by no path at all: so does the line.
     expect(edgesOf(draft, line)).toEqual([
       { from: 'a', to: 'b', label: 'go', on: 'success' },
       { from: 'b', to: 'c' },
-      { from: 'c', to: null },
     ]);
     const swapped = { ...draft, steps: moveStep(draft.steps, 0, 1) };
     expect(edgesOf(swapped, line)).toEqual([
       { from: 'b', to: 'a' },
       { from: 'a', to: 'c' },
+    ]);
+    // One that ends by a path to nowhere keeps it; a new one ends so.
+    const ended = { ...line, edges: [...line.edges, { from: 'c', to: null }] };
+    expect(edgesOf(workflowDraftOf(ended), ended)).toEqual([
+      ...edgesOf(draft, line),
       { from: 'c', to: null },
     ]);
     expect(edgesOf(workflowDraftOf(undefined), undefined)).toEqual([{ from: 'n-1', to: null }]);
@@ -311,9 +316,38 @@ describe('the workflow editor’s model', () => {
     expect(edgesOf(branching, line)).toBe(line.edges);
   });
 
+  it('keeps each step’s place in the list and the start the workflow named, or did not', () => {
+    const now = '2026-11-02T00:00:00.000Z';
+    const plain: Workflow = {
+      id: line.id,
+      name: line.name,
+      domain: line.domain,
+      status: line.status,
+      foundAt: line.foundAt,
+      nodes: [0, 2, 1].flatMap((at) => {
+        const node = line.nodes[at];
+        return node === undefined ? [] : [node];
+      }),
+      edges: line.edges,
+    };
+    const draft = workflowDraftOf(plain);
+    const saved = workflowOf({ ...draft, steps: [...draft.steps, newStep(draft.steps)] }, plain, 'w', now);
+    expect(draft.linear).toBe(true);
+    expect(saved.nodes.map((node) => node.id)).toEqual(['a', 'c', 'b', 'n-4']);
+    expect(saved).not.toHaveProperty('start');
+    // Moved to the front, another step names the start.
+    const second = draft.steps[1];
+    if (second === undefined) throw new Error('two steps');
+    expect(
+      workflowOf({ ...draft, steps: moveStep(draft.steps, second.key, -1) }, plain, 'w', now).start,
+    ).toBe(second.id);
+  });
+
   it('makes an id from the name that no workflow has', () => {
     expect(workflowIdFor('Déploiement — prod!', [])).toBe('wf-deploiement-prod');
     expect(workflowIdFor('  ', ['wf-workflow', 'wf-workflow-2'])).toBe('wf-workflow-3');
+    // Cut at 48 characters, never on a dash.
+    expect(workflowIdFor(`${'a'.repeat(47)} b`, [])).toBe(`wf-${'a'.repeat(47)}`);
   });
 
   it('writes the workflow a draft says, with its status as a person decided it', () => {
@@ -339,11 +373,13 @@ describe('the workflow editor’s model', () => {
     expect(edited).not.toHaveProperty('description');
     expect(edited.foundAt).toBe('2026-10-01T00:00:00.000Z');
     const proposed = { ...line, status: 'proposed' as const, sources: [{ kind: 'file', ref: 'a.yml' }] };
-    expect(workflowOf(workflowDraftOf(proposed), proposed, 'w', now)).toMatchObject({
+    expect(workflowOf({ ...workflowDraftOf(proposed), name: 'W2' }, proposed, 'w', now)).toMatchObject({
       status: 'edited',
       sources: [{ kind: 'file', ref: 'a.yml' }],
       description: 'Old',
     });
+    // Saved unchanged, a proposed workflow is accepted as found.
+    expect(workflowOf(workflowDraftOf(proposed), proposed, 'w', now).status).toBe('accepted');
     // A workflow that branches keeps where it starts.
     const branching = { ...workflowDraftOf(line), linear: false, steps: [] };
     expect(workflowOf(branching, line, 'w', now).start).toBe('a');

@@ -279,7 +279,10 @@ export function nodeOf(step: StepDraft): WorkflowNode {
  */
 export function edgesOf(draft: WorkflowDraft, base: Workflow | undefined): WorkflowEdge[] {
   if (!draft.linear && base !== undefined) return base.edges;
-  return draft.steps.map((step, at) => {
+  // The last step ends the way the workflow wrote it: by a path to nowhere, or by no path at all.
+  const endsByPath = base === undefined || base.edges.some((edge) => edge.to === null);
+  const steps = endsByPath ? draft.steps : draft.steps.slice(0, -1);
+  return steps.map((step, at) => {
     const to = draft.steps[at + 1]?.id ?? null;
     const before = base?.edges.find((edge) => edge.from === step.id && edge.to === to);
     return {
@@ -291,6 +294,19 @@ export function edgesOf(draft: WorkflowDraft, base: Workflow | undefined): Workf
   });
 }
 
+/** Whether two values read the same, whatever the order of their keys; an absent key and an undefined one are alike. */
+export function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((item: unknown, at) => sameValue(item, b[at]));
+  }
+  if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    return [...keys].every((key) => sameValue(Reflect.get(a, key), Reflect.get(b, key)));
+  }
+  return a === b;
+}
+
 /** An id for a new workflow from its name, that no workflow of the organization has. */
 export function workflowIdFor(name: string, taken: readonly string[]): string {
   const slug = name
@@ -298,8 +314,8 @@ export function workflowIdFor(name: string, taken: readonly string[]): string {
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 48);
+    .slice(0, 48)
+    .replace(/^-|-$/g, '');
   const stem = `wf-${slug === '' ? 'workflow' : slug}`;
   let id = stem;
   for (let number = 2; taken.includes(id); number += 1) id = `${stem}-${String(number)}`;
@@ -308,7 +324,7 @@ export function workflowIdFor(name: string, taken: readonly string[]): string {
 
 /**
  * The workflow a draft says. A new one is accepted as it is written (a person in the console decides); a proposed one
- * that a person edits is accepted with changes; an accepted one stays as it was called.
+ * that a person saves is accepted, with changes when it has some; an accepted one stays as it was called.
  */
 export function workflowOf(
   draft: WorkflowDraft,
@@ -317,17 +333,50 @@ export function workflowOf(
   now: string,
 ): Workflow {
   const description = textOf(draft.description);
+  const first = draft.steps[0]?.id;
+  // A workflow that names no start begins where its reading begins: it names one only once that changes.
+  const start =
+    !draft.linear || (base !== undefined && base.start === undefined && first === readSteps(base)[0]?.node.id)
+      ? base?.start
+      : first;
+  // The steps keep their place in the workflow's list (its order is the paths'); a new one comes after.
+  const place = (id: string): number => {
+    const at = base?.nodes.findIndex((node) => node.id === id) ?? -1;
+    return at < 0 ? Number.MAX_SAFE_INTEGER : at;
+  };
+  const nodes = draft.steps
+    .map((step, at) => ({ node: nodeOf(step), at }))
+    .sort((a, b) => {
+      const byPlace = place(a.node.id) - place(b.node.id);
+      return byPlace === 0 ? a.at - b.at : byPlace;
+    })
+    .map(({ node }) => node);
+  const edges = edgesOf(draft, base);
+  const name = draft.name.trim();
+  const domain = draft.domain.trim();
+  // As a rule is: a proposed workflow saved unchanged is accepted as found, and accepted with changes otherwise.
+  const changed =
+    base === undefined ||
+    !sameValue(
+      [name, domain, description, start, nodes, edges],
+      [base.name, base.domain, base.description, base.start, base.nodes, base.edges],
+    );
   const status: WorkflowStatus =
-    base === undefined ? 'accepted' : base.status === 'proposed' ? 'edited' : base.status;
-  const start = draft.linear ? draft.steps[0]?.id : base?.start;
+    base === undefined
+      ? 'accepted'
+      : base.status === 'proposed'
+        ? changed
+          ? 'edited'
+          : 'accepted'
+        : base.status;
   return {
     id,
-    name: draft.name.trim(),
-    domain: draft.domain.trim(),
+    name,
+    domain,
     ...(description === undefined ? {} : { description }),
     ...(base?.version === undefined ? {} : { version: base.version }),
-    nodes: draft.steps.map(nodeOf),
-    edges: edgesOf(draft, base),
+    nodes,
+    edges,
     ...(start === undefined ? {} : { start }),
     ...(base?.inputs === undefined ? {} : { inputs: base.inputs }),
     ...(base?.sources === undefined ? {} : { sources: base.sources }),

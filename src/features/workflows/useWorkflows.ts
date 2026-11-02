@@ -40,10 +40,12 @@ export function useWorkflow(id: string): WorkflowViewModel {
   return { workflow: query.data, failure: failureOf(query.error), canChange: viewer.canManage };
 }
 
-/** One change to a workflow: a creation, a save (from the version the editor read) or a deletion. */
+/** One change to a workflow: a creation, a save (from the version the editor read), an acceptance or a deletion. */
 export type WorkflowChange =
   | { readonly kind: 'create'; readonly workflow: Workflow }
   | { readonly kind: 'save'; readonly workflow: Workflow; readonly expectedVersion: number | undefined }
+  /** A proposed workflow accepted as found: a save of its status alone. */
+  | { readonly kind: 'accept'; readonly workflow: Workflow; readonly expectedVersion: number | undefined }
   | { readonly kind: 'delete'; readonly id: string };
 
 export interface WorkflowChangeViewModel {
@@ -51,6 +53,8 @@ export interface WorkflowChangeViewModel {
   readonly change: (change: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => void;
   readonly pending: WorkflowChange['kind'] | undefined;
   readonly failure: Error | undefined;
+  /** What the failed change was: its failure says what to do next accordingly. */
+  readonly failed: WorkflowChange['kind'] | undefined;
   /** Forgets the last failure, when the person starts over. */
   readonly reset: () => void;
 }
@@ -60,6 +64,7 @@ async function send(change: WorkflowChange): Promise<Workflow | undefined> {
     case 'create':
       return (await createWorkflow({ body: change.workflow, throwOnError: true })).data;
     case 'save':
+    case 'accept':
       return (
         await saveWorkflow({
           path: { id: change.workflow.id },
@@ -81,22 +86,22 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
   const mutation = useMutation({
     mutationFn: send,
     // Whatever the answer, the list and the workflow are read again: a conflict shows the version saved in between.
-    onSettled: async (_saved, _error, change) => {
+    onSettled: async (_saved, error, change) => {
       const id = change.kind === 'delete' ? change.id : change.workflow.id;
-      // A deleted workflow is gone: its screen is left, never read again.
-      if (change.kind === 'delete')
-        queryClient.removeQueries({ queryKey: getWorkflowQueryKey({ path: { id } }) });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: listWorkflowsQueryKey() }),
-        change.kind === 'delete'
-          ? Promise.resolve()
-          : queryClient.invalidateQueries({ queryKey: getWorkflowQueryKey({ path: { id } }) }),
+        // A deleted workflow is only marked stale: its screen is being left, and reading it again would flash a 404.
+        queryClient.invalidateQueries({
+          queryKey: getWorkflowQueryKey({ path: { id } }),
+          ...(change.kind === 'delete' && error === null ? { refetchType: 'none' } : {}),
+        }),
         queryClient.invalidateQueries({ queryKey: listDecisionsQueryKey() }),
         // The catalogue holds the actions of the workflows' gates.
         queryClient.invalidateQueries({ queryKey: getGateCatalogQueryKey() }),
       ]);
     },
   });
+
   const { mutate, reset } = mutation;
   const change = useCallback(
     (next: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => {
@@ -108,6 +113,7 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
     change,
     pending: mutation.isPending ? mutation.variables.kind : undefined,
     failure: failureOf(mutation.error),
+    failed: mutation.isError ? mutation.variables.kind : undefined,
     reset,
   };
 }

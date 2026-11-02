@@ -19,9 +19,9 @@ export function WorkflowScreen(): ReactElement {
   const { workflowId } = useParams({ from: '/workflows/$workflowId' });
   const { workflow, failure, canChange } = useWorkflow(workflowId);
   const changes = useWorkflowChange();
-  // The version the editor started from: a save is checked against it, so a version saved in between is a conflict,
-  // never overwritten, even once the screen has read it.
-  const [editing, setEditing] = useState<{ readonly from: number | undefined } | undefined>(undefined);
+  // The workflow the editor started from: its draft is drawn from it, a save is built on it and checked against its
+  // version, so a version saved in between is a conflict, never overwritten nor mixed in, even once the screen read it.
+  const [editing, setEditing] = useState<Workflow | undefined>(undefined);
   return (
     <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (
@@ -38,18 +38,18 @@ export function WorkflowScreen(): ReactElement {
           lead={workflow.description}
         >
           {changes.failure === undefined ? null : (
-            <WorkflowFailure failure={changes.failure} creating={false} />
+            <WorkflowFailure failure={changes.failure} change={changes.failed} />
           )}
           {editing !== undefined ? (
             <WorkflowEditor
-              workflow={workflow}
+              workflow={editing}
               saving={changes.pending === 'save'}
               onSave={(draft) => {
                 changes.change(
                   {
                     kind: 'save',
-                    workflow: workflowOf(draft, workflow, workflow.id, new Date().toISOString()),
-                    expectedVersion: editing.from,
+                    workflow: workflowOf(draft, editing, editing.id, new Date().toISOString()),
+                    expectedVersion: editing.version,
                   },
                   () => {
                     setEditing(undefined);
@@ -69,7 +69,7 @@ export function WorkflowScreen(): ReactElement {
                   changes={changes}
                   onEdit={() => {
                     changes.reset();
-                    setEditing({ from: workflow.version });
+                    setEditing(workflow);
                   }}
                 />
               ) : (
@@ -108,7 +108,7 @@ function WorkflowActions({
           onClick={() => {
             changes.change(
               {
-                kind: 'save',
+                kind: 'accept',
                 workflow: { ...workflow, status: 'accepted' },
                 expectedVersion: workflow.version,
               },
@@ -116,7 +116,7 @@ function WorkflowActions({
             );
           }}
         >
-          {changes.pending === 'save' ? t('workflows.actions.accepting') : t('workflows.actions.accept')}
+          {changes.pending === 'accept' ? t('workflows.actions.accepting') : t('workflows.actions.accept')}
         </Button>
       ) : null}
       <ConfirmButton

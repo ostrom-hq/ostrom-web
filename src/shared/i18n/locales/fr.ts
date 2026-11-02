@@ -683,7 +683,6 @@ export const fr = {
       saveAccept: 'Enregistrer et accepter',
       saving: 'Enregistrement…',
       cancel: 'Annuler',
-      saved: 'Workflow enregistré.',
       createConflict:
         'Un autre workflow a pris cet id entre-temps : crée à nouveau et celui-ci aura le sien.',
       conflict:
@@ -698,6 +697,9 @@ export const fr = {
       deleteLead: 'Les agents cessent de le suivre, et ses portes quittent le catalogue.',
       keep: 'Le garder',
       deleting: 'Suppression…',
+      inUse: 'Quelque chose l’utilise encore : il se supprime quand plus rien ne l’utilise.',
+      acceptConflict:
+        'Quelqu’un l’a modifié entre-temps : sa version enregistrée est affichée, décide à nouveau.',
       errorTag: 'Non enregistré',
       readOnly: 'Les propriétaires et les admins modifient les workflows.',
     },

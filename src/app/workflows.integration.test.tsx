@@ -305,6 +305,89 @@ describe('changing the workflows', () => {
     expect(db.decisions[0]).toMatchObject({ action: 'delete', subject: { id: 'wf-migrations' } });
   });
 
+  it('says a deletion something still uses, and an acceptance someone changed in between, and keeps the screen', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete(
+        '*/api/v1/workflows/:id',
+        () =>
+          HttpResponse.json(
+            {
+              error: {
+                type: 'conflict',
+                message: 'workflow_in_use: a pinned package compiles this workflow.',
+              },
+            },
+            { status: 409 },
+          ),
+        { once: true },
+      ),
+    );
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete this workflow' }));
+    expect(
+      await screen.findByText(
+        'workflow_in_use: a pinned package compiles this workflow. Something still uses it: it is deleted once nothing does.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Database migrations' })).toBeInTheDocument();
+    const current = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
+    if (current === undefined) throw new Error('wf-migrations');
+    db.workflows = db.workflows.map((workflow) =>
+      workflow.id === 'wf-migrations' ? { ...current, version: 2 } : workflow,
+    );
+    server.use(
+      http.put(
+        '*/api/v1/workflows/:id',
+        () =>
+          HttpResponse.json(
+            {
+              error: {
+                type: 'conflict',
+                message: 'workflow_conflict: someone saved this workflow in between.',
+              },
+            },
+            { status: 409 },
+          ),
+        { once: true },
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Accept' }));
+    expect(
+      await screen.findByText(
+        /someone saved this workflow in between\. Someone changed it in between: its saved version/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('accepts a proposed workflow saved unchanged as found', async () => {
+    const user = userEvent.setup();
+    const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
+    if (base === undefined) throw new Error('wf-migrations');
+    db.workflows = db.workflows.map((workflow) =>
+      workflow.id === 'wf-migrations'
+        ? { ...base, edges: [...base.edges, { from: 'm-orphan', to: null }] }
+        : workflow,
+    );
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Save and accept' }));
+    expect(await screen.findByText('Accepted')).toBeInTheDocument();
+    expect(db.decisions[0]).toMatchObject({ action: 'accept', subject: { id: 'wf-migrations' } });
+  });
+
+  it('signs nothing for a save that changes no decided part', async () => {
+    const user = userEvent.setup();
+    const before = db.decisions.length;
+    visit('/workflows/wf-backend');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    await user.type(screen.getByLabelText('What it is for'), ' Read it first.');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText(/Read it first\./)).toBeInTheDocument();
+    expect(db.decisions).toHaveLength(before);
+  });
+
   it('says what is being sent while the server answers', async () => {
     const user = userEvent.setup();
     server.use(http.put('*/api/v1/workflows/:id', never), http.delete('*/api/v1/workflows/:id', never));

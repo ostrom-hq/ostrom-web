@@ -166,6 +166,7 @@ import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mo
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
+import { sameValue } from '@/features/workflows/model';
 
 export interface MockDb
   extends
@@ -1176,12 +1177,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(409, 'conflict', 'workflow_conflict: someone saved this workflow in between.');
       const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
       db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
-      recordWorkflowDecision(
-        db,
-        workflow,
-        current.status === 'proposed' && workflow.status === 'accepted' ? 'accept' : 'edit',
-        at,
-      );
+      // As the server: a decision is signed only when something decided changed (steps, paths, status, name).
+      const decided = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
+      if (!sameValue(decided(current), decided(workflow)))
+        recordWorkflowDecision(
+          db,
+          workflow,
+          current.status === 'proposed' && workflow.status === 'accepted' ? 'accept' : 'edit',
+          at,
+        );
       return HttpResponse.json(workflow);
     }),
     handleDeleteWorkflow(({ params }) => {

@@ -31,7 +31,7 @@ export function NewWorkflowScreen(): ReactElement {
           canChange ? (
             <>
               {changes.failure === undefined ? null : (
-                <WorkflowFailure failure={changes.failure} creating={true} />
+                <WorkflowFailure failure={changes.failure} change={changes.failed} />
               )}
               <WorkflowEditor
                 workflow={undefined}
