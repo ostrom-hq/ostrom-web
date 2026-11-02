@@ -22,7 +22,13 @@ export function SignOutNotice(): ReactElement | null {
           <Button onClick={signOut} disabled={signingOut}>
             {signingOut ? t('yes.signout.going') : t('yes.signout.go')}
           </Button>
-          <Button variant="ghost" onClick={stay} disabled={signingOut}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void stay();
+            }}
+            disabled={signingOut}
+          >
             {t('yes.signout.stay')}
           </Button>
         </span>

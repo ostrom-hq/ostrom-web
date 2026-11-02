@@ -10,7 +10,7 @@ import { type AppRouter, createAppRouter } from '@/app/router';
 import { FRESH_SIGN_IN_MS, resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { resetArrivals, useSignOutAsk } from '@/features/yes';
+import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 
 const { server, db } = createMockServer();
@@ -26,7 +26,6 @@ beforeAll(() => {
   configureApiClient({ baseUrl: 'http://ostrom.test' });
 });
 afterEach(() => {
-  useSignOutAsk.getState().drop();
   server.resetHandlers();
   resetMockDb(db);
   useAuthStore.setState({ link: undefined, notice: undefined });
@@ -240,9 +239,8 @@ describe('the queue', () => {
       }),
     );
     const generation = useAuthStore.getState().generation;
-    const router = visit('/yes?signout');
+    visit('/yes?signout');
     expect(await screen.findByText(/Sign out of Ostrom on this browser\?/)).toBeInTheDocument();
-    expect(router.state.location.searchStr).toBe('');
     expect(calls).toBe(0);
     expect(db.signedIn).toBe(true);
     expect(useAuthStore.getState().generation).toBe(generation);
@@ -257,7 +255,33 @@ describe('the queue', () => {
       expect(useAuthStore.getState().generation).toBe(generation + 1);
     });
     expect(db.signedIn).toBe(false);
-    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    });
+  });
+
+  it('asks nothing of a browser nobody is signed in on', async () => {
+    db.signedIn = false;
+    let asked = 0;
+    server.use(
+      http.get('*/api/v1/auth/me', () => {
+        asked += 1;
+      }),
+    );
+    visit('/yes?signout');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    await vi.waitFor(() => {
+      expect(asked).toBeGreaterThan(0);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/Sign out of Ostrom on this browser\?/)).toBeNull();
+  });
+
+  it('takes a sign-in link and the question together, and loses neither', async () => {
+    const router = visit('/yes?signout#signin=opk_test_12345678');
+    expect(await screen.findByText(/Sign out of Ostrom on this browser\?/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(router.state.location.hash).toBe('');
   });
 
   it('says it signs out while the server ends the session', async () => {
@@ -269,10 +293,13 @@ describe('the queue', () => {
     expect(screen.getByRole('button', { name: 'Stay signed in' })).toBeDisabled();
   });
 
-  it('stays signed in when asked to', async () => {
+  it('stays signed in when asked to, and the question goes with the address', async () => {
     const user = userEvent.setup();
-    visit('/yes?signout');
+    const router = visit('/yes?signout');
     await user.click(await screen.findByRole('button', { name: 'Stay signed in' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.searchStr).toBe('');
+    });
     expect(screen.queryByText(/Sign out of Ostrom on this browser\?/)).toBeNull();
     expect(db.signedIn).toBe(true);
   });

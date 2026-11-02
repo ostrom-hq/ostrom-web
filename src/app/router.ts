@@ -28,7 +28,7 @@ import { BillingScreen } from '@/features/billing';
 import { PolicyScreen } from '@/features/policy';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { NewWorkflowScreen, WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
-import { ApprovalScreen, useSignOutAsk, YesQueueScreen } from '@/features/yes';
+import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
@@ -69,13 +69,18 @@ const yesRoute = createRoute({
   validateSearch: yesSearchSchema,
   beforeLoad: ({ search, location }) => {
     const signin = signInFromHash(location.hash);
-    // Asked, never done: a page of another site can open this address (audit AUDIT-SECU-WEB-2 M2).
-    if (search.signout === true) useSignOutAsk.getState().ask();
-    else if (signin !== undefined) {
+    if (signin !== undefined) {
       dropFragment();
       useAuthStore.getState().offer(signin);
     } else if (search.signin === undefined) return;
-    throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
+    // `?signout` stays in the address: the queue asks from it, and nothing is ended before a yes (audit
+    // AUDIT-SECU-WEB-2 M2: a page of another site can open this address).
+    throw redirect({
+      to: '/yes',
+      search: search.signout === true ? { signout: true } : {},
+      hash: '',
+      replace: true,
+    });
   },
   component: YesQueueScreen,
 });
