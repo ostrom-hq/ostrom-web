@@ -104,6 +104,12 @@ describe('the mock automation writes, as the server answers them', () => {
       },
     });
     expect(
+      (await send('POST', '', { name: 'P', trigger: { kind: 'cron' }, action: { agent: 'codex' } })).body,
+    ).toMatchObject({ error: { message: 'The prompt has 1 to 32000 characters.' } });
+    expect(
+      (await send('POST', '', { name: 'P', trigger: { kind: 'cron' }, action: { prompt: ' ' } })).status,
+    ).toBe(400);
+    expect(
       (await send('POST', '', { name: 'O', trigger: { kind: 'cron' }, action: prompt, overlap: 'queue' }))
         .body,
     ).toMatchObject({ error: { message: 'overlap is skip or allow.' } });

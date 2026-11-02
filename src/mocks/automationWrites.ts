@@ -18,15 +18,19 @@ const WEBHOOK_BASE = 'https://api.ostrom.run/api/v1/automations';
 
 /**
  * The server's checks that the console's form does not make itself (`AutomationRules`, `AutomationRequest`): a
- * workflow action, an unknown overlap. The rest the form already refuses; the server says it again in its own words.
+ * workflow action, a blank prompt, an unknown overlap. The rest the form already refuses; the server says it again in
+ * its own words. Gives the prompt it checked, or the refusal.
  */
-function refusalOf(write: Write): HttpResponse<ApiError> | undefined {
+function promptOrRefusal(write: Write): string | HttpResponse<ApiError> {
   if (write.action.workflowId !== undefined)
     return refusal(
       400,
       'invalid_request',
       'Workflow actions are not available yet: give the action a prompt.',
     );
+  const { prompt } = write.action;
+  if (prompt === undefined || prompt.trim() === '')
+    return refusal(400, 'invalid_request', 'The prompt has 1 to 32000 characters.');
   if (write.overlap !== undefined && write.overlap !== 'skip' && write.overlap !== 'allow')
     return refusal(400, 'invalid_request', 'overlap is skip or allow.');
   if (
@@ -34,14 +38,14 @@ function refusalOf(write: Write): HttpResponse<ApiError> | undefined {
     (write.trigger.cron !== undefined || write.trigger.timezone !== undefined)
   )
     return refusal(400, 'invalid_request', 'A webhook trigger has no cron nor timezone.');
-  return undefined;
+  return prompt;
 }
 
 /** The server's defaults where a write is silent; the parsed body's absent fields stay absent. */
-function definitionOf(write: Write): Pick<
-  Automation,
-  'name' | 'trigger' | 'action' | 'variables' | 'overlap' | 'maxRunsPerDay'
-> & {
+function definitionOf(
+  write: Write,
+  prompt: string,
+): Pick<Automation, 'name' | 'trigger' | 'action' | 'variables' | 'overlap' | 'maxRunsPerDay'> & {
   samplePayload?: unknown;
 } {
   const { trigger, action } = write;
@@ -55,7 +59,7 @@ function definitionOf(write: Write): Pick<
     },
     action: {
       agent: action.agent ?? 'claude',
-      prompt: action.prompt ?? '',
+      prompt,
       ...(action.model === undefined ? {} : { model: action.model }),
       maxRuntimeMinutes: action.maxRuntimeMinutes ?? 60,
     },
@@ -88,8 +92,8 @@ export function createAutomationWriteHandlers(
     handleCreateAutomation(async ({ request }) => {
       const body = zAutomationWrite.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a name, a trigger and an action are needed');
-      const refused = refusalOf(body.data);
-      if (refused !== undefined) return refused;
+      const prompt = promptOrRefusal(body.data);
+      if (typeof prompt !== 'string') return prompt;
       const s = state();
       const at = now().toISOString();
       const id = `au-${String(s.automations.length + 100)}`;
@@ -98,7 +102,7 @@ export function createAutomationWriteHandlers(
         id,
         owner,
         enabled: false,
-        ...definitionOf(body.data),
+        ...definitionOf(body.data, prompt),
         ...(webhook ? { webhookUrl: `${WEBHOOK_BASE}/${id}/trigger` } : {}),
         version: 1,
         createdAt: at,
@@ -123,8 +127,8 @@ export function createAutomationWriteHandlers(
         return refusal(400, 'invalid_request', 'A change gives the version it read.');
       if (body.data.version !== current.version)
         return refusal(409, 'conflict', 'The automation changed since you read it: reload it and try again.');
-      const refused = refusalOf(body.data);
-      if (refused !== undefined) return refused;
+      const prompt = promptOrRefusal(body.data);
+      if (typeof prompt !== 'string') return prompt;
       const webhook = body.data.trigger.kind === 'webhook';
       // A sample or a webhook address the new definition does not have is gone with the old one.
       const kept: Automation = { ...current };
@@ -132,7 +136,7 @@ export function createAutomationWriteHandlers(
       delete kept.webhookUrl;
       const saved: Automation = {
         ...kept,
-        ...definitionOf(body.data),
+        ...definitionOf(body.data, prompt),
         ...(webhook ? { webhookUrl: `${WEBHOOK_BASE}/${current.id}/trigger` } : {}),
         version: current.version + 1,
         updatedAt: now().toISOString(),
