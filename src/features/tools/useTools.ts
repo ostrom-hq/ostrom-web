@@ -20,6 +20,8 @@ import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
+import { managesMembers } from '@/shared/org/roles';
+import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 
 export interface McpViewModel {
   readonly servers: readonly McpServer[] | undefined;
@@ -36,7 +38,8 @@ export function useMcp(): McpViewModel {
   const secrets = useQuery(ready(listSecretsOptions()));
   const usage = useQuery(ready(getMcpUsageOptions()));
   const calls = useQuery(ready(listMcpCallsOptions()));
-  const viewer = useViewer();
+  // The role in the organization the calls act in, from the person's own list: `/auth/me` may not carry it.
+  const { role } = useCurrentOrg();
   return {
     servers: servers.data?.items,
     secrets: secrets.data?.items,
@@ -44,7 +47,7 @@ export function useMcp(): McpViewModel {
     calls: calls.data?.items,
     // Missing secrets or usage would read as "nothing missing" and "0 calls": any failed part is said.
     failure: failureOf(servers.error ?? secrets.error ?? usage.error ?? calls.error),
-    canManage: viewer.canManage,
+    canManage: managesMembers(role),
   };
 }
 

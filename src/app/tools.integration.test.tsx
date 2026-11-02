@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { setDemoRole } from '@/mocks/orgs';
 
 const { server, db } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
@@ -13,6 +14,7 @@ const never = async (): Promise<undefined> => {
 };
 
 function asMember(): void {
+  setDemoRole(db, 'member');
   db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
   server.use(
     http.get('*/api/v1/auth/me', () =>

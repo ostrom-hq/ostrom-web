@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { McpServer, Secret } from '@gen/api/types.gen';
-import { checkServer, isHttpsUrl, isTransport, missingSecrets, parseNames } from './model';
+import type { McpAssignment, McpServer, Member, Secret } from '@gen/api/types.gen';
+import {
+  AGENT_PREFIX,
+  agentToolName,
+  type AssignmentDraft,
+  checkAssignment,
+  checkPolicy,
+  checkServer,
+  EVERYONE,
+  isConditionOperator,
+  isHttpsUrl,
+  isPolicyEffect,
+  isToolName,
+  isTransport,
+  memberLabel,
+  missingSecrets,
+  parseNames,
+  type PolicyDraft,
+  sortAssignments,
+  takesValue,
+} from './model';
 
 describe('isHttpsUrl', () => {
   it('accepts https only', () => {
@@ -40,7 +59,7 @@ describe('checkServer', () => {
         transport: 'sse',
         secretNames: ['LINEAR_TOKEN'],
         enabled: true,
-        scope: 'org',
+        scope: 'shared',
       },
     });
   });
@@ -67,5 +86,120 @@ describe('missingSecrets', () => {
     expect(missingSecrets(server, secrets)).toEqual(['LACK']);
     const bare: McpServer = { name: 'b', url: 'https://b', transport: 'http', enabled: true, scope: 'org' };
     expect(missingSecrets(bare, secrets)).toEqual([]);
+  });
+});
+
+describe('the agent prefix', () => {
+  it('is 1 to 32 of a-z 0-9 _ -, starting with a letter or a digit', () => {
+    expect(['ostrom', 'a', '9-x_y', 'a'.repeat(32)].every((value) => AGENT_PREFIX.test(value))).toBe(true);
+    expect(['', '-a', 'Acme', 'a b', 'a'.repeat(33)].some((value) => AGENT_PREFIX.test(value))).toBe(false);
+  });
+
+  it('names a tool as agents see it, dots turned to underscores', () => {
+    expect(agentToolName('ostrom', 'linear')).toBe('mcp__ostrom-linear__<tool>');
+    expect(agentToolName('acme', 'mcp.dev')).toBe('mcp__acme-mcp_dev__<tool>');
+  });
+});
+
+describe('checkPolicy', () => {
+  const draft: PolicyDraft = { tool: ' create_issue ', effect: 'DENY', message: ' No. ', conditions: [] };
+
+  it('sends a policy with its conditions, without a value for the tests that take none', () => {
+    expect(
+      checkPolicy({
+        ...draft,
+        conditions: [
+          { path: ' query ', operator: 'CONTAINS', value: 'DROP' },
+          { path: 'options.database', operator: 'EXISTS', value: 'ignored' },
+        ],
+      }),
+    ).toEqual({
+      request: {
+        tool: 'create_issue',
+        effect: 'DENY',
+        message: 'No.',
+        conditions: [
+          { path: 'query', operator: 'CONTAINS', value: 'DROP' },
+          { path: 'options.database', operator: 'EXISTS' },
+        ],
+      },
+    });
+    expect(checkPolicy({ ...draft, tool: '*' })).toEqual({
+      request: { tool: '*', effect: 'DENY', message: 'No.', conditions: [] },
+    });
+  });
+
+  it('says the first problem in the order the form reads', () => {
+    expect(checkPolicy({ ...draft, tool: 'a b' })).toEqual({ problem: 'tool' });
+    expect(checkPolicy({ ...draft, message: '  ' })).toEqual({ problem: 'message' });
+    expect(checkPolicy({ ...draft, message: 'x'.repeat(501) })).toEqual({ problem: 'message' });
+    expect(checkPolicy({ ...draft, conditions: [{ path: ' ', operator: 'ABSENT', value: '' }] })).toEqual({
+      problem: 'path',
+    });
+    expect(checkPolicy({ ...draft, conditions: [{ path: 'q', operator: 'EQUALS', value: '' }] })).toEqual({
+      problem: 'value',
+    });
+  });
+
+  it('knows the operators and the effects', () => {
+    expect([isConditionOperator('MATCHES'), isConditionOperator('LIKE')]).toEqual([true, false]);
+    expect([takesValue('PREFIX'), takesValue('EXISTS'), takesValue('ABSENT')]).toEqual([true, false, false]);
+    expect([isPolicyEffect('REQUIRE_APPROVAL'), isPolicyEffect('ALLOW')]).toEqual([true, false]);
+    expect([isToolName('list_issues'), isToolName('*'), isToolName('')]).toEqual([true, false, false]);
+  });
+});
+
+describe('checkAssignment', () => {
+  const draft: AssignmentDraft = {
+    member: EVERYONE,
+    onlySome: false,
+    tools: 'ignored',
+    credentialSecret: '',
+  };
+
+  it('gives every tool, an allowlist, or none at all', () => {
+    expect(checkAssignment(draft)).toEqual({ member: 'all', request: {} });
+    expect(checkAssignment({ ...draft, onlySome: true, tools: 'a, b a' })).toEqual({
+      member: 'all',
+      request: { tools: ['a', 'b'] },
+    });
+    expect(checkAssignment({ ...draft, onlySome: true, tools: '' })).toEqual({
+      member: 'all',
+      request: { tools: [] },
+    });
+  });
+
+  it('gives one member their own credential, never everyone', () => {
+    expect(checkAssignment({ ...draft, member: ' m-1 ', credentialSecret: ' MY_TOKEN ' })).toEqual({
+      member: 'm-1',
+      request: { credentialSecret: 'MY_TOKEN' },
+    });
+    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({ problem: 'credential' });
+    expect(checkAssignment({ ...draft, member: 'm-1', credentialSecret: 'lower' })).toEqual({
+      problem: 'credential',
+    });
+  });
+
+  it('says whom it lacks and which tool is wrong', () => {
+    expect(checkAssignment({ ...draft, member: ' ' })).toEqual({ problem: 'member' });
+    expect(checkAssignment({ ...draft, onlySome: true, tools: 'ok, a/b' })).toEqual({
+      problem: 'tool',
+      detail: 'a/b',
+    });
+  });
+});
+
+describe('sortAssignments and memberLabel', () => {
+  it('puts everyone first', () => {
+    const one: McpAssignment = { server: 's', member: 'm', assignedAt: 'x' };
+    const all: McpAssignment = { server: 's', assignedAt: 'y' };
+    expect(sortAssignments([one, all])).toEqual([all, one]);
+  });
+
+  it('names a member by name and login, or login alone', () => {
+    const member: Member = { id: 'm', login: 'theo', avatarUrl: '', role: 'member' };
+    expect(memberLabel(member)).toBe('theo');
+    expect(memberLabel({ ...member, name: '' })).toBe('theo');
+    expect(memberLabel({ ...member, name: 'Theo B' })).toBe('Theo B (theo)');
   });
 });
