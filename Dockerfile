@@ -7,7 +7,12 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm build && find dist -name '*.map' -delete
+# Scripts, styles and SVG images compressed once, at build (nginx's gzip_static serves them), never at each request:
+# no name nor date in the .gz (-n), so one commit gives one image; a gzip that fails fails the build (`+`), and each
+# .gz is checked whole before it ships.
+RUN pnpm build && find dist -name '*.map' -delete \
+ && find dist/assets -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' \) \
+      -exec sh -c 'for f; do gzip -9 -n -c "$f" > "$f.gz" && gzip -t "$f.gz" || exit 1; done' _ {} +
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
 USER root
