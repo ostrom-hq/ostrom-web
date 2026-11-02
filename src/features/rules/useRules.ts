@@ -52,23 +52,23 @@ export interface RuleDecisionViewModel {
   readonly decide: (id: string, change: RuleChange, onSaved?: () => void) => void;
   /** Whether a decision or an edit of this rule is on its way; several rules may be at once. */
   readonly saving: (id: string) => boolean;
-  /** Why the last refused decision was refused. */
-  readonly failure: Error | undefined;
+  /** Why this rule's last decision or edit was refused, until the next one for this rule. */
+  readonly failure: (id: string) => Error | undefined;
 }
 
 export function useRuleDecision(): RuleDecisionViewModel {
   const invalidate = useInvalidate();
   const { mutateAsync } = useMutation({ ...updateRuleMutation(), onSettled: invalidate });
-  // Each save keeps its own answer: one mutation observer would only remember the last one sent.
+  // Each save keeps its own answer, by rule: one mutation observer would only remember the last one sent.
   const [pending, setPending] = useState<readonly string[]>([]);
-  const [failure, setFailure] = useState<Error | undefined>(undefined);
+  const [failures, setFailures] = useState<ReadonlyMap<string, unknown>>(new Map());
   const decide = useCallback(
     (id: string, change: RuleChange, onSaved?: () => void) => {
-      setFailure(undefined);
+      setFailures((current) => new Map([...current].filter(([failed]) => failed !== id)));
       setPending((ids) => [...ids, id]);
       mutateAsync({ path: { id }, body: change })
         .then(onSaved, (error: unknown) => {
-          setFailure(failureOf(error));
+          setFailures((current) => new Map([...current, [id, error]]));
         })
         .finally(() => {
           setPending((ids) => ids.filter((pendingId) => pendingId !== id));
@@ -77,6 +77,7 @@ export function useRuleDecision(): RuleDecisionViewModel {
     [mutateAsync],
   );
   const saving = useCallback((id: string) => pending.includes(id), [pending]);
+  const failure = useCallback((id: string) => failureOf(failures.get(id)), [failures]);
   return { decide, saving, failure };
 }
 
@@ -150,7 +151,8 @@ export function useDeleteRule(): DeleteRuleViewModel {
     remove,
     deleting: mutation.isPending ? mutation.variables.path.id : undefined,
     deleted: mutation.isSuccess,
-    dismiss: mutation.reset,
+    // A delete on its way keeps its answer: only a settled one is forgotten.
+    dismiss: mutation.isPending ? () => undefined : mutation.reset,
     failure: failureOf(mutation.error),
   };
 }

@@ -5,9 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
+import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { editOf, isAccepted, percent, type RuleChange } from '../model';
+import { editOf, isAccepted, phaseOf, percent, type RuleChange } from '../model';
 import { RuleForm } from './RuleForm';
 
 export interface RuleCardProps {
@@ -19,15 +20,18 @@ export interface RuleCardProps {
   /** Deletes the rule; offered only with the decisions. */
   readonly onDelete: () => void;
   readonly saving: boolean;
+  /** Why the last decision or edit of this rule was refused. */
+  readonly failure: Error | undefined;
 }
 
 /** A rule with its evidence, then the decision: accept what is true, fix what is close, reject the rest. */
-export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardProps): ReactElement {
+export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: RuleCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   // The rule as it stood when its editor opened: a save sends what changed since then, never an older value.
   const [editing, setEditing] = useState<Rule | undefined>(undefined);
-  // Decided elsewhere while the editor was open: the editor closes rather than decide it a second time.
-  if (editing !== undefined && editing.status !== rule.status) setEditing(undefined);
+  // Decided elsewhere while the editor was open (accepted, rejected or reopened; a fix keeps it accepted): the editor
+  // closes rather than decide it a second time.
+  if (editing !== undefined && phaseOf(editing) !== phaseOf(rule)) setEditing(undefined);
   const accepted = isAccepted(rule);
   return (
     // Named by the statement itself, which the editor replaces on screen while it is open.
@@ -115,6 +119,11 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
             when: formatAbsolute(rule.decidedAt, i18n.language),
           })}
         </p>
+      )}
+      {failure === undefined ? null : (
+        <Banner tone="danger" tag={t('rules.errorTag')} live>
+          {failure.message}
+        </Banner>
       )}
       {onDecide === undefined || editing !== undefined ? null : (
         <div className="o-inline">

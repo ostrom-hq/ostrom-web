@@ -165,15 +165,27 @@ describe('the rules', () => {
   it('says when a decision is refused', async () => {
     const user = userEvent.setup();
     server.use(
-      http.patch('*/api/v1/rules/:id', () =>
-        HttpResponse.json({ error: { type: 'forbidden', message: 'owners only' } }, { status: 403 }),
+      http.patch(
+        '*/api/v1/rules/:id',
+        () => HttpResponse.json({ error: { type: 'forbidden', message: 'owners only' } }, { status: 403 }),
+        { once: true },
       ),
     );
     visit('/rules');
     await user.click(
       within(await findCard(/one review from an owner/)).getByRole('button', { name: 'Accept' }),
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent('owners only');
+    const review = card(/one review from an owner/);
+    expect(await within(review).findByRole('alert')).toHaveTextContent('owners only');
+    // The refusal is said on its rule only.
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    // Tried again, the refusal goes.
+    await user.click(within(review).getByRole('button', { name: 'Accept' }));
+    // Accepted, it leaves what is to review, and no refusal is left behind.
+    await waitFor(() => {
+      expect(screen.queryByText(/one review from an owner/)).toBeNull();
+    });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('accepts every sure proposal in one gesture', async () => {
@@ -430,6 +442,24 @@ describe('writing and gating rules', () => {
     ]);
   });
 
+  it('waits for a word being composed before adding the action', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [] })));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    const form = newRule();
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'What it does' }), 'gate');
+    const gate = within(form).getByRole('group', { name: 'Gate' });
+    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), '部署');
+    const commands = within(gate).getByRole('textbox', { name: 'Its commands' });
+    await user.type(commands, 'kubectl apply');
+    // The Enter that ends a composition picks the word; it does not add the action.
+    fireEvent.keyDown(commands, { key: 'Enter', isComposing: true });
+    expect(within(gate).queryByRole('checkbox', { name: /部署/ })).toBeNull();
+    fireEvent.keyDown(commands, { key: 'Enter' });
+    expect(within(gate).getByRole('checkbox', { name: /部署/ })).toBeChecked();
+  });
+
   it('says when the catalogue fails', async () => {
     const user = userEvent.setup();
     server.use(
@@ -574,6 +604,22 @@ describe('writing and gating rules', () => {
     expect(within(review).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
   });
 
+  it('keeps the editor of an accepted rule open when it is edited elsewhere', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'All 4' }));
+    const migrations = card(/Migrations run only/);
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    // Someone else rewords it: still accepted, now edited.
+    const rule = db.rules.find((one) => one.id === 'R-7');
+    if (rule === undefined) throw new Error('no R-7');
+    rule.status = 'edited';
+    rule.statement = 'Migrations run only after a yes from a release owner.';
+    await user.click(within(card(/one review from an owner/)).getByRole('button', { name: 'Reject' }));
+    expect(await within(card(/one review from an owner/)).findByText(/Rejected by maya/)).toBeInTheDocument();
+    expect(within(migrations).getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
   it('says why a save was refused, and keeps its editor open', async () => {
     const user = userEvent.setup();
     server.use(
@@ -615,6 +661,27 @@ describe('writing and gating rules', () => {
     // Once the person moves on, the banner goes.
     await user.click(screen.getByRole('button', { name: 'All 3' }));
     expect(screen.queryByText('Rule deleted.')).toBeNull();
+  });
+
+  it('keeps the answer of a delete still on its way when the person moves on', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.delete('*/api/v1/rules/:id', async () => {
+        await held;
+        return undefined;
+      }),
+    );
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Delete' }));
+    await user.click(within(tests).getByRole('button', { name: 'Delete this rule' }));
+    await user.click(screen.getByRole('button', { name: /^All/ }));
+    release();
+    expect(await screen.findByText('Rule deleted.')).toBeInTheDocument();
   });
 
   it('says when a rule cannot be deleted', async () => {

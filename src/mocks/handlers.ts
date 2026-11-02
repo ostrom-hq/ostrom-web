@@ -652,7 +652,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...(gate === undefined || gate === null ? {} : { gate: ruleGateOf(gate) }),
       };
       if (gate === null) delete edits.gate;
-      const status = body.data.status ?? (statement === undefined ? rule.status : 'edited');
+      // New words accept a rule as fixed, unless it was rejected: a rejected rule reworded stays rejected.
+      const status =
+        body.data.status ?? (statement === undefined || rule.status === 'rejected' ? rule.status : 'edited');
       const next = status === rule.status ? edits : decided(edits, status, at);
       db.rules[index] = next;
       // A new strength alone is no new decision; new words, a new place or a new gate are.

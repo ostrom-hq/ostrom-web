@@ -63,7 +63,8 @@ function GateFields({
         };
   // Enter in these two fields adds the action; it never sends the whole rule.
   const onEnter = (event: KeyboardEvent<HTMLInputElement>): void => {
-    if (event.key !== 'Enter') return;
+    // Enter that confirms an input method's candidate (Japanese, Chinese…) is still typing.
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
     event.preventDefault();
     add?.();
   };

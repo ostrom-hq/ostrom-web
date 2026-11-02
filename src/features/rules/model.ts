@@ -10,6 +10,12 @@ export function isAccepted(rule: Rule): boolean {
   return rule.status === 'accepted' || rule.status === 'edited';
 }
 
+/** Where a rule stands: still to decide, accepted (as is or fixed), or rejected. */
+export function phaseOf(rule: Rule): 'proposed' | 'accepted' | 'rejected' {
+  if (rule.status === 'proposed' || rule.status === 'rejected') return rule.status;
+  return 'accepted';
+}
+
 export function matches(rule: Rule, filter: RuleFilter): boolean {
   switch (filter) {
     case 'todo':
@@ -218,17 +224,17 @@ export function addCheck(checks: readonly CheckDraft[]): CheckDraft[] {
   return [...checks, { key, check: '', attested: false }];
 }
 
-/** "Déployer en prod" → "deployer-en-prod": the class of an action written by hand, accents dropped. */
+/**
+ * "Déployer en prod" → "deployer-en-prod": the class of an action written by hand. Accents are dropped; letters and
+ * digits of any script are kept, so two labels that differ by a word of another script stay two actions.
+ */
 export function actionClass(label: string): string {
-  const ascii = label
+  return label
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\p{M}/gu, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-|-$/g, '');
-  if (ascii !== '' || label.trim() === '') return ascii;
-  // A label in another script keeps a class of its own, from its characters.
-  return `action-${Array.from(label.trim(), (char) => char.charCodeAt(0).toString(36)).join('')}`;
 }
 
 /**
@@ -254,19 +260,20 @@ export function listOfCommands(text: string): string[] {
   ];
 }
 
-/** Every action the form offers: the catalogue's, the rule's own, then those written here. */
+/**
+ * Every action the form offers: the catalogue's, the rule's own, then those written here. An action written here keeps
+ * the commands the person typed, even when the catalogue later brings the same class with others.
+ */
 export function offeredActions(
   catalog: readonly GateAction[],
   rule: Rule | undefined,
   draft: RuleDraft,
 ): GateAction[] {
-  const offered = gateActions(catalog, rule);
-  const known = new Set(offered.map((action) => action.class));
   const repos = listOf(draft.scope);
-  return [
-    ...offered,
-    ...draft.extra.filter((action) => !known.has(action.class)).map((action) => ({ ...action, repos })),
-  ];
+  const written = new Map(draft.extra.map((action) => [action.class, { ...action, repos }]));
+  const offered = gateActions(catalog, rule).map((action) => written.get(action.class) ?? action);
+  const known = new Set(offered.map((action) => action.class));
+  return [...offered, ...[...written.values()].filter((action) => !known.has(action.class))];
 }
 
 /**

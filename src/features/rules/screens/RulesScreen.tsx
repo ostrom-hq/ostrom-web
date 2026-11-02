@@ -79,11 +79,6 @@ export function RulesScreen(): ReactElement {
           />
         </section>
       ) : null}
-      {decision.failure === undefined ? null : (
-        <Banner tone="danger" tag={t('rules.errorTag')} live>
-          {decision.failure.message}
-        </Banner>
-      )}
       {bulk.failure === undefined ? null : (
         <Banner tone="danger" tag={t('rules.errorTag')} live>
           {bulk.failure.message}
@@ -138,6 +133,7 @@ export function RulesScreen(): ReactElement {
                         rule={rule}
                         groups={groups}
                         saving={decision.saving(rule.id) || removal.deleting === rule.id}
+                        failure={decision.failure(rule.id)}
                         onDelete={() => {
                           removal.remove(rule.id);
                         }}

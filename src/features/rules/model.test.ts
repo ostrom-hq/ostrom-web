@@ -143,7 +143,9 @@ describe('a rule draft', () => {
   it('writes an action by hand, its commands kept whole, held on the rule repositories when saved', () => {
     expect(actionClass('  Run a Migration! ')).toBe('run-a-migration');
     expect(actionClass('Déployer en prod')).toBe('deployer-en-prod');
-    expect(actionClass('部署')).toBe('action-smgp6a');
+    expect(actionClass('部署')).toBe('部署');
+    expect(actionClass('Déployer 生产')).not.toBe(actionClass('Déployer 测试'));
+    expect(actionClass('Straße')).toBe('straße');
     expect(actionClass('  ')).toBe('');
     expect(customAction('Run a migration', 'flyway migrate,\n rails db:migrate, flyway migrate')).toEqual({
       class: 'run-a-migration',
@@ -156,7 +158,14 @@ describe('a rule draft', () => {
     expect(customAction('Push', ' , ')).toBeUndefined();
     const push = { class: 'push', label: 'Push', patterns: ['git push'], repos: [] };
     const draft = { ...draftOf(rule), scope: 'acme/web', extra: [push, deploy] };
-    expect(offeredActions([merge], rule, draft)).toEqual([merge, deploy, { ...push, repos: ['acme/web'] }]);
+    expect(offeredActions([merge], rule, draft)).toEqual([
+      merge,
+      { ...deploy, repos: ['acme/web'] },
+      { ...push, repos: ['acme/web'] },
+    ]);
+    // Written here, an action keeps its commands when the catalogue brings the same class with others.
+    const typed = { class: 'merge-main', label: 'Merge', patterns: ['git merge'], repos: [] };
+    expect(offeredActions([merge], undefined, { ...draftOf(), extra: [typed] })).toEqual([typed]);
   });
 
   it('accepts a proposed rule as it saves, fixed or not, and sends nothing for an unchanged decided one', () => {

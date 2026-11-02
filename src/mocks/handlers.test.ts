@@ -471,6 +471,14 @@ describe('mock rules and decisions', () => {
     });
     expect(again.data.status).toBe('edited');
     expect(db.decisions).toHaveLength(before + 2);
+    // A rejected rule reworded stays rejected: rewording is not accepting.
+    const rejected = await updateRule({
+      path: { id: 'R-9' },
+      body: { statement: 'Commit messages are in English.' },
+      throwOnError: true,
+    });
+    expect(rejected.data.status).toBe('rejected');
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-9' }, action: 'rejected' });
   });
 
   it('refuses an unknown rule, a bad change, and someone who does not decide', async () => {
