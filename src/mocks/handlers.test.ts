@@ -630,7 +630,7 @@ describe('mock MCP servers and secrets', () => {
         rotateSecret({ path: { name: 'NOPE' }, body: { name: 'NOPE', value: 'x' }, throwOnError: true }),
       ),
     ).toBe(404);
-    expect((await listSecrets({ throwOnError: true })).data.items).toHaveLength(4);
+    expect((await listSecrets({ throwOnError: true })).data.items).toHaveLength(5);
   });
 
   it('refuses to delete a secret an MCP server uses, or one that does not exist', async () => {
