@@ -1,0 +1,130 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+import type { ActivityItem } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
+import { type FormEvent, type ReactElement, useId, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatUsd } from '@/shared/lib/money';
+import { formatAbsolute } from '@/shared/lib/time';
+import { Badge } from '@/shared/ui/Badge';
+import { Banner } from '@/shared/ui/Banner';
+import { Button } from '@/shared/ui/Button';
+import { LoadState, Screen } from '@/shared/ui/Screen';
+import { knownKind, linkOf, toneOf } from '../model';
+import { useActivity } from '../useActivity';
+
+function ActivityRow({ item }: { readonly item: ActivityItem }): ReactElement {
+  const { t, i18n } = useTranslation();
+  const kind = knownKind(item.kind);
+  const meta = [
+    item.actor.kind === 'agent' || item.actor.kind === 'person'
+      ? t(`activity.actor.${item.actor.kind}`, { name: item.actor.name })
+      : item.actor.name,
+    item.repo,
+    item.costUsd === undefined ? undefined : formatUsd(item.costUsd, i18n.language),
+    formatAbsolute(item.at, i18n.language),
+  ].filter((part) => part !== undefined);
+  const body = (
+    <>
+      <span className="o-row__main">
+        {/* The server words the line, in English: the contract gives no subject to word it here. */}
+        <span className="o-row__title">{item.summary}</span>
+        <span className="o-row__meta">{meta.join(' · ')}</span>
+      </span>
+      {/* A kind the console does not know yet is shown as the server wrote it. */}
+      <Badge tone={toneOf(kind)}>{kind === undefined ? item.kind : t(`activity.kind.${kind}`)}</Badge>
+    </>
+  );
+  const link = linkOf(item);
+  if (link === undefined) return <div className="o-row">{body}</div>;
+  // Two branches with the same markup: the router types `to` and `params` together, one route at a time.
+  return link.to === '/yes/$approvalId' ? (
+    <Link className="o-row" to={link.to} params={link.params}>
+      {body}
+    </Link>
+  ) : (
+    <Link className="o-row" to={link.to} params={link.params}>
+      {body}
+    </Link>
+  );
+}
+
+/** What happened in the organization, newest first: sessions, requests and their answers, workflow changes. */
+export function ActivityScreen(): ReactElement {
+  const { t } = useTranslation();
+  const inputId = useId();
+  const [typed, setTyped] = useState('');
+  const [repo, setRepo] = useState('');
+  const view = useActivity(repo);
+  const filter = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    setRepo(typed.trim());
+  };
+  return (
+    <Screen title={t('activity.title')} lead={t('activity.lead')}>
+      {view.unavailable ? (
+        <Banner tone="info" tag={t('activity.unavailableTag')}>
+          {t('activity.unavailable')}
+        </Banner>
+      ) : (
+        <>
+          <form className="o-inline" onSubmit={filter} role="search" aria-label={t('activity.filter.label')}>
+            <label htmlFor={inputId} className="o-field-label">
+              {t('activity.filter.repo')}
+            </label>
+            <input
+              id={inputId}
+              className="o-input o-mono"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="acme/web"
+              value={typed}
+              onChange={(event) => {
+                setTyped(event.target.value);
+              }}
+            />
+            <Button type="submit">{t('activity.filter.apply')}</Button>
+            {repo === '' ? null : (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setTyped('');
+                  setRepo('');
+                }}
+              >
+                {t('activity.filter.clear')}
+              </Button>
+            )}
+          </form>
+          {repo === '' ? null : <p className="o-row__meta">{t('activity.filter.note', { repo })}</p>}
+          <LoadState data={view.items} failure={view.failure}>
+            {(items) =>
+              items.length === 0 ? (
+                <p className="o-empty">
+                  {repo === '' ? t('activity.empty') : t('activity.emptyRepo', { repo })}
+                </p>
+              ) : (
+                <ul className="o-card o-rows">
+                  {items.map((item) => (
+                    <li key={item.id}>
+                      <ActivityRow item={item} />
+                    </li>
+                  ))}
+                </ul>
+              )
+            }
+          </LoadState>
+          {view.moreFailure === undefined ? null : (
+            <Banner tone="warning" tag={t('app.failure.tag')} live>
+              {view.moreFailure.message}
+            </Banner>
+          )}
+          {view.more ? (
+            <Button disabled={view.loadingMore} onClick={view.loadMore}>
+              {view.loadingMore ? t('activity.loadingMore') : t('activity.more')}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </Screen>
+  );
+}

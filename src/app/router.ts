@@ -10,6 +10,7 @@ import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
+import { ActivityScreen } from '@/features/activity';
 import { DecisionsScreen } from '@/features/decisions';
 import { GithubScreen, githubSearchSchema } from '@/features/github';
 import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
@@ -122,6 +123,11 @@ const approversRoute = createRoute({
   component: ApproversScreen,
 });
 const rulesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rules', component: RulesScreen });
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/activity',
+  component: ActivityScreen,
+});
 const decisionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/decisions',
@@ -249,6 +255,7 @@ export const routeTree = rootRoute.addChildren([
   githubRoute,
   approversRoute,
   rulesRoute,
+  activityRoute,
   decisionsRoute,
   workflowsRoute,
   workflowRoute,
