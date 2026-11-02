@@ -9,6 +9,15 @@ map $http_upgrade $ostrom_connection {
 # $ostrom_csp_connect_extra: the PostHog origin the CSP's connect-src allows, or nothing (40-ostrom-config.sh).
 include /var/run/ostrom/csp.conf;
 
+# $ostrom_from_trusted_proxy: 1 when the client is a proxy of OSTROM_TRUSTED_PROXIES (40-ostrom-config.sh). Only such a
+# proxy says which scheme the browser used, and only http or https; any other client gets nginx's own (audit B5).
+include /var/run/ostrom/proxies.conf;
+map "$ostrom_from_trusted_proxy:$http_x_forwarded_proto" $ostrom_forwarded_proto {
+    default  $scheme;
+    "1:https" https;
+    "1:http"  http;
+}
+
 server {
     listen 8080;
     listen [::]:8080;
@@ -39,7 +48,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto $ostrom_forwarded_proto;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $ostrom_connection;
         proxy_buffering off;

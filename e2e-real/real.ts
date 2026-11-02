@@ -35,13 +35,38 @@ function signInToken(email: string): string | undefined {
   return undefined;
 }
 
+// The people of this run so far: each gets the next address.
+let people = 0;
+
+/**
+ * An address of its own for one person, in 10.0.0.0/8: unique in the run and the same from one run to the next. The
+ * server limits e-mailed sign-in links per source address (10 every 15 minutes, `RequestMagicLinkUseCaseImpl`), and
+ * every journey reaches it from the same machine: each person then reads as their own network, as people do. The
+ * server believes `X-Forwarded-For` only from a trusted proxy (`OSTROM_TRUSTED_PROXIES`: the runner's loopback, from
+ * which `vite preview` proxies /api, in ostrom-server's `console-journey.yml`); elsewhere it is ignored.
+ */
+function addressOfAPerson(): string {
+  people += 1;
+  return `10.${String((people >> 16) & 255)}.${String((people >> 8) & 255)}.${String(people & 255)}`;
+}
+
 /** Signs `email` in through the console: the form, the e-mailed link, the queue. */
 export async function signIn(page: Page, email: string): Promise<void> {
+  // Every request of this person's browser, the console's calls through the proxy and `page.request` included, comes
+  // from their own address.
+  await page.context().setExtraHTTPHeaders({ 'X-Forwarded-For': addressOfAPerson() });
   // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
   await page.goto('/signin?redirect=%2Fyes');
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
-  await expect(page.getByRole('alert')).toContainText(`If ${email} may sign in, a link is on its way.`);
+  const said = page.getByRole('alert');
+  await expect(said).not.toHaveText('');
+  // The server counts every journey as one source: its trusted proxies do not include this runner's loopback.
+  if ((await said.textContent())?.includes('Too many attempts') === true)
+    throw new Error(
+      'The server limits sign-ins from this runner: give its loopback to OSTROM_TRUSTED_PROXIES (console-journey.yml).',
+    );
+  await expect(said).toContainText(`If ${email} may sign in, a link is on its way.`);
   let token: string | undefined;
   await expect
     .poll(() => {
