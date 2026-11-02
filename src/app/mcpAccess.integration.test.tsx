@@ -192,7 +192,9 @@ describe('who may use a server', () => {
     await user.type(within(form).getByRole('textbox', { name: /Allowed tools/ }), 'search_issues');
     await user.type(within(form).getByRole('textbox', { name: /Their own credential/ }), 'samir_key');
     await user.click(within(form).getByRole('button', { name: 'Give access' }));
-    expect(within(form).getByRole('alert')).toHaveTextContent('A personal credential is a secret name');
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      'A personal credential is a secret name: CAPITALS, digits and underscores, starting with a letter.',
+    );
     await user.clear(within(form).getByRole('textbox', { name: /Their own credential/ }));
     await user.type(within(form).getByRole('textbox', { name: /Their own credential/ }), 'SAMIR_KEY');
     await user.click(within(form).getByRole('button', { name: 'Give access' }));
@@ -224,6 +226,13 @@ describe('who may use a server', () => {
       'Samir Haddad (samir)',
     );
     await user.type(within(form).getByRole('textbox', { name: /Their own credential/ }), 'SAMIR_KEY');
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'Give it to' }), 'Everyone');
+    await user.selectOptions(
+      within(form).getByRole('combobox', { name: 'Give it to' }),
+      'Samir Haddad (samir)',
+    );
+    // Another choice starts without the last one's credential.
+    expect(within(form).getByRole('textbox', { name: /Their own credential/ })).toHaveValue('');
     await user.selectOptions(within(form).getByRole('combobox', { name: 'Give it to' }), 'Everyone');
     await user.click(within(form).getByRole('button', { name: 'Give access' }));
     expect(await within(card).findByRole('list', { name: 'Who may use sentry' })).toHaveTextContent(
@@ -259,6 +268,14 @@ describe('who may use a server', () => {
     await user.selectOptions(within(form).getByRole('combobox', { name: 'Give it to' }), 'A member, by id…');
     await user.click(within(form).getByRole('button', { name: 'Give access' }));
     expect(within(form).getByRole('alert')).toHaveTextContent('Say whom to give it to');
+    await user.type(within(form).getByRole('textbox', { name: 'Member id' }), 'all');
+    await user.type(within(form).getByRole('textbox', { name: /Their own credential/ }), 'MAYA_KEY');
+    await user.click(within(form).getByRole('button', { name: 'Give access' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      'A personal credential goes to one member, never to everyone.',
+    );
+    await user.clear(within(form).getByRole('textbox', { name: /Their own credential/ }));
+    await user.clear(within(form).getByRole('textbox', { name: 'Member id' }));
     await user.type(within(form).getByRole('textbox', { name: 'Member id' }), 'nobody-1');
     await user.click(within(form).getByRole('button', { name: 'Give access' }));
     expect(await within(card).findByText('member not found')).toBeInTheDocument();

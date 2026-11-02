@@ -579,7 +579,8 @@ export const fr = {
             noTool: 'Nomme les outils permis, ou donne tous les outils.',
             tool: '{{detail}} n’est pas un nom d’outil : lettres, chiffres, points, tirets et tirets bas.',
             credential:
-              'Un identifiant personnel est un nom de secret en MAJUSCULES, et va à un membre, jamais à tout le monde.',
+              'Un identifiant personnel est un nom de secret : MAJUSCULES, chiffres et tirets bas, commençant par une lettre.',
+            credentialEveryone: 'Un identifiant personnel va à un membre, jamais à tout le monde.',
           },
         },
         policy: {

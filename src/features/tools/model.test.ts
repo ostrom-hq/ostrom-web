@@ -186,7 +186,9 @@ describe('checkAssignment', () => {
       member: 'm-1',
       request: { credentialSecret: 'MY_TOKEN' },
     });
-    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({ problem: 'credential' });
+    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({
+      problem: 'credentialEveryone',
+    });
     expect(checkAssignment({ ...draft, member: 'm-1', credentialSecret: 'lower' })).toEqual({
       problem: 'credential',
     });

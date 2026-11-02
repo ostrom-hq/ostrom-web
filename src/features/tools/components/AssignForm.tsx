@@ -28,13 +28,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
   const [tried, setTried] = useState(false);
   const ids = { who: useId(), id: useId(), mode: useId(), tools: useId(), credential: useId() };
   const member = who === BY_ID ? memberId : who;
-  // The credential field is hidden for everyone: what it held then is not sent.
-  const checked = checkAssignment({
-    member,
-    onlySome,
-    tools,
-    credentialSecret: who === EVERYONE ? '' : credential,
-  });
+  const checked = checkAssignment({ member, onlySome, tools, credentialSecret: credential });
   // An invitation not accepted yet has no account to give a server to.
   const candidates = (members ?? []).filter((item) => item.role !== 'invited');
   return (
@@ -66,6 +60,8 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
           value={who}
           onChange={(event) => {
             setWho(event.target.value);
+            // A credential is one member's: another choice starts without the last one's.
+            setCredential('');
           }}
         >
           <option value={EVERYONE}>{t('tools.mcp.access.everyone')}</option>

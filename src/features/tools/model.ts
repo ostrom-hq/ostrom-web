@@ -165,7 +165,7 @@ export interface AssignmentDraft {
   readonly credentialSecret: string;
 }
 
-export type AssignmentDraftProblem = 'member' | 'noTool' | 'tool' | 'credential';
+export type AssignmentDraftProblem = 'member' | 'noTool' | 'tool' | 'credential' | 'credentialEveryone';
 
 /** What stops the assignment from being sent, or the member and the request to send. */
 export function checkAssignment(
@@ -187,7 +187,8 @@ export function checkAssignment(
   const credential = draft.credentialSecret.trim();
   if (credential !== '') {
     // A personal credential belongs to one member: the server refuses it with `all`.
-    if (member === EVERYONE || !SECRET_NAME.test(credential)) return { problem: 'credential' };
+    if (member === EVERYONE) return { problem: 'credentialEveryone' };
+    if (!SECRET_NAME.test(credential)) return { problem: 'credential' };
     request.credentialSecret = credential;
   }
   return { member, request };
