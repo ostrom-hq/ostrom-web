@@ -28,7 +28,7 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
   // version, so a version saved in between is a conflict, never overwritten nor mixed in, even once the screen read it.
   const [editing, setEditing] = useState<Workflow | undefined>(undefined);
   // Deleted: its screen is left for the list; nothing of it is drawn again, its buttons least of all.
-  if (changes.deleted) return <Navigate to="/workflows" />;
+  if (changes.deleted) return <Navigate to="/workflows" replace />;
   return (
     <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (

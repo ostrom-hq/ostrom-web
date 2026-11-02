@@ -1160,7 +1160,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const at = new Date().toISOString();
       const workflow = savedWorkflow(sent, 1, at);
       db.workflows.push(workflow);
-      recordWorkflowDecision(db, workflow, 'create', at);
+      // As the server's `changeOf`: nothing before, so the decision is an edit.
+      recordWorkflowDecision(db, workflow, 'edit', at);
       return HttpResponse.json(workflow, { status: 201 });
     }),
     handleSaveWorkflow(async ({ request, params }) => {

@@ -153,7 +153,7 @@ describe('changing the workflows', () => {
       start: 'n-1',
     });
     expect(db.decisions[0]).toMatchObject({
-      action: 'create',
+      action: 'edit',
       subject: { kind: 'workflow', id: 'wf-release-train' },
     });
   });
