@@ -25,6 +25,7 @@ import { EmailLinkScreen, fragmentValue, SignInScreen, useEmailLinkStore } from 
 import { SpendScreen } from '@/features/spend';
 import { TokensScreen } from '@/features/tokens';
 import { BillingScreen } from '@/features/billing';
+import { PolicyScreen } from '@/features/policy';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -146,6 +147,11 @@ const workflowRoute = createRoute({
   component: WorkflowScreen,
 });
 const mcpRoute = createRoute({ getParentRoute: () => rootRoute, path: '/mcp', component: McpScreen });
+const policyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/policy',
+  component: PolicyScreen,
+});
 const secretsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/secrets',
@@ -267,6 +273,7 @@ export const routeTree = rootRoute.addChildren([
   workflowsRoute,
   workflowRoute,
   mcpRoute,
+  policyRoute,
   secretsRoute,
   importRoute,
   spendRoute,

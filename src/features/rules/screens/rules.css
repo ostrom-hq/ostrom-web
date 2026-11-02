@@ -63,3 +63,9 @@
 .rl-gate__add {
   justify-self: start;
 }
+/* A card or a form says whole sentences ("Why", the gate, a refusal): they wrap instead of ending in an ellipsis. */
+.rl-card .o-row__meta,
+.rl-form .o-row__meta {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
