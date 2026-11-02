@@ -11,6 +11,7 @@ import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api
 import type { InferenceSettings, Member, ModelPolicy } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
+import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
@@ -70,7 +71,8 @@ export function useModelPolicy(): ModelPolicyViewModel {
   // Only names: a refusal is not asked again, a member then reads as their id.
   const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
   const change = useSave(
-    async (body: ModelPolicy) => (await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data,
+    async (body: ModelPolicy) =>
+      applied((await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data),
     getModelPolicyQueryKey(),
   );
   return {

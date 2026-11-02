@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
-  bulkUpdateRulesMutation,
   createRuleMutation,
   deleteRuleMutation,
   getGateCatalogOptions,
@@ -10,9 +9,11 @@ import {
   listRulesQueryKey,
   updateRuleMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { GateAction, NewRule, Rule } from '@gen/api/types.gen';
+import { bulkUpdateRules, type Options } from '@gen/api/sdk.gen';
+import type { BulkUpdateRulesData, GateAction, NewRule, Rule } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
+import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
@@ -94,7 +95,11 @@ export interface BulkViewModel {
 
 export function useBulkAccept(): BulkViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...bulkUpdateRulesMutation(), onSettled: invalidate });
+  const mutation = useMutation({
+    mutationFn: async (options: Options<BulkUpdateRulesData>) =>
+      applied((await bulkUpdateRules({ ...options, throwOnError: true })).data),
+    onSettled: invalidate,
+  });
   const { mutate } = mutation;
   const accept = useCallback(
     (ids: readonly string[]) => {

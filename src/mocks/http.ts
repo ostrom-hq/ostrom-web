@@ -15,3 +15,6 @@ export async function readJson(request: Request): Promise<unknown> {
     return undefined;
   }
 }
+
+/** How long a sign-in may say yes or confirm a governance change, as on the server (S2-54). */
+export const FRESH_SIGN_IN_MS = 5 * 60_000;

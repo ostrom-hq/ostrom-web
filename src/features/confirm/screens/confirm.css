@@ -1,0 +1,81 @@
+/* A governance confirmation: the approval page's column, plus the before/after of the change. */
+.cf-diff {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+@media (min-width: 720px) {
+  .cf-diff {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.cf-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+}
+.cf-side__label {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  font-weight: 700;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+.cf-json {
+  margin: 0;
+  padding: var(--space-3) 0;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  line-height: 1.6;
+  /* Wrapped rather than scrolled: the whole change reads on a phone without a sideways scroll. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cf-json > code {
+  display: block;
+  padding: 0 var(--space-3);
+}
+.cf-line {
+  display: block;
+  padding: 0 var(--space-2);
+  margin: 0 calc(-1 * var(--space-2));
+  border-left: 3px solid transparent;
+  color: var(--text);
+  text-decoration: none;
+}
+.cf-side--before .cf-line--changed {
+  background: var(--danger-tint);
+  border-left-color: var(--danger);
+}
+.cf-side--after .cf-line--changed {
+  background: var(--success-tint);
+  border-left-color: var(--success);
+}
+.cf-nothing {
+  margin: 0;
+  padding: var(--space-4) var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+  text-align: center;
+}
+.cf-countdown {
+  font-variant-numeric: tabular-nums;
+}
+.cf-outcome.cf-outcome--confirmed {
+  border-color: var(--success);
+}
+.cf-outcome.cf-outcome--refused,
+.cf-outcome.cf-outcome--failed {
+  border-color: var(--danger);
+}
+/* A command reads whole: never broken at its `--`. */
+.cf-command {
+  white-space: nowrap;
+}
