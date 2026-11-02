@@ -39,7 +39,10 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     // A handler that never answers (`delay('infinite')`) still lets the caller give up, as a real fetch does.
     const response = await new Promise<Response | undefined>((resolve, reject) => {
       const abort = (): void => {
-        reject(signal.reason);
+        const reason: unknown = signal.reason;
+        reject(
+          reason instanceof Error ? reason : new DOMException('The operation was aborted.', 'AbortError'),
+        );
       };
       signal.addEventListener('abort', abort, { once: true });
       pending.then(
