@@ -16,6 +16,7 @@ import { missingSecrets } from '../model';
 import { useMcpSettings } from '../useMcpAccess';
 import { useMcp, useMcpChange } from '../useTools';
 import './tools.css';
+import { FailureText } from '@/shared/ui/FailureText';
 
 /** The MCP servers Ostrom relays to every agent of the organization, and what the agents called. */
 export function McpScreen(): ReactElement {
@@ -38,7 +39,7 @@ function McpServers({ canManage }: { readonly canManage: boolean }): ReactElemen
     <Screen title={t('tools.mcp.title')} lead={t('tools.mcp.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('tools.errorTag')} live>
-          {change.failure.message}
+          <FailureText failure={change.failure} />
         </Banner>
       )}
       <AgentPrefix

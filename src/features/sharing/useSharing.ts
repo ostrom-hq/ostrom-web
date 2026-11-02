@@ -8,6 +8,7 @@ import {
   listArtifactsQueryKey,
   listArtifactVersionsOptions,
   listMembersOptions,
+  listOrgMembersOptions,
   listSecretsOptions,
   listSharedAccountsOptions,
   listSharedAccountsQueryKey,
@@ -21,6 +22,7 @@ import type {
   ArtifactVersion,
   EnrollSharedAccountData,
   Member,
+  OrgMember,
   Secret,
   SharedAccount,
   UpdateSharedAccountData,
@@ -30,6 +32,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
+import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 
 export interface ArtifactsViewModel {
   readonly artifacts: readonly Artifact[] | undefined;
@@ -168,7 +171,8 @@ export interface AccountsViewModel {
   readonly accounts: readonly SharedAccount[] | undefined;
   /** The secrets a new subscription's credential can come from. */
   readonly secrets: readonly Secret[] | undefined;
-  readonly members: readonly Member[] | undefined;
+  /** The organization's members, to lend a subscription to. */
+  readonly members: readonly OrgMember[] | undefined;
   readonly failure: Error | undefined;
   /** Only a subscription's owner changes or removes it. */
   readonly login: string | undefined;
@@ -177,14 +181,20 @@ export interface AccountsViewModel {
 export function useAccounts(): AccountsViewModel {
   const accounts = useQuery(ready(listSharedAccountsOptions()));
   const secrets = useQuery(ready(listSecretsOptions()));
-  const members = useQuery(ready(listMembersOptions()));
+  // From the organization's own route, which the server serves (`GET /members` is still planned), once it is known.
+  const current = useCurrentOrg();
+  const { org } = current;
+  const members = useQuery(
+    ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), { enabled: org !== undefined }),
+  );
   const viewer = useViewer();
   return {
     accounts: accounts.data?.items,
     secrets: secrets.data?.items,
     members: members.data?.items,
     // Without the secrets or the members the form to share a subscription cannot show: say why.
-    failure: failureOf(accounts.error ?? secrets.error ?? members.error),
+    // Without its organization, the members cannot be asked for: that says why too.
+    failure: failureOf(accounts.error ?? secrets.error ?? members.error) ?? current.failure,
     login: viewer.login,
   };
 }

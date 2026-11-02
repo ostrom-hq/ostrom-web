@@ -9,6 +9,7 @@ import { Section } from '@/shared/ui/Screen';
 import { LINK_DEFAULT_USES, LINK_MAX_USES } from '../model';
 import type { InviteLinkViewModel } from '../useMembers';
 import { RoleSelect } from './RoleSelect';
+import { FailureText } from '@/shared/ui/FailureText';
 
 export interface InviteLinkProps {
   readonly link: InviteLinkViewModel;
@@ -73,7 +74,7 @@ export function InviteLink({ link, roles }: InviteLinkProps): ReactElement {
       )}
       {link.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.link.errorTag')} live>
-          {link.failure.message}
+          <FailureText failure={link.failure} />
         </Banner>
       )}
     </Section>

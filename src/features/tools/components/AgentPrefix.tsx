@@ -6,6 +6,7 @@ import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import { AGENT_PREFIX, agentToolName } from '../model';
 import type { McpSettingsViewModel } from '../useMcpAccess';
+import { FailureText } from '@/shared/ui/FailureText';
 
 export interface AgentPrefixProps {
   readonly settings: McpSettingsViewModel;
@@ -74,7 +75,7 @@ export function AgentPrefix({ settings, example, canManage }: AgentPrefixProps):
               ) : null}
               {settings.saveFailure === undefined ? null : (
                 <Banner tone="danger" tag={t('tools.errorTag')} live>
-                  {settings.saveFailure.message}
+                  <FailureText failure={settings.saveFailure} />
                 </Banner>
               )}
             </div>
