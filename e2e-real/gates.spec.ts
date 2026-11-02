@@ -95,8 +95,8 @@ async function withToken(
     failOnStatusCode: false,
   });
   const text = await response.text();
-  const body: unknown = text === '' ? undefined : JSON.parse(text);
-  return { status: response.status(), body };
+  const answer: unknown = text === '' ? undefined : JSON.parse(text);
+  return { status: response.status(), body: answer };
 }
 
 /** Asks for a push of a new commit to main of `repo`, as the hook would: the gate, still waiting for a yes. */
