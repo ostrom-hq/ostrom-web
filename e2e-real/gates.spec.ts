@@ -252,7 +252,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   await expect(setting).toHaveValue(await selfApprovalOf(page, org));
   await setting.selectOption('never');
   await expect(page.getByText('Someone who asked never approves their own request')).toBeVisible();
-  await expect.poll(() => selfApprovalOf(page, org)).toBe('never');
+  await expect.poll(async () => selfApprovalOf(page, org)).toBe('never');
   const alone = await askPushToMain(token, org, await gatedRepository(page, org, [owner]));
   const refused = await requestOf(page, org, alone);
   await openFromQueue(page, refused);
@@ -264,7 +264,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   await page.goto('/approvers');
   await page.getByRole('combobox', { name: 'Self-approval' }).selectOption('sole-approver');
   await expect(page.getByText('Someone who asked may approve only when nobody else can')).toBeVisible();
-  await expect.poll(() => selfApprovalOf(page, org)).toBe('sole-approver');
+  await expect.poll(async () => selfApprovalOf(page, org)).toBe('sole-approver');
   const sole = await askPushToMain(token, org, await gatedRepository(page, org, [owner]));
   const self = await requestOf(page, org, sole);
   await openFromQueue(page, self);
