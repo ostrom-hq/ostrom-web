@@ -146,7 +146,12 @@ export function EnrollForm({ change, secrets, members }: EnrollFormProps): React
                       );
                     }}
                   />
-                  <span>{member.name === '' ? member.login : `${member.name} (${member.login})`}</span>
+                  {/* A name the server has not been given is empty, or the login again: the login alone then. */}
+                  <span>
+                    {member.name === '' || member.name === member.login
+                      ? member.login
+                      : `${member.name} (${member.login})`}
+                  </span>
                 </label>
               ))}
             </fieldset>

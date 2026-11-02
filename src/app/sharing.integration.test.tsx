@@ -412,6 +412,16 @@ describe('the shared subscriptions', () => {
     expect(within(form).getByRole('link', { name: 'Add it in Secrets' })).toHaveAttribute('href', '/secrets');
   });
 
+  it('names a member whose name is their login once', async () => {
+    const org = db.organization.id;
+    db.orgMembers[org] = (db.orgMembers[org] ?? []).map((member) =>
+      member.login === 'samir' ? { ...member, name: 'samir' } : member,
+    );
+    visit('/accounts');
+    const form = await screen.findByRole('region', { name: 'Share a subscription' });
+    expect(within(form).getByRole('checkbox', { name: 'samir' })).toBeInTheDocument();
+  });
+
   it('has nobody to lend to in an organization of one', async () => {
     // The organization's own list, the one the form lends from.
     const org = db.organization.id;
