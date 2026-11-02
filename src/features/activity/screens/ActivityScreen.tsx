@@ -61,7 +61,8 @@ export function ActivityScreen(): ReactElement {
   const view = useActivity(repo);
   const show = (next: string): void => {
     setEdit(undefined);
-    void navigate({ search: next === '' ? {} : { repo: next } });
+    // The same filter again adds no step to Back.
+    if (next !== repo) void navigate({ search: next === '' ? {} : { repo: next } });
   };
   return (
     <Screen title={t('activity.title')} lead={t('activity.lead')}>
@@ -69,43 +70,47 @@ export function ActivityScreen(): ReactElement {
         <Banner tone="info" tag={t('activity.unavailableTag')}>
           {t('activity.unavailable')}
         </Banner>
-      ) : (
-        <>
-          <form
-            className="o-inline"
-            onSubmit={(event) => {
-              event.preventDefault();
-              show(typed.trim());
+      ) : null}
+      {/* Without the route there is nothing to filter, but a filter opened from a link can still be cleared. */}
+      {view.unavailable && repo === '' ? null : (
+        <form
+          className="o-inline"
+          onSubmit={(event) => {
+            event.preventDefault();
+            show(typed.trim());
+          }}
+          role="search"
+          aria-label={t('activity.filter.label')}
+        >
+          <label htmlFor={inputId} className="o-field-label">
+            {t('activity.filter.repo')}
+          </label>
+          <input
+            id={inputId}
+            className="o-input o-mono"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="acme/web"
+            value={typed}
+            onChange={(event) => {
+              setEdit({ for: repo, value: event.target.value });
             }}
-            role="search"
-            aria-label={t('activity.filter.label')}
-          >
-            <label htmlFor={inputId} className="o-field-label">
-              {t('activity.filter.repo')}
-            </label>
-            <input
-              id={inputId}
-              className="o-input o-mono"
-              autoComplete="off"
-              spellCheck={false}
-              placeholder="acme/web"
-              value={typed}
-              onChange={(event) => {
-                setEdit({ for: repo, value: event.target.value });
+          />
+          <Button type="submit">{t('activity.filter.apply')}</Button>
+          {repo === '' ? null : (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                show('');
               }}
-            />
-            <Button type="submit">{t('activity.filter.apply')}</Button>
-            {repo === '' ? null : (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  show('');
-                }}
-              >
-                {t('activity.filter.clear')}
-              </Button>
-            )}
-          </form>
+            >
+              {t('activity.filter.clear')}
+            </Button>
+          )}
+        </form>
+      )}
+      {view.unavailable ? null : (
+        <>
           {repo === '' ? null : <p className="o-row__meta">{t('activity.filter.note', { repo })}</p>}
           <LoadState data={view.items} failure={view.failure}>
             {(items) =>
@@ -114,7 +119,7 @@ export function ActivityScreen(): ReactElement {
                   {repo === '' ? t('activity.empty') : t('activity.emptyRepo', { repo })}
                 </p>
               ) : (
-                <ul className="o-card o-rows">
+                <ul className="o-card o-rows" aria-busy={view.switching}>
                   {items.map((item) => (
                     <li key={item.id}>
                       <ActivityRow item={item} />

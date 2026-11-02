@@ -31,6 +31,8 @@ async function shown(page: Page): Promise<string[]> {
   await expect(
     main.getByRole('list').or(main.getByText(/^Nothing has happened yet\.$|^No session in /)),
   ).toBeVisible();
+  // Lines kept from the previous filter are marked busy until this filter's own come.
+  await expect(main.locator('[aria-busy="true"]')).toHaveCount(0);
   return main.getByRole('listitem').locator('.o-row__title').allTextContents();
 }
 

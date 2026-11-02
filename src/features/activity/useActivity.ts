@@ -17,6 +17,8 @@ export interface ActivityViewModel {
   readonly failure: Error | undefined;
   /** Why the lines on screen could not be read again: they may be out of date. */
   readonly staleFailure: Error | undefined;
+  /** The lines on screen are the previous filter's, until this one's come. */
+  readonly switching: boolean;
   /** There are older lines. */
   readonly more: boolean;
   readonly loadingMore: boolean;
@@ -44,15 +46,17 @@ export function useActivity(repo: string): ActivityViewModel {
     () => (query.data === undefined ? undefined : flatten(query.data.pages)),
     [query.data],
   );
-  // Only the whole feed says whether the route is served: a 404 with a filter is about that filter.
+  // An unknown repository is an empty page, never a 404: a 404 means the route itself is not served.
   const unavailable =
-    repo === '' && query.data === undefined && isApiFailure(query.error) && query.error.kind === 'not-found';
+    query.data === undefined && isApiFailure(query.error) && query.error.kind === 'not-found';
   const { fetchNextPage } = query;
   return {
     items,
     unavailable,
     failure: query.data === undefined && !unavailable ? failureOf(query.error) : undefined,
-    more: query.hasNextPage,
+    switching: query.isPlaceholderData,
+    // The older lines of the previous filter are not this one's.
+    more: query.hasNextPage && !query.isPlaceholderData,
     loadingMore: query.isFetchingNextPage,
     moreFailure: query.isFetchNextPageError ? failureOf(query.error) : undefined,
     staleFailure: query.isRefetchError ? failureOf(query.error) : undefined,

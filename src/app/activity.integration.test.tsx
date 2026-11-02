@@ -122,21 +122,46 @@ describe('the activity', () => {
     expect(rows()).toHaveLength(5);
   });
 
-  it('says why one repository’s lines do not come, and keeps the filter to clear it', async () => {
+  it('marks the previous filter’s lines as not this one’s while its own come, without their older lines', async () => {
+    const user = userEvent.setup();
+    let release = (): void => undefined;
+    server.use(
+      http.get('*/api/v1/activity', async ({ request }) => {
+        if (new URL(request.url).searchParams.has('repo'))
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        return undefined;
+      }),
+    );
+    const router = visit('/activity');
+    await screen.findByText('claude-code asked for a yes: Merge PR #412 into main');
+    expect(screen.getByRole('button', { name: 'Show older' })).toBeInTheDocument();
+    const entries = router.history.length;
+    await user.type(screen.getByRole('textbox', { name: 'Repository' }), 'acme/web{Enter}');
+    expect(await screen.findByText(/left out for acme\/web/)).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('list')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('button', { name: 'Show older' })).toBeNull();
+    // The same filter again is no new step for Back.
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(router.history.length).toBe(entries + 1);
+    release();
+    expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByRole('list')).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('says the activity is not served from a filtered link too, and keeps the filter to clear it', async () => {
     const user = userEvent.setup();
     server.use(
       http.get('*/api/v1/activity', ({ request }) =>
         new URL(request.url).searchParams.has('repo')
-          ? HttpResponse.json(
-              { error: { type: 'not_found', message: 'no such repository' } },
-              { status: 404 },
-            )
+          ? HttpResponse.json({ error: { type: 'not_found', message: 'Not Found' } }, { status: 404 })
           : undefined,
       ),
     );
-    visit('/activity?repo=acme%2Fgone');
-    expect(await screen.findByText('no such repository')).toBeInTheDocument();
-    expect(screen.queryByText('This server does not serve the activity yet.')).toBeNull();
+    visit('/activity?repo=acme%2Fweb');
+    expect(await screen.findByText('This server does not serve the activity yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/left out/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'All repositories' }));
     expect(
       await screen.findByText('claude-code asked for a yes: Merge PR #412 into main'),
