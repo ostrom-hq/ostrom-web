@@ -1,84 +1,92 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, type Response, test } from '@playwright/test';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 interface MeBody {
   readonly dev: { readonly login: string };
-  readonly member?: { readonly login: string; readonly role: string };
+  readonly member?: { readonly login: string; readonly name?: string; readonly role: string };
   readonly organization?: { readonly id: string; readonly name: string };
 }
 
 test.afterEach(closeOthers);
 
-/** The name an organization was created with, read back from the server. */
-async function nameOf(page: Page, id: string): Promise<string> {
-  const read = await callFromPage(page, 'GET', `/api/v1/orgs/${id}`);
-  expect(read.status).toBe(200);
-  return (read.body as { name: string }).name;
+/** The console's own `GET /auth/me` with `Ostrom-Org` naming `org`, from the moment this is called. */
+function consoleReadsMeIn(page: Page, org: string): Promise<Response> {
+  return page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === '/api/v1/auth/me' &&
+      response.request().headers()['ostrom-org'] === org,
+  );
 }
 
-/** `/auth/me` as the server answers it, in the organization `org` names (none when absent). */
-async function me(page: Page, org?: string): Promise<MeBody> {
-  const answer = await callFromPage(page, 'GET', '/api/v1/auth/me', undefined, org);
-  expect(answer.status).toBe(200);
-  return answer.body as MeBody;
+/** What the top bar says of the person, from `/auth/me` as the server answered the console: "Name (login) · Role". */
+function signedInAs(me: MeBody, role: string): string {
+  const name = me.member?.name;
+  return `${name === undefined || name === '' ? me.dev.login : `${name} (${me.dev.login})`} · ${role}`;
 }
 
-test('the top bar names the organization the console acts in, as /auth/me answers for it, with the person’s role', async ({
+/** The top bar's organization button, and what it says of the person there. */
+async function expectTopBar(page: Page, organization: string, person: string): Promise<void> {
+  const button = page.getByRole('button', { name: `Organization: ${organization}. Switch` });
+  await expect(button).toBeVisible();
+  await expect(button).toHaveAccessibleDescription(person);
+  await expect(button).toContainText(person);
+}
+
+test('the top bar reads /auth/me in the organization the console acts in: its name, and the person’s name and role', async ({
   page,
   browser,
 }) => {
-  // One organization: taken without asking, named in the top bar.
+  // One organization: taken without asking; the console reads /auth/me with it named, and says who the person is there.
   const first = await ownerOfNewOrganization(page, 'mona');
-  const firstName = await nameOf(page, first.id);
+  const readInFirst = consoleReadsMeIn(page, first.id);
   await page.goto('/yes');
-  await expect(page.getByRole('button', { name: `Organization: ${firstName}. Switch` })).toBeVisible();
+  const inFirst = await readInFirst;
+  expect(inFirst.status()).toBe(200);
+  const meInFirst = (await inFirst.json()) as MeBody;
+  expect(meInFirst.member?.role).toBe('owner');
+  expect(meInFirst.organization?.id).toBe(first.id);
+  const firstName = meInFirst.organization?.name ?? '';
+  await expectTopBar(page, firstName, signedInAs(meInFirst, 'Owner'));
   await expect(page.getByRole('dialog', { name: 'Which organization?' })).toHaveCount(0);
-  // Without Ostrom-Org, /auth/me says who is signed in and nothing of an organization; with it, the member and their role.
-  const bare = await me(page);
-  expect(bare.dev.login).not.toBe('');
-  expect(bare.member).toBeUndefined();
-  expect(bare.organization).toBeUndefined();
-  const inFirst = await me(page, first.id);
-  expect(inFirst.member?.role).toBe('owner');
-  expect(inFirst.member?.login).toBe(bare.dev.login);
-  expect(inFirst.organization).toMatchObject({ id: first.id, name: firstName });
 
-  // Two organizations: the console asks, then reads /auth/me again in the one chosen, and the top bar keeps it.
-  const second = await ownerOfNewOrganization(page, 'mona-two');
-  const secondName = await nameOf(page, second.id);
+  // A second organization of the same person: the console asks, then reads /auth/me again in the one chosen.
+  const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
+    name: `mona two ${Date.now().toString(36)}`,
+  });
+  expect(created.status).toBe(201);
+  const second = created.body as { id: string; name: string };
   await page.goto('/yes');
   const picker = page.getByRole('dialog', { name: 'Which organization?' });
   await expect(picker).toBeVisible();
-  const readAgain = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === '/api/v1/auth/me' &&
-      response.request().headers()['ostrom-org'] === second.id,
-  );
+  const readInSecond = consoleReadsMeIn(page, second.id);
   await picker
     .getByRole('list', { name: 'Your organizations' })
-    .getByRole('button', { name: secondName })
+    .getByRole('button', { name: second.name })
     .click();
-  const answer = await readAgain;
-  expect(answer.status()).toBe(200);
-  const inSecond = (await answer.json()) as MeBody;
-  expect(inSecond.member?.role).toBe('owner');
-  expect(inSecond.organization).toMatchObject({ id: second.id, name: secondName });
-  // The console took that answer: the top bar still names the organization, after it was read with the header.
-  await expect(page.getByRole('button', { name: `Organization: ${secondName}. Switch` })).toBeVisible();
+  const inSecond = await readInSecond;
+  expect(inSecond.status()).toBe(200);
+  const meInSecond = (await inSecond.json()) as MeBody;
+  expect(meInSecond.member?.role).toBe('owner');
+  expect(meInSecond.organization).toMatchObject({ id: second.id, name: second.name });
+  await expectTopBar(page, second.name, signedInAs(meInSecond, 'Owner'));
+  // The choice is kept: after a reload, the same organization, read again with it named.
+  const readAfterReload = consoleReadsMeIn(page, second.id);
   await page.reload();
-  await expect(page.getByRole('button', { name: `Organization: ${secondName}. Switch` })).toBeVisible();
+  await readAfterReload;
+  await expectTopBar(page, second.name, signedInAs(meInSecond, 'Owner'));
 
-  // Someone invited as an admin: the top bar names that organization, and /auth/me gives their own role in it.
+  // Someone invited as an admin of the second: their own name and role there, from their own /auth/me.
   const admin = await anotherPerson(browser);
   await joinAs(page, second.id, admin, 'nils', 'admin');
+  const readByAdmin = consoleReadsMeIn(admin, second.id);
   await admin.goto('/yes');
-  await expect(admin.getByRole('button', { name: `Organization: ${secondName}. Switch` })).toBeVisible();
-  const adminInSecond = await me(admin, second.id);
-  expect(adminInSecond.member?.role).toBe('admin');
-  expect(adminInSecond.organization?.id).toBe(second.id);
-  // An organization they are not in adds nothing, and is no error (server#92).
-  const adminInFirst = await me(admin, first.id);
-  expect(adminInFirst.member).toBeUndefined();
-  expect(adminInFirst.organization).toBeUndefined();
+  const adminMe = (await (await readByAdmin).json()) as MeBody;
+  expect(adminMe.member?.role).toBe('admin');
+  await expectTopBar(admin, second.name, signedInAs(adminMe, 'Admin'));
+  // An organization they are not in adds nothing to /auth/me, and is no error (ostrom-server#92).
+  const foreign = await callFromPage(admin, 'GET', '/api/v1/auth/me', undefined, first.id);
+  expect(foreign.status).toBe(200);
+  expect(foreign.body).not.toHaveProperty('member');
+  expect(foreign.body).not.toHaveProperty('organization');
 });

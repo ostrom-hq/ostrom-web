@@ -1093,6 +1093,7 @@ export const zMcpCall = z.object({
     tool: z.string(),
     dev: z.string(),
     sessionId: z.string().optional(),
+    launchId: z.string().optional(),
     durationMs: z.int().optional(),
     ok: z.boolean()
 });
@@ -1149,7 +1150,8 @@ export const zMemberRole = z.enum([
     'admin',
     'member',
     'approver',
-    'invited'
+    'invited',
+    'billing'
 ]);
 
 /**
@@ -1181,7 +1183,7 @@ export const zMemberInvite = z.object({
  */
 export const zModelPolicy = z.object({
     allowed: z.array(z.string()),
-    default: z.string(),
+    default: z.string().optional(),
     byMember: z.record(z.string(), z.array(z.string())).optional()
 });
 
@@ -1318,7 +1320,7 @@ export const zOrganization = z.object({
     name: z.string(),
     avatarUrl: z.string(),
     description: z.string().optional(),
-    connectedVia: zGitHubConnection,
+    connectedVia: zGitHubConnection.optional(),
     createdAt: z.string().optional()
 });
 
@@ -2260,6 +2262,7 @@ export const zUsageEvent = z.object({
     provider: z.string().optional(),
     accountId: z.string().optional(),
     sessionId: z.string().optional(),
+    launchId: z.string().optional(),
     inputTokens: z.int(),
     outputTokens: z.int(),
     cacheReadTokens: z.int(),
@@ -3010,6 +3013,10 @@ export const zCheckAgentPolicyResponse = z.object({
     allowed: z.boolean(),
     reason: z.string().optional(),
     note: z.string().optional()
+});
+
+export const zGetMeHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
 });
 
 export const zGetMeResponse = z.union([
@@ -3775,7 +3782,7 @@ export const zGetGatePath = z.object({
 });
 
 export const zGetGateQuery = z.object({
-    wait: z.int().optional()
+    wait: z.int().gte(0).lte(30).optional().default(0)
 });
 
 /**

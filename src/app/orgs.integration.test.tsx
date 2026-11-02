@@ -260,3 +260,74 @@ describe('the organization the console acts in', () => {
     expect([asked, listed]).toEqual([[], []]);
   });
 });
+
+describe('who the person is in the organization, in the top bar', () => {
+  it('reads /auth/me with the only organization named, and says their name and role there', async () => {
+    const asked = watch('/api/v1/auth/me');
+    visit('/artifacts');
+    const button = await screen.findByRole('button', { name: 'Organization: Acme. Switch' });
+    await waitFor(() => {
+      expect(button).toHaveAccessibleDescription('Maya Lind (maya) · Admin');
+    });
+    // Who is signed in first, with no organization; then the same route with the one the console acts in.
+    expect(asked[0]).toBeNull();
+    expect(asked).toContain(db.organization.id);
+  });
+
+  it('reads it again in the organization chosen', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [globex];
+    const asked = watch('/api/v1/auth/me');
+    visit('/artifacts');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    // Nobody is named in an organization not chosen yet.
+    expect(screen.getByRole('button', { name: 'Choose an organization' })).not.toHaveAccessibleDescription();
+    const list = await within(picker).findByRole('list', { name: 'Your organizations' });
+    await user.click(within(list).getByRole('button', { name: 'Globex' }));
+    const button = await screen.findByRole('button', { name: 'Organization: Globex. Switch' });
+    await waitFor(() => {
+      expect(button).toHaveAccessibleDescription('Maya Lind (maya) · Admin');
+    });
+    expect(asked).toContain(globex.id);
+    expect(asked).not.toContain(db.organization.id);
+  });
+
+  const signedIn = { dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] };
+
+  it('gives the name alone for a role the console does not know', async () => {
+    server.use(
+      http.get('*/api/v1/auth/me', ({ request }) =>
+        HttpResponse.json(
+          request.headers.get('ostrom-org') === null
+            ? signedIn
+            : {
+                ...signedIn,
+                member: {
+                  id: '3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60',
+                  login: 'maya',
+                  avatarUrl: '',
+                  role: 'invited',
+                },
+              },
+        ),
+      ),
+    );
+    visit('/artifacts');
+    const button = await screen.findByRole('button', { name: 'Organization: Acme. Switch' });
+    await waitFor(() => {
+      expect(button).toHaveAccessibleDescription('maya');
+    });
+  });
+
+  it('names nobody when the answer has no member there', async () => {
+    const asked = watch('/api/v1/auth/me');
+    server.use(http.get('*/api/v1/auth/me', () => HttpResponse.json(signedIn)));
+    visit('/artifacts');
+    const bare = await screen.findByRole('button', { name: 'Organization: Acme. Switch' });
+    await waitFor(() => {
+      expect(asked).toContain(db.organization.id);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(bare).not.toHaveAccessibleDescription();
+  });
+});

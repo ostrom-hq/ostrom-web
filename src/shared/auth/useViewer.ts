@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { getMeOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { MemberRole } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { ready } from '@/shared/api/ready';
-import { meOf, viewerName } from './me';
+import { useOrgStore } from '@/shared/org/orgStore';
+import { meInOrgOptions, meOf, viewerName } from './me';
 
 export interface Viewer {
   readonly login: string | undefined;
@@ -16,9 +16,13 @@ export interface Viewer {
   readonly canManage: boolean;
 }
 
-/** The person looking at the console, as the server knows them; who they are rarely changes in a session. */
+/**
+ * The person looking at the console, as the server knows them in the organization the console acts in: their member
+ * (id, name, role) only comes with that organization named. Who they are rarely changes in a session.
+ */
 export function useViewer(): Viewer {
-  const query = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
+  const current = useOrgStore((state) => state.current);
+  const query = useQuery(ready(meInOrgOptions(current), { staleTime: 60_000 }));
   const me = meOf(query.data);
   const role = me?.member?.role;
   return {

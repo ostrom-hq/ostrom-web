@@ -1484,6 +1484,10 @@ export type McpCall = {
     tool: string;
     dev: string;
     sessionId?: string;
+    /**
+     * The launch whose agent token made the call (`POST /launches`), set by the server from the token; absent for a person's own credential. The launch may differ from the one of `sessionId`
+     */
+    launchId?: string;
     durationMs?: number;
     ok: boolean;
 };
@@ -1630,14 +1634,17 @@ export type MemberInvite = {
     team?: string;
 };
 
-export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited';
+export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited' | 'billing';
 
 /**
  * Models allowed, and the default
  */
 export type ModelPolicy = {
     allowed: Array<string>;
-    default: string;
+    /**
+     * Absent while no default model is set (a new organization's policy has none)
+     */
+    default?: string;
     byMember?: {
         [key: string]: Array<string>;
     };
@@ -1892,7 +1899,10 @@ export type Organization = {
     name: string;
     avatarUrl: string;
     description?: string;
-    connectedVia: GitHubConnection;
+    /**
+     * How GitHub is connected; absent for an organization linked to no GitHub organization
+     */
+    connectedVia?: GitHubConnection;
     createdAt?: string;
 };
 
@@ -2803,6 +2813,10 @@ export type UsageEvent = {
     provider?: string;
     accountId?: string;
     sessionId?: string;
+    /**
+     * The launch whose agent token made the call or sent the event, set by the server from the token (`POST /launches`), never from a request body; absent for a person's own credential. Read under the same rules as the event
+     */
+    launchId?: string;
     inputTokens: number;
     outputTokens: number;
     cacheReadTokens: number;
@@ -3869,6 +3883,12 @@ export type CheckAgentPolicyResponse = CheckAgentPolicyResponses[keyof CheckAgen
 
 export type GetMeData = {
     body?: never;
+    headers?: {
+        /**
+         * The organization whose member and organization the answer adds, when the caller is a member of it. An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a 404
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/auth/me';
@@ -7011,6 +7031,9 @@ export type GetGateData = {
         id: string;
     };
     query?: {
+        /**
+         * Seconds to wait on a pending gate for its answer; absent or 0 reads at once.
+         */
         wait?: number;
     };
     url: '/api/v1/gates/{id}';
