@@ -11,7 +11,7 @@ interface DecisionLine {
   readonly receiptId: string;
 }
 
-test('an owner’s decision on a rule is in the journal, signed, newest first, and another organization sees none', async ({
+test('an owner’s decision on a rule are in the journal, newest first, each with its receipt, and another organization sees none', async ({
   page,
   browser,
 }) => {
@@ -27,32 +27,35 @@ test('an owner’s decision on a rule is in the journal, signed, newest first, a
   const { id } = rule.body as { id: string };
   expect((await callFromPage(page, 'DELETE', `/api/v1/rules/${id}`)).status).toBeLessThan(300);
 
-  const read = await callFromPage(page, 'GET', '/api/v1/decisions');
-  expect(read.status).toBe(200);
-  const decisions = (read.body as { items: DecisionLine[] }).items;
-  const onRule = decisions.filter(
-    (decision) => decision.subject.kind === 'rule' && decision.subject.id === id,
-  );
-  expect(onRule.length).toBeGreaterThan(0);
+  // Signed once the change commits: read until both are there, newest first.
+  const onRule = async (): Promise<DecisionLine[]> => {
+    const read = await callFromPage(page, 'GET', '/api/v1/decisions');
+    expect(read.status).toBe(200);
+    return (read.body as { items: DecisionLine[] }).items.filter(
+      (decision) => decision.subject.kind === 'rule' && decision.subject.id === id,
+    );
+  };
+  await expect
+    .poll(async () => (await onRule()).map((decision) => decision.action))
+    .toEqual(['deleted', 'accepted']);
+  const [deleted, accepted] = await onRule();
+  if (deleted === undefined || accepted === undefined) throw new Error('The two decisions are listed above.');
 
-  // The screen lists them as the server does: who, what, and a link to each signed receipt.
+  // The screen lists them as the server does, in its order: who did what, each linking its signed receipt.
   await page.reload();
-  const list = page.getByRole('list').filter({ has: page.getByRole('link', { name: /Receipt/ }) });
-  for (const decision of onRule) {
-    const line = list
-      .getByRole('link')
-      .filter({ hasText: `${decision.by} ` })
-      .filter({
-        hasText: decision.subject.label ?? decision.subject.id,
-      });
-    await expect(line.first()).toBeVisible();
-    await expect(list.locator(`a[href="/receipts/${decision.receiptId}"]`)).toHaveCount(1);
-  }
-  const first = onRule[0];
-  if (first !== undefined) {
-    await list.locator(`a[href="/receipts/${first.receiptId}"]`).click();
-    await expect(page).toHaveURL(new RegExp(`/receipts/${first.receiptId}$`));
-  }
+  const deletedLine = page.locator(`a[href="/receipts/${deleted.receiptId}"]`);
+  const acceptedLine = page.locator(`a[href="/receipts/${accepted.receiptId}"]`);
+  await expect(deletedLine).toContainText(`${deleted.by} deleted the rule`);
+  await expect(acceptedLine).toContainText(`${accepted.by} accepted the rule`);
+  for (const line of [deletedLine, acceptedLine]) await expect(line).toContainText(statement.slice(0, 20));
+  const links = await Promise.all(
+    (await page.getByRole('link', { name: /Receipt$/ }).all()).map((link) => link.getAttribute('href')),
+  );
+  expect(links.indexOf(`/receipts/${deleted.receiptId}`)).toBeLessThan(
+    links.indexOf(`/receipts/${accepted.receiptId}`),
+  );
+  await acceptedLine.click();
+  await expect(page).toHaveURL(new RegExp(`/receipts/${accepted.receiptId}$`));
 
   // Another organization: an empty journal, and naming the first one opens nothing.
   const stranger = await anotherPerson(browser);

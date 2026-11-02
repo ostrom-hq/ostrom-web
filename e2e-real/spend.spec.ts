@@ -21,6 +21,8 @@ test('an owner reads a new organization’s spend, sets its monthly budget that 
   // Nothing spent and no budget yet: the server's /spending and /budgets say so, and the screen with them.
   const spending = await callFromPage(page, 'GET', '/api/v1/spending?period=month');
   expect(spending.status).toBe(200);
+  expect(spending.body).toMatchObject({ totalUsd: 0 });
+  expect(spending.body).not.toHaveProperty('budgetUsd');
   await page.goto('/spend');
   await expect(page.getByRole('heading', { level: 1, name: 'Spend' })).toBeVisible();
   await expect(
@@ -50,6 +52,9 @@ test('an owner reads a new organization’s spend, sets its monthly budget that 
   const lines = (held.body as { items: BudgetLine[] }).items;
   expect(lines).toEqual([expect.objectContaining({ usdPerMonth: 100, hardStop: true })]);
   expect(['org', 'organization']).toContain(lines[0]?.scope);
+  // The spending carries it too: that is what the meter reads.
+  const after = await callFromPage(page, 'GET', '/api/v1/spending?period=month');
+  expect(after.body).toMatchObject({ totalUsd: 0, budgetUsd: 100 });
 
   // Another organization: no budget on screen, and naming the first one opens nothing.
   const stranger = await anotherPerson(browser);

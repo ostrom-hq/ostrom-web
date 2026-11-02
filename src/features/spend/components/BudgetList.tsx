@@ -19,7 +19,7 @@ export function BudgetList({ budgets }: { readonly budgets: readonly Budget[] })
             const scope = budgetScopeOf(budget.scope);
             const who = scope === undefined ? budget.scope : t(`spend.budgets.scope.${scope}`);
             return (
-              <li key={`${budget.scope}:${budget.subject ?? ''}`} className="o-row">
+              <li key={`${scope ?? budget.scope}:${budget.subject ?? ''}`} className="o-row">
                 <span className="o-row__main">
                   <span className="o-row__title">
                     {budget.subject === undefined ? who : `${who} · ${budget.subject}`}
