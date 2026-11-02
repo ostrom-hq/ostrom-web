@@ -890,6 +890,79 @@ export const zGateStatus = z.enum([
 export const zGitHubConnection = z.enum(['github-app', 'gh-token']);
 
 /**
+ * The governance write a confirmation holds: the operation that opened it
+ */
+export const zGovernanceChangeKind = z.enum([
+    'rules.create',
+    'rules.update',
+    'rules.delete',
+    'rules.bulk',
+    'gates.policy',
+    'models.policy',
+    'workflows.create',
+    'workflows.save',
+    'workflows.delete'
+]);
+
+export const zGovernanceConfirmationAnswer = z.enum(['confirm', 'refuse']);
+
+export const zGovernanceConfirmationAnswerRequest = z.object({
+    answer: zGovernanceConfirmationAnswer
+});
+
+/**
+ * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
+ */
+export const zGovernanceConfirmationPending = z.object({
+    confirmationId: z.string(),
+    confirmUrl: z.string(),
+    expiresAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * A member who asked for or answered a confirmation
+ */
+export const zGovernanceConfirmationPerson = z.object({
+    memberId: z.string(),
+    login: z.string().optional(),
+    name: z.string().optional()
+});
+
+/**
+ * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ */
+export const zGovernanceConfirmationStatus = z.enum([
+    'pending',
+    'confirmed',
+    'refused',
+    'expired',
+    'failed'
+]);
+
+/**
+ * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
+ */
+export const zGovernanceConfirmation = z.object({
+    id: z.string(),
+    kind: zGovernanceChangeKind,
+    status: zGovernanceConfirmationStatus,
+    method: z.string(),
+    path: z.string(),
+    scope: z.string(),
+    summary: z.string(),
+    before: z.unknown(),
+    after: z.unknown(),
+    requestedBy: zGovernanceConfirmationPerson,
+    credential: z.enum(['admin', 'device']),
+    createdAt: z.iso.datetime({ offset: true }),
+    expiresAt: z.iso.datetime({ offset: true }),
+    answeredBy: zGovernanceConfirmationPerson.optional(),
+    answeredAt: z.iso.datetime({ offset: true }).optional(),
+    result: z.unknown().optional(),
+    error: zErrorDetail.optional()
+});
+
+/**
  * A group of members sharing subscriptions
  */
 export const zGroup = z.object({
@@ -3926,12 +3999,12 @@ export const zSetGatePolicyHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-/**
- * OK
- */
-export const zSetGatePolicyResponse = z.object({
-    selfApproval: z.string()
-});
+export const zSetGatePolicyResponse = z.union([
+    z.object({
+        selfApproval: z.string()
+    }),
+    zGovernanceConfirmationPending
+]);
 
 export const zListApprovalsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4001,6 +4074,38 @@ export const zAnswerApprovalPath = z.object({
  * The answered approval and its receipt
  */
 export const zAnswerApprovalResponse = zApprovalView;
+
+export const zGetGovernanceConfirmationHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zGetGovernanceConfirmationPath = z.object({
+    id: z.string()
+});
+
+export const zGetGovernanceConfirmationQuery = z.object({
+    wait: z.int().gte(0).lte(30).optional().default(0)
+});
+
+/**
+ * OK
+ */
+export const zGetGovernanceConfirmationResponse = zGovernanceConfirmation;
+
+export const zAnswerGovernanceConfirmationBody = zGovernanceConfirmationAnswerRequest;
+
+export const zAnswerGovernanceConfirmationHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zAnswerGovernanceConfirmationPath = z.object({
+    id: z.string()
+});
+
+/**
+ * The answered confirmation; when confirmed, `result` holds what the write returned
+ */
+export const zAnswerGovernanceConfirmationResponse = zGovernanceConfirmation;
 
 export const zListDecisionsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4282,10 +4387,10 @@ export const zCreateRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-/**
- * Created
- */
-export const zCreateRuleResponse = zRule;
+export const zCreateRuleResponse = z.union([
+    zRule,
+    zGovernanceConfirmationPending
+]);
 
 export const zDeleteRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4295,10 +4400,10 @@ export const zDeleteRulePath = z.object({
     id: z.string()
 });
 
-/**
- * Deleted
- */
-export const zDeleteRuleResponse = z.void();
+export const zDeleteRuleResponse = z.union([
+    zGovernanceConfirmationPending,
+    z.void()
+]);
 
 export const zGetRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4333,10 +4438,10 @@ export const zUpdateRulePath = z.object({
     id: z.string()
 });
 
-/**
- * OK
- */
-export const zUpdateRuleResponse = zRule;
+export const zUpdateRuleResponse = z.union([
+    zRule,
+    zGovernanceConfirmationPending
+]);
 
 export const zBulkUpdateRulesBody = z.object({
     ids: z.array(z.string()),
@@ -4347,12 +4452,12 @@ export const zBulkUpdateRulesHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-/**
- * OK
- */
-export const zBulkUpdateRulesResponse = z.object({
-    updated: z.int()
-});
+export const zBulkUpdateRulesResponse = z.union([
+    z.object({
+        updated: z.int()
+    }),
+    zGovernanceConfirmationPending
+]);
 
 export const zListWorkflowsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4377,10 +4482,10 @@ export const zCreateWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-/**
- * OK
- */
-export const zCreateWorkflowResponse = zWorkflow;
+export const zCreateWorkflowResponse = z.union([
+    zWorkflow,
+    zGovernanceConfirmationPending
+]);
 
 export const zDeleteWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4390,10 +4495,10 @@ export const zDeleteWorkflowPath = z.object({
     id: z.string()
 });
 
-/**
- * Done
- */
-export const zDeleteWorkflowResponse = z.void();
+export const zDeleteWorkflowResponse = z.union([
+    zGovernanceConfirmationPending,
+    z.void()
+]);
 
 export const zGetWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4421,10 +4526,10 @@ export const zSaveWorkflowPath = z.object({
     id: z.string()
 });
 
-/**
- * OK
- */
-export const zSaveWorkflowResponse = zWorkflow;
+export const zSaveWorkflowResponse = z.union([
+    zWorkflow,
+    zGovernanceConfirmationPending
+]);
 
 export const zListWorkflowRunsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -5088,10 +5193,10 @@ export const zSetModelPolicyHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-/**
- * OK
- */
-export const zSetModelPolicyResponse = zModelPolicy;
+export const zSetModelPolicyResponse = z.union([
+    zModelPolicy,
+    zGovernanceConfirmationPending
+]);
 
 export const zListInferenceRoutesHeaders = z.object({
     'Ostrom-Org': z.string().optional()

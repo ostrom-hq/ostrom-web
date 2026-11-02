@@ -158,6 +158,9 @@ import {
   initialMcpServers,
   initialSecrets,
 } from '@/mocks/fixtures/tools';
+import { createConfirmationHandlers, type ConfirmationsState } from '@/mocks/confirmations';
+import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
+import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
@@ -169,6 +172,7 @@ export interface MockDb
     AccountState,
     ActivityState,
     BillingState,
+    ConfirmationsState,
     GithubState,
     OrgsState,
     TokensState,
@@ -227,6 +231,7 @@ export interface MockDb
 }
 
 export function createMockDb(): MockDb {
+  const opened = Date.now();
   return {
     activity: initialActivity(),
     approvals: initialApprovals(),
@@ -274,8 +279,11 @@ export function createMockDb(): MockDb {
     sharedAccounts: initialSharedAccounts(),
     runsByKey: {},
     nextAccountId: 100,
-    signedInAt: Date.now(),
+    signedInAt: opened,
     signedIn: true,
+    confirmations: initialConfirmations(opened),
+    staleConfirmations: ['gc-models-stale'],
+    refusedWrites: initialRefusedWrites(),
     usedLinks: [],
     authSessions: initialAuthSessions(),
     tokens: initialTokens(),
@@ -511,8 +519,7 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
 /** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
 export const DEMO_EMAIL_TOKEN = 'ml_demo';
 
-/** How long a sign-in may say yes, as on the server (S2-54). */
-export const FRESH_SIGN_IN_MS = 5 * 60_000;
+export { FRESH_SIGN_IN_MS };
 
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
@@ -637,6 +644,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
     ...createApproversGraphHandlers(() => db),
+    ...createConfirmationHandlers(
+      () => db,
+      now,
+      (request) => organizationOf(db, request),
+    ),
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,

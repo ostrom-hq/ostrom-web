@@ -4,7 +4,15 @@
 // console image. Sign-in links are read from the directory the server writes its mails to (OSTROM_MAIL_DIR).
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Browser, type BrowserContext, expect, type Page, test } from '@playwright/test';
+import {
+  type APIRequestContext,
+  type Browser,
+  type BrowserContext,
+  expect,
+  type Page,
+  request,
+  test,
+} from '@playwright/test';
 
 const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
@@ -163,4 +171,72 @@ export async function invitationTo(owner: Page, org: string, role: string): Prom
 export async function accept(joiner: Page, token: string): Promise<void> {
   const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', { token });
   expect(accepted.status).toBe(200);
+}
+
+/** The governance write scopes of `ostrom login --admin` (core `DeviceLoginStart`). */
+const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
+
+/**
+ * A CLI token, obtained as `ostrom login` does: the device flow started without a session, approved by the person
+ * signed in in `page` (in `org`), then exchanged for the token. `admin` asks for the governance scopes, as
+ * `ostrom login --admin`. Undefined when the server refuses the start (a server without the admin login yet).
+ */
+export async function cliToken(
+  page: Page,
+  org: string,
+  kind: 'admin' | 'device',
+): Promise<string | undefined> {
+  const cli = await cliContext();
+  try {
+    const start = await cli.post('/api/v1/auth/device', {
+      data: kind === 'admin' ? { scopes: ADMIN_SCOPES } : {},
+      failOnStatusCode: false,
+    });
+    if (start.status() !== 200) return undefined;
+    const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
+    const answered = await callFromPage(
+      page,
+      'POST',
+      '/api/v1/auth/device/answer',
+      { userCode, approve: true },
+      org,
+    );
+    expect(answered.status).toBe(204);
+    const token = await cli.post('/api/v1/auth/device/token', { data: { deviceCode } });
+    expect(token.status()).toBe(200);
+    return ((await token.json()) as { token: string }).token;
+  } finally {
+    await cli.dispose();
+  }
+}
+
+/** A client of its own, as the CLI is: no cookie of the browser, only `Authorization: Bearer`. */
+async function cliContext(): Promise<APIRequestContext> {
+  const { baseURL } = test.info().project.use;
+  return request.newContext(baseURL === undefined ? {} : { baseURL });
+}
+
+/** Calls the API as the CLI does with `token`, in `org`. */
+export async function callAsCli(
+  token: string,
+  method: string,
+  path: string,
+  body?: unknown,
+  org?: string,
+): Promise<{ status: number; body: unknown }> {
+  const cli = await cliContext();
+  try {
+    const headers: Record<string, string> = { authorization: `Bearer ${token}`, accept: 'application/json' };
+    if (org !== undefined) headers['Ostrom-Org'] = org;
+    const response = await cli.fetch(path, {
+      method,
+      headers,
+      ...(body === undefined ? {} : { data: body }),
+      failOnStatusCode: false,
+    });
+    const text = await response.text();
+    return { status: response.status(), body: text === '' ? undefined : (JSON.parse(text) as unknown) };
+  } finally {
+    await cli.dispose();
+  }
 }

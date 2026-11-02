@@ -11,6 +11,7 @@ import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
 import { ActivityScreen, activitySearchSchema } from '@/features/activity';
+import { ConfirmScreen } from '@/features/confirm';
 import { DecisionsScreen } from '@/features/decisions';
 import { GithubScreen, githubSearchSchema } from '@/features/github';
 import { ImportScreen } from '@/features/import';
@@ -95,6 +96,16 @@ const approvalRoute = createRoute({
     throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
   },
   component: ApprovalScreen,
+});
+
+/**
+ * `/confirm/gc-…` is the link `ostrom` prints when a governance write made with a CLI token waits for a person
+ * (core#57): an owner or an admin reads the exact change here, then confirms or refuses it.
+ */
+const confirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm/$confirmationId',
+  component: ConfirmScreen,
 });
 
 const sessionsRoute = createRoute({
@@ -260,6 +271,7 @@ export const routeTree = rootRoute.addChildren([
   emailLinkRoute,
   yesRoute,
   approvalRoute,
+  confirmRoute,
   sessionsRoute,
   sessionRoute,
   receiptsRoute,
