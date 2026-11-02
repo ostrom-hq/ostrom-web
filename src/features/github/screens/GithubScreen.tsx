@@ -19,12 +19,16 @@ import './github.css';
  */
 export function GithubScreen(): ReactElement {
   const { t } = useTranslation();
-  return (
-    <WithOrg title={t('github.title')}>{(org, role) => <GithubPage org={org} role={role} />}</WithOrg>
-  );
+  return <WithOrg title={t('github.title')}>{(org, role) => <GithubPage org={org} role={role} />}</WithOrg>;
 }
 
-function GithubPage({ org, role }: { readonly org: OrgView; readonly role: OrgRole | undefined }): ReactElement {
+function GithubPage({
+  org,
+  role,
+}: {
+  readonly org: OrgView;
+  readonly role: OrgRole | undefined;
+}): ReactElement {
   const { t } = useTranslation();
   // Read once the organization is known: a person in several chooses first, and the screen mounts again after.
   const outcome = useInstallOutcome();
@@ -244,7 +248,9 @@ function AnalysisBody({ analysis }: { readonly analysis: Analysis }): ReactEleme
         ) : null}
         {analysis.run === undefined ? null : (
           <Button onClick={analysis.run.go} disabled={analysis.starting}>
-            {analysis.starting ? t('github.analysis.starting') : t(`github.analysis.run.${analysis.run.from}`)}
+            {analysis.starting
+              ? t('github.analysis.starting')
+              : t(`github.analysis.run.${analysis.run.from}`)}
           </Button>
         )}
       </div>
