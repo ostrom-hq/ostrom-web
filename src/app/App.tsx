@@ -7,7 +7,15 @@ import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
 import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { safeLocalStorage } from '@/shared/lib/safeStorage';
 import { followOtherTab, useOrgStore } from '@/shared/org/orgStore';
+import { accountChanged } from '@/shared/org/sameOrg';
+
+/**
+ * Written by a tab whose account changed (a sign-in, a sign-out), read by the others: the cookie is the browser's, so
+ * every tab now reads as the new account or as nobody (audit AUDIT-SECU-WEB-2 B2). A time, never who.
+ */
+export const ACCOUNT_CHANGED_KEY = 'ostrom.account.changed';
 
 export interface AppProps {
   readonly router: AppRouter;
@@ -29,11 +37,29 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
       useAuthStore.subscribe((auth, previous) => {
         // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
         if (auth.generation === previous.generation) return;
+        safeLocalStorage.setItem(ACCOUNT_CHANGED_KEY, String(Date.now()));
+        accountChanged();
         useOrgStore.getState().signedInOrOut();
         void queryClient.resetQueries();
       }),
     [queryClient],
   );
+  // The account changed in another tab: what this one shows was read as the previous one. Read again here, without
+  // saying it changed (that would echo back to the other tab).
+  useEffect(() => {
+    const follow = (event: StorageEvent): void => {
+      if (event.key !== ACCOUNT_CHANGED_KEY) return;
+      accountChanged();
+      // The new account's queue is not "new" because of what the previous one saw (as useArrivals does in this tab).
+      resetArrivals();
+      useOrgStore.getState().signedInOrOut();
+      void queryClient.resetQueries();
+    };
+    window.addEventListener('storage', follow);
+    return () => {
+      window.removeEventListener('storage', follow);
+    };
+  }, [queryClient]);
   // Read in another organization, or refused for want of one: everything is read again in the one chosen. Who is
   // signed in and their organizations do not depend on it, and the organization switch needs them to stay on screen.
   useEffect(() => {
