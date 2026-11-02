@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { setDemoRole } from '@/mocks/orgs';
 
 const { server, db } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
@@ -13,6 +14,7 @@ const never = async (): Promise<undefined> => {
 };
 
 function asMember(): void {
+  setDemoRole(db, 'member');
   db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
   server.use(
     http.get('*/api/v1/auth/me', () =>
@@ -47,12 +49,12 @@ describe('the MCP servers', () => {
     expect(linear).toHaveTextContent('SSE');
     expect(linear).toHaveTextContent('https://mcp.linear.app/sse');
     expect(linear).toHaveTextContent(
-      'Scope org · 3 calls · Tools list_issues, create_issue, update_issue · Uses LINEAR_TOKEN',
+      'Scope shared · 3 calls · Tools list_issues, create_issue, update_issue · Uses LINEAR_TOKEN',
     );
     const sentry = await findServer('sentry');
     expect(sentry).toHaveTextContent('Off');
     expect(sentry).toHaveTextContent('HTTP');
-    expect(sentry).toHaveTextContent('Scope team:billing · 0 calls · No secret');
+    expect(sentry).toHaveTextContent('Scope per-member · 0 calls · No secret');
     const recent = within(screen.getByRole('region', { name: 'Recent calls' })).getAllByRole('listitem');
     expect(recent).toHaveLength(3);
     expect(recent[0]).toHaveTextContent('linear · create_issue');
@@ -72,7 +74,7 @@ describe('the MCP servers', () => {
       transport: 'stdio',
       secretNames: ['A', 'B'],
       enabled: true,
-      scope: 'org',
+      scope: 'shared',
     });
     visit('/mcp');
     const linear = await findServer('linear');

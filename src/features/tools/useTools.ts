@@ -18,7 +18,6 @@ import type { McpCall, McpServer, Secret } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
 
 export interface McpViewModel {
@@ -28,7 +27,6 @@ export interface McpViewModel {
   readonly callsByServer: Readonly<Record<string, number>> | undefined;
   readonly calls: readonly McpCall[] | undefined;
   readonly failure: Error | undefined;
-  readonly canManage: boolean;
 }
 
 export function useMcp(): McpViewModel {
@@ -36,7 +34,6 @@ export function useMcp(): McpViewModel {
   const secrets = useQuery(ready(listSecretsOptions()));
   const usage = useQuery(ready(getMcpUsageOptions()));
   const calls = useQuery(ready(listMcpCallsOptions()));
-  const viewer = useViewer();
   return {
     servers: servers.data?.items,
     secrets: secrets.data?.items,
@@ -44,7 +41,6 @@ export function useMcp(): McpViewModel {
     calls: calls.data?.items,
     // Missing secrets or usage would read as "nothing missing" and "0 calls": any failed part is said.
     failure: failureOf(servers.error ?? secrets.error ?? usage.error ?? calls.error),
-    canManage: viewer.canManage,
   };
 }
 
@@ -125,13 +121,11 @@ export function useMcpChange(): McpChangeViewModel {
 export interface SecretsViewModel {
   readonly secrets: readonly Secret[] | undefined;
   readonly failure: Error | undefined;
-  readonly canManage: boolean;
 }
 
 export function useSecrets(): SecretsViewModel {
   const secrets = useQuery(ready(listSecretsOptions()));
-  const viewer = useViewer();
-  return { secrets: secrets.data?.items, failure: failureOf(secrets.error), canManage: viewer.canManage };
+  return { secrets: secrets.data?.items, failure: failureOf(secrets.error) };
 }
 
 export interface SecretChangeViewModel {
