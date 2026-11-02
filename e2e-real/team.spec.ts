@@ -74,6 +74,7 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   // By link, as an approver: shown once, then opened by someone else.
   const linkForm = page.getByRole('region', { name: 'Invitation link' });
   await linkForm.getByRole('combobox', { name: 'Joins as' }).selectOption('approver');
+  await linkForm.getByRole('spinbutton', { name: 'Uses' }).fill('1');
   await linkForm.getByRole('button', { name: 'Create a link' }).click();
   const link = linkForm.getByRole('textbox', { name: 'Invitation link', exact: true });
   await expect(link).toHaveValue(/\/invite#token=/);
@@ -115,10 +116,8 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   const late = await anotherPerson(browser);
   await signIn(late, freshEmail('sven'));
   await late.goto(`${url.pathname}${url.hash}`);
-  // The server still describes the spent link (asked of its owner: the JOURNAL, 02/11), but refuses to let a second
-  // person in with it.
-  await late.getByRole('button', { name: `Join ${orgName.name}` }).click();
-  await expect(late.getByText(/no longer works/).first()).toBeVisible();
+  // One use, spent: the link no longer works, and nobody else got in.
+  await expect(late.getByText('This invitation no longer works')).toBeVisible();
   const after = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/members`);
   expect((after.body as { items: unknown[] }).items).toHaveLength(2);
 
