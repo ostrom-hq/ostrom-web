@@ -8,3 +8,4 @@ test-results
 .env*.local
 dist-real
 playwright-report-real
+dist-budget
