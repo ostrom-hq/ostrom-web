@@ -8,6 +8,7 @@ import { Section } from '@/shared/ui/Screen';
 import { parseInvites } from '../model';
 import type { InviteViewModel } from '../useMembers';
 import { RoleSelect } from './RoleSelect';
+import { FailureText } from '@/shared/ui/FailureText';
 
 export interface InviteFormProps {
   readonly invite: InviteViewModel;
@@ -69,7 +70,7 @@ export function InviteForm({ invite, roles }: InviteFormProps): ReactElement {
       )}
       {invite.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.invite.errorTag')} live>
-          {invite.failure.message}
+          <FailureText failure={invite.failure} />
         </Banner>
       )}
     </Section>

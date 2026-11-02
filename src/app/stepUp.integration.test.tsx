@@ -77,6 +77,28 @@ describe('a sensitive write from a sign-in too old (web audit 2, M3)', () => {
     expectStepUp(await within(keys).findByRole('alert'), '/policy');
   });
 
+  it('asks to sign in again before inviting by e-mail', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/orgs/:org/members/invites', stale));
+    visit('/members');
+    const invite = await screen.findByRole('region', { name: 'Invite people' });
+    await user.type(within(invite).getByRole('textbox'), 'ana@acme.dev');
+    await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
+    expectStepUp(await within(invite).findByRole('alert'), '/members');
+  });
+
+  it('asks to sign in again before changing how agents name the tools', async () => {
+    const user = userEvent.setup();
+    server.use(http.put('*/api/v1/mcp/settings', stale));
+    visit('/mcp');
+    const section = await screen.findByRole('region', { name: 'Agent names' });
+    const field = await within(section).findByRole('textbox', { name: 'Prefix' });
+    await user.clear(field);
+    await user.type(field, 'acme-ai');
+    await user.click(within(section).getByRole('button', { name: 'Save the prefix' }));
+    expectStepUp(await within(section).findByRole('alert'), '/mcp');
+  });
+
   it('still says what the server said for any other refusal', async () => {
     const user = userEvent.setup();
     server.use(
