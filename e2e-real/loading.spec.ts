@@ -67,8 +67,10 @@ async function callsOnLoad(page: Page, path: string): Promise<Call[]> {
   }
   return [...started].map(([request, start]) => {
     const url = new URL(request.url());
+    // The same path in an organization or out of one is not the same question (`GET /auth/me`, ostrom-server#92).
+    const inOrg = request.headers()['ostrom-org'] === undefined ? '' : ' (in the org)';
     return {
-      name: `${request.method()} ${url.pathname}${url.search}`,
+      name: `${request.method()} ${url.pathname}${url.search}${inOrg}`,
       start,
       end: ended.get(request) ?? Number.POSITIVE_INFINITY,
     };
@@ -91,21 +93,37 @@ function depthOf(calls: readonly Call[]): number {
   return Math.max(0, ...depths);
 }
 
+/** A call asked again once its first answer is in: a screen polling, not part of loading it. */
+function pollsIn(calls: readonly Call[]): Call[] {
+  return calls.filter((call) => calls.some((other) => other.name === call.name && other.end <= call.start));
+}
+
+/** The calls asked again while the first one was still on its way: the same question, asked twice. */
 function twiceIn(calls: readonly Call[]): string[] {
-  const names = calls.map((call) => call.name);
-  return [...new Set(names.filter((name, index) => names.indexOf(name) !== index))];
+  const twice = calls.filter((call) =>
+    calls.some(
+      (other) =>
+        other !== call && other.name === call.name && other.start <= call.start && other.end > call.start,
+    ),
+  );
+  return [...new Set(twice.map((call) => call.name))];
 }
 
 test('what each screen asks the server when it loads', async ({ page }) => {
   test.setTimeout(180_000);
   await ownerOfNewOrganization(page, 'ada');
 
-  const rows = ['| Screen | Calls | Depth | Asked twice | Calls in order |', '|---|---:|---:|---|---|'];
+  const rows = [
+    '| Screen | Calls | Depth | Asked twice | Polled | Calls in order |',
+    '|---|---:|---:|---|---:|---|',
+  ];
   for (const screen of screens) {
-    const calls = await callsOnLoad(page, screen);
+    const all = await callsOnLoad(page, screen);
+    const polls = pollsIn(all);
+    const calls = all.filter((call) => !polls.includes(call));
     const ordered = calls.toSorted((a, b) => a.start - b.start).map((call) => `\`${call.name}\``);
     rows.push(
-      `| \`${screen}\` | ${String(calls.length)} | ${String(depthOf(calls))} | ${twiceIn(calls).join(', ')} | ${ordered.join(' ')} |`,
+      `| \`${screen}\` | ${String(calls.length)} | ${String(depthOf(calls))} | ${twiceIn(calls).join(', ')} | ${String(polls.length)} | ${ordered.join(' ')} |`,
     );
   }
   const table = `### API calls on load (${test.info().project.name})\n\n${rows.join('\n')}\n`;
