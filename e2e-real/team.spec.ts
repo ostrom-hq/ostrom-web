@@ -90,6 +90,14 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   await expect(joiner.getByText('You are invited as Approver.')).toBeVisible();
   await joiner.getByRole('button', { name: `Join ${orgName.name}` }).click();
   await expect(joiner.getByRole('heading', { level: 1 })).toHaveText(orgName.name);
+  // An approver reads the members, but is offered no invitation, and the server lists them none.
+  await joiner.goto('/members');
+  await expect(joiner.getByText('2 people · you are Approver')).toBeVisible();
+  await expect(joiner.getByRole('region', { name: 'Invite people' })).toHaveCount(0);
+  await expect(joiner.getByRole('region', { name: 'Invitation link' })).toHaveCount(0);
+  expect([403, 404]).toContain(
+    (await callFromPage(joiner, 'GET', `/api/v1/orgs/${org.id}/invitations`)).status,
+  );
 
   // The owner sees them with that role, and makes them a member.
   const login = await loginOf(joiner);
@@ -112,7 +120,6 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
     expect.objectContaining({ login, role: 'member' }),
   );
 
-  // The link was for one person: it no longer works.
   const late = await anotherPerson(browser);
   await signIn(late, freshEmail('sven'));
   await late.goto(`${url.pathname}${url.hash}`);
@@ -124,5 +131,11 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   // Another organization's person reads none of it.
   const stranger = await anotherPerson(browser);
   await ownerOfNewOrganization(stranger, 'tove');
-  expect((await callFromPage(stranger, 'GET', `/api/v1/orgs/${org.id}/members`)).status).toBe(404);
+  await stranger.goto('/members');
+  await expect(stranger.getByText('1 person · you are Owner')).toBeVisible();
+  await expect(stranger.getByText(invited)).toHaveCount(0);
+  await expect(stranger.getByRole('combobox', { name: `Role of ${shown}` })).toHaveCount(0);
+  for (const path of [`/api/v1/orgs/${org.id}/members`, `/api/v1/orgs/${org.id}/invitations`]) {
+    expect((await callFromPage(stranger, 'GET', path)).status, path).toBe(404);
+  }
 });
