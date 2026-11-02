@@ -34,7 +34,8 @@ function signInToken(email: string): string | undefined {
 
 /** Signs `email` in through the console: the form, the e-mailed link, the queue. */
 export async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/signin');
+  // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
+  await page.goto('/signin?redirect=%2Fyes');
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
   await expect(page.getByRole('alert')).toContainText(`If ${email} may sign in, a link is on its way.`);
