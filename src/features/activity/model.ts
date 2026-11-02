@@ -31,7 +31,11 @@ export function toneOf(kind: ActivityKind | undefined): BadgeTone {
       return 'warning';
     case 'check.passed':
       return 'success';
-    default:
+    case 'session.started':
+    case 'session.ended':
+    case 'gate.decided':
+    case 'workflow.changed':
+    case undefined:
       return 'neutral';
   }
 }
