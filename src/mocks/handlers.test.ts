@@ -185,6 +185,7 @@ describe('mock API', () => {
   });
 
   it('refuses the asker’s own approval while another approver exists, and lets their refusal through', async () => {
+    db.selfApproval = 'sole-approver';
     const error = await failureOf(async () =>
       answerApproval({
         ...deploy,
@@ -206,6 +207,7 @@ describe('mock API', () => {
   });
 
   it('marks the approval of the only approver as self-approved, on the approval and its receipt', async () => {
+    db.selfApproval = 'sole-approver';
     db.approvers['apr-deploy-88'] = ['maya'];
     const { data } = await answerApproval({
       ...deploy,
@@ -476,9 +478,10 @@ describe('mock workflows and policy', () => {
   });
 
   it('reads and sets the self-approval policy, for owners and admins only', async () => {
-    expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('sole-approver');
-    const set = await setGatePolicy({ body: { selfApproval: 'never' }, throwOnError: true });
-    expect(set.data.selfApproval).toBe('never');
+    // Never by default, as the server (S2-15); sole-approver is the organization's choice.
+    expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('never');
+    const set = await setGatePolicy({ body: { selfApproval: 'sole-approver' }, throwOnError: true });
+    expect(set.data.selfApproval).toBe('sole-approver');
     const bad = await failureOf(async () =>
       setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }),
     );

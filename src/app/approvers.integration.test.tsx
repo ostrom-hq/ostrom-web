@@ -113,7 +113,7 @@ describe('who approves what', () => {
       ),
     );
     visit('/approvers');
-    expect(await screen.findByText(/only when nobody else can/)).toBeInTheDocument();
+    expect(await screen.findByText(/never approves their own request/)).toBeInTheDocument();
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
