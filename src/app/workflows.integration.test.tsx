@@ -401,12 +401,27 @@ describe('changing the workflows', () => {
     expect(screen.queryByRole('heading', { name: 'Database migrations' })).toBeNull();
   });
 
-  it('opens another workflow without the editor of the first', async () => {
+  it('opens another workflow without the editor nor the refusal of the first, and the first again without either', async () => {
     const user = userEvent.setup();
     const router = visit('/workflows/wf-backend');
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    server.use(
+      http.put(
+        '*/api/v1/workflows/:id',
+        () =>
+          HttpResponse.json({ error: { type: 'invalid_request', message: 'refused here' } }, { status: 400 }),
+        { once: true },
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('refused here')).toBeInTheDocument();
     await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-migrations' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'Database migrations' })).toBeInTheDocument();
+    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.queryByText('refused here')).toBeNull();
+    // Back to the first: it starts again from what the server has, without its old editor.
+    await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-backend' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Backend changes' })).toBeInTheDocument();
     expect(screen.queryByRole('form')).toBeNull();
   });
 

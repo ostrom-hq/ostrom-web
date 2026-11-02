@@ -278,7 +278,15 @@ export function nodeOf(step: StepDraft): WorkflowNode {
  * goes to the same step); the workflow's own paths, untouched, for one that branches.
  */
 export function edgesOf(draft: WorkflowDraft, base: Workflow | undefined): WorkflowEdge[] {
-  if (!draft.linear && base !== undefined) return base.edges;
+  if (
+    base !== undefined &&
+    (!draft.linear ||
+      sameValue(
+        draft.steps.map((step) => step.id),
+        readSteps(base).map((step) => step.node.id),
+      ))
+  )
+    return base.edges;
   // The last step ends the way the workflow wrote it: by a path to nowhere, or by no path at all.
   const endsByPath = base === undefined || base.edges.some((edge) => edge.to === null);
   const steps = endsByPath ? draft.steps : draft.steps.slice(0, -1);
@@ -322,6 +330,12 @@ export function workflowIdFor(name: string, taken: readonly string[]): string {
   return id;
 }
 
+/** The node a step was read from, when nobody changed any of its fields. */
+function untouched(step: StepDraft): WorkflowNode | undefined {
+  if (step.base === undefined) return undefined;
+  return sameValue({ ...stepDraftOf(step.base, step.key) }, { ...step }) ? step.base : undefined;
+}
+
 /** A new workflow is accepted as written; a proposed one is accepted, with changes when it has some; else it stays. */
 function statusOf(base: Workflow | undefined, changed: boolean): WorkflowStatus {
   if (base === undefined) return 'accepted';
@@ -339,7 +353,10 @@ export function workflowOf(
   id: string,
   now: string,
 ): Workflow {
-  const description = textOf(draft.description);
+  const description =
+    base !== undefined && draft.description === (base.description ?? '')
+      ? base.description
+      : textOf(draft.description);
   const first = draft.steps[0]?.id;
   // A workflow that names no start begins where its reading begins: it names one only once that changes.
   const start =
@@ -352,30 +369,21 @@ export function workflowOf(
     return at < 0 ? Number.MAX_SAFE_INTEGER : at;
   };
   const nodes = draft.steps
-    .map((step, at) => ({ node: nodeOf(step), at }))
+    .map((step, at) => ({ node: untouched(step) ?? nodeOf(step), at }))
     .sort((a, b) => {
       const byPlace = place(a.node.id) - place(b.node.id);
       return byPlace === 0 ? a.at - b.at : byPlace;
     })
     .map(({ node }) => node);
   const edges = edgesOf(draft, base);
-  const name = draft.name.trim();
-  const domain = draft.domain.trim();
-  // As a rule is: a proposed workflow saved unchanged is accepted as found, and accepted with changes otherwise.
-  // Both sides as the editor writes them (trimmed, approvers listed once, empty parts left out): a workflow saved
-  // untouched is the same workflow, whatever the server's own spelling of it.
+  const name = draft.name === base?.name ? base.name : draft.name.trim();
+  const domain = draft.domain === base?.domain ? base.domain : draft.domain.trim();
+  // What nobody touched goes back as it was read, so a workflow saved untouched is the very same workflow.
   const changed =
     base === undefined ||
     !sameValue(
       [name, domain, description, start, nodes, edges],
-      [
-        base.name.trim(),
-        base.domain.trim(),
-        textOf(base.description ?? ''),
-        base.start,
-        base.nodes.map((node) => nodeOf(stepDraftOf(node, 0))),
-        base.edges,
-      ],
+      [base.name, base.domain, base.description, base.start, base.nodes, base.edges],
     );
   const status: WorkflowStatus = statusOf(base, changed);
   return {

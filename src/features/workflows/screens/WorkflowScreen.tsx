@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Workflow } from '@gen/api/types.gen';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, Navigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -15,15 +15,20 @@ import { readSteps, STATUS_TONES, type Step, workflowOf } from '../model';
 import { useWorkflow, useWorkflowChange, type WorkflowChangeViewModel } from '../useWorkflows';
 
 export function WorkflowScreen(): ReactElement {
-  const { t } = useTranslation();
   const { workflowId } = useParams({ from: '/workflows/$workflowId' });
+  // One screen per workflow: its editor, its last refusal and its pending change never follow a link to another.
+  return <WorkflowView key={workflowId} workflowId={workflowId} />;
+}
+
+function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactElement {
+  const { t } = useTranslation();
   const { workflow, failure, canChange } = useWorkflow(workflowId);
   const changes = useWorkflowChange();
   // The workflow the editor started from: its draft is drawn from it, a save is built on it and checked against its
   // version, so a version saved in between is a conflict, never overwritten nor mixed in, even once the screen read it.
-  const [editingAny, setEditing] = useState<Workflow | undefined>(undefined);
-  // Only this screen's workflow: another one opened from a link starts without an editor.
-  const editing = editingAny?.id === workflowId ? editingAny : undefined;
+  const [editing, setEditing] = useState<Workflow | undefined>(undefined);
+  // Deleted: its screen is left for the list; nothing of it is drawn again, its buttons least of all.
+  if (changes.deleted) return <Navigate to="/workflows" />;
   return (
     <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (
@@ -97,7 +102,6 @@ function WorkflowActions({
   readonly onEdit: () => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const busy = changes.pending !== undefined;
   return (
     <div className="o-inline wf-actions">
@@ -127,9 +131,7 @@ function WorkflowActions({
         keep={t('workflows.actions.keep')}
         disabled={busy}
         onConfirm={() => {
-          changes.change({ kind: 'delete', id: workflow.id }, async () => {
-            await navigate({ to: '/workflows' });
-          });
+          changes.change({ kind: 'delete', id: workflow.id }, () => undefined);
         }}
       />
       <p className="o-screen__lead wf-actions__lead">{t('workflows.actions.deleteLead')}</p>

@@ -49,14 +49,10 @@ export type WorkflowChange =
   | { readonly kind: 'delete'; readonly id: string };
 
 export interface WorkflowChangeViewModel {
-  /**
-   * Sends the change; `onDone` runs once the server took it (an editor closes then, a deleted workflow's screen is
-   * left, and the workflow leaves the cache once it has).
-   */
-  readonly change: (
-    change: WorkflowChange,
-    onDone: (saved: Workflow | undefined) => void | Promise<void>,
-  ) => void;
+  /** Sends the change; `onDone` runs once the server took it (an editor closes then, a deleted workflow is left). */
+  readonly change: (change: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => void;
+  /** The workflow was deleted: its screen says so, and offers nothing more. */
+  readonly deleted: boolean;
   readonly pending: WorkflowChange['kind'] | undefined;
   readonly failure: Error | undefined;
   /** What the failed change was: its failure says what to do next accordingly. */
@@ -91,16 +87,19 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: send,
+    // Gone from the server: it leaves the cache here, whether or not its screen is still open (it says "deleted").
+    onSuccess: (_saved, change) => {
+      if (change.kind === 'delete')
+        queryClient.removeQueries({ queryKey: getWorkflowQueryKey({ path: { id: change.id } }) });
+    },
     // Whatever the answer, the list and the workflow are read again: a conflict shows the version saved in between.
     onSettled: async (_saved, error, change) => {
       const id = change.kind === 'delete' ? change.id : change.workflow.id;
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: listWorkflowsQueryKey() }),
-        // A deleted workflow is only marked stale: its screen is being left, and reading it again would flash a 404.
-        queryClient.invalidateQueries({
-          queryKey: getWorkflowQueryKey({ path: { id } }),
-          ...(change.kind === 'delete' && error === null ? { refetchType: 'none' } : {}),
-        }),
+        change.kind === 'delete' && error === null
+          ? Promise.resolve()
+          : queryClient.invalidateQueries({ queryKey: getWorkflowQueryKey({ path: { id } }) }),
         queryClient.invalidateQueries({ queryKey: listDecisionsQueryKey() }),
         // The catalogue holds the actions of the workflows' gates.
         queryClient.invalidateQueries({ queryKey: getGateCatalogQueryKey() }),
@@ -110,25 +109,19 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
 
   const { mutate, reset } = mutation;
   const change = useCallback(
-    (next: WorkflowChange, onDone: (saved: Workflow | undefined) => void | Promise<void>) => {
+    (next: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => {
       mutate(next, {
-        onSuccess: (saved) => {
-          // Gone from the server, and its screen now left: nothing shows it again, not even from the cache.
-          const forget = (): void => {
-            if (next.kind === 'delete')
-              queryClient.removeQueries({ queryKey: getWorkflowQueryKey({ path: { id: next.id } }) });
-          };
-          void Promise.resolve(onDone(saved)).then(forget);
-        },
+        onSuccess: onDone,
       });
     },
-    [mutate, queryClient],
+    [mutate],
   );
   return {
     change,
     pending: mutation.isPending ? mutation.variables.kind : undefined,
     failure: failureOf(mutation.error),
     failed: mutation.isError ? mutation.variables.kind : undefined,
+    deleted: mutation.isSuccess && mutation.variables.kind === 'delete',
     reset,
   };
 }
