@@ -604,7 +604,12 @@ describe('mock rules and decisions', () => {
     // An accepted rule without a gate adds nothing.
     db.rules = db.rules.map((rule) => (rule.id === 'R-12' ? { ...rule, status: 'accepted' } : rule));
     const { data } = await getGateCatalog({ throwOnError: true });
-    expect(data.actions.map((action) => action.class)).toEqual(['merge-main', 'deploy', 'migrate']);
+    expect(data.actions.map((action) => action.class)).toEqual([
+      'merge-main',
+      'deploy',
+      'migrate',
+      'drop-table',
+    ]);
     db.workflows = [];
     db.rules = db.rules.map((rule) => ({ ...rule, status: 'proposed' }));
     expect((await getGateCatalog({ throwOnError: true })).data).toEqual({ gates: [], actions: [] });

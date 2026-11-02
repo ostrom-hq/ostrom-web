@@ -465,6 +465,8 @@ describe('writing and gating rules', () => {
 
   it('edits a decided rule: where it holds, why, and takes its gate off', async () => {
     const user = userEvent.setup();
+    const deploy = { class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: [] };
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [deploy] })));
     visit('/rules');
     await user.click(await screen.findByRole('button', { name: 'Accepted 1' }));
     const migrations = card(/Migrations run only/);
