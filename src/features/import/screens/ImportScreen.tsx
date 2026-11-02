@@ -13,14 +13,13 @@ import { changesOf, type ImportMode } from '../model';
 import { type ImportFailure, useTeamCodeImport } from '../useImport';
 import './import.css';
 
-/** Moving a TeamCode team into the organization: the plan, the real import, then the cutover once TeamCode stops. */
 /** What a failed run says: a known refusal or a failure before the server, or a cutover that may have run. */
 function FailureBanner({ failure }: { readonly failure: ImportFailure }): ReactElement {
   const { t } = useTranslation();
   switch (failure.kind) {
     case 'cutoverUnknown':
       return (
-        <Banner tone="warning" tag={t('imports.failure.unknownTag')} live>
+        <Banner tone="warning" tag={t('imports.failure.mayHaveRunTag')} live>
           {t('imports.failure.cutoverUnknown', { message: failure.message })}
         </Banner>
       );
@@ -41,6 +40,7 @@ function FailureBanner({ failure }: { readonly failure: ImportFailure }): ReactE
   }
 }
 
+/** Moving a TeamCode team into the organization: the plan, the real import, then the cutover once TeamCode stops. */
 export function ImportScreen(): ReactElement {
   const { t } = useTranslation();
   return (

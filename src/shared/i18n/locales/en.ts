@@ -837,7 +837,7 @@ export const en = {
       noAudit: 'This server keeps no audit log, so it cannot run the cutover. Nothing was written.',
       noSharing:
         'This server does not import shared accounts, so it has no cutover to run. Nothing was written.',
-      unknownTag: 'May have run',
+      mayHaveRunTag: 'May have run',
       cutoverUnknown:
         'The cutover may have run: look at the audit log before running it again. Error: {{message}}',
     },

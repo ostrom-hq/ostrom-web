@@ -18,7 +18,10 @@ import {
 export type ImportFailure =
   /** The server refused the cutover before writing anything: an owner only, no audit log, no shared accounts. */
   | { readonly kind: CutoverRefusal }
-  /** The cutover failed after it may have started: it may have run, so the screen says to look first. */
+  /**
+   * Any other cutover failure: unless it is known to come before the audit entry, it may have run, so the screen says to
+   * look first. A refusal before the write that is not one of the three known ones lands here too, on the safe side.
+   */
   | { readonly kind: 'cutoverUnknown'; readonly message: string }
   | { readonly kind: 'other'; readonly message: string };
 
