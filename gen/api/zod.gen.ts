@@ -536,6 +536,15 @@ export const zCheckOutcome = z.enum([
     'skipped'
 ]);
 
+/**
+ * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: an Ostrom runner ran it in an isolated session. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
+ */
+export const zCheckAttestation = z.enum([
+    'workstation_declared',
+    'isolated_runner',
+    'ci'
+]);
+
 export const zCheckState = z.enum([
     'success',
     'failure',
@@ -890,7 +899,8 @@ export const zImportItem = z.object({
         'created',
         'updated',
         'unchanged',
-        'skipped'
+        'skipped',
+        'revive_at_cutover'
     ]),
     reason: z.string().optional()
 });
@@ -903,7 +913,8 @@ export const zImportReport = z.object({
     created: z.int(),
     updated: z.int(),
     unchanged: z.int(),
-    skipped: z.int()
+    skipped: z.int(),
+    reviveAtCutover: z.int()
 });
 
 /**
@@ -1529,7 +1540,8 @@ export const zReceiptNode = z.object({
     label: z.string(),
     outcome: z.string(),
     detail: z.string().optional(),
-    ref: z.string().optional()
+    ref: z.string().optional(),
+    attestation: zCheckAttestation.optional()
 });
 
 /**
@@ -1662,6 +1674,24 @@ export const zNodeWhen = z.object({
 });
 
 /**
+ * A check a rule gate requires before its actions pass
+ */
+export const zRuleGateCheck = z.object({
+    check: z.string(),
+    attested: z.boolean().optional()
+});
+
+/**
+ * The gate a rule puts on boundary actions. An accepted or edited rule blocks the actions until one of the approvers says yes; a proposed rule only records them (shadow); a rejected rule gates nothing.
+ */
+export const zRuleGate = z.object({
+    actions: z.array(zGateAction),
+    approvers: z.array(z.string()),
+    reason: z.string().optional(),
+    checks: z.array(zRuleGateCheck).optional()
+});
+
+/**
  * Where a rule or a workflow was found
  */
 export const zRuleSource = z.object({
@@ -1698,7 +1728,23 @@ export const zRule = z.object({
     reviewBy: z.string().optional(),
     decidedBy: z.string().optional(),
     decidedAt: z.string().optional(),
-    origin: z.string().optional()
+    origin: z.string().optional(),
+    gate: zRuleGate.optional()
+});
+
+/**
+ * A rule written by the team
+ */
+export const zNewRule = z.object({
+    statement: z.string(),
+    group: z.string(),
+    output: z.string().optional(),
+    scope: z.array(z.string()).optional(),
+    strength: zRuleStrength.optional(),
+    why: z.string().optional(),
+    status: zRuleStatus.optional(),
+    reviewBy: z.string().optional(),
+    gate: zRuleGate.optional()
 });
 
 export const zRunLocation = z.enum(['workstation', 'ostrom']);
@@ -4184,6 +4230,30 @@ export const zListRulesResponse = z.object({
     next: z.string().optional()
 });
 
+export const zCreateRuleBody = zNewRule;
+
+export const zCreateRuleHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+/**
+ * Created
+ */
+export const zCreateRuleResponse = zRule;
+
+export const zDeleteRuleHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
+export const zDeleteRulePath = z.object({
+    id: z.string()
+});
+
+/**
+ * Deleted
+ */
+export const zDeleteRuleResponse = z.void();
+
 export const zGetRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
@@ -4202,7 +4272,11 @@ export const zUpdateRuleBody = z.object({
     status: zRuleStatus.optional(),
     strength: zRuleStrength.optional(),
     reviewBy: z.string().optional(),
-    scope: z.array(z.string()).optional()
+    scope: z.array(z.string()).optional(),
+    group: z.string().optional(),
+    why: z.string().optional(),
+    output: z.string().optional(),
+    gate: zRuleGate.nullish()
 });
 
 export const zUpdateRuleHeaders = z.object({
@@ -4895,7 +4969,8 @@ export const zImportTeamCodeHeaders = z.object({
 });
 
 export const zImportTeamCodeQuery = z.object({
-    dryRun: z.boolean().optional()
+    dryRun: z.boolean().optional(),
+    cutover: z.boolean().optional()
 });
 
 /**
