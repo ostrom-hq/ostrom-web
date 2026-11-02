@@ -104,8 +104,12 @@ import {
   zExchangeSignInLinkBody,
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
+import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
+import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
@@ -138,7 +142,7 @@ import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixt
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
-export interface MockDb extends BillingState, OrgsState {
+export interface MockDb extends AccountState, BillingState, OrgsState, TokensState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -228,6 +232,9 @@ export function createMockDb(): MockDb {
     signedInAt: Date.now(),
     signedIn: true,
     usedLinks: [],
+    authSessions: initialAuthSessions(),
+    tokens: initialTokens(),
+    nextToken: 3,
     billing: initialBilling(),
     invoices: initialInvoices(),
   };
@@ -554,6 +561,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
     handleListMembers(() => HttpResponse.json({ items: db.members })),
     ...createOrgsHandlers(() => db, now),
+    ...createOrgDeletionHandlers(() => db),
+    ...createTokensHandlers(() => db, now),
+    ...createAccountHandlers(() => db, now),
     ...createApproversGraphHandlers(() => db),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
