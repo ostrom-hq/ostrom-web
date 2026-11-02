@@ -100,9 +100,15 @@ function depthOf(calls: readonly Call[]): number {
   return Math.max(0, ...depths);
 }
 
-/** A call asked again once its first answer is in: a screen polling, not part of loading it. */
+/**
+ * A call asked again once its first answer is in: a screen polling, not part of loading it. The console adds the
+ * organization to a call once it knows it, so a poll may carry it where the first call did not; on `/auth/…` the
+ * caller names it, and the call in the organization is another question (ostrom-server#92).
+ */
 function pollsIn(calls: readonly Call[]): Call[] {
-  return calls.filter((call) => calls.some((other) => other.asked === call.asked && other.end <= call.start));
+  const same = (a: Call, b: Call): boolean =>
+    a.asked.includes(' /api/v1/auth/') ? a.name === b.name : a.asked === b.asked;
+  return calls.filter((call) => calls.some((other) => same(other, call) && other.end <= call.start));
 }
 
 /** The calls asked again while the first one was still on its way: the same question, asked twice. */
