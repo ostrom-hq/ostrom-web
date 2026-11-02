@@ -56,7 +56,7 @@ function ImportSteps({
         <>
           <Section label={t('imports.plan.title')}>
             <div className="o-stack">
-              <p className="o-row__meta">{t('imports.plan.lead')}</p>
+              <p className="o-screen__lead">{t('imports.plan.lead')}</p>
               <div className="o-inline">
                 <Button
                   disabled={busy}
@@ -72,9 +72,9 @@ function ImportSteps({
           </Section>
           <Section label={t('imports.run.title')}>
             <div className="o-stack">
-              <p className="o-row__meta">{t('imports.run.lead')}</p>
+              <p className="o-screen__lead">{t('imports.run.lead')}</p>
               {plan === undefined ? (
-                <p className="o-row__meta">{t('imports.run.needsPlan')}</p>
+                <p className="o-screen__lead">{t('imports.run.needsPlan')}</p>
               ) : (
                 <div className="o-inline">
                   <ConfirmButton
@@ -94,11 +94,11 @@ function ImportSteps({
           </Section>
           <Section label={t('imports.cutover.title')}>
             <div className="o-stack">
-              <p className="o-row__meta">{t('imports.cutover.lead')}</p>
+              <p className="o-screen__lead">{t('imports.cutover.lead')}</p>
               {role !== 'owner' ? (
-                <p className="o-row__meta">{t('imports.cutover.ownersOnly')}</p>
+                <p className="o-screen__lead">{t('imports.cutover.ownersOnly')}</p>
               ) : imported === undefined ? (
-                <p className="o-row__meta">{t('imports.cutover.needsImport')}</p>
+                <p className="o-screen__lead">{t('imports.cutover.needsImport')}</p>
               ) : (
                 <>
                   <div className="o-inline">

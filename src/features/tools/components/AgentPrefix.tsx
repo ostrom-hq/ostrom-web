@@ -29,7 +29,7 @@ export function AgentPrefix({ settings, example, canManage }: AgentPrefixProps):
           const valid = AGENT_PREFIX.test(value);
           return (
             <div className="o-stack">
-              <p className="o-row__meta">
+              <p className="o-screen__lead">
                 {t('tools.mcp.prefix.lead')}{' '}
                 <span className="o-mono">{agentToolName(valid ? value : prefix, example)}</span>
               </p>
@@ -65,7 +65,7 @@ export function AgentPrefix({ settings, example, canManage }: AgentPrefixProps):
                   </Button>
                 </form>
               ) : (
-                <p className="o-row__meta">{t('tools.mcp.prefix.readOnly', { prefix })}</p>
+                <p className="o-screen__lead">{t('tools.mcp.prefix.readOnly', { prefix })}</p>
               )}
               {tried && !valid ? (
                 <Banner tone="warning" tag={t('tools.mcp.add.problemTag')} live>

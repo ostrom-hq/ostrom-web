@@ -60,7 +60,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
           <>
             <h4 className="tl-label">{t('tools.mcp.access.who')}</h4>
             {assignments.length === 0 ? (
-              <p className="o-row__meta">{t('tools.mcp.access.nobody')}</p>
+              <p className="o-screen__lead">{t('tools.mcp.access.nobody')}</p>
             ) : (
               <ul className="o-rows" aria-label={t('tools.mcp.access.whoList', { server })}>
                 {assignments.map((assignment) => (
@@ -79,7 +79,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
             <AssignForm server={server} members={view.members} change={change} />
             <h4 className="tl-label">{t('tools.mcp.access.policies')}</h4>
             {policies.length === 0 ? (
-              <p className="o-row__meta">{t('tools.mcp.access.noPolicy')}</p>
+              <p className="o-screen__lead">{t('tools.mcp.access.noPolicy')}</p>
             ) : (
               <ul className="o-rows" aria-label={t('tools.mcp.access.policyList', { server })}>
                 {policies.map((policy) => (
@@ -190,7 +190,7 @@ function PolicyRow({ policy, busy, onRemove }: PolicyRowProps): ReactElement {
           </Badge>
         </span>
         <span className="o-row__meta o-mono">{when}</span>
-        <span className="o-row__meta">{t('tools.mcp.access.says', { message: policy.message })}</span>
+        <span className="o-row__meta tl-says">{t('tools.mcp.access.says', { message: policy.message })}</span>
       </span>
       <span className="o-row__end">
         <ConfirmButton

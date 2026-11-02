@@ -14,7 +14,7 @@ export function ExportFile({ view }: { readonly view: TeamCodeImportViewModel })
   return (
     <Section label={t('imports.file.title')}>
       <div className="o-stack">
-        <p className="o-row__meta">
+        <p className="o-screen__lead">
           {t('imports.file.lead')} <span className="o-mono">ostrom import teamcode</span>
         </p>
         <label htmlFor={id} className="o-field-label">
@@ -56,7 +56,7 @@ export function ExportFile({ view }: { readonly view: TeamCodeImportViewModel })
                 })}
               </Banner>
             )}
-            <p className="o-row__meta">{t('imports.file.inClear')}</p>
+            <p className="o-screen__lead">{t('imports.file.inClear')}</p>
             <div className="o-inline">
               <Button variant="ghost" disabled={view.running !== undefined} onClick={view.forget}>
                 {t('imports.file.forget')}

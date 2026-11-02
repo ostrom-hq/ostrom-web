@@ -28,7 +28,7 @@ export function ImportReportView({ mode, report }: ImportReportViewProps): React
   return (
     <div className="o-stack">
       {shown.length === 0 ? (
-        <p className="o-row__meta">{t('imports.report.empty')}</p>
+        <p className="o-screen__lead">{t('imports.report.empty')}</p>
       ) : (
         <ul className="o-inline im-counts" aria-label={t(`imports.report.counts.${mode}`)}>
           {shown.map((action) => (

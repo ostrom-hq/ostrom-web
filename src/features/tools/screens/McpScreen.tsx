@@ -37,7 +37,7 @@ export function McpScreen(): ReactElement {
       {view.canManage ? (
         <AddServerForm change={change} />
       ) : (
-        <p className="o-row__meta">{t('tools.mcp.access.membersNote')}</p>
+        <p className="o-screen__lead">{t('tools.mcp.access.membersNote')}</p>
       )}
       <LoadState data={view.servers} failure={view.failure}>
         {(servers) =>
