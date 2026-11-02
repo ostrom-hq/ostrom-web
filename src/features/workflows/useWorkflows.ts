@@ -49,8 +49,14 @@ export type WorkflowChange =
   | { readonly kind: 'delete'; readonly id: string };
 
 export interface WorkflowChangeViewModel {
-  /** Sends the change; `onDone` runs once the server took it (an editor closes then, a deleted workflow leaves). */
-  readonly change: (change: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => void;
+  /**
+   * Sends the change; `onDone` runs once the server took it (an editor closes then, a deleted workflow's screen is
+   * left, and the workflow leaves the cache once it has).
+   */
+  readonly change: (
+    change: WorkflowChange,
+    onDone: (saved: Workflow | undefined) => void | Promise<void>,
+  ) => void;
   readonly pending: WorkflowChange['kind'] | undefined;
   readonly failure: Error | undefined;
   /** What the failed change was: its failure says what to do next accordingly. */
@@ -104,10 +110,19 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
 
   const { mutate, reset } = mutation;
   const change = useCallback(
-    (next: WorkflowChange, onDone: (saved: Workflow | undefined) => void) => {
-      mutate(next, { onSuccess: onDone });
+    (next: WorkflowChange, onDone: (saved: Workflow | undefined) => void | Promise<void>) => {
+      mutate(next, {
+        onSuccess: (saved) => {
+          // Gone from the server, and its screen now left: nothing shows it again, not even from the cache.
+          const forget = (): void => {
+            if (next.kind === 'delete')
+              queryClient.removeQueries({ queryKey: getWorkflowQueryKey({ path: { id: next.id } }) });
+          };
+          void Promise.resolve(onDone(saved)).then(forget);
+        },
+      });
     },
-    [mutate],
+    [mutate, queryClient],
   );
   return {
     change,

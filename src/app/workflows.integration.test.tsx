@@ -328,7 +328,7 @@ describe('changing the workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Delete this workflow' }));
     expect(
       await screen.findByText(
-        'workflow_in_use: a pinned package compiles this workflow. Something still uses it: it is deleted once nothing does.',
+        'workflow_in_use: a pinned package compiles this workflow. Something still uses it: delete it again once nothing does.',
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Database migrations' })).toBeInTheDocument();
@@ -386,6 +386,49 @@ describe('changing the workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(/Read it first\./)).toBeInTheDocument();
     expect(db.decisions).toHaveLength(before);
+  });
+
+  it('never shows a deleted workflow again, not even from what the screen had read', async () => {
+    const user = userEvent.setup();
+    const router = visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByRole('button', { name: 'Delete this workflow' }));
+    await screen.findByRole('heading', { level: 1, name: 'Workflows' });
+    // Its old address, the server slow to answer: nothing of it is drawn from the cache.
+    server.use(http.get('*/api/v1/workflows/:id', never));
+    await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-migrations' } });
+    expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Database migrations' })).toBeNull();
+  });
+
+  it('opens another workflow without the editor of the first', async () => {
+    const user = userEvent.setup();
+    const router = visit('/workflows/wf-backend');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-migrations' } });
+    expect(await screen.findByRole('heading', { level: 1, name: 'Database migrations' })).toBeInTheDocument();
+    expect(screen.queryByRole('form')).toBeNull();
+  });
+
+  it('accepts as found a proposed workflow the editor spells otherwise but nobody touched', async () => {
+    const user = userEvent.setup();
+    const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
+    if (base === undefined) throw new Error('wf-migrations');
+    db.workflows = db.workflows.map((workflow) =>
+      workflow.id === 'wf-migrations'
+        ? {
+            ...base,
+            name: ' Database migrations ',
+            nodes: base.nodes.map((node) =>
+              node.id === 'm-orphan' ? { ...node, approvers: [], run: {} } : node,
+            ),
+          }
+        : workflow,
+    );
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    await user.click(screen.getByRole('button', { name: 'Save and accept' }));
+    expect(await screen.findByText('Accepted')).toBeInTheDocument();
   });
 
   it('says what is being sent while the server answers', async () => {

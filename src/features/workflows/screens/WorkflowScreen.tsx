@@ -21,7 +21,9 @@ export function WorkflowScreen(): ReactElement {
   const changes = useWorkflowChange();
   // The workflow the editor started from: its draft is drawn from it, a save is built on it and checked against its
   // version, so a version saved in between is a conflict, never overwritten nor mixed in, even once the screen read it.
-  const [editing, setEditing] = useState<Workflow | undefined>(undefined);
+  const [editingAny, setEditing] = useState<Workflow | undefined>(undefined);
+  // Only this screen's workflow: another one opened from a link starts without an editor.
+  const editing = editingAny?.id === workflowId ? editingAny : undefined;
   return (
     <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (
@@ -125,8 +127,8 @@ function WorkflowActions({
         keep={t('workflows.actions.keep')}
         disabled={busy}
         onConfirm={() => {
-          changes.change({ kind: 'delete', id: workflow.id }, () => {
-            void navigate({ to: '/workflows' });
+          changes.change({ kind: 'delete', id: workflow.id }, async () => {
+            await navigate({ to: '/workflows' });
           });
         }}
       />

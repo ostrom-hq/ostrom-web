@@ -322,6 +322,13 @@ export function workflowIdFor(name: string, taken: readonly string[]): string {
   return id;
 }
 
+/** A new workflow is accepted as written; a proposed one is accepted, with changes when it has some; else it stays. */
+function statusOf(base: Workflow | undefined, changed: boolean): WorkflowStatus {
+  if (base === undefined) return 'accepted';
+  if (base.status !== 'proposed') return base.status;
+  return changed ? 'edited' : 'accepted';
+}
+
 /**
  * The workflow a draft says. A new one is accepted as it is written (a person in the console decides); a proposed one
  * that a person saves is accepted, with changes when it has some; an accepted one stays as it was called.
@@ -355,20 +362,22 @@ export function workflowOf(
   const name = draft.name.trim();
   const domain = draft.domain.trim();
   // As a rule is: a proposed workflow saved unchanged is accepted as found, and accepted with changes otherwise.
+  // Both sides as the editor writes them (trimmed, approvers listed once, empty parts left out): a workflow saved
+  // untouched is the same workflow, whatever the server's own spelling of it.
   const changed =
     base === undefined ||
     !sameValue(
       [name, domain, description, start, nodes, edges],
-      [base.name, base.domain, base.description, base.start, base.nodes, base.edges],
+      [
+        base.name.trim(),
+        base.domain.trim(),
+        textOf(base.description ?? ''),
+        base.start,
+        base.nodes.map((node) => nodeOf(stepDraftOf(node, 0))),
+        base.edges,
+      ],
     );
-  const status: WorkflowStatus =
-    base === undefined
-      ? 'accepted'
-      : base.status === 'proposed'
-        ? changed
-          ? 'edited'
-          : 'accepted'
-        : base.status;
+  const status: WorkflowStatus = statusOf(base, changed);
   return {
     id,
     name,

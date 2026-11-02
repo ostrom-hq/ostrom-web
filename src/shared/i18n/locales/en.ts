@@ -679,7 +679,7 @@ export const en = {
       deleteLead: 'Agents stop following it, and its gates leave the catalogue.',
       keep: 'Keep it',
       deleting: 'Deleting…',
-      inUse: 'Something still uses it: it is deleted once nothing does.',
+      inUse: 'Something still uses it: delete it again once nothing does.',
       acceptConflict: 'Someone changed it in between: its saved version is shown, decide again.',
       errorTag: 'Not saved',
       readOnly: 'Owners and admins change workflows.',

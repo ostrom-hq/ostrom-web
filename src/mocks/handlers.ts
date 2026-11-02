@@ -1178,8 +1178,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
       db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
       // As the server: a decision is signed only when something decided changed (steps, paths, status, name).
-      const decided = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
-      if (!sameValue(decided(current), decided(workflow)))
+      const decidedParts = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
+      if (!sameValue(decidedParts(current), decidedParts(workflow)))
         recordWorkflowDecision(
           db,
           workflow,
