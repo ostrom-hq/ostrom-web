@@ -14,3 +14,30 @@
 .cl-session {
   flex-wrap: wrap;
 }
+.cl-new {
+  align-self: flex-start;
+}
+/* One column on a phone, as many as fit on a wider screen. */
+.cl-form__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+.cl-form,
+.cl-form fieldset,
+.cl-form__grid > * {
+  min-width: 0;
+}
+.cl-form__grid .o-select {
+  width: 100%;
+}
+.cl-variables {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.cl-variable {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}

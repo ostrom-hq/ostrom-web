@@ -552,6 +552,38 @@ export type AutomationVariable = {
 };
 
 /**
+ * The body of createAutomation and saveAutomation: what a person writes. The server sets the id, the owner (the caller), the dates, the webhook URL and the webhook secret; a body that also carries them is read without them.
+ */
+export type AutomationWrite = {
+    /**
+     * 1 to 120 characters, trimmed, without control characters
+     */
+    name: string;
+    trigger: AutomationTrigger;
+    action: AutomationAction;
+    /**
+     * Webhook triggers only, 32 at most
+     */
+    variables?: Array<AutomationVariable>;
+    /**
+     * A sample webhook body (a JSON object, 64 KiB at most) that the variables must fit; webhook triggers only
+     */
+    samplePayload?: unknown;
+    /**
+     * skip (the default) or allow
+     */
+    overlap?: string;
+    /**
+     * 1 to 1000, 24 by default
+     */
+    maxRunsPerDay?: number;
+    /**
+     * The version read; saveAutomation refuses a body without it, and a change made since
+     */
+    version?: number;
+};
+
+/**
  * An invoice or receipt. Amounts are in the currency's smallest unit (cents)
  */
 export type BillingInvoice = {
@@ -1484,6 +1516,10 @@ export type McpCall = {
     tool: string;
     dev: string;
     sessionId?: string;
+    /**
+     * The launch whose agent token made the call (`POST /launches`), set by the server from the token; absent for a person's own credential. The launch may differ from the one of `sessionId`
+     */
+    launchId?: string;
     durationMs?: number;
     ok: boolean;
 };
@@ -1637,7 +1673,10 @@ export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited';
  */
 export type ModelPolicy = {
     allowed: Array<string>;
-    default: string;
+    /**
+     * Absent while no default model is set (a new organization's policy has none)
+     */
+    default?: string;
     byMember?: {
         [key: string]: Array<string>;
     };
@@ -2803,6 +2842,10 @@ export type UsageEvent = {
     provider?: string;
     accountId?: string;
     sessionId?: string;
+    /**
+     * The launch whose agent token made the call or sent the event, set by the server from the token (`POST /launches`), never from a request body; absent for a person's own credential. Read under the same rules as the event
+     */
+    launchId?: string;
     inputTokens: number;
     outputTokens: number;
     cacheReadTokens: number;
@@ -7011,6 +7054,9 @@ export type GetGateData = {
         id: string;
     };
     query?: {
+        /**
+         * Seconds to wait on a pending gate for its answer; absent or 0 reads at once.
+         */
         wait?: number;
     };
     url: '/api/v1/gates/{id}';
@@ -9467,7 +9513,7 @@ export type ListAutomationsResponses = {
 export type ListAutomationsResponse = ListAutomationsResponses[keyof ListAutomationsResponses];
 
 export type CreateAutomationData = {
-    body: Automation;
+    body: AutomationWrite;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -9612,7 +9658,7 @@ export type GetAutomationResponses = {
 export type GetAutomationResponse = GetAutomationResponses[keyof GetAutomationResponses];
 
 export type SaveAutomationData = {
-    body: Automation;
+    body: AutomationWrite;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization

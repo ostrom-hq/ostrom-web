@@ -226,7 +226,7 @@ describe('the automations', () => {
     expect(bare).toHaveTextContent('The default agent:');
     const other = await card('Other agent');
     expect(other).toHaveTextContent('Starts on a schedule: @hourly');
-    expect(other).toHaveTextContent('gemini: Hi');
+    expect(other).toHaveTextContent('Gemini CLI: Hi');
     expect(other).not.toHaveTextContent('skips');
   });
 
