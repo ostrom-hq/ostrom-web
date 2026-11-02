@@ -117,10 +117,14 @@ export async function closeOthers(): Promise<void> {
   const failed = info.status !== info.expectedStatus;
   for (const [index, context] of others.splice(0).entries()) {
     const path = info.outputPath(`other-person-${String(index + 1)}.zip`);
-    await context.tracing.stop(failed ? { path } : {});
-    if (failed)
-      await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
-    await context.close();
+    try {
+      await context.tracing.stop(failed ? { path } : {});
+      if (failed)
+        await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
+    } finally {
+      // A trace that cannot be kept never leaves a browser open for the next test.
+      await context.close();
+    }
   }
 }
 
