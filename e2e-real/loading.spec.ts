@@ -33,9 +33,18 @@ const screens = [
   '/github',
 ] as const;
 
-/** Who the person is, the organization they act in, then what it holds. */
-const MAX_DEPTH = 3;
+/** Who the person is and the organizations they have, asked together, then what the organization holds. */
+const MAX_DEPTH = 2;
 const MAX_CALLS = 10;
+/** A screen that asks the server still after this long never settles: a loop, not a load. */
+const SETTLE_LIMIT_MS = 30_000;
+/**
+ * The questions a screen asks again on purpose once answered. The queue of approvals asks every 2 s, for the other
+ * approvers' answers; the organization joins the question once it is known (shared/api/apiClient.ts).
+ */
+const POLLS: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
+  '/yes': ['GET /api/v1/approvals?mine=true'],
+};
 
 interface Call {
   readonly name: string;
@@ -47,8 +56,12 @@ interface Call {
 }
 
 /** The calls to the API a full load of `path` makes, until none has started for a second and a half. */
-async function callsOnLoad(page: Page, path: string): Promise<Call[]> {
+async function callsOnLoad(
+  page: Page,
+  path: string,
+): Promise<{ readonly calls: Call[]; readonly settled: boolean }> {
   const started = new Map<Request, number>();
+  let settled = false;
   const ended = new Map<Request, number>();
   const onRequest = (request: Request): void => {
     if (new URL(request.url()).pathname.startsWith('/api/')) started.set(request, performance.now());
@@ -61,17 +74,19 @@ async function callsOnLoad(page: Page, path: string): Promise<Call[]> {
   page.on('requestfailed', onEnd);
   try {
     await page.goto(path);
+    const limit = performance.now() + SETTLE_LIMIT_MS;
     let seen = -1;
-    while (seen !== started.size) {
+    while (seen !== started.size && performance.now() < limit) {
       seen = started.size;
       await page.waitForTimeout(1500);
     }
+    settled = seen === started.size;
   } finally {
     page.off('request', onRequest);
     page.off('requestfinished', onEnd);
     page.off('requestfailed', onEnd);
   }
-  return [...started].map(([request, start]) => {
+  const calls = [...started].map(([request, start]) => {
     const url = new URL(request.url());
     // The same path in an organization or out of one is not the same question (`GET /auth/me`, ostrom-server#92).
     const inOrg = request.headers()['ostrom-org'] === undefined ? '' : ' (in the org)';
@@ -82,6 +97,7 @@ async function callsOnLoad(page: Page, path: string): Promise<Call[]> {
       end: ended.get(request) ?? Number.POSITIVE_INFINITY,
     };
   });
+  return { calls, settled };
 }
 
 /** The longest chain of calls each started only after the one before had answered (1: all at once). */
@@ -101,11 +117,11 @@ function depthOf(calls: readonly Call[]): number {
 }
 
 /**
- * A call asked again once its first answer is in: a screen polling, not part of loading it. The console adds the
- * organization to a call once it knows it, so a poll may carry it where the first call did not; on `/auth/…` the
- * caller names it, and the call in the organization is another question (ostrom-server#92).
+ * The calls asked again once their first answer was in. The console adds the organization to a call once it knows it,
+ * so the same question may come back with it; on `/auth/…` the caller names it, and the call in the organization is
+ * another question (ostrom-server#92).
  */
-function pollsIn(calls: readonly Call[]): Call[] {
+function againIn(calls: readonly Call[]): Call[] {
   const same = (a: Call, b: Call): boolean =>
     a.asked.includes(' /api/v1/auth/') ? a.name === b.name : a.asked === b.asked;
   return calls.filter((call) => calls.some((other) => same(other, call) && other.end <= call.start));
@@ -128,28 +144,33 @@ test('what each screen asks the server when it loads', async ({ page }) => {
 
   const rows = [
     '| Screen | Calls | Depth | Asked twice | Polled | Calls in order |',
-    '|---|---:|---:|---|---:|---|',
+    '|---|---:|---:|---|---|---|',
   ];
   const problems: string[] = [];
   for (const screen of screens) {
-    const all = await callsOnLoad(page, screen);
-    const polls = pollsIn(all);
+    const { calls: all, settled } = await callsOnLoad(page, screen);
+    // Only a poll the screen means is left out; any other question asked again counts, and is reported.
+    const polls = againIn(all).filter((call) => POLLS[screen]?.includes(call.asked) === true);
     const calls = all.filter((call) => !polls.includes(call));
+    const again = [...new Set(againIn(calls).map((call) => call.name))];
     const ordered = calls.toSorted((a, b) => a.start - b.start).map((call) => `\`${call.name}\``);
     const depth = depthOf(calls);
     const twice = twiceIn(calls);
+    if (!settled) problems.push(`${screen}: still asking after ${String(SETTLE_LIMIT_MS / 1000)} s`);
     if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
+    if (again.length > 0) problems.push(`${screen}: asked again once answered ${again.join(', ')}`);
     if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
     if (calls.length > MAX_CALLS) problems.push(`${screen}: ${String(calls.length)} calls`);
+    const polled = [...new Set(polls.map((call) => call.asked))].map((asked) => `\`${asked}\``);
     rows.push(
-      `| \`${screen}\` | ${String(calls.length)} | ${String(depth)} | ${twiceIn(calls).join(', ')} | ${String(polls.length)} | ${ordered.join(' ')} |`,
+      `| \`${screen}\` | ${String(calls.length)} | ${String(depth)} | ${[...twice, ...again].join(', ')} | ${String(polls.length)} ${polled.join(' ')} | ${ordered.join(' ')} |`,
     );
   }
   const table = `### API calls on load (${test.info().project.name})\n\n${rows.join('\n')}\n`;
   await test.info().attach('api-calls-on-load.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
-  // Each screen asks its data at once: no question asked twice, no chain longer than who the person is, then the
-  // organization, then what it holds (3), and a load that stays small.
+  // Each screen asks its data at once: no question asked twice, no chain longer than who the person is and their
+  // organizations, then what the organization holds (2), and a load that stays small and ends.
   expect(problems, table).toEqual([]);
 });
