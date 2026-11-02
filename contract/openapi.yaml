@@ -470,7 +470,18 @@ paths:
       tags:
       - auth
       summary: Start the device flow (CLI sign-in)
+      description: "Without a body, the ordinary sign-in of `ostrom login`. With `scopes`, `ostrom login --admin`: the
+        governance write scopes no other token holds (S2-52, decision of 02/11/2026). The browser's page shows them
+        (`DeviceAuthorization.scopes`), only an owner or admin of the organisation may approve them, and the token
+        that comes out expires in 8 hours at most and is never refreshed. Planned (AUTH-REPRISE): a server that does
+        not read `scopes` yet answers an ordinary token, whose `AuthToken.scopes` tell the CLI."
       security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceLoginStart'
       responses:
         '200':
           description: OK
@@ -756,12 +767,22 @@ paths:
   /api/v1/auth/me:
     get:
       operationId: getMe
-      x-ostrom-status: planned
-      description: "Main serves this path with another body, `Profile` (id, login, displayName, primaryEmail, avatarUrl,
-        createdAt, emails, providers, csrfToken). Planned until the server answers `Me`."
+      x-ostrom-status: served
+      description: "`Ostrom-Org` is an option here: `member` and `organization` are those of the organization it names when
+        the caller is a member of it, and absent otherwise (no header, not an id, not a membership): never 409 nor 404.
+        The account (e-mails, ways in) is read at `/api/v1/auth/me/account`."
       tags:
       - auth
       summary: 'The caller: login, member, organization'
+      parameters:
+      - name: Ostrom-Org
+        in: header
+        required: false
+        description: The organization whose member and organization the answer adds, when the caller is a member of it.
+          An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a
+          404. Without it the answer has neither, even for a person with one organization
+        schema:
+          type: string
       responses:
         '204':
           description: Done
@@ -3085,6 +3106,12 @@ paths:
       tags:
       - gates
       summary: A gate request; `wait` long-polls up to that many seconds for an answer
+      description: |-
+        With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
+        pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
+        answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+        30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
+        connection. A client sets its HTTP timeout above the wait.
       parameters:
       - name: id
         in: path
@@ -3094,8 +3121,12 @@ paths:
       - name: wait
         in: query
         required: false
+        description: Seconds to wait on a pending gate for its answer; absent or 0 reads at once.
         schema:
           type: integer
+          minimum: 0
+          maximum: 30
+          default: 0
       responses:
         '200':
           description: OK
@@ -3315,7 +3346,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getGatePolicy
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - gates
       summary: Self-approval policy
@@ -3343,7 +3374,7 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: setGatePolicy
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - gates
       summary: Set the self-approval policy (`sole-approver` or `never`), signed decision
@@ -3587,7 +3618,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listDecisions
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - approvals
       summary: Signed decisions
@@ -4268,7 +4299,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listRules
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Rules
@@ -4316,7 +4347,7 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       operationId: createRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Write a rule (signed decision)
@@ -4348,7 +4379,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: A rule
@@ -4377,7 +4408,7 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: updateRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Decide or edit a rule (signed decision)
@@ -4436,7 +4467,7 @@ paths:
           $ref: '#/components/responses/Error'
     delete:
       operationId: deleteRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Delete a rule (signed decision)
@@ -4464,7 +4495,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: bulkUpdateRules
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Decide several rules
@@ -4927,7 +4958,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Automation'
+              $ref: '#/components/schemas/AutomationWrite'
       responses:
         '201':
           description: OK
@@ -4994,7 +5025,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Automation'
+              $ref: '#/components/schemas/AutomationWrite'
       responses:
         '200':
           description: OK
@@ -10482,6 +10513,7 @@ components:
           type: string
         expiresAt:
           type: string
+          description: "When the token expires; for a token of `ostrom login --admin`, 8 hours after the yes at most"
         scopes:
           type: array
           items:
@@ -10711,6 +10743,41 @@ components:
       - name
       - path
       - type
+    AutomationWrite:
+      type: object
+      description: "The body of createAutomation and saveAutomation: what a person writes. The server sets the id, the
+        owner (the caller), the dates, the webhook URL and the webhook secret; a body that also carries them is read
+        without them."
+      properties:
+        name:
+          type: string
+          description: 1 to 120 characters, trimmed, without control characters
+        trigger:
+          $ref: '#/components/schemas/AutomationTrigger'
+        action:
+          $ref: '#/components/schemas/AutomationAction'
+        variables:
+          type: array
+          description: Webhook triggers only, 32 at most
+          items:
+            $ref: '#/components/schemas/AutomationVariable'
+        samplePayload:
+          description: A sample webhook body (a JSON object, 64 KiB at most) that the variables must fit; webhook
+            triggers only
+        overlap:
+          type: string
+          description: skip (the default) or allow
+        maxRunsPerDay:
+          type: integer
+          description: 1 to 1000, 24 by default
+        version:
+          type: integer
+          description: The version read; saveAutomation refuses a body without it, and a change made since
+      required:
+      - name
+      - trigger
+      - action
+      x-ostrom-kotlin: pending
     BillingInvoice:
       type: object
       description: An invoice or receipt. Amounts are in the currency's smallest unit (cents)
@@ -11478,6 +11545,18 @@ components:
       - userCode
       - approve
       x-ostrom-kotlin: pending
+    DeviceLoginStart:
+      type: object
+      description: "What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for
+        `ostrom login --admin`"
+      properties:
+        scopes:
+          type: array
+          description: "Every one of them, or the request is malformed (400). Absent or empty: the ordinary sign-in"
+          items:
+            type: string
+            enum: ['policy:write', 'harness:write', 'gates:policy']
+      x-ostrom-kotlin: pending
     DeviceAuthorization:
       type: object
       description: "A pending `ostrom login`, as the console shows it"
@@ -11486,6 +11565,13 @@ components:
           type: string
         clientName:
           type: string
+        scopes:
+          type: array
+          description: "The governance write scopes an `ostrom login --admin` asks for, shown before the yes; only an
+            owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary
+            sign-in"
+          items:
+            type: string
         expiresAt:
           type: string
           format: date-time
@@ -12267,6 +12353,10 @@ components:
           type: string
         sessionId:
           type: string
+        launchId:
+          type: string
+          description: The launch whose agent token made the call (`POST /launches`), set by the server from the
+            token; absent for a person's own credential. The launch may differ from the one of `sessionId`
         durationMs:
           type: integer
         ok:
@@ -12465,6 +12555,7 @@ components:
       - member
       - approver
       - invited
+      - billing
     ModelPolicy:
       type: object
       description: Models allowed, and the default
@@ -12475,6 +12566,7 @@ components:
             type: string
         default:
           type: string
+          description: Absent while no default model is set (a new organization's policy has none)
         byMember:
           type: object
           additionalProperties:
@@ -12483,7 +12575,6 @@ components:
               type: string
       required:
       - allowed
-      - default
       x-ostrom-kotlin: pending
     MyBudget:
       type: object
@@ -12868,13 +12959,14 @@ components:
           type: string
         connectedVia:
           $ref: '#/components/schemas/GitHubConnection'
+          description: How GitHub is connected; absent when the answer does not say (an organization linked to no
+            GitHub organization, or a list that does not carry it)
         createdAt:
           type: string
       required:
       - id
       - name
       - avatarUrl
-      - connectedVia
     PackageEnvelope:
       type: object
       description: The envelope a session package is served in (`ostrom.package/1`). [payload] is the canonical text of a
@@ -14575,6 +14667,11 @@ components:
           type: string
         sessionId:
           type: string
+        launchId:
+          type: string
+          description: The launch whose agent token made the call or sent the event, set by the server from the token
+            (`POST /launches`), never from a request body; absent for a person's own credential. Read under the same
+            rules as the event
         inputTokens:
           type: integer
         outputTokens:

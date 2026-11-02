@@ -10,7 +10,10 @@ const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
 /** A fresh address per journey: no two journeys share a person. */
 export function freshEmail(who: string): string {
-  return `${who}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}@e2e.ostrom.test`;
+  // A domain of its own: the server gives one free organization per company domain (`freeClaimOf`), so people of one
+  // shared domain could not each create theirs.
+  const run = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  return `${who}-${run}@${run}.e2e.ostrom.test`;
 }
 
 /** The token of the newest sign-in mail to `email`, if the server wrote one. */
@@ -34,7 +37,8 @@ function signInToken(email: string): string | undefined {
 
 /** Signs `email` in through the console: the form, the e-mailed link, the queue. */
 export async function signIn(page: Page, email: string): Promise<void> {
-  await page.goto('/signin');
+  // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
+  await page.goto('/signin?redirect=%2Fyes');
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
   await expect(page.getByRole('alert')).toContainText(`If ${email} may sign in, a link is on its way.`);
@@ -92,7 +96,8 @@ const others: BrowserContext[] = [];
 
 /**
  * A second person's browser: its own cookies, the same console on the same device as the project (a Pixel 7 in
- * `mobile`), traced like the test's own page. A spec that uses it calls `closeOthers` after each test.
+ * `mobile`). Playwright traces it with the test's own page (`trace` of the config, which it starts on every context
+ * of the `browser` fixture: starting it here again fails). A spec that uses it calls `closeOthers` after each test.
  */
 export async function anotherPerson(browser: Browser): Promise<Page> {
   const { baseURL, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, locale } =
@@ -106,26 +111,13 @@ export async function anotherPerson(browser: Browser): Promise<Page> {
     ...(hasTouch === undefined ? {} : { hasTouch }),
     ...(locale === undefined ? {} : { locale }),
   });
-  await context.tracing.start({ screenshots: true, snapshots: true });
   others.push(context);
   return context.newPage();
 }
 
-/** Closes the other people's browsers, keeping their traces when the test failed (as `retain-on-failure`). */
+/** Closes the other people's browsers; Playwright keeps their traces with the test's when it failed. */
 export async function closeOthers(): Promise<void> {
-  const info = test.info();
-  const failed = info.status !== info.expectedStatus;
-  for (const [index, context] of others.splice(0).entries()) {
-    const path = info.outputPath(`other-person-${String(index + 1)}.zip`);
-    try {
-      await context.tracing.stop(failed ? { path } : {});
-      if (failed)
-        await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
-    } finally {
-      // A trace that cannot be kept never leaves a browser open for the next test.
-      await context.close();
-    }
-  }
+  for (const context of others.splice(0)) await context.close();
 }
 
 /** A new person signed in with an organization of their own, which they own; returns its id and short name. */
@@ -150,6 +142,13 @@ export async function joinAs(
   who: string,
   role: string,
 ): Promise<void> {
+  const token = await invitationTo(owner, org, role);
+  await signIn(joiner, freshEmail(who));
+  await accept(joiner, token);
+}
+
+/** An invitation link to `org` with `role`, made by an owner: its token. */
+export async function invitationTo(owner: Page, org: string, role: string): Promise<string> {
   const link = await callFromPage(owner, 'POST', `/api/v1/orgs/${org}/invitations/links`, {
     role,
     maxUses: 1,
@@ -157,9 +156,11 @@ export async function joinAs(
   expect(link.status).toBe(201);
   const token = /token=([^&#\s]+)/.exec((link.body as { url: string }).url)?.[1];
   expect(token).toBeDefined();
-  await signIn(joiner, freshEmail(who));
-  const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', {
-    token: decodeURIComponent(token ?? ''),
-  });
+  return decodeURIComponent(token ?? '');
+}
+
+/** The person signed in in `joiner` joins with an invitation's token. */
+export async function accept(joiner: Page, token: string): Promise<void> {
+  const accepted = await callFromPage(joiner, 'POST', '/api/v1/invitations/accept', { token });
   expect(accepted.status).toBe(200);
 }

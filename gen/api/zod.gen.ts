@@ -378,6 +378,20 @@ export const zAutomation = z.object({
 });
 
 /**
+ * The body of createAutomation and saveAutomation: what a person writes. The server sets the id, the owner (the caller), the dates, the webhook URL and the webhook secret; a body that also carries them is read without them.
+ */
+export const zAutomationWrite = z.object({
+    name: z.string(),
+    trigger: zAutomationTrigger,
+    action: zAutomationAction,
+    variables: z.array(zAutomationVariable).optional(),
+    samplePayload: z.unknown().optional(),
+    overlap: z.string().optional(),
+    maxRunsPerDay: z.int().optional(),
+    version: z.int().optional()
+});
+
+/**
  * An invoice or receipt. Amounts are in the currency's smallest unit (cents)
  */
 export const zBillingInvoice = z.object({
@@ -679,11 +693,23 @@ export const zDeviceAnswer = z.object({
 });
 
 /**
+ * What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for `ostrom login --admin`
+ */
+export const zDeviceLoginStart = z.object({
+    scopes: z.array(z.enum([
+        'policy:write',
+        'harness:write',
+        'gates:policy'
+    ])).optional()
+});
+
+/**
  * A pending `ostrom login`, as the console shows it
  */
 export const zDeviceAuthorization = z.object({
     userCode: z.string(),
     clientName: z.string(),
+    scopes: z.array(z.string()).optional(),
     expiresAt: z.iso.datetime({ offset: true })
 });
 
@@ -1093,6 +1119,7 @@ export const zMcpCall = z.object({
     tool: z.string(),
     dev: z.string(),
     sessionId: z.string().optional(),
+    launchId: z.string().optional(),
     durationMs: z.int().optional(),
     ok: z.boolean()
 });
@@ -1149,7 +1176,8 @@ export const zMemberRole = z.enum([
     'admin',
     'member',
     'approver',
-    'invited'
+    'invited',
+    'billing'
 ]);
 
 /**
@@ -1181,7 +1209,7 @@ export const zMemberInvite = z.object({
  */
 export const zModelPolicy = z.object({
     allowed: z.array(z.string()),
-    default: z.string(),
+    default: z.string().optional(),
     byMember: z.record(z.string(), z.array(z.string())).optional()
 });
 
@@ -1318,7 +1346,7 @@ export const zOrganization = z.object({
     name: z.string(),
     avatarUrl: z.string(),
     description: z.string().optional(),
-    connectedVia: zGitHubConnection,
+    connectedVia: zGitHubConnection.optional(),
     createdAt: z.string().optional()
 });
 
@@ -2260,6 +2288,7 @@ export const zUsageEvent = z.object({
     provider: z.string().optional(),
     accountId: z.string().optional(),
     sessionId: z.string().optional(),
+    launchId: z.string().optional(),
     inputTokens: z.int(),
     outputTokens: z.int(),
     cacheReadTokens: z.int(),
@@ -2923,6 +2952,8 @@ export const zGetDeviceLoginQuery = z.object({
  */
 export const zGetDeviceLoginResponse = zDeviceAuthorization;
 
+export const zStartDeviceLoginBody = zDeviceLoginStart;
+
 /**
  * OK
  */
@@ -3010,6 +3041,10 @@ export const zCheckAgentPolicyResponse = z.object({
     allowed: z.boolean(),
     reason: z.string().optional(),
     note: z.string().optional()
+});
+
+export const zGetMeHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
 });
 
 export const zGetMeResponse = z.union([
@@ -3775,7 +3810,7 @@ export const zGetGatePath = z.object({
 });
 
 export const zGetGateQuery = z.object({
-    wait: z.int().optional()
+    wait: z.int().gte(0).lte(30).optional().default(0)
 });
 
 /**
@@ -4473,7 +4508,7 @@ export const zListAutomationsResponse = z.object({
     next: z.string().optional()
 });
 
-export const zCreateAutomationBody = zAutomation;
+export const zCreateAutomationBody = zAutomationWrite;
 
 export const zCreateAutomationHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4510,7 +4545,7 @@ export const zGetAutomationPath = z.object({
  */
 export const zGetAutomationResponse = zAutomation;
 
-export const zSaveAutomationBody = zAutomation;
+export const zSaveAutomationBody = zAutomationWrite;
 
 export const zSaveAutomationHeaders = z.object({
     'Ostrom-Org': z.string().optional()

@@ -26,8 +26,15 @@ async function get(path: string, org?: string): Promise<{ status: number; body: 
 }
 
 describe('mock organization of a call', () => {
-  it('acts in the only organization when none is named, and says which', async () => {
-    expect(await get('/auth/me')).toMatchObject({ status: 200, body: { organization: { name: 'Acme' } } });
+  it('acts in the only organization when none is named; /me names it, with the member, only when asked', async () => {
+    const bare = await get('/auth/me');
+    expect(bare.status).toBe(200);
+    expect(bare.body).not.toHaveProperty('member');
+    expect(bare.body).not.toHaveProperty('organization');
+    expect(await get('/auth/me', db.organization.id)).toMatchObject({
+      status: 200,
+      body: { dev: { login: 'maya' }, member: { role: 'admin' }, organization: { name: 'Acme' } },
+    });
     expect((await get('/org')).body).toMatchObject({ name: 'Acme' });
     expect((await get('/artifacts')).status).toBe(200);
   });
@@ -60,8 +67,15 @@ describe('mock organization of a call', () => {
   it('acts in the organization named, and answers as for anything else of an organization it does not know', async () => {
     db.otherOrganizations = [globex];
     expect((await get('/org', globex.id)).body).toMatchObject({ name: 'Globex' });
-    // `/me` takes no header: it names no organization for a person in several, whatever is sent.
-    expect((await get('/auth/me', globex.id)).body).not.toHaveProperty('organization');
+    // `/me` names the organization the header names, among the person's; any other value is ignored, never refused.
+    expect((await get('/auth/me', globex.id)).body).toMatchObject({
+      member: { login: 'maya' },
+      organization: { name: 'Globex' },
+    });
+    const foreign = await get('/auth/me', 'org-nobody');
+    expect(foreign.status).toBe(200);
+    expect(foreign.body).not.toHaveProperty('member');
+    expect(foreign.body).not.toHaveProperty('organization');
     expect((await get('/secrets', 'org-nobody')).status).toBe(404);
   });
 

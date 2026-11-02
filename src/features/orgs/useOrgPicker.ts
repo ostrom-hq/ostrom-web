@@ -6,8 +6,9 @@ import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { meOf } from '@/shared/auth/me';
+import { meInOrgOptions, meOf, signedInName } from '@/shared/auth/me';
 import { useOrgStore } from '@/shared/org/orgStore';
+import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { nextStep } from './model';
 
 export interface OrgOption {
@@ -17,9 +18,19 @@ export interface OrgOption {
   readonly choose: () => void;
 }
 
+/** Who the person is in the organization the console acts in, as `/auth/me` answers with it named. */
+export interface OrgViewer {
+  /** "Maya Lind (maya)", or the login alone. */
+  readonly name: string;
+  /** None for a role the console does not know. */
+  readonly role: OrgRole | undefined;
+}
+
 export interface OrgPickerViewModel {
   /** The organization the console acts in, once the list named it. */
   readonly current: Organization | undefined;
+  /** The person in it, once `/auth/me` answered with it named. */
+  readonly viewer: OrgViewer | undefined;
   readonly options: readonly OrgOption[];
   readonly loading: boolean;
   readonly failure: Error | undefined;
@@ -40,7 +51,7 @@ export interface OrgPickerViewModel {
  * `org_required` on any call asks too (shared/api/apiClient.ts).
  */
 export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolean }): OrgPickerViewModel {
-  // The same freshness as `useViewer`: one `/me` for both. A sign-in page asks nobody who they are; someone who came
+  // Who is signed in: `/auth/me` with no organization named. A sign-in page asks nobody who they are; someone who came
   // to it signed in keeps what was read before.
   const me = useQuery(ready(getMeOptions(), { staleTime: 60_000, enabled: !anonymousPage }));
   const login = meOf(me.data)?.dev.login;
@@ -63,6 +74,15 @@ export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolea
       close: state.close,
     })),
   );
+  // The same query as `useViewer`: `/auth/me` again, with the organization named, for the person's name and role there.
+  const inOrg = useQuery(
+    ready(meInOrgOptions(current), {
+      staleTime: 60_000,
+      enabled: !anonymousPage && login !== undefined && current !== undefined,
+    }),
+  );
+  const meInOrg = current === undefined ? undefined : meOf(inOrg.data);
+  const member = meInOrg?.member;
   useEffect(() => {
     if (login === undefined || organizations === undefined) return;
     const step = nextStep({ current, owner, login, organizations });
@@ -85,6 +105,10 @@ export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolea
   );
   return {
     current: organizations?.find((organization) => organization.id === current),
+    viewer:
+      meInOrg === undefined || member === undefined
+        ? undefined
+        : { name: signedInName(meInOrg), role: orgRoleOf(member.role) },
     options,
     loading: list.isLoading,
     failure: failureOf(list.error),

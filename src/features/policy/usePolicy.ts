@@ -159,7 +159,9 @@ export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckView
   useEffect(() => {
     const question = last.current;
     if (question === undefined || policy === undefined) return;
-    mutate(question.named ? question : { ...question, model: policy.default });
+    // No default set (ostrom-core#48) asks as `ostrom <agent>` does then: with no model.
+    const { default: model = '' } = policy;
+    mutate(question.named ? question : { ...question, model });
   }, [policy, mutate]);
   return {
     ask,

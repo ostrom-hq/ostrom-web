@@ -41,6 +41,8 @@ describe('a model policy', () => {
       byMember: { m1: ['x'] },
     });
     expect(policyDraftOf({ allowed: [], default: '' }).byMember).toEqual([]);
+    // No default set yet: the contract leaves it out.
+    expect(policyDraftOf({ allowed: [] }).defaultModel).toBe('');
     expect(addMemberRow(addMemberRow([]))).toEqual([
       { key: 0, member: '', models: '' },
       { key: 1, member: '', models: '' },
