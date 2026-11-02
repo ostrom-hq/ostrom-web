@@ -100,20 +100,22 @@ describe('the poll of a run', () => {
     expect(analysisPollDelay(undefined, null)).toBe(false);
   });
 
-  it('slows down after a server error or the network, and goes on', () => {
-    expect(analysisPollDelay(running, new ApiFailure('server', 'down', 503, undefined))).toBe(
-      ANALYSIS_RETRY_MS,
-    );
-    expect(analysisPollDelay(running, new ApiFailure('network', 'gone', undefined, undefined))).toBe(
-      ANALYSIS_RETRY_MS,
-    );
-    expect(analysisPollDelay(running, new Error('odd'))).toBe(ANALYSIS_RETRY_MS);
+  it('slows down after a server error, the network, a rate limit or a route missing midway, and goes on', () => {
+    for (const failure of [
+      new ApiFailure('server', 'down', 503, undefined),
+      new ApiFailure('network', 'gone', undefined, undefined),
+      new ApiFailure('unexpected', 'slow down', 429, undefined),
+      new ApiFailure('not-found', 'deploying', 404, undefined),
+      new Error('odd'),
+    ])
+      expect(analysisPollDelay(running, failure)).toBe(ANALYSIS_RETRY_MS);
   });
 
-  it('stops on a refusal, which reading again does not change', () => {
-    expect(analysisPollDelay(running, new ApiFailure('unauthorized', 'signed out', 401, undefined))).toBe(
-      false,
-    );
-    expect(analysisPollDelay(running, new ApiFailure('not-found', 'gone', 404, undefined))).toBe(false);
+  it('stops once the session or the right is lost, which reading again does not change', () => {
+    for (const failure of [
+      new ApiFailure('unauthorized', 'signed out', 401, undefined),
+      new ApiFailure('forbidden', 'no longer admin', 403, undefined),
+    ])
+      expect(analysisPollDelay(running, failure)).toBe(false);
   });
 });

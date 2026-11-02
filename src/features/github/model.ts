@@ -80,8 +80,9 @@ export const ANALYSIS_RETRY_MS = 15_000;
 
 /**
  * How long until the analysis is read again: only while a run goes on. A failing read is said on the page and slows
- * the poll down, so a passing blip never freezes a run the server finishes; a refusal (4xx: the session, the
- * organization or the route is gone) stops it, as reading again changes nothing.
+ * the poll down, so a passing blip (a server error, the network, a rate limit, a route missing while the server
+ * deploys) never freezes a run the server finishes. Only a lost session or right (401, 403) stops it: reading again
+ * changes nothing until the person signs in again.
  */
 export function analysisPollDelay(
   state: { readonly phase?: string | undefined } | undefined,
@@ -90,7 +91,7 @@ export function analysisPollDelay(
   if (state === undefined || stageOf(state) !== 'running') return false;
   if (error === null || error === undefined) return ANALYSIS_POLL_MS;
   const status = isApiFailure(error) ? error.status : undefined;
-  return status !== undefined && status >= 400 && status < 500 ? false : ANALYSIS_RETRY_MS;
+  return status === 401 || status === 403 ? false : ANALYSIS_RETRY_MS;
 }
 
 /**
