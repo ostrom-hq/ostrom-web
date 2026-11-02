@@ -80,7 +80,8 @@ test('6.1 the thread of a session shows who said yes or no to each gate it asked
       return answers.map((answer) => `${answer.gateId}:${answer.outcome}:${answer.by}`).toSorted();
     })
     .toEqual([`${no}:refused:${member}`, `${yes}:approved:${member}`].toSorted());
-  const receipt = answers.find((answer) => answer.gateId === yes)?.receiptId;
+  const receiptOf = (gate: string): string | undefined =>
+    answers.find((answer) => answer.gateId === gate)?.receiptId;
 
   // The owner finds the session in the list, opens it, and reads the thread.
   await page.goto('/sessions');
@@ -97,14 +98,17 @@ test('6.1 the thread of a session shows who said yes or no to each gate it asked
   await expect(approved).toContainText(`by ${member}, `);
   const refused = what.getByRole('listitem').filter({ hasText: /^Refused/ });
   await expect(refused).toContainText(`by ${member}, `);
-  await expect(refused.getByRole('link', { name: 'Receipt' })).toHaveCount(0);
   await expect(what.getByRole('listitem').filter({ hasText: /^Waiting/ })).toContainText(waiting);
-  if (receipt === undefined) {
-    test.info().annotations.push({ type: 'receipt', description: 'the yes carried no receipt id yet' });
-  } else {
-    await expect(approved.getByRole('link', { name: 'Receipt' })).toHaveAttribute(
+  // A yes and a no are both signed: each line leads to its own receipt.
+  for (const [line, gate] of [
+    [approved, yes],
+    [refused, no],
+  ] as const) {
+    const receipt = receiptOf(gate);
+    expect(receipt, `${gate} carries its receipt`).toBeDefined();
+    await expect(line.getByRole('link', { name: 'Receipt' })).toHaveAttribute(
       'href',
-      `/receipts/${receipt}`,
+      `/receipts/${receipt ?? ''}`,
     );
   }
   // Whether a gate's id opens its request: the session's lines link to /yes/<gate> (recorded, not asserted).

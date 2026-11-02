@@ -627,7 +627,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({ items });
     }),
     handleGetApproval(({ params }) => {
-      const approval = find(params.id);
+      // As server#185 reads it: an approval of the organization, else the first request of one of its gates, so a
+      // session's gate opens its request (the server prefers the reader's own request on the gate).
+      const approval = find(params.id) ?? db.approvals.find((item) => item.group === params.id);
       return approval === undefined ? notFound() : HttpResponse.json(approval);
     }),
     handleAnswerApproval(async ({ params, request }) => {

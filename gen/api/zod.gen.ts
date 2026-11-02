@@ -239,11 +239,11 @@ export const zArtifactVersion = z.object({
  */
 export const zAuditEvent = z.object({
     id: z.string(),
-    at: z.iso.datetime({ offset: true }),
+    at: z.string(),
     event: z.string(),
     actor: z.string(),
     subject: z.string(),
-    meta: z.record(z.string(), z.string()).optional()
+    meta: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -551,7 +551,7 @@ export const zCheckOutcome = z.enum([
 ]);
 
 /**
- * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: the runner of an Ostrom cloud session ran it and reported it with its own token, which the agent cannot read (reportRunnerCheck); it proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
+ * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: an Ostrom runner ran it in an isolated session. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
  */
 export const zCheckAttestation = z.enum([
     'workstation_declared',
@@ -690,13 +690,9 @@ export const zDev = z.object({
 export const zDevice = z.object({
     id: z.string(),
     name: z.string(),
-    platform: z.string().optional(),
+    platform: z.string(),
     cliVersion: z.string().optional(),
-    lastSeenAt: z.string().optional(),
-    kind: z.enum(['cli', 'admin']).optional(),
-    orgId: z.string().optional(),
-    scopes: z.array(z.string()).optional(),
-    expiresAt: z.string().optional()
+    lastSeenAt: z.string().optional()
 });
 
 /**
@@ -892,79 +888,6 @@ export const zGateStatus = z.enum([
 ]);
 
 export const zGitHubConnection = z.enum(['github-app', 'gh-token']);
-
-/**
- * The governance write a confirmation holds: the operation that opened it
- */
-export const zGovernanceChangeKind = z.enum([
-    'rules.create',
-    'rules.update',
-    'rules.delete',
-    'rules.bulk',
-    'gates.policy',
-    'models.policy',
-    'workflows.create',
-    'workflows.save',
-    'workflows.delete'
-]);
-
-export const zGovernanceConfirmationAnswer = z.enum(['confirm', 'refuse']);
-
-export const zGovernanceConfirmationAnswerRequest = z.object({
-    answer: zGovernanceConfirmationAnswer
-});
-
-/**
- * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
- */
-export const zGovernanceConfirmationPending = z.object({
-    confirmationId: z.string(),
-    confirmUrl: z.string(),
-    expiresAt: z.iso.datetime({ offset: true })
-});
-
-/**
- * A member who asked for or answered a confirmation
- */
-export const zGovernanceConfirmationPerson = z.object({
-    memberId: z.string(),
-    login: z.string().optional(),
-    name: z.string().optional()
-});
-
-/**
- * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
- */
-export const zGovernanceConfirmationStatus = z.enum([
-    'pending',
-    'confirmed',
-    'refused',
-    'expired',
-    'failed'
-]);
-
-/**
- * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
- */
-export const zGovernanceConfirmation = z.object({
-    id: z.string(),
-    kind: zGovernanceChangeKind,
-    status: zGovernanceConfirmationStatus,
-    method: z.string(),
-    path: z.string(),
-    scope: z.string(),
-    summary: z.string(),
-    before: z.unknown(),
-    after: z.unknown(),
-    requestedBy: zGovernanceConfirmationPerson,
-    credential: z.enum(['admin', 'device']),
-    createdAt: z.iso.datetime({ offset: true }),
-    expiresAt: z.iso.datetime({ offset: true }),
-    answeredBy: zGovernanceConfirmationPerson.optional(),
-    answeredAt: z.iso.datetime({ offset: true }).optional(),
-    result: z.unknown().optional(),
-    error: zErrorDetail.optional()
-});
 
 /**
  * A group of members sharing subscriptions
@@ -1259,34 +1182,6 @@ export const zMcpServer = z.object({
     createdAt: z.iso.datetime({ offset: true }).readonly().optional()
 });
 
-export const zAccountEmail = z.object({
-    email: z.string(),
-    verified: z.boolean()
-});
-
-/**
- * The signed-in person's account
- */
-export const zAccount = z.object({
-    id: z.string(),
-    login: z.string(),
-    displayName: z.string(),
-    primaryEmail: z.string().optional(),
-    avatarUrl: z.string().optional(),
-    createdAt: z.string(),
-    emails: z.array(zAccountEmail),
-    providers: z.array(z.string())
-});
-
-export const zTokenScope = z.object({
-    scope: z.string(),
-    description: z.string()
-});
-
-export const zTokenScopes = z.object({
-    scopes: z.array(zTokenScope)
-});
-
 export const zMemberRole = z.enum([
     'owner',
     'admin',
@@ -1318,17 +1213,6 @@ export const zMemberInvite = z.object({
     login: z.string(),
     role: zMemberRole.optional(),
     team: z.string().optional()
-});
-
-/**
- * One of the caller's organizations, to choose the one `Ostrom-Org` names
- */
-export const zMyOrganization = z.object({
-    id: z.string(),
-    slug: z.string(),
-    name: z.string(),
-    avatarUrl: z.string(),
-    role: zMemberRole
 });
 
 /**
@@ -1951,8 +1835,7 @@ export const zRunner = z.object({
     labels: z.array(z.string()),
     status: z.string(),
     lastSeenAt: z.string().optional(),
-    version: z.string().optional(),
-    token: z.string().optional()
+    version: z.string().optional()
 });
 
 /**
@@ -2033,7 +1916,6 @@ export const zServiceKey = z.object({
     name: z.string(),
     scopes: z.array(z.string()),
     createdAt: z.string(),
-    expiresAt: z.string().optional(),
     lastUsedAt: z.string().optional(),
     secret: z.string().optional()
 });
@@ -2217,7 +2099,7 @@ export const zStartSessionRequest = z.object({
 });
 
 /**
- * 403 step_up_required: a yes, and a sensitive write from the console or the app (a personal token, a service key, a sign-in link, an invitation, a role, a member removed, a transfer, a secret, an MCP server, its assignments, policies and settings, the model keys), need a sign-in less than 5 minutes old (a sign-in of unknown age is refused too); sign in again, then send it again. A no never needs it, and an API token is never asked: it has no sign-in to renew
+ * 403 step_up_required: a yes needs a sign-in less than 5 minutes old (a sign-in of unknown age is refused too); sign in again, then answer. A no never needs it
  */
 export const zStepUpRequired = z.object({
     error: zErrorDetail
@@ -3040,19 +2922,7 @@ export const zMobileTokenBody = z.object({
 export const zMobileTokenResponse = z.object({
     token: z.string(),
     user: zAuthUser,
-    expiresAt: z.string().optional(),
-    unlockKey: z.string().optional()
-});
-
-export const zUnlockMobileAppBody = z.object({
-    unlockKey: z.string()
-});
-
-/**
- * OK
- */
-export const zUnlockMobileAppResponse = z.object({
-    authenticatedAt: z.iso.datetime({ offset: true })
+    expiresAt: z.string().optional()
 });
 
 export const zGithubLoginCallbackQuery = z.object({
@@ -3071,11 +2941,7 @@ export const zStartOAuthLoginPath = z.object({
 
 export const zStartOAuthLoginQuery = z.object({
     redirect: z.string().optional(),
-    reauth: z.boolean().optional(),
-    redirect_uri: z.string().optional(),
-    state: z.string().optional(),
-    code_challenge: z.string().optional(),
-    code_challenge_method: z.string().optional()
+    reauth: z.boolean().optional()
 });
 
 export const zOauthLoginCallbackPath = z.object({
@@ -3201,16 +3067,6 @@ export const zCheckAgentPolicyResponse = z.object({
     note: z.string().optional()
 });
 
-/**
- * OK
- */
-export const zGetMyAccountResponse = zAccount;
-
-/**
- * OK
- */
-export const zListTokenScopesResponse = zTokenScopes;
-
 export const zGetMeHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
@@ -3329,8 +3185,7 @@ export const zListServiceKeysResponse = z.object({
 
 export const zCreateServiceKeyBody = z.object({
     name: z.string(),
-    scopes: z.array(z.string()),
-    expiresInDays: z.int().optional()
+    scopes: z.array(z.string())
 });
 
 export const zCreateServiceKeyHeaders = z.object({
@@ -3413,7 +3268,7 @@ export const zDeletePushDeviceResponse = z.void();
  * OK
  */
 export const zListMyOrganizationsResponse = z.object({
-    items: z.array(zMyOrganization)
+    items: z.array(zOrganization)
 });
 
 /**
@@ -3472,14 +3327,9 @@ export const zGetGithubAppResponse = z.object({
     htmlUrl: z.string().optional()
 });
 
-export const zStartGithubAppManifestQuery = z.object({
-    owner: z.string().optional()
+export const zStartGithubAppManifestHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
 });
-
-/**
- * The HTML page that posts the manifest to GitHub
- */
-export const zStartGithubAppManifestResponse = z.string();
 
 export const zGithubAppManifestCallbackQuery = z.object({
     code: z.string().optional(),
@@ -3490,13 +3340,8 @@ export const zStartGithubAppInstallHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zStartGithubAppInstallQuery = z.object({
-    org: z.string().optional()
-});
-
 export const zGithubAppInstallCallbackQuery = z.object({
     installation_id: z.string().optional(),
-    code: z.string().optional(),
     state: z.string().optional()
 });
 
@@ -3773,13 +3618,8 @@ export const zInviteMembersResponse = z.object({
     invited: z.array(z.string())
 });
 
-export const zListTeamsPath = z.object({
-    org: z.string()
-});
-
-export const zListTeamsQuery = z.object({
-    after: z.string().optional(),
-    limit: z.int().optional()
+export const zListTeamsHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
 });
 
 /**
@@ -3792,11 +3632,6 @@ export const zListTeamsResponse = z.object({
 
 export const zListReposHeaders = z.object({
     'Ostrom-Org': z.string().optional()
-});
-
-export const zListReposQuery = z.object({
-    after: z.string().optional(),
-    limit: z.int().optional()
 });
 
 /**
@@ -4104,12 +3939,12 @@ export const zSetGatePolicyHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zSetGatePolicyResponse = z.union([
-    z.object({
-        selfApproval: z.string()
-    }),
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zSetGatePolicyResponse = z.object({
+    selfApproval: z.string()
+});
 
 export const zListApprovalsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4179,38 +4014,6 @@ export const zAnswerApprovalPath = z.object({
  * The answered approval and its receipt
  */
 export const zAnswerApprovalResponse = zApprovalView;
-
-export const zGetGovernanceConfirmationHeaders = z.object({
-    'Ostrom-Org': z.string().optional()
-});
-
-export const zGetGovernanceConfirmationPath = z.object({
-    id: z.string()
-});
-
-export const zGetGovernanceConfirmationQuery = z.object({
-    wait: z.int().gte(0).lte(30).optional().default(0)
-});
-
-/**
- * OK
- */
-export const zGetGovernanceConfirmationResponse = zGovernanceConfirmation;
-
-export const zAnswerGovernanceConfirmationBody = zGovernanceConfirmationAnswerRequest;
-
-export const zAnswerGovernanceConfirmationHeaders = z.object({
-    'Ostrom-Org': z.string().optional()
-});
-
-export const zAnswerGovernanceConfirmationPath = z.object({
-    id: z.string()
-});
-
-/**
- * The answered confirmation; when confirmed, `result` holds what the write returned
- */
-export const zAnswerGovernanceConfirmationResponse = zGovernanceConfirmation;
 
 export const zListDecisionsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4492,10 +4295,10 @@ export const zCreateRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zCreateRuleResponse = z.union([
-    zRule,
-    zGovernanceConfirmationPending
-]);
+/**
+ * Created
+ */
+export const zCreateRuleResponse = zRule;
 
 export const zDeleteRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4505,10 +4308,10 @@ export const zDeleteRulePath = z.object({
     id: z.string()
 });
 
-export const zDeleteRuleResponse = z.union([
-    zGovernanceConfirmationPending,
-    z.void()
-]);
+/**
+ * Deleted
+ */
+export const zDeleteRuleResponse = z.void();
 
 export const zGetRuleHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4543,10 +4346,10 @@ export const zUpdateRulePath = z.object({
     id: z.string()
 });
 
-export const zUpdateRuleResponse = z.union([
-    zRule,
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zUpdateRuleResponse = zRule;
 
 export const zBulkUpdateRulesBody = z.object({
     ids: z.array(z.string()),
@@ -4557,12 +4360,12 @@ export const zBulkUpdateRulesHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zBulkUpdateRulesResponse = z.union([
-    z.object({
-        updated: z.int()
-    }),
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zBulkUpdateRulesResponse = z.object({
+    updated: z.int()
+});
 
 export const zListWorkflowsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4587,10 +4390,10 @@ export const zCreateWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zCreateWorkflowResponse = z.union([
-    zWorkflow,
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zCreateWorkflowResponse = zWorkflow;
 
 export const zDeleteWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4600,10 +4403,10 @@ export const zDeleteWorkflowPath = z.object({
     id: z.string()
 });
 
-export const zDeleteWorkflowResponse = z.union([
-    zGovernanceConfirmationPending,
-    z.void()
-]);
+/**
+ * Done
+ */
+export const zDeleteWorkflowResponse = z.void();
 
 export const zGetWorkflowHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4631,10 +4434,10 @@ export const zSaveWorkflowPath = z.object({
     id: z.string()
 });
 
-export const zSaveWorkflowResponse = z.union([
-    zWorkflow,
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zSaveWorkflowResponse = zWorkflow;
 
 export const zListWorkflowRunsHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -5298,10 +5101,10 @@ export const zSetModelPolicyHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
 
-export const zSetModelPolicyResponse = z.union([
-    zModelPolicy,
-    zGovernanceConfirmationPending
-]);
+/**
+ * OK
+ */
+export const zSetModelPolicyResponse = zModelPolicy;
 
 export const zListInferenceRoutesHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -5746,39 +5549,6 @@ export const zCloudRunnerHeartbeatResponse = z.object({
     instruction: z.string(),
     state: z.string()
 });
-
-export const zOpenRunnerLaunchBody = z.object({
-    sessionId: z.string(),
-    epoch: z.coerce.bigint().min(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })
-});
-
-export const zOpenRunnerLaunchHeaders = z.object({
-    'Ostrom-Org': z.string().optional()
-});
-
-/**
- * OK
- */
-export const zOpenRunnerLaunchResponse = z.object({
-    launchId: z.string(),
-    agentToken: z.string(),
-    expiresAt: z.string()
-});
-
-export const zReportRunnerCheckBody = z.object({
-    sessionId: z.string(),
-    epoch: z.coerce.bigint().min(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
-    check: zReportCheckRequest
-});
-
-export const zReportRunnerCheckHeaders = z.object({
-    'Ostrom-Org': z.string().optional()
-});
-
-/**
- * OK
- */
-export const zReportRunnerCheckResponse = zCheckRun;
 
 export const zSendCloudMessageBody = z.object({
     text: z.string()

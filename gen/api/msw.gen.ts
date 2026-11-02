@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses } from './types.gen';
+import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OpenBillingPortalResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -208,33 +208,6 @@ export type HandleMobileTokenResponse = {
  */
 export function handleMobileToken(response?: HandleMobileTokenResponse | HttpResponseResolver<never, MobileTokenData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, MobileTokenData['body']>(`${options?.baseUrl ?? '*'}/api/v1/auth/mobile/token`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleUnlockMobileAppResponse = {
-    body: UnlockMobileAppResponses[200];
-    status?: 200;
-};
-
-/**
- * Handler for the `POST /api/v1/auth/mobile/unlock` operation.
- */
-export function handleUnlockMobileApp(response?: HandleUnlockMobileAppResponse | HttpResponseResolver<never, UnlockMobileAppData['body']>, options?: RequestHandlerOptions): HttpHandler {
-    return http.post<never, UnlockMobileAppData['body']>(`${options?.baseUrl ?? '*'}/api/v1/auth/mobile/unlock`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -625,60 +598,6 @@ export type HandleCheckAgentPolicyResponse = {
  */
 export function handleCheckAgentPolicy(response?: HandleCheckAgentPolicyResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/policy/agents`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleGetMyAccountResponse = {
-    body: GetMyAccountResponses[200];
-    status?: 200;
-};
-
-/**
- * Handler for the `GET /api/v1/auth/me/account` operation.
- */
-export function handleGetMyAccount(response?: HandleGetMyAccountResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
-    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/auth/me/account`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleListTokenScopesResponse = {
-    body: ListTokenScopesResponses[200];
-    status?: 200;
-};
-
-/**
- * Handler for the `GET /api/v1/tokens/scopes` operation.
- */
-export function handleListTokenScopes(response?: HandleListTokenScopesResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
-    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/tokens/scopes`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -1457,8 +1376,8 @@ export function handleGetGithubApp(response?: HandleGetGithubAppResponse | HttpR
 }
 
 export type HandleStartGithubAppManifestResponse = {
-    body: StartGithubAppManifestResponses[200];
-    status?: 200;
+    body: DefaultBodyType;
+    status?: number;
 };
 
 /**
@@ -1471,7 +1390,7 @@ export function handleStartGithubAppManifest(response?: HandleStartGithubAppMani
         }
         const body = response?.body;
         if (body !== undefined) {
-            return HttpResponse.text(typeof body === 'string' ? body : JSON.stringify(body), { status: response?.status ?? 200 });
+            return new HttpResponse(body, { status: response?.status });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -2344,14 +2263,10 @@ export type HandleListTeamsResponse = {
 };
 
 /**
- * Handler for the `GET /api/v1/orgs/{org}/teams` operation.
+ * Handler for the `GET /api/v1/teams` operation.
  */
-export function handleListTeams(response?: HandleListTeamsResponse | HttpResponseResolver<{
-    org: string;
-}, never>, options?: RequestHandlerOptions): HttpHandler {
-    return http.get<{
-        org: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/orgs/:org/teams`, info => {
+export function handleListTeams(response?: HandleListTeamsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/teams`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -2984,7 +2899,7 @@ export type HandleSetGatePolicyResponse = {
 /**
  * Handler for the `PUT /api/v1/gates/policy` operation.
  */
-export function handleSetGatePolicy(response?: HandleSetGatePolicyResponse | ToResponseUnion<SetGatePolicyResponses> | HttpResponseResolver<never, SetGatePolicyData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleSetGatePolicy(response?: HandleSetGatePolicyResponse | HttpResponseResolver<never, SetGatePolicyData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.put<never, SetGatePolicyData['body']>(`${options?.baseUrl ?? '*'}/api/v1/gates/policy`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -3133,68 +3048,6 @@ export function handleAnswerApproval(response?: HandleAnswerApprovalResponse | H
     return http.post<{
         id: string;
     }, AnswerApprovalData['body']>(`${options?.baseUrl ?? '*'}/api/v1/approvals/:id/answer`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleGetGovernanceConfirmationResponse = {
-    body: GetGovernanceConfirmationResponses[200];
-    status?: 200;
-};
-
-/**
- * Handler for the `GET /api/v1/confirmations/{id}` operation.
- */
-export function handleGetGovernanceConfirmation(response?: HandleGetGovernanceConfirmationResponse | HttpResponseResolver<{
-    id: string;
-}, never>, options?: RequestHandlerOptions): HttpHandler {
-    return http.get<{
-        id: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/confirmations/:id`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleAnswerGovernanceConfirmationResponse = {
-    body: AnswerGovernanceConfirmationResponses[200];
-    status?: 200;
-};
-
-/**
- * Handler for the `POST /api/v1/confirmations/{id}/answer` operation.
- */
-export function handleAnswerGovernanceConfirmation(response?: HandleAnswerGovernanceConfirmationResponse | HttpResponseResolver<{
-    id: string;
-}, AnswerGovernanceConfirmationData['body']>, options?: RequestHandlerOptions): HttpHandler {
-    return http.post<{
-        id: string;
-    }, AnswerGovernanceConfirmationData['body']>(`${options?.baseUrl ?? '*'}/api/v1/confirmations/:id/answer`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -3761,7 +3614,7 @@ export type HandleCreateRuleResponse = {
 /**
  * Handler for the `POST /api/v1/rules` operation.
  */
-export function handleCreateRule(response?: HandleCreateRuleResponse | ToResponseUnion<CreateRuleResponses> | HttpResponseResolver<never, CreateRuleData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleCreateRule(response?: HandleCreateRuleResponse | HttpResponseResolver<never, CreateRuleData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, CreateRuleData['body']>(`${options?.baseUrl ?? '*'}/api/v1/rules`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -3781,14 +3634,14 @@ export function handleCreateRule(response?: HandleCreateRuleResponse | ToRespons
 }
 
 export type HandleDeleteRuleResponse = {
-    body: DeleteRuleResponses[202];
-    status?: 202;
+    body: DeleteRuleResponses[204];
+    status?: 204;
 };
 
 /**
  * Handler for the `DELETE /api/v1/rules/{id}` operation.
  */
-export function handleDeleteRule(response?: HandleDeleteRuleResponse | ToResponseUnion<DeleteRuleResponses> | HttpResponseResolver<{
+export function handleDeleteRule(response?: HandleDeleteRuleResponse | HttpResponseResolver<{
     id: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.delete<{
@@ -3799,7 +3652,7 @@ export function handleDeleteRule(response?: HandleDeleteRuleResponse | ToRespons
         }
         const body = response?.body;
         if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 202 });
+            return new HttpResponse(body, { status: response?.status ?? 204 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -3850,7 +3703,7 @@ export type HandleUpdateRuleResponse = {
 /**
  * Handler for the `PATCH /api/v1/rules/{id}` operation.
  */
-export function handleUpdateRule(response?: HandleUpdateRuleResponse | ToResponseUnion<UpdateRuleResponses> | HttpResponseResolver<{
+export function handleUpdateRule(response?: HandleUpdateRuleResponse | HttpResponseResolver<{
     id: string;
 }, UpdateRuleData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.patch<{
@@ -3881,7 +3734,7 @@ export type HandleBulkUpdateRulesResponse = {
 /**
  * Handler for the `POST /api/v1/rules/bulk` operation.
  */
-export function handleBulkUpdateRules(response?: HandleBulkUpdateRulesResponse | ToResponseUnion<BulkUpdateRulesResponses> | HttpResponseResolver<never, BulkUpdateRulesData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleBulkUpdateRules(response?: HandleBulkUpdateRulesResponse | HttpResponseResolver<never, BulkUpdateRulesData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, BulkUpdateRulesData['body']>(`${options?.baseUrl ?? '*'}/api/v1/rules/bulk`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -3935,7 +3788,7 @@ export type HandleCreateWorkflowResponse = {
 /**
  * Handler for the `POST /api/v1/workflows` operation.
  */
-export function handleCreateWorkflow(response?: HandleCreateWorkflowResponse | ToResponseUnion<CreateWorkflowResponses> | HttpResponseResolver<never, CreateWorkflowData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleCreateWorkflow(response?: HandleCreateWorkflowResponse | HttpResponseResolver<never, CreateWorkflowData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, CreateWorkflowData['body']>(`${options?.baseUrl ?? '*'}/api/v1/workflows`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -3955,14 +3808,14 @@ export function handleCreateWorkflow(response?: HandleCreateWorkflowResponse | T
 }
 
 export type HandleDeleteWorkflowResponse = {
-    body: DeleteWorkflowResponses[202];
-    status?: 202;
+    body: DeleteWorkflowResponses[204];
+    status?: 204;
 };
 
 /**
  * Handler for the `DELETE /api/v1/workflows/{id}` operation.
  */
-export function handleDeleteWorkflow(response?: HandleDeleteWorkflowResponse | ToResponseUnion<DeleteWorkflowResponses> | HttpResponseResolver<{
+export function handleDeleteWorkflow(response?: HandleDeleteWorkflowResponse | HttpResponseResolver<{
     id: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.delete<{
@@ -3973,7 +3826,7 @@ export function handleDeleteWorkflow(response?: HandleDeleteWorkflowResponse | T
         }
         const body = response?.body;
         if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 202 });
+            return new HttpResponse(body, { status: response?.status ?? 204 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -4024,7 +3877,7 @@ export type HandleSaveWorkflowResponse = {
 /**
  * Handler for the `PUT /api/v1/workflows/{id}` operation.
  */
-export function handleSaveWorkflow(response?: HandleSaveWorkflowResponse | ToResponseUnion<SaveWorkflowResponses> | HttpResponseResolver<{
+export function handleSaveWorkflow(response?: HandleSaveWorkflowResponse | HttpResponseResolver<{
     id: string;
 }, SaveWorkflowData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.put<{
@@ -5492,7 +5345,7 @@ export type HandleSetModelPolicyResponse = {
 /**
  * Handler for the `PUT /api/v1/policy/models` operation.
  */
-export function handleSetModelPolicy(response?: HandleSetModelPolicyResponse | ToResponseUnion<SetModelPolicyResponses> | HttpResponseResolver<never, SetModelPolicyData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleSetModelPolicy(response?: HandleSetModelPolicyResponse | HttpResponseResolver<never, SetModelPolicyData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.put<never, SetModelPolicyData['body']>(`${options?.baseUrl ?? '*'}/api/v1/policy/models`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -6391,60 +6244,6 @@ export function handleCloudRunnerHeartbeat(response?: HandleCloudRunnerHeartbeat
         const body = response?.body;
         if (body !== undefined) {
             return HttpResponse.json(body, { status: response?.status ?? 200 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleOpenRunnerLaunchResponse = {
-    body: OpenRunnerLaunchResponses[201];
-    status?: 201;
-};
-
-/**
- * Handler for the `POST /api/v1/cloud/runner/launch` operation.
- */
-export function handleOpenRunnerLaunch(response?: HandleOpenRunnerLaunchResponse | HttpResponseResolver<never, OpenRunnerLaunchData['body']>, options?: RequestHandlerOptions): HttpHandler {
-    return http.post<never, OpenRunnerLaunchData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/launch`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 201 });
-        }
-        if (options?.responseFallback === 'passthrough') {
-            return;
-        }
-        return new Response('Not Implemented', {
-            status: 501,
-            statusText: 'Not Implemented'
-        });
-    }, options);
-}
-
-export type HandleReportRunnerCheckResponse = {
-    body: ReportRunnerCheckResponses[201];
-    status?: 201;
-};
-
-/**
- * Handler for the `POST /api/v1/cloud/runner/checks` operation.
- */
-export function handleReportRunnerCheck(response?: HandleReportRunnerCheckResponse | HttpResponseResolver<never, ReportRunnerCheckData['body']>, options?: RequestHandlerOptions): HttpHandler {
-    return http.post<never, ReportRunnerCheckData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/checks`, info => {
-        if (typeof response === 'function') {
-            return response(info);
-        }
-        const body = response?.body;
-        if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 201 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -8237,10 +8036,6 @@ export type MswHandlerFactories = {
      */
     mobileToken: typeof handleMobileToken;
     /**
-     * Handler for the `POST /api/v1/auth/mobile/unlock` operation.
-     */
-    unlockMobileApp: typeof handleUnlockMobileApp;
-    /**
      * Handler for the `GET /api/v1/auth/github/callback` operation.
      */
     githubLoginCallback: typeof handleGithubLoginCallback;
@@ -8296,14 +8091,6 @@ export type MswHandlerFactories = {
      * Handler for the `GET /api/v1/policy/agents` operation.
      */
     checkAgentPolicy: typeof handleCheckAgentPolicy;
-    /**
-     * Handler for the `GET /api/v1/auth/me/account` operation.
-     */
-    getMyAccount: typeof handleGetMyAccount;
-    /**
-     * Handler for the `GET /api/v1/tokens/scopes` operation.
-     */
-    listTokenScopes: typeof handleListTokenScopes;
     /**
      * Handler for the `GET /api/v1/auth/me` operation.
      */
@@ -8533,7 +8320,7 @@ export type MswHandlerFactories = {
      */
     inviteMembers: typeof handleInviteMembers;
     /**
-     * Handler for the `GET /api/v1/orgs/{org}/teams` operation.
+     * Handler for the `GET /api/v1/teams` operation.
      */
     listTeams: typeof handleListTeams;
     /**
@@ -8644,14 +8431,6 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/approvals/{id}/answer` operation.
      */
     answerApproval: typeof handleAnswerApproval;
-    /**
-     * Handler for the `GET /api/v1/confirmations/{id}` operation.
-     */
-    getGovernanceConfirmation: typeof handleGetGovernanceConfirmation;
-    /**
-     * Handler for the `POST /api/v1/confirmations/{id}/answer` operation.
-     */
-    answerGovernanceConfirmation: typeof handleAnswerGovernanceConfirmation;
     /**
      * Handler for the `GET /api/v1/decisions` operation.
      */
@@ -9093,14 +8872,6 @@ export type MswHandlerFactories = {
      */
     cloudRunnerHeartbeat: typeof handleCloudRunnerHeartbeat;
     /**
-     * Handler for the `POST /api/v1/cloud/runner/launch` operation.
-     */
-    openRunnerLaunch: typeof handleOpenRunnerLaunch;
-    /**
-     * Handler for the `POST /api/v1/cloud/runner/checks` operation.
-     */
-    reportRunnerCheck: typeof handleReportRunnerCheck;
-    /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/messages` operation.
      */
     sendCloudMessage: typeof handleSendCloudMessage;
@@ -9361,7 +9132,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         capabilities: wrap(handleCapabilities),
         startGithubLogin: wrap(handleStartGithubLogin),
         mobileToken: wrap(handleMobileToken),
-        unlockMobileApp: wrap(handleUnlockMobileApp),
         githubLoginCallback: wrap(handleGithubLoginCallback),
         listSignInMethods: wrap(handleListSignInMethods),
         startOAuthLogin: wrap(handleStartOAuthLogin),
@@ -9376,8 +9146,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         launcherLogin: wrap(handleLauncherLogin),
         createLaunch: wrap(handleCreateLaunch),
         checkAgentPolicy: wrap(handleCheckAgentPolicy),
-        getMyAccount: wrap(handleGetMyAccount),
-        listTokenScopes: wrap(handleListTokenScopes),
         getMe: wrap(handleGetMe),
         listMyAudit: wrap(handleListMyAudit),
         requestSignInEmail: wrap(handleRequestSignInEmail),
@@ -9463,8 +9231,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         getApproval: wrap(handleGetApproval),
         getApprovalView: wrap(handleGetApprovalView),
         answerApproval: wrap(handleAnswerApproval),
-        getGovernanceConfirmation: wrap(handleGetGovernanceConfirmation),
-        answerGovernanceConfirmation: wrap(handleAnswerGovernanceConfirmation),
         listDecisions: wrap(handleListDecisions),
         listReceipts: wrap(handleListReceipts),
         listReceiptKeys: wrap(handleListReceiptKeys),
@@ -9575,8 +9341,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         attachCloudTerminal: wrap(handleAttachCloudTerminal),
         attachRunnerTerminal: wrap(handleAttachRunnerTerminal),
         cloudRunnerHeartbeat: wrap(handleCloudRunnerHeartbeat),
-        openRunnerLaunch: wrap(handleOpenRunnerLaunch),
-        reportRunnerCheck: wrap(handleReportRunnerCheck),
         sendCloudMessage: wrap(handleSendCloudMessage),
         streamCloudSession: wrap(handleStreamCloudSession),
         listArtifacts: wrap(handleListArtifacts),
@@ -9687,14 +9451,12 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.addGroupMember, overrides.addGroupMember),
             invoke(pick.startGithubLogin, overrides.startGithubLogin),
             invoke(pick.mobileToken, overrides.mobileToken),
-            invoke(pick.unlockMobileApp, overrides.unlockMobileApp),
             invoke(pick.githubLoginCallback, overrides.githubLoginCallback),
             invoke(pick.pollDeviceLogin, overrides.pollDeviceLogin),
             invoke(pick.answerDeviceLogin, overrides.answerDeviceLogin),
             invoke(pick.refreshToken, overrides.refreshToken),
             invoke(pick.getLauncherConfig, overrides.getLauncherConfig),
             invoke(pick.launcherLogin, overrides.launcherLogin),
-            invoke(pick.getMyAccount, overrides.getMyAccount),
             invoke(pick.listMyAudit, overrides.listMyAudit),
             invoke(pick.verifySignInEmail, overrides.verifySignInEmail),
             invoke(pick.logoutEverywhere, overrides.logoutEverywhere),
@@ -9704,8 +9466,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.inferenceModels, overrides.inferenceModels),
             invoke(pick.attachRunnerTerminal, overrides.attachRunnerTerminal),
             invoke(pick.cloudRunnerHeartbeat, overrides.cloudRunnerHeartbeat),
-            invoke(pick.openRunnerLaunch, overrides.openRunnerLaunch),
-            invoke(pick.reportRunnerCheck, overrides.reportRunnerCheck),
             invoke(pick.receiveStripeWebhookAlias, overrides.receiveStripeWebhookAlias),
             invoke(pick.revokeAuthSession, overrides.revokeAuthSession),
             invoke(pick.deleteMcpServer, overrides.deleteMcpServer),
@@ -9720,7 +9480,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.leaveOrg, overrides.leaveOrg),
             invoke(pick.listOrgMembers, overrides.listOrgMembers),
             invoke(pick.listInvitations, overrides.listInvitations),
-            invoke(pick.listTeams, overrides.listTeams),
             invoke(pick.sessionAlive, overrides.sessionAlive),
             invoke(pick.endSession, overrides.endSession),
             invoke(pick.reopenSession, overrides.reopenSession),
@@ -9731,7 +9490,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.releaseGate, overrides.releaseGate),
             invoke(pick.getApprovalView, overrides.getApprovalView),
             invoke(pick.answerApproval, overrides.answerApproval),
-            invoke(pick.answerGovernanceConfirmation, overrides.answerGovernanceConfirmation),
             invoke(pick.verifyReceipt, overrides.verifyReceipt),
             invoke(pick.getReceiptBundle, overrides.getReceiptBundle),
             invoke(pick.getPackageStatus, overrides.getPackageStatus),
@@ -9762,7 +9520,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.getDeviceLogin, overrides.getDeviceLogin),
             invoke(pick.startDeviceLogin, overrides.startDeviceLogin),
             invoke(pick.checkAgentPolicy, overrides.checkAgentPolicy),
-            invoke(pick.listTokenScopes, overrides.listTokenScopes),
             invoke(pick.getMe, overrides.getMe),
             invoke(pick.requestSignInEmail, overrides.requestSignInEmail),
             invoke(pick.exchangeSignInLink, overrides.exchangeSignInLink),
@@ -9828,7 +9585,6 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.getSession, overrides.getSession),
             invoke(pick.getGate, overrides.getGate),
             invoke(pick.getApproval, overrides.getApproval),
-            invoke(pick.getGovernanceConfirmation, overrides.getGovernanceConfirmation),
             invoke(pick.getReceipt, overrides.getReceipt),
             invoke(pick.getPackage, overrides.getPackage),
             invoke(pick.deleteRule, overrides.deleteRule),
@@ -9875,6 +9631,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.createOrg, overrides.createOrg),
             invoke(pick.getOrganization, overrides.getOrganization),
             invoke(pick.listMembers, overrides.listMembers),
+            invoke(pick.listTeams, overrides.listTeams),
             invoke(pick.listRepos, overrides.listRepos),
             invoke(pick.getSettings, overrides.getSettings),
             invoke(pick.updateSettings, overrides.updateSettings),

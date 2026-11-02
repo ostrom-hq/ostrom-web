@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/api/types.gen';
-import { Link, useParams } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Viewer, useViewer } from '@/shared/auth/useViewer';
 import './yes.css';
@@ -46,6 +46,14 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
   // The server refused the answer because the request changed: the page shows the new version at once.
   const { approval, failure, newer, readNewer } = useShownApproval(approvalId, answer.changed);
   const viewer = useViewer();
+  const navigate = useNavigate();
+  const shown = approval?.id;
+  // A session links its gates by the gate's id (server#185 answers with the request it holds): the address then
+  // names the request itself, the id an answer is posted to and the one a reload reads.
+  useEffect(() => {
+    if (shown !== undefined && shown !== approvalId)
+      void navigate({ to: '/yes/$approvalId', params: { approvalId: shown }, replace: true });
+  }, [shown, approvalId, navigate]);
   return (
     <div className="ys-page ys-page--detail">
       <Link to="/yes" className="ys-back">
