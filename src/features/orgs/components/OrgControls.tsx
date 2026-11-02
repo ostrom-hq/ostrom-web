@@ -37,9 +37,13 @@ export function OrgControls({ anonymousPage }: OrgControlsProps): ReactElement |
         <Avatar login={name} size={20} />
         <span className="o-org-switch__text">
           <span className="o-org-switch__name">{name ?? t('orgs.switch.unnamed')}</span>
-          {/* Who the person is there, as `/auth/me` answers with the organization named: their name and role. */}
+          {/*
+           * Who the person is there, as `/auth/me` answers with the organization named: their name and role. Read as
+           * the button's description, not as its name: hidden from the name, which stays the label shown above it
+           * (WCAG 2.5.3, label in name), and still read through `aria-describedby`, which reads hidden elements.
+           */}
           {signedIn === undefined ? null : (
-            <span id={viewerId} className="o-org-switch__viewer">
+            <span id={viewerId} className="o-org-switch__viewer" aria-hidden="true">
               {signedIn}
             </span>
           )}
