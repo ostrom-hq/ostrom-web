@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -107,8 +107,10 @@ describe('the settings screen', () => {
     expect(remove).toBeDisabled();
     await user.type(typed, 'Acme');
     expect(remove).toBeDisabled();
-    // Enter does nothing until the short name matches.
-    await user.keyboard('{Enter}');
+    // A submission does nothing until the short name matches.
+    const form = typed.closest('form');
+    if (form === null) throw new Error('no deletion form');
+    fireEvent.submit(form);
     expect(db.noOrganization).toBe(false);
     await user.clear(typed);
     await user.type(typed, 'acme');
@@ -117,6 +119,18 @@ describe('the settings screen', () => {
       expect(router.state.location.pathname).toBe('/');
     });
     expect(db.noOrganization).toBe(true);
+  });
+
+  it('holds the deletion while the server deletes', async () => {
+    const user = userEvent.setup();
+    setDemoRole(db, 'owner');
+    server.use(http.delete('*/api/v1/orgs/:org', async () => delay('infinite')));
+    visit('/settings');
+    await settings();
+    const danger = region('Danger zone');
+    await user.type(within(danger).getByRole('textbox', { name: 'Type acme to confirm' }), 'acme');
+    await user.click(within(danger).getByRole('button', { name: 'Delete Acme' }));
+    expect(await within(danger).findByRole('button', { name: 'Deleting…' })).toBeDisabled();
   });
 
   it('asks the owner to sign in again when the server wants a fresh sign-in', async () => {

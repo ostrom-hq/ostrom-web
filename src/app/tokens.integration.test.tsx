@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
+
+function never(): never {
+  throw new Error('the demo has no token');
+}
 
 function form(): HTMLElement {
   return screen.getByRole('region', { name: 'New token' });
@@ -149,6 +153,38 @@ describe('the tokens screen', () => {
     expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeEnabled();
     for (const item of await liveTokens())
       expect(within(item).getByRole('button', { name: 'Revoke' })).toBeEnabled();
+  });
+
+  it('holds the page while a token is created or replaced', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/tokens', async () => delay('infinite')),
+      http.post('*/api/v1/tokens/:id/rotate', async () => delay('infinite')),
+    );
+    visit('/tokens');
+    const [ci] = await liveTokens();
+    const row = ci ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
+    // While the new secret is on its way, nothing else changes a token.
+    await waitFor(async () => {
+      for (const item of await liveTokens())
+        expect(within(item).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    });
+    expect(within(form()).getByRole('button', { name: 'Create the token' })).toBeDisabled();
+  });
+
+  it('shows the creation on its way, and a kind of token it does not know as the server says it', async () => {
+    const user = userEvent.setup();
+    db.tokens = [{ ...(db.tokens[0] ?? never()), id: 'tok-9', name: 'Service', kind: 'service' }];
+    server.use(http.post('*/api/v1/tokens', async () => delay('infinite')));
+    visit('/tokens');
+    const [service] = await liveTokens();
+    expect(service).toHaveTextContent('service');
+    await user.type(within(form()).getByRole('textbox', { name: 'Name' }), 'CI');
+    await user.click(within(form()).getByRole('checkbox', { name: 'Usage: Read' }));
+    await user.click(within(form()).getByRole('button', { name: 'Create the token' }));
+    expect(await within(form()).findByRole('button', { name: 'Creating…' })).toBeDisabled();
   });
 
   it('says why a token was not created, revoked or replaced', async () => {
