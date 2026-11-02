@@ -25,6 +25,8 @@ export interface ActivityViewModel {
   /** Why the older lines did not come; what was read stays. */
   readonly moreFailure: Error | undefined;
   readonly loadMore: () => void;
+  /** Reads the filter on screen again, from its first page. */
+  readonly reload: () => void;
 }
 
 /** The organization's feed, optionally one repository's sessions only, read a page at a time. */
@@ -46,10 +48,11 @@ export function useActivity(repo: string): ActivityViewModel {
     () => (query.data === undefined ? undefined : flatten(query.data.pages)),
     [query.data],
   );
-  // An unknown repository is an empty page, never a 404: a 404 means the route itself is not served.
+  // The server filters on the repository: an unknown one is an empty page, never a 404 (server#72,
+  // ReportsPostgresTest). A 404 here means the route itself is not served.
   const unavailable =
     query.data === undefined && isApiFailure(query.error) && query.error.kind === 'not-found';
-  const { fetchNextPage } = query;
+  const { fetchNextPage, refetch } = query;
   return {
     items,
     unavailable,
@@ -62,6 +65,9 @@ export function useActivity(repo: string): ActivityViewModel {
     staleFailure: query.isRefetchError ? failureOf(query.error) : undefined,
     loadMore: () => {
       void fetchNextPage();
+    },
+    reload: () => {
+      void refetch();
     },
   };
 }

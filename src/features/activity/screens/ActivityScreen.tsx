@@ -61,8 +61,9 @@ export function ActivityScreen(): ReactElement {
   const view = useActivity(repo);
   const show = (next: string): void => {
     setEdit(undefined);
-    // The same filter again adds no step to Back.
-    if (next !== repo) void navigate({ search: next === '' ? {} : { repo: next } });
+    // The same filter again adds no step to Back: it reads that filter again, a retry after a failure.
+    if (next === repo) view.reload();
+    else void navigate({ search: next === '' ? {} : { repo: next } });
   };
   return (
     <Screen title={t('activity.title')} lead={t('activity.lead')}>
@@ -72,7 +73,17 @@ export function ActivityScreen(): ReactElement {
         </Banner>
       ) : null}
       {/* Without the route there is nothing to filter, but a filter opened from a link can still be cleared. */}
-      {view.unavailable && repo === '' ? null : (
+      {view.unavailable && repo !== '' ? (
+        <Button
+          variant="ghost"
+          onClick={() => {
+            show('');
+          }}
+        >
+          {t('activity.filter.clear')}
+        </Button>
+      ) : null}
+      {view.unavailable ? null : (
         <form
           className="o-inline"
           onSubmit={(event) => {
@@ -112,23 +123,26 @@ export function ActivityScreen(): ReactElement {
       {view.unavailable ? null : (
         <>
           {repo === '' ? null : <p className="o-row__meta">{t('activity.filter.note', { repo })}</p>}
-          <LoadState data={view.items} failure={view.failure}>
-            {(items) =>
-              items.length === 0 ? (
-                <p className="o-empty">
-                  {repo === '' ? t('activity.empty') : t('activity.emptyRepo', { repo })}
-                </p>
-              ) : (
-                <ul className="o-card o-rows" aria-busy={view.switching}>
-                  {items.map((item) => (
-                    <li key={item.id}>
-                      <ActivityRow item={item} />
-                    </li>
-                  ))}
-                </ul>
-              )
-            }
-          </LoadState>
+          {/* While another filter's lines come, those on screen, or its empty note, are marked as not this one's. */}
+          <div aria-busy={view.switching}>
+            <LoadState data={view.items} failure={view.failure}>
+              {(items) =>
+                items.length === 0 ? (
+                  <p className="o-empty">
+                    {repo === '' ? t('activity.empty') : t('activity.emptyRepo', { repo })}
+                  </p>
+                ) : (
+                  <ul className="o-card o-rows">
+                    {items.map((item) => (
+                      <li key={item.id}>
+                        <ActivityRow item={item} />
+                      </li>
+                    ))}
+                  </ul>
+                )
+              }
+            </LoadState>
+          </div>
           {view.staleFailure === undefined ? null : (
             <Banner tone="warning" tag={t('activity.staleTag')} live>
               {view.staleFailure.message}

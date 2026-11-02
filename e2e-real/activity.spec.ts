@@ -83,6 +83,7 @@ test('an owner reads their organization’s activity as the server lists it, and
     'GET',
     `/api/v1/activity?repo=${encodeURIComponent(`${otherSlug}/api`)}`,
   );
-  if (leak.status === 200) expect((leak.body as Feed).items).toEqual([]);
-  else expect(leak.status).toBe(404);
+  // The server filters on the repository: another organization's is an empty page, never its lines.
+  expect(leak.status).toBe(200);
+  expect((leak.body as Feed).items).toEqual([]);
 });

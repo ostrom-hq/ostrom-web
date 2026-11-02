@@ -124,30 +124,53 @@ describe('the activity', () => {
 
   it('marks the previous filter’s lines as not this one’s while its own come, without their older lines', async () => {
     const user = userEvent.setup();
+    let hold = true;
     let release = (): void => undefined;
     server.use(
       http.get('*/api/v1/activity', async ({ request }) => {
-        if (new URL(request.url).searchParams.has('repo'))
+        if (hold && new URL(request.url).searchParams.has('repo'))
           await new Promise<void>((resolve) => {
             release = resolve;
           });
         return undefined;
       }),
     );
-    const router = visit('/activity');
+    visit('/activity');
     await screen.findByText('claude-code asked for a yes: Merge PR #412 into main');
     expect(screen.getByRole('button', { name: 'Show older' })).toBeInTheDocument();
-    const entries = router.history.length;
     await user.type(screen.getByRole('textbox', { name: 'Repository' }), 'acme/web{Enter}');
     expect(await screen.findByText(/left out for acme\/web/)).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByRole('list')).toHaveAttribute('aria-busy', 'true');
+    expect(within(screen.getByRole('main')).getByRole('list').closest('[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
     expect(screen.queryByRole('button', { name: 'Show older' })).toBeNull();
-    // The same filter again is no new step for Back.
-    await user.click(screen.getByRole('button', { name: 'Filter' }));
-    expect(router.history.length).toBe(entries + 1);
+    hold = false;
     release();
     expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
-    expect(within(screen.getByRole('main')).getByRole('list')).toHaveAttribute('aria-busy', 'false');
+    expect(within(screen.getByRole('main')).getByRole('list').closest('[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    );
+  });
+
+  it('reads the same filter again when asked, after it failed', async () => {
+    const user = userEvent.setup();
+    let fail = true;
+    server.use(
+      http.get('*/api/v1/activity', () =>
+        fail
+          ? HttpResponse.json({ error: { type: 'internal', message: 'feed is down' } }, { status: 500 })
+          : undefined,
+      ),
+    );
+    const router = visit('/activity?repo=acme%2Fweb');
+    expect(await screen.findByText('feed is down')).toBeInTheDocument();
+    const entries = router.history.length;
+    fail = false;
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
+    expect(router.history.length).toBe(entries);
   });
 
   it('says the activity is not served from a filtered link too, and keeps the filter to clear it', async () => {
@@ -162,6 +185,8 @@ describe('the activity', () => {
     visit('/activity?repo=acme%2Fweb');
     expect(await screen.findByText('This server does not serve the activity yet.')).toBeInTheDocument();
     expect(screen.queryByText(/left out/)).toBeNull();
+    // Nothing to filter on a server without the route: only the way back to the whole feed.
+    expect(screen.queryByRole('search')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'All repositories' }));
     expect(
       await screen.findByText('claude-code asked for a yes: Merge PR #412 into main'),
@@ -173,11 +198,8 @@ describe('the activity', () => {
     db.otherOrganizations = [otherOrganization()];
     visit('/activity');
     const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
-    await user.click(
-      within(within(picker).getByRole('list', { name: 'Your organizations' })).getByRole('button', {
-        name: 'Globex',
-      }),
-    );
+    const organizations = await within(picker).findByRole('list', { name: 'Your organizations' });
+    await user.click(within(organizations).getByRole('button', { name: 'Globex' }));
     expect(await screen.findByText('Nothing has happened yet.')).toBeInTheDocument();
     expect(screen.queryByText(/Merge PR #412/)).toBeNull();
   });
