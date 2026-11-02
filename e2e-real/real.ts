@@ -102,7 +102,7 @@ export async function callFromPage(
   const csrf = (await page.context().cookies()).find((cookie) =>
     /^(?:__Host-)?ostrom_csrf$/.test(cookie.name),
   )?.value;
-  return page.evaluate(
+  const answer = await page.evaluate(
     async ({ method, path, body, csrf, org }) => {
       const headers: Record<string, string> = { accept: 'application/json' };
       if (org !== undefined) headers['Ostrom-Org'] = org;
@@ -114,11 +114,34 @@ export async function callFromPage(
         credentials: 'include',
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      const text = await response.text();
-      return { status: response.status, body: text === '' ? undefined : (JSON.parse(text) as unknown) };
+      return { status: response.status, text: await response.text() };
     },
     { method, path, body, csrf, org },
   );
+  return { status: answer.status, body: bodyOf(`${method} ${path}`, answer.status, answer.text) };
+}
+
+/**
+ * An answer's body, read in Node. A success (2xx but 204) must be JSON: the callers read fields from it, so a page of
+ * text or an empty body fails here, at its cause. A refusal may be a proxy's page of text: it is kept, cut short, so
+ * its status and words show in the failure.
+ */
+export function bodyOf(call: string, status: number, text: string): unknown {
+  const shown = text.length > 300 ? `${text.slice(0, 300)}…` : text;
+  let parsed: { json: unknown } | undefined;
+  try {
+    parsed = text === '' ? undefined : { json: JSON.parse(text) };
+  } catch {
+    parsed = undefined;
+  }
+  const success = status >= 200 && status < 300 && status !== 204;
+  if (success && parsed === undefined) {
+    throw new Error(
+      `${call} answered ${String(status)} without a JSON body: ${shown === '' ? '(empty)' : shown}`,
+    );
+  }
+  if (parsed !== undefined) return parsed.json;
+  return shown === '' ? undefined : shown;
 }
 
 const others: BrowserContext[] = [];
