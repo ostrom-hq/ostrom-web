@@ -127,7 +127,7 @@ describe('writing an automation', () => {
     expect(db.automations[0]?.variables).toEqual([
       {
         name: 'level',
-        path: 'level',
+        path: '$.level',
         type: 'enum',
         values: ['low', 'high'],
         required: false,
