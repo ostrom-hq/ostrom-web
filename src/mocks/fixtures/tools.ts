@@ -32,6 +32,15 @@ const secrets: Secret[] = [
     usedBy: ['mcp:linear'],
   },
   {
+    name: 'ANTHROPIC_API_KEY',
+    scope: 'org',
+    createdAt: '2026-10-21T08:00:00.000Z',
+    updatedAt: '2026-10-21T08:00:00.000Z',
+    updatedBy: 'lena',
+    version: 1,
+    usedBy: ['inference:anthropic'],
+  },
+  {
     name: 'STRIPE_TEST_KEY',
     scope: 'team:billing',
     createdAt: '2026-10-22T10:00:00.000Z',

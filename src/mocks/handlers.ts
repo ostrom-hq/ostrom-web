@@ -158,6 +158,7 @@ import {
   initialSecrets,
 } from '@/mocks/fixtures/tools';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
+import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
@@ -171,6 +172,7 @@ export interface MockDb
     OrgsState,
     TokensState,
     McpAccessState,
+    PolicyState,
     TeamCodeImportState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
@@ -253,6 +255,10 @@ export function createMockDb(): MockDb {
     mcpAssignments: initialMcpAssignments(),
     mcpPolicies: initialMcpPolicies(),
     mcpPrefixes: {},
+    modelPolicies: { [initialOrganization().id]: initialModelPolicy(MEMBER_IDS.theo) },
+    inferenceSettings: {
+      [initialOrganization().id]: { anthropicKeySecret: 'ANTHROPIC_API_KEY', useSharedAccounts: true },
+    },
     nextPolicyId: 3,
     imported: {},
     cutoverAvailable: true,
@@ -820,6 +826,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => db,
       (request) => organizationOf(db, request),
       now,
+    ),
+    ...createPolicyHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
     ),
     ...createTeamCodeImportHandlers(
       () => db,
