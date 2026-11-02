@@ -1,20 +1,30 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  getApproversGraphOptions,
   getGatePolicyOptions,
   getGatePolicyQueryKey,
   listMembersOptions,
   listWorkflowsOptions,
   setGatePolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
+import type { ApproversGraph } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 
 export interface ApproversViewModel {
+  /** The steps, as soon as the workflows come: a slow graph never holds them. */
   readonly points: readonly ApprovalPoint[] | undefined;
+  /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
+  readonly graph: ApproversGraph | undefined;
+  /** The server does not serve it (an older server): the steps of the workflows still show. */
+  readonly graphUnavailable: boolean;
+  /** Why the graph did not come; the steps still show, with this in place of the notes and the people. */
+  readonly graphFailure: Error | undefined;
   readonly failure: Error | undefined;
   /** A login with the name the organization knows, or the login alone. */
   readonly nameOf: (login: string) => string;
@@ -23,6 +33,10 @@ export interface ApproversViewModel {
 export function useApprovers(): ApproversViewModel {
   const workflows = useQuery(ready(listWorkflowsOptions()));
   const members = useQuery(ready(listMembersOptions()));
+  // Read again on every visit: a workflow changed elsewhere changes who approves what.
+  const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));
+  // A server without the route says nothing; any other failure says why. Neither leaves a stale graph on screen.
+  const graphUnavailable = isApiFailure(graph.error) && graph.error.kind === 'not-found';
   const points = useMemo(
     () => (workflows.data === undefined ? undefined : approvalPoints(workflows.data.items)),
     [workflows.data],
@@ -40,6 +54,9 @@ export function useApprovers(): ApproversViewModel {
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {
     points,
+    graph: graph.isError ? undefined : graph.data,
+    graphUnavailable,
+    graphFailure: graphUnavailable ? undefined : failureOf(graph.error),
     failure: failureOf(workflows.error ?? members.error),
     nameOf,
   };

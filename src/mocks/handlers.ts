@@ -104,6 +104,7 @@ import {
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
+import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialRepos } from '@/mocks/fixtures/github';
@@ -566,6 +567,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
+    ...createApproversGraphHandlers(() => db),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');

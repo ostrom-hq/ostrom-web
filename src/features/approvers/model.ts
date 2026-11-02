@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { GateAction, NodeWhen, Workflow } from '@gen/api/types.gen';
+import type {
+  ApproverGate,
+  ApproverLine,
+  ApproversGraph,
+  GateAction,
+  NodeWhen,
+  Workflow,
+} from '@gen/api/types.gen';
 
 /** One place where an agent stops for a person: a gate of a workflow, and who may say yes there. */
 export interface ApprovalPoint {
@@ -12,6 +19,8 @@ export interface ApprovalPoint {
   readonly owner: string | undefined;
   readonly actions: readonly GateAction[];
   readonly when: NodeWhen | undefined;
+  /** False while its workflow is only proposed: the gate is not enforced yet. */
+  readonly enforced: boolean;
 }
 
 export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] {
@@ -28,32 +37,44 @@ export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] 
         owner: node.owner,
         actions: node.actions ?? [],
         when: node.when,
+        enforced: workflow.status !== 'proposed',
       })),
   );
 }
 
-export interface PersonApprovals {
-  readonly login: string;
-  readonly points: readonly ApprovalPoint[];
+/** The gates that stop an agent for good: enforced, and naming nobody. A proposed gate is not enforced yet. */
+export function blocking(unanswered: readonly ApproverGate[]): ApproverGate[] {
+  return unanswered.filter((gate) => gate.enforce);
 }
 
-/** The same map read the other way: for each person, what they can say yes to; most first. */
-export function byPerson(points: readonly ApprovalPoint[]): PersonApprovals[] {
-  const people = new Map<string, ApprovalPoint[]>();
-  for (const point of points) {
-    for (const login of point.approvers) people.set(login, [...(people.get(login) ?? []), point]);
-  }
-  return [...people.entries()]
-    .map(([login, list]) => ({ login, points: list }))
-    .sort((a, b) => {
-      const byCount = b.points.length - a.points.length;
-      return byCount !== 0 ? byCount : a.login.localeCompare(b.login, 'en');
-    });
+/** The server's approvers, the busiest first, then by name. */
+export function busiestFirst(lines: readonly ApproverLine[]): ApproverLine[] {
+  return [...lines].sort((a, b) => {
+    const byCount = b.gates.length - a.gates.length;
+    return byCount !== 0 ? byCount : a.approver.localeCompare(b.approver, 'en');
+  });
 }
 
-/** A gate nobody may approve stops the agent for good: it is shown first, as a problem. */
-export function unanswerable(points: readonly ApprovalPoint[]): ApprovalPoint[] {
-  return points.filter((point) => point.approvers.length === 0);
+export interface GraphReading {
+  /** Who answers each gate, by `workflowId/nodeId`, as the server resolves it. */
+  readonly answeredBy: ReadonlyMap<string, readonly string[]>;
+  /** The gates that stop an agent for good, by `workflowId/nodeId`. */
+  readonly blocked: ReadonlySet<string>;
+}
+
+/** The server's graph read gate by gate, so each step says what the gates decide. */
+export function readGraph(graph: ApproversGraph): GraphReading {
+  const answeredBy = new Map<string, string[]>();
+  for (const line of graph.approvers)
+    for (const gate of line.gates) {
+      const key = `${gate.workflowId}/${gate.nodeId}`;
+      answeredBy.set(key, [...(answeredBy.get(key) ?? []), line.approver]);
+    }
+  for (const gate of graph.unanswered) answeredBy.set(`${gate.workflowId}/${gate.nodeId}`, []);
+  return {
+    answeredBy,
+    blocked: new Set(blocking(graph.unanswered).map((gate) => `${gate.workflowId}/${gate.nodeId}`)),
+  };
 }
 
 export const SELF_APPROVAL_POLICIES = ['sole-approver', 'never'] as const;
