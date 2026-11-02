@@ -49,7 +49,7 @@ test('an owner’s decision on a rule are in the journal, newest first, each wit
   await expect(acceptedLine).toContainText(`${accepted.by} accepted the rule`);
   for (const line of [deletedLine, acceptedLine]) await expect(line).toContainText(statement.slice(0, 20));
   const links = await Promise.all(
-    (await page.getByRole('link', { name: /Receipt$/ }).all()).map((link) => link.getAttribute('href')),
+    (await page.getByRole('link', { name: /Receipt$/ }).all()).map(async (link) => link.getAttribute('href')),
   );
   expect(links.indexOf(`/receipts/${deleted.receiptId}`)).toBeLessThan(
     links.indexOf(`/receipts/${accepted.receiptId}`),
