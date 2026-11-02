@@ -10,14 +10,14 @@ const servers: McpServer[] = [
     secretNames: ['LINEAR_TOKEN'],
     tools: ['list_issues', 'create_issue', 'update_issue'],
     enabled: true,
-    scope: 'org',
+    scope: 'shared',
   },
   {
     name: 'sentry',
     url: 'https://mcp.sentry.dev/mcp',
     transport: 'http',
     enabled: false,
-    scope: 'team:billing',
+    scope: 'per-member',
   },
 ];
 

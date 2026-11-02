@@ -20,7 +20,7 @@ export function SecretsScreen(): ReactElement {
           {change.failure.message}
         </Banner>
       )}
-      {view.canManage ? <AddSecretForm change={change} /> : null}
+      {view.canManage === true ? <AddSecretForm change={change} /> : null}
       <LoadState data={view.secrets} failure={view.failure}>
         {(secrets) =>
           secrets.length === 0 ? (
@@ -33,7 +33,7 @@ export function SecretsScreen(): ReactElement {
                     secret={secret}
                     busy={change.pending !== undefined}
                     actions={
-                      view.canManage
+                      view.canManage === true
                         ? {
                             rotate: (value, onDone) => {
                               change.rotate(secret.name, value, onDone);

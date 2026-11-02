@@ -78,13 +78,19 @@ describe('missingSecrets', () => {
       transport: 'http',
       secretNames: ['HAVE', 'LACK'],
       enabled: true,
-      scope: 'org',
+      scope: 'shared',
     };
     const secrets: Secret[] = [
       { name: 'HAVE', scope: 'org', createdAt: '', updatedAt: '', updatedBy: 'maya', version: 1 },
     ];
     expect(missingSecrets(server, secrets)).toEqual(['LACK']);
-    const bare: McpServer = { name: 'b', url: 'https://b', transport: 'http', enabled: true, scope: 'org' };
+    const bare: McpServer = {
+      name: 'b',
+      url: 'https://b',
+      transport: 'http',
+      enabled: true,
+      scope: 'shared',
+    };
     expect(missingSecrets(bare, secrets)).toEqual([]);
   });
 });
@@ -136,8 +142,22 @@ describe('checkPolicy', () => {
     expect(checkPolicy({ ...draft, conditions: [{ path: ' ', operator: 'ABSENT', value: '' }] })).toEqual({
       problem: 'path',
     });
+    expect(
+      checkPolicy({ ...draft, conditions: [{ path: 'p'.repeat(257), operator: 'EXISTS', value: '' }] }),
+    ).toEqual({ problem: 'path' });
+    expect(
+      checkPolicy({ ...draft, conditions: [{ path: 'q', operator: 'EQUALS', value: 'v'.repeat(1025) }] }),
+    ).toEqual({ problem: 'value' });
+  });
+
+  it('compares with an empty value, as the relay accepts', () => {
     expect(checkPolicy({ ...draft, conditions: [{ path: 'q', operator: 'EQUALS', value: '' }] })).toEqual({
-      problem: 'value',
+      request: {
+        tool: 'create_issue',
+        effect: 'DENY',
+        message: 'No.',
+        conditions: [{ path: 'q', operator: 'EQUALS', value: '' }],
+      },
     });
   });
 
@@ -157,16 +177,13 @@ describe('checkAssignment', () => {
     credentialSecret: '',
   };
 
-  it('gives every tool, an allowlist, or none at all', () => {
+  it('gives every tool or an allowlist, never an empty one', () => {
     expect(checkAssignment(draft)).toEqual({ member: 'all', request: {} });
     expect(checkAssignment({ ...draft, onlySome: true, tools: 'a, b a' })).toEqual({
       member: 'all',
       request: { tools: ['a', 'b'] },
     });
-    expect(checkAssignment({ ...draft, onlySome: true, tools: '' })).toEqual({
-      member: 'all',
-      request: { tools: [] },
-    });
+    expect(checkAssignment({ ...draft, onlySome: true, tools: ' , ' })).toEqual({ problem: 'noTool' });
   });
 
   it('gives one member their own credential, never everyone', () => {
@@ -174,7 +191,11 @@ describe('checkAssignment', () => {
       member: 'm-1',
       request: { credentialSecret: 'MY_TOKEN' },
     });
-    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({ problem: 'credential' });
+    // Typed for a member, then the form switched to everyone: the hidden field is not sent.
+    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({
+      member: 'all',
+      request: {},
+    });
     expect(checkAssignment({ ...draft, member: 'm-1', credentialSecret: 'lower' })).toEqual({
       problem: 'credential',
     });

@@ -576,9 +576,10 @@ export const fr = {
           submit: 'Donner l’accès',
           problem: {
             member: 'Dis à qui le donner : tout le monde, un membre, ou l’id d’un membre.',
+            noTool: 'Nomme les outils permis, ou donne tous les outils.',
             tool: '{{detail}} n’est pas un nom d’outil : lettres, chiffres, points, tirets et tirets bas.',
             credential:
-              'Un identifiant personnel est un nom de secret en MAJUSCULES, et va à un membre, jamais à tout le monde.',
+              'Un identifiant personnel est un nom de secret : MAJUSCULES, chiffres et tirets bas, commençant par une lettre.',
           },
         },
         policy: {
@@ -597,8 +598,8 @@ export const fr = {
           problem: {
             tool: 'Nomme un outil (lettres, chiffres, points, tirets et tirets bas), ou * pour tous.',
             message: 'Dis en 1 à 500 caractères ce que lit l’agent.',
-            path: 'Chaque condition nomme un argument, comme query ou options.database.',
-            value: 'Ce test demande une valeur.',
+            path: 'Chaque condition nomme un argument en 256 caractères au plus, comme query ou options.database.',
+            value: 'Une valeur fait au plus 1 024 caractères.',
           },
         },
       },

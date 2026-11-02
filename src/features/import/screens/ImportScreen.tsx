@@ -9,7 +9,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { EmptyState, Screen, Section } from '@/shared/ui/Screen';
 import { ExportFile } from '../components/ExportFile';
 import { ImportReportView } from '../components/ImportReportView';
-import { changesOf } from '../model';
+import { changesOf, type ImportMode } from '../model';
 import { useTeamCodeImport } from '../useImport';
 import './import.css';
 
@@ -32,8 +32,6 @@ function ImportSteps({
 }): ReactElement {
   const { t } = useTranslation();
   const view = useTeamCodeImport();
-  const [stopped, setStopped] = useState(false);
-  const stoppedId = useId();
   if (!managesMembers(role))
     return (
       <Screen title={t('imports.title')}>
@@ -99,34 +97,17 @@ function ImportSteps({
                 <p className="o-screen__lead">{t('imports.cutover.ownersOnly')}</p>
               ) : imported === undefined ? (
                 <p className="o-screen__lead">{t('imports.cutover.needsImport')}</p>
-              ) : (
-                <>
-                  <div className="o-inline">
-                    <input
-                      id={stoppedId}
-                      type="checkbox"
-                      checked={stopped}
-                      onChange={(event) => {
-                        setStopped(event.target.checked);
-                      }}
-                    />
-                    <label htmlFor={stoppedId}>{t('imports.cutover.stopped')}</label>
-                  </div>
-                  <div className="o-inline">
-                    <ConfirmButton
-                      label={
-                        view.running === 'cutover' ? t('imports.cutover.running') : t('imports.cutover.ask')
-                      }
-                      confirm={t('imports.cutover.confirm', { org: orgName })}
-                      keep={t('imports.keep')}
-                      disabled={busy || !stopped}
-                      onConfirm={() => {
-                        file.run('cutover');
-                      }}
-                    />
-                  </div>
-                </>
-              )}
+              ) : cutover === undefined ? (
+                // A new file asks again whether TeamCode is stopped.
+                <CutoverAsk
+                  key={file.id}
+                  orgName={orgName}
+                  running={view.running}
+                  onConfirm={() => {
+                    file.run('cutover');
+                  }}
+                />
+              ) : null}
               {cutover === undefined ? null : (
                 <>
                   <Banner tag={t('imports.cutover.doneTag')}>{t('imports.cutover.done')}</Banner>
@@ -138,5 +119,44 @@ function ImportSteps({
         </>
       )}
     </Screen>
+  );
+}
+
+/** Once run, the cutover is not offered again for this file: it rotates TeamCode's tokens. */
+function CutoverAsk({
+  orgName,
+  running,
+  onConfirm,
+}: {
+  readonly orgName: string;
+  readonly running: ImportMode | undefined;
+  readonly onConfirm: () => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const [stopped, setStopped] = useState(false);
+  const stoppedId = useId();
+  return (
+    <>
+      <div className="o-inline">
+        <input
+          id={stoppedId}
+          type="checkbox"
+          checked={stopped}
+          onChange={(event) => {
+            setStopped(event.target.checked);
+          }}
+        />
+        <label htmlFor={stoppedId}>{t('imports.cutover.stopped')}</label>
+      </div>
+      <div className="o-inline">
+        <ConfirmButton
+          label={running === 'cutover' ? t('imports.cutover.running') : t('imports.cutover.ask')}
+          confirm={t('imports.cutover.confirm', { org: orgName })}
+          keep={t('imports.keep')}
+          disabled={running !== undefined || !stopped}
+          onConfirm={onConfirm}
+        />
+      </div>
+    </>
   );
 }

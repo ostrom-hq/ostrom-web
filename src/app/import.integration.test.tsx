@@ -188,6 +188,34 @@ describe('the TeamCode import', () => {
     await user.click(within(region('1. The plan')).getByRole('button', { name: 'Show the plan' }));
     expect(within(region('1. The plan')).getByRole('button', { name: 'Reading…' })).toBeDisabled();
     expect(within(region('TeamCode export')).getByRole('button', { name: 'Forget the file' })).toBeDisabled();
+    expect(screen.getByLabelText('Export file (JSON)')).toBeDisabled();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps the file chosen last, even when an earlier one is read after it', async () => {
+    visit('/import');
+    const late: { resolve: (text: string) => void; reject: (error: Error) => void }[] = [];
+    function slow(name: string): File {
+      const file = exportFile(EXPORT, name);
+      Object.defineProperty(file, 'text', {
+        value: async () =>
+          new Promise<string>((resolve, reject) => {
+            late.push({ resolve, reject });
+          }),
+      });
+      return file;
+    }
+    await choose(slow('first.json'));
+    await choose(slow('broken.json'));
+    await choose(exportFile(EXPORT, 'last.json'));
+    expect(await screen.findByText('last.json')).toBeInTheDocument();
+    late[0]?.resolve(JSON.stringify(EXPORT));
+    late[1]?.reject(new Error('gone'));
+    await waitFor(() => {
+      expect(late).toHaveLength(2);
+    });
+    expect(screen.queryByText('first.json')).toBeNull();
+    expect(screen.getByText('last.json')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -241,6 +269,31 @@ describe('the cutover', () => {
     expect(within(cutover).getByRole('list', { name: 'The cutover, line by line' })).toHaveTextContent(
       'Old CodexShared accountUpdated',
     );
+    // It rotated TeamCode's tokens: it is not offered again for this file.
+    expect(within(cutover).queryByRole('button', { name: 'Run the cutover' })).toBeNull();
+    expect(within(cutover).queryByRole('checkbox')).toBeNull();
+  });
+
+  it('asks again whether TeamCode is stopped for a new file', async () => {
+    const user = userEvent.setup();
+    setDemoRole(db, 'owner');
+    visit('/import');
+    await runImport();
+    await user.click(within(region('3. The cutover')).getByRole('checkbox', { name: 'TeamCode is stopped' }));
+    await choose();
+    await user.click(
+      await within(await screen.findByRole('region', { name: '1. The plan' })).findByRole('button', {
+        name: 'Show the plan',
+      }),
+    );
+    await within(region('1. The plan')).findByRole('list', { name: 'The plan in numbers' });
+    await user.click(within(region('2. The import')).getByRole('button', { name: 'Import' }));
+    await user.click(within(region('2. The import')).getByRole('button', { name: /^Write .* into Acme$/ }));
+    await within(region('2. The import')).findByRole('list', { name: 'The import in numbers' });
+    expect(
+      within(region('3. The cutover')).getByRole('checkbox', { name: 'TeamCode is stopped' }),
+    ).not.toBeChecked();
+    expect(within(region('3. The cutover')).getByRole('button', { name: 'Run the cutover' })).toBeDisabled();
   });
 
   it('says when the server cannot cut over, or refuses the person', async () => {

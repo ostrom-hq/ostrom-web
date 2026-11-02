@@ -2,7 +2,7 @@
 import { importTeamCodeMutation } from '@gen/api/@tanstack/react-query.gen';
 import type { ImportReport, TeamCodeImportRequestWritable } from '@gen/api/types.gen';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import {
@@ -36,12 +36,15 @@ export interface TeamCodeImportViewModel {
 }
 
 export interface ChosenExport {
+  /** Changes with each file chosen: what the screen asked about the last one starts again. */
+  readonly id: number;
   readonly name: string;
   readonly summary: ExportSummary;
   readonly run: (mode: ImportMode) => void;
 }
 
 interface Loaded {
+  readonly id: number;
   readonly name: string;
   readonly request: TeamCodeImportRequestWritable;
   readonly summary: ExportSummary;
@@ -66,7 +69,10 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
   // The body carries credentials in clear: the mutation is never cached beyond this screen.
   const mutation = useMutation({ ...importTeamCodeMutation(), gcTime: 0 });
   const { mutate, reset } = mutation;
+  // Each choice or forgetting moves it on: a file read late never replaces the one chosen after it.
+  const choice = useRef(0);
   const forget = useCallback(() => {
+    choice.current += 1;
     setLoaded(undefined);
     setFileProblem(undefined);
     setReports({});
@@ -75,14 +81,17 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
   const choose = useCallback(
     (file: File) => {
       forget();
+      const id = choice.current;
       file.text().then(
         (text) => {
+          if (id !== choice.current) return;
           const parsed = parseExport(text);
           if ('problem' in parsed) setFileProblem(parsed.problem);
-          else setLoaded({ name: file.name, request: parsed.request, summary: summarize(parsed.request) });
+          else
+            setLoaded({ id, name: file.name, request: parsed.request, summary: summarize(parsed.request) });
         },
         () => {
-          setFileProblem('read');
+          if (id === choice.current) setFileProblem('read');
         },
       );
     },
@@ -108,6 +117,7 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
       loaded === undefined
         ? undefined
         : {
+            id: loaded.id,
             name: loaded.name,
             summary: loaded.summary,
             run: (mode: ImportMode) => {

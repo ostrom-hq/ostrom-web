@@ -125,8 +125,10 @@ export interface PolicyDraft {
 
 export type PolicyDraftProblem = 'tool' | 'message' | 'path' | 'value';
 
-/** At most 500 characters, as the relay tells the agent. */
+/** The relay's limits (`McpRules`): the message the agent is told, an argument path, a compared value. */
 const MAX_MESSAGE = 500;
+const MAX_PATH = 256;
+const MAX_VALUE = 1024;
 
 /** What stops the policy from being sent, in the order the form reads, or the request to send. */
 export function checkPolicy(
@@ -139,12 +141,13 @@ export function checkPolicy(
   const conditions: McpArgumentCondition[] = [];
   for (const condition of draft.conditions) {
     const path = condition.path.trim();
-    if (path === '') return { problem: 'path' };
+    if (path === '' || path.length > MAX_PATH) return { problem: 'path' };
     if (!takesValue(condition.operator)) {
       conditions.push({ path, operator: condition.operator });
       continue;
     }
-    if (condition.value === '') return { problem: 'value' };
+    // An empty value is a value: `equals ""` is a policy the relay accepts.
+    if (condition.value.length > MAX_VALUE) return { problem: 'value' };
     conditions.push({ path, operator: condition.operator, value: condition.value });
   }
   return { request: { tool, effect: draft.effect, message, conditions } };
@@ -162,7 +165,7 @@ export interface AssignmentDraft {
   readonly credentialSecret: string;
 }
 
-export type AssignmentDraftProblem = 'member' | 'tool' | 'credential';
+export type AssignmentDraftProblem = 'member' | 'noTool' | 'tool' | 'credential';
 
 /** What stops the assignment from being sent, or the member and the request to send. */
 export function checkAssignment(
@@ -174,16 +177,17 @@ export function checkAssignment(
   if (member === '') return { problem: 'member' };
   const request: McpAssignmentRequest = {};
   if (draft.onlySome) {
-    // An empty list means no tool at all: it is sent as `[]`, never dropped.
+    // An empty allowlist would give the server and allow no call: not giving it says that already.
     const tools = parseNames(draft.tools);
+    if (tools.length === 0) return { problem: 'noTool' };
     const wrong = tools.find((tool) => !isToolName(tool));
     if (wrong !== undefined) return { problem: 'tool', detail: wrong };
     request.tools = tools;
   }
-  const credential = draft.credentialSecret.trim();
+  // A personal credential belongs to one member: the form hides it for everyone, and it is never sent with `all`.
+  const credential = member === EVERYONE ? '' : draft.credentialSecret.trim();
   if (credential !== '') {
-    // A personal credential belongs to one member: the server refuses it with `all`.
-    if (member === EVERYONE || !SECRET_NAME.test(credential)) return { problem: 'credential' };
+    if (!SECRET_NAME.test(credential)) return { problem: 'credential' };
     request.credentialSecret = credential;
   }
   return { member, request };

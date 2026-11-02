@@ -269,6 +269,8 @@ export function createMockDb(): MockDb {
 const zMcpServerWrite = zMcpServer.extend({
   name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
   url: z.url({ protocol: /^https$/ }),
+  // The relay's two scopes (`McpRules`): one shared credential, or each member's own.
+  scope: z.enum(['shared', 'per-member']),
 });
 /** A parsed write as the contract's server: an absent list stays absent, never `undefined`. */
 function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {

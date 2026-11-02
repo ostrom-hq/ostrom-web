@@ -25,6 +25,8 @@ export function ExportFile({ view }: { readonly view: TeamCodeImportViewModel })
           className="o-input"
           type="file"
           accept=".json,application/json"
+          // A run on its way keeps its file: its report and the screens it refreshes are not dropped.
+          disabled={view.running !== undefined}
           onChange={(event) => {
             const chosen = event.target.files?.[0];
             if (chosen !== undefined) view.choose(chosen);

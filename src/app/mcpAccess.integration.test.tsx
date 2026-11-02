@@ -292,8 +292,6 @@ describe('the argument policies', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent('Each condition names an argument');
     await user.type(within(form).getByRole('textbox', { name: 'Argument of condition 1' }), 'query');
     await user.selectOptions(within(form).getByRole('combobox', { name: 'Test of condition 1' }), 'contains');
-    await user.click(submit);
-    expect(within(form).getByRole('alert')).toHaveTextContent('This test needs a value.');
     await user.type(within(form).getByRole('textbox', { name: 'Value of condition 1' }), 'DROP');
     await user.click(within(form).getByRole('button', { name: 'Add a condition' }));
     await user.type(

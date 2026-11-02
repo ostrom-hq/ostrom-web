@@ -18,7 +18,6 @@ import type { McpCall, McpServer, Secret } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
 import { managesMembers } from '@/shared/org/roles';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
@@ -30,7 +29,17 @@ export interface McpViewModel {
   readonly callsByServer: Readonly<Record<string, number>> | undefined;
   readonly calls: readonly McpCall[] | undefined;
   readonly failure: Error | undefined;
-  readonly canManage: boolean;
+  /** Owners and admins manage; unknown while the organization loads. */
+  readonly canManage: boolean | undefined;
+}
+
+/**
+ * Whether the person manages the organization the calls act in, from their own list of organizations: `/auth/me`
+ * may not carry the role. Unknown while that list loads, so a screen never shows a member's view, then an admin's.
+ */
+function useCanManage(): boolean | undefined {
+  const { org, role } = useCurrentOrg();
+  return org === undefined ? undefined : managesMembers(role);
 }
 
 export function useMcp(): McpViewModel {
@@ -38,8 +47,7 @@ export function useMcp(): McpViewModel {
   const secrets = useQuery(ready(listSecretsOptions()));
   const usage = useQuery(ready(getMcpUsageOptions()));
   const calls = useQuery(ready(listMcpCallsOptions()));
-  // The role in the organization the calls act in, from the person's own list: `/auth/me` may not carry it.
-  const { role } = useCurrentOrg();
+  const canManage = useCanManage();
   return {
     servers: servers.data?.items,
     secrets: secrets.data?.items,
@@ -47,7 +55,7 @@ export function useMcp(): McpViewModel {
     calls: calls.data?.items,
     // Missing secrets or usage would read as "nothing missing" and "0 calls": any failed part is said.
     failure: failureOf(servers.error ?? secrets.error ?? usage.error ?? calls.error),
-    canManage: managesMembers(role),
+    canManage,
   };
 }
 
@@ -128,13 +136,14 @@ export function useMcpChange(): McpChangeViewModel {
 export interface SecretsViewModel {
   readonly secrets: readonly Secret[] | undefined;
   readonly failure: Error | undefined;
-  readonly canManage: boolean;
+  /** As on the MCP screen: from the organization's role, unknown while it loads. */
+  readonly canManage: boolean | undefined;
 }
 
 export function useSecrets(): SecretsViewModel {
   const secrets = useQuery(ready(listSecretsOptions()));
-  const viewer = useViewer();
-  return { secrets: secrets.data?.items, failure: failureOf(secrets.error), canManage: viewer.canManage };
+  const canManage = useCanManage();
+  return { secrets: secrets.data?.items, failure: failureOf(secrets.error), canManage };
 }
 
 export interface SecretChangeViewModel {

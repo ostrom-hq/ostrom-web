@@ -29,15 +29,19 @@ export function McpScreen(): ReactElement {
           {change.failure.message}
         </Banner>
       )}
-      <AgentPrefix
-        settings={settings}
-        example={view.servers?.[0]?.name ?? '<server>'}
-        canManage={view.canManage}
-      />
-      {view.canManage ? (
-        <AddServerForm change={change} />
-      ) : (
-        <p className="o-screen__lead">{t('tools.mcp.access.membersNote')}</p>
+      {view.canManage === undefined ? null : (
+        <>
+          <AgentPrefix
+            settings={settings}
+            example={view.servers?.[0]?.name ?? '<server>'}
+            canManage={view.canManage}
+          />
+          {view.canManage ? (
+            <AddServerForm change={change} />
+          ) : (
+            <p className="o-screen__lead">{t('tools.mcp.access.membersNote')}</p>
+          )}
+        </>
       )}
       <LoadState data={view.servers} failure={view.failure}>
         {(servers) =>
@@ -53,7 +57,7 @@ export function McpScreen(): ReactElement {
                   missing={view.secrets === undefined ? [] : missingSecrets(server, view.secrets)}
                   busy={change.pending !== undefined}
                   actions={
-                    view.canManage
+                    view.canManage === true
                       ? {
                           toggle: () => {
                             change.toggle(server);
@@ -65,7 +69,7 @@ export function McpScreen(): ReactElement {
                       : undefined
                   }
                 >
-                  {view.canManage ? <ServerAccess server={server.name} /> : null}
+                  {view.canManage === true ? <ServerAccess server={server.name} /> : null}
                 </ServerCard>
               ))}
             </div>

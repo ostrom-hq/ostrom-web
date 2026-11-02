@@ -564,9 +564,10 @@ export const en = {
           submit: 'Give access',
           problem: {
             member: 'Say whom to give it to: everyone, a member, or a member id.',
+            noTool: 'Name the tools allowed, or give every tool.',
             tool: '{{detail}} is not a tool name: letters, digits, dots, dashes and underscores.',
             credential:
-              'A personal credential is a secret name in CAPITALS, and goes to one member, never to everyone.',
+              'A personal credential is a secret name: CAPITALS, digits and underscores, starting with a letter.',
           },
         },
         policy: {
@@ -585,8 +586,8 @@ export const en = {
           problem: {
             tool: 'Name one tool (letters, digits, dots, dashes and underscores), or * for every tool.',
             message: 'Say in 1 to 500 characters what the agent is told.',
-            path: 'Each condition names an argument, like query or options.database.',
-            value: 'This test needs a value.',
+            path: 'Each condition names an argument in at most 256 characters, like query or options.database.',
+            value: 'A value has at most 1,024 characters.',
           },
         },
       },
