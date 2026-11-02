@@ -33,8 +33,14 @@ const screens = [
   '/github',
 ] as const;
 
+/** Who the person is, the organization they act in, then what it holds. */
+const MAX_DEPTH = 3;
+const MAX_CALLS = 10;
+
 interface Call {
   readonly name: string;
+  /** The question without the organization it names: a poll asks it again once the organization is known. */
+  readonly asked: string;
   readonly start: number;
   /** When its answer had arrived; never, for a stream still open. */
   readonly end: number;
@@ -71,6 +77,7 @@ async function callsOnLoad(page: Page, path: string): Promise<Call[]> {
     const inOrg = request.headers()['ostrom-org'] === undefined ? '' : ' (in the org)';
     return {
       name: `${request.method()} ${url.pathname}${url.search}${inOrg}`,
+      asked: `${request.method()} ${url.pathname}${url.search}`,
       start,
       end: ended.get(request) ?? Number.POSITIVE_INFINITY,
     };
@@ -95,7 +102,7 @@ function depthOf(calls: readonly Call[]): number {
 
 /** A call asked again once its first answer is in: a screen polling, not part of loading it. */
 function pollsIn(calls: readonly Call[]): Call[] {
-  return calls.filter((call) => calls.some((other) => other.name === call.name && other.end <= call.start));
+  return calls.filter((call) => calls.some((other) => other.asked === call.asked && other.end <= call.start));
 }
 
 /** The calls asked again while the first one was still on its way: the same question, asked twice. */
@@ -117,18 +124,26 @@ test('what each screen asks the server when it loads', async ({ page }) => {
     '| Screen | Calls | Depth | Asked twice | Polled | Calls in order |',
     '|---|---:|---:|---|---:|---|',
   ];
+  const problems: string[] = [];
   for (const screen of screens) {
     const all = await callsOnLoad(page, screen);
     const polls = pollsIn(all);
     const calls = all.filter((call) => !polls.includes(call));
     const ordered = calls.toSorted((a, b) => a.start - b.start).map((call) => `\`${call.name}\``);
+    const depth = depthOf(calls);
+    const twice = twiceIn(calls);
+    if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
+    if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
+    if (calls.length > MAX_CALLS) problems.push(`${screen}: ${String(calls.length)} calls`);
     rows.push(
-      `| \`${screen}\` | ${String(calls.length)} | ${String(depthOf(calls))} | ${twiceIn(calls).join(', ')} | ${String(polls.length)} | ${ordered.join(' ')} |`,
+      `| \`${screen}\` | ${String(calls.length)} | ${String(depth)} | ${twiceIn(calls).join(', ')} | ${String(polls.length)} | ${ordered.join(' ')} |`,
     );
   }
   const table = `### API calls on load (${test.info().project.name})\n\n${rows.join('\n')}\n`;
   await test.info().attach('api-calls-on-load.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
-  expect(rows.length).toBe(screens.length + 2);
+  // Each screen asks its data at once: no question asked twice, no chain longer than who the person is, then the
+  // organization, then what it holds (3), and a load that stays small.
+  expect(problems, table).toEqual([]);
 });

@@ -3,7 +3,7 @@ import type { BillingOverview } from '@gen/api/types.gen';
 import { setDemoRole } from '@/mocks/orgs';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import type { MockInstance } from 'vitest';
 import { STRIPE_CHECKOUT, STRIPE_PORTAL } from '@/mocks/billing';
 import { PLAN_LIMITS } from '@/mocks/fixtures/billing';
@@ -11,7 +11,7 @@ import { exit } from '@/shared/lib/leave';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -59,6 +59,32 @@ async function region(name: string): Promise<HTMLElement> {
 }
 
 describe('the billing', () => {
+  it('asks for the invoices with the plan, not once the plan is in', async () => {
+    const asked: string[] = [];
+    traffic.onRequest((request) => {
+      if (new URL(request.url).pathname.endsWith('/billing/invoices')) asked.push(request.url);
+    });
+    // The plan never answers: the invoices are asked all the same.
+    server.use(http.get('*/api/v1/orgs/:orgId/billing', async () => delay('infinite')));
+    visit('/billing');
+    await vi.waitFor(() => {
+      expect(asked).toHaveLength(1);
+    });
+  });
+
+  it('does not ask for the invoices of a person who cannot read them', async () => {
+    asMember();
+    const asked: string[] = [];
+    traffic.onRequest((request) => {
+      if (new URL(request.url).pathname.endsWith('/billing/invoices')) asked.push(request.url);
+    });
+    visit('/billing');
+    expect(
+      await screen.findByText('Owners, admins and the billing role change the plan and read the invoices.'),
+    ).toBeInTheDocument();
+    expect(asked).toEqual([]);
+  });
+
   it('shows the plan, the period’s usage against it, and what it allows', async () => {
     visit('/billing');
     expect(await screen.findByRole('heading', { level: 1, name: 'Billing' })).toBeInTheDocument();
