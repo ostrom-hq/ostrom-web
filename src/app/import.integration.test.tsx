@@ -307,7 +307,7 @@ describe('the cutover', () => {
     await user.click(within(cutover).getByRole('button', { name: 'Run the cutover' }));
     await user.click(within(cutover).getByRole('button', { name: 'Cut Acme over, in my name' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'The cutover needs an audit log and shared accounts. Nothing was written.',
+      'This server keeps no audit log, so it cannot run the cutover. Nothing was written.',
     );
     // The role changed since the screen opened: the server refuses, the screen says so.
     setDemoRole(db, 'admin');
@@ -316,16 +316,59 @@ describe('the cutover', () => {
     expect(
       await screen.findByText('Only an owner runs the cutover. Nothing was written.'),
     ).toBeInTheDocument();
-    // A 503 that is not the server's own refusal (a proxy, no error body) says nothing of what was written.
+    // A server without shared accounts says so too.
+    setDemoRole(db, 'owner');
     server.use(
+      http.post(
+        '*/api/v1/import/teamcode',
+        () =>
+          HttpResponse.json(
+            {
+              error: {
+                type: 'unavailable',
+                message: 'This server does not import shared accounts, so it has no cutover to run.',
+              },
+            },
+            { status: 503 },
+          ),
+        { once: true },
+      ),
+      // Any other failure of the cutover, even with the same error type, may come after a write.
+      http.post(
+        '*/api/v1/import/teamcode',
+        () =>
+          HttpResponse.json(
+            { error: { type: 'unavailable', message: 'Agent sessions are not available.' } },
+            { status: 503 },
+          ),
+        { once: true },
+      ),
       http.post('*/api/v1/import/teamcode', () => new HttpResponse('Service Unavailable', { status: 503 }), {
         once: true,
       }),
     );
-    setDemoRole(db, 'owner');
-    await user.click(within(cutover).getByRole('button', { name: 'Run the cutover' }));
-    await user.click(within(cutover).getByRole('button', { name: 'Cut Acme over, in my name' }));
-    expect(await screen.findByText('HTTP 503')).toBeInTheDocument();
+    const cutAgain = async () => {
+      await user.click(within(cutover).getByRole('button', { name: 'Run the cutover' }));
+      await user.click(within(cutover).getByRole('button', { name: 'Cut Acme over, in my name' }));
+    };
+    await cutAgain();
+    expect(
+      await screen.findByText(
+        'This server does not import shared accounts, so it has no cutover to run. Nothing was written.',
+      ),
+    ).toBeInTheDocument();
+    await cutAgain();
+    expect(
+      await screen.findByText(
+        'Agent sessions are not available. — the cutover may have run: look at the audit log before running it again.',
+      ),
+    ).toBeInTheDocument();
+    await cutAgain();
+    expect(
+      await screen.findByText(
+        'HTTP 503 — the cutover may have run: look at the audit log before running it again.',
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/Nothing was written/)).toBeNull();
   });
 

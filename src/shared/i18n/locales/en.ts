@@ -833,7 +833,12 @@ export const en = {
     },
     failure: {
       tag: 'Not imported',
-      refused: '{{message}} Nothing was written.',
+      ownersOnly: 'Only an owner runs the cutover. Nothing was written.',
+      noAudit: 'This server keeps no audit log, so it cannot run the cutover. Nothing was written.',
+      noSharing:
+        'This server does not import shared accounts, so it has no cutover to run. Nothing was written.',
+      cutoverUnknown:
+        '{{message}} — the cutover may have run: look at the audit log before running it again.',
     },
     report: {
       empty: 'Nothing to import.',

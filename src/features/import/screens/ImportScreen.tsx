@@ -48,7 +48,9 @@ function ImportSteps({
         <Banner tone="danger" tag={t('imports.failure.tag')} live>
           {failure.kind === 'other'
             ? failure.message
-            : t('imports.failure.refused', { message: failure.message })}
+            : failure.kind === 'cutoverUnknown'
+              ? t('imports.failure.cutoverUnknown', { message: failure.message })
+              : t(`imports.failure.${failure.kind}`)}
         </Banner>
       )}
       <ExportFile view={view} />

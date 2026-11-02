@@ -854,7 +854,13 @@ export const fr = {
     },
     failure: {
       tag: 'Non importé',
-      refused: '{{message}} Rien n’a été écrit.',
+      ownersOnly: 'Seul un propriétaire lance la bascule. Rien n’a été écrit.',
+      noAudit:
+        'Ce serveur ne tient pas de journal d’audit, il ne peut donc pas lancer la bascule. Rien n’a été écrit.',
+      noSharing:
+        'Ce serveur n’importe pas les comptes partagés, il n’a donc pas de bascule à lancer. Rien n’a été écrit.',
+      cutoverUnknown:
+        '{{message}} — la bascule a peut-être tourné : regarde le journal d’audit avant de la relancer.',
     },
     report: {
       empty: 'Rien à importer.',
