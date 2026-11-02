@@ -6,7 +6,6 @@ import {
   automationDraftOf,
   automationProblem,
   automationWriteOf,
-  isAutomationAgent,
   isOverlap,
   isTriggerKind,
   localTimezone,
@@ -58,11 +57,6 @@ const variable = (parts: Partial<VariableDraft>): VariableDraft => ({
 
 describe('the automation form', () => {
   it('knows the agents, triggers and overlaps the server takes', () => {
-    expect([
-      isAutomationAgent('claude'),
-      isAutomationAgent('gemini'),
-      isAutomationAgent('claude-code'),
-    ]).toEqual([true, true, false]);
     expect([isTriggerKind('cron'), isTriggerKind('webhook'), isTriggerKind('email')]).toEqual([
       true,
       true,

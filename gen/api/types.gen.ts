@@ -810,6 +810,11 @@ export type CheckRun = {
 export type CheckState = 'success' | 'failure' | 'pending' | 'skipped';
 
 /**
+ * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
+ */
+export type CloudAgentKind = 'claude' | 'codex' | 'opencode' | 'gemini' | 'shell';
+
+/**
  * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
  */
 export type CloudSession = {
@@ -12876,7 +12881,7 @@ export type ListCloudSessionsResponse = ListCloudSessionsResponses[keyof ListClo
 
 export type CreateCloudSessionData = {
     body: {
-        agent: string;
+        agent: CloudAgentKind;
         model?: string;
         /**
          * https://github.com/<owner>/<name>, cloned through the organization's GitHub App

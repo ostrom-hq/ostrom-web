@@ -2,10 +2,11 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { zCloudAgentKind, zCreateCloudSessionBody } from '@gen/api/zod.gen';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
 const never = async (): Promise<undefined> => {
   await delay('infinite');
@@ -61,13 +62,13 @@ describe('the cloud agents', () => {
 
   it('shows an agent and a status it has no words for as is, and a runner never seen', async () => {
     db.cloudSessions = [
-      { id: 'cs-x', owner: 'maya', agent: 'gemini', status: 'paused', createdAt: '2026-10-30T07:00:00.000Z' },
+      { id: 'cs-x', owner: 'maya', agent: 'aider', status: 'paused', createdAt: '2026-10-30T07:00:00.000Z' },
     ];
     db.runners = [{ id: 'r', name: 'r', labels: [], status: 'draining' }];
     visit('/cloud');
-    expect(await screen.findByText('gemini · cs-x')).toBeInTheDocument();
-    expect(row('gemini · cs-x')).toHaveTextContent(/maya · gemini · started/);
-    expect(within(row('gemini · cs-x')).getByText('paused')).toBeInTheDocument();
+    expect(await screen.findByText('aider · cs-x')).toBeInTheDocument();
+    expect(row('aider · cs-x')).toHaveTextContent(/maya · aider · started/);
+    expect(within(row('aider · cs-x')).getByText('paused')).toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Runners' })).getByText('never seen'),
     ).toBeInTheDocument();
@@ -85,11 +86,41 @@ describe('the cloud agents', () => {
     await user.type(within(form).getByRole('textbox', { name: 'Name' }), 'SDK bump');
     const agent = within(form).getByRole('combobox', { name: 'Agent' });
     await user.selectOptions(agent, 'codex');
-    fireEvent.change(agent, { target: { value: 'gemini' } });
+    // A name outside the contract's agents is never taken.
+    fireEvent.change(agent, { target: { value: 'claude-code' } });
     await user.click(start);
     expect(await screen.findByText('SDK bump')).toBeInTheDocument();
     expect(row('SDK bump')).toHaveTextContent('maya · Codex');
     expect(within(form).getByRole('textbox', { name: 'What should it do?' })).toHaveValue('');
+  });
+
+  it('offers only the contract’s agents that follow a prompt, and sends one of them', async () => {
+    const user = userEvent.setup();
+    const sent: Promise<string>[] = [];
+    traffic.onRequest((request) => {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/api/v1/cloud/sessions')
+        sent.push(request.clone().text());
+    });
+    visit('/cloud');
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
+    const agent = within(form).getByRole('combobox', { name: 'Agent' });
+    // Read from the generated client: an agent the server would refuse is never offered; the plain shell, which only
+    // a terminal drives, is not started from here.
+    const offered = within(agent)
+      .getAllByRole<HTMLOptionElement>('option')
+      .map((option) => option.value);
+    expect(offered).toEqual(zCloudAgentKind.options.filter((name) => name !== 'shell'));
+    expect(offered.every((name) => zCloudAgentKind.safeParse(name).success)).toBe(true);
+    expect(agent).toHaveValue('claude');
+    await user.selectOptions(agent, 'Gemini CLI');
+    await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
+    await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
+    expect(await screen.findByText('gemini · cs-104')).toBeInTheDocument();
+    const bodies = await Promise.all(sent);
+    expect(bodies).toHaveLength(1);
+    const body: unknown = JSON.parse(bodies.join(''));
+    // The body the server reads, with the contract's enum: a name outside it would fail here.
+    expect(zCreateCloudSessionBody.parse(body)).toMatchObject({ agent: 'gemini', prompt: 'Look around' });
   });
 
   it('starts an agent without a name or a repository', async () => {
@@ -98,7 +129,7 @@ describe('the cloud agents', () => {
     const form = await screen.findByRole('region', { name: 'Start an agent' });
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
-    expect(await screen.findByText('claude-code · cs-104')).toBeInTheDocument();
+    expect(await screen.findByText('claude · cs-104')).toBeInTheDocument();
   });
 
   it('holds the form while the agent starts, and says why it did not', async () => {

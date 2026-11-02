@@ -5,12 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import {
   addVariable,
-  AUTOMATION_AGENTS,
   type AutomationDraft,
   automationDraftOf,
   automationProblem,
   automationWriteOf,
-  isAutomationAgent,
   isOverlap,
   isTriggerKind,
   localTimezone,
@@ -19,6 +17,7 @@ import {
   VARIABLE_TYPES,
   type VariableDraft,
 } from '../automationDraft';
+import { isCloudAgent, isPromptAgent, PROMPT_AGENTS } from '../model';
 
 export interface AutomationFormProps {
   /** The automation being edited; absent, the form writes a new one. */
@@ -160,9 +159,9 @@ export function AutomationForm({
   };
   const problem = automationProblem(draft);
   // An agent this console has no word for is kept, shown as the server wrote it.
-  const agents: readonly string[] = isAutomationAgent(draft.agent)
-    ? AUTOMATION_AGENTS
-    : [...AUTOMATION_AGENTS, draft.agent];
+  const agents: readonly string[] = isPromptAgent(draft.agent)
+    ? PROMPT_AGENTS
+    : [...PROMPT_AGENTS, draft.agent];
   const workflow = automation?.action.workflowId;
   return (
     <form
@@ -256,7 +255,7 @@ export function AutomationForm({
           >
             {agents.map((agent) => (
               <option key={agent} value={agent}>
-                {isAutomationAgent(agent) ? t(`automations.form.agents.${agent}`) : agent}
+                {isCloudAgent(agent) ? t(`cloud.agent.${agent}`) : agent}
               </option>
             ))}
           </select>
