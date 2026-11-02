@@ -50,6 +50,10 @@ export async function signIn(page: Page, email: string): Promise<void> {
     })
     .toBeDefined();
   await page.goto(`/auth/email#token=${encodeURIComponent(token ?? '')}`);
+  // A page already signed in is asked before the link replaces its session (login CSRF): say yes.
+  const ask = page.getByRole('button', { name: 'Sign in with the link' });
+  await expect(page.getByRole('heading', { name: 'Requests' }).or(ask)).toBeVisible();
+  if (await ask.isVisible()) await ask.click();
   await expect(page).toHaveURL(/\/yes$/);
 }
 

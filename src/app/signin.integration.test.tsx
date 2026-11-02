@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';
 import { useEmailLinkStore } from '@/features/signin';
 import { DEMO_EMAIL_TOKEN } from '@/mocks/handlers';
@@ -114,14 +115,118 @@ describe('the sign-in page', () => {
 });
 
 describe('the e-mailed link', () => {
+  /** Nobody signed in on this browser: the link is the way in, spent at once. */
+  function signedOut(): void {
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'unauthorized', message: 'nobody' } }, { status: 401 }),
+      ),
+    );
+  }
+
+  /** Counts the links spent, so a test can say none was; the mock still answers each. */
+  function spentLinks(): string[] {
+    const spent: string[] = [];
+    server.use(
+      http.post('*/api/v1/auth/email/verify', ({ request }) => {
+        spent.push(request.url);
+      }),
+    );
+    return spent;
+  }
+
   it('takes the token from the fragment, wipes it from the address, signs in and opens the page asked', async () => {
+    signedOut();
     const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
     expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/yes');
     expect(router.state.location.href).not.toContain(DEMO_EMAIL_TOKEN);
   });
 
-  it('says signing in while the server checks the link', async () => {
+  it('takes a 204 with no body as nobody signed in, and spends the link at once', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/yes');
+  });
+
+  it('never replaces a session without a yes: a link from another site cannot sign this browser in as someone else', async () => {
+    const spent = spentLinks();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'You are signed in as maya on this browser. This link signs it in as the account it was sent to',
+    );
+    expect(router.state.location.href).not.toContain(DEMO_EMAIL_TOKEN);
+    expect(spent).toEqual([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with the link' }));
+    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/yes');
+    expect(spent).toHaveLength(1);
+  });
+
+  it('keeps the question on screen while it reads who is signed in again', async () => {
+    const spent = spentLinks();
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await screen.findByRole('button', { name: 'Sign in with the link' });
+    let readAgain = false;
+    server.use(
+      http.get('*/api/v1/auth/me', async () => {
+        readAgain = true;
+        return delay('infinite');
+      }),
+    );
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await vi.waitFor(() => {
+      expect(readAgain).toBe(true);
+    });
+    expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(screen.queryByText('Signing you in…')).toBeNull();
+    expect(spent).toEqual([]);
+  });
+
+  it('drops a link left unanswered with the page: never spent later, when nobody would be asked', async () => {
+    const spent = spentLinks();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await screen.findByRole('button', { name: 'Sign in with the link' });
+    await router.navigate({ to: '/yes' });
+    expect(useEmailLinkStore.getState().token).toBeUndefined();
+    signedOut();
+    await router.navigate({ to: '/auth/email' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This link was already used or is incomplete.',
+    );
+    expect(spent).toEqual([]);
+  });
+
+  it('keeps the session as it is and drops the link when asked to', async () => {
+    const spent = spentLinks();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Stay signed in as now' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    expect(useEmailLinkStore.getState().token).toBeUndefined();
+    expect(spent).toEqual([]);
+  });
+
+  it('asks before spending the link when it cannot tell whether someone is signed in', async () => {
+    const spent = spentLinks();
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Someone may already be signed in on this browser.',
+    );
+    expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(spent).toEqual([]);
+  });
+
+  it('says signing in while it checks who is signed in, then while the server checks the link', async () => {
+    signedOut();
     server.use(http.post('*/api/v1/auth/email/verify', async () => delay('infinite')));
     const router = visit('/auth/email#token=ml_slow');
     expect(await screen.findByText('Signing you in…')).toBeInTheDocument();
@@ -129,6 +234,7 @@ describe('the e-mailed link', () => {
   });
 
   it('says why a used link does not sign in, and offers a new one', async () => {
+    signedOut();
     visit('/auth/email#token=ml_used');
     expect(await screen.findByRole('alert')).toHaveTextContent('This link was already used or has expired.');
     expect(screen.getByRole('link', { name: 'Ask for a new link' })).toHaveAttribute('href', '/signin');

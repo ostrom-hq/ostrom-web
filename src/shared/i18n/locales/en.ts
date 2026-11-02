@@ -1180,6 +1180,13 @@ export const en = {
       failedTag: 'Not signed in',
       missing: 'This link was already used or is incomplete.',
       again: 'Ask for a new link',
+      switchTag: 'Another account?',
+      switch:
+        'Someone may already be signed in on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
+      switchFrom:
+        'You are signed in as {{name}} on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
+      accept: 'Sign in with the link',
+      keep: 'Stay signed in as now',
     },
   },
   sharing: {
