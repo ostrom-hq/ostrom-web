@@ -442,7 +442,8 @@ export const fr = {
       clear: 'Tous les dépôts',
       note: 'Seules les sessions appartiennent à un dépôt : les demandes et les changements de workflow sont écartés pour {{repo}}.',
     },
-    actor: { agent: 'agent {{name}}', person: '{{name}}' },
+    actor: { other: '{{name}} ({{kind}})' },
+    staleTag: 'Peut-être périmé',
     kind: {
       'session.started': 'Session lancée',
       'session.ended': 'Session terminée',

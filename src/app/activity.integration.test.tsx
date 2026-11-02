@@ -2,6 +2,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
@@ -22,7 +23,9 @@ describe('the activity', () => {
     expect(within(lines[0] ?? document.body).getByText('Yes asked')).toHaveClass('o-badge--warning');
     expect(within(lines[0] ?? document.body).getByRole('link')).toHaveAttribute('href', '/yes/apr-merge-412');
     expect(within(lines[1] ?? document.body).getByRole('link')).toHaveAttribute('href', '/sessions/ses-7f3a');
-    expect(lines[1]).toHaveTextContent('agent claude-code · acme/billing-api');
+    // The summary names the agent; the line adds its repository, not the agent again.
+    expect(lines[1]).toHaveTextContent('acme/billing-api');
+    expect(lines[1]).not.toHaveTextContent('· claude-code');
     // A workflow change leads nowhere yet, and names the person.
     expect(within(lines[3] ?? document.body).queryByRole('link')).toBeNull();
     expect(lines[3]).toHaveTextContent('Workflow changed');
@@ -72,19 +75,86 @@ describe('the activity', () => {
 
   it('keeps one repository’s sessions, says what that leaves out, and goes back to all', async () => {
     const user = userEvent.setup();
-    visit('/activity');
+    const router = visit('/activity');
     await screen.findByText('claude-code asked for a yes: Merge PR #412 into main');
     await user.type(screen.getByRole('textbox', { name: 'Repository' }), '  acme/web ');
     await user.click(screen.getByRole('button', { name: 'Filter' }));
     expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
     expect(rows()).toHaveLength(2);
     expect(screen.getByText(/requests and workflow changes are left out for acme\/web/)).toBeInTheDocument();
+    // The filter is in the address: Back and a shared link keep it.
+    expect(router.state.location.search).toEqual({ repo: 'acme/web' });
     await user.click(screen.getByRole('button', { name: 'All repositories' }));
     expect(
       await screen.findByText('claude-code asked for a yes: Merge PR #412 into main'),
     ).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Repository' })).toHaveValue('');
     expect(screen.queryByText(/left out/)).toBeNull();
+  });
+
+  it('opens on the repository the address names, and Back goes to the filter before', async () => {
+    const user = userEvent.setup();
+    const router = visit('/activity?repo=acme%2Fweb');
+    expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Repository' })).toHaveValue('acme/web');
+    await user.clear(screen.getByRole('textbox', { name: 'Repository' }));
+    await user.type(screen.getByRole('textbox', { name: 'Repository' }), 'acme/billing-api{Enter}');
+    expect(await screen.findByText('maya started a codex session in acme/billing-api')).toBeInTheDocument();
+    router.history.back();
+    expect(await screen.findByText('samir started a claude-code session in acme/web')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Repository' })).toHaveValue('acme/web');
+  });
+
+  it('says the lines on screen may be out of date when they cannot be read again', async () => {
+    const user = userEvent.setup();
+    visit('/activity');
+    await screen.findByText('claude-code asked for a yes: Merge PR #412 into main');
+    await user.click(screen.getByRole('link', { name: 'Decisions' }));
+    await screen.findByRole('heading', { level: 1, name: 'Decisions' });
+    server.use(
+      http.get('*/api/v1/activity', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'feed is down' } }, { status: 500 }),
+      ),
+    );
+    await user.click(screen.getByRole('link', { name: 'Activity' }));
+    expect(await screen.findByText('feed is down')).toBeInTheDocument();
+    expect(screen.getByText('Maybe out of date')).toBeInTheDocument();
+    expect(rows()).toHaveLength(5);
+  });
+
+  it('says why one repository’s lines do not come, and keeps the filter to clear it', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/activity', ({ request }) =>
+        new URL(request.url).searchParams.has('repo')
+          ? HttpResponse.json(
+              { error: { type: 'not_found', message: 'no such repository' } },
+              { status: 404 },
+            )
+          : undefined,
+      ),
+    );
+    visit('/activity?repo=acme%2Fgone');
+    expect(await screen.findByText('no such repository')).toBeInTheDocument();
+    expect(screen.queryByText('This server does not serve the activity yet.')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'All repositories' }));
+    expect(
+      await screen.findByText('claude-code asked for a yes: Merge PR #412 into main'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows another organization nothing of this one’s activity', async () => {
+    const user = userEvent.setup();
+    db.otherOrganizations = [otherOrganization()];
+    visit('/activity');
+    const picker = await screen.findByRole('dialog', { name: 'Which organization?' });
+    await user.click(
+      within(within(picker).getByRole('list', { name: 'Your organizations' })).getByRole('button', {
+        name: 'Globex',
+      }),
+    );
+    expect(await screen.findByText('Nothing has happened yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/Merge PR #412/)).toBeNull();
   });
 
   it('says when a repository has no session', async () => {
@@ -115,7 +185,7 @@ describe('the activity', () => {
     visit('/activity');
     const line = (await screen.findByText('janitor archived acme/old')).closest('li');
     expect(line).toHaveTextContent('repo.archived');
-    expect(line).toHaveTextContent('janitor ·');
+    expect(line).toHaveTextContent('janitor (service) ·');
   });
 
   it('says plainly when the server does not serve the activity yet', async () => {

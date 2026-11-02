@@ -15,6 +15,8 @@ export interface ActivityViewModel {
   readonly unavailable: boolean;
   /** Why the first page did not come. */
   readonly failure: Error | undefined;
+  /** Why the lines on screen could not be read again: they may be out of date. */
+  readonly staleFailure: Error | undefined;
   /** There are older lines. */
   readonly more: boolean;
   readonly loadingMore: boolean;
@@ -26,7 +28,15 @@ export interface ActivityViewModel {
 /** The organization's feed, optionally one repository's sessions only, read a page at a time. */
 export function useActivity(repo: string): ActivityViewModel {
   const query = useInfiniteQuery({
-    ...ready(listActivityInfiniteOptions(repo === '' ? {} : { query: { repo } }), { retry: false }),
+    ...ready(listActivityInfiniteOptions(repo === '' ? {} : { query: { repo } }), {
+      retry: false,
+      // Read again on every visit: what happened since is the point of the page.
+      staleTime: 0,
+      // Another filter keeps the lines on screen until its own come: no skeleton, no jump.
+      placeholderData: (previous) => previous,
+    }),
+    // Every page read would be read again, one after the other, at each return to the window.
+    refetchOnWindowFocus: false,
     initialPageParam: {},
     getNextPageParam: (last) => last.next,
   });
@@ -34,8 +44,9 @@ export function useActivity(repo: string): ActivityViewModel {
     () => (query.data === undefined ? undefined : flatten(query.data.pages)),
     [query.data],
   );
+  // Only the whole feed says whether the route is served: a 404 with a filter is about that filter.
   const unavailable =
-    query.data === undefined && isApiFailure(query.error) && query.error.kind === 'not-found';
+    repo === '' && query.data === undefined && isApiFailure(query.error) && query.error.kind === 'not-found';
   const { fetchNextPage } = query;
   return {
     items,
@@ -44,6 +55,7 @@ export function useActivity(repo: string): ActivityViewModel {
     more: query.hasNextPage,
     loadingMore: query.isFetchingNextPage,
     moreFailure: query.isFetchNextPageError ? failureOf(query.error) : undefined,
+    staleFailure: query.isRefetchError ? failureOf(query.error) : undefined,
     loadMore: () => {
       void fetchNextPage();
     },

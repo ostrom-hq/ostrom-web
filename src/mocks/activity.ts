@@ -16,20 +16,32 @@ function cursorOf(item: ActivityItem): string {
   return `${item.at}~${item.id}`;
 }
 
+/** An instant as the server writes it; anything else is a cursor no page gave. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+
 function olderThan(cursor: string): ((item: ActivityItem) => boolean) | undefined {
   const at = cursor.slice(0, cursor.indexOf('~'));
   const id = cursor.slice(cursor.indexOf('~') + 1);
-  if (!cursor.includes('~') || id === '' || Number.isNaN(Date.parse(at))) return undefined;
-  return (item) => item.at < at || (item.at === at && item.id < id);
+  if (!cursor.includes('~') || id === '' || !INSTANT.test(at)) return undefined;
+  const time = Date.parse(at);
+  return (item) => {
+    const itemTime = Date.parse(item.at);
+    return itemTime < time || (itemTime === time && item.id < id);
+  };
 }
 
 /**
  * `GET /activity?before=&repo=` as server#72 serves it: newest first, paged by key; with `repo`, only that
  * repository's sessions (gates and workflows have none); a cursor no page gave is refused with 400.
  */
-export function createActivityHandlers(state: () => ActivityState): HttpHandler[] {
+export function createActivityHandlers(
+  state: () => ActivityState,
+  inHome: (request: Request) => boolean,
+): HttpHandler[] {
   return [
     handleListActivity(({ request }) => {
+      // The demo's activity is Acme's: another organization never sees it (CONVENTIONS § 16).
+      if (!inHome(request)) return HttpResponse.json({ items: [] });
       const params = new URL(request.url).searchParams;
       const repo = params.get('repo');
       const before = params.get('before');

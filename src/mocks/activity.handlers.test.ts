@@ -5,7 +5,11 @@ import { ACTIVITY_PAGE, type ActivityState, createActivityHandlers } from '@/moc
 import { initialActivity } from '@/mocks/fixtures/activity';
 
 const state: ActivityState = { activity: initialActivity() };
-const handlers = createActivityHandlers(() => state);
+let home = true;
+const handlers = createActivityHandlers(
+  () => state,
+  () => home,
+);
 
 /** The handler's answer, without a socket. */
 async function list(query = ''): Promise<{ status: number; body: unknown }> {
@@ -21,6 +25,12 @@ function page(body: unknown): ReturnType<typeof zListActivityResponse.parse> {
 describe('the mock activity feed', () => {
   afterEach(() => {
     state.activity = initialActivity();
+    home = true;
+  });
+
+  it('shows another organization nothing of the demo’s activity', async () => {
+    home = false;
+    expect(page((await list()).body).items).toEqual([]);
   });
 
   it('pages newest first by key, and the last page has no next', async () => {
@@ -53,7 +63,7 @@ describe('the mock activity feed', () => {
   });
 
   it('refuses a cursor no page gave', async () => {
-    for (const before of ['nonsense', 'not-a-date~x', '2026-10-30T07:00:00.000Z~']) {
+    for (const before of ['nonsense', 'not-a-date~x', '2026~x', '2026-10-30T07:00:00.000Z~']) {
       expect(await list(`?before=${encodeURIComponent(before)}`)).toMatchObject({
         status: 400,
         body: { error: { type: 'invalid_request' } },

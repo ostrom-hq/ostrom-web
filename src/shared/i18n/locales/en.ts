@@ -432,7 +432,8 @@ export const en = {
       clear: 'All repositories',
       note: 'Only sessions belong to a repository: requests and workflow changes are left out for {{repo}}.',
     },
-    actor: { agent: 'agent {{name}}', person: '{{name}}' },
+    actor: { other: '{{name}} ({{kind}})' },
+    staleTag: 'Maybe out of date',
     kind: {
       'session.started': 'Session started',
       'session.ended': 'Session ended',

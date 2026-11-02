@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ActivityItem } from '@gen/api/types.gen';
+import { z } from 'zod';
 import type { BadgeTone } from '@/shared/ui/Badge';
+
+/** `?repo=`: one repository's sessions, kept in the address so Back and a shared link keep it. */
+export const activitySearchSchema = z.object({ repo: z.string().trim().min(1).optional().catch(undefined) });
 
 /** The kinds the contract names; any other is shown as the server wrote it. */
 export const ACTIVITY_KINDS = [

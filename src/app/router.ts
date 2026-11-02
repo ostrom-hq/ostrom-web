@@ -10,7 +10,7 @@ import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen } from '@/app/StatusScreens';
 import { ApproversScreen } from '@/features/approvers';
 import { AutomationsScreen, CloudScreen } from '@/features/cloud';
-import { ActivityScreen } from '@/features/activity';
+import { ActivityScreen, activitySearchSchema } from '@/features/activity';
 import { DecisionsScreen } from '@/features/decisions';
 import { GithubScreen, githubSearchSchema } from '@/features/github';
 import { HomeScreen, InviteScreen, inviteToken } from '@/features/onboarding';
@@ -126,6 +126,7 @@ const rulesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/rules'
 const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activity',
+  validateSearch: activitySearchSchema,
   component: ActivityScreen,
 });
 const decisionsRoute = createRoute({

@@ -572,7 +572,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
     ...createApproversGraphHandlers(() => db),
-    ...createActivityHandlers(() => db),
+    ...createActivityHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+    ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');

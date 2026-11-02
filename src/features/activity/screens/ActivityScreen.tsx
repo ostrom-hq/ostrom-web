@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ActivityItem } from '@gen/api/types.gen';
-import { Link } from '@tanstack/react-router';
-import { type FormEvent, type ReactElement, useId, useState } from 'react';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatUsd } from '@/shared/lib/money';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -16,9 +16,10 @@ function ActivityRow({ item }: { readonly item: ActivityItem }): ReactElement {
   const { t, i18n } = useTranslation();
   const kind = knownKind(item.kind);
   const meta = [
+    // The summary already names an agent or a person; another kind of actor is said, never taken for a person.
     item.actor.kind === 'agent' || item.actor.kind === 'person'
-      ? t(`activity.actor.${item.actor.kind}`, { name: item.actor.name })
-      : item.actor.name,
+      ? undefined
+      : t('activity.actor.other', { name: item.actor.name, kind: item.actor.kind }),
     item.repo,
     item.costUsd === undefined ? undefined : formatUsd(item.costUsd, i18n.language),
     formatAbsolute(item.at, i18n.language),
@@ -52,12 +53,15 @@ function ActivityRow({ item }: { readonly item: ActivityItem }): ReactElement {
 export function ActivityScreen(): ReactElement {
   const { t } = useTranslation();
   const inputId = useId();
-  const [typed, setTyped] = useState('');
-  const [repo, setRepo] = useState('');
+  const { repo = '' } = useSearch({ from: '/activity' });
+  const navigate = useNavigate({ from: '/activity' });
+  // What is typed belongs to the filter on screen: Back to another filter shows that one's name again.
+  const [edit, setEdit] = useState<{ readonly for: string; readonly value: string }>();
+  const typed = edit?.for === repo ? edit.value : repo;
   const view = useActivity(repo);
-  const filter = (event: FormEvent<HTMLFormElement>): void => {
-    event.preventDefault();
-    setRepo(typed.trim());
+  const show = (next: string): void => {
+    setEdit(undefined);
+    void navigate({ search: next === '' ? {} : { repo: next } });
   };
   return (
     <Screen title={t('activity.title')} lead={t('activity.lead')}>
@@ -67,7 +71,15 @@ export function ActivityScreen(): ReactElement {
         </Banner>
       ) : (
         <>
-          <form className="o-inline" onSubmit={filter} role="search" aria-label={t('activity.filter.label')}>
+          <form
+            className="o-inline"
+            onSubmit={(event) => {
+              event.preventDefault();
+              show(typed.trim());
+            }}
+            role="search"
+            aria-label={t('activity.filter.label')}
+          >
             <label htmlFor={inputId} className="o-field-label">
               {t('activity.filter.repo')}
             </label>
@@ -79,7 +91,7 @@ export function ActivityScreen(): ReactElement {
               placeholder="acme/web"
               value={typed}
               onChange={(event) => {
-                setTyped(event.target.value);
+                setEdit({ for: repo, value: event.target.value });
               }}
             />
             <Button type="submit">{t('activity.filter.apply')}</Button>
@@ -87,8 +99,7 @@ export function ActivityScreen(): ReactElement {
               <Button
                 variant="ghost"
                 onClick={() => {
-                  setTyped('');
-                  setRepo('');
+                  show('');
                 }}
               >
                 {t('activity.filter.clear')}
@@ -113,6 +124,11 @@ export function ActivityScreen(): ReactElement {
               )
             }
           </LoadState>
+          {view.staleFailure === undefined ? null : (
+            <Banner tone="warning" tag={t('activity.staleTag')} live>
+              {view.staleFailure.message}
+            </Banner>
+          )}
           {view.moreFailure === undefined ? null : (
             <Banner tone="warning" tag={t('app.failure.tag')} live>
               {view.moreFailure.message}

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { callFromPage, freshEmail, served, signIn } from './real';
 
 interface Feed {
@@ -7,50 +7,80 @@ interface Feed {
   readonly next?: string;
 }
 
-test('an owner reads the activity of a new organization as the server lists it, and one repository’s sessions', async ({
+/** A person with an organization of their own and one accepted workflow, which the feed may show. */
+async function owner(page: Page, who: string, run: string): Promise<string> {
+  await signIn(page, freshEmail(who));
+  const org = await callFromPage(page, 'POST', '/api/v1/orgs', { name: `${who} ${run}` });
+  expect(org.status).toBe(201);
+  const { slug } = org.body as { slug: string };
+  await callFromPage(page, 'POST', '/api/v1/workflows', {
+    id: `wf-${who}-${run}`,
+    name: `Ship ${who} ${run}`,
+    domain: `${slug}/api`,
+    status: 'accepted',
+    foundAt: new Date().toISOString(),
+    nodes: [{ id: 'g-deploy', kind: 'gate', label: `Deploy ${who} ${run}`, approvers: [who] }],
+    edges: [],
+  });
+  return slug;
+}
+
+/** The summaries the screen shows, once it has shown the feed or said it is empty. */
+async function shown(page: Page): Promise<string[]> {
+  const main = page.getByRole('main');
+  await expect(
+    main.getByRole('list').or(main.getByText(/^Nothing has happened yet\.$|^No session in /)),
+  ).toBeVisible();
+  return main.getByRole('listitem').locator('.o-row__title').allTextContents();
+}
+
+test('an owner reads their organization’s activity as the server lists it, and never another’s', async ({
   page,
+  browser,
 }) => {
   test.skip(
     !(await served(page, 'GET', '/api/v1/activity')),
     'GET /api/v1/activity not served yet (server#72)',
   );
-  await signIn(page, freshEmail('ines'));
   const run = Date.now().toString(36);
-  const org = await callFromPage(page, 'POST', '/api/v1/orgs', { name: `Initrode ${run}` });
-  expect(org.status).toBe(201);
-  const { slug } = org.body as { slug: string };
-  // An accepted workflow is a signed decision: the feed may show it as a workflow change.
-  await callFromPage(page, 'POST', '/api/v1/workflows', {
-    id: `wf-${run}`,
-    name: `Ship ${run}`,
-    domain: `${slug}/api`,
-    status: 'accepted',
-    foundAt: new Date().toISOString(),
-    nodes: [{ id: 'g-deploy', kind: 'gate', label: 'Deploy', approvers: ['ines'] }],
-    edges: [],
-  });
+  // Another organization, with its own person and its own workflow.
+  const other = await browser.newPage();
+  const otherSlug = await owner(other, 'umbra', run);
+  await other.close();
+  const slug = await owner(page, 'ines', run);
 
-  const all = await callFromPage(page, 'GET', '/api/v1/activity');
-  expect(all.status).toBe(200);
-  const feed = all.body as Feed;
+  // The screen first, then the API: a line the screen shows was there when the API is read after it.
   await page.goto('/activity');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Activity');
-  const list = page.getByRole('main').getByRole('list');
-  if (feed.items.length === 0) await expect(page.getByText('Nothing has happened yet.')).toBeVisible();
-  else {
-    await expect(list.getByRole('listitem')).toHaveCount(feed.items.length);
-    for (const item of feed.items) await expect(list).toContainText(item.summary);
-  }
-  await expect(page.getByRole('button', { name: 'Show older' })).toHaveCount(feed.next === undefined ? 0 : 1);
+  const lines = await shown(page);
+  const all = await callFromPage(page, 'GET', '/api/v1/activity');
+  expect(all.status).toBe(200);
+  const summaries = (all.body as Feed).items.map((item) => item.summary);
+  for (const line of lines) expect(summaries).toContain(line);
+  // Nothing of the other organization, in the screen or in the answer (CONVENTIONS § 16).
+  await expect(page.getByRole('main')).not.toContainText(`umbra ${run}`);
+  for (const summary of summaries) expect(summary).not.toContain(`umbra ${run}`);
 
-  // One repository: the server keeps its sessions only, and the screen says what that leaves out.
-  const repo = `${slug}/api`;
-  const one = await callFromPage(page, 'GET', `/api/v1/activity?repo=${encodeURIComponent(repo)}`);
-  expect(one.status).toBe(200);
-  const sessions = (one.body as Feed).items;
-  await page.getByRole('textbox', { name: 'Repository' }).fill(repo);
+  // One repository: its sessions only, and the screen says what that leaves out.
+  await page.getByRole('textbox', { name: 'Repository' }).fill(`${slug}/api`);
   await page.getByRole('button', { name: 'Filter' }).click();
   await expect(page.getByText(/requests and workflow changes are left out/)).toBeVisible();
-  if (sessions.length === 0) await expect(page.getByText(`No session in ${repo}.`)).toBeVisible();
-  else await expect(list.getByRole('listitem')).toHaveCount(sessions.length);
+  const repoLines = await shown(page);
+  const repoFeed = await callFromPage(
+    page,
+    'GET',
+    `/api/v1/activity?repo=${encodeURIComponent(`${slug}/api`)}`,
+  );
+  expect(repoFeed.status).toBe(200);
+  const repoSummaries = (repoFeed.body as Feed).items.map((item) => item.summary);
+  for (const line of repoLines) expect(repoSummaries).toContain(line);
+
+  // The other organization's repository, asked from here, shows nothing of it.
+  const leak = await callFromPage(
+    page,
+    'GET',
+    `/api/v1/activity?repo=${encodeURIComponent(`${otherSlug}/api`)}`,
+  );
+  if (leak.status === 200) expect((leak.body as Feed).items).toEqual([]);
+  else expect(leak.status).toBe(404);
 });
