@@ -308,7 +308,8 @@ const buildRouter = (history?: RouterHistory) =>
     defaultPreload: 'intent',
     defaultNotFoundComponent: NotFoundScreen,
     defaultErrorComponent: ErrorScreen,
-    // A screen whose chunk takes more than a second shows the shape of a page, not an empty main area.
+    // A route still pending after a second (its screen's chunk, or anything it waits for) shows the shape of a page,
+    // not an empty main area; once shown, it stays half a second (the router's default) so it does not flash.
     defaultPendingComponent: PendingScreen,
     ...(history === undefined ? {} : { history }),
   });
