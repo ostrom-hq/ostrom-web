@@ -295,18 +295,25 @@ describe('the analysis of the rules', () => {
     expect(within(section).queryByText('An analysis is running.')).toBeNull();
   });
 
-  it('learns from a refused start that the last run failed, and restarts it', async () => {
+  it('starts a run over a failed one the page had not seen yet', async () => {
     const user = userEvent.setup();
     visit('/github');
     const section = await analysis();
     const button = await within(section).findByRole('button', { name: 'Analyse the repositories' });
-    // A run failed meanwhile, in another tab: the start is refused.
+    // A run failed meanwhile, in another tab: as on the server, a start goes through.
     db.analyses[ACME] = { phase: 'failed', progress: 1, fails: true };
     await user.click(button);
-    expect(await within(section).findByText('The last analysis stopped.')).toBeInTheDocument();
-    expect(within(section).queryByText('Restart the failed analysis.')).toBeNull();
-    await user.click(within(section).getByRole('button', { name: 'Start again' }));
     expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+  });
+
+  it('says a failing read while a run goes on, and keeps the run on screen', async () => {
+    db.analyses[ACME] = { phase: 'connect', progress: 0.05, fails: false };
+    visit('/github');
+    const section = await analysis();
+    expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+    server.use(http.get('*/api/v1/analysis/state', () => refuse(500, 'a blip'), { once: true }));
+    expect(await within(section).findByText('a blip', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(within(section).getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('keeps the refusal of a restart while the run stays failed', async () => {

@@ -19,7 +19,11 @@ import './github.css';
  */
 export function GithubScreen(): ReactElement {
   const { t } = useTranslation();
-  return <WithOrg title={t('github.title')}>{(org, role) => <GithubPage org={org} role={role} />}</WithOrg>;
+  return (
+    <WithOrg title={t('github.title')}>
+      {(org, role) => <GithubPage key={org.id} org={org} role={role} />}
+    </WithOrg>
+  );
 }
 
 function GithubPage({

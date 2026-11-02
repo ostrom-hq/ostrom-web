@@ -46,9 +46,9 @@ describe('mock GitHub', () => {
 
   it('runs an analysis phase by phase, once at a time, then proposes the rules', async () => {
     expect(await phase()).toBeUndefined();
-    expect(await restart()).toBe(409);
     expect(await start()).toBe(202);
     expect(await start()).toBe(409);
+    expect(await restart()).toBe(409);
     expect(await phase()).toBe('connect');
     expect(await phase()).toBe('read');
     expect(await phase()).toBe('propose');
@@ -65,7 +65,6 @@ describe('mock GitHub', () => {
     const failed = (await getAnalysisState({ throwOnError: true })).data;
     expect(failed.failure?.['reason']).toBe('GitHub refused to list the code owners.');
     expect(failed.repos).toEqual([]);
-    expect(await start()).toBe(409);
     expect(await restart()).toBe(202);
     expect(db.analyses[ACME].fails).toBe(false);
   });

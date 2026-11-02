@@ -47,22 +47,17 @@ export function createGithubHandlers(
     managesMembers(
       orgRoleOf(state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role),
     );
-  const start = (
-    request: Request,
-    again: boolean,
-  ): HttpResponse<ApiError> | HttpResponse<{ runId: string }> => {
+  const start = (request: Request): HttpResponse<ApiError> | HttpResponse<{ runId: string }> => {
     const organization = organizationOf(request);
     const s = state();
     if (s.githubInstalled[organization.id] !== true)
       return refusal(409, 'github_not_installed', 'Install the GitHub App first.');
     if (!manages(organization))
       return refusal(403, 'forbidden', 'Only an owner or an admin analyses the repositories.');
+    // As the server (StartAnalysisUseCaseImpl): start and restart both start a run, refused only while one runs.
     const last = s.analyses[organization.id];
-    const failed = last?.phase === 'failed';
-    if (last !== undefined && last.phase !== 'ready' && !failed)
+    if (last !== undefined && last.phase !== 'ready' && last.phase !== 'failed')
       return refusal(409, 'analysis_running', 'An analysis is running.');
-    if (again && !failed) return refusal(409, 'analysis_not_failed', 'No failed analysis to restart.');
-    if (!again && failed) return refusal(409, 'analysis_failed', 'Restart the failed analysis.');
     s.analyses[organization.id] = { phase: 'connect', progress: 0.05, fails: false };
     return HttpResponse.json<{ runId: string }>({ runId: `run-${organization.id}` }, { status: 202 });
   };
@@ -111,7 +106,7 @@ export function createGithubHandlers(
       } else [run.phase, run.progress] = next;
       return HttpResponse.json(answer);
     }),
-    handleStartAnalysis(({ request }) => start(request, false)),
-    handleRestartAnalysis(({ request }) => start(request, true)),
+    handleStartAnalysis(({ request }) => start(request)),
+    handleRestartAnalysis(({ request }) => start(request)),
   ];
 }

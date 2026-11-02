@@ -28,6 +28,8 @@ import {
 
 /** A running analysis is read again this often. */
 export const ANALYSIS_POLL_MS = 2_000;
+/** After a failing read, the next one waits this long. */
+export const ANALYSIS_RETRY_MS = 15_000;
 
 export interface GithubApp {
   readonly installed: boolean;
@@ -75,11 +77,12 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     ready(getAnalysisStateOptions(), {
       enabled: installed,
       retry: false,
-      // Only while a run goes on, and never on a failing read: the page says the failure instead of hammering.
+      // Only while a run goes on. A failing read is said on the page and slows the poll down, never stops it: a
+      // passing blip must not freeze a run the server finishes.
       refetchInterval: (query) => {
-        if (query.state.error !== null) return false;
         const read = zAnalysisState.safeParse(query.state.data);
-        return read.success && stageOf(read.data) === 'running' ? ANALYSIS_POLL_MS : false;
+        if (!read.success || stageOf(read.data) !== 'running') return false;
+        return query.state.error === null ? ANALYSIS_POLL_MS : ANALYSIS_RETRY_MS;
       },
     }),
   );
@@ -90,16 +93,21 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
   };
   const start = useMutation({ ...startAnalysisMutation(), onSettled });
   const restart = useMutation({ ...restartAnalysisMutation(), onSettled });
-  // The stage an attempt was made from: its refusal speaks only while the page still shows that stage. Once the
-  // state read again tells otherwise (another admin's run, a run that ended elsewhere), the page says it.
-  const [attempted, setAttempted] = useState<AnalysisStage>();
+  // A refusal speaks only while the page still shows the stage it was tried from: once the state read again tells
+  // otherwise (another admin's run, a run that ended elsewhere), the page says it, and the refusal is forgotten.
+  const stage = state.data === undefined ? undefined : stageOf(state.data);
+  const { reset: resetStart } = start;
+  const { reset: resetRestart } = restart;
+  useEffect(() => {
+    resetStart();
+    resetRestart();
+  }, [stage, resetStart, resetRestart]);
   const [query, setQuery] = useState('');
   const items = repos.data?.items;
   const shown = useMemo(() => reposShown(items ?? [], query), [items, query]);
   const manager = managesMembers(role);
   let analysis: Analysis | undefined;
-  if (state.data !== undefined) {
-    const stage = stageOf(state.data);
+  if (state.data !== undefined && stage !== undefined) {
     analysis = {
       state: state.data,
       stage,
@@ -111,13 +119,12 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
                 // Only the last attempt speaks: an older refusal of the other call never stays on screen.
                 const [used, other] = stage === 'failed' ? [restart, start] : [start, restart];
                 other.reset();
-                setAttempted(stage);
                 used.mutate({});
               },
             }
           : undefined,
       starting: start.isPending || restart.isPending,
-      failure: attempted === stage ? failureOf(start.error ?? restart.error) : undefined,
+      failure: failureOf(start.error ?? restart.error),
     };
   }
   return {
