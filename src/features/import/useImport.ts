@@ -16,8 +16,8 @@ import {
 
 /** Why a run failed, as the screen words it: the cases the contract names, or the server's message. */
 export type ImportFailure =
-  | { readonly kind: 'unavailable' }
-  | { readonly kind: 'ownersOnly' }
+  /** The server itself refused the cutover before writing anything (an owner only, no audit log…), in its words. */
+  | { readonly kind: 'refused'; readonly message: string }
   | { readonly kind: 'other'; readonly message: string };
 
 export interface TeamCodeImportViewModel {
@@ -51,9 +51,11 @@ function failureFrom(mode: ImportMode | undefined, error: unknown): ImportFailur
   const failure = failureOf(error);
   if (failure === undefined) return undefined;
   if (mode === 'cutover' && isApiFailure(failure)) {
-    // The cutover is owners only, and needs an audit log and the shared accounts (contract, `cutover`).
-    if (failure.status === 503) return { kind: 'unavailable' };
-    if (failure.status === 403) return { kind: 'ownersOnly' };
+    // The cutover is owners only, and needs an audit log and the shared accounts (contract, `cutover`): the server
+    // checks both before it writes, and answers with its own error (`forbidden`, `unavailable`). A bare 503 from a
+    // proxy has no such error, and says nothing about what was written.
+    if (failure.code === 'forbidden' || failure.code === 'unavailable')
+      return { kind: 'refused', message: failure.message };
   }
   return { kind: 'other', message: failure.message };
 }

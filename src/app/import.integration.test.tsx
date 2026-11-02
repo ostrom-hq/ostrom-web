@@ -307,7 +307,7 @@ describe('the cutover', () => {
     await user.click(within(cutover).getByRole('button', { name: 'Run the cutover' }));
     await user.click(within(cutover).getByRole('button', { name: 'Cut Acme over, in my name' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'This server cannot run the cutover: it needs an audit log and shared accounts. Nothing was written.',
+      'The cutover needs an audit log and shared accounts. Nothing was written.',
     );
     // The role changed since the screen opened: the server refuses, the screen says so.
     setDemoRole(db, 'admin');
@@ -316,6 +316,17 @@ describe('the cutover', () => {
     expect(
       await screen.findByText('Only an owner runs the cutover. Nothing was written.'),
     ).toBeInTheDocument();
+    // A 503 that is not the server's own refusal (a proxy, no error body) says nothing of what was written.
+    server.use(
+      http.post('*/api/v1/import/teamcode', () => new HttpResponse('Service Unavailable', { status: 503 }), {
+        once: true,
+      }),
+    );
+    setDemoRole(db, 'owner');
+    await user.click(within(cutover).getByRole('button', { name: 'Run the cutover' }));
+    await user.click(within(cutover).getByRole('button', { name: 'Cut Acme over, in my name' }));
+    expect(await screen.findByText('HTTP 503')).toBeInTheDocument();
+    expect(screen.queryByText(/Nothing was written/)).toBeNull();
   });
 
   it('holds the button while the cutover runs, and says another failure as the server words it', async () => {

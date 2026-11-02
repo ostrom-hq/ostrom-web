@@ -46,7 +46,9 @@ function ImportSteps({
     <Screen title={t('imports.title')} lead={t('imports.lead', { org: orgName })}>
       {failure === undefined ? null : (
         <Banner tone="danger" tag={t('imports.failure.tag')} live>
-          {failure.kind === 'other' ? failure.message : t(`imports.failure.${failure.kind}`)}
+          {failure.kind === 'other'
+            ? failure.message
+            : t('imports.failure.refused', { message: failure.message })}
         </Banner>
       )}
       <ExportFile view={view} />

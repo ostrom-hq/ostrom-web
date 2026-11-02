@@ -24,12 +24,13 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
   const [memberId, setMemberId] = useState('');
   const [onlySome, setOnlySome] = useState(false);
   const [tools, setTools] = useState('');
-  // A credential is typed for one member: it is kept with that member and never follows to another.
-  const [typed, setTyped] = useState({ member: '', value: '' });
+  // A credential is typed for one choice of member: it is kept with that choice and never follows to another. Typing
+  // a member's id is one choice ("by id"), so a credential typed before the id stays while the id is typed.
+  const [typed, setTyped] = useState({ choice: '', value: '' });
   const [tried, setTried] = useState(false);
   const ids = { who: useId(), id: useId(), mode: useId(), tools: useId(), credential: useId() };
   const member = who === BY_ID ? memberId : who;
-  const credential = typed.member === member ? typed.value : '';
+  const credential = typed.choice === who ? typed.value : '';
   const checked = checkAssignment({ member, onlySome, tools, credentialSecret: credential });
   // An invitation not accepted yet has no account to give a server to.
   const candidates = (members ?? []).filter((item) => item.role !== 'invited');
@@ -47,7 +48,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
             setMemberId('');
             setOnlySome(false);
             setTools('');
-            setTyped({ member: '', value: '' });
+            setTyped({ choice: '', value: '' });
             setTried(false);
           });
       }}
@@ -137,7 +138,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
             placeholder="LINEAR_TOKEN"
             value={credential}
             onChange={(event) => {
-              setTyped({ member, value: event.target.value });
+              setTyped({ choice: who, value: event.target.value });
             }}
           />
         </>
