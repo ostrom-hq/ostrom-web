@@ -14,6 +14,38 @@ const MOCK_MEMBERSHIPS_KEY = 'ostrom.mock.memberships';
 /** Set before the demo loads: the demo person's role in Acme (`owner`, `member`…), admin otherwise. */
 const MOCK_ROLE_KEY = 'ostrom.mock.role';
 
+/** The browser's Trusted Types factory, where it has one (Chromium). */
+interface TrustedTypesFactory {
+  readonly createPolicy: (
+    name: string,
+    rules: { readonly createScriptURL: (url: string) => string },
+  ) => unknown;
+}
+
+function isTrustedTypesFactory(value: unknown): value is TrustedTypesFactory {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'createPolicy' in value &&
+    typeof value.createPolicy === 'function'
+  );
+}
+
+/**
+ * The image's CSP requires Trusted Types for scripts (audit AUDIT-SECU-WEB-2 B4), and registering a Service Worker is
+ * such a sink. The demo alone, never a real build, lets through the one script it registers: MSW's own worker.
+ */
+function allowMockWorker(): void {
+  const factory: unknown = Reflect.get(window, 'trustedTypes');
+  if (!isTrustedTypesFactory(factory)) return;
+  factory.createPolicy('default', {
+    createScriptURL: (url) => {
+      if (new URL(url, window.location.href).pathname === '/mockServiceWorker.js') return url;
+      throw new TypeError(`Trusted Types: ${url} is not the demo's worker`);
+    },
+  });
+}
+
 export async function startMocks(): Promise<void> {
   const db = createMockDb();
   const memberships = safeLocalStorage.getItem(MOCK_MEMBERSHIPS_KEY);
@@ -21,6 +53,7 @@ export async function startMocks(): Promise<void> {
   if (memberships === 'none') freshAccount(db);
   const role = orgRoleOf(safeLocalStorage.getItem(MOCK_ROLE_KEY) ?? undefined);
   if (role !== undefined) setDemoRole(db, role);
+  allowMockWorker();
   const worker = setupWorker(...createHandlers(db));
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true });
 }

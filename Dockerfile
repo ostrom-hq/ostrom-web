@@ -4,7 +4,7 @@
 FROM --platform=$BUILDPLATFORM node:24-alpine AS build
 WORKDIR /src
 RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build && find dist -name '*.map' -delete

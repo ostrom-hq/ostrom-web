@@ -30,7 +30,7 @@ cfg=$(get /config.js)
 echo "$cfg" | grep -q '^window.__OSTROM_CONFIG__={"OSTROM_API_URL":"https://api.example.com","OSTROM_APP_URL":"https://app.example.com/\\"x","OSTROM_POSTHOG_HOST":"https://ph.example.com:8443/ingest/","OSTROM_POSTHOG_API_KEY":"phc_smoke"};$' \
   || fail "config.js: $cfg"
 # S2-09: the same security headers on the page, the runtime settings, a deep route, a script, the API and /healthz.
-csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'"
 header() { printf '%s\n' "$1" | tr -d '\r' | sed -n "s/^$2: //Ip"; }
 for path in / /config.js /some/route /theme.js /api/v1/health /healthz; do
   h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$path")
@@ -39,6 +39,7 @@ for path in / /config.js /some/route /theme.js /api/v1/health /healthz; do
   [ "$(header "$h" x-content-type-options)" = nosniff ] || fail "X-Content-Type-Options on $path"
   [ "$(header "$h" referrer-policy)" = strict-origin-when-cross-origin ] || fail "Referrer-Policy on $path"
   [ "$(header "$h" x-frame-options)" = DENY ] || fail "X-Frame-Options on $path"
+  [ "$(header "$h" cross-origin-opener-policy)" = same-origin ] || fail "Cross-Origin-Opener-Policy on $path"
   [ "$(header "$h" permissions-policy)" = 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' ] \
     || fail "Permissions-Policy on $path"
 done
@@ -77,4 +78,6 @@ set -e
 echo "$bad" | grep -q 'OSTROM_TRUSTED_PROXIES must list addresses or CIDRs' || fail "no reason given for the refused start: $bad"
 if curl -fsS -o /dev/null http://127.0.0.1:18080/assets/missing.js; then fail "missing asset must be 404"; fi
 if docker exec web sh -c 'ls /usr/share/nginx/html/assets/*.map' >/dev/null 2>&1; then fail "source maps shipped"; fi
+# A build without VITE_MOCKS ships neither the mock API nor its demo data (audit AUDIT-SECU-WEB-2 B7).
+if docker exec web grep -rlqe ml_demo -e '\[MSW\]' /usr/share/nginx/html/assets; then fail "mock API shipped"; fi
 echo "web image smoke test: ok"
