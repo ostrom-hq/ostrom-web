@@ -597,6 +597,7 @@ describe('mock rules and decisions', () => {
     expect(off.data.gate).toBeUndefined();
     expect(off.data.output).toBe('note');
     expect(db.decisions).toHaveLength(before + 3);
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-7' }, action: 'edited' });
   });
 
   it('serves the catalogue of the actions the gates of the workflows and of the decided rules cover', async () => {

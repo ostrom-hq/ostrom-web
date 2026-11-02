@@ -8,14 +8,15 @@ import {
   type CheckDraft,
   draftOf,
   draftProblem,
-  gateActions,
+  customAction,
   isOutput,
   isStrength,
+  offeredActions,
   RULE_OUTPUTS,
   RULE_STRENGTHS,
   type RuleDraft,
 } from '../model';
-import { useGateCatalog } from '../useRules';
+import { type GateCatalogViewModel, useGateCatalog } from '../useRules';
 
 export interface RuleFormProps {
   /** The rule being edited; absent, the form writes a new one. */
@@ -31,19 +32,39 @@ export interface RuleFormProps {
 }
 
 function GateFields({
-  rule,
+  catalog,
+  actions,
   draft,
   onChange,
 }: {
-  readonly rule: Rule | undefined;
+  readonly catalog: GateCatalogViewModel;
+  /** What the gate may pick from: the catalogue's, the rule's own, those written here. */
+  readonly actions: readonly GateAction[];
   readonly draft: RuleDraft;
   readonly onChange: (next: Partial<RuleDraft>) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const catalog = useGateCatalog(true);
   const approversId = useId();
   const reasonId = useId();
-  const actions = gateActions(catalog.actions ?? [], rule);
+  const labelId = useId();
+  const commandsId = useId();
+  const [label, setLabel] = useState('');
+  const [commands, setCommands] = useState('');
+  const written = customAction(label, commands, draft.scope);
+  const add =
+    written === undefined
+      ? undefined
+      : (): void => {
+          const known = actions.some((action) => action.class === written.class);
+          onChange({
+            extra: known ? draft.extra : [...draft.extra, written],
+            actions: draft.actions.includes(written.class)
+              ? draft.actions
+              : [...draft.actions, written.class],
+          });
+          setLabel('');
+          setCommands('');
+        };
   const setCheck = (index: number, next: Partial<CheckDraft>): void => {
     onChange({ checks: draft.checks.map((check, at) => (at === index ? { ...check, ...next } : check)) });
   };
@@ -81,6 +102,45 @@ function GateFields({
             </span>
           </label>
         ))}
+        <div className="rl-gate__custom">
+          <span className="o-stack">
+            <label htmlFor={labelId} className="o-field-label">
+              {t('rules.form.gate.customLabel')}
+            </label>
+            <input
+              id={labelId}
+              className="o-input"
+              placeholder={t('rules.form.gate.customLabelPlaceholder')}
+              value={label}
+              onChange={(event) => {
+                setLabel(event.target.value);
+              }}
+            />
+          </span>
+          <span className="o-stack">
+            <label htmlFor={commandsId} className="o-field-label">
+              {t('rules.form.gate.customCommands')}
+            </label>
+            <input
+              id={commandsId}
+              className="o-input"
+              placeholder={t('rules.form.gate.customCommandsPlaceholder')}
+              value={commands}
+              onChange={(event) => {
+                setCommands(event.target.value);
+              }}
+            />
+          </span>
+          <span className="rl-gate__add">
+            <Button
+              variant="ghost"
+              disabled={add === undefined}
+              {...(add === undefined ? {} : { onClick: add })}
+            >
+              {t('rules.form.gate.customAdd')}
+            </Button>
+          </span>
+        </div>
       </fieldset>
       <label htmlFor={approversId} className="o-field-label">
         {t('rules.form.gate.approvers')}
@@ -161,13 +221,14 @@ export function RuleForm({ rule, groups, saving, submit, onSave, onCancel }: Rul
   const { t } = useTranslation();
   const [draft, setDraft] = useState<RuleDraft>(() => draftOf(rule));
   const catalog = useGateCatalog(draft.output === 'gate');
+  const actions = offeredActions(catalog.actions ?? [], rule, draft);
   const ids = { statement: useId(), group: useId(), groups: useId(), why: useId(), scope: useId() };
   const strengthId = useId();
   const outputId = useId();
   const change = (next: Partial<RuleDraft>): void => {
     setDraft((current) => ({ ...current, ...next }));
   };
-  const problem = draftProblem(draft);
+  const problem = draftProblem(draft, actions);
   // A rule whose output this console has no words for keeps it, shown as the server wrote it.
   const outputs: readonly string[] = isOutput(draft.output) ? RULE_OUTPUTS : [...RULE_OUTPUTS, draft.output];
   return (
@@ -175,7 +236,7 @@ export function RuleForm({ rule, groups, saving, submit, onSave, onCancel }: Rul
       className="o-stack rl-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSave(draft, gateActions(catalog.actions ?? [], rule));
+        onSave(draft, actions);
       }}
     >
       <label htmlFor={ids.statement} className="o-field-label">
@@ -276,7 +337,9 @@ export function RuleForm({ rule, groups, saving, submit, onSave, onCancel }: Rul
           ))}
         </select>
       </div>
-      {draft.output === 'gate' ? <GateFields rule={rule} draft={draft} onChange={change} /> : null}
+      {draft.output === 'gate' ? (
+        <GateFields catalog={catalog} actions={actions} draft={draft} onChange={change} />
+      ) : null}
       {problem === undefined || problem === 'statement' || problem === 'group' ? null : (
         <p className="o-row__meta">{t(`rules.form.problem.${problem}`)}</p>
       )}

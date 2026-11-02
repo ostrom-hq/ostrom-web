@@ -4,6 +4,7 @@ import {
   createRuleMutation,
   deleteRuleMutation,
   getGateCatalogOptions,
+  getGateCatalogQueryKey,
   listDecisionsQueryKey,
   listRulesOptions,
   listRulesQueryKey,
@@ -40,6 +41,8 @@ function useInvalidate(): () => Promise<void> {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: listRulesQueryKey() }),
       queryClient.invalidateQueries({ queryKey: listDecisionsQueryKey() }),
+      // The catalogue holds the actions of the decided rules' gates.
+      queryClient.invalidateQueries({ queryKey: getGateCatalogQueryKey() }),
     ]);
   }, [queryClient]);
 }
@@ -55,12 +58,13 @@ export interface RuleDecisionViewModel {
 export function useRuleDecision(): RuleDecisionViewModel {
   const invalidate = useInvalidate();
   const mutation = useMutation({ ...updateRuleMutation(), onSettled: invalidate });
-  const { mutate } = mutation;
+  const { mutateAsync } = mutation;
   const decide = useCallback(
     (id: string, change: RuleChange, onSaved?: () => void) => {
-      mutate({ path: { id }, body: change }, onSaved === undefined ? {} : { onSuccess: onSaved });
+      // Each save keeps its own answer: a decision on another rule meanwhile never loses this one's `onSaved`.
+      mutateAsync({ path: { id }, body: change }).then(onSaved, () => undefined);
     },
-    [mutate],
+    [mutateAsync],
   );
   return {
     decide,
@@ -118,6 +122,8 @@ export interface DeleteRuleViewModel {
   readonly remove: (id: string) => void;
   /** The rule being deleted. */
   readonly deleting: string | undefined;
+  /** The last delete was signed. */
+  readonly deleted: boolean;
   readonly failure: Error | undefined;
 }
 
@@ -134,6 +140,7 @@ export function useDeleteRule(): DeleteRuleViewModel {
   return {
     remove,
     deleting: mutation.isPending ? mutation.variables.path.id : undefined,
+    deleted: mutation.isSuccess,
     failure: failureOf(mutation.error),
   };
 }

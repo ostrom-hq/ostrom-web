@@ -96,6 +96,8 @@ export interface RuleDraft {
   readonly approvers: string;
   readonly reason: string;
   readonly checks: readonly CheckDraft[];
+  /** Actions written here because the catalogue does not have them yet: the first gate of an organization. */
+  readonly extra: readonly GateAction[];
 }
 
 /** The draft of a new rule, or of `rule` as it stands. */
@@ -116,6 +118,7 @@ export function draftOf(rule?: Rule): RuleDraft {
       check: check.check,
       attested: check.attested ?? false,
     })),
+    extra: [],
   };
 }
 
@@ -133,11 +136,12 @@ export function gateActions(catalog: readonly GateAction[], rule?: Rule): GateAc
 /** What keeps a draft from being sent, the first one only. */
 export type DraftProblem = 'statement' | 'group' | 'actions' | 'approvers' | 'check';
 
-export function draftProblem(draft: RuleDraft): DraftProblem | undefined {
+/** `actions` are those the gate may pick from: a picked one that left them counts for nothing. */
+export function draftProblem(draft: RuleDraft, actions: readonly GateAction[]): DraftProblem | undefined {
   if (draft.statement.trim() === '') return 'statement';
   if (draft.group.trim() === '') return 'group';
   if (draft.output !== 'gate') return undefined;
-  if (draft.actions.length === 0) return 'actions';
+  if (!actions.some((action) => draft.actions.includes(action.class))) return 'actions';
   if (listOf(draft.approvers).length === 0) return 'approvers';
   if (draft.checks.some((check) => check.check.trim() === '')) return 'check';
   return undefined;
@@ -212,4 +216,54 @@ export function changeOf(rule: Rule, draft: RuleDraft, actions: readonly GateAct
 export function addCheck(checks: readonly CheckDraft[]): CheckDraft[] {
   const key = checks.reduce((last, check) => Math.max(last, check.key), -1) + 1;
   return [...checks, { key, check: '', attested: false }];
+}
+
+/** "Run a migration" → "run-a-migration": the class of an action written by hand. */
+export function actionClass(label: string): string {
+  return label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+/** An action written by hand, held on the rule's repositories; undefined while its label says nothing. */
+export function customAction(label: string, commands: string, scope: string): GateAction | undefined {
+  const cls = actionClass(label);
+  if (cls === '') return undefined;
+  return { class: cls, label: label.trim(), patterns: listOfCommands(commands), repos: listOf(scope) };
+}
+
+/** Commands are separated by commas or lines, never by spaces: `helm upgrade` is one command. */
+export function listOfCommands(text: string): string[] {
+  return [
+    ...new Set(
+      text
+        .split(/[,\n]+/)
+        .map((value) => value.trim())
+        .filter((value) => value !== ''),
+    ),
+  ];
+}
+
+/** Every action the form offers: the catalogue's, the rule's own, then those written here. */
+export function offeredActions(
+  catalog: readonly GateAction[],
+  rule: Rule | undefined,
+  draft: RuleDraft,
+): GateAction[] {
+  const offered = gateActions(catalog, rule);
+  const known = new Set(offered.map((action) => action.class));
+  return [...offered, ...draft.extra.filter((action) => !known.has(action.class))];
+}
+
+/**
+ * What saving an editor sends. A proposed rule is accepted as it saves ("Save and accept"): fixed when something
+ * changed, as it was otherwise. A decided rule keeps its decision, and nothing changed sends nothing.
+ */
+export function editOf(rule: Rule, draft: RuleDraft, actions: readonly GateAction[]): RuleChange | undefined {
+  const change = changeOf(rule, draft, actions);
+  const changed = Object.keys(change).length > 0;
+  if (rule.status === 'proposed') return changed ? { ...change, status: 'edited' } : { status: 'accepted' };
+  return changed ? change : undefined;
 }

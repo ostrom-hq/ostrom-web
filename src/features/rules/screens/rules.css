@@ -51,3 +51,15 @@
   gap: var(--space-2);
   align-items: baseline;
 }
+.rl-gate__custom {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.rl-gate__custom > * {
+  min-width: 0;
+}
+.rl-gate__add {
+  justify-self: start;
+}

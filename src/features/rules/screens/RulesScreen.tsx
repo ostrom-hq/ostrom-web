@@ -37,6 +37,11 @@ export function RulesScreen(): ReactElement {
           {create.failure.message}
         </Banner>
       )}
+      {removal.deleted ? (
+        <Banner tag={t('rules.delete.doneTag')} live>
+          {t('rules.delete.done')}
+        </Banner>
+      ) : null}
       {removal.failure === undefined ? null : (
         <Banner tone="danger" tag={t('rules.errorTag')} live>
           {removal.failure.message}

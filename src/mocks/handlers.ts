@@ -626,7 +626,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       db.rules[index] = next;
       // A new strength alone is no new decision; new words, a new place or a new gate are.
       const reworded = [statement, group, why, output, scope, gate].some((field) => field !== undefined);
-      if (next.status !== rule.status || reworded) recordRuleDecision(db, next, next.status, at);
+      // A decided rule edited without a new decision is signed as an edit.
+      if (next.status !== rule.status) recordRuleDecision(db, next, next.status, at);
+      else if (reworded) recordRuleDecision(db, next, 'edited', at);
       return HttpResponse.json(next);
     }),
     handleCreateRule(async ({ request }) => {

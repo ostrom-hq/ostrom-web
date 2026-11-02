@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Rule } from '@gen/api/types.gen';
 import {
+  actionClass,
   addCheck,
+  customAction,
+  editOf,
+  offeredActions,
   changeOf,
   countRules,
   draftOf,
@@ -97,6 +101,7 @@ describe('a rule draft', () => {
       approvers: '',
       reason: '',
       checks: [],
+      extra: [],
     });
     expect(draftOf(rule)).toMatchObject({
       scope: 'acme/api',
@@ -120,15 +125,51 @@ describe('a rule draft', () => {
 
   it('says the first thing that keeps a draft from being sent', () => {
     const base = { ...draftOf(), statement: 'x', group: 'g' };
-    expect(draftProblem(draftOf())).toBe('statement');
-    expect(draftProblem({ ...draftOf(), statement: 'x' })).toBe('group');
-    expect(draftProblem(base)).toBeUndefined();
+    expect(draftProblem(draftOf(), [])).toBe('statement');
+    expect(draftProblem({ ...draftOf(), statement: 'x' }, [])).toBe('group');
+    expect(draftProblem(base, [])).toBeUndefined();
     const gate = { ...base, output: 'gate' };
-    expect(draftProblem(gate)).toBe('actions');
-    expect(draftProblem({ ...gate, actions: ['deploy'] })).toBe('approvers');
+    expect(draftProblem(gate, [deploy])).toBe('actions');
+    // A picked action that left the offer counts for nothing.
+    expect(draftProblem({ ...gate, actions: ['deploy'] }, [merge])).toBe('actions');
+    expect(draftProblem({ ...gate, actions: ['deploy'] }, [deploy])).toBe('approvers');
     const named = { ...gate, actions: ['deploy'], approvers: 'samir' };
-    expect(draftProblem({ ...named, checks: [{ key: 0, check: ' ', attested: false }] })).toBe('check');
-    expect(draftProblem(named)).toBeUndefined();
+    expect(draftProblem({ ...named, checks: [{ key: 0, check: ' ', attested: false }] }, [deploy])).toBe(
+      'check',
+    );
+    expect(draftProblem(named, [deploy])).toBeUndefined();
+  });
+
+  it('writes an action by hand, held on the rule repositories, its commands kept whole', () => {
+    expect(actionClass('  Run a Migration! ')).toBe('run-a-migration');
+    expect(
+      customAction('Run a migration', 'flyway migrate,\n rails db:migrate, flyway migrate', 'acme/api'),
+    ).toEqual({
+      class: 'run-a-migration',
+      label: 'Run a migration',
+      patterns: ['flyway migrate', 'rails db:migrate'],
+      repos: ['acme/api'],
+    });
+    expect(customAction(' !? ', 'x', '')).toBeUndefined();
+    const extra = customAction('Push', '', '');
+    const draft = { ...draftOf(rule), extra: extra === undefined ? [] : [extra, deploy] };
+    expect(offeredActions([merge], rule, draft).map((action) => action.class)).toEqual([
+      'merge-main',
+      'deploy',
+      'push',
+    ]);
+  });
+
+  it('accepts a proposed rule as it saves, fixed or not, and sends nothing for an unchanged decided one', () => {
+    const proposed: Rule = { ...rule, status: 'proposed' };
+    const actions = gateActions([], rule);
+    expect(editOf(proposed, draftOf(proposed), actions)).toEqual({ status: 'accepted' });
+    expect(editOf(proposed, { ...draftOf(proposed), group: 'Ops' }, actions)).toEqual({
+      group: 'Ops',
+      status: 'edited',
+    });
+    expect(editOf(rule, draftOf(rule), actions)).toBeUndefined();
+    expect(editOf(rule, { ...draftOf(rule), group: 'Ops' }, actions)).toEqual({ group: 'Ops' });
   });
 
   it('adds check rows that keep their place', () => {

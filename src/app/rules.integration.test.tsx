@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -100,17 +100,30 @@ describe('the rules', () => {
     expect(fixed).toHaveTextContent('Required');
   });
 
-  it('sends only the strength when the text is unchanged, and cancels an edit', async () => {
+  it('accepts a proposed rule saved with only a new strength, and cancels an edit', async () => {
     const user = userEvent.setup();
     visit('/rules');
     const tests = await findCard(/Run `pnpm test`/);
     await user.click(within(tests).getByRole('button', { name: 'Edit' }));
-    await user.selectOptions(within(tests).getByRole('combobox', { name: 'Strength' }), 'required');
-    await user.click(within(tests).getByRole('button', { name: 'Save and accept' }));
-    expect(await within(tests).findByText('Required')).toBeInTheDocument();
-    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
     await user.click(within(tests).getByRole('button', { name: 'Cancel' }));
     expect(within(tests).queryByRole('textbox')).toBeNull();
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    await user.selectOptions(within(tests).getByRole('combobox', { name: 'Strength' }), 'required');
+    await user.click(within(tests).getByRole('button', { name: 'Save and accept' }));
+    await user.click(await screen.findByRole('button', { name: 'Accepted 2' }));
+    const fixed = card(/Run `pnpm test`/);
+    expect(fixed).toHaveTextContent('Accepted with a fix');
+    expect(fixed).toHaveTextContent('Required');
+  });
+
+  it('accepts a proposed rule saved unchanged from its editor', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    const tests = await findCard(/Run `pnpm test`/);
+    await user.click(within(tests).getByRole('button', { name: 'Edit' }));
+    await user.click(within(tests).getByRole('button', { name: 'Save and accept' }));
+    await user.click(await screen.findByRole('button', { name: 'Accepted 2' }));
+    expect(card(/Run `pnpm test`/)).toHaveTextContent(/Accepted by maya/);
   });
 
   it('sends only the text when the strength is unchanged, and ignores a strength it does not know', async () => {
@@ -365,6 +378,51 @@ describe('writing and gating rules', () => {
     expect(await within(newRule()).findByText(/The catalogue has no action yet/)).toBeInTheDocument();
   });
 
+  it('writes the first action of a gate by hand when the catalogue has none', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [] })));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    const form = newRule();
+    await user.type(within(form).getByRole('textbox', { name: 'Rule' }), 'Migrations wait for a yes.');
+    await user.type(within(form).getByRole('combobox', { name: 'Group' }), 'Releases');
+    await user.type(within(form).getByRole('textbox', { name: 'Repositories' }), 'acme/api');
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'What it does' }), 'gate');
+    const gate = within(form).getByRole('group', { name: 'Gate' });
+    expect(await within(gate).findByText(/write the first one below/)).toBeInTheDocument();
+    expect(within(gate).getByRole('button', { name: 'Add the action' })).toBeDisabled();
+    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
+    await user.type(
+      within(gate).getByRole('textbox', { name: 'Its commands' }),
+      'flyway migrate, rails db:migrate',
+    );
+    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
+    expect(within(gate).getByRole('checkbox', { name: /Run a migration/ })).toBeChecked();
+    expect(within(gate).getByRole('textbox', { name: 'Another action' })).toHaveValue('');
+    // The same action written twice stays one.
+    await user.click(within(gate).getByRole('checkbox', { name: /Run a migration/ }));
+    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
+    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
+    expect(within(gate).getAllByRole('checkbox', { name: /Run a migration/ })).toHaveLength(1);
+    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
+    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
+    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
+    expect(within(gate).getByRole('checkbox', { name: /Run a migration/ })).toBeChecked();
+    await user.type(within(gate).getByRole('textbox', { name: 'Who may say yes' }), 'lena');
+    await user.click(within(form).getByRole('button', { name: 'Add the rule' }));
+    expect(await findCard(/Migrations wait for a yes/)).toHaveTextContent(
+      'Gate: Run a migration, waits for a yes from lena',
+    );
+    expect(db.rules[0]?.gate?.actions).toEqual([
+      {
+        class: 'run-a-migration',
+        label: 'Run a migration',
+        patterns: ['flyway migrate', 'rails db:migrate'],
+        repos: ['acme/api'],
+      },
+    ]);
+  });
+
   it('says when the catalogue fails', async () => {
     const user = userEvent.setup();
     server.use(
@@ -450,6 +508,48 @@ describe('writing and gating rules', () => {
     expect(await within(tests).findByRole('checkbox', { name: 'Push' })).toBeChecked();
   });
 
+  it('clears the why of a rule, signed as an edit, and shows no empty line', async () => {
+    const user = userEvent.setup();
+    db.rules = db.rules.map((rule) => (rule.id === 'R-7' ? { ...rule, why: 'Two outages.' } : rule));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'Accepted 1' }));
+    const migrations = card(/Migrations run only/);
+    expect(migrations).toHaveTextContent('Why: Two outages.');
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    await user.clear(within(migrations).getByRole('textbox', { name: 'Why' }));
+    await user.click(within(migrations).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(migrations).not.toHaveTextContent('Why:');
+    });
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-7' }, action: 'edited' });
+  });
+
+  it('closes an editor once its save is signed, even when another rule is decided meanwhile', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.patch('*/api/v1/rules/R-7', async () => {
+        await held;
+        return undefined;
+      }),
+    );
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'All 4' }));
+    const migrations = card(/Migrations run only/);
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    await user.type(within(migrations).getByRole('textbox', { name: 'Why' }), 'Two outages.');
+    await user.click(within(migrations).getByRole('button', { name: 'Save' }));
+    await user.click(within(card(/one review from an owner/)).getByRole('button', { name: 'Reject' }));
+    expect(await within(card(/one review from an owner/)).findByText(/Rejected by maya/)).toBeInTheDocument();
+    expect(within(migrations).getByRole('textbox', { name: 'Why' })).toBeInTheDocument();
+    release();
+    expect(await within(migrations).findByText('Why: Two outages.')).toBeInTheDocument();
+    expect(within(migrations).queryByRole('textbox', { name: 'Why' })).toBeNull();
+  });
+
   it('keeps an output it has no words for, shown as the server wrote it', async () => {
     const user = userEvent.setup();
     db.rules = db.rules.map((rule) => (rule.id === 'R-3' ? { ...rule, output: 'banner' } : rule));
@@ -470,6 +570,7 @@ describe('writing and gating rules', () => {
     expect(await screen.findByRole('button', { name: 'To review 1' })).toBeInTheDocument();
     expect(screen.queryByText(/Run `pnpm test`/)).toBeNull();
     expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-3' }, action: 'deleted' });
+    expect(screen.getByText('Rule deleted.')).toBeInTheDocument();
   });
 
   it('says when a rule cannot be deleted', async () => {

@@ -7,7 +7,7 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { changeOf, isAccepted, percent, type RuleChange } from '../model';
+import { editOf, isAccepted, percent, type RuleChange } from '../model';
 import { RuleForm } from './RuleForm';
 
 export interface RuleCardProps {
@@ -24,7 +24,8 @@ export interface RuleCardProps {
 /** A rule with its evidence, then the decision: accept what is true, fix what is close, reject the rest. */
 export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const [editing, setEditing] = useState(false);
+  // The rule as it stood when its editor opened: a save sends what changed since then, never an older value.
+  const [editing, setEditing] = useState<Rule | undefined>(undefined);
   const accepted = isAccepted(rule);
   return (
     // Named by the statement itself, which the editor replaces on screen while it is open.
@@ -38,29 +39,29 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
         )}
         <span className="o-row__meta">{t('rules.card.confidence', { value: percent(rule.confidence) })}</span>
       </div>
-      {editing && onDecide !== undefined ? (
+      {editing !== undefined && onDecide !== undefined ? (
         <RuleForm
-          rule={rule}
+          rule={editing}
           groups={groups}
           saving={saving}
-          submit={rule.status === 'proposed' ? t('rules.edit.save') : t('rules.form.save')}
+          submit={editing.status === 'proposed' ? t('rules.edit.save') : t('rules.form.save')}
           onCancel={() => {
-            setEditing(false);
+            setEditing(undefined);
           }}
           onSave={(draft, actions) => {
-            const change = changeOf(rule, draft, actions);
-            // Nothing changed: nothing to sign.
-            if (Object.keys(change).length === 0) setEditing(false);
+            const change = editOf(editing, draft, actions);
+            // Nothing changed on a decided rule: nothing to sign.
+            if (change === undefined) setEditing(undefined);
             else
               onDecide(change, () => {
-                setEditing(false);
+                setEditing(undefined);
               });
           }}
         />
       ) : (
         <p className="rl-statement">{rule.statement}</p>
       )}
-      {rule.why === undefined ? null : (
+      {rule.why === undefined || rule.why === '' ? null : (
         <p className="o-row__meta">{t('rules.card.why', { why: rule.why })}</p>
       )}
       {rule.scope === undefined || rule.scope.length === 0 ? null : (
@@ -113,7 +114,7 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
           })}
         </p>
       )}
-      {onDecide === undefined || editing ? null : (
+      {onDecide === undefined || editing !== undefined ? null : (
         <div className="o-inline">
           {rule.status === 'proposed' ? (
             <>
@@ -128,7 +129,7 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
               <Button
                 disabled={saving}
                 onClick={() => {
-                  setEditing(true);
+                  setEditing(rule);
                 }}
               >
                 {t('rules.act.edit')}
@@ -148,7 +149,7 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
               <Button
                 disabled={saving}
                 onClick={() => {
-                  setEditing(true);
+                  setEditing(rule);
                 }}
               >
                 {t('rules.act.edit')}
