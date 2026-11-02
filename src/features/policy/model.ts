@@ -43,9 +43,11 @@ export interface PolicyDraft {
 }
 
 export function policyDraftOf(policy: ModelPolicy): PolicyDraft {
+  // The contract leaves `default` out until one is set (ostrom-core#48): no default is an empty field.
+  const { default: defaultModel = '' } = policy;
   return {
     allowed: policy.allowed.join(', '),
-    defaultModel: policy.default,
+    defaultModel,
     byMember: Object.entries(policy.byMember ?? {}).map(([member, models], key) => ({
       key,
       member,

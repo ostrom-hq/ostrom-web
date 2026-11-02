@@ -45,7 +45,9 @@ function policyRefusal(policy: ModelPolicy): string | undefined {
   const own = Object.entries(policy.byMember ?? {});
   if (own.some(([id]) => !UUID.test(id))) return 'byMember is keyed by member id.';
   if (own.some(([, models]) => models.length === 0)) return 'A member’s own list names at least one model.';
-  const models = [...policy.allowed, policy.default, ...own.flatMap(([, list]) => list)];
+  const models = [...policy.allowed, policy.default, ...own.flatMap(([, list]) => list)].filter(
+    (model): model is string => model !== undefined,
+  );
   if (models.some((model) => !MODEL_NAME.test(model)))
     return "Models are names or prefixes of letters, digits, '.', '-', '_', ':' or '/'.";
   return undefined;
@@ -73,10 +75,12 @@ export function createPolicyHandlers(
       if (refused !== undefined) return refused;
       const body = zModelPolicy.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'The policy is not valid.');
-      const { allowed, byMember } = body.data;
+      // No default reads as an empty one, which the gateway's model names refuse, as before the contract made it
+      // optional (ostrom-core#48).
+      const { allowed, byMember, default: model = '' } = body.data;
       const policy: ModelPolicy = {
         allowed,
-        default: body.data.default,
+        default: model,
         ...(byMember === undefined ? {} : { byMember }),
       };
       const problem = policyRefusal(policy);
