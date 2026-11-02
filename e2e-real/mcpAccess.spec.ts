@@ -1,16 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { callFromPage, freshEmail, served, signIn } from './real';
-
-/** Signs a new person in with an organization of their own; returns its id. */
-async function ownerOfNewOrganization(page: Page, who: string): Promise<string> {
-  await signIn(page, freshEmail(who));
-  const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
-    name: `${who} ${Date.now().toString(36)}`,
-  });
-  expect(created.status).toBe(201);
-  return (created.body as { id: string }).id;
-}
+import { callFromPage, ownerOfNewOrganization, refusedOutside, served } from './real';
 
 /** Adds a server through the form, as an owner does, and returns its card. */
 async function addServer(page: Page, name: string): Promise<Locator> {
@@ -26,10 +16,8 @@ async function addServer(page: Page, name: string): Promise<Locator> {
 test('an owner changes the agents’ prefix, gives a server to everyone, adds and removes a policy', async ({
   page,
 }) => {
-  test.skip(
-    !(await served(page, 'GET', '/api/v1/mcp/servers/linear/assignments')),
-    'GET /api/v1/mcp/servers/{name}/assignments not served yet',
-  );
+  // Served on the server's main: a probe that fails is a broken server, never a journey to skip.
+  expect(await served(page, 'GET', '/api/v1/mcp/servers/linear/assignments')).toBe(true);
   await ownerOfNewOrganization(page, 'owen');
   await page.goto('/mcp');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('MCP servers');
@@ -88,11 +76,9 @@ test('an owner changes the agents’ prefix, gives a server to everyone, adds an
 });
 
 test('another organization never sees the first one’s servers, people or policies', async ({ page }) => {
-  test.skip(
-    !(await served(page, 'GET', '/api/v1/mcp/servers/linear/assignments')),
-    'GET /api/v1/mcp/servers/{name}/assignments not served yet',
-  );
-  await ownerOfNewOrganization(page, 'ada');
+  // Served on the server's main: a probe that fails is a broken server, never a journey to skip.
+  expect(await served(page, 'GET', '/api/v1/mcp/servers/linear/assignments')).toBe(true);
+  const ada = await ownerOfNewOrganization(page, 'ada');
   await page.goto('/mcp');
   const card = await addServer(page, 'vault');
   await card.getByRole('button', { name: 'Who may use it' }).click();
@@ -108,4 +94,18 @@ test('another organization never sees the first one’s servers, people or polic
     expect((await callFromPage(page, 'GET', path)).status).toBe(404);
   }
   expect((await callFromPage(page, 'PUT', '/api/v1/mcp/servers/vault/assignments/all', {})).status).toBe(404);
+  // Naming the first organization does not open it: its server, who may use it and its policies are refused.
+  for (const [method, path, body] of [
+    ['GET', '/api/v1/mcp/servers', undefined],
+    ['GET', '/api/v1/mcp/servers/vault/assignments', undefined],
+    ['GET', '/api/v1/mcp/servers/vault/policies', undefined],
+    ['PUT', '/api/v1/mcp/servers/vault/assignments/all', {}],
+    ['DELETE', '/api/v1/mcp/servers/vault/assignments/all', undefined],
+  ] as const) {
+    const answer = await callFromPage(page, method, path, body, ada.id);
+    expect(
+      refusedOutside(answer.status),
+      `${method} ${path} as another organization: ${String(answer.status)}`,
+    ).toBe(true);
+  }
 });

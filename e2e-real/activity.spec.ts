@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
-import { callFromPage, freshEmail, served, signIn } from './real';
+import { anotherPerson, callFromPage, freshEmail, served, signIn } from './real';
 
 interface Feed {
   readonly items: { readonly summary: string; readonly repo?: string }[];
@@ -46,9 +46,9 @@ test('an owner reads their organization’s activity as the server lists it, and
   );
   const run = Date.now().toString(36);
   // Another organization, with its own person and its own workflow.
-  const other = await browser.newPage();
+  const other = await anotherPerson(browser);
   const otherSlug = await owner(other, 'umbra', run);
-  await other.close();
+  await other.context().close();
   const slug = await owner(page, 'ines', run);
 
   // The screen first, then the API: a line the screen shows was there when the API is read after it.
