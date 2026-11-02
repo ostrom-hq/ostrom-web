@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { callFromPage, freshEmail, served, signIn } from './real';
 
-test('an owner reads who approves the gate of a new workflow, as the server decides it', async ({ page }) => {
-  test.skip(
-    !(await served(page, 'GET', '/api/v1/gates/approvers')),
-    'GET /api/v1/gates/approvers not served yet',
-  );
+/**
+ * A new person's new organization, with a workflow of two gates over `repos` (every repository when empty): deploying,
+ * which `nora` approves, then dropping a table, which nobody does.
+ */
+async function workflowOfGates(page: Page, repos: (slug: string) => string[]): Promise<void> {
   await signIn(page, freshEmail('nora'));
   const run = Date.now().toString(36);
   const org = await callFromPage(page, 'POST', '/api/v1/orgs', { name: `Umbrella ${run}` });
@@ -18,26 +18,35 @@ test('an owner reads who approves the gate of a new workflow, as the server deci
     domain: `${slug}/api`,
     status: 'accepted',
     foundAt: new Date().toISOString(),
-    // Gates over every repository (no repository named): the screen reads the organization's graph, which leaves out a gate scoped to one
-    // repository (ostrom-server `GatesCatalog.covers` with no repository named; asked of its owner in the JOURNAL).
     nodes: [
       {
         id: 'g-deploy',
         kind: 'gate',
         label: 'Deploy to production',
         approvers: ['nora'],
-        actions: [{ class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: [] }],
+        actions: [{ class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: repos(slug) }],
       },
       {
         id: 'g-drop',
         kind: 'gate',
         label: 'Drop a table',
-        actions: [{ class: 'drop-table', label: 'Drop a table', patterns: ['DROP TABLE'], repos: [] }],
+        actions: [
+          { class: 'drop-table', label: 'Drop a table', patterns: ['DROP TABLE'], repos: repos(slug) },
+        ],
       },
     ],
     edges: [{ from: 'g-deploy', to: 'g-drop' }],
   });
   expect(workflow.status, JSON.stringify(workflow.body)).toBeLessThan(300);
+}
+
+test('an owner reads who approves the gate of a new workflow, as the server decides it', async ({ page }) => {
+  test.skip(
+    !(await served(page, 'GET', '/api/v1/gates/approvers')),
+    'GET /api/v1/gates/approvers not served yet',
+  );
+  // Gates over every repository: the organization's graph, which the screen reads, has them.
+  await workflowOfGates(page, () => []);
 
   // The screen says what the server's graph says, person by person.
   const graph = await callFromPage(page, 'GET', '/api/v1/gates/approvers');
@@ -57,4 +66,19 @@ test('an owner reads who approves the gate of a new workflow, as the server deci
   for (const action of ungated) await expect(page.getByText(/No gate covers/)).toContainText(action);
   const people = page.getByRole('region', { name: 'By person' });
   for (const line of approvers) for (const gate of line.gates) await expect(people).toContainText(gate.label);
+});
+
+test('the organization’s graph names the approver of a gate scoped to one of its repositories', async ({
+  page,
+}) => {
+  test.fixme(
+    true,
+    'ostrom-server: GET /gates/approvers without `repo` leaves out a gate scoped to one repository ' +
+      '(GatesCatalog.covers with no repository); asked of the compiler module’s owner in the JOURNAL (02/11)',
+  );
+  await workflowOfGates(page, (slug) => [`${slug}/api`]);
+  const graph = await callFromPage(page, 'GET', '/api/v1/gates/approvers');
+  expect(graph.status).toBe(200);
+  const { approvers } = graph.body as { approvers: { approver: string }[] };
+  expect(approvers.map((line) => line.approver)).toContain('nora');
 });

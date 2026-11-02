@@ -246,8 +246,13 @@
   padding: 0;
   list-style: none;
 }
+/*
+ * A row's end (a badge, buttons, a confirmation once tapped) can be wider than a phone beside the row's text: the
+ * row then wraps, the end goes under the text, to the right, and its own buttons wrap.
+ */
 .o-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   min-height: 56px;
@@ -264,7 +269,7 @@ a.o-row:hover {
 }
 .o-row__main {
   display: flex;
-  flex: 1;
+  flex: 1 1 12rem;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
@@ -283,7 +288,9 @@ a.o-row:hover {
   white-space: nowrap;
 }
 .o-row__end {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-inline-start: auto;
   color: var(--text-muted);
   font-size: var(--fs-12);
   font-variant-numeric: tabular-nums;
