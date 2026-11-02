@@ -18,7 +18,7 @@ import {
 export type ImportFailure =
   /** The server refused the cutover before writing anything: an owner only, no audit log, no shared accounts. */
   | { readonly kind: CutoverRefusal }
-  /** The cutover failed on the server's side or on the way: it may have run, so the screen says to look first. */
+  /** The cutover failed after it may have started: it may have run, so the screen says to look first. */
   | { readonly kind: 'cutoverUnknown'; readonly message: string }
   | { readonly kind: 'other'; readonly message: string };
 
@@ -93,16 +93,15 @@ export function failureFrom(mode: ImportMode | undefined, error: unknown): Impor
       )
     : undefined;
   if (refusal !== undefined) return { kind: refusal.kind };
-  // Only a server failure or a dropped connection can come after the audit entry; a refusal (4xx) or a request the
-  // client never sent wrote nothing, but says no more than its own words.
-  return mayHaveRun(failure)
-    ? { kind: 'cutoverUnknown', message: failure.message }
-    : { kind: 'other', message: failure.message };
+  // The server writes the audit entry first, and anything after it may still fail, 4xx included: only what is known
+  // to come before (a request the client never sent, a session refused at the door) wrote nothing.
+  return wroteNothing(failure)
+    ? { kind: 'other', message: failure.message }
+    : { kind: 'cutoverUnknown', message: failure.message };
 }
 
-function mayHaveRun(failure: Error): boolean {
-  if (!isApiFailure(failure)) return true;
-  return failure.kind === 'network' || (failure.status !== undefined && failure.status >= 500);
+function wroteNothing(failure: Error): boolean {
+  return isApiFailure(failure) && (failure.kind === 'invalid-request' || failure.kind === 'unauthorized');
 }
 
 export function useTeamCodeImport(): TeamCodeImportViewModel {

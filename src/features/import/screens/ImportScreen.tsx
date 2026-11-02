@@ -10,10 +10,37 @@ import { EmptyState, Screen, Section } from '@/shared/ui/Screen';
 import { ExportFile } from '../components/ExportFile';
 import { ImportReportView } from '../components/ImportReportView';
 import { changesOf, type ImportMode } from '../model';
-import { useTeamCodeImport } from '../useImport';
+import { type ImportFailure, useTeamCodeImport } from '../useImport';
 import './import.css';
 
 /** Moving a TeamCode team into the organization: the plan, the real import, then the cutover once TeamCode stops. */
+/** What a failed run says: a known refusal or a failure before the server, or a cutover that may have run. */
+function FailureBanner({ failure }: { readonly failure: ImportFailure }): ReactElement {
+  const { t } = useTranslation();
+  switch (failure.kind) {
+    case 'cutoverUnknown':
+      return (
+        <Banner tone="warning" tag={t('imports.failure.unknownTag')} live>
+          {t('imports.failure.cutoverUnknown', { message: failure.message })}
+        </Banner>
+      );
+    case 'other':
+      return (
+        <Banner tone="danger" tag={t('imports.failure.tag')} live>
+          {failure.message}
+        </Banner>
+      );
+    case 'ownersOnly':
+    case 'noAudit':
+    case 'noSharing':
+      return (
+        <Banner tone="danger" tag={t('imports.failure.tag')} live>
+          {t(`imports.failure.${failure.kind}`)}
+        </Banner>
+      );
+  }
+}
+
 export function ImportScreen(): ReactElement {
   const { t } = useTranslation();
   return (
@@ -44,19 +71,7 @@ function ImportSteps({
   const file = view.file;
   return (
     <Screen title={t('imports.title')} lead={t('imports.lead', { org: orgName })}>
-      {failure === undefined ? null : (
-        <Banner
-          tone={failure.kind === 'cutoverUnknown' ? 'warning' : 'danger'}
-          tag={failure.kind === 'cutoverUnknown' ? t('imports.failure.unknownTag') : t('imports.failure.tag')}
-          live
-        >
-          {failure.kind === 'other'
-            ? failure.message
-            : failure.kind === 'cutoverUnknown'
-              ? t('imports.failure.cutoverUnknown', { message: failure.message })
-              : t(`imports.failure.${failure.kind}`)}
-        </Banner>
-      )}
+      {failure === undefined ? null : <FailureBanner failure={failure} />}
       <ExportFile view={view} />
       {file === undefined ? null : (
         <>
