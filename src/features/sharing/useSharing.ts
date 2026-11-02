@@ -182,7 +182,8 @@ export function useAccounts(): AccountsViewModel {
   const accounts = useQuery(ready(listSharedAccountsOptions()));
   const secrets = useQuery(ready(listSecretsOptions()));
   // From the organization's own route, which the server serves (`GET /members` is still planned), once it is known.
-  const { org } = useCurrentOrg();
+  const current = useCurrentOrg();
+  const { org } = current;
   const members = useQuery(
     ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), { enabled: org !== undefined }),
   );
@@ -192,7 +193,8 @@ export function useAccounts(): AccountsViewModel {
     secrets: secrets.data?.items,
     members: members.data?.items,
     // Without the secrets or the members the form to share a subscription cannot show: say why.
-    failure: failureOf(accounts.error ?? secrets.error ?? members.error),
+    // Without its organization, the members cannot be asked for: that says why too.
+    failure: failureOf(accounts.error ?? secrets.error ?? members.error) ?? current.failure,
     login: viewer.login,
   };
 }

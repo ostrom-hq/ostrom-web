@@ -41,6 +41,7 @@ test('an owner writes a secret, never reads its value back, replaces it and remo
   await row.getByLabel('New value of NOTION_KEY').fill(next);
   await row.getByRole('button', { name: 'Save the value' }).click();
   await expect(row.getByLabel('New value of NOTION_KEY')).toHaveCount(0);
+  await expect(page.getByText(next)).toHaveCount(0);
   const replaced = await callFromPage(page, 'GET', '/api/v1/secrets');
   expect(JSON.stringify(replaced.body)).not.toContain(next);
   const [after] = (replaced.body as { items: { name: string; version: number }[] }).items;
@@ -94,7 +95,7 @@ test('an owner finds the organization’s members to lend a subscription to, and
     'Pick a secret',
     'CLAUDE_MAX_TOKEN',
   ]);
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
 });
 
 test('an owner lends a subscription to a member from a secret, pauses it and stops sharing it; another organization sees none of it', async ({

@@ -295,6 +295,13 @@ describe('the shared subscriptions', () => {
     expect(await screen.findByText('secrets are locked')).toBeInTheDocument();
   });
 
+  it('says why the form is missing when the organizations cannot be read', async () => {
+    server.use(http.get('*/api/v1/orgs', refuse('organizations are down')));
+    visit('/accounts');
+    expect(await screen.findByText('organizations are down')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Share a subscription' })).toBeNull();
+  });
+
   it('says when nothing is shared', async () => {
     db.sharedAccounts = [];
     visit('/accounts');
