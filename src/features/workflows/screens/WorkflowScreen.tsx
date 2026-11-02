@@ -1,18 +1,34 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Workflow } from '@gen/api/types.gen';
-import { Link, useParams } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { Link, Navigate, useParams } from '@tanstack/react-router';
+import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
+import { Button } from '@/shared/ui/Button';
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
-import { readSteps, STATUS_TONES, type Step } from '../model';
-import { useWorkflow } from '../useWorkflows';
+import { WorkflowEditor } from '../components/WorkflowEditor';
+import { WorkflowFailure } from '../components/WorkflowFailure';
+import './workflows.css';
+import { readSteps, STATUS_TONES, type Step, workflowOf } from '../model';
+import { useWorkflow, useWorkflowChange, type WorkflowChangeViewModel } from '../useWorkflows';
 
 export function WorkflowScreen(): ReactElement {
-  const { t } = useTranslation();
   const { workflowId } = useParams({ from: '/workflows/$workflowId' });
-  const { workflow, failure } = useWorkflow(workflowId);
+  // One screen per workflow: its editor, its last refusal and its pending change never follow a link to another.
+  return <WorkflowView key={workflowId} workflowId={workflowId} />;
+}
+
+function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactElement {
+  const { t } = useTranslation();
+  const { workflow, failure, canChange } = useWorkflow(workflowId);
+  const changes = useWorkflowChange();
+  // The workflow the editor started from: its draft is drawn from it, a save is built on it and checked against its
+  // version, so a version saved in between is a conflict, never overwritten nor mixed in, even once the screen read it.
+  const [editing, setEditing] = useState<Workflow | undefined>(undefined);
+  // Deleted: its screen is left for the list; nothing of it is drawn again, its buttons least of all.
+  if (changes.deleted) return <Navigate to="/workflows" replace />;
   return (
     <LoadState data={workflow} failure={failure} rows={2}>
       {(workflow) => (
@@ -28,10 +44,98 @@ export function WorkflowScreen(): ReactElement {
           title={workflow.name}
           lead={workflow.description}
         >
-          <WorkflowDetail workflow={workflow} />
+          {changes.failure === undefined ? null : (
+            <WorkflowFailure failure={changes.failure} change={changes.failed} />
+          )}
+          {editing !== undefined ? (
+            <WorkflowEditor
+              workflow={editing}
+              saving={changes.pending === 'save'}
+              onSave={(draft) => {
+                changes.change(
+                  {
+                    kind: 'save',
+                    workflow: workflowOf(draft, editing, editing.id, new Date().toISOString()),
+                    expectedVersion: editing.version,
+                  },
+                  () => {
+                    setEditing(undefined);
+                  },
+                );
+              }}
+              onCancel={() => {
+                changes.reset();
+                setEditing(undefined);
+              }}
+            />
+          ) : (
+            <>
+              {canChange ? (
+                <WorkflowActions
+                  workflow={workflow}
+                  changes={changes}
+                  onEdit={() => {
+                    changes.reset();
+                    setEditing(workflow);
+                  }}
+                />
+              ) : (
+                <p className="o-screen__lead">{t('workflows.actions.readOnly')}</p>
+              )}
+              <WorkflowDetail workflow={workflow} />
+            </>
+          )}
         </Screen>
       )}
     </LoadState>
+  );
+}
+
+/** Edit, accept a proposed workflow as found, or delete it (two clicks). */
+function WorkflowActions({
+  workflow,
+  changes,
+  onEdit,
+}: {
+  readonly workflow: Workflow;
+  readonly changes: WorkflowChangeViewModel;
+  readonly onEdit: () => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const busy = changes.pending !== undefined;
+  return (
+    <div className="o-inline wf-actions">
+      <Button disabled={busy} onClick={onEdit}>
+        {t('workflows.actions.edit')}
+      </Button>
+      {workflow.status === 'proposed' ? (
+        <Button
+          disabled={busy}
+          onClick={() => {
+            changes.change(
+              {
+                kind: 'accept',
+                workflow: { ...workflow, status: 'accepted' },
+                expectedVersion: workflow.version,
+              },
+              () => undefined,
+            );
+          }}
+        >
+          {changes.pending === 'accept' ? t('workflows.actions.accepting') : t('workflows.actions.accept')}
+        </Button>
+      ) : null}
+      <ConfirmButton
+        label={changes.pending === 'delete' ? t('workflows.actions.deleting') : t('workflows.actions.delete')}
+        confirm={t('workflows.actions.deleteConfirm')}
+        keep={t('workflows.actions.keep')}
+        disabled={busy}
+        onConfirm={() => {
+          changes.change({ kind: 'delete', id: workflow.id }, () => undefined);
+        }}
+      />
+      <p className="o-screen__lead wf-actions__lead">{t('workflows.actions.deleteLead')}</p>
+    </div>
   );
 }
 

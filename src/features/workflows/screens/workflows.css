@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+.wf-actions {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wf-actions__lead {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.wf-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.wf-step {
+  min-width: 0;
+  padding: var(--space-4);
+}
+
+.wf-step__top {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.wf-step__top .o-select {
+  width: auto;
+  min-width: 10rem;
+}
+
+.wf-step__moves {
+  margin-inline-start: auto;
+}

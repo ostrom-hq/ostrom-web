@@ -3,6 +3,8 @@ import {
   answerApproval,
   bulkUpdateRules,
   createRule,
+  createWorkflow,
+  deleteWorkflow,
   deleteRule,
   getGateCatalog,
   createCloudSession,
@@ -36,6 +38,7 @@ import {
   listSecrets,
   listSessions,
   listWorkflows,
+  saveWorkflow,
   rotateAutomationSecret,
   rotateSecret,
   saveMcpServer,
@@ -395,6 +398,70 @@ describe('mock workflows and policy', () => {
     );
     const missing = await failureOf(async () => getWorkflow({ path: { id: 'nope' }, throwOnError: true }));
     expect(isApiFailure(missing) && missing.status).toBe(404);
+  });
+
+  it('writes workflows as the server does: owners and admins, a schema, one id, the version read', async () => {
+    const base = (await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data;
+    const status = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
+      const failure = await failureOf(call);
+      return isApiFailure(failure) && failure.status;
+    };
+    const raw = async (method: string, path: string, body: unknown): Promise<Response> =>
+      fetch(`http://ostrom.test/api/v1/${path}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    expect((await raw('POST', 'workflows', { id: 'x' })).status).toBe(400);
+    expect((await raw('PUT', 'workflows/wf-backend', { workflow: { id: 'x' } })).status).toBe(400);
+    expect(await status(async () => createWorkflow({ body: base, throwOnError: true }))).toBe(409);
+    expect(
+      await status(async () =>
+        saveWorkflow({ path: { id: 'wf-other' }, body: { workflow: base }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    expect(
+      await status(async () =>
+        saveWorkflow({
+          path: { id: 'nope' },
+          body: { workflow: { ...base, id: 'nope' } },
+          throwOnError: true,
+        }),
+      ),
+    ).toBe(404);
+    expect(
+      await status(async () =>
+        saveWorkflow({
+          path: { id: 'wf-backend' },
+          body: { workflow: base, expectedVersion: 1 },
+          throwOnError: true,
+        }),
+      ),
+    ).toBe(409);
+    // Without a version read, the save goes through; a workflow without a version gets its first.
+    const migrations = (await getWorkflow({ path: { id: 'wf-migrations' }, throwOnError: true })).data;
+    expect(
+      (
+        await saveWorkflow({
+          path: { id: 'wf-migrations' },
+          body: { workflow: migrations },
+          throwOnError: true,
+        })
+      ).data.version,
+    ).toBe(1);
+    expect(await status(async () => deleteWorkflow({ path: { id: 'nope' }, throwOnError: true }))).toBe(404);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    expect(await status(async () => createWorkflow({ body: base, throwOnError: true }))).toBe(403);
+    expect(
+      await status(async () =>
+        saveWorkflow({ path: { id: 'wf-backend' }, body: { workflow: base }, throwOnError: true }),
+      ),
+    ).toBe(403);
+    expect(await status(async () => deleteWorkflow({ path: { id: 'wf-backend' }, throwOnError: true }))).toBe(
+      403,
+    );
   });
 
   it('lists workflows, by status', async () => {

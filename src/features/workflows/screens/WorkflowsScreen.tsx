@@ -9,9 +9,14 @@ import { useWorkflows } from '../useWorkflows';
 
 export function WorkflowsScreen(): ReactElement {
   const { t } = useTranslation();
-  const { workflows, failure } = useWorkflows();
+  const { workflows, failure, canChange } = useWorkflows();
   return (
     <Screen title={t('workflows.title')} lead={t('workflows.lead')}>
+      {canChange ? (
+        <Link to="/workflows/new" className="o-btn o-btn--secondary o-btn--md o-self-start">
+          {t('workflows.edit.new')}
+        </Link>
+      ) : null}
       <LoadState data={workflows} failure={failure}>
         {(workflows) =>
           workflows.length === 0 ? (

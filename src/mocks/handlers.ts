@@ -24,6 +24,8 @@ import {
   handleGetReceipt,
   handleGetReceiptBundle,
   handleGetSession,
+  handleCreateWorkflow,
+  handleDeleteWorkflow,
   handleGetWorkflow,
   handleListApprovals,
   handleListArtifactMembers,
@@ -48,6 +50,7 @@ import {
   handleRequestSignInEmail,
   handleListSessions,
   handleListWorkflows,
+  handleSaveWorkflow,
   handleSetGatePolicy,
   handleUpdateRule,
   handleRotateAutomationSecret,
@@ -93,22 +96,24 @@ import type {
   Workflow,
 } from '@gen/api/types.gen';
 import {
+  type zRuleGate,
   zAnswerApprovalRequest,
   zBudget,
+  zBulkUpdateRulesBody,
   zCloudAgentKind,
   zCreateCloudSessionBody,
+  zCreateRuleBody,
+  zCreateWorkflowBody,
   zEnrollSharedAccountBody,
-  zBulkUpdateRulesBody,
+  zExchangeSignInLinkBody,
   zMcpServer,
   zRequestSignInEmailBody,
+  zSaveWorkflowBody,
   zSecretWrite,
   zTestAutomationBody,
-  zUpdateSharedAccountBody,
   zUpdateRuleBody,
-  zCreateRuleBody,
-  type zRuleGate,
+  zUpdateSharedAccountBody,
   zVerifySignInEmailBody,
-  zExchangeSignInLinkBody,
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
@@ -163,6 +168,7 @@ import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mo
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
+import { sameValue } from '@/features/workflows/model';
 
 export interface MockDb
   extends
@@ -477,6 +483,33 @@ function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus | 'delete
     createdAt: at,
     signature: `ed25519;kid=${MOCK_KEY.kid};sha256=${id};sig=mock`,
   });
+}
+
+/** A workflow decision is signed like a rule's: a decision line and its receipt, newest first. */
+function recordWorkflowDecision(db: MockDb, workflow: Workflow, action: string, at: string): void {
+  const id = `dec-${String(db.decisions.length + 1)}`;
+  db.decisions.unshift({
+    id,
+    at,
+    by: me.dev.login,
+    subject: { kind: 'workflow', id: workflow.id, label: workflow.name },
+    action,
+    receiptId: `rcpt-${id}`,
+  });
+  db.receipts.unshift({
+    id: `rcpt-${id}`,
+    subject: { kind: 'workflow', id: workflow.id, digest: `sha256:${id}` },
+    initiator: me.dev.login,
+    rules: [],
+    decisions: [],
+    createdAt: at,
+    signature: `ed25519;kid=${MOCK_KEY.kid};sha256=${id};sig=mock`,
+  });
+}
+
+/** What the server keeps of a saved workflow: its new version, when and by whom. */
+function savedWorkflow(workflow: Workflow, version: number, at: string): Workflow {
+  return { ...workflow, version, updatedAt: at, updatedBy: me.dev.login };
 }
 
 /** A gate as the zod schema reads it, with the optional fields it left out really absent. */
@@ -1125,6 +1158,55 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return workflow === undefined
         ? refusal(404, 'not_found', 'workflow not found')
         : HttpResponse.json(workflow);
+    }),
+    // Writes, as the server takes them: a person decides; a version saved in between is a conflict; a deletion signs.
+    handleCreateWorkflow(async ({ request }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change workflows');
+      // Checked by the contract's schema, then read with its optional fields really absent.
+      if (!zCreateWorkflowBody.safeParse(await readJson(request.clone())).success)
+        return refusal(400, 'invalid_request', 'not a workflow');
+      const sent = await request.json();
+      if (db.workflows.some((item) => item.id === sent.id))
+        return refusal(409, 'conflict', 'A workflow with this id exists.');
+      const at = new Date().toISOString();
+      const workflow = savedWorkflow(sent, 1, at);
+      db.workflows.push(workflow);
+      // As the server's `changeOf`: nothing before, so the decision is an edit.
+      recordWorkflowDecision(db, workflow, 'edit', at);
+      return HttpResponse.json(workflow, { status: 201 });
+    }),
+    handleSaveWorkflow(async ({ request, params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change workflows');
+      if (!zSaveWorkflowBody.safeParse(await readJson(request.clone())).success)
+        return refusal(400, 'invalid_request', 'not a workflow');
+      const body = { data: await request.json() };
+      if (body.data.workflow.id !== params.id)
+        return refusal(400, 'invalid_request', 'the workflow id is not the path id');
+      const at = new Date().toISOString();
+      const current = db.workflows.find((item) => item.id === params.id);
+      if (current === undefined) return refusal(404, 'not_found', 'workflow not found');
+      if (body.data.expectedVersion !== undefined && body.data.expectedVersion !== current.version)
+        return refusal(409, 'conflict', 'workflow_conflict: someone saved this workflow in between.');
+      const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
+      db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
+      // As the server: a decision is signed only when something decided changed (steps, paths, status, name).
+      const decidedParts = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
+      if (!sameValue(decidedParts(current), decidedParts(workflow)))
+        recordWorkflowDecision(
+          db,
+          workflow,
+          current.status === 'proposed' && workflow.status === 'accepted' ? 'accept' : 'edit',
+          at,
+        );
+      return HttpResponse.json(workflow);
+    }),
+    handleDeleteWorkflow(({ params }) => {
+      if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change workflows');
+      const workflow = db.workflows.find((item) => item.id === params.id);
+      if (workflow === undefined) return refusal(404, 'not_found', 'workflow not found');
+      db.workflows = db.workflows.filter((item) => item.id !== params.id);
+      recordWorkflowDecision(db, workflow, 'delete', new Date().toISOString());
+      return new HttpResponse(null, { status: 204 });
     }),
     handleGetGatePolicy(() => HttpResponse.json({ selfApproval: db.selfApproval })),
     handleSetGatePolicy(async ({ request }) => {
