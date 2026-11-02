@@ -404,6 +404,9 @@ export type AuthSession = {
 export type AuthToken = {
     token: string;
     login: string;
+    /**
+     * When the token expires; for a token of `ostrom login --admin`, 8 hours after the yes at most
+     */
     expiresAt?: string;
     scopes: Array<string>;
 };
@@ -549,6 +552,38 @@ export type AutomationVariable = {
     maxLength?: number;
     required?: boolean;
     sensitive?: boolean;
+};
+
+/**
+ * The body of createAutomation and saveAutomation: what a person writes. The server sets the id, the owner (the caller), the dates, the webhook URL and the webhook secret; a body that also carries them is read without them.
+ */
+export type AutomationWrite = {
+    /**
+     * 1 to 120 characters, trimmed, without control characters
+     */
+    name: string;
+    trigger: AutomationTrigger;
+    action: AutomationAction;
+    /**
+     * Webhook triggers only, 32 at most
+     */
+    variables?: Array<AutomationVariable>;
+    /**
+     * A sample webhook body (a JSON object, 64 KiB at most) that the variables must fit; webhook triggers only
+     */
+    samplePayload?: unknown;
+    /**
+     * skip (the default) or allow
+     */
+    overlap?: string;
+    /**
+     * 1 to 1000, 24 by default
+     */
+    maxRunsPerDay?: number;
+    /**
+     * The version read; saveAutomation refuses a body without it, and a change made since
+     */
+    version?: number;
 };
 
 /**
@@ -997,11 +1032,25 @@ export type DeviceAnswer = {
 };
 
 /**
+ * What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for `ostrom login --admin`
+ */
+export type DeviceLoginStart = {
+    /**
+     * Every one of them, or the request is malformed (400). Absent or empty: the ordinary sign-in
+     */
+    scopes?: Array<'policy:write' | 'harness:write' | 'gates:policy'>;
+};
+
+/**
  * A pending `ostrom login`, as the console shows it
  */
 export type DeviceAuthorization = {
     userCode: string;
     clientName: string;
+    /**
+     * The governance write scopes an `ostrom login --admin` asks for, shown before the yes; only an owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary sign-in
+     */
+    scopes?: Array<string>;
     expiresAt: string;
 };
 
@@ -3569,7 +3618,7 @@ export type GetDeviceLoginResponses = {
 export type GetDeviceLoginResponse = GetDeviceLoginResponses[keyof GetDeviceLoginResponses];
 
 export type StartDeviceLoginData = {
-    body?: never;
+    body?: DeviceLoginStart;
     path?: never;
     query?: never;
     url: '/api/v1/auth/device';
@@ -9490,7 +9539,7 @@ export type ListAutomationsResponses = {
 export type ListAutomationsResponse = ListAutomationsResponses[keyof ListAutomationsResponses];
 
 export type CreateAutomationData = {
-    body: Automation;
+    body: AutomationWrite;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -9635,7 +9684,7 @@ export type GetAutomationResponses = {
 export type GetAutomationResponse = GetAutomationResponses[keyof GetAutomationResponses];
 
 export type SaveAutomationData = {
-    body: Automation;
+    body: AutomationWrite;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
