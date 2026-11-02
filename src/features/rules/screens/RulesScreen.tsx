@@ -51,6 +51,7 @@ export function RulesScreen(): ReactElement {
         <span className="rl-new">
           <Button
             onClick={() => {
+              removal.dismiss();
               setWriting(true);
             }}
           >
@@ -107,6 +108,7 @@ export function RulesScreen(): ReactElement {
                     variant="ghost"
                     aria-pressed={filter === option}
                     onClick={() => {
+                      removal.dismiss();
                       setFilter(option);
                     }}
                   >
@@ -135,13 +137,14 @@ export function RulesScreen(): ReactElement {
                         key={rule.id}
                         rule={rule}
                         groups={groups}
-                        saving={decision.saving === rule.id || removal.deleting === rule.id}
+                        saving={decision.saving(rule.id) || removal.deleting === rule.id}
                         onDelete={() => {
                           removal.remove(rule.id);
                         }}
                         onDecide={
                           view.canDecide
                             ? (change, onSaved) => {
+                                removal.dismiss();
                                 decision.decide(rule.id, change, onSaved);
                               }
                             : undefined

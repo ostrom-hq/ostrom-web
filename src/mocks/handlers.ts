@@ -659,7 +659,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const reworded = [statement, group, why, output, scope, gate].some((field) => field !== undefined);
       // A decided rule edited without a new decision is signed as an edit.
       if (next.status !== rule.status) recordRuleDecision(db, next, next.status, at);
-      else if (reworded) recordRuleDecision(db, next, 'edited', at);
+      else if (reworded)
+        recordRuleDecision(
+          db,
+          next,
+          next.status === 'accepted' || next.status === 'edited' ? 'edited' : next.status,
+          at,
+        );
       return HttpResponse.json(next);
     }),
     handleCreateRule(async ({ request }) => {

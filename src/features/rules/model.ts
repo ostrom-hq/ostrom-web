@@ -218,20 +218,28 @@ export function addCheck(checks: readonly CheckDraft[]): CheckDraft[] {
   return [...checks, { key, check: '', attested: false }];
 }
 
-/** "Run a migration" → "run-a-migration": the class of an action written by hand. */
+/** "Déployer en prod" → "deployer-en-prod": the class of an action written by hand, accents dropped. */
 export function actionClass(label: string): string {
-  return label
-    .trim()
+  const ascii = label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
+  if (ascii !== '' || label.trim() === '') return ascii;
+  // A label in another script keeps a class of its own, from its characters.
+  return `action-${Array.from(label.trim(), (char) => char.charCodeAt(0).toString(36)).join('')}`;
 }
 
-/** An action written by hand, held on the rule's repositories; undefined while its label says nothing. */
-export function customAction(label: string, commands: string, scope: string): GateAction | undefined {
+/**
+ * An action written by hand; undefined until it has a label and a command, since an action without a command matches
+ * nothing and would hold nothing. Its repositories are the rule's, read again when the rule is saved.
+ */
+export function customAction(label: string, commands: string): GateAction | undefined {
   const cls = actionClass(label);
-  if (cls === '') return undefined;
-  return { class: cls, label: label.trim(), patterns: listOfCommands(commands), repos: listOf(scope) };
+  const patterns = listOfCommands(commands);
+  if (cls === '' || patterns.length === 0) return undefined;
+  return { class: cls, label: label.trim(), patterns, repos: [] };
 }
 
 /** Commands are separated by commas or lines, never by spaces: `helm upgrade` is one command. */
@@ -254,7 +262,11 @@ export function offeredActions(
 ): GateAction[] {
   const offered = gateActions(catalog, rule);
   const known = new Set(offered.map((action) => action.class));
-  return [...offered, ...draft.extra.filter((action) => !known.has(action.class))];
+  const repos = listOf(draft.scope);
+  return [
+    ...offered,
+    ...draft.extra.filter((action) => !known.has(action.class)).map((action) => ({ ...action, repos })),
+  ];
 }
 
 /**

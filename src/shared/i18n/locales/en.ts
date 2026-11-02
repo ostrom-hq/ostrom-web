@@ -429,6 +429,7 @@ export const en = {
         customLabelPlaceholder: 'Run a migration',
         customCommands: 'Its commands',
         customCommandsPlaceholder: 'flyway migrate, rails db:migrate',
+        customTaken: 'This action is already in the list: tick it above.',
         customAdd: 'Add the action',
         approvers: 'Who may say yes',
         approversPlaceholder: 'GitHub logins: maya, samir',

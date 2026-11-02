@@ -140,24 +140,23 @@ describe('a rule draft', () => {
     expect(draftProblem(named, [deploy])).toBeUndefined();
   });
 
-  it('writes an action by hand, held on the rule repositories, its commands kept whole', () => {
+  it('writes an action by hand, its commands kept whole, held on the rule repositories when saved', () => {
     expect(actionClass('  Run a Migration! ')).toBe('run-a-migration');
-    expect(
-      customAction('Run a migration', 'flyway migrate,\n rails db:migrate, flyway migrate', 'acme/api'),
-    ).toEqual({
+    expect(actionClass('Déployer en prod')).toBe('deployer-en-prod');
+    expect(actionClass('部署')).toBe('action-smgp6a');
+    expect(actionClass('  ')).toBe('');
+    expect(customAction('Run a migration', 'flyway migrate,\n rails db:migrate, flyway migrate')).toEqual({
       class: 'run-a-migration',
       label: 'Run a migration',
       patterns: ['flyway migrate', 'rails db:migrate'],
-      repos: ['acme/api'],
+      repos: [],
     });
-    expect(customAction(' !? ', 'x', '')).toBeUndefined();
-    const extra = customAction('Push', '', '');
-    const draft = { ...draftOf(rule), extra: extra === undefined ? [] : [extra, deploy] };
-    expect(offeredActions([merge], rule, draft).map((action) => action.class)).toEqual([
-      'merge-main',
-      'deploy',
-      'push',
-    ]);
+    expect(customAction(' ', 'x')).toBeUndefined();
+    // An action without a command matches nothing: it is not written.
+    expect(customAction('Push', ' , ')).toBeUndefined();
+    const push = { class: 'push', label: 'Push', patterns: ['git push'], repos: [] };
+    const draft = { ...draftOf(rule), scope: 'acme/web', extra: [push, deploy] };
+    expect(offeredActions([merge], rule, draft)).toEqual([merge, deploy, { ...push, repos: ['acme/web'] }]);
   });
 
   it('accepts a proposed rule as it saves, fixed or not, and sends nothing for an unchanged decided one', () => {

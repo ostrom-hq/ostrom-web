@@ -12,7 +12,7 @@ import {
 } from '@gen/api/@tanstack/react-query.gen';
 import type { GateAction, NewRule, Rule } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
@@ -50,27 +50,34 @@ function useInvalidate(): () => Promise<void> {
 export interface RuleDecisionViewModel {
   /** Sends a decision or an edit; `onSaved` runs once the server signed it (an editor closes then, not before). */
   readonly decide: (id: string, change: RuleChange, onSaved?: () => void) => void;
-  /** The rule being saved. */
-  readonly saving: string | undefined;
+  /** Whether a decision or an edit of this rule is on its way; several rules may be at once. */
+  readonly saving: (id: string) => boolean;
+  /** Why the last refused decision was refused. */
   readonly failure: Error | undefined;
 }
 
 export function useRuleDecision(): RuleDecisionViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...updateRuleMutation(), onSettled: invalidate });
-  const { mutateAsync } = mutation;
+  const { mutateAsync } = useMutation({ ...updateRuleMutation(), onSettled: invalidate });
+  // Each save keeps its own answer: one mutation observer would only remember the last one sent.
+  const [pending, setPending] = useState<readonly string[]>([]);
+  const [failure, setFailure] = useState<Error | undefined>(undefined);
   const decide = useCallback(
     (id: string, change: RuleChange, onSaved?: () => void) => {
-      // Each save keeps its own answer: a decision on another rule meanwhile never loses this one's `onSaved`.
-      mutateAsync({ path: { id }, body: change }).then(onSaved, () => undefined);
+      setFailure(undefined);
+      setPending((ids) => [...ids, id]);
+      mutateAsync({ path: { id }, body: change })
+        .then(onSaved, (error: unknown) => {
+          setFailure(failureOf(error));
+        })
+        .finally(() => {
+          setPending((ids) => ids.filter((pendingId) => pendingId !== id));
+        });
     },
     [mutateAsync],
   );
-  return {
-    decide,
-    saving: mutation.isPending ? mutation.variables.path.id : undefined,
-    failure: failureOf(mutation.error),
-  };
+  const saving = useCallback((id: string) => pending.includes(id), [pending]);
+  return { decide, saving, failure };
 }
 
 export interface BulkViewModel {
@@ -122,8 +129,10 @@ export interface DeleteRuleViewModel {
   readonly remove: (id: string) => void;
   /** The rule being deleted. */
   readonly deleting: string | undefined;
-  /** The last delete was signed. */
+  /** The last delete was signed, until `dismiss`. */
   readonly deleted: boolean;
+  /** Forgets the last delete, once the person moved on. */
+  readonly dismiss: () => void;
   readonly failure: Error | undefined;
 }
 
@@ -141,6 +150,7 @@ export function useDeleteRule(): DeleteRuleViewModel {
     remove,
     deleting: mutation.isPending ? mutation.variables.path.id : undefined,
     deleted: mutation.isSuccess,
+    dismiss: mutation.reset,
     failure: failureOf(mutation.error),
   };
 }

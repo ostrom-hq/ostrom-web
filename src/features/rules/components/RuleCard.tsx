@@ -26,6 +26,8 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving }: RuleCardP
   const { t, i18n } = useTranslation();
   // The rule as it stood when its editor opened: a save sends what changed since then, never an older value.
   const [editing, setEditing] = useState<Rule | undefined>(undefined);
+  // Decided elsewhere while the editor was open: the editor closes rather than decide it a second time.
+  if (editing !== undefined && editing.status !== rule.status) setEditing(undefined);
   const accepted = isAccepted(rule);
   return (
     // Named by the statement itself, which the editor replaces on screen while it is open.

@@ -390,8 +390,9 @@ describe('writing and gating rules', () => {
     await user.selectOptions(within(form).getByRole('combobox', { name: 'What it does' }), 'gate');
     const gate = within(form).getByRole('group', { name: 'Gate' });
     expect(await within(gate).findByText(/write the first one below/)).toBeInTheDocument();
-    expect(within(gate).getByRole('button', { name: 'Add the action' })).toBeDisabled();
+    // A label alone matches nothing: the action needs a command.
     await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
+    expect(within(gate).getByRole('button', { name: 'Add the action' })).toBeDisabled();
     await user.type(
       within(gate).getByRole('textbox', { name: 'Its commands' }),
       'flyway migrate, rails db:migrate',
@@ -399,16 +400,22 @@ describe('writing and gating rules', () => {
     await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
     expect(within(gate).getByRole('checkbox', { name: /Run a migration/ })).toBeChecked();
     expect(within(gate).getByRole('textbox', { name: 'Another action' })).toHaveValue('');
-    // The same action written twice stays one.
-    await user.click(within(gate).getByRole('checkbox', { name: /Run a migration/ }));
+    // Enter adds the action without sending the rule; the same label again is ticked above, never written twice.
+    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Seed the base');
+    await user.type(within(gate).getByRole('textbox', { name: 'Its commands' }), 'rails db:seed{Enter}');
+    expect(within(gate).getByRole('checkbox', { name: /Seed the base/ })).toBeChecked();
+    expect(newRule()).toBeInTheDocument();
     await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
-    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
+    await user.type(within(gate).getByRole('textbox', { name: 'Its commands' }), 'prisma migrate{Enter}');
+    expect(within(gate).getByText('This action is already in the list: tick it above.')).toBeInTheDocument();
+    expect(within(gate).getByRole('button', { name: 'Add the action' })).toBeDisabled();
     expect(within(gate).getAllByRole('checkbox', { name: /Run a migration/ })).toHaveLength(1);
-    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
-    await user.type(within(gate).getByRole('textbox', { name: 'Another action' }), 'Run a migration');
-    await user.click(within(gate).getByRole('button', { name: 'Add the action' }));
-    expect(within(gate).getByRole('checkbox', { name: /Run a migration/ })).toBeChecked();
+    await user.click(within(gate).getByRole('checkbox', { name: /Seed the base/ }));
     await user.type(within(gate).getByRole('textbox', { name: 'Who may say yes' }), 'lena');
+    // Its repositories are the rule's when the rule is saved, not when the action was written.
+    const scope = within(form).getByRole('textbox', { name: 'Repositories' });
+    await user.clear(scope);
+    await user.type(scope, 'acme/web');
     await user.click(within(form).getByRole('button', { name: 'Add the rule' }));
     expect(await findCard(/Migrations wait for a yes/)).toHaveTextContent(
       'Gate: Run a migration, waits for a yes from lena',
@@ -418,7 +425,7 @@ describe('writing and gating rules', () => {
         class: 'run-a-migration',
         label: 'Run a migration',
         patterns: ['flyway migrate', 'rails db:migrate'],
-        repos: ['acme/api'],
+        repos: ['acme/web'],
       },
     ]);
   });
@@ -547,9 +554,41 @@ describe('writing and gating rules', () => {
     await user.click(within(card(/one review from an owner/)).getByRole('button', { name: 'Reject' }));
     expect(await within(card(/one review from an owner/)).findByText(/Rejected by maya/)).toBeInTheDocument();
     expect(within(migrations).getByRole('textbox', { name: 'Why' })).toBeInTheDocument();
+    // Its own save is still on its way: the editor stays held.
+    expect(within(migrations).getByRole('button', { name: 'Saving…' })).toBeDisabled();
     release();
     expect(await within(migrations).findByText('Why: Two outages.')).toBeInTheDocument();
     expect(within(migrations).queryByRole('textbox', { name: 'Why' })).toBeNull();
+  });
+
+  it('closes an editor whose rule was decided meanwhile', async () => {
+    const user = userEvent.setup();
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'All 4' }));
+    const review = card(/one review from an owner/);
+    await user.click(within(review).getByRole('button', { name: 'Edit' }));
+    expect(within(review).getByRole('button', { name: 'Save and accept' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Accept the 1 rule at 90 % or more' }));
+    expect(await within(review).findByText(/Accepted by maya/)).toBeInTheDocument();
+    expect(within(review).queryByRole('button', { name: /Save/ })).toBeNull();
+    expect(within(review).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+  });
+
+  it('says why a save was refused, and keeps its editor open', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.patch('*/api/v1/rules/R-7', () =>
+        HttpResponse.json({ error: { type: 'conflict', message: 'Changed meanwhile.' } }, { status: 409 }),
+      ),
+    );
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'Accepted 1' }));
+    const migrations = card(/Migrations run only/);
+    await user.click(within(migrations).getByRole('button', { name: 'Edit' }));
+    await user.type(within(migrations).getByRole('textbox', { name: 'Why' }), 'x');
+    await user.click(within(migrations).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Changed meanwhile.')).toBeInTheDocument();
+    expect(within(migrations).getByRole('button', { name: 'Save' })).toBeEnabled();
   });
 
   it('keeps an output it has no words for, shown as the server wrote it', async () => {
@@ -573,6 +612,9 @@ describe('writing and gating rules', () => {
     expect(screen.queryByText(/Run `pnpm test`/)).toBeNull();
     expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-3' }, action: 'deleted' });
     expect(screen.getByText('Rule deleted.')).toBeInTheDocument();
+    // Once the person moves on, the banner goes.
+    await user.click(screen.getByRole('button', { name: 'All 3' }));
+    expect(screen.queryByText('Rule deleted.')).toBeNull();
   });
 
   it('says when a rule cannot be deleted', async () => {

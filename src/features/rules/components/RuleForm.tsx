@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GateAction, Rule } from '@gen/api/types.gen';
-import { type ReactElement, useId, useState } from 'react';
+import { type KeyboardEvent, type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -50,21 +50,23 @@ function GateFields({
   const commandsId = useId();
   const [label, setLabel] = useState('');
   const [commands, setCommands] = useState('');
-  const written = customAction(label, commands, draft.scope);
+  const written = customAction(label, commands);
+  // A label already offered is ticked above, never written twice with other commands.
+  const taken = written !== undefined && actions.some((action) => action.class === written.class);
   const add =
-    written === undefined
+    written === undefined || taken
       ? undefined
       : (): void => {
-          const known = actions.some((action) => action.class === written.class);
-          onChange({
-            extra: known ? draft.extra : [...draft.extra, written],
-            actions: draft.actions.includes(written.class)
-              ? draft.actions
-              : [...draft.actions, written.class],
-          });
+          onChange({ extra: [...draft.extra, written], actions: [...draft.actions, written.class] });
           setLabel('');
           setCommands('');
         };
+  // Enter in these two fields adds the action; it never sends the whole rule.
+  const onEnter = (event: KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    add?.();
+  };
   const setCheck = (index: number, next: Partial<CheckDraft>): void => {
     onChange({ checks: draft.checks.map((check, at) => (at === index ? { ...check, ...next } : check)) });
   };
@@ -112,6 +114,7 @@ function GateFields({
               className="o-input"
               placeholder={t('rules.form.gate.customLabelPlaceholder')}
               value={label}
+              onKeyDown={onEnter}
               onChange={(event) => {
                 setLabel(event.target.value);
               }}
@@ -126,11 +129,13 @@ function GateFields({
               className="o-input"
               placeholder={t('rules.form.gate.customCommandsPlaceholder')}
               value={commands}
+              onKeyDown={onEnter}
               onChange={(event) => {
                 setCommands(event.target.value);
               }}
             />
           </span>
+          {taken ? <p className="o-row__meta rl-gate__taken">{t('rules.form.gate.customTaken')}</p> : null}
           <span className="rl-gate__add">
             <Button
               variant="ghost"

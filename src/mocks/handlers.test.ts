@@ -598,6 +598,9 @@ describe('mock rules and decisions', () => {
     expect(off.data.output).toBe('note');
     expect(db.decisions).toHaveLength(before + 3);
     expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-7' }, action: 'edited' });
+    // A rejected rule reworded stays rejected, and is signed so.
+    await updateRule({ path: { id: 'R-9' }, body: { group: 'Tone' }, throwOnError: true });
+    expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-9' }, action: 'rejected' });
   });
 
   it('serves the catalogue of the actions the gates of the workflows and of the decided rules cover', async () => {
