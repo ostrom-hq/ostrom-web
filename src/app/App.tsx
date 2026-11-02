@@ -50,6 +50,8 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
     const follow = (event: StorageEvent): void => {
       if (event.key !== ACCOUNT_CHANGED_KEY) return;
       accountChanged();
+      // The new account's queue is not "new" because of what the previous one saw (as useArrivals does in this tab).
+      resetArrivals();
       useOrgStore.getState().signedInOrOut();
       void queryClient.resetQueries();
     };

@@ -4,6 +4,19 @@ import { ACCOUNT_CHANGED_KEY } from '@/app/App';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { setupMockApp, visit } from '@/test/mockApp';
+import type * as Yes from '@/features/yes';
+
+const arrivals = vi.hoisted(() => ({ resets: 0 }));
+vi.mock('@/features/yes', async (original) => {
+  const real = await original<typeof Yes>();
+  return {
+    ...real,
+    resetArrivals: () => {
+      arrivals.resets += 1;
+      real.resetArrivals();
+    },
+  };
+});
 
 const { db } = setupMockApp();
 
@@ -53,5 +66,15 @@ describe('the account across tabs (audit B2)', () => {
     const write = vi.fn();
     whenSameOrg(sent, write);
     expect(write).not.toHaveBeenCalled();
+  });
+
+  it('forgets what the previous account saw arrive in the queue', async () => {
+    visit('/yes');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    const before = arrivals.resets;
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: ACCOUNT_CHANGED_KEY, newValue: '3' }));
+    });
+    expect(arrivals.resets).toBe(before + 1);
   });
 });
