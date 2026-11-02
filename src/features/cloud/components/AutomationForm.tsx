@@ -154,12 +154,9 @@ export function AutomationForm({
   const change = (next: Partial<AutomationDraft>): void => {
     setDraft((current) => ({ ...current, ...next }));
   };
-  const setVariable = (key: number, next: Partial<VariableDraft>): void => {
-    change({
-      variables: draft.variables.map((variable) =>
-        variable.key === key ? { ...variable, ...next } : variable,
-      ),
-    });
+  // Rows change from the latest draft, never from the one this render saw: two quick edits both land.
+  const setVariables = (next: (variables: readonly VariableDraft[]) => VariableDraft[]): void => {
+    setDraft((current) => ({ ...current, variables: next(current.variables) }));
   };
   const problem = automationProblem(draft);
   // An agent this console has no word for is kept, shown as the server wrote it.
@@ -357,10 +354,12 @@ export function AutomationForm({
               variable={variable}
               number={index + 1}
               onChange={(next) => {
-                setVariable(variable.key, next);
+                setVariables((variables) =>
+                  variables.map((other) => (other.key === variable.key ? { ...other, ...next } : other)),
+                );
               }}
               onRemove={() => {
-                change({ variables: draft.variables.filter((other) => other.key !== variable.key) });
+                setVariables((variables) => variables.filter((other) => other.key !== variable.key));
               }}
             />
           ))}
@@ -368,7 +367,7 @@ export function AutomationForm({
             <Button
               variant="ghost"
               onClick={() => {
-                change({ variables: addVariable(draft.variables) });
+                setVariables(addVariable);
               }}
             >
               {t('automations.form.addVariable')}

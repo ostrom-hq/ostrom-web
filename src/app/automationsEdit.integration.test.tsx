@@ -135,6 +135,15 @@ describe('writing an automation', () => {
       },
     ]);
     expect(db.automations[0]?.samplePayload).toEqual({ level: 'low' });
+    // Another gesture never takes the secret away before it is copied.
+    await user.click(screen.getByRole('button', { name: 'New automation' }));
+    await user.click(
+      within(screen.getByRole('region', { name: 'A new automation' })).getByRole('button', {
+        name: 'Cancel',
+      }),
+    );
+    await user.click(within(await card('Triage new Sentry issues')).getByRole('button', { name: 'Edit' }));
+    expect(within(created).getByText(/^whsec_mock_au-102/)).toBeInTheDocument();
   });
 
   it('shows the server’s refusal as it wrote it, keeps the form, and forgets it once a new form opens', async () => {

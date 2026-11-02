@@ -25,7 +25,7 @@ import type {
   Runner,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
@@ -148,11 +148,16 @@ export interface AutomationEditViewModel {
   readonly creating: boolean;
   /** The automation being saved. */
   readonly saving: string | undefined;
-  /** A new webhook's secret, which only the answer to its creation carries: shown once, on its card. */
+  /**
+   * A new webhook's secret, which only the answer to its creation carries: shown once, on its card, until the screen is
+   * left or another webhook is created; no other gesture takes it away before it is copied.
+   */
   readonly secret: { readonly id: string; readonly value: string } | undefined;
-  /** The server's refusal, as it wrote it. */
-  readonly failure: Error | undefined;
-  /** Forgets the last answer, once the person moved on (a new form, another gesture). */
+  /** Why the server refused the new automation, as it wrote it: said in the form. */
+  readonly createFailure: Error | undefined;
+  /** Why the server refused this automation's change, as it wrote it: said in its editor. */
+  readonly saveFailure: (id: string) => Error | undefined;
+  /** Forgets the last refusal, once the person moved on (a new form, another editor). */
   readonly dismiss: () => void;
 }
 
@@ -163,6 +168,9 @@ export function useAutomationEdit(): AutomationEditViewModel {
   }, [queryClient]);
   const creation = useMutation({ ...createAutomationMutation(), onSuccess: refresh });
   const saving = useMutation({ ...saveAutomationMutation(), onSuccess: refresh });
+  const [secret, setSecret] = useState<{ readonly id: string; readonly value: string } | undefined>(
+    undefined,
+  );
   const { mutate: createMutate, reset: resetCreate } = creation;
   const { mutate: saveMutate, reset: resetSave } = saving;
   const dismiss = useCallback(() => {
@@ -172,7 +180,15 @@ export function useAutomationEdit(): AutomationEditViewModel {
   const create = useCallback(
     (write: AutomationWrite, onDone: () => void) => {
       resetSave();
-      createMutate({ body: write }, { onSuccess: onDone });
+      createMutate(
+        { body: write },
+        {
+          onSuccess: (created) => {
+            if (created.secret !== undefined) setSecret({ id: created.id, value: created.secret });
+            onDone();
+          },
+        },
+      );
     },
     [createMutate, resetSave],
   );
@@ -183,14 +199,19 @@ export function useAutomationEdit(): AutomationEditViewModel {
     },
     [saveMutate, resetCreate],
   );
-  const created = creation.data;
+  const refused = saving.isError ? saving.variables.path.id : undefined;
+  const saveFailure = useCallback(
+    (id: string) => (id === refused ? failureOf(saving.error) : undefined),
+    [refused, saving.error],
+  );
   return {
     create,
     save,
     creating: creation.isPending,
     saving: saving.isPending ? saving.variables.path.id : undefined,
-    secret: created?.secret === undefined ? undefined : { id: created.id, value: created.secret },
-    failure: failureOf(creation.error ?? saving.error),
+    secret,
+    createFailure: failureOf(creation.error),
+    saveFailure,
     dismiss,
   };
 }

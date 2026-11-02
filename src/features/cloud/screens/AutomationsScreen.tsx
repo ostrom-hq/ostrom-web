@@ -23,11 +23,6 @@ export function AutomationsScreen(): ReactElement {
   const viewer = { login: view.viewer, memberId: view.memberId };
   return (
     <Screen title={t('automations.title')} lead={t('automations.lead')}>
-      {edit.failure === undefined ? null : (
-        <Banner tone="danger" tag={t('automations.errorTag')} live>
-          {edit.failure.message}
-        </Banner>
-      )}
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('automations.errorTag')} live>
           {change.failure.message}
@@ -45,6 +40,11 @@ export function AutomationsScreen(): ReactElement {
       {writing ? (
         <section className="o-card o-stack" aria-label={t('automations.form.newTitle')}>
           <h2 className="o-label">{t('automations.form.newTitle')}</h2>
+          {edit.createFailure === undefined ? null : (
+            <Banner tone="danger" tag={t('automations.errorTag')} live>
+              {edit.createFailure.message}
+            </Banner>
+          )}
           <AutomationForm
             saving={edit.creating}
             submit={t('automations.form.create')}
@@ -108,6 +108,7 @@ export function AutomationsScreen(): ReactElement {
                     ownsAutomation(automation, viewer)
                       ? {
                           saving: edit.saving === automation.id,
+                          failure: edit.saveFailure(automation.id),
                           save: (write, onSaved) => {
                             edit.save(automation.id, write, onSaved);
                           },

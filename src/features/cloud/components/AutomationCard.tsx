@@ -4,6 +4,7 @@ import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
+import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
 import { isAutomationAgent } from '../automationDraft';
@@ -29,6 +30,8 @@ export interface AutomationCardProps {
   readonly edit:
     | {
         readonly saving: boolean;
+        /** Why the server refused the last change, as it wrote it: said above the editor. */
+        readonly failure: Error | undefined;
         /** `onSaved` runs once the server took the change: the editor closes then, not before. */
         readonly save: (write: AutomationWrite, onSaved: () => void) => void;
         /** Runs as the editor opens: the last answer of another gesture is forgotten. */
@@ -106,19 +109,26 @@ export function AutomationCard({
         </Badge>
       </div>
       {editing !== undefined && edit !== undefined ? (
-        <AutomationForm
-          automation={editing}
-          saving={edit.saving}
-          submit={t('automations.form.save')}
-          onCancel={() => {
-            setEditing(undefined);
-          }}
-          onSave={(write) => {
-            edit.save(write, () => {
+        <>
+          {edit.failure === undefined ? null : (
+            <Banner tone="danger" tag={t('automations.errorTag')} live>
+              {edit.failure.message}
+            </Banner>
+          )}
+          <AutomationForm
+            automation={editing}
+            saving={edit.saving}
+            submit={t('automations.form.save')}
+            onCancel={() => {
               setEditing(undefined);
-            });
-          }}
-        />
+            }}
+            onSave={(write) => {
+              edit.save(write, () => {
+                setEditing(undefined);
+              });
+            }}
+          />
+        </>
       ) : null}
       <p className="o-row__meta">
         {isWebhook(automation)
