@@ -115,7 +115,12 @@ test('an owner invites by e-mail and by link, the invited person joins with the 
   const late = await anotherPerson(browser);
   await signIn(late, freshEmail('sven'));
   await late.goto(`${url.pathname}${url.hash}`);
-  await expect(late.getByText('This invitation no longer works')).toBeVisible();
+  // The server still describes the spent link (asked of its owner: the JOURNAL, 02/11), but refuses to let a second
+  // person in with it.
+  await late.getByRole('button', { name: `Join ${orgName.name}` }).click();
+  await expect(late.getByText(/no longer works/).first()).toBeVisible();
+  const after = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/members`);
+  expect((after.body as { items: unknown[] }).items).toHaveLength(2);
 
   // Another organization's person reads none of it.
   const stranger = await anotherPerson(browser);
