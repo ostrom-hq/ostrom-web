@@ -28,8 +28,9 @@ export function actsInOrganization(pathname: string): boolean {
 }
 
 /**
- * A call that acts in an organization names the one the console acts in, once there is one. The others never carry
- * it: `/me` and the person's list must answer whatever was chosen before, so a stale choice can be dropped.
+ * A call that acts in an organization names the one the console acts in, once there is one. The others are never
+ * given it here: the person's list must answer whatever was chosen before, so a stale choice can be dropped, and
+ * `/auth/me` takes it only as an option, named by its caller (`meInOrgOptions`) for the member there.
  */
 export function withOrg(request: Request, orgId: string | undefined): Request {
   if (orgId !== undefined && actsInOrganization(new URL(request.url).pathname)) {

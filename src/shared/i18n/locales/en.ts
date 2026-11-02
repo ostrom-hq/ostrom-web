@@ -1409,6 +1409,7 @@ export const en = {
   orgs: {
     switch: {
       named: 'Organization: {{name}}. Switch',
+      viewer: '{{name}} · {{role}}',
       choose: 'Choose an organization',
       unnamed: 'Organization',
     },
