@@ -52,36 +52,47 @@ test('an owner writes a workflow in the console, changes it, and deletes it', as
   await expect(page.getByRole('link', { name: new RegExp(name) })).toHaveCount(0);
 });
 
-test('another organization never sees nor changes the first one’s workflow', async ({ page }) => {
+test('another organization never sees nor changes the first one’s workflow', async ({ page, browser }) => {
   expect(await served(page, 'POST', '/api/v1/workflows')).toBe(true);
   const first = await ownerOfNewOrganization(page, 'xavi');
   const id = `wf-isolated-${Date.now().toString(36)}`;
   const workflow = workflowNamed(id, 'Kept apart');
   expect((await callFromPage(page, 'POST', '/api/v1/workflows', workflow)).status).toBe(201);
+  const firstVersion = (
+    (await callFromPage(page, 'GET', `/api/v1/workflows/${id}`)).body as { version?: number }
+  ).version;
 
-  await ownerOfNewOrganization(page, 'yara');
-  await page.goto('/workflows');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Workflows');
-  await expect(page.getByRole('link', { name: /Kept apart/ })).toHaveCount(0);
-  await page.goto(`/workflows/${id}`);
-  await expect(page.getByText('Kept apart')).toHaveCount(0);
-  // In its own organization, the id is nobody's: 404, read, saved or deleted.
-  for (const [method, path, body] of [
-    ['GET', `/api/v1/workflows/${id}`, undefined],
-    ['PUT', `/api/v1/workflows/${id}`, { workflow }],
-    ['DELETE', `/api/v1/workflows/${id}`, undefined],
-  ] as const) {
-    expect((await callFromPage(page, method, path, body)).status, `${method} ${path}`).toBe(404);
-  }
+  const other = await anotherPerson(browser);
+  await ownerOfNewOrganization(other, 'yara');
+  await other.goto('/workflows');
+  await expect(other.getByRole('heading', { level: 1 })).toHaveText('Workflows');
+  await expect(other.getByRole('link', { name: /Kept apart/ })).toHaveCount(0);
+  await other.goto(`/workflows/${id}`);
+  await expect(other.getByText('Kept apart')).toHaveCount(0);
+  // In its own organization, the id is nobody's.
+  expect((await callFromPage(other, 'GET', `/api/v1/workflows/${id}`)).status).toBe(404);
   // Naming the first organization does not open it: 404, as for one that does not exist.
   for (const [method, path, body] of [
     ['GET', '/api/v1/workflows', undefined],
     ['GET', `/api/v1/workflows/${id}`, undefined],
-    ['PUT', `/api/v1/workflows/${id}`, { workflow }],
+    ['PUT', `/api/v1/workflows/${id}`, { workflow: { ...workflow, name: 'Taken over' } }],
     ['DELETE', `/api/v1/workflows/${id}`, undefined],
   ] as const) {
-    expect((await callFromPage(page, method, path, body, first.id)).status, `${method} ${path}`).toBe(404);
+    expect((await callFromPage(other, method, path, body, first.id)).status, `${method} ${path}`).toBe(404);
   }
+  // Written and deleted under the same id in its own organization, it never touches the first one's.
+  const own = await callFromPage(other, 'PUT', `/api/v1/workflows/${id}`, {
+    workflow: { ...workflow, name: 'Taken over' },
+  });
+  expect([200, 404]).toContain(own.status);
+  if (own.status === 200)
+    expect((await callFromPage(other, 'DELETE', `/api/v1/workflows/${id}`)).status).toBe(204);
+  const kept = await callFromPage(page, 'GET', `/api/v1/workflows/${id}`);
+  expect(kept.status).toBe(200);
+  expect(kept.body).toMatchObject({
+    name: 'Kept apart',
+    ...(firstVersion === undefined ? {} : { version: firstVersion }),
+  });
 });
 
 test('a member reads the workflows but is offered no change, and the server refuses one', async ({
