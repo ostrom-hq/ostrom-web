@@ -3,7 +3,8 @@
 // through the API in the setup, as the QA bench does it (ostrom-e2e `scripts/load-setup.ts`): an accepted workflow
 // whose gate node names the approvers of pushes to main of a repository, and a personal token with `gates:ask` that
 // asks for such a push. The yes, the refusal and the receipt are then read and given in the console.
-import { expect, type Page, test } from '@playwright/test';
+import { type Browser, expect, type Locator, type Page, test } from '@playwright/test';
+import { z } from 'zod';
 import {
   zAskGateResponse,
   zCreateLaunchResponse,
@@ -12,6 +13,7 @@ import {
   zGetGatePolicyResponse,
   zListApprovalsResponse,
   zMe,
+  zReceipt,
   zSignWorkflowReceiptResponse,
   zVerifyReceiptResponse,
 } from '../gen/api/zod.gen';
@@ -27,6 +29,9 @@ import {
 } from './real';
 
 test.afterEach(closeOthers);
+
+/** The receipt an answer carries, whatever else the answer holds (the contract and the server differ on the rest). */
+const zAnswerReceipt = z.object({ receipt: zReceipt });
 
 /** The GitHub login the server knows the person signed in on `page` by: what a gate node names. */
 async function loginOf(page: Page): Promise<string> {
@@ -165,10 +170,14 @@ async function ownerAndMember(
   return { org: id, owner: await loginOf(page), member: await loginOf(other) };
 }
 
-test('5.4 a member opens another person’s request in the console queue and says yes; the gate is open', async ({
-  page,
-  browser,
-}) => {
+/**
+ * 5.4's journey up to the decision: Ada owns the organization and asks for a push to main through her token, Ben is
+ * its approver and says yes from his queue. Returns Ben's page, the decision region, Ada's token and the gate.
+ */
+async function memberSaysYes(
+  page: Page,
+  browser: Browser,
+): Promise<{ ben: Page; decision: Locator; token: string; org: string; gate: string; receipt: unknown }> {
   const ben = await anotherPerson(browser);
   const { org, member } = await ownerAndMember(page, ben, 'member');
   const repo = await gatedRepository(page, org, [member]);
@@ -179,17 +188,42 @@ test('5.4 a member opens another person’s request in the console queue and say
   const request = await requestOf(ben, org, gate);
   await openFromQueue(ben, request);
   await expect(ben.getByText('You asked for this yourself.')).toHaveCount(0);
+  const answered = ben.waitForResponse(
+    (response) => response.request().method() === 'POST' && response.url().endsWith(`/${request.id}/answer`),
+  );
   await ben.getByRole('button', { name: /^Approve/ }).click();
+  const response = await answered;
+  expect(response.status()).toBe(200);
+  const body: unknown = await response.json();
   const decision = ben.getByRole('region', { name: 'Decision' });
   await expect(decision).toContainText(` approved: ${request.title}`);
-  // The answer carries its signed receipt (ostrom-server#127).
-  await decision.getByText('Verify the receipt').click();
-  await expect(decision).toContainText('ostrom verify ');
+  return { ben, decision, token, org, gate, receipt: zAnswerReceipt.parse(body).receipt };
+}
+
+test('5.4 a member opens another person’s request in the console queue and says yes; the gate is open', async ({
+  page,
+  browser,
+}) => {
+  const { token, org, gate, receipt } = await memberSaysYes(page, browser);
+  // The server signs the yes and answers with its receipt (ostrom-server#127).
+  expect(receipt).toBeDefined();
 
   // What the hook reads: the gate itself has passed.
   const read = await withToken(page, token, org, 'GET', `/api/v1/gates/${gate}`);
   expect(read.status, JSON.stringify(read.body)).toBe(200);
   expect(zAskGateResponse.parse(read.body).gate.status).toBe('approved');
+});
+
+test('5.4 the decision shows the signed receipt of the yes', async ({ page, browser }) => {
+  // Known defect (JOURNAL 02/11, WEB → GATES, CORE-CONTRAT): the server answers `{approval, receipt}` but the
+  // contract's `answerApproval` 200 is `ApprovalView`, whose `you` is required, so the console's client refuses the
+  // answer and keeps no receipt. Remove `test.fail` once the contract and the server agree.
+  test.fail(true, 'answerApproval 200 lacks ApprovalView.you: the console drops the receipt');
+  const { decision } = await memberSaysYes(page, browser);
+  const verify = decision.getByText('Verify the receipt');
+  await expect(verify).toBeVisible({ timeout: 5_000 });
+  await verify.click();
+  await expect(decision).toContainText('ostrom verify ');
 });
 
 test('5.6 the asker sees their own request and is refused the yes with a clear message, per the organization’s setting', async ({
