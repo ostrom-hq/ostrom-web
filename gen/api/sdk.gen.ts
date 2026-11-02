@@ -383,7 +383,7 @@ export const checkAgentPolicy = <ThrowOnError extends boolean = false>(options?:
 /**
  * The caller: login, member, organization
  *
- * Main serves this path with another body, `Profile` (id, login, displayName, primaryEmail, avatarUrl, createdAt, emails, providers, csrfToken). Planned until the server answers `Me`.
+ * `Ostrom-Org` is an option here: `member` and `organization` are those of the organization it names when the caller is a member of it, and absent otherwise (no header, not an id, not a membership): never 409 nor 404. The account (e-mails, ways in) is read at `/api/v1/auth/me/account`.
  */
 export const getMe = <ThrowOnError extends boolean = false>(options?: Options<GetMeData, ThrowOnError>): RequestResult<GetMeResponses, GetMeErrors, ThrowOnError> => (options?.client ?? client).get<GetMeResponses, GetMeErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1856,6 +1856,12 @@ export const askGate = <ThrowOnError extends boolean = false>(options: Options<A
 
 /**
  * A gate request; `wait` long-polls up to that many seconds for an answer
+ *
+ * With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
+ * pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
+ * answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+ * 30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
+ * connection. A client sets its HTTP timeout above the wait.
  */
 export const getGate = <ThrowOnError extends boolean = false>(options: Options<GetGateData, ThrowOnError>): RequestResult<GetGateResponses, GetGateErrors, ThrowOnError> => (options.client ?? client).get<GetGateResponses, GetGateErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({

@@ -120,6 +120,7 @@ import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
+import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
 import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
@@ -130,6 +131,7 @@ import {
   initialOrgMembers,
   initialTeams,
   invitedOrganization,
+  MEMBER_IDS,
 } from '@/mocks/fixtures/organization';
 import { actsInOrganization, ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
 import { managesBilling, orgRoleOf } from '@/shared/org/roles';
@@ -946,6 +948,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleListRunners(() => HttpResponse.json({ items: db.runners })),
     handleListAutomations(() => HttpResponse.json({ items: db.automations })),
+    ...createAutomationWriteHandlers(() => db, [me.dev.login, MEMBER_IDS.maya], now),
     handleEnableAutomation(({ params }) => switchAutomation(db, params.id, true, now().toISOString())),
     handleDisableAutomation(({ params }) => switchAutomation(db, params.id, false, now().toISOString())),
     handleListAutomationRuns(({ params }) =>

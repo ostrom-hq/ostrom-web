@@ -1,26 +1,38 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Automation } from '@gen/api/types.gen';
+import type { Automation, AutomationWrite } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
+import { isAutomationAgent } from '../automationDraft';
 import { useAutomationRuns } from '../useCloud';
+import { AutomationForm } from './AutomationForm';
 import { SecretOnce } from './SecretOnce';
 
 export interface AutomationCardProps {
   readonly automation: Automation;
   readonly now: Date;
   readonly busy: boolean;
-  /** A webhook secret just rotated, shown here once. */
-  readonly secret: string | undefined;
+  /** A webhook secret just made (`created`) or rotated, shown here once. */
+  readonly secret: { readonly value: string; readonly created: boolean } | undefined;
   /** Present when the viewer may change this automation. */
   readonly actions:
     | {
         readonly toggle: () => void;
         readonly run: (dry: boolean) => void;
         readonly rotate: () => void;
+      }
+    | undefined;
+  /** Present when the viewer owns it: only its owner changes what it does. */
+  readonly edit:
+    | {
+        readonly saving: boolean;
+        /** `onSaved` runs once the server took the change: the editor closes then, not before. */
+        readonly save: (write: AutomationWrite, onSaved: () => void) => void;
+        /** Runs as the editor opens: the last answer of another gesture is forgotten. */
+        readonly onOpen: () => void;
       }
     | undefined;
 }
@@ -66,18 +78,23 @@ export function AutomationCard({
   busy,
   secret,
   actions,
+  edit,
 }: AutomationCardProps): ReactElement {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  // The automation as it stood when its editor opened: a save sends the version read then, never a newer one.
+  const [editing, setEditing] = useState<Automation | undefined>(undefined);
   const headingId = useId();
   const runsId = useId();
   const { trigger, action } = automation;
   const agent =
     action.agent === undefined
       ? undefined
-      : isCloudAgent(action.agent)
-        ? t(`cloud.agent.${action.agent}`)
-        : action.agent;
+      : isAutomationAgent(action.agent)
+        ? t(`automations.form.agents.${action.agent}`)
+        : isCloudAgent(action.agent)
+          ? t(`cloud.agent.${action.agent}`)
+          : action.agent;
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
       <div className="o-inline">
@@ -88,6 +105,21 @@ export function AutomationCard({
           {automation.enabled ? t('automations.on') : t('automations.off')}
         </Badge>
       </div>
+      {editing !== undefined && edit !== undefined ? (
+        <AutomationForm
+          automation={editing}
+          saving={edit.saving}
+          submit={t('automations.form.save')}
+          onCancel={() => {
+            setEditing(undefined);
+          }}
+          onSave={(write) => {
+            edit.save(write, () => {
+              setEditing(undefined);
+            });
+          }}
+        />
+      ) : null}
       <p className="o-row__meta">
         {isWebhook(automation)
           ? t('automations.trigger.webhook')
@@ -121,7 +153,9 @@ export function AutomationCard({
       {automation.webhookUrl === undefined ? null : (
         <p className="o-row__meta o-mono cl-url">{automation.webhookUrl}</p>
       )}
-      {secret === undefined ? null : <SecretOnce name={automation.name} value={secret} />}
+      {secret === undefined ? null : (
+        <SecretOnce name={automation.name} value={secret.value} created={secret.created} />
+      )}
       <div className="o-inline">
         <Button
           aria-expanded={open}
@@ -133,6 +167,16 @@ export function AutomationCard({
         >
           {open ? t('automations.runs.hide') : t('automations.runs.show')}
         </Button>
+        {edit === undefined || editing !== undefined ? null : (
+          <Button
+            onClick={() => {
+              edit.onOpen();
+              setEditing(automation);
+            }}
+          >
+            {t('automations.form.edit')}
+          </Button>
+        )}
         {actions === undefined ? null : (
           <>
             <Button disabled={busy} onClick={actions.toggle}>

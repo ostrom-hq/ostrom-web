@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
+  createAutomationMutation,
   createCloudSessionMutation,
   disableAutomationMutation,
   enableAutomationMutation,
@@ -11,10 +12,18 @@ import {
   listCloudSessionsQueryKey,
   listRunnersOptions,
   rotateAutomationSecretMutation,
+  saveAutomationMutation,
   stopCloudSessionMutation,
   testAutomationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Automation, AutomationDryRun, AutomationRun, CloudSession, Runner } from '@gen/api/types.gen';
+import type {
+  Automation,
+  AutomationDryRun,
+  AutomationRun,
+  AutomationWrite,
+  CloudSession,
+  Runner,
+} from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -114,6 +123,8 @@ export interface AutomationsViewModel {
   readonly automations: readonly Automation[] | undefined;
   readonly failure: Error | undefined;
   readonly viewer: string | undefined;
+  /** Their member id: the server names an automation's owner by it. */
+  readonly memberId: string | undefined;
   readonly canManage: boolean;
 }
 
@@ -124,7 +135,63 @@ export function useAutomations(): AutomationsViewModel {
     automations: automations.data?.items,
     failure: failureOf(automations.error),
     viewer: viewer.login,
+    memberId: viewer.memberId,
     canManage: viewer.canManage,
+  };
+}
+
+export interface AutomationEditViewModel {
+  /** Writes a new automation; `onDone` runs once the server took it, so the form closes then, not before. */
+  readonly create: (write: AutomationWrite, onDone: () => void) => void;
+  /** Saves over the version read; a change made since is refused, and said. */
+  readonly save: (id: string, write: AutomationWrite, onDone: () => void) => void;
+  readonly creating: boolean;
+  /** The automation being saved. */
+  readonly saving: string | undefined;
+  /** A new webhook's secret, which only the answer to its creation carries: shown once, on its card. */
+  readonly secret: { readonly id: string; readonly value: string } | undefined;
+  /** The server's refusal, as it wrote it. */
+  readonly failure: Error | undefined;
+  /** Forgets the last answer, once the person moved on (a new form, another gesture). */
+  readonly dismiss: () => void;
+}
+
+export function useAutomationEdit(): AutomationEditViewModel {
+  const queryClient = useQueryClient();
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: listAutomationsQueryKey() });
+  }, [queryClient]);
+  const creation = useMutation({ ...createAutomationMutation(), onSuccess: refresh });
+  const saving = useMutation({ ...saveAutomationMutation(), onSuccess: refresh });
+  const { mutate: createMutate, reset: resetCreate } = creation;
+  const { mutate: saveMutate, reset: resetSave } = saving;
+  const dismiss = useCallback(() => {
+    resetCreate();
+    resetSave();
+  }, [resetCreate, resetSave]);
+  const create = useCallback(
+    (write: AutomationWrite, onDone: () => void) => {
+      resetSave();
+      createMutate({ body: write }, { onSuccess: onDone });
+    },
+    [createMutate, resetSave],
+  );
+  const save = useCallback(
+    (id: string, write: AutomationWrite, onDone: () => void) => {
+      resetCreate();
+      saveMutate({ path: { id }, body: write }, { onSuccess: onDone });
+    },
+    [saveMutate, resetCreate],
+  );
+  const created = creation.data;
+  return {
+    create,
+    save,
+    creating: creation.isPending,
+    saving: saving.isPending ? saving.variables.path.id : undefined,
+    secret: created?.secret === undefined ? undefined : { id: created.id, value: created.secret },
+    failure: failureOf(creation.error ?? saving.error),
+    dismiss,
   };
 }
 
