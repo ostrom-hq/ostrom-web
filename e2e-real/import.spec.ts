@@ -155,7 +155,10 @@ test('an admin plans and imports, but the cutover is the owner’s, on screen an
   expect((await callFromPage(admin, 'POST', '/api/v1/import/teamcode?cutover=true', withMore)).status).toBe(
     403,
   );
+  // Read on a real list: the admin's import is in it, the refused cutover's server is not.
   const servers = await callFromPage(page, 'GET', '/api/v1/mcp/servers');
+  expect(servers.status).toBe(200);
+  expect(JSON.stringify(servers.body)).toContain('notion');
   expect(JSON.stringify(servers.body)).not.toContain('refused-cutover');
 
   const member = await anotherPerson(browser);
