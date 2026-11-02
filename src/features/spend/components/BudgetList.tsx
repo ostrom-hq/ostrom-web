@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { formatUsd } from '@/shared/lib/money';
 import { Badge } from '@/shared/ui/Badge';
 import { Section } from '@/shared/ui/Screen';
-import { isBudgetScope } from '../model';
+import { budgetScopeOf } from '../model';
 
 export function BudgetList({ budgets }: { readonly budgets: readonly Budget[] }): ReactElement {
   const { t, i18n } = useTranslation();
@@ -16,7 +16,8 @@ export function BudgetList({ budgets }: { readonly budgets: readonly Budget[] })
       ) : (
         <ul className="o-card o-rows">
           {budgets.map((budget) => {
-            const who = isBudgetScope(budget.scope) ? t(`spend.budgets.scope.${budget.scope}`) : budget.scope;
+            const scope = budgetScopeOf(budget.scope);
+            const who = scope === undefined ? budget.scope : t(`spend.budgets.scope.${scope}`);
             return (
               <li key={`${budget.scope}:${budget.subject ?? ''}`} className="o-row">
                 <span className="o-row__main">
