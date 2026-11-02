@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { handleRotateToken } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
@@ -95,6 +96,19 @@ describe('the tokens screen', () => {
     await within(form()).findByRole('textbox', { name: 'Secret of Forever' });
     expect(sent).toEqual({ name: 'Forever', scopes: ['profile:read'] });
     expect(db.tokens[0]?.expiresAt).toBeNull();
+  });
+
+  it('holds the tokens while a secret is being replaced', async () => {
+    const user = userEvent.setup();
+    server.use(handleRotateToken(async () => delay('infinite')));
+    visit('/tokens');
+    const [ci, cli] = await liveTokens();
+    const row = ci ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
+    await waitFor(() => {
+      expect(within(cli ?? document.body).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    });
   });
 
   it('replaces a secret, shown once, and revokes a token', async () => {

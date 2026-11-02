@@ -43,8 +43,8 @@ async function aborted(signal: AbortSignal): Promise<never> {
  *
  * What it does not do, as no handler here needs it: `passthrough()`, `bypass()`, storing `Set-Cookie`. An aborted
  * call is rejected at once, but its handler still runs to the end, as a server would. Remove it, and answer through
- * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed. Each answer waits for one real
- * `setTimeout`: a test that fakes timers leaves `setTimeout` real (`toFake: ['Date']`), or no call ever answers.
+ * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed. A test of a pending state holds its
+ * handler (`delay('infinite')`) rather than counting on how late an answer comes.
  */
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
   const requestListeners = new Set<(request: Request) => void>();
@@ -55,14 +55,9 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     const { signal } = request;
     signal.throwIfAborted();
     // The listeners of the test that sent the call: one left running when a test ends never reaches the next one's.
-    const listening = [...requestListeners];
     const hearing = [...responseListeners];
-    // A network answer always comes a task later, never in the same microtask flush: a screen renders its pending
-    // state (a held button, "Saving…") before the answer, as it does against a server.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    signal.throwIfAborted();
-    // Only the calls that reach a handler, each listener with its own copy: none reads the body away from the handler.
-    for (const listener of listening) listener(request.clone());
+    // Each listener with its own copy: none reads the body away from the handler.
+    for (const listener of requestListeners) listener(request.clone());
     const handlers = server.listHandlers().filter((handler) => handler instanceof RequestHandler);
     const pending = getResponse(handlers, request).catch((error: unknown) => {
       // As MSW does: a handler that throws is a server error, not a failed network, and its stack is shown, unless
