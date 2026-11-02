@@ -145,6 +145,13 @@ async function openFromQueue(page: Page, request: { id: string; title: string })
   await expect(page).toHaveURL(new RegExp(`/yes/${request.id}$`));
 }
 
+/** The organization's self-approval setting, as the server reads it. */
+async function selfApprovalOf(page: Page, org: string): Promise<string> {
+  const policy = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
+  expect(policy.status, JSON.stringify(policy.body)).toBe(200);
+  return zGetGatePolicyResponse.parse(policy.body).selfApproval;
+}
+
 /** The owner of a new organization on `page`, and a second person who joined it with `role` on their own browser. */
 async function ownerAndMember(
   page: Page,
@@ -175,6 +182,7 @@ test('5.4 a member opens another person’s request in the console queue and say
   await ben.getByRole('button', { name: /^Approve/ }).click();
   const decision = ben.getByRole('region', { name: 'Decision' });
   await expect(decision).toContainText(` approved: ${request.title}`);
+  // The answer carries its signed receipt (ostrom-server#127).
   await decision.getByText('Verify the receipt').click();
   await expect(decision).toContainText('ostrom verify ');
 
@@ -202,10 +210,14 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
     `You asked for this action and cannot approve it: ${member} must say yes.`,
   );
 
-  // The organization's setting, in the console: never (the server's default), then only as the sole approver.
+  // The organization's setting, in the console: what the server says first, then never, then only as the sole
+  // approver.
   await page.goto('/approvers');
   const setting = page.getByRole('combobox', { name: 'Self-approval' });
-  await expect(setting).toHaveValue('never');
+  await expect(setting).toHaveValue(await selfApprovalOf(page, org));
+  await setting.selectOption('never');
+  await expect(page.getByText('Someone who asked never approves their own request')).toBeVisible();
+  await expect.poll(() => selfApprovalOf(page, org)).toBe('never');
   const alone = await askPushToMain(page, token, org, await gatedRepository(page, org, [owner]));
   const refused = await requestOf(page, org, alone);
   await openFromQueue(page, refused);
@@ -217,12 +229,7 @@ test('5.6 the asker sees their own request and is refused the yes with a clear m
   await page.goto('/approvers');
   await page.getByRole('combobox', { name: 'Self-approval' }).selectOption('sole-approver');
   await expect(page.getByText('Someone who asked may approve only when nobody else can')).toBeVisible();
-  await expect
-    .poll(async () => {
-      const policy = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
-      return policy.status === 200 ? zGetGatePolicyResponse.parse(policy.body).selfApproval : undefined;
-    })
-    .toBe('sole-approver');
+  await expect.poll(() => selfApprovalOf(page, org)).toBe('sole-approver');
   const sole = await askPushToMain(page, token, org, await gatedRepository(page, org, [owner]));
   const self = await requestOf(page, org, sole);
   await openFromQueue(page, self);
