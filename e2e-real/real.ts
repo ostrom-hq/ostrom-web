@@ -95,7 +95,8 @@ const others: BrowserContext[] = [];
 
 /**
  * A second person's browser: its own cookies, the same console on the same device as the project (a Pixel 7 in
- * `mobile`), traced like the test's own page. A spec that uses it calls `closeOthers` after each test.
+ * `mobile`). Playwright traces it with the test's own page (`trace` of the config, which it starts on every context
+ * of the `browser` fixture: starting it here again fails). A spec that uses it calls `closeOthers` after each test.
  */
 export async function anotherPerson(browser: Browser): Promise<Page> {
   const { baseURL, viewport, userAgent, deviceScaleFactor, isMobile, hasTouch, locale } =
@@ -109,26 +110,13 @@ export async function anotherPerson(browser: Browser): Promise<Page> {
     ...(hasTouch === undefined ? {} : { hasTouch }),
     ...(locale === undefined ? {} : { locale }),
   });
-  await context.tracing.start({ screenshots: true, snapshots: true });
   others.push(context);
   return context.newPage();
 }
 
-/** Closes the other people's browsers, keeping their traces when the test failed (as `retain-on-failure`). */
+/** Closes the other people's browsers; Playwright keeps their traces with the test's when it failed. */
 export async function closeOthers(): Promise<void> {
-  const info = test.info();
-  const failed = info.status !== info.expectedStatus;
-  for (const [index, context] of others.splice(0).entries()) {
-    const path = info.outputPath(`other-person-${String(index + 1)}.zip`);
-    try {
-      await context.tracing.stop(failed ? { path } : {});
-      if (failed)
-        await info.attach(`trace of person ${String(index + 1)}`, { path, contentType: 'application/zip' });
-    } finally {
-      // A trace that cannot be kept never leaves a browser open for the next test.
-      await context.close();
-    }
-  }
+  for (const context of others.splice(0)) await context.close();
 }
 
 /** A new person signed in with an organization of their own, which they own; returns its id and short name. */
