@@ -56,6 +56,9 @@ test('a person creates a token, sees its secret once, and revokes it', async ({ 
 
   const row = page.getByRole('listitem').filter({ hasText: 'Nightly CI' });
   await row.getByRole('button', { name: 'Revoke' }).click();
+  // The confirmation fits the screen, a phone's included: nothing scrolls sideways (a string, without the DOM types).
+  const fits: unknown = await page.evaluate('document.documentElement.scrollWidth <= window.innerWidth');
+  expect(fits).toBe(true);
   await row.getByRole('button', { name: 'Revoke Nightly CI' }).click();
   await expect(row).toHaveCount(0);
 });

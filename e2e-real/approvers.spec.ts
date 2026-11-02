@@ -18,21 +18,21 @@ test('an owner reads who approves the gate of a new workflow, as the server deci
     domain: `${slug}/api`,
     status: 'accepted',
     foundAt: new Date().toISOString(),
+    // Gates over every repository: the screen reads the organization's graph, which leaves out a gate scoped to one
+    // repository (ostrom-server `GatesCatalog.covers` with no repository named; asked of its owner in the JOURNAL).
     nodes: [
       {
         id: 'g-deploy',
         kind: 'gate',
         label: 'Deploy to production',
         approvers: ['nora'],
-        actions: [{ class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: [`${slug}/api`] }],
+        actions: [{ class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'] }],
       },
       {
         id: 'g-drop',
         kind: 'gate',
         label: 'Drop a table',
-        actions: [
-          { class: 'drop-table', label: 'Drop a table', patterns: ['DROP TABLE'], repos: [`${slug}/api`] },
-        ],
+        actions: [{ class: 'drop-table', label: 'Drop a table', patterns: ['DROP TABLE'] }],
       },
     ],
     edges: [{ from: 'g-deploy', to: 'g-drop' }],

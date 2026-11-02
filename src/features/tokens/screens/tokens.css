@@ -32,3 +32,16 @@
 .tk-row .o-row__meta {
   overflow-wrap: anywhere;
 }
+
+/*
+ * A row's end holds its kind and two buttons, which become a confirmation and a "Keep" once tapped: wider than a
+ * phone beside the token's name. The end then goes under the name, full width, and its buttons wrap.
+ */
+.tk-row {
+  flex-wrap: wrap;
+}
+.tk-row .o-row__end {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
