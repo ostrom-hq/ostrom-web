@@ -29,7 +29,6 @@ import { PolicyScreen } from '@/features/policy';
 import { McpScreen, SecretsScreen } from '@/features/tools';
 import { NewWorkflowScreen, WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
-import { logout } from '@gen/api/sdk.gen';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
@@ -48,7 +47,7 @@ const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', comp
  * `/yes#signin=opk_…` is the link an approver opens on their phone. The token rides in the fragment, which the
  * browser never sends to a server nor writes in its logs: it is wiped from the address bar and the history at once
  * (`history.replaceState`), held in memory, and the yes screens exchange it for the session cookie
- * (`POST /auth/link`). `/yes?signout` ends the session (`POST /auth/logout`).
+ * (`POST /auth/link`). `/yes?signout` asks whether to end the session (`POST /auth/logout`) once the person says so.
  */
 export const yesSearchSchema = z.object({
   /** A token in the query string is never used (servers log it), only wiped from the address. */
@@ -68,17 +67,20 @@ const yesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/yes',
   validateSearch: yesSearchSchema,
-  beforeLoad: async ({ search, location }) => {
+  beforeLoad: ({ search, location }) => {
     const signin = signInFromHash(location.hash);
-    if (search.signout === true) {
-      // The page waits for the server: what it shows next is read as nobody, never as the account just ended.
-      const { error } = await logout();
-      if (error === undefined) useAuthStore.getState().changed();
-    } else if (signin !== undefined) {
+    if (signin !== undefined) {
       dropFragment();
       useAuthStore.getState().offer(signin);
     } else if (search.signin === undefined) return;
-    throw redirect({ to: '/yes', search: {}, hash: '', replace: true });
+    // `?signout` stays in the address: the queue asks from it, and nothing is ended before a yes (audit
+    // AUDIT-SECU-WEB-2 M2: a page of another site can open this address).
+    throw redirect({
+      to: '/yes',
+      search: search.signout === true ? { signout: true } : {},
+      hash: '',
+      replace: true,
+    });
   },
   component: YesQueueScreen,
 });

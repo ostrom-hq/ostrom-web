@@ -9,6 +9,7 @@ import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
 import { FailureBanner } from '../components/FailureBanner';
 import { SignInNotice } from '../components/SignInNotice';
+import { SignOutNotice } from '../components/SignOutNotice';
 import { useApprovalsQueue } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {
@@ -24,6 +25,7 @@ export function YesQueueScreen(): ReactElement {
           <p className="ys-meta">{t('yes.signedAs', { name: viewer.name })}</p>
         )}
       </header>
+      <SignOutNotice />
       <SignInNotice />
       <FailureBanner failure={failure} />
       {waiting === undefined ? (

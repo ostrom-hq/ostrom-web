@@ -68,6 +68,14 @@ export const en = {
       signedOut: 'This browser is no longer signed in. Open your sign-in link again to see your requests.',
       refusedTag: 'Refused',
     },
+    signout: {
+      tag: 'Sign out',
+      ask: 'Sign out of Ostrom on this browser? Nothing changes until you say so.',
+      go: 'Sign out',
+      going: 'Signing out…',
+      stay: 'Stay signed in',
+      failed: 'Could not sign out ({{reason}}). This browser is still signed in.',
+    },
     signin: {
       tag: 'Sign-in',
       invalid: 'This sign-in link is not valid. Ask for a new one.',

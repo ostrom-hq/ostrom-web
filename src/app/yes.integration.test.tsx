@@ -188,7 +188,8 @@ describe('the queue', () => {
     expect(db.usedLinks).toEqual([]);
   });
 
-  it('keeps everything as it was when the sign-out fails', async () => {
+  it('keeps everything as it was when the sign-out fails, and says so', async () => {
+    const user = userEvent.setup();
     server.use(
       http.post('*/api/v1/auth/logout', () =>
         HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
@@ -196,7 +197,8 @@ describe('the queue', () => {
     );
     const generation = useAuthStore.getState().generation;
     visit('/yes?signout');
-    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByText(/Could not sign out \(boom\)/)).toBeInTheDocument();
     expect(useAuthStore.getState().generation).toBe(generation);
     expect(db.signedIn).toBe(true);
   });
@@ -229,15 +231,77 @@ describe('the queue', () => {
     expect(router.state.location.searchStr).toBe('');
   });
 
-  it('ends the session on signout, and reads everything again', async () => {
+  it('never ends the session from the address alone: another site can open it', async () => {
+    let calls = 0;
+    server.use(
+      http.post('*/api/v1/auth/logout', () => {
+        calls += 1;
+      }),
+    );
     const generation = useAuthStore.getState().generation;
-    const router = visit('/yes?signout');
-    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    visit('/yes?signout');
+    expect(await screen.findByText(/Sign out of Ostrom on this browser\?/)).toBeInTheDocument();
+    expect(calls).toBe(0);
+    expect(db.signedIn).toBe(true);
+    expect(useAuthStore.getState().generation).toBe(generation);
+  });
+
+  it('ends the session once asked, and reads everything again', async () => {
+    const user = userEvent.setup();
+    const generation = useAuthStore.getState().generation;
+    visit('/yes?signout');
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
     await vi.waitFor(() => {
       expect(useAuthStore.getState().generation).toBe(generation + 1);
     });
     expect(db.signedIn).toBe(false);
-    expect(router.state.location.searchStr).toBe('');
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+    });
+  });
+
+  it('asks nothing of a browser nobody is signed in on', async () => {
+    db.signedIn = false;
+    let asked = 0;
+    server.use(
+      http.get('*/api/v1/auth/me', () => {
+        asked += 1;
+      }),
+    );
+    visit('/yes?signout');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    await vi.waitFor(() => {
+      expect(asked).toBeGreaterThan(0);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText(/Sign out of Ostrom on this browser\?/)).toBeNull();
+  });
+
+  it('takes a sign-in link and the question together, and loses neither', async () => {
+    const router = visit('/yes?signout#signin=opk_test_12345678');
+    expect(await screen.findByText(/Sign out of Ostrom on this browser\?/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(router.state.location.hash).toBe('');
+  });
+
+  it('says it signs out while the server ends the session', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/auth/logout', async () => delay('infinite')));
+    visit('/yes?signout');
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+    expect(await screen.findByRole('button', { name: 'Signing out…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Stay signed in' })).toBeDisabled();
+  });
+
+  it('stays signed in when asked to, and the question goes with the address', async () => {
+    const user = userEvent.setup();
+    const router = visit('/yes?signout');
+    await user.click(await screen.findByRole('button', { name: 'Stay signed in' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.searchStr).toBe('');
+    });
+    expect(screen.queryByText(/Sign out of Ostrom on this browser\?/)).toBeNull();
+    expect(db.signedIn).toBe(true);
   });
 });
 

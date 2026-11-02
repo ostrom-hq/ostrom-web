@@ -69,6 +69,14 @@ export const fr = {
       signedOut: 'Ce navigateur n’est plus connecté. Rouvre ton lien de connexion pour voir tes demandes.',
       refusedTag: 'Refusé',
     },
+    signout: {
+      tag: 'Déconnexion',
+      ask: 'Te déconnecter d’Ostrom sur ce navigateur ? Rien ne change tant que tu ne le dis pas.',
+      go: 'Me déconnecter',
+      going: 'Déconnexion…',
+      stay: 'Rester connecté',
+      failed: 'La déconnexion a échoué ({{reason}}). Ce navigateur est toujours connecté.',
+    },
     signin: {
       tag: 'Connexion',
       invalid: 'Ce lien de connexion n’est pas valide. Demandes-en un nouveau.',
