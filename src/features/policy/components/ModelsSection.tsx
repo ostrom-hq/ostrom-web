@@ -7,12 +7,14 @@ import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   addMemberRow,
+  defaultRefusedFor,
   type MemberModels,
   memberName,
   policyDraftOf,
   policyOf,
   policyProblem,
   type PolicyDraft,
+  runsAgents,
 } from '../model';
 import type { ModelPolicyViewModel, SaveViewModel } from '../usePolicy';
 
@@ -75,7 +77,7 @@ function MemberPicker({
       />
     );
   // An invitation not accepted yet has no account to run agents with.
-  const candidates = members.filter((member) => member.role !== 'invited');
+  const candidates = members.filter(runsAgents);
   const gone = row.member !== '' && !candidates.some((member) => member.id === row.member);
   return (
     <select
@@ -113,6 +115,7 @@ function PolicyForm({
   const allowedId = useId();
   const defaultId = useId();
   const problem = policyProblem(draft);
+  const refusedFor = defaultRefusedFor(draft);
   const setRow = (key: number, next: Partial<MemberModels>): void => {
     setDraft((current) => ({
       ...current,
@@ -199,11 +202,26 @@ function PolicyForm({
       {problem === undefined ? null : (
         <p className="o-screen__lead">{t(`policy.models.problem.${problem}`)}</p>
       )}
+      {problem !== undefined || refusedFor.length === 0 ? null : (
+        <p className="o-screen__lead">
+          {t('policy.models.defaultRefusedFor', {
+            members: refusedFor.map((member) => memberName(member, members)).join(', '),
+            model: draft.defaultModel.trim(),
+          })}
+        </p>
+      )}
       <div className="o-inline">
         <Button type="submit" disabled={change.saving || problem !== undefined}>
           {change.saving ? t('policy.saving') : t('policy.save')}
         </Button>
-        <Button variant="ghost" disabled={change.saving} onClick={onDone}>
+        <Button
+          variant="ghost"
+          disabled={change.saving}
+          onClick={() => {
+            change.reset();
+            onDone();
+          }}
+        >
           {t('policy.cancel')}
         </Button>
       </div>
@@ -253,6 +271,7 @@ export function ModelsSection({ view, canChange }: ModelsSectionProps): ReactEle
                 <span className="o-self-start">
                   <Button
                     onClick={() => {
+                      change.reset();
                       setEditing(true);
                     }}
                   >

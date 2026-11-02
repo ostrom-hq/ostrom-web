@@ -9,6 +9,7 @@ import {
 import type { InferenceSettings, Member, ModelPolicy, Organization, Secret } from '@gen/api/types.gen';
 import { zInferenceSettings, zModelPolicy } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { allows, MODEL_NAME } from '@/features/policy/model';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { readJson, refusal } from './http';
 import { DEMO_LOGIN, type OrgsState } from './orgs';
@@ -34,7 +35,6 @@ export function initialModelPolicy(theo: string): ModelPolicy {
 }
 
 // The gateway's and the launch policy's names (ostrom-server GatewaySettingsUseCases, LaunchPolicy).
-const MODEL = /^[A-Za-z0-9._:/-]{1,200}$/;
 const AGENT = /^[a-z0-9][a-z0-9._-]{0,63}$/;
 const LAUNCH_MODEL = /^[A-Za-z0-9][A-Za-z0-9._:/@+[\]-]{0,199}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -46,7 +46,7 @@ function policyRefusal(policy: ModelPolicy): string | undefined {
   if (own.some(([id]) => !UUID.test(id))) return 'byMember is keyed by member id.';
   if (own.some(([, models]) => models.length === 0)) return 'A member’s own list names at least one model.';
   const models = [...policy.allowed, policy.default, ...own.flatMap(([, list]) => list)];
-  if (models.some((model) => !MODEL.test(model)))
+  if (models.some((model) => !MODEL_NAME.test(model)))
     return "Models are names or prefixes of letters, digits, '.', '-', '_', ':' or '/'.";
   return undefined;
 }
@@ -124,7 +124,7 @@ export function createPolicyHandlers(
       const policy = policyOf(organization);
       const me = state().members.find((member) => member.login === DEMO_LOGIN)?.id ?? '';
       const list = policy.byMember?.[me] ?? policy.allowed;
-      return list.length === 0 || list.some((entry) => model.startsWith(entry))
+      return allows(list, model)
         ? HttpResponse.json({ allowed: true })
         : refused(`The organization does not allow ${model}.`);
     }),

@@ -18,7 +18,12 @@ function ProvidersForm({
   readonly view: ProvidersViewModel;
 }): ReactElement {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<ProvidersDraft>(() => providersDraftOf(settings));
+  const [draft, setDraftState] = useState<ProvidersDraft>(() => providersDraftOf(settings));
+  // An edit after a save is not saved yet: its banner goes.
+  const setDraft = (next: ProvidersDraft): void => {
+    view.change.reset();
+    setDraftState(next);
+  };
   const listId = useId();
   const ids: Record<Provider, string> = { anthropic: useId(), openai: useId(), openrouter: useId() };
   return (

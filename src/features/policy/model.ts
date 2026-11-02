@@ -1,5 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { InferenceSettings, Member, ModelPolicy, Secret } from '@gen/api/types.gen';
+import { zModelPolicy } from '@gen/api/zod.gen';
+import { z } from 'zod';
+
+/**
+ * The policy as the server sends it. A new organization's has no `default` until one is set (the server leaves the
+ * field out while the contract requires it): it reads as no default, `""`, rather than as a broken answer.
+ */
+export async function readModelPolicy(data: unknown): Promise<ModelPolicy> {
+  const {
+    allowed,
+    default: model,
+    byMember,
+  } = await zModelPolicy.extend({ default: z.string().optional() }).parseAsync(data);
+  return { allowed, default: model ?? '', ...(byMember === undefined ? {} : { byMember }) };
+}
 
 /** "claude-opus, gpt-5" or one per line: each value once, in the order typed. */
 export function listOf(text: string): string[] {
@@ -51,7 +66,7 @@ export function addMemberRow(rows: readonly MemberModels[]): MemberModels[] {
 }
 
 /** A model name or prefix, as the gateway accepts it. */
-const MODEL = /^[A-Za-z0-9._:/-]{1,200}$/;
+export const MODEL_NAME = /^[A-Za-z0-9._:/-]{1,200}$/;
 
 /**
  * What keeps a policy from being saved, in the order the form says it: a model the gateway would refuse, no default, a
@@ -63,7 +78,7 @@ export type PolicyProblem = 'format' | 'noDefault' | 'default' | 'member' | 'twi
 export function policyProblem(draft: PolicyDraft): PolicyProblem | undefined {
   const model = draft.defaultModel.trim();
   const lists = [listOf(draft.allowed), ...draft.byMember.map((row) => listOf(row.models))];
-  if ([...lists.flat(), ...(model === '' ? [] : [model])].some((value) => !MODEL.test(value)))
+  if ([...lists.flat(), ...(model === '' ? [] : [model])].some((value) => !MODEL_NAME.test(value)))
     return 'format';
   if (model === '') return 'noDefault';
   if (!allows(listOf(draft.allowed), model)) return 'default';
@@ -72,6 +87,25 @@ export function policyProblem(draft: PolicyDraft): PolicyProblem | undefined {
   if (new Set(members).size < members.length) return 'twice';
   if (draft.byMember.some((row) => listOf(row.models).length === 0)) return 'memberModels';
   return undefined;
+}
+
+/**
+ * The members whose own list refuses the default model: a launch of theirs that names no model gets the default, which
+ * their list then refuses. Said, not refused: a member who always names a model is fine.
+ */
+export function defaultRefusedFor(draft: PolicyDraft): string[] {
+  const model = draft.defaultModel.trim();
+  return draft.byMember
+    .filter((row) => {
+      const list = listOf(row.models);
+      return row.member.trim() !== '' && list.length > 0 && model !== '' && !allows(list, model);
+    })
+    .map((row) => row.member.trim());
+}
+
+/** Who may get a list of their own: a member who runs agents, not an invitation (no account yet). */
+export function runsAgents(member: Member): boolean {
+  return member.role !== 'invited';
 }
 
 /** The policy a draft says, once `policyProblem` finds nothing. */
@@ -124,5 +158,8 @@ export function keySecrets(secrets: readonly Secret[]): string[] {
     .sort((a, b) => a.localeCompare(b, 'en'));
 }
 
-/** The agents `ostrom <agent>` launches (ostrom-cli `Agent`), offered as the check is typed. */
+/**
+ * The agents `ostrom <agent>` launches today (ostrom-cli `Agent`), only offered as the check is typed: any name may be
+ * asked, and the server says whether it is valid. The contract has no list of agents to read them from.
+ */
 export const KNOWN_AGENTS = ['claude', 'codex', 'opencode', 'gemini', 'grok', 'hermes', 'pi'] as const;

@@ -1,14 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { type ReactElement, useId, useState } from 'react';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
 import { KNOWN_AGENTS } from '../model';
-import type { LaunchCheckViewModel } from '../usePolicy';
+import type { LaunchCheckViewModel, LaunchQuestion } from '../usePolicy';
+
+/** What an allowed launch says: the model asked, the default it stood for, or no model at all. */
+function allowedText(t: TFunction, asked: LaunchQuestion): string {
+  if (asked.model === '') return t('policy.check.allowedAgent', { agent: asked.agent });
+  if (!asked.named) return t('policy.check.allowedDefault', { agent: asked.agent, model: asked.model });
+  return t('policy.check.allowed', { agent: asked.agent, model: asked.model });
+}
 
 /** What `ostrom <agent>` asks first, asked from here: may I launch this agent with this model? */
-export function LaunchCheck({ check }: { readonly check: LaunchCheckViewModel }): ReactElement {
+export function LaunchCheck({
+  check,
+  defaultModel,
+}: {
+  readonly check: LaunchCheckViewModel;
+  /** The organization's default model, asked when none is typed: the one a launch without a model gets. */
+  readonly defaultModel: string | undefined;
+}): ReactElement {
   const { t } = useTranslation();
   const [agent, setAgent] = useState('claude');
   const [model, setModel] = useState('');
@@ -23,7 +38,12 @@ export function LaunchCheck({ check }: { readonly check: LaunchCheckViewModel })
         className="pl-check"
         onSubmit={(event) => {
           event.preventDefault();
-          check.ask({ agent: agent.trim(), model: model.trim() });
+          const named = model.trim();
+          check.ask({
+            agent: agent.trim(),
+            model: named === '' ? (defaultModel ?? '') : named,
+            named: named !== '',
+          });
         }}
       >
         <span className="o-stack">
@@ -76,12 +96,7 @@ export function LaunchCheck({ check }: { readonly check: LaunchCheckViewModel })
           tag={answer.allowed ? t('policy.check.allowedTag') : t('policy.check.refusedTag')}
           live
         >
-          {answer.allowed
-            ? t('policy.check.allowed', {
-                agent: asked.agent,
-                model: asked.model === '' ? t('policy.check.anyModel') : asked.model,
-              })
-            : (answer.reason ?? t('policy.check.refused'))}
+          {answer.allowed ? allowedText(t, asked) : (answer.reason ?? t('policy.check.refused'))}
           {answer.note === undefined ? null : <> {answer.note}</>}
         </Banner>
       )}

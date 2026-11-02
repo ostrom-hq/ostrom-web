@@ -506,6 +506,8 @@ export const en = {
       addMember: 'Add a member',
       readOnly: 'Owners and admins change the models.',
       saved: 'Models saved.',
+      defaultRefusedFor:
+        'The own list of {{members}} refuses the default model, {{model}}: their launches that name no model would be refused.',
       problem: {
         format: 'A model is letters, digits, and . - _ : / only.',
         noDefault: 'Name the model an agent gets when it names none.',
@@ -538,7 +540,9 @@ export const en = {
       allowedTag: 'Allowed',
       refusedTag: 'Refused',
       allowed: 'You may launch {{agent}} with {{model}}.',
-      anyModel: 'the default model',
+      allowedDefault: 'You may launch {{agent}} with the default model, {{model}}.',
+      allowedAgent:
+        'You may launch {{agent}}. No default model is known: the model it names is checked as it starts.',
       refused: 'This launch would be refused.',
     },
   },

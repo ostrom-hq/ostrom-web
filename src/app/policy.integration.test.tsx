@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -127,11 +127,66 @@ describe('the agent policy', () => {
     expect(within(models).getByRole('textbox', { name: 'Member 1' })).toHaveValue(MEMBER_IDS.samir);
   });
 
-  it('says why the policy does not come', async () => {
+  it('reads a new organization’s policy, which has no default yet, and sets the first one', async () => {
+    const user = userEvent.setup();
+    // The server leaves `default` out until one is set.
+    server.use(http.get('*/api/v1/policy/models', () => HttpResponse.json({ allowed: [] }), { once: true }));
+    visit('/policy');
+    const models = await section('Models');
+    expect(await within(models).findByText('None')).toBeInTheDocument();
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    expect(within(models).getByRole('textbox', { name: 'Default model' })).toHaveValue('');
+    await user.type(within(models).getByRole('textbox', { name: 'Default model' }), 'claude-opus-4-1');
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
+    expect(within(models).getByText('claude-opus-4-1')).toBeInTheDocument();
+  });
+
+  it('forgets a save or a refusal once the next edit opens or closes', async () => {
+    const user = userEvent.setup();
+    visit('/policy');
+    const models = await section('Models');
+    await user.click(await within(models).findByRole('button', { name: 'Change' }));
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    await user.click(within(models).getByRole('button', { name: 'Cancel' }));
+    expect(within(models).queryByText('Models saved.')).toBeNull();
+    server.use(http.put('*/api/v1/policy/models', () => refused('policy down'), { once: true }));
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByRole('alert')).toHaveTextContent('policy down');
+    await user.click(within(models).getByRole('button', { name: 'Cancel' }));
+    expect(within(models).queryByRole('alert')).toBeNull();
+  });
+
+  it('says when a member’s own list refuses the default model', async () => {
+    const user = userEvent.setup();
+    visit('/policy');
+    const models = await section('Models');
+    await user.click(await within(models).findByRole('button', { name: 'Change' }));
+    // Theo's list is claude-haiku; the default is claude-sonnet-4-5.
+    expect(
+      await within(models).findByText(
+        'The own list of theo refuses the default model, claude-sonnet-4-5: their launches that name no model would be refused.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(models).getByRole('button', { name: 'Save' })).toBeEnabled();
+  });
+
+  it('says why the policy does not come, and still asks a launch without a model', async () => {
+    const user = userEvent.setup();
     server.use(http.get('*/api/v1/policy/models', () => refused('gateway down')));
     visit('/policy');
     const models = await section('Models');
     expect(await within(models).findByText(/gateway down/)).toBeInTheDocument();
+    const check = await section('Would a launch pass?');
+    await user.click(within(check).getByRole('button', { name: 'Ask' }));
+    expect(
+      await within(check).findByText(
+        'You may launch claude. No default model is known: the model it names is checked as it starts.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('lets a member read the models, never change them nor see the keys', async () => {
@@ -181,6 +236,17 @@ describe('the provider keys', () => {
     expect(await within(keys).findByRole('alert')).toHaveTextContent('A key is named by a secret');
   });
 
+  it('forgets the save once a key is edited again', async () => {
+    const user = userEvent.setup();
+    visit('/policy');
+    const keys = await section('Provider keys');
+    await within(keys).findByRole('combobox', { name: 'Anthropic key' });
+    await user.click(within(keys).getByRole('button', { name: 'Save' }));
+    expect(await within(keys).findByText('Provider keys saved.')).toBeInTheDocument();
+    await user.type(within(keys).getByRole('combobox', { name: 'OpenAI key' }), 'X');
+    expect(within(keys).queryByText('Provider keys saved.')).toBeNull();
+  });
+
   it('holds the keys while they save, and still names them when the secrets cannot be read', async () => {
     const user = userEvent.setup();
     server.use(
@@ -203,7 +269,7 @@ describe('the launch check', () => {
     const check = await section('Would a launch pass?');
     await user.click(within(check).getByRole('button', { name: 'Ask' }));
     expect(
-      await within(check).findByText('You may launch claude with the default model.'),
+      await within(check).findByText('You may launch claude with the default model, claude-sonnet-4-5.'),
     ).toBeInTheDocument();
     await user.type(within(check).getByRole('textbox', { name: 'Model' }), 'gemini-2.5-pro');
     await user.click(within(check).getByRole('button', { name: 'Ask' }));
@@ -218,6 +284,31 @@ describe('the launch check', () => {
     await user.type(within(check).getByRole('textbox', { name: 'Model' }), 'gpt-5.1-codex');
     await user.click(within(check).getByRole('button', { name: 'Ask' }));
     expect(await within(check).findByText('You may launch codex with gpt-5.1-codex.')).toBeInTheDocument();
+  });
+
+  it('asks the server again for the same question, and says when there is no default model', async () => {
+    const user = userEvent.setup();
+    let asked = 0;
+    server.use(
+      http.get('*/api/v1/policy/agents', () => {
+        asked += 1;
+        return HttpResponse.json({ allowed: true });
+      }),
+    );
+    db.modelPolicies[db.organization.id] = { allowed: [], default: '' };
+    visit('/policy');
+    const check = await section('Would a launch pass?');
+    await within(await section('Models')).findByText('None');
+    await user.click(within(check).getByRole('button', { name: 'Ask' }));
+    expect(
+      await within(check).findByText(
+        'You may launch claude. No default model is known: the model it names is checked as it starts.',
+      ),
+    ).toBeInTheDocument();
+    await user.click(within(check).getByRole('button', { name: 'Ask' }));
+    await waitFor(() => {
+      expect(asked).toBe(2);
+    });
   });
 
   it('shows a refusal without a reason, a note, the wait, and a failure', async () => {

@@ -521,6 +521,8 @@ export const fr = {
       addMember: 'Ajouter un membre',
       readOnly: 'Les propriétaires et les admins modifient les modèles.',
       saved: 'Modèles enregistrés.',
+      defaultRefusedFor:
+        'La liste propre de {{members}} refuse le modèle par défaut, {{model}} : ses lancements qui ne nomment aucun modèle seraient refusés.',
       problem: {
         format: 'Un modèle ne contient que des lettres, des chiffres et . - _ : /.',
         noDefault: 'Nomme le modèle qu’un agent reçoit quand il n’en nomme aucun.',
@@ -554,7 +556,9 @@ export const fr = {
       allowedTag: 'Autorisé',
       refusedTag: 'Refusé',
       allowed: 'Tu peux lancer {{agent}} avec {{model}}.',
-      anyModel: 'le modèle par défaut',
+      allowedDefault: 'Tu peux lancer {{agent}} avec le modèle par défaut, {{model}}.',
+      allowedAgent:
+        'Tu peux lancer {{agent}}. Aucun modèle par défaut n’est connu : le modèle qu’il nomme est vérifié au lancement.',
       refused: 'Ce lancement serait refusé.',
     },
   },

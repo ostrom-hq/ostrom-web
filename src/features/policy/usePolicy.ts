@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
-  checkAgentPolicyOptions,
   getInferenceSettingsOptions,
   getInferenceSettingsQueryKey,
   getModelPolicyOptions,
   getModelPolicyQueryKey,
   listMembersOptions,
   listSecretsOptions,
-  setInferenceSettingsMutation,
-  setModelPolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
+import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api/sdk.gen';
 import type { InferenceSettings, Member, ModelPolicy } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { keySecrets } from './model';
+import { keySecrets, readModelPolicy } from './model';
 
 export interface SaveViewModel<T> {
   /** Saves; `onSaved` runs once the server took it, so a form shows the saved value then, not before. */
@@ -24,6 +22,33 @@ export interface SaveViewModel<T> {
   /** The last save was taken. */
   readonly saved: boolean;
   readonly failure: Error | undefined;
+  /** Forgets the last save, so its banner does not outlive the edit it was for. */
+  readonly reset: () => void;
+}
+
+/** A save that puts the server's answer where the screen reads it. */
+function useSave<T>(send: (body: T) => Promise<T>, queryKey: readonly unknown[]): SaveViewModel<T> {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: async ({ body }: { body: T }) => send(body),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(queryKey, saved);
+    },
+  });
+  const { mutate, reset } = mutation;
+  const save = useCallback(
+    (value: T, onSaved: () => void) => {
+      mutate({ body: value }, { onSuccess: onSaved });
+    },
+    [mutate],
+  );
+  return {
+    save,
+    saving: mutation.isPending,
+    saved: mutation.isSuccess,
+    failure: failureOf(mutation.error),
+    reset,
+  };
 }
 
 export interface ModelPolicyViewModel {
@@ -34,34 +59,25 @@ export interface ModelPolicyViewModel {
   readonly change: SaveViewModel<ModelPolicy>;
 }
 
+// A new organization's policy has no `default` yet: read leniently, with Zod still (`readModelPolicy`).
+const lenientPolicy = {
+  responseValidator: readModelPolicy,
+  responseTransformer: readModelPolicy,
+};
+
 export function useModelPolicy(): ModelPolicyViewModel {
-  const queryClient = useQueryClient();
-  const policy = useQuery(ready(getModelPolicyOptions()));
+  const policy = useQuery(ready(getModelPolicyOptions(lenientPolicy)));
   // Only names: a refusal is not asked again, a member then reads as their id.
   const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
-  const mutation = useMutation({
-    ...setModelPolicyMutation(),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(getModelPolicyQueryKey(), saved);
-    },
-  });
-  const { mutate } = mutation;
-  const save = useCallback(
-    (value: ModelPolicy, onSaved: () => void) => {
-      mutate({ body: value }, { onSuccess: onSaved });
-    },
-    [mutate],
+  const change = useSave(
+    async (body: ModelPolicy) => (await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data,
+    getModelPolicyQueryKey(),
   );
   return {
     policy: policy.data,
     failure: failureOf(policy.error),
     members: members.data?.items,
-    change: {
-      save,
-      saving: mutation.isPending,
-      saved: mutation.isSuccess,
-      failure: failureOf(mutation.error),
-    },
+    change,
   };
 }
 
@@ -75,62 +91,69 @@ export interface ProvidersViewModel {
 
 /** The providers' keys: only owners and admins read them (`inference:admin`), so the read waits for `enabled`. */
 export function useProviders(enabled: boolean): ProvidersViewModel {
-  const queryClient = useQueryClient();
   const settings = useQuery(ready(getInferenceSettingsOptions(), { enabled }));
   const secrets = useQuery(ready(listSecretsOptions(), { enabled, retry: false }));
-  const mutation = useMutation({
-    ...setInferenceSettingsMutation(),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(getInferenceSettingsQueryKey(), saved);
-    },
-  });
-  const { mutate } = mutation;
-  const save = useCallback(
-    (value: InferenceSettings, onSaved: () => void) => {
-      mutate({ body: value }, { onSuccess: onSaved });
-    },
-    [mutate],
+  const change = useSave(
+    async (body: InferenceSettings) => (await setInferenceSettings({ body, throwOnError: true })).data,
+    getInferenceSettingsQueryKey(),
   );
   return {
     settings: settings.data,
     failure: failureOf(settings.error),
     secrets: secrets.data === undefined ? undefined : keySecrets(secrets.data.items),
-    change: {
-      save,
-      saving: mutation.isPending,
-      saved: mutation.isSuccess,
-      failure: failureOf(mutation.error),
-    },
+    change,
   };
 }
 
 export interface LaunchQuestion {
   readonly agent: string;
+  /** The model asked; empty when none is named and the organization has no default, as `ostrom <agent>` asks then. */
   readonly model: string;
+  /** False when `model` is the default, asked for an empty field. */
+  readonly named: boolean;
+}
+
+export interface LaunchAnswer {
+  readonly allowed: boolean;
+  readonly reason?: string;
+  readonly note?: string;
 }
 
 export interface LaunchCheckViewModel {
-  /** Asks the server whether the viewer may launch this agent with this model, as `ostrom <agent>` does first. */
+  /**
+   * Asks the server whether the viewer may launch this agent with this model, as `ostrom <agent>` does first. Each
+   * ask goes to the server, so the same question asked after a change gets the new answer.
+   */
   readonly ask: (question: LaunchQuestion) => void;
   readonly asked: LaunchQuestion | undefined;
-  readonly answer:
-    { readonly allowed: boolean; readonly reason?: string; readonly note?: string } | undefined;
+  readonly answer: LaunchAnswer | undefined;
   readonly checking: boolean;
   readonly failure: Error | undefined;
 }
 
 export function useLaunchCheck(): LaunchCheckViewModel {
-  const [asked, setAsked] = useState<LaunchQuestion | undefined>(undefined);
-  const query =
-    asked === undefined ? {} : { agent: asked.agent, ...(asked.model === '' ? {} : { model: asked.model }) };
-  const check = useQuery(
-    ready(checkAgentPolicyOptions({ query }), { enabled: asked !== undefined, retry: false, staleTime: 0 }),
+  // A question asked, not a state kept fresh: a mutation never asks again on its own (a focus, a remount).
+  const mutation = useMutation({
+    mutationFn: async (question: LaunchQuestion): Promise<LaunchAnswer> =>
+      (
+        await checkAgentPolicy({
+          query: { agent: question.agent, ...(question.model === '' ? {} : { model: question.model }) },
+          throwOnError: true,
+        })
+      ).data,
+  });
+  const { mutate } = mutation;
+  const ask = useCallback(
+    (question: LaunchQuestion) => {
+      mutate(question);
+    },
+    [mutate],
   );
   return {
-    ask: setAsked,
-    asked,
-    answer: check.data,
-    checking: check.isFetching,
-    failure: failureOf(check.error),
+    ask,
+    asked: mutation.variables,
+    answer: mutation.data,
+    checking: mutation.isPending,
+    failure: failureOf(mutation.error),
   };
 }

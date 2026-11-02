@@ -3,15 +3,14 @@ import { expect, type Page, test } from '@playwright/test';
 import { callFromPage, ownerOfNewOrganization, served } from './real';
 
 /**
- * Skips the journey while the console cannot read a new organization's policy: the contract requires `default`, and the
- * server leaves it out until one is set (ostrom-server `ModelPolicyDto.defaultModel` is nullable). Asked signed in.
+ * Skips the journey while the server does not serve the policy. A new organization's has no `default` (ostrom-server
+ * `ModelPolicyDto.defaultModel` is nullable while the contract requires it): the console reads it as no default.
  */
-async function skipUnlessReadable(page: Page): Promise<void> {
+async function skipUnlessServed(page: Page): Promise<void> {
   const policy = await callFromPage(page, 'GET', '/api/v1/policy/models');
-  const body = policy.body as { default?: unknown } | undefined;
   test.skip(
-    policy.status !== 200 || typeof body?.default !== 'string',
-    `GET /api/v1/policy/models answers ${policy.status.toString()} without a default: not readable by the console yet`,
+    policy.status !== 200,
+    `GET /api/v1/policy/models answers ${policy.status.toString()}: not served yet`,
   );
 }
 
@@ -19,7 +18,7 @@ test('an owner sets the models, names a key, and asks whether a launch would pas
   // `GET /policy/agents` is served since ostrom-server#84: a probe that fails is a broken server, never a skip.
   expect(await served(page, 'GET', '/api/v1/policy/agents')).toBe(true);
   await ownerOfNewOrganization(page, 'pia');
-  await skipUnlessReadable(page);
+  await skipUnlessServed(page);
   await page.goto('/policy');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Agent policy');
 
@@ -49,7 +48,7 @@ test('an owner sets the models, names a key, and asks whether a launch would pas
 test('another organization never sees the first one’s models or keys', async ({ page }) => {
   expect(await served(page, 'GET', '/api/v1/policy/agents')).toBe(true);
   const ada = await ownerOfNewOrganization(page, 'ada');
-  await skipUnlessReadable(page);
+  await skipUnlessServed(page);
   const set = await callFromPage(page, 'PUT', '/api/v1/policy/models', {
     allowed: ['claude-'],
     default: 'claude-opus-4-1',

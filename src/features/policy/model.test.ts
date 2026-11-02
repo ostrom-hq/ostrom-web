@@ -3,6 +3,7 @@ import type { Member, Secret } from '@gen/api/types.gen';
 import {
   addMemberRow,
   allows,
+  defaultRefusedFor,
   keySecrets,
   listOf,
   memberName,
@@ -10,6 +11,8 @@ import {
   policyOf,
   policyProblem,
   providersDraftOf,
+  readModelPolicy,
+  runsAgents,
   settingsOf,
 } from './model';
 
@@ -59,11 +62,34 @@ describe('a model policy', () => {
     expect(policyProblem({ ...fine, byMember: [{ ...row, models: ' , ' }] })).toBe('memberModels');
   });
 
+  it('reads a policy without a default as no default, and refuses what is not a policy', async () => {
+    expect(await readModelPolicy({ allowed: ['claude-'] })).toEqual({ allowed: ['claude-'], default: '' });
+    expect(await readModelPolicy({ allowed: [], default: 'x', byMember: { m1: ['y'] } })).toEqual({
+      allowed: [],
+      default: 'x',
+      byMember: { m1: ['y'] },
+    });
+    await expect(readModelPolicy({ allowed: 'claude-' })).rejects.toThrow();
+  });
+
+  it('names the members whose own list refuses the default', () => {
+    const draft = { allowed: '', defaultModel: 'claude-sonnet-4-5', byMember: [] };
+    const row = { key: 0, member: 'm1', models: 'claude-haiku' };
+    expect(defaultRefusedFor({ ...draft, byMember: [row] })).toEqual(['m1']);
+    expect(defaultRefusedFor({ ...draft, byMember: [{ ...row, models: 'claude-' }] })).toEqual([]);
+    // Not yet a member, not yet a list, no default: nothing to say.
+    expect(defaultRefusedFor({ ...draft, byMember: [{ ...row, member: ' ' }] })).toEqual([]);
+    expect(defaultRefusedFor({ ...draft, byMember: [{ ...row, models: '' }] })).toEqual([]);
+    expect(defaultRefusedFor({ ...draft, defaultModel: '', byMember: [row] })).toEqual([]);
+  });
+
   it('names a member by login when the members are known', () => {
     const members: Member[] = [{ id: 'm1', login: 'lena', avatarUrl: '', role: 'owner' }];
     expect(memberName('m1', members)).toBe('lena');
     expect(memberName('m2', members)).toBe('m2');
     expect(memberName('m1', undefined)).toBe('m1');
+    expect(runsAgents(members[0] ?? { id: '', login: '', avatarUrl: '', role: 'invited' })).toBe(true);
+    expect(runsAgents({ id: 'm2', login: 'jo', avatarUrl: '', role: 'invited' })).toBe(false);
   });
 });
 

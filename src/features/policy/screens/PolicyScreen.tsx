@@ -19,7 +19,7 @@ function PolicyBody({ role }: { readonly role: OrgRole | undefined }): ReactElem
     <>
       <ModelsSection view={models} canChange={canChange} />
       <ProvidersSection view={providers} canChange={canChange} />
-      <LaunchCheck check={check} />
+      <LaunchCheck check={check} defaultModel={models.policy?.default} />
     </>
   );
 }
