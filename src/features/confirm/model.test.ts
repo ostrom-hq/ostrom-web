@@ -1,15 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { GovernanceConfirmation } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import {
-  answerNoticeOf,
-  changedKeys,
-  formatCountdown,
-  jsonLines,
-  personName,
-  remainingMs,
-  shownStatus,
-} from './model';
+import { answerNoticeOf, changedKeys, formatCountdown, jsonLines, personName, remainingMs } from './model';
 
 describe('personName', () => {
   it('names the person as best it can, never empty', () => {
@@ -45,8 +36,31 @@ describe('jsonLines', () => {
     ]);
   });
 
-  it('shows anything but two objects whole, changed or not', () => {
-    expect(jsonLines([1], [2])).toEqual([
+  it('reads two lists position by position', () => {
+    expect(
+      jsonLines([{ id: 'R-3', status: 'proposed' }, 'same'], [{ id: 'R-3', status: 'accepted' }, 'same']),
+    ).toEqual([
+      { text: '[', changed: false },
+      { text: '  {', changed: true },
+      { text: '    "id": "R-3",', changed: true },
+      { text: '    "status": "proposed"', changed: true },
+      { text: '  },', changed: true },
+      { text: '  "same"', changed: false },
+      { text: ']', changed: false },
+    ]);
+    expect(jsonLines([1, 2], [1]).map((line) => line.changed)).toEqual([false, false, true, false]);
+  });
+
+  it('never reads a different key order as a change', () => {
+    const lines = jsonLines(
+      { steps: { a: 1, b: [{ x: 1, y: 2 }] } },
+      { steps: { b: [{ y: 2, x: 1 }], a: 1 } },
+    );
+    expect(lines.some((line) => line.changed)).toBe(false);
+  });
+
+  it('shows scalars and two values of different shapes whole, changed or not', () => {
+    expect(jsonLines([1], { 0: 1 })).toEqual([
       { text: '[', changed: true },
       { text: '  1', changed: true },
       { text: ']', changed: true },
@@ -69,6 +83,7 @@ describe('changedKeys', () => {
     expect(changedKeys({ a: 1, b: 2, gone: 0 }, { a: 1, b: 3, added: 1 })).toEqual(['b', 'gone', 'added']);
     expect(changedKeys(null, { a: 1 })).toEqual([]);
     expect(changedKeys({ a: 1 }, [1])).toEqual([]);
+    expect(changedKeys({ a: { x: 1, y: 2 } }, { a: { y: 2, x: 1 } })).toEqual([]);
   });
 });
 
@@ -84,31 +99,6 @@ describe('the countdown', () => {
     expect(formatCountdown(65_001)).toBe('1:06');
     expect(formatCountdown(9_000)).toBe('0:09');
     expect(formatCountdown(0)).toBe('0:00');
-  });
-});
-
-describe('shownStatus', () => {
-  const base: GovernanceConfirmation = {
-    id: 'gc-1',
-    kind: 'gates.policy',
-    status: 'pending',
-    method: 'PUT',
-    path: '/api/v1/gates/policy',
-    scope: 'gates:policy',
-    summary: 'Never',
-    before: null,
-    after: null,
-    requestedBy: { memberId: 'm-1' },
-    credential: 'admin',
-    createdAt: '2026-11-02T20:00:00Z',
-    expiresAt: '2026-11-02T20:15:00Z',
-  };
-  it('reads a pending one past its time as expired, and the rest as the server says', () => {
-    expect(shownStatus(base, Date.parse('2026-11-02T20:10:00Z'))).toBe('pending');
-    expect(shownStatus(base, Date.parse('2026-11-02T20:15:00Z'))).toBe('expired');
-    expect(shownStatus({ ...base, status: 'confirmed' }, Date.parse('2026-11-02T21:00:00Z'))).toBe(
-      'confirmed',
-    );
   });
 });
 
@@ -131,6 +121,8 @@ describe('answerNoticeOf', () => {
     expect(answerNoticeOf(failure(401))).toBe('error');
     expect(answerNoticeOf(failure(404))).toBe('error');
     expect(answerNoticeOf(failure(500))).toBe('error');
+    expect(answerNoticeOf(failure(408))).toBe('error');
+    expect(answerNoticeOf(failure(429, 'rate_limited'))).toBe('error');
     expect(answerNoticeOf(failure(302))).toBe('error');
     expect(answerNoticeOf(failure(undefined))).toBe('error');
     expect(answerNoticeOf(new Error('offline'))).toBe('error');

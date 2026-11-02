@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
+import type { GovernanceConfirmationPerson } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** "Theo Martin (theo)", the login or the name alone, else the member id: never an empty requester. */
@@ -14,11 +14,22 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function same(a: unknown, b: unknown): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+/** The same JSON with object keys sorted: two values that differ only in key order read the same. */
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, canonical(value[key])]),
+  );
 }
 
-/** One line of a value shown as JSON: the top-level key it belongs to, when it changes. */
+function same(a: unknown, b: unknown): boolean {
+  return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
+}
+
+/** One line of a value shown as JSON, marked when the entry it belongs to changes. */
 export interface JsonLine {
   readonly text: string;
   readonly changed: boolean;
@@ -29,24 +40,39 @@ function indented(value: unknown): string[] {
   return JSON.stringify(value, null, 2).split('\n');
 }
 
+/** The entries an object (by key) or a list (by position) is compared by: `"key": ` or nothing before each. */
+function entriesOf(value: unknown): readonly (readonly [string | number, string, unknown])[] | undefined {
+  if (Array.isArray(value)) return value.map((item: unknown, index) => [index, '', item] as const);
+  if (isRecord(value))
+    return Object.entries(value).map(([key, item]) => [key, `${JSON.stringify(key)}: `, item] as const);
+  return undefined;
+}
+
 /**
- * `value` as indented JSON, with the lines of every top-level key whose value differs from `other` marked. Objects
- * are read key by key (a key only on one side changes too); anything else changes as a whole.
+ * `value` as indented JSON, with the lines of every top-level entry (a key of an object, a position of a list) that
+ * differs from `other` marked; an entry only on one side changes too, key order never does. Two values of different
+ * shapes, or scalars, change as a whole.
  */
 export function jsonLines(value: unknown, other: unknown): readonly JsonLine[] {
-  if (!isRecord(value) || !isRecord(other)) {
+  const entries = entriesOf(value);
+  const theirs = entriesOf(other);
+  if (entries === undefined || theirs === undefined || Array.isArray(value) !== Array.isArray(other)) {
     const changed = !same(value, other);
     return indented(value).map((text) => ({ text, changed }));
   }
-  const entries = Object.entries(value);
-  const body = entries.flatMap(([key, item], index) => {
-    const changed = !same(item, other[key]);
+  const otherAt = new Map(theirs.map(([key, , item]) => [key, item]));
+  const [open, close] = Array.isArray(value) ? ['[', ']'] : ['{', '}'];
+  const body = entries.flatMap(([key, label, item], index) => {
+    const changed = !same(item, otherAt.get(key));
     const [first = '', ...rest] = indented(item);
     const comma = index === entries.length - 1 ? '' : ',';
-    const lines = [`  ${JSON.stringify(key)}: ${first}`, ...rest.map((line) => `  ${line}`)];
-    return lines.map((text, at) => ({ text: at === lines.length - 1 ? `${text}${comma}` : text, changed }));
+    const lines = [`  ${label}${first}`, ...rest.map((line) => `  ${line}`)];
+    return lines.map((text, line) => ({
+      text: line === lines.length - 1 ? `${text}${comma}` : text,
+      changed,
+    }));
   });
-  return [{ text: '{', changed: false }, ...body, { text: '}', changed: false }];
+  return [{ text: open, changed: false }, ...body, { text: close, changed: false }];
 }
 
 /** The top-level keys a change writes differently: what the before/after legend counts. */
@@ -66,15 +92,6 @@ export function remainingMs(expiresAt: string, now: number): number {
 export function formatCountdown(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
   return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, '0')}`;
-}
-
-export type ShownStatus = GovernanceConfirmation['status'];
-
-/** A pending confirmation past its time reads as expired at once, before the server says so on the next read. */
-export function shownStatus(confirmation: GovernanceConfirmation, now: number): ShownStatus {
-  return confirmation.status === 'pending' && remainingMs(confirmation.expiresAt, now) === 0
-    ? 'expired'
-    : confirmation.status;
 }
 
 /** Why an answer was not taken, as the page says it. */
@@ -98,6 +115,8 @@ export function answerNoticeOf(error: unknown): AnswerNotice {
   if (!isApiFailure(error) || error.status === undefined) return 'error';
   if (error.status === 403) return error.code === 'step_up_required' ? 'step-up' : 'forbidden';
   if (error.status === 410 || error.code === 'confirmation_expired') return 'expired';
+  // Asking again later can go through (a timeout, a rate limit): the confirmation is still waiting.
+  if (error.status === 408 || error.status === 429) return 'error';
   if (error.code === 'confirmation_closed') return 'closed';
   if (error.code === 'confirmation_stale') return 'stale';
   // Signed out or the confirmation gone are not the write's doing; another refusal is its own error (`answer`).

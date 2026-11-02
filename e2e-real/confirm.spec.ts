@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
+import { z } from 'zod';
 import {
   anotherPerson,
   callAsCli,
@@ -11,10 +12,11 @@ import {
 
 test.afterEach(closeOthers);
 
-interface Pending {
-  readonly confirmationId: string;
-  readonly confirmUrl: string;
-}
+/** What the journeys read of the server's answers (core `GovernanceConfirmationPending`, `GatePolicy`, …). */
+const PENDING = z.object({ confirmationId: z.string(), confirmUrl: z.string(), expiresAt: z.string() });
+const POLICY = z.object({ selfApproval: z.string() });
+const CONFIRMATION = z.object({ status: z.string() });
+type Pending = z.infer<typeof PENDING>;
 
 /**
  * The self-approval policy flipped with a CLI token of `kind`: the confirmation it opens, or a skip while the server
@@ -29,17 +31,17 @@ async function askWithCli(
   test.skip(token === undefined, `POST /api/v1/auth/device refuses the ${kind} login: not served yet`);
   const now = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
   expect(now.status).toBe(200);
-  const to = (now.body as { selfApproval: string }).selfApproval === 'never' ? 'sole-approver' : 'never';
+  const to = POLICY.parse(now.body).selfApproval === 'never' ? 'sole-approver' : 'never';
   const asked = await callAsCli(token ?? '', 'PUT', '/api/v1/gates/policy', { selfApproval: to }, org);
   test.skip(
     asked.status !== 202,
     `PUT /api/v1/gates/policy with a CLI token answers ${asked.status.toString()}: confirmations not served yet`,
   );
-  const pending = asked.body as Pending;
+  const pending = PENDING.parse(asked.body);
   expect(new URL(pending.confirmUrl).pathname).toBe(`/confirm/${pending.confirmationId}`);
   // Nothing is written until a person confirms it.
   const still = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
-  expect((still.body as { selfApproval: string }).selfApproval).not.toBe(to);
+  expect(POLICY.parse(still.body).selfApproval).not.toBe(to);
   return { pending, to };
 }
 
@@ -65,7 +67,7 @@ test('an owner confirms on the console the governance change their admin CLI tok
   await page.getByRole('button', { name: 'Confirm the change' }).click();
   await expect(page.getByRole('region', { name: 'Outcome' })).toContainText('Confirmed and written');
   const written = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org.id);
-  expect((written.body as { selfApproval: string }).selfApproval).toBe(to);
+  expect(POLICY.parse(written.body).selfApproval).toBe(to);
 });
 
 test('refusing a change asked with an ordinary CLI token writes nothing', async ({ page }) => {
@@ -77,7 +79,7 @@ test('refusing a change asked with an ordinary CLI token writes nothing', async 
   await page.getByRole('button', { name: 'Refuse' }).click();
   await expect(page.getByRole('region', { name: 'Outcome' })).toContainText('Refused');
   const after = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org.id);
-  expect((after.body as { selfApproval: string }).selfApproval).not.toBe(to);
+  expect(POLICY.parse(after.body).selfApproval).not.toBe(to);
   const read = await callFromPage(
     page,
     'GET',
@@ -85,7 +87,7 @@ test('refusing a change asked with an ordinary CLI token writes nothing', async 
     undefined,
     org.id,
   );
-  expect((read.body as { status: string }).status).toBe('refused');
+  expect(CONFIRMATION.parse(read.body).status).toBe('refused');
 });
 
 test('another organization never sees nor answers the confirmation', async ({ page, browser }) => {
@@ -112,5 +114,5 @@ test('another organization never sees nor answers the confirmation', async ({ pa
     undefined,
     org.id,
   );
-  expect((read.body as { status: string }).status).toBe('pending');
+  expect(CONFIRMATION.parse(read.body).status).toBe('pending');
 });

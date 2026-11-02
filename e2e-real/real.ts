@@ -13,6 +13,7 @@ import {
   request,
   test,
 } from '@playwright/test';
+import { z } from 'zod';
 
 const mailDir = process.env['OSTROM_E2E_MAIL_DIR'] ?? '';
 
@@ -173,6 +174,10 @@ export async function accept(joiner: Page, token: string): Promise<void> {
   expect(accepted.status).toBe(200);
 }
 
+/** What the journeys read of the device flow's answers (core `DeviceCode`, `AuthToken`). */
+const DEVICE_CODE = z.object({ deviceCode: z.string(), userCode: z.string() });
+const AUTH_TOKEN = z.object({ token: z.string() });
+
 /** The governance write scopes of `ostrom login --admin` (core `DeviceLoginStart`). */
 const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
 
@@ -193,7 +198,7 @@ export async function cliToken(
       failOnStatusCode: false,
     });
     if (start.status() !== 200) return undefined;
-    const { deviceCode, userCode } = (await start.json()) as { deviceCode: string; userCode: string };
+    const { deviceCode, userCode } = DEVICE_CODE.parse(await start.json());
     const answered = await callFromPage(
       page,
       'POST',
@@ -204,7 +209,7 @@ export async function cliToken(
     expect(answered.status).toBe(204);
     const token = await cli.post('/api/v1/auth/device/token', { data: { deviceCode } });
     expect(token.status()).toBe(200);
-    return ((await token.json()) as { token: string }).token;
+    return AUTH_TOKEN.parse(await token.json()).token;
   } finally {
     await cli.dispose();
   }
@@ -235,7 +240,8 @@ export async function callAsCli(
       failOnStatusCode: false,
     });
     const text = await response.text();
-    return { status: response.status(), body: text === '' ? undefined : (JSON.parse(text) as unknown) };
+    const parsed: unknown = text === '' ? undefined : JSON.parse(text);
+    return { status: response.status(), body: parsed };
   } finally {
     await cli.dispose();
   }

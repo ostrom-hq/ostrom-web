@@ -11,16 +11,17 @@ import { Banner } from '@/shared/ui/Banner';
 import { Facts } from '@/shared/ui/Screen';
 import { Skeleton } from '@/shared/ui/Skeleton';
 // The approval page's layout (`ys-` classes): the same proof-then-buttons column, the same bar under the thumb.
-import '@/features/yes';
+import '@/shared/ui/decision.css';
 import './confirm.css';
 import { AnswerBar } from '../components/AnswerBar';
 import { AnswerNotice } from '../components/AnswerNotice';
 import { ChangeView } from '../components/ChangeView';
 import { Outcome } from '../components/Outcome';
-import { formatCountdown, personName, remainingMs, type ShownStatus, shownStatus } from '../model';
-import { type AnswerViewModel, useAnswerConfirmation, useClock, useConfirmation } from '../useConfirmation';
+import { Countdown } from '../components/Countdown';
+import { personName } from '../model';
+import { type AnswerViewModel, useAnswerConfirmation, useConfirmation } from '../useConfirmation';
 
-const TONES: Readonly<Record<ShownStatus, BadgeTone>> = {
+const TONES: Readonly<Record<GovernanceConfirmation['status'], BadgeTone>> = {
   pending: 'signal',
   confirmed: 'success',
   refused: 'danger',
@@ -42,11 +43,12 @@ export function ConfirmScreen(): ReactElement {
 
 function ConfirmPage({ id }: { readonly id: string }): ReactElement {
   const { t } = useTranslation();
-  const { confirmation, failure, notFound, signedOut } = useConfirmation(id);
+  const { confirmation, failure, notFound, signedOut, refresh } = useConfirmation(id);
   const answer = useAnswerConfirmation(id);
   const here = `/confirm/${id}`;
   let body: ReactElement | null = null;
-  if (confirmation !== undefined) body = <ConfirmationDetail confirmation={confirmation} answer={answer} />;
+  if (confirmation !== undefined)
+    body = <ConfirmationDetail confirmation={confirmation} answer={answer} refresh={refresh} />;
   else if (notFound)
     body = (
       <header className="ys-head">
@@ -79,15 +81,15 @@ function ConfirmPage({ id }: { readonly id: string }): ReactElement {
 interface DetailProps {
   readonly confirmation: GovernanceConfirmation;
   readonly answer: AnswerViewModel;
+  /** Reads it again: its time ran out on this device, and only the server says whether it expired. */
+  readonly refresh: () => void;
 }
 
 /** What is asked, by whom, the exact change, then the answer: nothing to press before the proof. */
-function ConfirmationDetail({ confirmation, answer }: DetailProps): ReactElement {
+function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const viewer = useViewer();
-  const now = useClock(confirmation.status === 'pending');
-  const status = shownStatus(confirmation, now);
-  const { requestedBy, credential } = confirmation;
+  const { requestedBy, credential, status } = confirmation;
   return (
     <>
       <header className="ys-head">
@@ -100,11 +102,7 @@ function ConfirmationDetail({ confirmation, answer }: DetailProps): ReactElement
           {status === 'pending' ? (
             <>
               {' · '}
-              <time dateTime={confirmation.expiresAt} className="cf-countdown">
-                {t('confirm.expiresIn', {
-                  left: formatCountdown(remainingMs(confirmation.expiresAt, now)),
-                })}
-              </time>
+              <Countdown expiresAt={confirmation.expiresAt} onElapsed={refresh} />
             </>
           ) : null}
         </p>

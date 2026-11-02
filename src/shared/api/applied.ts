@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GovernanceConfirmationPending } from '@gen/api/types.gen';
+import type { UseMutationOptions } from '@tanstack/react-query';
 import { zGovernanceConfirmationPending } from '@gen/api/zod.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 
@@ -23,4 +24,19 @@ export function applied<T>(response: T | GovernanceConfirmationPending): T {
       'confirmation_pending',
     );
   return response;
+}
+
+/**
+ * A generated mutation of a governance write, with its 202 read as a failure ({@link applied}): what it returns, and
+ * every screen that reads it, is only ever what the server wrote.
+ */
+export function appliedMutation<TData, TError, TVariables>(
+  options: UseMutationOptions<TData | GovernanceConfirmationPending, TError, TVariables>,
+): UseMutationOptions<TData, TError, TVariables> {
+  const { mutationFn } = options;
+  if (mutationFn === undefined) throw new Error('a generated mutation always carries its function');
+  return {
+    ...options,
+    mutationFn: async (...args: Parameters<typeof mutationFn>) => applied(await mutationFn(...args)),
+  };
 }

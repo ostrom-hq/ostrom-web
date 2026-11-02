@@ -25,21 +25,15 @@ describe('useClock', () => {
     vi.useRealTimers();
   });
 
-  it('ticks every second while running, and stops when it no longer runs', () => {
+  it('ticks every second, and stops once unmounted', () => {
     vi.setSystemTime(Date.parse('2026-11-02T20:00:00Z'));
-    const { result, rerender, unmount } = renderHook(({ running }) => useClock(running), {
-      initialProps: { running: true },
-    });
+    const { result, unmount } = renderHook(() => useClock());
     expect(result.current).toBe(Date.parse('2026-11-02T20:00:00Z'));
     act(() => {
       vi.advanceTimersByTime(1_000);
     });
     expect(result.current).toBe(Date.parse('2026-11-02T20:00:01Z'));
-    rerender({ running: false });
-    act(() => {
-      vi.advanceTimersByTime(5_000);
-    });
-    expect(result.current).toBe(Date.parse('2026-11-02T20:00:01Z'));
     unmount();
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

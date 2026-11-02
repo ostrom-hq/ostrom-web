@@ -166,7 +166,7 @@ describe('a governance confirmation', () => {
     const user = userEvent.setup();
     visit('/confirm/gc-rules-bulk');
     expect(await screen.findByText('Decide several rules')).toBeInTheDocument();
-    // Lists are shown whole, changed as a whole.
+    // Lists are compared position by position: the rule that changes is marked whole.
     expect(screen.getByRole('figure', { name: 'Before' }).querySelectorAll('del').length).toBeGreaterThan(1);
     await user.click(screen.getByRole('button', { name: 'Confirm the change' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -297,6 +297,18 @@ describe('a governance confirmation', () => {
       within(await outcome()).getByRole('heading', { name: 'Expired without an answer' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirm the change' })).toBeNull();
+  });
+
+  it('keeps the answer open while the server says it waits, whatever this device’s clock says', async () => {
+    const late = {
+      ...confirmation('gc-self-approval'),
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    };
+    server.use(http.get('*/api/v1/confirmations/:id', () => HttpResponse.json(late)));
+    visit('/confirm/gc-self-approval');
+    expect(await screen.findByText('expires in 0:00')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirm the change' })).toBeEnabled();
+    expect(screen.queryByRole('region', { name: 'Outcome' })).toBeNull();
   });
 
   it('says a confirmation of another organization, or none, is not found', async () => {

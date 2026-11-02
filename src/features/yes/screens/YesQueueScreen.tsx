@@ -2,7 +2,7 @@
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useViewer } from '@/shared/auth/useViewer';
-import './yes.css';
+import '@/shared/ui/decision.css';
 import { useNow } from '@/shared/lib/useNow';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { ApprovalCard } from '../components/ApprovalCard';

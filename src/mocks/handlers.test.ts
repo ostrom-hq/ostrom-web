@@ -441,15 +441,12 @@ describe('mock workflows and policy', () => {
     ).toBe(409);
     // Without a version read, the save goes through; a workflow without a version gets its first.
     const migrations = (await getWorkflow({ path: { id: 'wf-migrations' }, throwOnError: true })).data;
-    expect(
-      (
-        await saveWorkflow({
-          path: { id: 'wf-migrations' },
-          body: { workflow: migrations },
-          throwOnError: true,
-        })
-      ).data.version,
-    ).toBe(1);
+    const saved = await saveWorkflow({
+      path: { id: 'wf-migrations' },
+      body: { workflow: migrations },
+      throwOnError: true,
+    });
+    expect(applied(saved.data).version).toBe(1);
     expect(await status(async () => deleteWorkflow({ path: { id: 'nope' }, throwOnError: true }))).toBe(404);
     db.members = db.members.map((member) =>
       member.login === 'maya' ? { ...member, role: 'member' } : member,

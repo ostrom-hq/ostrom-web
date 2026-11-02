@@ -29,6 +29,8 @@ export interface ConfirmationViewModel {
   readonly notFound: boolean;
   /** 401: nobody is signed in on this browser. */
   readonly signedOut: boolean;
+  /** Reads it again now. */
+  readonly refresh: () => void;
 }
 
 export function useConfirmation(id: string): ConfirmationViewModel {
@@ -38,7 +40,12 @@ export function useConfirmation(id: string): ConfirmationViewModel {
     }),
   );
   const failure = failureOf(query.error);
+  const { refetch } = query;
+  const refresh = useCallback(() => {
+    void refetch();
+  }, [refetch]);
   return {
+    refresh,
     confirmation: query.data,
     failure,
     notFound: isApiFailure(failure) && failure.kind === 'not-found',
@@ -87,17 +94,16 @@ export function useAnswerConfirmation(id: string): AnswerViewModel {
   };
 }
 
-/** The time, every second while `running`: the countdown to `expiresAt` reads it. */
-export function useClock(running: boolean, ms = 1_000): number {
+/** The time, every second: the countdown to `expiresAt` reads it. */
+export function useClock(ms = 1_000): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!running) return undefined;
     const timer = setInterval(() => {
       setNow(Date.now());
     }, ms);
     return () => {
       clearInterval(timer);
     };
-  }, [running, ms]);
+  }, [ms]);
   return now;
 }
