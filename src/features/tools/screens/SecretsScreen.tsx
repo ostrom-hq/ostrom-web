@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { managesMembers } from '@/shared/org/roles';
+import { WithOrg } from '@/shared/org/WithOrg';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { AddSecretForm } from '../components/AddSecretForm';
@@ -11,6 +13,16 @@ import './tools.css';
 /** The organization's secrets: written here, given to the agents' sandboxes and MCP servers, never read back. */
 export function SecretsScreen(): ReactElement {
   const { t } = useTranslation();
+  // As on the MCP screen: the role in the organization, from the person's own list.
+  return (
+    <WithOrg title={t('tools.secrets.title')}>
+      {(_org, role) => <Secrets canManage={managesMembers(role)} />}
+    </WithOrg>
+  );
+}
+
+function Secrets({ canManage }: { readonly canManage: boolean }): ReactElement {
+  const { t } = useTranslation();
   const view = useSecrets();
   const change = useSecretChange();
   return (
@@ -20,7 +32,7 @@ export function SecretsScreen(): ReactElement {
           {change.failure.message}
         </Banner>
       )}
-      {view.canManage === true ? <AddSecretForm change={change} /> : null}
+      {canManage ? <AddSecretForm change={change} /> : null}
       <LoadState data={view.secrets} failure={view.failure}>
         {(secrets) =>
           secrets.length === 0 ? (
@@ -33,7 +45,7 @@ export function SecretsScreen(): ReactElement {
                     secret={secret}
                     busy={change.pending !== undefined}
                     actions={
-                      view.canManage === true
+                      canManage
                         ? {
                             rotate: (value, onDone) => {
                               change.rotate(secret.name, value, onDone);

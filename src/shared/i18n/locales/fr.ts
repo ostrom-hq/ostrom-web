@@ -579,7 +579,7 @@ export const fr = {
             noTool: 'Nomme les outils permis, ou donne tous les outils.',
             tool: '{{detail}} n’est pas un nom d’outil : lettres, chiffres, points, tirets et tirets bas.',
             credential:
-              'Un identifiant personnel est un nom de secret : MAJUSCULES, chiffres et tirets bas, commençant par une lettre.',
+              'Un identifiant personnel est un nom de secret en MAJUSCULES, et va à un membre, jamais à tout le monde.',
           },
         },
         policy: {
@@ -599,7 +599,7 @@ export const fr = {
             tool: 'Nomme un outil (lettres, chiffres, points, tirets et tirets bas), ou * pour tous.',
             message: 'Dis en 1 à 500 caractères ce que lit l’agent.',
             path: 'Chaque condition nomme un argument en 256 caractères au plus, comme query ou options.database.',
-            value: 'Une valeur fait au plus 1 024 caractères.',
+            value: 'Ce test demande une valeur de 1 024 caractères au plus.',
           },
         },
       },

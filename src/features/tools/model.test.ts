@@ -150,14 +150,9 @@ describe('checkPolicy', () => {
     ).toEqual({ problem: 'value' });
   });
 
-  it('compares with an empty value, as the relay accepts', () => {
+  it('takes a blank value for a forgotten one', () => {
     expect(checkPolicy({ ...draft, conditions: [{ path: 'q', operator: 'EQUALS', value: '' }] })).toEqual({
-      request: {
-        tool: 'create_issue',
-        effect: 'DENY',
-        message: 'No.',
-        conditions: [{ path: 'q', operator: 'EQUALS', value: '' }],
-      },
+      problem: 'value',
     });
   });
 
@@ -191,11 +186,7 @@ describe('checkAssignment', () => {
       member: 'm-1',
       request: { credentialSecret: 'MY_TOKEN' },
     });
-    // Typed for a member, then the form switched to everyone: the hidden field is not sent.
-    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({
-      member: 'all',
-      request: {},
-    });
+    expect(checkAssignment({ ...draft, credentialSecret: 'MY_TOKEN' })).toEqual({ problem: 'credential' });
     expect(checkAssignment({ ...draft, member: 'm-1', credentialSecret: 'lower' })).toEqual({
       problem: 'credential',
     });

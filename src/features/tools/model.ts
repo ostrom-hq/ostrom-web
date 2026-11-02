@@ -146,8 +146,8 @@ export function checkPolicy(
       conditions.push({ path, operator: condition.operator });
       continue;
     }
-    // An empty value is a value: `equals ""` is a policy the relay accepts.
-    if (condition.value.length > MAX_VALUE) return { problem: 'value' };
+    // The relay takes an empty value, but here it is a field left blank far more often than `equals ""`.
+    if (condition.value === '' || condition.value.length > MAX_VALUE) return { problem: 'value' };
     conditions.push({ path, operator: condition.operator, value: condition.value });
   }
   return { request: { tool, effect: draft.effect, message, conditions } };
@@ -177,17 +177,17 @@ export function checkAssignment(
   if (member === '') return { problem: 'member' };
   const request: McpAssignmentRequest = {};
   if (draft.onlySome) {
-    // An empty allowlist would give the server and allow no call: not giving it says that already.
+    // An empty allowlist allows no call: the relay takes it, but here it is a list left blank, not a choice.
     const tools = parseNames(draft.tools);
     if (tools.length === 0) return { problem: 'noTool' };
     const wrong = tools.find((tool) => !isToolName(tool));
     if (wrong !== undefined) return { problem: 'tool', detail: wrong };
     request.tools = tools;
   }
-  // A personal credential belongs to one member: the form hides it for everyone, and it is never sent with `all`.
-  const credential = member === EVERYONE ? '' : draft.credentialSecret.trim();
+  const credential = draft.credentialSecret.trim();
   if (credential !== '') {
-    if (!SECRET_NAME.test(credential)) return { problem: 'credential' };
+    // A personal credential belongs to one member: the server refuses it with `all`.
+    if (member === EVERYONE || !SECRET_NAME.test(credential)) return { problem: 'credential' };
     request.credentialSecret = credential;
   }
   return { member, request };

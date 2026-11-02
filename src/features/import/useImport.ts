@@ -36,15 +36,12 @@ export interface TeamCodeImportViewModel {
 }
 
 export interface ChosenExport {
-  /** Changes with each file chosen: what the screen asked about the last one starts again. */
-  readonly id: number;
   readonly name: string;
   readonly summary: ExportSummary;
   readonly run: (mode: ImportMode) => void;
 }
 
 interface Loaded {
-  readonly id: number;
   readonly name: string;
   readonly request: TeamCodeImportRequestWritable;
   readonly summary: ExportSummary;
@@ -87,8 +84,7 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
           if (id !== choice.current) return;
           const parsed = parseExport(text);
           if ('problem' in parsed) setFileProblem(parsed.problem);
-          else
-            setLoaded({ id, name: file.name, request: parsed.request, summary: summarize(parsed.request) });
+          else setLoaded({ name: file.name, request: parsed.request, summary: summarize(parsed.request) });
         },
         () => {
           if (id === choice.current) setFileProblem('read');
@@ -117,7 +113,6 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
       loaded === undefined
         ? undefined
         : {
-            id: loaded.id,
             name: loaded.name,
             summary: loaded.summary,
             run: (mode: ImportMode) => {

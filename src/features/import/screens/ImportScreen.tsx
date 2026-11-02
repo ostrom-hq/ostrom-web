@@ -98,9 +98,8 @@ function ImportSteps({
               ) : imported === undefined ? (
                 <p className="o-screen__lead">{t('imports.cutover.needsImport')}</p>
               ) : cutover === undefined ? (
-                // A new file asks again whether TeamCode is stopped.
+                // Choosing a new file drops the reports, so this asks again whether TeamCode is stopped.
                 <CutoverAsk
-                  key={file.id}
                   orgName={orgName}
                   running={view.running}
                   onConfirm={() => {

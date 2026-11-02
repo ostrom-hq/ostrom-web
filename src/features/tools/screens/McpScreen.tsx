@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
+import { managesMembers } from '@/shared/org/roles';
+import { WithOrg } from '@/shared/org/WithOrg';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { AddServerForm } from '../components/AddServerForm';
@@ -17,6 +19,16 @@ import './tools.css';
 
 /** The MCP servers Ostrom relays to every agent of the organization, and what the agents called. */
 export function McpScreen(): ReactElement {
+  const { t } = useTranslation();
+  // The role in the organization the calls act in, from the person's own list: `/auth/me` may not carry it.
+  return (
+    <WithOrg title={t('tools.mcp.title')}>
+      {(_org, role) => <McpServers canManage={managesMembers(role)} />}
+    </WithOrg>
+  );
+}
+
+function McpServers({ canManage }: { readonly canManage: boolean }): ReactElement {
   const { t, i18n } = useTranslation();
   const view = useMcp();
   const change = useMcpChange();
@@ -29,19 +41,15 @@ export function McpScreen(): ReactElement {
           {change.failure.message}
         </Banner>
       )}
-      {view.canManage === undefined ? null : (
-        <>
-          <AgentPrefix
-            settings={settings}
-            example={view.servers?.[0]?.name ?? '<server>'}
-            canManage={view.canManage}
-          />
-          {view.canManage ? (
-            <AddServerForm change={change} />
-          ) : (
-            <p className="o-screen__lead">{t('tools.mcp.access.membersNote')}</p>
-          )}
-        </>
+      <AgentPrefix
+        settings={settings}
+        example={view.servers?.[0]?.name ?? '<server>'}
+        canManage={canManage}
+      />
+      {canManage ? (
+        <AddServerForm change={change} />
+      ) : (
+        <p className="o-screen__lead">{t('tools.mcp.access.membersNote')}</p>
       )}
       <LoadState data={view.servers} failure={view.failure}>
         {(servers) =>
@@ -57,7 +65,7 @@ export function McpScreen(): ReactElement {
                   missing={view.secrets === undefined ? [] : missingSecrets(server, view.secrets)}
                   busy={change.pending !== undefined}
                   actions={
-                    view.canManage === true
+                    canManage
                       ? {
                           toggle: () => {
                             change.toggle(server);
@@ -69,7 +77,7 @@ export function McpScreen(): ReactElement {
                       : undefined
                   }
                 >
-                  {view.canManage === true ? <ServerAccess server={server.name} /> : null}
+                  {canManage ? <ServerAccess server={server.name} /> : null}
                 </ServerCard>
               ))}
             </div>

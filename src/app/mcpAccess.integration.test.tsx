@@ -214,6 +214,26 @@ describe('who may use a server', () => {
     ).toBeInTheDocument();
   });
 
+  it('drops a credential typed for a member once the server goes to everyone', async () => {
+    const user = userEvent.setup();
+    visit('/mcp');
+    const card = await openAccess('sentry');
+    const form = within(card).getByRole('form', { name: 'Give sentry' });
+    await user.selectOptions(
+      within(form).getByRole('combobox', { name: 'Give it to' }),
+      'Samir Haddad (samir)',
+    );
+    await user.type(within(form).getByRole('textbox', { name: /Their own credential/ }), 'SAMIR_KEY');
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'Give it to' }), 'Everyone');
+    await user.click(within(form).getByRole('button', { name: 'Give access' }));
+    expect(await within(card).findByRole('list', { name: 'Who may use sentry' })).toHaveTextContent(
+      'EveryoneEvery tool',
+    );
+    expect(db.mcpAssignments['sentry']).toEqual([
+      expect.not.objectContaining({ credentialSecret: 'SAMIR_KEY' }),
+    ]);
+  });
+
   it('takes the server back from everyone', async () => {
     const user = userEvent.setup();
     visit('/mcp');
@@ -292,6 +312,8 @@ describe('the argument policies', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent('Each condition names an argument');
     await user.type(within(form).getByRole('textbox', { name: 'Argument of condition 1' }), 'query');
     await user.selectOptions(within(form).getByRole('combobox', { name: 'Test of condition 1' }), 'contains');
+    await user.click(submit);
+    expect(within(form).getByRole('alert')).toHaveTextContent('This test needs a value');
     await user.type(within(form).getByRole('textbox', { name: 'Value of condition 1' }), 'DROP');
     await user.click(within(form).getByRole('button', { name: 'Add a condition' }));
     await user.type(
