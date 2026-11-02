@@ -168,12 +168,7 @@ export function useSignInNotice(): SignInNoticeViewModel {
     known &&
     ((isApiFailure(me.error) && me.error.kind === 'unauthorized') ||
       (me.isSuccess && meOf(me.data) === undefined));
-  const mutation = useMutation({
-    ...exchangeSignInLinkMutation(),
-    onSuccess: () => {
-      changed();
-    },
-  });
+  const mutation = useMutation({ ...exchangeSignInLinkMutation(), onSuccess: changed });
   const { mutate, reset } = mutation;
   // Spent once: the link leaves memory as it goes to the server, even when a screen mounts twice.
   const exchange = useCallback(

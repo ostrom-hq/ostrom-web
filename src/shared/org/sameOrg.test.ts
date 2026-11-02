@@ -1,22 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { useAuthStore } from '@/shared/auth/authStore';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 describe('whenSameOrg', () => {
   afterEach(() => {
     useOrgStore.setState({ generation: 0 });
+    useAuthStore.setState({ generation: 0 });
   });
 
-  it('writes an answer while its organization is still on screen', () => {
+  it('writes an answer while its organization and account are still on screen', () => {
     const sent = sentInOrg();
     const write = vi.fn();
     whenSameOrg(sent, write);
     expect(write).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves out an answer from an organization switched away from, or of no known one', () => {
+  it('leaves out an answer from an organization switched away from', () => {
     const sent = sentInOrg();
-    useOrgStore.setState({ generation: sent + 1 });
+    useOrgStore.setState({ generation: useOrgStore.getState().generation + 1 });
+    const write = vi.fn();
+    whenSameOrg(sent, write);
+    expect(write).not.toHaveBeenCalled();
+  });
+
+  it('leaves out an answer sent as another account (a sign-in in another tab moves no organization)', () => {
+    const sent = sentInOrg();
+    useAuthStore.setState({ generation: useAuthStore.getState().generation + 1 });
     const write = vi.fn();
     whenSameOrg(sent, write);
     whenSameOrg(undefined, write);

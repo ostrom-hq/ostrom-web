@@ -55,9 +55,19 @@ export function readAnalyticsConfig(
 }
 
 /**
- * The privacy policy the banner links to: the deployment's own, or the hosted service's. Only an http(s) address is a
- * link: a `javascript:` one in the settings would run in the signed-in console at the click (audit AUDIT-SECU-WEB-2 B6).
+ * The privacy policy the banner links to: the deployment's own (absolute, or a path on the console's site), or the
+ * hosted service's. Only an http(s) address is a link: a `javascript:` one in the settings would run in the signed-in
+ * console at the click (audit AUDIT-SECU-WEB-2 B6).
  */
-export function readPrivacyUrl(runtime: RuntimeConfig | undefined): string {
-  return safeHref(nonEmpty(runtime?.OSTROM_PRIVACY_URL)) ?? DEFAULT_PRIVACY_URL;
+export function readPrivacyUrl(
+  runtime: RuntimeConfig | undefined,
+  base: string = window.location.origin,
+): string {
+  const raw = nonEmpty(runtime?.OSTROM_PRIVACY_URL);
+  if (raw === undefined) return DEFAULT_PRIVACY_URL;
+  try {
+    return safeHref(new URL(raw, base).href) ?? DEFAULT_PRIVACY_URL;
+  } catch {
+    return DEFAULT_PRIVACY_URL;
+  }
 }

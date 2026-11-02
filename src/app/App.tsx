@@ -5,7 +5,6 @@ import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
-import { inviteToken } from '@/features/onboarding';
 import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
@@ -37,8 +36,6 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
       useAuthStore.subscribe((auth, previous) => {
         // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
         if (auth.generation === previous.generation) return;
-        // An invitation opened here waits for its person: once signed out, nobody is (audit B8).
-        if (auth.signedOut) inviteToken.drop();
         safeLocalStorage.setItem(ACCOUNT_CHANGED_KEY, String(Date.now()));
         useOrgStore.getState().signedInOrOut();
         void queryClient.resetQueries();

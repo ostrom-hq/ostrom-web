@@ -40,19 +40,14 @@ export interface AuthState {
   /** Holds a link's token that passes the schema; says so otherwise. */
   readonly offer: (token: string) => SignInOutcome;
   readonly dismiss: () => void;
-  /** The session in the cookie ended at the last change (a sign-out), rather than became another account's. */
-  readonly signedOut: boolean;
   /** The cookie now holds another account, or none: the cached reads are someone else's. */
   readonly changed: () => void;
-  /** The session ended here (a sign-out): as `changed`, and what waited for this person goes too (audit B8). */
-  readonly ended: () => void;
 }
 
 export const useAuthStore = create<AuthState>()((set, get) => ({
   link: undefined,
   notice: undefined,
   generation: 0,
-  signedOut: false,
   offer: (token) => {
     const parsed = tokenSchema.safeParse(token);
     if (!parsed.success) {
@@ -66,9 +61,6 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     set({ link: undefined, notice: undefined });
   },
   changed: () => {
-    set({ link: undefined, notice: undefined, signedOut: false, generation: get().generation + 1 });
-  },
-  ended: () => {
-    set({ link: undefined, notice: undefined, signedOut: true, generation: get().generation + 1 });
+    set({ link: undefined, notice: undefined, generation: get().generation + 1 });
   },
 }));

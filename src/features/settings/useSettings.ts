@@ -136,7 +136,7 @@ export function useSessionActions(): SessionActionsViewModel {
   const signedOut = useCallback(async () => {
     // Off this page first, so nothing on it reads again as nobody; then everything cached, this account's, goes.
     await navigate({ to: '/signin', search: { redirect: '/settings' } });
-    useAuthStore.getState().ended();
+    useAuthStore.getState().changed();
   }, [navigate]);
   const relist = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() });

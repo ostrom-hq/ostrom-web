@@ -42,7 +42,15 @@ function useSave<T>(send: (body: T) => Promise<T>, queryKey: readonly unknown[])
   const { mutate, reset } = mutation;
   const save = useCallback(
     (value: T, onSaved: () => void) => {
-      mutate({ body: value }, { onSuccess: onSaved });
+      // Said saved only where it was saved: after a switch, the form on screen is another organization's.
+      mutate(
+        { body: value },
+        {
+          onSuccess: (_saved, _body, sent) => {
+            whenSameOrg(sent, onSaved);
+          },
+        },
+      );
     },
     [mutate],
   );
