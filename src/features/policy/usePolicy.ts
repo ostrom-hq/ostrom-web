@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 export interface SaveViewModel<T> {
   /** Saves; `onSaved` runs once the server took it, so a form shows the saved value then, not before. */
@@ -31,8 +32,11 @@ function useSave<T>(send: (body: T) => Promise<T>, queryKey: readonly unknown[])
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({ body }: { body: T }) => send(body),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(queryKey, saved);
+    onMutate: sentInOrg,
+    onSuccess: (saved, _body, sent) => {
+      whenSameOrg(sent, () => {
+        queryClient.setQueryData(queryKey, saved);
+      });
     },
   });
   const { mutate, reset } = mutation;

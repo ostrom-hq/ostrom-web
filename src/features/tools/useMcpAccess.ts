@@ -25,6 +25,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { EVERYONE, sortAssignments } from './model';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 export interface McpSettingsViewModel {
   /** The prefix agents see before each relayed server's name. */
@@ -42,8 +43,11 @@ export function useMcpSettings(): McpSettingsViewModel {
   const settings = useQuery(ready(getMcpSettingsOptions()));
   const put = useMutation({
     ...putMcpSettingsMutation(),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(getMcpSettingsQueryKey(), saved);
+    onMutate: sentInOrg,
+    onSuccess: (saved, _body, sent) => {
+      whenSameOrg(sent, () => {
+        queryClient.setQueryData(getMcpSettingsQueryKey(), saved);
+      });
     },
   });
   const { mutate } = put;

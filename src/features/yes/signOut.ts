@@ -27,7 +27,7 @@ export interface SignOutViewModel {
 export function useSignOut(): SignOutViewModel {
   const { signout } = useSearch({ from: '/yes' });
   const navigate = useNavigate();
-  const changed = useAuthStore((auth) => auth.changed);
+  const ended = useAuthStore((auth) => auth.ended);
   const me = useQuery(ready(getMeOptions(), { retry: false }));
   const signedIn = meOf(me.data) !== undefined;
   const leave = useCallback(async () => {
@@ -36,7 +36,7 @@ export function useSignOut(): SignOutViewModel {
   const mutation = useMutation({
     ...logoutMutation(),
     onSuccess: async () => {
-      changed();
+      ended();
       await leave();
     },
   });

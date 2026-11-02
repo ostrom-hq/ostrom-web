@@ -26,6 +26,7 @@ import { useAuthStore } from '@/shared/auth/authStore';
 import { meOf } from '@/shared/auth/me';
 import { stillOpen } from './model';
 import { useArrivals } from './useArrivals';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 /** The queue polls like the prototype: a request must show up on the phone within seconds. */
 export const POLL_MS = 2_000;
@@ -167,7 +168,12 @@ export function useSignInNotice(): SignInNoticeViewModel {
     known &&
     ((isApiFailure(me.error) && me.error.kind === 'unauthorized') ||
       (me.isSuccess && meOf(me.data) === undefined));
-  const mutation = useMutation({ ...exchangeSignInLinkMutation(), onSuccess: changed });
+  const mutation = useMutation({
+    ...exchangeSignInLinkMutation(),
+    onSuccess: () => {
+      changed();
+    },
+  });
   const { mutate, reset } = mutation;
   // Spent once: the link leaves memory as it goes to the server, even when a screen mounts twice.
   const exchange = useCallback(
@@ -230,8 +236,11 @@ export function useAnswerApproval(id: string): AnswerViewModel {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...answerApprovalMutation(),
-    onSuccess: async (data) => {
-      queryClient.setQueryData(getApprovalQueryKey({ path: { id } }), data.approval);
+    onMutate: sentInOrg,
+    onSuccess: async (data, _body, sent) => {
+      whenSameOrg(sent, () => {
+        queryClient.setQueryData(getApprovalQueryKey({ path: { id } }), data.approval);
+      });
       await queryClient.invalidateQueries({ queryKey: listApprovalsQueryKey() });
     },
     onError: async (error) => {
