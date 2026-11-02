@@ -102,9 +102,9 @@ describe('the organization the console acts in', () => {
     await user.click(within(picker).getByRole('button', { name: 'Not now' }));
     let refused = false;
     traffic.onResponse((request, response) => {
-      if (new URL(request.url).pathname === '/api/v1/secrets' && response.status === 409) refused = true;
+      if (new URL(request.url).pathname === '/api/v1/workflows' && response.status === 409) refused = true;
     });
-    await user.click(screen.getByRole('link', { name: 'Secrets' }));
+    await user.click(screen.getByRole('link', { name: 'Workflows' }));
     await waitFor(() => {
       expect(refused).toBe(true);
     });

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { McpCall, McpServer, Secret } from '@gen/api/types.gen';
+import type { McpArgumentPolicy, McpAssignment, McpCall, McpServer, Secret } from '@gen/api/types.gen';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const servers: McpServer[] = [
   {
@@ -9,14 +10,14 @@ const servers: McpServer[] = [
     secretNames: ['LINEAR_TOKEN'],
     tools: ['list_issues', 'create_issue', 'update_issue'],
     enabled: true,
-    scope: 'org',
+    scope: 'shared',
   },
   {
     name: 'sentry',
     url: 'https://mcp.sentry.dev/mcp',
     transport: 'http',
     enabled: false,
-    scope: 'team:billing',
+    scope: 'per-member',
   },
 ];
 
@@ -81,4 +82,43 @@ export function initialSecrets(): Secret[] {
 /** Newest first. */
 export function initialMcpCalls(): McpCall[] {
   return structuredClone(calls);
+}
+
+/** linear: everyone with every tool, and theo with two tools only; sentry: nobody yet. */
+export function initialMcpAssignments(): Record<string, McpAssignment[]> {
+  return {
+    linear: [
+      {
+        server: 'linear',
+        member: MEMBER_IDS.theo,
+        tools: ['list_issues', 'create_issue'],
+        assignedAt: '2026-10-21T09:00:00.000Z',
+      },
+      { server: 'linear', assignedAt: '2026-10-20T09:00:00.000Z' },
+    ],
+  };
+}
+
+/** linear refuses a new issue in the security team, and holds any deletion for a yes. */
+export function initialMcpPolicies(): Record<string, McpArgumentPolicy[]> {
+  return {
+    linear: [
+      {
+        id: 'pol-1',
+        tool: 'create_issue',
+        conditions: [{ path: 'team', operator: 'EQUALS', value: 'SEC' }],
+        effect: 'DENY',
+        message: 'Security issues are filed by hand.',
+        createdAt: '2026-10-22T09:00:00.000Z',
+      },
+      {
+        id: 'pol-2',
+        tool: '*',
+        conditions: [],
+        effect: 'REQUIRE_APPROVAL',
+        message: 'A human says yes first.',
+        createdAt: '2026-10-23T09:00:00.000Z',
+      },
+    ],
+  };
 }

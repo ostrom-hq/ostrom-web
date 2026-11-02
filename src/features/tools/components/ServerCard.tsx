@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { McpServer } from '@gen/api/types.gen';
-import { type ReactElement, useId } from 'react';
+import { type ReactElement, type ReactNode, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -15,9 +15,18 @@ export interface ServerCardProps {
   readonly busy: boolean;
   /** Present when the viewer manages the servers. */
   readonly actions: { readonly toggle: () => void; readonly remove: () => void } | undefined;
+  /** Who may use it and its argument policies, for the people who manage them. */
+  readonly children?: ReactNode;
 }
 
-export function ServerCard({ server, calls, missing, busy, actions }: ServerCardProps): ReactElement {
+export function ServerCard({
+  server,
+  calls,
+  missing,
+  busy,
+  actions,
+  children,
+}: ServerCardProps): ReactElement {
   const { t } = useTranslation();
   const headingId = useId();
   return (
@@ -67,6 +76,7 @@ export function ServerCard({ server, calls, missing, busy, actions }: ServerCard
           />
         </div>
       )}
+      {children}
     </article>
   );
 }
