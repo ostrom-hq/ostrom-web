@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Repo } from '@gen/api/types.gen';
-import { githubSearchSchema, readableDate, reposShown, safeAppPage, stageOf } from './model';
+import { ApiFailure } from '@/shared/api/ApiFailure';
+import {
+  ANALYSIS_POLL_MS,
+  ANALYSIS_RETRY_MS,
+  analysisPollDelay,
+  githubSearchSchema,
+  readableDate,
+  reposShown,
+  safeAppPage,
+  stageOf,
+} from './model';
 
 function repo(name: string, extra: Partial<Repo> = {}): Repo {
   return { name, defaultBranch: 'main', archived: false, ...extra };
@@ -78,5 +88,32 @@ describe('what comes from outside', () => {
   it('reads a date, and nothing from a date that is not one', () => {
     expect(readableDate('2026-10-29T17:42:00Z', 'en')).toBe('Oct 29, 2026');
     expect(readableDate('yesterday', 'en')).toBeUndefined();
+  });
+});
+
+describe('the poll of a run', () => {
+  const running = { phase: 'connect', repos: [], rules: [], workflows: [] };
+
+  it('reads a run as it goes, and nothing else', () => {
+    expect(analysisPollDelay(running, null)).toBe(ANALYSIS_POLL_MS);
+    expect(analysisPollDelay({ ...running, phase: 'ready' }, null)).toBe(false);
+    expect(analysisPollDelay(undefined, null)).toBe(false);
+  });
+
+  it('slows down after a server error or the network, and goes on', () => {
+    expect(analysisPollDelay(running, new ApiFailure('server', 'down', 503, undefined))).toBe(
+      ANALYSIS_RETRY_MS,
+    );
+    expect(analysisPollDelay(running, new ApiFailure('network', 'gone', undefined, undefined))).toBe(
+      ANALYSIS_RETRY_MS,
+    );
+    expect(analysisPollDelay(running, new Error('odd'))).toBe(ANALYSIS_RETRY_MS);
+  });
+
+  it('stops on a refusal, which reading again does not change', () => {
+    expect(analysisPollDelay(running, new ApiFailure('unauthorized', 'signed out', 401, undefined))).toBe(
+      false,
+    );
+    expect(analysisPollDelay(running, new ApiFailure('not-found', 'gone', 404, undefined))).toBe(false);
   });
 });

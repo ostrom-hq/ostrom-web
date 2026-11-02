@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Repo } from '@gen/api/types.gen';
 import { z } from 'zod';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { apiUrl } from '@/shared/api/apiClient';
 import { safeHref } from '@/shared/lib/safeHref';
 
@@ -70,6 +71,26 @@ export function stageOf(state: { readonly phase?: string | undefined }): Analysi
     default:
       return 'running';
   }
+}
+
+/** A running analysis is read again this often. */
+export const ANALYSIS_POLL_MS = 2_000;
+/** After a failing read (a server error, the network), the next one waits this long. */
+export const ANALYSIS_RETRY_MS = 15_000;
+
+/**
+ * How long until the analysis is read again: only while a run goes on. A failing read is said on the page and slows
+ * the poll down, so a passing blip never freezes a run the server finishes; a refusal (4xx: the session, the
+ * organization or the route is gone) stops it, as reading again changes nothing.
+ */
+export function analysisPollDelay(
+  state: { readonly phase?: string | undefined } | undefined,
+  error: unknown,
+): number | false {
+  if (state === undefined || stageOf(state) !== 'running') return false;
+  if (error === null || error === undefined) return ANALYSIS_POLL_MS;
+  const status = isApiFailure(error) ? error.status : undefined;
+  return status !== undefined && status >= 400 && status < 500 ? false : ANALYSIS_RETRY_MS;
 }
 
 /**

@@ -54,7 +54,8 @@ export function createGithubHandlers(
       return refusal(409, 'github_not_installed', 'Install the GitHub App first.');
     if (!manages(organization))
       return refusal(403, 'forbidden', 'Only an owner or an admin analyses the repositories.');
-    // As the server (StartAnalysisUseCaseImpl): start and restart both start a run, refused only while one runs.
+    // As the server (server#81, `analysisRoutes`): start and restart both call StartAnalysisUseCaseImpl, which
+    // starts a run and refuses only while one runs.
     const last = s.analyses[organization.id];
     if (last !== undefined && last.phase !== 'ready' && last.phase !== 'failed')
       return refusal(409, 'analysis_running', 'An analysis is running.');

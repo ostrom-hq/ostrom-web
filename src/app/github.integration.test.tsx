@@ -316,6 +316,16 @@ describe('the analysis of the rules', () => {
     expect(within(section).getByRole('progressbar')).toBeInTheDocument();
   });
 
+  it('keeps a run on screen when a read is refused midway, and says it', async () => {
+    db.analyses[ACME] = { phase: 'connect', progress: 0.05, fails: false };
+    visit('/github');
+    const section = await analysis();
+    expect(await within(section).findByText('Reading the repositories…')).toBeInTheDocument();
+    server.use(http.get('*/api/v1/analysis/state', () => refuse(404, 'gone for now')));
+    expect(await within(section).findByText('gone for now', {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(within(section).getByRole('progressbar')).toBeInTheDocument();
+  });
+
   it('keeps the refusal of a restart while the run stays failed', async () => {
     const user = userEvent.setup();
     db.analyses[ACME] = { phase: 'failed', progress: 1, fails: true };
