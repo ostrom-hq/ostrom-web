@@ -2,6 +2,7 @@
 import { act, screen } from '@testing-library/react';
 import { ACCOUNT_CHANGED_KEY } from '@/app/App';
 import { useAuthStore } from '@/shared/auth/authStore';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { db } = setupMockApp();
@@ -40,5 +41,17 @@ describe('the account across tabs (audit B2)', () => {
       window.dispatchEvent(new StorageEvent('storage', { key: 'ostrom.theme', newValue: 'dark' }));
     });
     expect(screen.getByText(/Approving as/)).toBeInTheDocument();
+  });
+
+  it('leaves out an answer sent as the account another tab signed out of', async () => {
+    visit('/yes');
+    await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    const sent = sentInOrg();
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: ACCOUNT_CHANGED_KEY, newValue: '2' }));
+    });
+    const write = vi.fn();
+    whenSameOrg(sent, write);
+    expect(write).not.toHaveBeenCalled();
   });
 });

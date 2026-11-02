@@ -9,6 +9,7 @@ import { resetArrivals } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 import { followOtherTab, useOrgStore } from '@/shared/org/orgStore';
+import { accountChanged } from '@/shared/org/sameOrg';
 
 /**
  * Written by a tab whose account changed (a sign-in, a sign-out), read by the others: the cookie is the browser's, so
@@ -37,6 +38,7 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
         // Reset, not clear: the screens on display read again at once, as the new account or as nobody.
         if (auth.generation === previous.generation) return;
         safeLocalStorage.setItem(ACCOUNT_CHANGED_KEY, String(Date.now()));
+        accountChanged();
         useOrgStore.getState().signedInOrOut();
         void queryClient.resetQueries();
       }),
@@ -47,6 +49,7 @@ export function App({ router, mocks = false }: AppProps): ReactElement {
   useEffect(() => {
     const follow = (event: StorageEvent): void => {
       if (event.key !== ACCOUNT_CHANGED_KEY) return;
+      accountChanged();
       useOrgStore.getState().signedInOrOut();
       void queryClient.resetQueries();
     };

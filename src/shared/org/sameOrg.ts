@@ -1,13 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useAuthStore } from '@/shared/auth/authStore';
 import { useOrgStore } from '@/shared/org/orgStore';
 
 /**
+ * Goes up each time this tab learns that the account in the cookie changed: a sign-in or sign-out here, or one in
+ * another tab (the cookie is the browser's). The auth store's generation only moves in the tab that did it.
+ */
+let accounts = 0;
+
+/** The account changed, here or in another tab (App.tsx calls it on both). */
+export function accountChanged(): void {
+  accounts += 1;
+}
+
+/**
  * Who a change was sent as, as `onMutate` returns it: the organization's generation (it goes up each time another
- * organization is chosen, here or in another tab) and the account's (a sign-in or sign-out, here or in another tab).
+ * organization is chosen, here or in another tab) and the account's.
  */
 export function sentInOrg(): string {
-  return `${String(useOrgStore.getState().generation)}/${String(useAuthStore.getState().generation)}`;
+  return `${String(useOrgStore.getState().generation)}/${String(accounts)}`;
 }
 
 /**

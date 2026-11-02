@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { useAuthStore } from '@/shared/auth/authStore';
 import { useOrgStore } from '@/shared/org/orgStore';
-import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
+import { accountChanged, sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 describe('whenSameOrg', () => {
   afterEach(() => {
     useOrgStore.setState({ generation: 0 });
-    useAuthStore.setState({ generation: 0 });
   });
 
   it('writes an answer while its organization and account are still on screen', () => {
@@ -26,7 +24,7 @@ describe('whenSameOrg', () => {
 
   it('leaves out an answer sent as another account (a sign-in in another tab moves no organization)', () => {
     const sent = sentInOrg();
-    useAuthStore.setState({ generation: useAuthStore.getState().generation + 1 });
+    accountChanged();
     const write = vi.fn();
     whenSameOrg(sent, write);
     whenSameOrg(undefined, write);
