@@ -833,9 +833,13 @@ export const en = {
     },
     failure: {
       tag: 'Not imported',
-      unavailable:
-        'This server cannot run the cutover: it needs an audit log and shared accounts. Nothing was written.',
       ownersOnly: 'Only an owner runs the cutover. Nothing was written.',
+      noAudit: 'This server keeps no audit log, so it cannot run the cutover. Nothing was written.',
+      noSharing:
+        'This server does not import shared accounts, so it has no cutover to run. Nothing was written.',
+      mayHaveRunTag: 'May have run',
+      cutoverUnknown:
+        'The cutover may have run: look at the audit log before running it again. Error: {{message}}',
     },
     report: {
       empty: 'Nothing to import.',

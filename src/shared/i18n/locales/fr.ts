@@ -854,9 +854,14 @@ export const fr = {
     },
     failure: {
       tag: 'Non importé',
-      unavailable:
-        'Ce serveur ne peut pas lancer la bascule : il lui faut un journal d’audit et des comptes partagés. Rien n’a été écrit.',
       ownersOnly: 'Seul un propriétaire lance la bascule. Rien n’a été écrit.',
+      noAudit:
+        'Ce serveur ne tient pas de journal d’audit, il ne peut donc pas lancer la bascule. Rien n’a été écrit.',
+      noSharing:
+        'Ce serveur n’importe pas les comptes partagés, il n’a donc pas de bascule à lancer. Rien n’a été écrit.',
+      mayHaveRunTag: 'Peut-être lancée',
+      cutoverUnknown:
+        'La bascule a peut-être tourné : regarde le journal d’audit avant de la relancer. Erreur : {{message}}',
     },
     report: {
       empty: 'Rien à importer.',

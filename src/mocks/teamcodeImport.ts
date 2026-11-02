@@ -47,9 +47,15 @@ export function createTeamCodeImportHandlers(
       const dryRun = query.get('dryRun') === 'true';
       const cutover = query.get('cutover') === 'true';
       if (!managesMembers(role)) return refusal(403, 'forbidden', 'Only an owner or an admin imports.');
-      if (cutover && role !== 'owner') return refusal(403, 'forbidden', 'Only an owner runs the cutover.');
+      // The server's own refusals, word for word: the console recognises them as written before anything.
+      if (cutover && role !== 'owner')
+        return refusal(403, 'forbidden', 'Only an owner of the organization runs the cutover import.');
       if (cutover && !s.cutoverAvailable)
-        return refusal(503, 'unavailable', 'The cutover needs an audit log and shared accounts.');
+        return refusal(
+          503,
+          'unavailable',
+          'This server keeps no audit log, so it cannot record a cutover import.',
+        );
       const body = zImportTeamCodeBody.safeParse(await readJson(request));
       if (!body.success)
         return refusal(400, 'invalid_request', 'This is not what `ostrom import teamcode` sends.');
