@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 
 function never(): never {
   throw new Error('the demo has no token');
@@ -76,7 +76,7 @@ describe('the tokens screen', () => {
   it('warns about a token that never expires, and sends no expiry for it', async () => {
     const user = userEvent.setup();
     let sent: unknown;
-    server.events.on('request:start', ({ request }) => {
+    traffic.onRequest((request) => {
       if (request.method === 'POST' && request.url.endsWith('/api/v1/tokens'))
         void request
           .clone()
@@ -95,7 +95,6 @@ describe('the tokens screen', () => {
     await within(form()).findByRole('textbox', { name: 'Secret of Forever' });
     expect(sent).toEqual({ name: 'Forever', scopes: ['profile:read'] });
     expect(db.tokens[0]?.expiresAt).toBeNull();
-    server.events.removeAllListeners();
   });
 
   it('replaces a secret, shown once, and revokes a token', async () => {
