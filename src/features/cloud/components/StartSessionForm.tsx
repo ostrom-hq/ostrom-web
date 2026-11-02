@@ -3,13 +3,13 @@ import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { CLOUD_AGENTS, type CloudAgent, isCloudAgent } from '../model';
+import { isPromptAgent, PROMPT_AGENTS, type PromptAgent } from '../model';
 import type { SessionChangeViewModel } from '../useCloud';
 
 /** An agent on one of the organization's runners: what to do, where, and a name to find it again. */
 export function StartSessionForm({ change }: { readonly change: SessionChangeViewModel }): ReactElement {
   const { t } = useTranslation();
-  const [agent, setAgent] = useState<CloudAgent>('claude');
+  const [agent, setAgent] = useState<PromptAgent>('claude');
   const [prompt, setPrompt] = useState('');
   const [repo, setRepo] = useState('');
   const [name, setName] = useState('');
@@ -77,10 +77,10 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
             className="o-input o-select"
             value={agent}
             onChange={(event) => {
-              if (isCloudAgent(event.target.value)) setAgent(event.target.value);
+              if (isPromptAgent(event.target.value)) setAgent(event.target.value);
             }}
           >
-            {CLOUD_AGENTS.map((option) => (
+            {PROMPT_AGENTS.map((option) => (
               <option key={option} value={option}>
                 {t(`cloud.agent.${option}`)}
               </option>

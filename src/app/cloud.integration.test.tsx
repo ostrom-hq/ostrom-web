@@ -94,7 +94,7 @@ describe('the cloud agents', () => {
     expect(within(form).getByRole('textbox', { name: 'What should it do?' })).toHaveValue('');
   });
 
-  it('offers exactly the contract’s agents, and sends one of them', async () => {
+  it('offers only the contract’s agents that follow a prompt, and sends one of them', async () => {
     const user = userEvent.setup();
     const sent: Promise<string>[] = [];
     traffic.onRequest((request) => {
@@ -104,22 +104,23 @@ describe('the cloud agents', () => {
     visit('/cloud');
     const form = await screen.findByRole('region', { name: 'Start an agent' });
     const agent = within(form).getByRole('combobox', { name: 'Agent' });
-    // Read from the generated client: an agent the server would refuse is never offered.
-    expect(
-      within(agent)
-        .getAllByRole<HTMLOptionElement>('option')
-        .map((option) => option.value),
-    ).toEqual(zCloudAgentKind.options);
+    // Read from the generated client: an agent the server would refuse is never offered; the plain shell, which only
+    // a terminal drives, is not started from here.
+    const offered = within(agent)
+      .getAllByRole<HTMLOptionElement>('option')
+      .map((option) => option.value);
+    expect(offered).toEqual(zCloudAgentKind.options.filter((name) => name !== 'shell'));
+    expect(offered.every((name) => zCloudAgentKind.safeParse(name).success)).toBe(true);
     expect(agent).toHaveValue('claude');
-    await user.selectOptions(agent, 'Shell');
+    await user.selectOptions(agent, 'Gemini CLI');
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
-    expect(await screen.findByText('shell · cs-104')).toBeInTheDocument();
+    expect(await screen.findByText('gemini · cs-104')).toBeInTheDocument();
     const bodies = await Promise.all(sent);
     expect(bodies).toHaveLength(1);
     const body: unknown = JSON.parse(bodies.join(''));
     // The body the server reads, with the contract's enum: a name outside it would fail here.
-    expect(zCreateCloudSessionBody.parse(body)).toMatchObject({ agent: 'shell', prompt: 'Look around' });
+    expect(zCreateCloudSessionBody.parse(body)).toMatchObject({ agent: 'gemini', prompt: 'Look around' });
   });
 
   it('starts an agent without a name or a repository', async () => {

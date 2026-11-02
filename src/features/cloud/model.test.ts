@@ -5,6 +5,8 @@ import {
   CLOUD_AGENTS,
   idempotencyKey,
   isCloudAgent,
+  isPromptAgent,
+  PROMPT_AGENTS,
   isKnownRunReason,
   isKnownRunStatus,
   isCloudStatus,
@@ -32,6 +34,13 @@ describe('cloud sessions', () => {
       true,
       false,
       true,
+    ]);
+    // The console starts the agents that follow a prompt: the contract's but the plain shell.
+    expect(PROMPT_AGENTS).toEqual(zCloudAgentKind.options.filter((agent) => agent !== 'shell'));
+    expect([isPromptAgent('gemini'), isPromptAgent('shell'), isPromptAgent('claude-code')]).toEqual([
+      true,
+      false,
+      false,
     ]);
   });
   it('has words for the statuses it knows', () => {

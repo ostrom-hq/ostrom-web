@@ -20,6 +20,18 @@ export function isCloudAgent(value: string): value is CloudAgent {
   return zCloudAgentKind.safeParse(value).success;
 }
 
+/**
+ * The agents that follow a prompt, the only ones this console starts (a session or an automation): the contract's but the
+ * plain shell, which only an interactive terminal drives, and the console has none. `claude` is the server's default.
+ */
+const PROMPT_AGENT = zCloudAgentKind.exclude(['shell']);
+export const PROMPT_AGENTS = PROMPT_AGENT.options;
+export type PromptAgent = (typeof PROMPT_AGENTS)[number];
+
+export function isPromptAgent(value: string): value is PromptAgent {
+  return PROMPT_AGENT.safeParse(value).success;
+}
+
 export const CLOUD_STATUSES = ['queued', 'starting', 'running', 'ended', 'stopped', 'failed'] as const;
 export type CloudStatus = (typeof CLOUD_STATUSES)[number];
 

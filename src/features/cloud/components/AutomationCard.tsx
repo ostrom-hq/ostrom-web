@@ -6,8 +6,7 @@ import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
-import { isAutomationAgent } from '../automationDraft';
+import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
 import { useAutomationRuns } from '../useCloud';
 import { AutomationForm } from './AutomationForm';
 import { SecretOnce } from './SecretOnce';
@@ -93,7 +92,7 @@ export function AutomationCard({
   const agent =
     action.agent === undefined
       ? undefined
-      : isAutomationAgent(action.agent)
+      : isCloudAgent(action.agent)
         ? t(`cloud.agent.${action.agent}`)
         : action.agent;
   return (

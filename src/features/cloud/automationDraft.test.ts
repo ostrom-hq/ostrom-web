@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation } from '@gen/api/types.gen';
-import { zCloudAgentKind } from '@gen/api/zod.gen';
 import {
-  AUTOMATION_AGENTS,
   addVariable,
   type AutomationDraft,
   automationDraftOf,
   automationProblem,
   automationWriteOf,
-  isAutomationAgent,
   isOverlap,
   isTriggerKind,
   localTimezone,
@@ -60,14 +57,6 @@ const variable = (parts: Partial<VariableDraft>): VariableDraft => ({
 
 describe('the automation form', () => {
   it('knows the agents, triggers and overlaps the server takes', () => {
-    // The contract's agents but the plain shell.
-    expect(AUTOMATION_AGENTS).toEqual(zCloudAgentKind.options.filter((agent) => agent !== 'shell'));
-    expect([
-      isAutomationAgent('claude'),
-      isAutomationAgent('gemini'),
-      isAutomationAgent('claude-code'),
-      isAutomationAgent('shell'),
-    ]).toEqual([true, true, false, false]);
     expect([isTriggerKind('cron'), isTriggerKind('webhook'), isTriggerKind('email')]).toEqual([
       true,
       true,
