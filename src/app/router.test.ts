@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 import { createMemoryHistory } from '@tanstack/react-router';
 import { createAppRouter } from '@/app/router';
 
