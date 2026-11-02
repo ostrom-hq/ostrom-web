@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { ReactElement } from 'react';
+import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Button } from '@/shared/ui/Button';
@@ -15,18 +15,35 @@ export interface OrgControlsProps {
 export function OrgControls({ anonymousPage }: OrgControlsProps): ReactElement | null {
   const { t } = useTranslation();
   const org = useOrgPicker({ anonymousPage });
+  const viewerId = useId();
   if (!org.relevant) return null;
   const name = org.current?.name;
+  const viewer = org.viewer;
+  let signedIn: string | undefined;
+  if (viewer !== undefined)
+    signedIn =
+      viewer.role === undefined
+        ? viewer.name
+        : t('orgs.switch.viewer', { name: viewer.name, role: t(`members.role.${viewer.role}`) });
   return (
     <>
       <Button
         variant="ghost"
         aria-haspopup="dialog"
         aria-label={name === undefined ? t('orgs.switch.choose') : t('orgs.switch.named', { name })}
+        aria-describedby={signedIn === undefined ? undefined : viewerId}
         onClick={org.open}
       >
         <Avatar login={name} size={20} />
-        <span className="o-org-switch__name">{name ?? t('orgs.switch.unnamed')}</span>
+        <span className="o-org-switch__text">
+          <span className="o-org-switch__name">{name ?? t('orgs.switch.unnamed')}</span>
+          {/* Who the person is there, as `/auth/me` answers with the organization named: their name and role. */}
+          {signedIn === undefined ? null : (
+            <span id={viewerId} className="o-org-switch__viewer">
+              {signedIn}
+            </span>
+          )}
+        </span>
       </Button>
       {org.picking ? (
         <OrgPicker

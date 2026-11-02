@@ -470,7 +470,18 @@ paths:
       tags:
       - auth
       summary: Start the device flow (CLI sign-in)
+      description: "Without a body, the ordinary sign-in of `ostrom login`. With `scopes`, `ostrom login --admin`: the
+        governance write scopes no other token holds (S2-52, decision of 02/11/2026). The browser's page shows them
+        (`DeviceAuthorization.scopes`), only an owner or admin of the organisation may approve them, and the token
+        that comes out expires in 8 hours at most and is never refreshed. Planned (AUTH-REPRISE): a server that does
+        not read `scopes` yet answers an ordinary token, whose `AuthToken.scopes` tell the CLI."
       security: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceLoginStart'
       responses:
         '200':
           description: OK
@@ -763,6 +774,15 @@ paths:
       tags:
       - auth
       summary: 'The caller: login, member, organization'
+      parameters:
+      - name: Ostrom-Org
+        in: header
+        required: false
+        description: The organization whose member and organization the answer adds, when the caller is a member of it.
+          An option, unlike on the routes that act in an organization; any other value is ignored, never a 409 nor a
+          404. Without it the answer has neither, even for a person with one organization
+        schema:
+          type: string
       responses:
         '204':
           description: Done
@@ -3326,7 +3346,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getGatePolicy
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - gates
       summary: Self-approval policy
@@ -3354,7 +3374,7 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: setGatePolicy
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - gates
       summary: Set the self-approval policy (`sole-approver` or `never`), signed decision
@@ -3598,7 +3618,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listDecisions
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - approvals
       summary: Signed decisions
@@ -4279,7 +4299,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listRules
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Rules
@@ -4327,7 +4347,7 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       operationId: createRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Write a rule (signed decision)
@@ -4359,7 +4379,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: A rule
@@ -4388,7 +4408,7 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: updateRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Decide or edit a rule (signed decision)
@@ -4447,7 +4467,7 @@ paths:
           $ref: '#/components/responses/Error'
     delete:
       operationId: deleteRule
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Delete a rule (signed decision)
@@ -4475,7 +4495,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: bulkUpdateRules
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - rules
       summary: Decide several rules
@@ -10493,6 +10513,7 @@ components:
           type: string
         expiresAt:
           type: string
+          description: "When the token expires; for a token of `ostrom login --admin`, 8 hours after the yes at most"
         scopes:
           type: array
           items:
@@ -11524,6 +11545,18 @@ components:
       - userCode
       - approve
       x-ostrom-kotlin: pending
+    DeviceLoginStart:
+      type: object
+      description: "What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for
+        `ostrom login --admin`"
+      properties:
+        scopes:
+          type: array
+          description: "Every one of them, or the request is malformed (400). Absent or empty: the ordinary sign-in"
+          items:
+            type: string
+            enum: ['policy:write', 'harness:write', 'gates:policy']
+      x-ostrom-kotlin: pending
     DeviceAuthorization:
       type: object
       description: "A pending `ostrom login`, as the console shows it"
@@ -11532,6 +11565,13 @@ components:
           type: string
         clientName:
           type: string
+        scopes:
+          type: array
+          description: "The governance write scopes an `ostrom login --admin` asks for, shown before the yes; only an
+            owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary
+            sign-in"
+          items:
+            type: string
         expiresAt:
           type: string
           format: date-time
@@ -12515,6 +12555,7 @@ components:
       - member
       - approver
       - invited
+      - billing
     ModelPolicy:
       type: object
       description: Models allowed, and the default
@@ -12918,13 +12959,14 @@ components:
           type: string
         connectedVia:
           $ref: '#/components/schemas/GitHubConnection'
+          description: How GitHub is connected; absent when the answer does not say (an organization linked to no
+            GitHub organization, or a list that does not carry it)
         createdAt:
           type: string
       required:
       - id
       - name
       - avatarUrl
-      - connectedVia
     PackageEnvelope:
       type: object
       description: The envelope a session package is served in (`ostrom.package/1`). [payload] is the canonical text of a

@@ -693,11 +693,23 @@ export const zDeviceAnswer = z.object({
 });
 
 /**
+ * What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for `ostrom login --admin`
+ */
+export const zDeviceLoginStart = z.object({
+    scopes: z.array(z.enum([
+        'policy:write',
+        'harness:write',
+        'gates:policy'
+    ])).optional()
+});
+
+/**
  * A pending `ostrom login`, as the console shows it
  */
 export const zDeviceAuthorization = z.object({
     userCode: z.string(),
     clientName: z.string(),
+    scopes: z.array(z.string()).optional(),
     expiresAt: z.iso.datetime({ offset: true })
 });
 
@@ -1164,7 +1176,8 @@ export const zMemberRole = z.enum([
     'admin',
     'member',
     'approver',
-    'invited'
+    'invited',
+    'billing'
 ]);
 
 /**
@@ -1333,7 +1346,7 @@ export const zOrganization = z.object({
     name: z.string(),
     avatarUrl: z.string(),
     description: z.string().optional(),
-    connectedVia: zGitHubConnection,
+    connectedVia: zGitHubConnection.optional(),
     createdAt: z.string().optional()
 });
 
@@ -2939,6 +2952,8 @@ export const zGetDeviceLoginQuery = z.object({
  */
 export const zGetDeviceLoginResponse = zDeviceAuthorization;
 
+export const zStartDeviceLoginBody = zDeviceLoginStart;
+
 /**
  * OK
  */
@@ -3026,6 +3041,10 @@ export const zCheckAgentPolicyResponse = z.object({
     allowed: z.boolean(),
     reason: z.string().optional(),
     note: z.string().optional()
+});
+
+export const zGetMeHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
 });
 
 export const zGetMeResponse = z.union([

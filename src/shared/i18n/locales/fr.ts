@@ -1437,6 +1437,7 @@ export const fr = {
   orgs: {
     switch: {
       named: 'Organisation : {{name}}. Changer',
+      viewer: '{{name}} · {{role}}',
       choose: 'Choisir une organisation',
       unnamed: 'Organisation',
     },

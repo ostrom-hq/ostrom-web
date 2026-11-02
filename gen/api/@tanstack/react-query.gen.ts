@@ -295,6 +295,8 @@ export const getDeviceLoginOptions = (options: Options<GetDeviceLoginData>) => q
 
 /**
  * Start the device flow (CLI sign-in)
+ *
+ * Without a body, the ordinary sign-in of `ostrom login`. With `scopes`, `ostrom login --admin`: the governance write scopes no other token holds (S2-52, decision of 02/11/2026). The browser's page shows them (`DeviceAuthorization.scopes`), only an owner or admin of the organisation may approve them, and the token that comes out expires in 8 hours at most and is never refreshed. Planned (AUTH-REPRISE): a server that does not read `scopes` yet answers an ordinary token, whose `AuthToken.scopes` tell the CLI.
  */
 export const startDeviceLoginMutation = (options?: Partial<Options<StartDeviceLoginData>>): UseMutationOptions<StartDeviceLoginResponse, StartDeviceLoginError, Options<StartDeviceLoginData>> => {
     const mutationOptions: UseMutationOptions<StartDeviceLoginResponse, StartDeviceLoginError, Options<StartDeviceLoginData>> = {

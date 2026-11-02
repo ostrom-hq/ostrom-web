@@ -136,6 +136,23 @@
 }
 
 /* The organization picker: a dialog over the console, a sheet from the bottom on a phone. */
+.o-org-switch__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.o-org-switch__viewer {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-12);
+  color: var(--text-muted);
+}
+
 .o-org-switch__name {
   max-width: 12rem;
   overflow: hidden;
@@ -196,7 +213,8 @@
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
-  .o-org-switch__name {
+  .o-org-switch__name,
+  .o-org-switch__viewer {
     max-width: 6rem;
   }
 }
