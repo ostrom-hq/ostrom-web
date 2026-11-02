@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { handleRenameOrg, handleRevokeAuthSession } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
@@ -119,6 +120,32 @@ describe('the settings screen', () => {
       expect(router.state.location.pathname).toBe('/');
     });
     expect(db.noOrganization).toBe(true);
+  });
+
+  it('holds the name while the server saves it', async () => {
+    const user = userEvent.setup();
+    server.use(handleRenameOrg(async () => delay('infinite')));
+    visit('/settings');
+    await settings();
+    const general = region('Organization');
+    await user.type(within(general).getByRole('textbox', { name: 'Name' }), ' Labs');
+    await user.click(within(general).getByRole('button', { name: 'Save the name' }));
+    expect(await within(general).findByRole('button', { name: 'Saving…' })).toBeDisabled();
+    expect(within(general).getByRole('textbox', { name: 'Name' })).toHaveAttribute('readonly');
+  });
+
+  it('holds every sign-out while one session is being ended', async () => {
+    const user = userEvent.setup();
+    server.use(handleRevokeAuthSession(async () => delay('infinite')));
+    visit('/settings');
+    await settings();
+    const security = region('Security');
+    const phone = (await within(security).findAllByRole('listitem'))[1] ?? security;
+    await user.click(within(phone).getByRole('button', { name: 'Sign out' }));
+    await user.click(within(phone).getByRole('button', { name: 'Sign out Ostrom on iPhone' }));
+    await waitFor(() => {
+      expect(within(security).getByRole('button', { name: 'Sign out everywhere' })).toBeDisabled();
+    });
   });
 
   it('holds the deletion while the server deletes', async () => {

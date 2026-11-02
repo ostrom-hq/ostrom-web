@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { handleRevokeToken, handleRotateToken } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 
 function never(): never {
   throw new Error('the demo has no token');
@@ -76,7 +77,7 @@ describe('the tokens screen', () => {
   it('warns about a token that never expires, and sends no expiry for it', async () => {
     const user = userEvent.setup();
     let sent: unknown;
-    server.events.on('request:start', ({ request }) => {
+    traffic.onRequest((request) => {
       if (request.method === 'POST' && request.url.endsWith('/api/v1/tokens'))
         void request
           .clone()
@@ -95,7 +96,34 @@ describe('the tokens screen', () => {
     await within(form()).findByRole('textbox', { name: 'Secret of Forever' });
     expect(sent).toEqual({ name: 'Forever', scopes: ['profile:read'] });
     expect(db.tokens[0]?.expiresAt).toBeNull();
-    server.events.removeAllListeners();
+  });
+
+  it('holds the tokens while a secret is being replaced', async () => {
+    const user = userEvent.setup();
+    server.use(handleRotateToken(async () => delay('infinite')));
+    visit('/tokens');
+    const [ci, cli] = await liveTokens();
+    const row = ci ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret' }));
+    await user.click(within(row).getByRole('button', { name: 'Replace the secret of GitHub Actions' }));
+    await waitFor(() => {
+      expect(within(cli ?? document.body).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    });
+  });
+
+  it('holds the tokens while one is being revoked', async () => {
+    const user = userEvent.setup();
+    server.use(handleRevokeToken(async () => delay('infinite')));
+    visit('/tokens');
+    const tokens = await liveTokens();
+    const ci = tokens.find((item) => item.textContent.includes('GitHub Actions'));
+    const row = tokens.find((item) => item.textContent.includes('ostrom on maya-mbp')) ?? document.body;
+    await user.click(within(row).getByRole('button', { name: 'Revoke' }));
+    await user.click(within(row).getByRole('button', { name: 'Revoke ostrom on maya-mbp' }));
+    await waitFor(() => {
+      expect(within(ci ?? document.body).getByRole('button', { name: 'Replace the secret' })).toBeDisabled();
+    });
+    expect(screen.queryByRole('textbox', { name: /^Secret of / })).toBeNull();
   });
 
   it('replaces a secret, shown once, and revokes a token', async () => {
