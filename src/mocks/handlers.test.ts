@@ -627,7 +627,7 @@ describe('mock MCP servers and secrets', () => {
     transport: 'http',
     secretNames: [],
     enabled: true,
-    scope: 'org',
+    scope: 'shared',
   };
   const demote = (): void => {
     db.members = db.members.map((member) =>
@@ -651,6 +651,10 @@ describe('mock MCP servers and secrets', () => {
     expect(
       await send('POST', '/mcp/servers', JSON.stringify({ ...notion, name: 'x2', url: 'http://a.b' })),
     ).toBe(400);
+    // The relay knows two scopes only.
+    expect(await send('POST', '/mcp/servers', JSON.stringify({ ...notion, name: 'x3', scope: 'org' }))).toBe(
+      400,
+    );
     const saved = await saveMcpServer({
       path: { name: 'notion' },
       body: { ...notion, enabled: false },
@@ -659,7 +663,7 @@ describe('mock MCP servers and secrets', () => {
     expect(saved.data.enabled).toBe(false);
     expect(saved.data).not.toHaveProperty('tools');
     const plain = await createMcpServer({
-      body: { name: 'plain', url: notion.url, transport: 'http', enabled: true, scope: 'org' },
+      body: { name: 'plain', url: notion.url, transport: 'http', enabled: true, scope: 'per-member' },
       throwOnError: true,
     });
     expect(plain.data).not.toHaveProperty('secretNames');

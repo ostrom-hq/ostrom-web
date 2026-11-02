@@ -44,12 +44,14 @@ export function AppShell(): ReactElement {
           <Link to="/sessions">{t('app.nav.sessions')}</Link>
           <Link to="/receipts">{t('app.nav.receipts')}</Link>
           <Link to="/members">{t('app.nav.members')}</Link>
+          <Link to="/github">{t('app.nav.github')}</Link>
           <Link to="/workflows">{t('app.nav.workflows')}</Link>
           <Link to="/approvers">{t('app.nav.approvers')}</Link>
           <Link to="/rules">{t('app.nav.rules')}</Link>
           <Link to="/decisions">{t('app.nav.decisions')}</Link>
           <Link to="/mcp">{t('app.nav.mcp')}</Link>
           <Link to="/secrets">{t('app.nav.secrets')}</Link>
+          <Link to="/import">{t('app.nav.import')}</Link>
           <Link to="/spend">{t('app.nav.spend')}</Link>
           <Link to="/billing">{t('app.nav.billing')}</Link>
           <Link to="/settings">{t('app.nav.settings')}</Link>

@@ -21,7 +21,6 @@ import { meOf } from '@/shared/auth/me';
 import { ready } from '@/shared/api/ready';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 import { useOrgStore } from '@/shared/org/orgStore';
-import { githubInstallUrl } from '@/shared/org/githubInstall';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
 
@@ -104,8 +103,8 @@ export interface SetupViewModel {
   readonly done: number;
   /** The address `ostrom login --server` takes. */
   readonly server: string;
-  /** Where the GitHub App is installed, for an owner or an admin; nobody else may install it nor invite. */
-  readonly install: string | undefined;
+  /** An owner or an admin: nobody else may install the GitHub App nor invite. */
+  readonly manages: boolean;
   readonly hidden: boolean;
   readonly hide: () => void;
   readonly show: () => void;
@@ -146,7 +145,7 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
     steps,
     done: steps.filter((step) => step.state === 'done').length,
     server: originOf(apiUrl('/api/v1/'), window.location.href),
-    install: managesMembers(role) ? githubInstallUrl(org) : undefined,
+    manages: managesMembers(role),
     hidden,
     hide: () => {
       safeLocalStorage.setItem(key, '1');

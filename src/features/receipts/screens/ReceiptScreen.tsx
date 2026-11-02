@@ -10,6 +10,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { attestationOf, attestationTone } from '../model';
 import { type ReceiptViewModel, useReceipt } from '../useReceipts';
 
 export function ReceiptScreen(): ReactElement {
@@ -130,15 +131,25 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
       {receipt.nodes === undefined || receipt.nodes.length === 0 ? null : (
         <Section label={t('receipts.detail.steps')}>
           <ul className="o-rows">
-            {receipt.nodes.map((node) => (
-              <li key={node.id} className="o-row">
-                <span className="o-row__main">
-                  <span className="o-row__title">{node.label}</span>
-                  {node.detail === undefined ? null : <span className="o-row__meta">{node.detail}</span>}
-                </span>
-                <span className="o-row__end">{node.outcome}</span>
-              </li>
-            ))}
+            {receipt.nodes.map((node) => {
+              const attestation = attestationOf(node);
+              return (
+                <li key={node.id} className="o-row">
+                  <span className="o-row__main">
+                    <span className="o-row__title">{node.label}</span>
+                    {node.detail === undefined ? null : <span className="o-row__meta">{node.detail}</span>}
+                  </span>
+                  <span className="o-row__end o-inline">
+                    {attestation === undefined ? null : (
+                      <Badge tone={attestationTone(attestation)}>
+                        {t(`receipts.attestation.${attestation}`)}
+                      </Badge>
+                    )}
+                    {node.outcome}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </Section>
       )}

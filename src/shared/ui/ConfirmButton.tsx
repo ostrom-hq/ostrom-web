@@ -11,6 +11,8 @@ export interface ConfirmButtonProps {
   readonly keep: string;
   readonly disabled: boolean;
   readonly onConfirm: () => void;
+  /** `danger` (red) when something goes away; `secondary` when the second click writes rather than removes. */
+  readonly tone?: 'danger' | 'secondary';
 }
 
 /** A gesture that cannot be undone takes two clicks; the second one names what it does. */
@@ -20,12 +22,13 @@ export function ConfirmButton({
   keep,
   disabled,
   onConfirm,
+  tone = 'danger',
 }: ConfirmButtonProps): ReactElement {
   const [asking, setAsking] = useState(false);
   return asking ? (
     <span className="o-inline">
       <Button
-        variant="danger"
+        variant={tone}
         disabled={disabled}
         onClick={() => {
           setAsking(false);
@@ -45,7 +48,7 @@ export function ConfirmButton({
     </span>
   ) : (
     <Button
-      variant="ghost"
+      variant={tone === 'danger' ? 'ghost' : 'secondary'}
       disabled={disabled}
       onClick={() => {
         setAsking(true);

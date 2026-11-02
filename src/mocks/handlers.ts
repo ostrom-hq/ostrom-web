@@ -19,7 +19,6 @@ import {
   handleGetApproval,
   handleGetGatePolicy,
   handleExchangeSignInLink,
-  handleGetGithubApp,
   handleGetMe,
   handleGetOrganization,
   handleGetReceipt,
@@ -112,7 +111,10 @@ import {
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
+import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createGithubHandlers, type GithubState } from '@/mocks/github';
+import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
@@ -144,11 +146,27 @@ import {
 } from '@/mocks/fixtures/sharing';
 import { initialBilling, initialInvoices } from '@/mocks/fixtures/billing';
 import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
-import { initialMcpCalls, initialMcpServers, initialSecrets } from '@/mocks/fixtures/tools';
+import {
+  initialMcpAssignments,
+  initialMcpCalls,
+  initialMcpPolicies,
+  initialMcpServers,
+  initialSecrets,
+} from '@/mocks/fixtures/tools';
+import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
+import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 
-export interface MockDb extends AccountState, BillingState, OrgsState, TokensState {
+export interface MockDb
+  extends
+    AccountState,
+    BillingState,
+    GithubState,
+    OrgsState,
+    TokensState,
+    McpAccessState,
+    TeamCodeImportState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -215,6 +233,8 @@ export function createMockDb(): MockDb {
     elsewhere: [invitedOrganization()],
     nextInvitation: 1,
     githubInstalled: { [initialOrganization().id]: true },
+    repos: { [initialOrganization().id]: initialRepos() },
+    analyses: {},
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
@@ -224,6 +244,12 @@ export function createMockDb(): MockDb {
     mcpServers: initialMcpServers(),
     secrets: initialSecrets(),
     mcpCalls: initialMcpCalls(),
+    mcpAssignments: initialMcpAssignments(),
+    mcpPolicies: initialMcpPolicies(),
+    mcpPrefixes: {},
+    nextPolicyId: 3,
+    imported: {},
+    cutoverAvailable: true,
     budgets: initialBudgets(),
     cloudSessions: initialCloudSessions(),
     runners: initialRunners(),
@@ -250,6 +276,8 @@ export function createMockDb(): MockDb {
 const zMcpServerWrite = zMcpServer.extend({
   name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
   url: z.url({ protocol: /^https$/ }),
+  // The relay's two scopes (`McpRules`): one shared credential, or each member's own.
+  scope: z.enum(['shared', 'per-member']),
 });
 /** A parsed write as the contract's server: an absent list stays absent, never `undefined`. */
 function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
@@ -477,6 +505,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
+  const callsOf = (request: Request): McpCall[] =>
+    organizationOf(db, request).id === db.organization.id ? db.mcpCalls : [];
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
@@ -590,6 +620,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
+    ...createApproversGraphHandlers(() => db),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
       const status = params.get('status');
@@ -718,7 +749,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ),
       });
     }),
-    handleListMcpServers(() => HttpResponse.json({ items: db.mcpServers })),
+    // The demo's servers and their calls are Acme's: another organization has none.
+    handleListMcpServers(({ request }) =>
+      HttpResponse.json({
+        items: organizationOf(db, request).id === db.organization.id ? db.mcpServers : [],
+      }),
+    ),
     handleCreateMcpServer(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
       const body = zMcpServerWrite.safeParse(await readJson(request));
@@ -750,18 +786,28 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListMcpCalls(({ request }) => {
       const server = new URL(request.url).searchParams.get('server');
       return HttpResponse.json({
-        items: db.mcpCalls.filter((call) => server === null || call.server === server),
+        items: callsOf(request).filter((call) => server === null || call.server === server),
       });
     }),
-    handleGetMcpUsage(() => {
+    handleGetMcpUsage(({ request }) => {
       const byServer: Record<string, number> = {};
       const byTool: Record<string, number> = {};
-      for (const call of db.mcpCalls) {
+      for (const call of callsOf(request)) {
         byServer[call.server] = (byServer[call.server] ?? 0) + 1;
         byTool[call.tool] = (byTool[call.tool] ?? 0) + 1;
       }
       return HttpResponse.json({ byServer, byTool });
     }),
+    ...createMcpAccessHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
+    ),
+    ...createTeamCodeImportHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
+    ),
     handleListSecrets(() => HttpResponse.json({ items: db.secrets })),
     handleCreateSecret(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
@@ -1026,19 +1072,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       db.sharedAccounts = db.sharedAccounts.filter((item) => item.id !== params.id);
       return new HttpResponse(null, { status: 204 });
     }),
-    handleGetGithubApp(({ request }) => {
-      const organization = organizationOf(db, request);
-      return HttpResponse.json(
-        db.githubInstalled[organization.id] === true
-          ? {
-              installed: true,
-              slug: 'ostrom-dev',
-              installationId: 4242,
-              htmlUrl: 'https://github.com/apps/ostrom-dev',
-            }
-          : { installed: false },
-      );
-    }),
+    ...createGithubHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+    ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');
       return HttpResponse.json({
