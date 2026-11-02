@@ -2,7 +2,7 @@
 import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { useEmailLinkStore } from '@/features/signin';
+import { EMAIL_ASKED_KEY, EMAIL_LINK_LIFETIME_MS, emailAsked, useEmailLinkStore } from '@/features/signin';
 import { DEMO_EMAIL_TOKEN } from '@/mocks/handlers';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
@@ -10,6 +10,7 @@ const { server } = setupMockApp();
 
 afterEach(() => {
   useEmailLinkStore.setState({ token: undefined });
+  emailAsked.clear();
 });
 
 describe('the sign-in page', () => {
@@ -50,6 +51,7 @@ describe('the sign-in page', () => {
       'If maya@acme.dev may sign in, a link is on its way.',
     );
     expect(sent).toEqual({ email: 'maya@acme.dev', redirect: '/spend' });
+    expect(emailAsked.recent(Date.now())).toBe(true);
   });
 
   it('sends no page to come back to when none was asked, and ignores an incomplete address', async () => {
@@ -114,14 +116,101 @@ describe('the sign-in page', () => {
 });
 
 describe('the e-mailed link', () => {
+  /** Nobody signed in on this browser: the link is the way in, spent at once. */
+  function signedOut(): void {
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'unauthorized', message: 'nobody' } }, { status: 401 }),
+      ),
+    );
+  }
+
+  /** Counts the links spent, so a test can say none was; the mock still answers each. */
+  function spentLinks(): string[] {
+    const spent: string[] = [];
+    server.use(
+      http.post('*/api/v1/auth/email/verify', ({ request }) => {
+        spent.push(request.url);
+      }),
+    );
+    return spent;
+  }
+
   it('takes the token from the fragment, wipes it from the address, signs in and opens the page asked', async () => {
+    signedOut();
     const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
     expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/yes');
     expect(router.state.location.href).not.toContain(DEMO_EMAIL_TOKEN);
   });
 
-  it('says signing in while the server checks the link', async () => {
+  it('takes a 204 with no body as nobody signed in, and spends the link at once', async () => {
+    server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/yes');
+  });
+
+  it('never replaces a session without a yes: a link from another site cannot sign this browser in as someone else', async () => {
+    const spent = spentLinks();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'You are signed in as maya on this browser. This link signs it in as the account it was sent to',
+    );
+    expect(router.state.location.href).not.toContain(DEMO_EMAIL_TOKEN);
+    expect(spent).toEqual([]);
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in with the link' }));
+    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/yes');
+    expect(spent).toHaveLength(1);
+  });
+
+  it('spends at once a link this browser asked for, even with someone signed in (a sign-in again)', async () => {
+    const spent = spentLinks();
+    emailAsked.mark(Date.now());
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/yes');
+    expect(spent).toHaveLength(1);
+    expect(window.localStorage.getItem(EMAIL_ASKED_KEY)).toBeNull();
+  });
+
+  it('asks again once the link this browser asked for is past its life', async () => {
+    const spent = spentLinks();
+    emailAsked.mark(Date.now() - EMAIL_LINK_LIFETIME_MS - 1_000);
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(spent).toEqual([]);
+  });
+
+  it('keeps the session as it is and drops the link when asked to', async () => {
+    const spent = spentLinks();
+    const router = visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Stay signed in as now' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/');
+    });
+    expect(useEmailLinkStore.getState().token).toBeUndefined();
+    expect(spent).toEqual([]);
+  });
+
+  it('asks before spending the link when it cannot tell whether someone is signed in', async () => {
+    const spent = spentLinks();
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'boom' } }, { status: 500 }),
+      ),
+    );
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Someone may already be signed in on this browser.',
+    );
+    expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(spent).toEqual([]);
+  });
+
+  it('says signing in while it checks who is signed in, then while the server checks the link', async () => {
+    signedOut();
     server.use(http.post('*/api/v1/auth/email/verify', async () => delay('infinite')));
     const router = visit('/auth/email#token=ml_slow');
     expect(await screen.findByText('Signing you in…')).toBeInTheDocument();
@@ -129,6 +218,7 @@ describe('the e-mailed link', () => {
   });
 
   it('says why a used link does not sign in, and offers a new one', async () => {
+    signedOut();
     visit('/auth/email#token=ml_used');
     expect(await screen.findByRole('alert')).toHaveTextContent('This link was already used or has expired.');
     expect(screen.getByRole('link', { name: 'Ask for a new link' })).toHaveAttribute('href', '/signin');
