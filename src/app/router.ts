@@ -26,7 +26,7 @@ import { SpendScreen } from '@/features/spend';
 import { TokensScreen } from '@/features/tokens';
 import { BillingScreen } from '@/features/billing';
 import { McpScreen, SecretsScreen } from '@/features/tools';
-import { WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
+import { NewWorkflowScreen, WorkflowScreen, WorkflowsScreen } from '@/features/workflows';
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { logout } from '@gen/api/sdk.gen';
 import { useAuthStore } from '@/shared/auth/authStore';
@@ -139,6 +139,11 @@ const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows',
   component: WorkflowsScreen,
+});
+const newWorkflowRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows/new',
+  component: NewWorkflowScreen,
 });
 const workflowRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -265,6 +270,7 @@ export const routeTree = rootRoute.addChildren([
   activityRoute,
   decisionsRoute,
   workflowsRoute,
+  newWorkflowRoute,
   workflowRoute,
   mcpRoute,
   secretsRoute,
