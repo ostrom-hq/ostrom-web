@@ -47,7 +47,7 @@ export function useRules(): RulesViewModel {
   const rules = useQuery(
     ready({
       ...listRulesOptions(),
-      queryFn: ({ signal }: { readonly signal: AbortSignal }) => everyRule(signal),
+      queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyRule(signal),
     }),
   );
   const viewer = useViewer();

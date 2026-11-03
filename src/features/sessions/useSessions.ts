@@ -63,7 +63,7 @@ export function useSessionList(): SessionListViewModel {
     ready(
       {
         ...listSessionsOptions({ query: { open: true } }),
-        queryFn: ({ signal }: { readonly signal: AbortSignal }) => everyOpenSession(signal),
+        queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyOpenSession(signal),
       },
       { refetchInterval: SESSIONS_POLL_MS },
     ),
