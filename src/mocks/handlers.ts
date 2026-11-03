@@ -156,6 +156,7 @@ import {
   initialArtifactMembers,
   initialArtifacts,
   initialArtifactVersions,
+  initialGroups,
   initialSharedAccounts,
 } from '@/mocks/fixtures/sharing';
 import { initialBilling, initialInvoices } from '@/mocks/fixtures/billing';
@@ -172,6 +173,7 @@ import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/con
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
+import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
@@ -186,6 +188,7 @@ export interface MockDb
     ConfirmationsState,
     DeviceState,
     GithubState,
+    GroupsState,
     OrgsState,
     TokensState,
     McpAccessState,
@@ -293,6 +296,8 @@ export function createMockDb(): MockDb {
     artifactVersions: initialArtifactVersions(),
     artifactMembers: initialArtifactMembers(),
     sharedAccounts: initialSharedAccounts(),
+    groups: initialGroups(opened),
+    nextGroup: 3,
     runsByKey: {},
     nextAccountId: 100,
     signedInAt: opened,
@@ -910,6 +915,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createPolicyHandlers(
       () => db,
       (request) => organizationOf(db, request),
+    ),
+    ...createGroupsHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
     ),
     ...createTeamCodeImportHandlers(
       () => db,
