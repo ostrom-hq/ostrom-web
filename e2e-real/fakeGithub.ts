@@ -15,10 +15,13 @@
 //     GET  /app/installations/<id>          the App's view of an installation (its JWT)
 //     POST /app/installations/<id>/access_tokens   an installation token
 //     GET  /installation/repositories       the repositories given to the installation
+//     GET  /repos/<owner>/<repo>/branches/main, /git/trees/<sha>, /contents/<path>, /rules/branches/main
+//                                           what the rules analysis reads of a repository (its files, its protection)
 //     POST /graphql                         no GitHub organization: no teams
 // Every request is recorded for the journey to assert on. Both ports share one state. A GitHub id is derived from the
 // login, so that two runs of the same journey (desktop, then phone) never give two people the same id.
 import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { Buffer } from 'node:buffer';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 /** The ports the server was started pointing at (ostrom-server `console-journey.yml`); 0 when not configured. */
@@ -61,6 +64,16 @@ export interface FakeInstallation {
   readonly account: string;
   readonly admins: readonly string[];
   readonly repos: readonly string[];
+  /** What a repository holds on main, by short name: each file's path and text. None: an empty tree. */
+  readonly files?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** How main is protected, by short name: required checks and approvals. None: not protected. */
+  readonly protections?: Readonly<Record<string, FakeProtection>>;
+}
+
+/** The protection of main: classic required checks, and a ruleset that asks for approvals when there are any. */
+export interface FakeProtection {
+  readonly checks: readonly string[];
+  readonly approvals: number;
 }
 
 /** What the install page hands back to the server: this installation, as authorized by `login`. */
@@ -226,6 +239,62 @@ export class FakeGitHub {
     }
     if (method === 'GET' && path === '/installation/repositories')
       return this.repositories(person.login, query);
+    const read =
+      /^\/repos\/([^/]+)\/([^/]+)\/(branches\/[^/]+|git\/trees\/[0-9a-f]{40}|contents\/.+|rules\/branches\/[^/]+)$/.exec(
+        path,
+      );
+    if (method === 'GET' && read !== null)
+      return this.contents(person.login, read[1] ?? '', read[2] ?? '', read[3] ?? '');
+    return [404, { message: 'Not Found' }];
+  }
+
+  /**
+   * What the analysis reads of a repository with an installation's token: main (its commit's tree, its protection),
+   * the tree, a file, the rulesets of main. Another installation's repository, or another branch, is not found.
+   */
+  private contents(bot: string, owner: string, name: string, what: string): Answer {
+    const id = /^installation-(\d+)$/.exec(bot)?.[1];
+    const installation = id === undefined ? undefined : this.installations.get(Number(id));
+    if (installation?.account !== owner || !installation.repos.includes(name))
+      return [404, { message: 'Not Found' }];
+    const files = installation.files?.[name] ?? {};
+    const protection = installation.protections?.[name];
+    const tree = createHash('sha1').update(`${owner}/${name}`).digest('hex');
+    if (what === 'branches/main')
+      return [
+        200,
+        {
+          name: 'main',
+          commit: {
+            sha: createHash('sha1').update(`commit ${tree}`).digest('hex'),
+            commit: { tree: { sha: tree } },
+          },
+          protected: protection !== undefined,
+          protection: { required_status_checks: { contexts: protection?.checks ?? [] } },
+        },
+      ];
+    if (what === `git/trees/${tree}`)
+      return [
+        200,
+        { sha: tree, tree: Object.keys(files).map((path) => ({ path, type: 'blob' })), truncated: false },
+      ];
+    if (what === 'rules/branches/main')
+      return [
+        200,
+        protection === undefined || protection.approvals === 0
+          ? []
+          : [{ type: 'pull_request', parameters: { required_approving_review_count: protection.approvals } }],
+      ];
+    if (what.startsWith('contents/')) {
+      const path = what.slice('contents/'.length).split('/').map(decodeURIComponent).join('/');
+      const text = files[path];
+      if (text === undefined) return [404, { message: 'Not Found' }];
+      const bytes = Buffer.from(text, 'utf8');
+      return [
+        200,
+        { type: 'file', path, size: bytes.length, encoding: 'base64', content: bytes.toString('base64') },
+      ];
+    }
     return [404, { message: 'Not Found' }];
   }
 
