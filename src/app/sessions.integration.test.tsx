@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen, within } from '@testing-library/react';
+import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -151,6 +152,40 @@ describe('the older ended sessions', () => {
     expect(screen.getByRole('link', { name: /acme\/ses-new/ })).toBeInTheDocument();
     // The older page's warning only: the sessions already read are not replaced by a failure.
     expect(screen.getAllByText('Offline')).toHaveLength(1);
+  });
+
+  it('keep the older page’s failure under the list while the list is read again', async () => {
+    let readAgain = false;
+    server.use(
+      http.get('*/api/v1/sessions', async ({ request }) => {
+        const query = new URL(request.url).searchParams;
+        if (query.get('open') === 'true') return HttpResponse.json({ items: [] });
+        if (query.get('before') !== null)
+          return HttpResponse.json(
+            { error: { type: 'internal', message: 'older page down' } },
+            { status: 500 },
+          );
+        if (screen.queryByText('older page down') === null)
+          return HttpResponse.json({ items: [ended('ses-new')], next: 'ses-new' });
+        // The next poll: it stays on its way, as long as the screen is read.
+        readAgain = true;
+        await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/sessions');
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Show older sessions' }));
+    expect(await screen.findByText('older page down', {}, { timeout: 4_000 })).toBeInTheDocument();
+    // The list is stale past its poll: coming back to the window reads it again, as the poll would.
+    vi.setSystemTime(new Date('2026-10-30T08:00:20.000Z'));
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await vi.waitFor(() => {
+      expect(readAgain).toBe(true);
+    });
+    expect(screen.getByText('older page down')).toBeInTheDocument();
+    expect(screen.getAllByText('Offline')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /acme\/ses-new/ })).toBeInTheDocument();
   });
 });
 

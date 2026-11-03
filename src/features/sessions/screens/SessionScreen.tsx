@@ -153,7 +153,7 @@ interface GateLineProps {
   readonly gate: string;
   /** The server's answer to the gate, once someone said yes or no; nothing while it waits. */
   readonly answer: SessionGateAnswer | undefined;
-  /** The session ended: a gate nobody answered will not be answered any more. */
+  /** The session ended: a gate nobody answered by then is said not answered, not waiting (it may still be, at /yes). */
   readonly ended: boolean;
 }
 
