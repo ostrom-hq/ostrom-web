@@ -1483,7 +1483,12 @@ export const fr = {
       title: 'Abonnements partagés',
       lead: 'Les abonnements IA personnels prêtés aux agents de l’organisation : qui les utilise, la part de chaque jour, et une pause.',
       empty: 'Aucun abonnement partagé pour l’instant.',
-      state: { paused: 'En pause', active: 'Actif', expired: 'Connexion expirée' },
+      state: {
+        paused: 'En pause',
+        active: 'Actif',
+        expired: 'Connexion expirée',
+        wrongAccount: 'Connecté à un autre compte : à repartager',
+      },
       pool: 'réserve {{pool}}',
       daily: '{{amount}} par jour',
       noDaily: 'sans limite par jour',
