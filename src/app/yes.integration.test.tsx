@@ -306,6 +306,20 @@ describe('the queue', () => {
 });
 
 describe('a request', () => {
+  it('opened by its gate’s id, as a session links it, names the request itself in the address', async () => {
+    db.approvals = db.approvals.map((approval) =>
+      approval.id === 'apr-merge-412' ? { ...approval, group: 'gate-merge-412' } : approval,
+    );
+    const router = visit('/yes/gate-merge-412');
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/yes/apr-merge-412');
+    });
+    expect(await screen.findByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'What it lets through' })).toHaveTextContent(
+      'Merge into main on acme/billing-api',
+    );
+  });
+
   it('says what a yes lets through: the action, its commits, the size of the change', async () => {
     visit('/yes/apr-merge-412');
     const action = await screen.findByRole('region', { name: 'What it lets through' });
