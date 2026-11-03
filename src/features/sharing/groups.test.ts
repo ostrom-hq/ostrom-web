@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Group, SharedAccount } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { isGone, lentAccounts, pauseEndIn, pauseEndOn, pausedUntil, personOf, toggled } from './groups';
+import {
+  isGone,
+  lentAccounts,
+  localDay,
+  pauseEndIn,
+  pauseEndOn,
+  pausedUntil,
+  personOf,
+  toggled,
+} from './groups';
 
 const now = new Date('2026-11-03T10:00:00.000Z');
 
@@ -68,6 +77,10 @@ describe('the groups model', () => {
     expect(isGone(new ApiFailure('forbidden', 'no', 403, undefined))).toBe(false);
     expect(isGone(new Error('offline'))).toBe(false);
     expect(isGone(undefined)).toBe(false);
+  });
+
+  it('writes the person’s day as a date field does', () => {
+    expect(localDay(new Date(2026, 0, 5, 23, 0))).toBe('2026-01-05');
   });
 
   it('ticks a value on once, at the end, and off', () => {

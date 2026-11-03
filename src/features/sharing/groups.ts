@@ -26,6 +26,13 @@ export function pauseEndOn(day: string, now: Date): string | undefined {
   return end.getTime() > now.getTime() ? end.toISOString() : undefined;
 }
 
+/** The person's day as a date field writes it (`YYYY-MM-DD`): the first day a pause can end on. */
+export function localDay(now: Date): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${String(now.getFullYear())}-${month}-${day}`;
+}
+
 /** Until when a member of the group is paused, if they are now. */
 export function pausedUntil(group: Group, login: string): string | undefined {
   return group.paused?.find((pause) => pause.login === login)?.until;

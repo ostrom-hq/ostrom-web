@@ -1414,7 +1414,7 @@ export const fr = {
       left: 'A quitté l’organisation',
       pausedUntil: 'En pause jusqu’au {{when}}',
       pause: 'Mettre en pause',
-      pauseLabel: 'Mettre {{login}} en pause',
+      pauseLabel: 'Mettre en pause {{login}}',
       pauseChoices: 'Durée de la pause de {{login}}',
       pauseDay: 'Un jour',
       pauseWeek: 'Une semaine',

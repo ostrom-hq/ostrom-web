@@ -46,6 +46,8 @@ export function GroupScreen(): ReactElement {
             <p className="o-row__meta">{t('sharing.groups.readOnly')}</p>
           ) : (
             <GroupSettings
+              // Renamed elsewhere meanwhile: the field starts again from the new name.
+              key={group.name}
               group={group}
               change={writes}
               onDeleted={() => {

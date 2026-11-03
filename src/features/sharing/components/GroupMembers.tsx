@@ -6,7 +6,7 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { Section } from '@/shared/ui/Screen';
-import { pauseEndIn, pauseEndOn, pausedUntil, personOf } from '../groups';
+import { localDay, pauseEndIn, pauseEndOn, pausedUntil, personOf } from '../groups';
 import type { GroupChangeViewModel } from '../useGroups';
 
 export interface GroupMembersProps {
@@ -159,6 +159,7 @@ function PauseChoices({ login, busy, onPause, onCancel }: PauseChoicesProps): Re
         id={dayId}
         type="date"
         className="o-input sh-day"
+        min={localDay(new Date())}
         value={day}
         onChange={(event) => {
           setDay(event.target.value);
