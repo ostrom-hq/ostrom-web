@@ -177,6 +177,47 @@ describe('the budgets', () => {
     expect(screen.getByText('$10.00 a month · $1.00 a day')).toBeInTheDocument();
   });
 
+  it('reads the server’s `organization` scope as the organization’s own budget, first', async () => {
+    db.budgets = [
+      { scope: 'member', subject: 'ana', usdPerDay: 5, hardStop: true },
+      { scope: 'organization', usdPerMonth: 300, hardStop: true },
+    ];
+    visit('/spend');
+    const budgets = await within(await screen.findByRole('region', { name: 'Budgets' })).findAllByRole(
+      'listitem',
+    );
+    expect(budgets[0]).toHaveTextContent('The organization');
+    expect(budgets[0]).toHaveTextContent('$300.00 a month');
+    expect(screen.queryByText('organization')).toBeNull();
+  });
+
+  it('reads the spending again once a budget is saved, for the meter carries it', async () => {
+    const user = userEvent.setup();
+    db.budgets = [];
+    // The spending carries the organization's budget once the server holds one, as the real server does.
+    server.use(
+      http.get('*/api/v1/spending', () =>
+        HttpResponse.json({
+          // The week's fixture: it carries no budget of its own.
+          ...spendingFor('week'),
+          totalUsd: 10,
+          ...(db.budgets.some((budget) => budget.scope === 'org') ? { budgetUsd: 100 } : {}),
+        }),
+      ),
+    );
+    visit('/spend');
+    expect(
+      await screen.findByText('No budget for the organization: nothing warns or stops the spend.'),
+    ).toBeInTheDocument();
+    const form = screen.getByRole('region', { name: 'Set a budget' });
+    await user.type(within(form).getByRole('textbox', { name: 'Per month ($)' }), '100');
+    await user.click(within(form).getByRole('button', { name: 'Save the budget' }));
+    expect(await screen.findByRole('meter', { name: 'Spent of the budget' })).toHaveAttribute(
+      'aria-valuetext',
+      '$10.00 of $100.00',
+    );
+  });
+
   it('says when there is no budget', async () => {
     db.budgets = [];
     visit('/spend');
