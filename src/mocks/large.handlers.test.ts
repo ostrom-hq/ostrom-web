@@ -1,10 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { getSpending, listActivity, listBudgets, listGroups, listSessions } from '@gen/api/sdk.gen';
+import {
+  getSpending,
+  listActivity,
+  listBudgets,
+  listGroups,
+  listRules,
+  listSessions,
+} from '@gen/api/sdk.gen';
 import { growLarge, LARGE, largeRules } from '@/mocks/fixtures/large';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { z } from 'zod';
 
 const { server, db } = createMockServer();
 
@@ -20,22 +27,24 @@ afterAll(() => {
   server.close();
 });
 
-const zRulesPage = z.object({
-  items: z.array(z.object({ id: z.string() })).optional(),
-  next: z.string().optional(),
-});
-
 interface RulesPage {
-  readonly status: number;
+  readonly status: number | undefined;
   readonly ids: readonly string[];
   readonly next: string | undefined;
 }
 
-/** The rules route read as is: the vendored contract does not name `after` and `limit` yet. */
-async function rules(query: string): Promise<RulesPage> {
-  const response = await fetch(`http://ostrom.test/api/v1/rules${query}`);
-  const body = zRulesPage.parse(await response.json());
-  return { status: response.status, ids: (body.items ?? []).map((rule) => rule.id), next: body.next };
+async function rules(query: {
+  readonly after?: string;
+  readonly limit?: number;
+  readonly status?: string;
+}): Promise<RulesPage> {
+  try {
+    const { data } = await listRules({ query, throwOnError: true });
+    return { status: 200, ids: data.items.map((rule) => rule.id), next: data.next };
+  } catch (error) {
+    if (isApiFailure(error)) return { status: error.status, ids: [], next: undefined };
+    throw error;
+  }
 }
 
 describe('the large organization', () => {
@@ -97,28 +106,28 @@ describe('GET /rules, a page at a time', () => {
   });
 
   it('gives 1 000 rules by default, then the rest after the cursor', async () => {
-    const first = await rules('');
+    const first = await rules({});
     expect(first.ids).toHaveLength(1000);
     expect(first.next).toBe(first.ids.at(-1));
-    const second = await rules(`?after=${first.next ?? ''}`);
+    const second = await rules({ after: first.next ?? '' });
     expect(second.ids).toHaveLength(1000);
     expect(second.ids[0]).not.toBe(first.ids[0]);
     expect(second.next).toBeUndefined();
   });
 
   it('brings the limit into 1 to 1 000', async () => {
-    expect((await rules('?limit=5')).ids).toHaveLength(5);
-    expect((await rules('?limit=5000')).ids).toHaveLength(1000);
-    expect((await rules('?limit=0')).ids).toHaveLength(1);
+    expect((await rules({ limit: 5 })).ids).toHaveLength(5);
+    expect((await rules({ limit: 5000 })).ids).toHaveLength(1000);
+    expect((await rules({ limit: 0 })).ids).toHaveLength(1);
   });
 
   it('filters before the page', async () => {
-    const page = await rules('?status=accepted');
+    const page = await rules({ status: 'accepted' });
     expect(page.ids.length).toBeLessThan(1000);
     expect(page.next).toBeUndefined();
   });
 
   it('refuses a cursor no page gave', async () => {
-    expect((await rules('?after=R-none')).status).toBe(400);
+    expect((await rules({ after: 'R-none' })).status).toBe(400);
   });
 });
