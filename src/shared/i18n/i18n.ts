@@ -1,4 +1,4 @@
-import i18n, { type BackendModule, type i18n as I18n, type Services } from 'i18next';
+import i18n, { type BackendModule, type i18n as I18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { takeFirstWording, type Wording } from '@/shared/i18n/firstWording';
 import { type Language, LANGUAGES, type LocaleShape } from '@/shared/i18n/types';
@@ -28,6 +28,14 @@ const WORDINGS: Wordings = {
 /** The first screen's wording `/boot.js` fetched for a language, if any (src/shared/i18n/firstWording.ts). */
 type FirstWording = (language: Language) => Promise<Wording | undefined> | undefined;
 
+/** Adds a language's whole wording to what i18next already has of it. */
+type MergeWording = (language: Language, wording: LocaleShape) => void;
+
+/** Into the console's i18next, over the first screen's own words (react-i18next renders again on `added`). */
+const mergeIntoConsole: MergeWording = (language, wording) => {
+  i18n.addResourceBundle(language, 'translation', wording, true, true);
+};
+
 /**
  * Hands i18next a language's wording when it needs it: at start, and when the person picks another language.
  *
@@ -39,14 +47,12 @@ type FirstWording = (language: Language) => Promise<Wording | undefined> | undef
 export function wordingBackend(
   wordings: Wordings = WORDINGS,
   first: FirstWording = takeFirstWording,
+  merge: MergeWording = mergeIntoConsole,
 ): BackendModule {
-  let services: Services | undefined;
   return {
     type: 'backend',
-    init: (given) => {
-      services = given;
-    },
-    read(language, namespace, callback) {
+    init: () => undefined,
+    read(language, _namespace, callback) {
       const known = LANGUAGES.find((one) => one === language);
       if (known === undefined) {
         callback(new Error(`no wording for the language ${language}`), false);
@@ -75,7 +81,7 @@ export function wordingBackend(
         callback(null, wording);
         await wordings[known]().then(
           (all) => {
-            services?.resourceStore.addResourceBundle(known, namespace, all, true, true);
+            merge(known, all);
           },
           // The first screen keeps its words; another screen opened without network could not load either.
           () => undefined,
