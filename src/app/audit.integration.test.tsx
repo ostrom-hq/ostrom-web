@@ -57,7 +57,10 @@ describe('the audit log', () => {
   };
 
   it('says the next page is loading', async () => {
-    paged(async () => delay('infinite'));
+    paged(async () => {
+      await delay('infinite');
+      return undefined;
+    });
     visit('/audit');
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Show older lines' }));
     expect(await screen.findByRole('button', { name: 'Loading…' })).toBeDisabled();
