@@ -49,8 +49,28 @@ const SCREENS: readonly HeavyScreen[] = [
       },
     },
   },
-  { path: '/members', rows: 'section[aria-labelledby="mb-people"] li' },
-  { path: '/accounts/groups', rows: 'main article' },
+  {
+    path: '/members',
+    rows: 'section[aria-labelledby="mb-people"] li',
+    filter: {
+      label: 'search',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('Developer 04');
+        await expect(page.locator('section[aria-labelledby="mb-people"] li')).toHaveCount(10);
+      },
+    },
+  },
+  {
+    path: '/accounts/groups',
+    rows: 'main article',
+    filter: {
+      label: 'people of a new group',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-42');
+        await expect(page.getByRole('group', { name: 'Members' }).getByRole('checkbox')).toHaveCount(10);
+      },
+    },
+  },
   {
     path: '/sessions',
     rows: 'main ul.o-rows > li',
