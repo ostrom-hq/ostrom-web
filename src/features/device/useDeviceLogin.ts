@@ -93,7 +93,8 @@ export function useDeviceLogin(): DeviceLoginViewModel {
   // administers, the console's own first, else their first such one. A person who manages none still names one, so
   // the server answers why it refuses (403), never which organization (409).
   const admin = pending.data?.scopes !== undefined;
-  const orgs = useQuery(ready(listOrgsOptions(), { staleTime: 60_000, enabled: valid && admin })).data?.items;
+  const listed = useQuery(ready(listOrgsOptions(), { staleTime: 60_000, enabled: admin }));
+  const orgs = listed.data?.items;
   const current = useOrgStore((state) => state.current);
   const [picked, setPicked] = useState<string | undefined>(undefined);
   const read = (typed: string): void => {
@@ -148,8 +149,9 @@ export function useDeviceLogin(): DeviceLoginViewModel {
       stage: 'open',
       login,
       answering: answer.isPending,
-      // An admin approval waits for the person's organizations, so that it names one.
-      choosing: admin && orgs === undefined,
+      // An admin approval waits while the person's organizations are read, so that it names one. A list that could
+      // not be read lets it go without: the server then says why (409 or 403), never a button that stays off.
+      choosing: admin && listed.isPending,
       forbidden,
       severalOrgs,
       orgs: managed,

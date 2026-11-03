@@ -244,6 +244,20 @@ describe('the device sign-in page', () => {
     expect(named).toEqual([null]);
   });
 
+  it('lets an admin sign-in be approved when the person’s organizations could not be read: the server then says why', async () => {
+    const user = userEvent.setup();
+    alsoIn();
+    server.use(http.get('*/api/v1/orgs', () => refuse(403, 'forbidden', 'The request was refused.')));
+    open(DEMO_ADMIN_DEVICE_CODE);
+    await user.click(await approveAdmin());
+    expect(
+      await screen.findByText(
+        /^The server could not tell which of your organizations this admin sign-in is for\./,
+      ),
+    ).toBeInTheDocument();
+    expect(adminLogin()?.status).toBe('pending');
+  });
+
   it('lets an admin sign-in be approved only once the person’s organizations are read, and denied at once', async () => {
     const user = userEvent.setup();
     server.use(
