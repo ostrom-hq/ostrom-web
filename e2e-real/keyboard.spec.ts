@@ -36,8 +36,9 @@ async function focusProblem(page: Page): Promise<string> {
  */
 async function tabTo(page: Page, target: Locator, unseen: Set<string>): Promise<void> {
   await expect(target).toBeVisible({ timeout: 30_000 });
-  const reached = async (): Promise<boolean> =>
-    (await target.evaluate('(element) => element === document.activeElement')) === true;
+  // A string handed to locator.evaluate is never called (Playwright only calls real functions), so the focus is
+  // read through the `:focus` selector instead.
+  const reached = async (): Promise<boolean> => (await target.and(page.locator(':focus')).count()) === 1;
   // A screen may give its first field the focus as it opens: already there, no Tab needed.
   if (await reached()) return;
   for (let step = 0; step < MAX_TABS; step += 1) {
