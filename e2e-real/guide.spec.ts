@@ -67,7 +67,8 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   await expect(stepOf(guide, 'Invite your team')).toContainText('(done)');
 
   // 4. A shared subscription, from the guide's step.
-  const secret = `sk-ant-oat01-${run()}${run()}`;
+  // The shape secrets.spec.ts shares: an API key, not an OAuth token (which comes with its refresh token).
+  const secret = `sk-e2e-${run()}`;
   expect(
     (await callFromPage(page, 'POST', '/api/v1/secrets', { name: 'CLAUDE_MAX_TOKEN', value: secret })).status,
   ).toBe(201);
@@ -76,6 +77,7 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   await form.getByRole('combobox', { name: 'Provider' }).selectOption('anthropic');
   await form.getByRole('textbox', { name: 'Name' }).fill('Gus’s Claude Max');
   await form.getByRole('combobox', { name: 'Credential' }).selectOption('CLAUDE_MAX_TOKEN');
+  await form.getByRole('textbox', { name: 'Daily share in USD (optional)' }).fill('25');
   await form.getByRole('checkbox', { name: login, exact: true }).check();
   await form.getByRole('button', { name: 'Share' }).click();
   await expect(page.getByRole('article', { name: 'Gus’s Claude Max' })).toBeVisible();
