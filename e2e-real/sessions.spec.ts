@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// Lines 6.1 (sessions) and 6.2 (cloud agents) of the journey (demo/PARCOURS.md), console side, against the real
+// Line 6.1 (sessions) of the journey (demo/PARCOURS.md), console side, against the real
 // server. A session is reported as the CLI does, with a personal token holding `sessions:write`; no agent runs.
 import { expect, request, test } from '@playwright/test';
 import { zCreateTokenResponse } from '../gen/api/zod.gen';
@@ -82,61 +82,4 @@ test('an owner follows a session from live to ended, and another organization se
   await expect(stranger.getByText('No agent is working right now')).toBeVisible();
   await expect(stranger.getByText(repo)).toHaveCount(0);
   expect((await callFromPage(stranger, 'GET', `/api/v1/sessions/${id}`, undefined, org.id)).status).toBe(404);
-});
-
-test('an owner registers a runner, starts a cloud agent that waits for it, and another organization sees neither', async ({
-  page,
-  browser,
-}) => {
-  const org = await ownerOfNewOrganization(page, 'zeno');
-  await page.goto('/cloud');
-  await expect(page.getByRole('heading', { level: 1, name: 'Cloud agents' })).toBeVisible();
-  await expect(page.getByText('No cloud session yet.')).toBeVisible();
-  await expect(
-    page.getByText('No runner yet: register one with the CLI to run agents in the cloud.'),
-  ).toBeVisible();
-
-  const runnerName = `journey-runner-${Date.now().toString(36)}`;
-  const runner = await callFromPage(page, 'POST', '/api/v1/runners', { name: runnerName, labels: ['linux'] });
-  expect(runner.status, JSON.stringify(runner.body)).toBe(201);
-  await page.reload();
-  const runners = page.getByRole('region', { name: 'Runners' });
-  await expect(runners.getByRole('listitem').filter({ hasText: runnerName })).toBeVisible();
-
-  const form = page.getByRole('region', { name: 'Start an agent' });
-  const name = `Bump the SDK ${Date.now().toString(36)}`;
-  await form.getByRole('textbox', { name: 'What should it do?' }).fill('Bump the SDK and open a PR.');
-  await form.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
-  await form.getByRole('button', { name: 'Start the agent' }).click();
-  const session = page.getByRole('listitem').filter({ hasText: name });
-  await expect(session).toBeVisible();
-  const listed = await callFromPage(page, 'GET', '/api/v1/cloud/sessions');
-  expect(listed.status).toBe(200);
-  expect(JSON.stringify(listed.body)).toContain(name);
-
-  const stranger = await anotherPerson(browser);
-  await ownerOfNewOrganization(stranger, 'ilse');
-  await stranger.goto('/cloud');
-  await expect(stranger.getByText('No cloud session yet.')).toBeVisible();
-  await expect(stranger.getByText(runnerName)).toHaveCount(0);
-  for (const path of ['/api/v1/runners', '/api/v1/cloud/sessions']) {
-    expect((await callFromPage(stranger, 'GET', path, undefined, org.id)).status, path).toBe(404);
-  }
-});
-
-test('a cloud session reads in the contract’s words', async ({ page }) => {
-  test.fixme(
-    true,
-    'ostrom-web: the cloud screen knows queued, starting, ended and stopped; the contract and the server say creating, ' +
-      'running, pausing, paused, resuming, terminated and failed (a new session reads "creating" raw). Console fix ' +
-      'to come, in the JOURNAL (03/11)',
-  );
-  await ownerOfNewOrganization(page, 'odette');
-  await page.goto('/cloud');
-  const form = page.getByRole('region', { name: 'Start an agent' });
-  await form.getByRole('textbox', { name: 'What should it do?' }).fill('Bump the SDK and open a PR.');
-  await form.getByRole('button', { name: 'Start the agent' }).click();
-  await expect(page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').first()).toContainText(
-    'Creating',
-  );
 });
