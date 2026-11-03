@@ -115,7 +115,7 @@ describe("the first screen's own wording", () => {
         },
         fr: async () => Promise.resolve(fr),
       },
-      () => Promise.resolve({ app: { loading: 'First' } }),
+      async () => Promise.resolve({ app: { loading: 'First' } }),
     );
     expect(instance.t('app.loading')).toBe('First');
     expect(instance.exists('app.nav.home')).toBe(false);
@@ -130,7 +130,7 @@ describe("the first screen's own wording", () => {
   it('keeps the first screen on its words when the whole language does not come', async () => {
     const instance = await started(
       { en: async () => Promise.reject(new Error('offline')), fr: async () => Promise.resolve(fr) },
-      () => Promise.resolve({ app: { loading: 'First' } }),
+      async () => Promise.resolve({ app: { loading: 'First' } }),
     );
     await Promise.resolve();
     expect(instance.t('app.loading')).toBe('First');
@@ -139,7 +139,7 @@ describe("the first screen's own wording", () => {
   it("merges the whole language into the console's i18next by default", async () => {
     const backend = wordingBackend(
       { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
-      () => Promise.resolve({ app: { loading: 'First' } }),
+      async () => Promise.resolve({ app: { loading: 'First' } }),
     );
     const [error, wording] = await read(backend, 'fr');
     expect(error).toBeNull();
@@ -150,7 +150,7 @@ describe("the first screen's own wording", () => {
   });
 
   it('gives way to the whole language when it did not come, or was not fetched', async () => {
-    for (const first of [() => Promise.resolve(undefined), () => undefined]) {
+    for (const first of [async () => Promise.resolve(undefined), () => undefined]) {
       const instance = await started(
         { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
         first,
