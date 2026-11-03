@@ -46,7 +46,9 @@ const CHECKED: ReadonlySet<string> = new Set(['/yes']);
 async function violationsOn(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(WCAG).analyze();
   return results.violations.flatMap((violation) =>
-    violation.nodes.map((node) => `${violation.id} (${violation.impact ?? 'unknown'}) ${node.target.join(' ')}`),
+    violation.nodes.map(
+      (node) => `${violation.id} (${violation.impact ?? 'unknown'}) ${node.target.join(' ')}`,
+    ),
   );
 }
 
