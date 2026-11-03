@@ -136,15 +136,23 @@
 }
 
 /* The organization picker: a dialog over the console, a sheet from the bottom on a phone. */
-.o-org-switch__text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+.o-org-switch {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto);
+  align-items: center;
+  column-gap: var(--space-2);
   min-width: 0;
   line-height: 1.2;
 }
+.o-org-switch > .o-avatar {
+  grid-row: 1 / span 2;
+}
+.o-org-switch > .o-btn {
+  justify-self: start;
+}
 
 .o-org-switch__viewer {
+  grid-column: 2;
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;

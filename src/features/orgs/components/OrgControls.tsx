@@ -27,28 +27,29 @@ export function OrgControls({ anonymousPage }: OrgControlsProps): ReactElement |
         : t('orgs.switch.viewer', { name: viewer.name, role: t(`members.role.${viewer.role}`) });
   return (
     <>
-      <Button
-        variant="ghost"
-        aria-haspopup="dialog"
-        aria-label={name === undefined ? t('orgs.switch.choose') : t('orgs.switch.named', { name })}
-        aria-describedby={signedIn === undefined ? undefined : viewerId}
-        onClick={org.open}
-      >
+      {/*
+       * The button holds the organization's name only, so its name says all its visible text (WCAG 2.5.3, label in
+       * name): the initials before it and who the person is there, under it, are beside it. Who the person is (their
+       * name and role, from `/auth/me` with the organization named) is the button's description, hidden from reading
+       * on its own (`aria-describedby` reads hidden elements).
+       */}
+      <div className="o-org-switch">
         <Avatar login={name} size={20} />
-        <span className="o-org-switch__text">
+        <Button
+          variant="ghost"
+          aria-haspopup="dialog"
+          aria-label={name === undefined ? t('orgs.switch.choose') : t('orgs.switch.named', { name })}
+          aria-describedby={signedIn === undefined ? undefined : viewerId}
+          onClick={org.open}
+        >
           <span className="o-org-switch__name">{name ?? t('orgs.switch.unnamed')}</span>
-          {/*
-           * Who the person is there, as `/auth/me` answers with the organization named: their name and role. Read as
-           * the button's description, not as its name: hidden from the name, which stays the label shown above it
-           * (WCAG 2.5.3, label in name), and still read through `aria-describedby`, which reads hidden elements.
-           */}
-          {signedIn === undefined ? null : (
-            <span id={viewerId} className="o-org-switch__viewer" aria-hidden="true">
-              {signedIn}
-            </span>
-          )}
-        </span>
-      </Button>
+        </Button>
+        {signedIn === undefined ? null : (
+          <span id={viewerId} className="o-org-switch__viewer" aria-hidden="true">
+            {signedIn}
+          </span>
+        )}
+      </div>
       {org.picking ? (
         <OrgPicker
           options={org.options}
