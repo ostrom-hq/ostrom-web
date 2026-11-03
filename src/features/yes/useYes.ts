@@ -16,7 +16,7 @@ import type {
   Receipt,
 } from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
@@ -136,10 +136,12 @@ export function useShownApproval(id: string, follow = false): ShownApprovalViewM
 
 export interface SignInNoticeViewModel {
   /**
-   * Signs in with the held link; present only while someone is already signed in here, since the link may be
-   * another account and waits for a yes.
+   * Signs in with the held link, once the person says so: present as soon as the console knows whether someone is
+   * signed in here. A link never signs in on its own (another site can open it, web audit 2 W1).
    */
   readonly accept: (() => void) | undefined;
+  /** Nobody is signed in on this browser: the question says what the link does, not that it may switch accounts. */
+  readonly signedOut: boolean;
   /** A link that was not a sign-in token. */
   readonly invalid: boolean;
   /** The link is being exchanged for the session cookie. */
@@ -150,9 +152,11 @@ export interface SignInNoticeViewModel {
 }
 
 /**
- * A sign-in link held from the address bar is exchanged for the session cookie (`POST /auth/link`, server#58): at
- * once when nobody is signed in, after a yes when someone is (opening someone else's link must not silently make
- * them approve as that account). Once exchanged, the cookie is the session and everything cached is read again.
+ * A sign-in link held from the address bar is exchanged for the session cookie (`POST /auth/link`, server#58) only
+ * after a yes, whether or not someone is signed in here. Any site can open `/yes#signin=…` with a link to its own
+ * account: exchanged at once, it would sign in a browser where nobody was, and the person would add secrets or approve
+ * in someone else's organization without a word (login CSRF, web audit 2 W1; the e-mailed link is bound to its
+ * browser instead, M4). Once exchanged, the cookie is the session and everything cached is read again.
  */
 export function useSignInNotice(): SignInNoticeViewModel {
   const link = useAuthStore((auth) => auth.link);
@@ -178,23 +182,18 @@ export function useSignInNotice(): SignInNoticeViewModel {
     },
     [drop, mutate],
   );
-  useEffect(() => {
-    if (!signedOut) return;
-    // Read from the store, not the render: a second run of the effect (StrictMode) finds the link already spent.
-    const token = useAuthStore.getState().link;
-    if (token !== undefined) exchange(token);
-  }, [link, signedOut, exchange]);
   const dismiss = useCallback(() => {
     drop();
     reset();
   }, [drop, reset]);
   return {
     accept:
-      link !== undefined && known && !signedOut
+      link !== undefined && known
         ? () => {
             exchange(link);
           }
         : undefined,
+    signedOut,
     invalid: link === undefined && notice !== undefined,
     signingIn: mutation.isPending,
     failure: failureOf(mutation.error),
