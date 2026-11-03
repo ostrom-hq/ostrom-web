@@ -198,6 +198,8 @@ export const en = {
       open_one: '{{count}} open',
       open_other: '{{count}} open',
       ended: 'Ended',
+      more: 'Show older sessions',
+      loadingMore: 'Loading…',
       since: 'since {{when}}',
       emptyTitle: 'No agent is working right now',
       emptyBody: 'A session shows up here as soon as someone starts an agent with ostrom.',
@@ -230,6 +232,12 @@ export const en = {
       package: 'Package',
       requests_one: '{{count}} request for a person',
       requests_other: '{{count}} requests for a person',
+      unanswered: 'Waiting',
+      notAnswered: 'Not answered',
+      approved: 'Approved',
+      refused: 'Refused',
+      answeredBy: 'by {{by}}, {{when}}',
+      answerReceipt: 'Receipt',
       receipt: 'Receipt',
       noReceipt: 'The receipt is signed when the session ends.',
       openReceipt: 'Open receipt {{id}}',
@@ -1702,6 +1710,55 @@ export const en = {
     dead: {
       title: 'This invitation no longer works',
       body: 'It was used up, revoked or has expired. Ask the person who invited you for a new one.',
+    },
+  },
+  device: {
+    title: 'Sign in a terminal',
+    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer. If you did not run ostrom login yourself just now, deny it.',
+    enterLead: 'Type the code your terminal shows after ostrom login.',
+    form: {
+      label: 'Code from the terminal',
+      field: 'Code shown by the terminal',
+      placeholder: 'ABCD-EFGH',
+      submit: 'Continue',
+    },
+    unknownTag: 'Unknown code',
+    unknown:
+      'No sign-in is waiting for {{code}}: it may have expired or been answered already. Check the code, or run ostrom login again.',
+    malformed:
+      'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH. Type the code your terminal shows, or run ostrom login again.',
+    code: 'Code',
+    client: 'Name given by the terminal',
+    expires: 'Expires at',
+    adminTag: 'Admin sign-in',
+    admin:
+      'This terminal asks for the governance writes below. Only an owner or an admin of the organization may approve it.',
+    scopes: 'Scopes asked',
+    approve: 'Sign in this terminal',
+    approveAdmin: 'Approve the admin sign-in',
+    deny: 'Deny',
+    forbiddenTag: 'Not allowed',
+    forbidden:
+      'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
+    severalOrgs:
+      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for: it cannot be approved here yet. Deny it, or ask an owner or an admin who belongs to this organization only.',
+    failedTag: 'Not answered',
+    signedOut: {
+      title: 'Sign in to answer',
+      body: 'Only someone signed in to the console can sign a terminal in. You will come back here after.',
+      action: 'Sign in',
+    },
+    approved: {
+      title: 'Terminal signed in',
+      body: 'Go back to your terminal: ostrom login carries on there.',
+    },
+    denied: {
+      title: 'Terminal refused',
+      body: 'Nothing was signed in. If it was you after all, run ostrom login again.',
+    },
+    gone: {
+      title: 'This code no longer works',
+      body: 'It expired or was answered already. Run ostrom login again for a new code.',
     },
   },
 } as const;

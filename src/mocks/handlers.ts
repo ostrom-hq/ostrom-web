@@ -121,7 +121,9 @@ import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
 import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
+import { initialDeviceLogins } from '@/mocks/fixtures/device';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
@@ -178,6 +180,7 @@ export interface MockDb
     ActivityState,
     AuditState,
     BillingState,
+    DeviceState,
     GithubState,
     OrgsState,
     TokensState,
@@ -290,6 +293,7 @@ export function createMockDb(): MockDb {
     signedInAt: Date.now(),
     signedIn: true,
     usedLinks: [],
+    deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
     tokens: initialTokens(),
     nextToken: 3,
@@ -333,6 +337,8 @@ const zBudgetWrite = zBudget
 const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() });
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
+/** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
+const SESSIONS_PAGE = 50;
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
@@ -638,7 +644,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({ items });
     }),
     handleGetApproval(({ params }) => {
-      const approval = find(params.id);
+      // As server#185 reads it: an approval of the organization, else the first request of one of its gates, so a
+      // session's gate opens its request (the server prefers the reader's own request on the gate).
+      const approval = find(params.id) ?? db.approvals.find((item) => item.group === params.id);
       return approval === undefined ? notFound() : HttpResponse.json(approval);
     }),
     handleAnswerApproval(async ({ params, request }) => {
@@ -686,6 +694,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
+    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
     ...createApproversGraphHandlers(() => db),
     ...createActivityHandlers(
       () => db,
@@ -1240,11 +1249,19 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({ selfApproval: db.selfApproval });
     }),
     handleListSessions(({ request }) => {
-      const open = new URL(request.url).searchParams.get('open');
-      const items = db.sessions.filter(
+      const query = new URL(request.url).searchParams;
+      const open = query.get('open');
+      const matching = db.sessions.filter(
         (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
       );
-      return HttpResponse.json({ items });
+      // As the server pages it: a full page carries `next`, its last id, which the next call reads back as `before`.
+      const before = query.get('before');
+      const from = before === null ? 0 : matching.findIndex((session) => session.id === before) + 1;
+      const items = matching.slice(from, from + SESSIONS_PAGE);
+      const last = items.at(-1);
+      return HttpResponse.json(
+        items.length === SESSIONS_PAGE && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleGetSession(({ params }) => {
       const session = db.sessions.find((item) => item.id === params.id);
