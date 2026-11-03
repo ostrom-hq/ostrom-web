@@ -19,7 +19,7 @@ export const TEST_API = 'http://ostrom.test';
 /** The whole console against the in-memory API, one fresh database per test. */
 export function setupMockApp(): MockServer & { readonly traffic: MockTraffic } {
   const mock = createMockServer();
-  const { fetch: answer, traffic } = createHandlerFetch(mock.server);
+  const { fetch: answer, traffic, abortInFlight } = createHandlerFetch(mock.server);
   const realFetch = globalThis.fetch;
   beforeAll(() => {
     // Still listening: anything that does not go through fetch is caught by MSW rather than sent out.
@@ -28,9 +28,14 @@ export function setupMockApp(): MockServer & { readonly traffic: MockTraffic } {
     globalThis.fetch = answer;
     configureApiClient({ baseUrl: TEST_API });
   });
-  afterEach(() => {
+  afterEach(async () => {
     // Unmount first: a console still mounted would act on the resets below (take the only organization again).
     cleanup();
+    // Then call off what is still in flight: a mutation's own callbacks outlive the screen, and a late answer would
+    // act during the next test (leave for GitHub through the next test's `exit.assign` spy). The calls settle
+    // before the resets below, so an error callback never writes into the next test's stores.
+    abortInFlight();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     mock.server.resetHandlers();
     traffic.clear();
     resetMockDb(mock.db);
