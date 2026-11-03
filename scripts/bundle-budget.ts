@@ -133,15 +133,17 @@ function main(dist: string): void {
   const measured: MeasuredRoute[] = [];
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
     const own = new Set(
-      [...filesOf(manifest, indexOf(manifest, route.feature))].filter((f) => !entry.has(f)),
+      route.feature === undefined
+        ? []
+        : [...filesOf(manifest, indexOf(manifest, route.feature))].filter((f) => !entry.has(f)),
     );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
-    const ownBudget = budget.routes[route.path];
+    const ownBudget = route.feature === undefined ? 'in the first download' : budget.routes[route.path];
     rows.push(
       `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${String(ownBudget ?? 'none')} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
     );
-    measured.push({ path: route.path, ownKiB });
+    measured.push({ path: route.path, ownKiB: route.feature === undefined ? undefined : ownKiB });
     if (total > budget.routeKiB) over.push(`${route.path}: ${total.toFixed(1)} KiB`);
   }
   const routes = checkRouteBudgets(measured, budget.routes);

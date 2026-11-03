@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // No import: vite.config.ts and scripts/bundle-budget.ts read this file too, without the app's `@` alias.
 
-/** A route of the router, and the feature its screen loads from lazily. */
+/** The routes whose screens are in the first download on purpose (src/app/router.ts says why): nothing of their own. */
+export const IN_FIRST_DOWNLOAD: ReadonlySet<string> = new Set(['/yes', '/yes/$approvalId']);
+
+/** A route of the router, and the feature its screen loads from lazily (`undefined`: in the first download). */
 export interface RouteOfRouter {
   readonly path: string;
-  readonly feature: string;
+  readonly feature: string | undefined;
 }
 
 /**
@@ -20,6 +23,9 @@ export function routesOf(router: string): RouteOfRouter[] {
     .map((definition) => {
       const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
       const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
+      if (path !== undefined && feature === undefined && IN_FIRST_DOWNLOAD.has(path)) {
+        return { path, feature: undefined };
+      }
       if (path === undefined || feature === undefined) {
         throw new Error(`src/app/router.ts: a route without a lazy screen: ${definition.slice(0, 120)}`);
       }

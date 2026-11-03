@@ -127,13 +127,21 @@ function preloadBoot(): Plugin {
       for (const chunk of chunks) if (chunk.isEntry) closure(chunk.fileName, entry);
       const routes = routesOf(readFileSync(resolve(src, 'app', 'router.ts'), 'utf8')).map(
         (route): BootRoute => {
-          const screen = chunks.find((chunk) =>
-            new RegExp(`[\\/]src[\\/]features[\\/]${route.feature}[\\/]index\\.`).test(
-              chunk.facadeModuleId ?? '',
-            ),
-          );
-          if (screen === undefined) throw new Error(`no chunk for the feature ${route.feature}`);
-          const own = [...closure(screen.fileName, new Set())].filter((file) => !entry.has(file));
+          const feature = route.feature;
+          const screen =
+            feature === undefined
+              ? undefined
+              : chunks.find((chunk) =>
+                  new RegExp(`[\\/]src[\\/]features[\\/]${feature}[\\/]index\\.`).test(
+                    chunk.facadeModuleId ?? '',
+                  ),
+                );
+          if (feature !== undefined && screen === undefined)
+            throw new Error(`no chunk for the feature ${feature}`);
+          const own =
+            screen === undefined
+              ? []
+              : [...closure(screen.fileName, new Set())].filter((file) => !entry.has(file));
           const styles = own.flatMap((file) => [...(byName.get(file)?.viteMetadata?.importedCss ?? [])]);
           return {
             pattern: patternOf(route.path),
