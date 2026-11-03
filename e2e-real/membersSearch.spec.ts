@@ -46,7 +46,7 @@ test('the members search finds people past the first page, of this team only, or
   await expect(people.getByRole('listitem')).toHaveCount(2);
   // The screen sorts by role, then name: compare who is listed, not in which order.
   expect((await listed(page)).toSorted()).toEqual(FOUND.map((login) => `@${login}`).toSorted());
-  await expect(people.getByText('Zoey Byname')).toBeVisible();
+  await expect(people.getByText('Zoey Byname', { exact: true })).toBeVisible();
 
   // Never someone of another team, whatever their login.
   expect(await listed(page)).not.toContain(`@${ELSEWHERE}`);
