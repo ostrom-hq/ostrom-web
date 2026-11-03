@@ -25,6 +25,7 @@ const screens = [
   '/spend',
   '/billing',
   '/settings',
+  '/account',
   '/tokens',
   '/cloud',
   '/automations',

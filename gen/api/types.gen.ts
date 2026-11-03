@@ -1395,6 +1395,13 @@ export type Group = {
     name: string;
     members: Array<string>;
     accounts: Array<string>;
+    /**
+     * The members paused now, by login, and the end of their pause
+     */
+    paused?: Array<{
+        login: string;
+        until: string;
+    }>;
 };
 
 /**

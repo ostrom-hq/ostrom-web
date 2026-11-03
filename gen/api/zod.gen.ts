@@ -986,7 +986,11 @@ export const zGroup = z.object({
     id: z.string(),
     name: z.string(),
     members: z.array(z.string()),
-    accounts: z.array(z.string())
+    accounts: z.array(z.string()),
+    paused: z.array(z.object({
+        login: z.string(),
+        until: z.string()
+    })).optional()
 });
 
 /**

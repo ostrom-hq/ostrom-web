@@ -209,6 +209,12 @@ const settingsRoute = createRoute({
   path: '/settings',
   component: lazyRouteComponent(async () => import('@/features/settings'), 'SettingsScreen'),
 });
+/** The person's own account, read in no organization: sessions, workstations and their GitHub. */
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/account',
+  component: lazyRouteComponent(async () => import('@/features/settings'), 'AccountScreen'),
+});
 const tokensRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tokens',
@@ -233,6 +239,25 @@ const accountsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/accounts',
   component: lazyRouteComponent(async () => import('@/features/sharing'), 'AccountsScreen'),
+});
+/** `?gone` says, above the list, that the group just asked for no longer exists. */
+export const groupsSearchSchema = z.object({
+  gone: z
+    .unknown()
+    .transform(() => true as const)
+    .optional(),
+});
+
+const groupsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts/groups',
+  validateSearch: groupsSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/sharing'), 'GroupsScreen'),
+});
+const groupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accounts/groups/$groupId',
+  component: lazyRouteComponent(async () => import('@/features/sharing'), 'GroupScreen'),
 });
 const receiptsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -327,11 +352,14 @@ export const routeTree = rootRoute.addChildren([
   spendRoute,
   billingRoute,
   settingsRoute,
+  accountRoute,
   tokensRoute,
   cloudRoute,
   automationsRoute,
   artifactsRoute,
   accountsRoute,
+  groupsRoute,
+  groupRoute,
 ]);
 
 const buildRouter = (history?: RouterHistory) =>
