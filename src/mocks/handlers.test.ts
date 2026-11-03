@@ -115,6 +115,24 @@ describe('mock API', () => {
     expect(all.data.items).toHaveLength(3);
   });
 
+  it('pages the list as the server does: 50 lines, then `next`, read back as `before`', async () => {
+    db.sessions.push(
+      ...Array.from({ length: 50 }, (_, index) => ({
+        id: `ses-old-${String(index)}`,
+        agent: 'shell',
+        dev: 'lena',
+        startedAt: '2026-10-01T08:00:00.000Z',
+        endedAt: '2026-10-01T09:00:00.000Z',
+      })),
+    );
+    const first = await listSessions({ query: { open: false }, throwOnError: true });
+    expect(first.data.items).toHaveLength(50);
+    expect(first.data.next).toBe('ses-old-48');
+    const second = await listSessions({ query: { open: false, before: 'ses-old-48' }, throwOnError: true });
+    expect(second.data.items.map((session) => session.id)).toEqual(['ses-old-49']);
+    expect(second.data).not.toHaveProperty('next');
+  });
+
   it('leaves out of "mine" what the caller cannot answer', async () => {
     db.approvers['apr-deploy-88'] = ['samir'];
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });

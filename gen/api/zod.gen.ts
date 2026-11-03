@@ -1994,6 +1994,18 @@ export const zServiceKey = z.object({
 });
 
 /**
+ * The answer to a gate a session asked or joined, as the session's thread shows it.
+ */
+export const zSessionGateAnswer = z.object({
+    gateId: z.string(),
+    actionClass: z.string(),
+    outcome: z.enum(['approved', 'refused']),
+    by: z.string(),
+    at: z.iso.datetime({ offset: true }),
+    receiptId: z.string().optional()
+});
+
+/**
  * A coding agent session, one segment of it. A launch is a segment: a resumed agent session (`--resume` keeps its id)
  */
 export const zSession = z.object({
@@ -2018,6 +2030,7 @@ export const zSession = z.object({
     endedBy: z.string().optional(),
     lastSeenAt: z.string().optional(),
     gates: z.array(z.string()).optional(),
+    gateAnswers: z.array(zSessionGateAnswer).optional(),
     receiptId: z.string().optional(),
     tools: z.int().optional(),
     costUsd: z.number().optional(),

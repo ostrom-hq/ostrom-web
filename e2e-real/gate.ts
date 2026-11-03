@@ -4,7 +4,7 @@
 // `gates:ask` that asks for such a push. Shared by the journeys that read or answer it.
 import { expect, type Page, request, test } from '@playwright/test';
 import { zAskGateResponse, zCreateTokenResponse, zListApprovalsResponse, zMe } from '../gen/api/zod.gen';
-import { bodyOf, callFromPage } from './real';
+import { bodyOf, callFromPage, joinAs, ownerOfNewOrganization } from './real';
 
 /** The GitHub login the server knows the person signed in on `page` by: what a gate node names. */
 export async function loginOf(page: Page): Promise<string> {
@@ -101,10 +101,19 @@ export async function withToken(
   }
 }
 
-/** Asks for a push of a new commit to main of `repo`, as the hook would: the gate, still waiting for a yes. */
-export async function askPushToMain(token: string, org: string, repo: string): Promise<string> {
+/**
+ * Asks for a push of a new commit to main of `repo`, as the hook would, in `sessionId` when given: the gate, still waiting
+ * for a yes.
+ */
+export async function askPushToMain(
+  token: string,
+  org: string,
+  repo: string,
+  sessionId?: string,
+): Promise<string> {
   const sha = Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
   const asked = await withToken(token, org, 'POST', '/api/v1/gates', {
+    ...(sessionId === undefined ? {} : { sessionId }),
     repo,
     class: 'git.push',
     tool: 'Bash',
@@ -141,4 +150,23 @@ export async function requestOf(
     })
     .toBeDefined();
   return found ?? { id: '', title: '' };
+}
+
+/** Opens the request from the queue, as a person does: the queue, then its line. */
+export async function openFromQueue(page: Page, approval: { id: string; title: string }): Promise<void> {
+  await page.goto('/yes');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
+  await page.locator(`a[href$="/yes/${approval.id}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`/yes/${approval.id}$`));
+}
+
+/** The owner of a new organization on `page`, and a second person who joined it with `role` on their own browser. */
+export async function ownerAndMember(
+  page: Page,
+  other: Page,
+  role: string,
+): Promise<{ org: string; owner: string; member: string }> {
+  const { id } = await ownerOfNewOrganization(page, 'ada');
+  await joinAs(page, id, other, 'ben', role);
+  return { org: id, owner: await loginOf(page), member: await loginOf(other) };
 }
