@@ -18,7 +18,8 @@ export function useModal(
   returnTo?: RefObject<HTMLElement | null>,
 ): void {
   useEffect(() => {
-    const opener = document.activeElement;
+    // Read once: the button that opened the dialog is there before it, and stays after it.
+    const back = returnTo?.current ?? document.activeElement;
     const behind = [...document.body.children].filter(
       (child) => child !== overlay.current && !child.hasAttribute('inert'),
     );
@@ -46,7 +47,6 @@ export function useModal(
     return () => {
       document.removeEventListener('keydown', onKey);
       for (const element of behind) element.removeAttribute('inert');
-      const back = returnTo?.current ?? opener;
       if (back instanceof HTMLElement) back.focus();
     };
   }, [overlay, panel, onClose, returnTo]);
