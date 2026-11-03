@@ -224,6 +224,27 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.o-invitees {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-14);
+}
+.o-invitees li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-4);
+}
+.o-invitees__email {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.o-invitees__role {
+  color: var(--text-muted);
+}
 .o-mono {
   font-family: var(--font-mono);
   font-size: var(--fs-12);

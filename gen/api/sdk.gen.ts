@@ -1325,6 +1325,8 @@ export const listOrgMembers = <ThrowOnError extends boolean = false>(options: Op
 
 /**
  * Invite people by e-mail; members and addresses already invited are left out of `invited`
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const inviteOrgMembers = <ThrowOnError extends boolean = false>(options: Options<InviteOrgMembersData, ThrowOnError>): RequestResult<InviteOrgMembersResponses, InviteOrgMembersErrors, ThrowOnError> => (options.client ?? client).post<InviteOrgMembersResponses, InviteOrgMembersErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1348,6 +1350,8 @@ export const inviteOrgMembers = <ThrowOnError extends boolean = false>(options: 
 
 /**
  * Remove a member
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const removeOrgMember = <ThrowOnError extends boolean = false>(options: Options<RemoveOrgMemberData, ThrowOnError>): RequestResult<RemoveOrgMemberResponses, RemoveOrgMemberErrors, ThrowOnError> => (options.client ?? client).delete<RemoveOrgMemberResponses, RemoveOrgMemberErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1386,6 +1390,8 @@ export const getOrgMember = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Change a member's role
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const updateOrgMember = <ThrowOnError extends boolean = false>(options: Options<UpdateOrgMemberData, ThrowOnError>): RequestResult<UpdateOrgMemberResponses, UpdateOrgMemberErrors, ThrowOnError> => (options.client ?? client).patch<UpdateOrgMemberResponses, UpdateOrgMemberErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1428,6 +1434,8 @@ export const listInvitations = <ThrowOnError extends boolean = false>(options: O
 
 /**
  * Create an invitation link: the answer is the only time its URL is shown
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once. Confirmed, the URL is shown once, to the person who asked, in the confirmation's `result` (`GET /confirmations/{id}`): their first read with a token returns `{url, invitation}`; later reads, and any console session, get `{invitation, shown: true}`, without the URL. A first answer lost on the way is not shown again: revoke the link and create another.
  */
 export const createInvitationLink = <ThrowOnError extends boolean = false>(options: Options<CreateInvitationLinkData, ThrowOnError>): RequestResult<CreateInvitationLinkResponses, CreateInvitationLinkErrors, ThrowOnError> => (options.client ?? client).post<CreateInvitationLinkResponses, CreateInvitationLinkErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1971,7 +1979,8 @@ export const askGate = <ThrowOnError extends boolean = false>(options: Options<A
  *
  * With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
  * pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
- * answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+ * answers at once, and so does a gate of another organization (404, as if it did not exist) or of another launch
+ * of the caller's organization (403). The server caps the wait at
  * 30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
  * connection. A client sets its HTTP timeout above the wait.
  */
@@ -2240,7 +2249,7 @@ export const getApprovalView = <ThrowOnError extends boolean = false>(options: O
 });
 
 /**
- * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval, with its signed `receipt`, a no's included
+ * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 github_link_required when the gate's policy is never-self-approve, the pull request's author linked no Ostrom person and the answerer linked no GitHub account (the gate waits, Q-GATES-G1); 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval, with its signed `receipt`, a no's included
  */
 export const answerApproval = <ThrowOnError extends boolean = false>(options: Options<AnswerApprovalData, ThrowOnError>): RequestResult<AnswerApprovalResponses, AnswerApprovalErrors, ThrowOnError> => (options.client ?? client).post<AnswerApprovalResponses, AnswerApprovalErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -4458,7 +4467,7 @@ export const deleteRunner = <ThrowOnError extends boolean = false>(options: Opti
  * Sign of life; returns the work assigned
  *
  * Authenticated by the runner's own key (`Authorization: Bearer ostrom_runner_…`, from registerRunner's answer), not a member's credential. Marks the runner seen: listRunners shows it `online` for 90 seconds after its last heartbeat. An unknown runner, a malformed id, another runner's key or a runner removed meanwhile all answer 401 alike.
- * A runner that runs cloud sessions (`ostrom-runner machine` with a Docker Engine, on a server whose sessions run on registered runners) sends a JSON body: the executions its machine has and the workspaces it holds. The answer is what it must hold: the executions to run, each handed over once with its plan (the volumes and containers to create, the last one holding the execution's runner token), and the workspaces to keep. Anything else of its own, it stops and deletes. A runner that sends no body is given nothing; an unknown state or a malformed session id answers 400. `sessions` is kept for older runners and stays empty.
+ * A runner that runs cloud sessions (`ostrom-runner machine` with a Docker Engine, on a server whose sessions run on registered runners) sends a JSON body: the executions its machine has and the workspaces it holds. The answer is what it must hold: the executions to run, each handed over once with its plan (the volumes and containers to create, the last one holding the execution's runner token), and the workspaces to keep. Anything else of its own, it stops and deletes. A runner that sends no body is given nothing; an unknown state, a malformed session id or a capacity outside 0 to 256 answers 400. `sessions` is kept for older runners and stays empty.
  */
 export const runnerHeartbeat = <ThrowOnError extends boolean = false>(options: Options<RunnerHeartbeatData, ThrowOnError>): RequestResult<RunnerHeartbeatResponses, RunnerHeartbeatErrors, ThrowOnError> => (options.client ?? client).post<RunnerHeartbeatResponses, RunnerHeartbeatErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
