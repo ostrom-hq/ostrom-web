@@ -60,7 +60,8 @@ function useRunList(query: RunsQuery): RunListViewModel {
 export function useWorkflowRuns(workflowId: string): RunListViewModel {
   const query = useInfiniteQuery({
     ...ready(listWorkflowRunsInfiniteOptions({ path: { id: workflowId } })),
-    initialPageParam: {},
+    // The first page names its workflow: the generated page parameter carries the path along with `before`.
+    initialPageParam: { path: { id: workflowId } },
     getNextPageParam: (last) => last.next,
   });
   return useRunList(query);

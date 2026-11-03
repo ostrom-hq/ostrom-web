@@ -40,7 +40,10 @@ function start(body: unknown): RequestInit {
 }
 
 /** The run a POST started. */
-async function started(path: string, body: unknown): Promise<WorkflowRun> {
+async function started(
+  path: string,
+  body: unknown,
+): Promise<ReturnType<typeof zStartWorkflowRunResponse.parse>> {
   const answer = await call(path, start(body));
   expect(answer.status).toBe(201);
   return zStartWorkflowRunResponse.parse(answer.body);

@@ -4,8 +4,8 @@ import { openScreen } from './navigation';
 
 /** A list that fits the screen: nothing scrolls sideways, on a phone as on a wide screen. */
 async function fitsTheScreen(page: Page): Promise<void> {
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  const overflow: unknown = await page.evaluate(
+    'document.documentElement.scrollWidth - document.documentElement.clientWidth',
   );
   expect(overflow).toBeLessThanOrEqual(0);
 }
