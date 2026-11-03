@@ -19,9 +19,16 @@ const FOCUS_PROBLEM = `(() => {
   const focused = document.activeElement;
   // Past the last stop the focus leaves for the page itself before it comes round: nothing to show there.
   if (!(focused instanceof HTMLElement) || focused === document.body) return '';
-  const style = getComputedStyle(focused);
-  const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
-  if (outline || style.boxShadow !== 'none') return '';
+  const ringed = (element) => {
+    const style = getComputedStyle(element);
+    const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
+    return outline || style.boxShadow !== 'none';
+  };
+  if (ringed(focused)) return '';
+  // A control drawn as one with its parent (the organization switch) rings the parent while the button inside has
+  // the focus: seen, as long as the parent's ring is the one its :has(:focus-visible) puts.
+  const parent = focused.parentElement;
+  if (parent !== null && parent.matches(':has(> :focus-visible)') && ringed(parent)) return '';
   const name = focused.getAttribute('aria-label') ?? focused.innerText.trim().slice(0, 40);
   return focused.tagName.toLowerCase() + ' "' + name + '" shows no focus';
 })()`;
