@@ -107,10 +107,12 @@ describe('my account', () => {
 
   it('asks the server once while it answers', async () => {
     const user = userEvent.setup();
-    leaving();
+    const assign = leaving();
     db.providers = ['email'];
+    let asked = 0;
     server.use(
       http.post('*/api/v1/auth/:provider/link', async () => {
+        asked += 1;
         await delay(200);
         return HttpResponse.json({ authorizationUrl: DEMO_GITHUB_CONSENT });
       }),
@@ -119,7 +121,15 @@ describe('my account', () => {
     await account();
     const github = region('GitHub');
     await user.click(within(github).getByRole('button', { name: 'Link GitHub' }));
-    expect(within(github).getByRole('button', { name: 'Opening GitHub…' })).toBeDisabled();
+    const busy = within(github).getByRole('button', { name: 'Opening GitHub…' });
+    expect(busy).toBeDisabled();
+    await user.click(busy);
+    // The answer is awaited here: left pending, it would leave for GitHub during the next test, after the spy is gone.
+    await vi.waitFor(() => {
+      expect(assign).toHaveBeenCalledWith(DEMO_GITHUB_CONSENT);
+    });
+    expect(assign).toHaveBeenCalledTimes(1);
+    expect(asked).toBe(1);
   });
 
   it('stays when the server names a page that is not https', async () => {

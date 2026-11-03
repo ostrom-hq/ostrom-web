@@ -48,6 +48,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # TEMPORARY (removed before merge): the file once leaked a pending answer into the next test; 20 runs in a row.
+      - name: myAccount.integration, 20 runs in a row
+        run: for i in $(seq 1 20); do echo "run $i"; pnpm exec vitest run src/app/myAccount.integration.test.tsx --reporter=dot || exit 1; done
       # What ships in the console: a known advisory of moderate severity or above in a runtime dependency fails the
       # job (audit AUDIT-SECU-WEB-2 B9). Build tools are kept patched by pnpm-workspace.yaml overrides.
       - name: No known vulnerability in the runtime dependencies (pnpm audit --prod)
