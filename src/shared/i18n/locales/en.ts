@@ -1715,7 +1715,7 @@ export const en = {
     unknown:
       'No sign-in is waiting for {{code}}: it may have expired or been answered already. Check the code, or run ostrom login again.',
     malformed:
-      'This link holds no code from ostrom login. Type the code your terminal shows, or run ostrom login again.',
+      'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH. Type the code your terminal shows, or run ostrom login again.',
     code: 'Code',
     client: 'Name given by the terminal',
     expires: 'Expires at',

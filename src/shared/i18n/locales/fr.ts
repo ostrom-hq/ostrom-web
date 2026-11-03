@@ -1754,7 +1754,7 @@ export const fr = {
     unknown:
       'Aucune connexion n’attend le code {{code}} : il a peut-être expiré ou déjà reçu une réponse. Vérifie le code, ou relance ostrom login.',
     malformed:
-      'Ce lien ne contient aucun code d’ostrom login. Tape le code affiché par ton terminal, ou relance ostrom login.',
+      'Ce n’est pas un code d’ostrom login : il a huit lettres, comme ABCD-EFGH. Tape le code affiché par ton terminal, ou relance ostrom login.',
     code: 'Code',
     client: 'Nom donné par le terminal',
     expires: 'Expire à',
@@ -1769,7 +1769,7 @@ export const fr = {
     forbidden:
       'Seul un propriétaire ou un admin de l’organisation peut approuver une connexion admin. Demande-le à l’un d’eux, ou refuse-la.',
     severalOrgs:
-      'Tu fais partie de plusieurs organisations, et le serveur ne sait pas à laquelle cette connexion admin se rattache : elle ne peut pas encore être approuvée ici. Refuse-la, ou demande à un owner ou un admin qui n’appartient qu’à cette organisation.',
+      'Tu fais partie de plusieurs organisations, et le serveur ne sait pas à laquelle cette connexion admin se rattache : elle ne peut pas encore être approuvée ici. Refuse-la, ou demande à un propriétaire ou un admin qui n’appartient qu’à cette organisation.',
     failedTag: 'Réponse non envoyée',
     signedOut: {
       title: 'Connecte-toi pour répondre',

@@ -14,19 +14,19 @@ import { addressOfAPerson, bodyOf, callFromPage, freshEmail, signIn } from './re
 const zStartedLogin = zDeviceCode.extend({ verificationUriComplete: z.string() });
 
 /**
- * Calls the API as the CLI does, through the console's own origin (the preview proxies /api to the server): a
- * context of its own, without the browser's session cookie; a bearer token only once the CLI holds one.
+ * The CLI's network, one per test (set before each): the server lets one address start ten logins per ten minutes,
+ * and every journey reaches it from the same machine.
  */
-/**
- * The CLI's network, one per test: the server lets one address start ten logins per ten minutes, and every journey
- * reaches it from the same machine.
- */
-let cliAddress = addressOfAPerson();
+let cliAddress = '';
 
 test.beforeEach(() => {
   cliAddress = addressOfAPerson();
 });
 
+/**
+ * Calls the API as the CLI does, through the console's own origin (the preview proxies /api to the server): a
+ * context of its own, without the browser's session cookie; a bearer token only once the CLI holds one.
+ */
 async function asTheCli(
   method: 'GET' | 'POST',
   path: string,

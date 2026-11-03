@@ -157,7 +157,9 @@ describe('the device sign-in page', () => {
   it('never shows back what a link holds when it is not a code', async () => {
     open(encodeURIComponent('Your session expired, sign in on evil.example'));
     const said = await within(await main()).findByRole('alert');
-    expect(said).toHaveTextContent('This link holds no code from ostrom login.');
+    expect(said).toHaveTextContent(
+      'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH.',
+    );
     expect(said).not.toHaveTextContent('evil.example');
   });
 
