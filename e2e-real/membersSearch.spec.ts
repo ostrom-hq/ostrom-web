@@ -22,7 +22,7 @@ async function listed(page: Page): Promise<string[]> {
     .allTextContents();
 }
 
-test('the members search asks the server, finds people past the first page, only of this team, or says nobody', async ({
+test('the members search finds people past the first page, of this team only, or says nobody', async ({
   page,
 }) => {
   await signIn(page, OWNER, '/members');
@@ -44,18 +44,13 @@ test('the members search asks the server, finds people past the first page, only
   const served = zOrgMemberList.parse(await answer.json());
   expect(served.items.map((member) => member.login)).toEqual(FOUND);
   await expect(people.getByRole('listitem')).toHaveCount(2);
-  expect(await listed(page)).toEqual(FOUND.map((login) => `@${login}`));
+  // The screen sorts by role, then name: compare who is listed, not in which order.
+  expect((await listed(page)).toSorted()).toEqual(FOUND.map((login) => `@${login}`).toSorted());
   await expect(people.getByText('Zoey Byname')).toBeVisible();
 
   // Never someone of another team, whatever their login.
   expect(await listed(page)).not.toContain(`@${ELSEWHERE}`);
-  const direct = await callFromPage(
-    page,
-    'GET',
-    `/api/v1/orgs/${CROWD}/members?q=${ELSEWHERE}`,
-    undefined,
-    CROWD,
-  );
+  const direct = await callFromPage(page, 'GET', `/api/v1/orgs/${CROWD}/members?q=${ELSEWHERE}`);
   expect(direct.status).toBe(200);
   expect(zOrgMemberList.parse(direct.body).items).toEqual([]);
 
