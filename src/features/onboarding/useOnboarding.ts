@@ -5,7 +5,6 @@ import {
   getGithubAppOptions,
   listInvitationsOptions,
   listMyOrganizationsQueryKey,
-  listOrgMembersOptions,
   listOrgsOptions,
   listOrgsQueryKey,
   listSharedAccountsOptions,
@@ -20,6 +19,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { meOf } from '@/shared/auth/me';
 import { ready } from '@/shared/api/ready';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
+import { orgMembersOptions } from '@/shared/org/members';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
@@ -119,7 +119,7 @@ export interface SetupViewModel {
 export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel {
   const quiet = { retry: false, staleTime: 30_000 } as const;
   const github = useQuery(ready(getGithubAppOptions(), quiet));
-  const members = useQuery(ready(listOrgMembersOptions({ path: { org } }), quiet));
+  const members = useQuery(ready(orgMembersOptions(org), quiet));
   const invitations = useQuery(
     ready(listInvitationsOptions({ path: { org } }), { ...quiet, enabled: managesMembers(role) }),
   );

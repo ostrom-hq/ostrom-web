@@ -7,7 +7,6 @@ import {
   getGroupQueryKey,
   listGroupsOptions,
   listGroupsQueryKey,
-  listOrgMembersOptions,
   listSharedAccountsOptions,
   pauseGroupMemberMutation,
   removeGroupMemberMutation,
@@ -18,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
+import { orgMembersOptions } from '@/shared/org/members';
 import { managesMembers } from '@/shared/org/roles';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { isGone } from './groups';
@@ -39,7 +39,7 @@ function useGroupsContext(): GroupsContext {
   // Only names: a refusal is said once, not asked again, and the groups still show.
   const accounts = useQuery(ready(listSharedAccountsOptions(), { retry: false }));
   const members = useQuery(
-    ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), {
+    ready(orgMembersOptions(org?.id ?? ''), {
       enabled: org !== undefined,
       retry: false,
     }),

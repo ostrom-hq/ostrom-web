@@ -3,6 +3,7 @@ import type { Invitation, OrgMember } from '@gen/api/types.gen';
 import { displayName, parseInvites, sortInvitations, sortMembers } from './model';
 
 const member = (login: string, role: string, name = ''): OrgMember => ({
+  id: `id-${login}`,
   login,
   name,
   role,

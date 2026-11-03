@@ -5,7 +5,6 @@ import {
   inviteOrgMembersMutation,
   listInvitationsOptions,
   listInvitationsQueryKey,
-  listOrgMembersOptions,
   listOrgMembersQueryKey,
   removeOrgMemberMutation,
   revokeInvitationMutation,
@@ -17,6 +16,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
+import { orgMembersOptions } from '@/shared/org/members';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { sortInvitations, sortMembers } from './model';
 
@@ -33,7 +33,7 @@ export interface MembersViewModel {
 }
 
 export function useMembers(org: string, role: OrgRole | undefined): MembersViewModel {
-  const members = useQuery(ready(listOrgMembersOptions({ path: { org } })));
+  const members = useQuery(ready(orgMembersOptions(org)));
   const invitations = useQuery(
     ready(listInvitationsOptions({ path: { org } }), { enabled: managesMembers(role), retry: false }),
   );

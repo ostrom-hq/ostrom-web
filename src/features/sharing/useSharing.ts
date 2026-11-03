@@ -8,7 +8,6 @@ import {
   listArtifactsQueryKey,
   listArtifactVersionsOptions,
   listMembersOptions,
-  listOrgMembersOptions,
   listSecretsOptions,
   listSharedAccountsOptions,
   listSharedAccountsQueryKey,
@@ -32,6 +31,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
+import { orgMembersOptions } from '@/shared/org/members';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 
 export interface ArtifactsViewModel {
@@ -184,9 +184,7 @@ export function useAccounts(): AccountsViewModel {
   // From the organization's own route, which the server serves (`GET /members` is still planned), once it is known.
   const current = useCurrentOrg();
   const { org } = current;
-  const members = useQuery(
-    ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), { enabled: org !== undefined }),
-  );
+  const members = useQuery(ready(orgMembersOptions(org?.id ?? ''), { enabled: org !== undefined }));
   const viewer = useViewer();
   return {
     accounts: accounts.data?.items,
