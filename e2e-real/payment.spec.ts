@@ -44,12 +44,16 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   if (!(await shown(page, '#billingAddressLine1')) && (await manual.isVisible().catch(() => false))) {
     await manual.click();
   }
-  await page.locator('#billingAddressLine1').fill('60 rue François 1er');
+  const line1 = page.locator('#billingAddressLine1');
+  await line1.fill('60 rue François 1er');
+  // Stripe's address search opens a list of suggestions over the form: closed, so the Subscribe click lands.
+  await line1.press('Escape');
   await page.locator('#billingPostalCode').fill('75008');
   await page.locator('#billingLocality').fill('Paris');
   // Stripe's Link would ask for a phone number to save the card: the journey pays without it.
   const link = page.locator('#enableStripePass');
   if ((await shown(page, '#enableStripePass')) && (await link.isChecked())) await link.uncheck();
+  await expect(page.getByRole('combobox', { name: 'Address' })).not.toHaveAttribute('aria-expanded', 'true');
   await page.locator('[data-testid="hosted-payment-submit-button"]').click();
 }
 
