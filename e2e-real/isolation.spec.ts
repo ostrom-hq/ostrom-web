@@ -32,6 +32,8 @@ test('§16 another organization’s owner sees none of the first one’s rules o
     stranger.getByText('No rule yet: they appear as the deep pass reads your repositories.'),
   ).toBeVisible();
   await expect(stranger.getByText(statement)).toHaveCount(0);
+  // Naming the first organization opens nothing either.
+  expect((await callFromPage(stranger, 'GET', '/api/v1/rules', undefined, org)).status).toBe(404);
 });
 
 test('§16 another organization’s owner sees none of the first one’s gates, in the queue or by its address', async ({
@@ -40,7 +42,10 @@ test('§16 another organization’s owner sees none of the first one’s gates, 
 }) => {
   const { id: org } = await ownerOfNewOrganization(page, 'pia');
   const owner = await loginOf(page);
-  const repo = await gatedRepository(page, org, [owner]);
+  const stranger = await anotherPerson(browser);
+  await ownerOfNewOrganization(stranger, 'quin');
+  // The stranger is named among the approvers too: only the organization keeps the request out of their queue.
+  const repo = await gatedRepository(page, org, [owner, await loginOf(stranger)]);
   const gate = await askPushToMain(await askingToken(page, org), org, repo);
   const request = await requestOf(page, org, gate);
 
@@ -48,17 +53,17 @@ test('§16 another organization’s owner sees none of the first one’s gates, 
   await page.goto('/yes');
   await expect(page.locator(`a[href$="/yes/${request.id}"]`).first()).toBeVisible();
 
-  const stranger = await anotherPerson(browser);
-  await ownerOfNewOrganization(stranger, 'quin');
   await stranger.goto('/yes');
   await expect(stranger.getByText('Nothing waits for you')).toBeVisible();
   await expect(stranger.locator(`a[href*="/yes/${request.id}"]`)).toHaveCount(0);
   await expect(stranger.getByText(repo)).toHaveCount(0);
 
-  // Its address, typed by hand, opens nothing of it: no detail, no answer.
-  await stranger.goto(`/yes/${request.id}`);
-  await expect(stranger.getByRole('main').getByRole('alert')).toBeVisible();
-  await expect(stranger.getByText(repo)).toHaveCount(0);
-  if (request.title !== '') await expect(stranger.getByText(request.title)).toHaveCount(0);
-  await expect(stranger.getByRole('button', { name: /^Approve/ })).toHaveCount(0);
+  // Its address, typed by hand, opens nothing of it: no detail, no answer. Nor does the gate's, which a session links.
+  for (const id of [request.id, gate]) {
+    await stranger.goto(`/yes/${id}`);
+    await expect(stranger.getByRole('main').getByRole('alert')).toContainText('Refused');
+    await expect(stranger.getByText(repo)).toHaveCount(0);
+    await expect(stranger.getByText(request.title)).toHaveCount(0);
+    await expect(stranger.getByRole('button', { name: /^Approve/ })).toHaveCount(0);
+  }
 });
