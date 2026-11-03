@@ -40,7 +40,8 @@ test('3.2 an owner writes a rule with a gate on the console; once accepted, its 
   await form.getByRole('button', { name: 'Add the rule' }).click();
 
   const written = page.locator('article').filter({ hasText: statement });
-  await expect(written).toContainText('Accepted');
+  // Its status badge, not "Accepted by …" nor "Accepted with a fix".
+  await expect(written.getByText('Accepted', { exact: true })).toBeVisible();
   await expect(written).toContainText(`Gate: ${label}, waits for a yes from ${owner}`);
 
   // The accepted rule's gate is in the catalogue the hook and the gates read.
