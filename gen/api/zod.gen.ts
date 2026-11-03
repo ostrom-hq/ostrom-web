@@ -846,7 +846,7 @@ export const zApproval = z.object({
 });
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
  */
 export const zForbidden = z.object({
     error: z.object({
@@ -856,7 +856,8 @@ export const zForbidden = z.object({
             'installation_not_yours',
             'probe_not_yours',
             'cutover_owner_required',
-            'self_approval_refused'
+            'self_approval_refused',
+            'github_link_required'
         ]),
         message: z.string()
     })
@@ -958,7 +959,7 @@ export const zGovernanceConfirmationAnswerRequest = z.object({
 });
 
 /**
- * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
+ * The 202 of a governance write made with a person's API token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
  */
 export const zGovernanceConfirmationPending = z.object({
     confirmationId: z.string(),
@@ -987,7 +988,7 @@ export const zGovernanceConfirmationStatus = z.enum([
 ]);
 
 /**
- * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
+ * A governance write made with a person's API token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
  */
 export const zGovernanceConfirmation = z.object({
     id: z.string(),
@@ -2275,6 +2276,7 @@ export const zSpending = z.object({
     byAgent: z.array(zSpendingLine),
     byRepo: z.array(zSpendingLine),
     byPerson: z.array(zSpendingLine),
+    byWorkflow: z.array(zSpendingLine).optional(),
     daily: z.array(zSpendingDay),
     exceeded: z.array(zExceededBudget).optional()
 });
@@ -3329,7 +3331,8 @@ export const zLauncherLoginResponse = z.object({
 export const zCreateLaunchBody = z.object({
     repo: z.string().optional(),
     agent: z.string(),
-    model: z.string().optional()
+    model: z.string().optional(),
+    workflowId: z.string().optional()
 });
 
 export const zCreateLaunchHeaders = z.object({
@@ -3774,7 +3777,8 @@ export const zListOrgMembersPath = z.object({
 
 export const zListOrgMembersQuery = z.object({
     limit: z.int().gte(1).lte(1000).optional().default(1000),
-    after: z.uuid().optional()
+    after: z.uuid().optional(),
+    q: z.string().min(1).max(100).optional()
 });
 
 /**
@@ -5796,7 +5800,8 @@ export const zRunnerHeartbeatBody = z.object({
             'ended'
         ])
     })).optional(),
-    workspaces: z.array(z.uuid()).optional()
+    workspaces: z.array(z.uuid()).optional(),
+    capacity: z.int().gte(0).lte(256).optional()
 });
 
 export const zRunnerHeartbeatHeaders = z.object({

@@ -792,11 +792,11 @@ export type BillingWebhookAck = {
  */
 export type Budget = {
     /**
-     * `organization` (also `org`) or `member`
+     * `organization` (also `org`), `member`, or `workflow` (planned: the server answers 400 to it until it serves it)
      */
     scope: string;
     /**
-     * For `member`: the member's `id` (`OrgMember.id`); absent, every member without limits of their own
+     * For `member`: the member's `id` (`OrgMember.id`); absent, every member without limits of their own. For `workflow` (planned): the workflow's `id` (`Workflow.id`), required; the spend is that of the model calls of the launches that play it (`workflowId` of `createLaunch`)
      */
     subject?: string;
     /**
@@ -1200,14 +1200,14 @@ export type Evidence = {
 };
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
  */
 export type Forbidden = {
     /**
      * `ErrorDetail`, its `type` any 403 key but `step_up_required`
      */
     error: {
-        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused';
+        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required';
         message: string;
     };
 };
@@ -1372,7 +1372,7 @@ export type GitHubConnection = 'github-app' | 'gh-token';
 export type GovernanceChangeKind = 'rules.create' | 'rules.update' | 'rules.delete' | 'rules.bulk' | 'gates.policy' | 'models.policy' | 'workflows.create' | 'workflows.save' | 'workflows.delete' | 'members.role' | 'members.remove' | 'members.invite' | 'members.link';
 
 /**
- * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
+ * A governance write made with a person's API token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
  */
 export type GovernanceConfirmation = {
     id: string;
@@ -1387,7 +1387,7 @@ export type GovernanceConfirmation = {
      */
     path: string;
     /**
-     * The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`)
+     * The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`, `orgs:write`)
      */
     scope: string;
     /**
@@ -1415,7 +1415,7 @@ export type GovernanceConfirmation = {
     answeredBy?: GovernanceConfirmationPerson;
     answeredAt?: string;
     /**
-     * What the write returned once confirmed (absent when it returns nothing, as a deletion)
+     * What the write returned once confirmed (absent when it returns nothing, as a deletion). A secret in it is shown once, to the person who asked: for `members.link`, their first read with a token returns `{url, invitation}`, then the result is `{invitation, shown: true}`. No console session reads the `url`, the asker's included; a first answer lost on the way is not shown again (revoke the link and create another).
      */
     result?: unknown;
     /**
@@ -1431,7 +1431,7 @@ export type GovernanceConfirmationAnswerRequest = {
 };
 
 /**
- * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
+ * The 202 of a governance write made with a person's API token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
  */
 export type GovernanceConfirmationPending = {
     confirmationId: string;
@@ -3050,6 +3050,10 @@ export type Spending = {
     byAgent: Array<SpendingLine>;
     byRepo: Array<SpendingLine>;
     byPerson: Array<SpendingLine>;
+    /**
+     * By workflow: the model calls of the launches that play one (`workflowId` of `createLaunch`), `key` the workflow's `id`, `label` its name; the calls of no workflow are in no line. Planned: the server does not send it yet
+     */
+    byWorkflow?: Array<SpendingLine>;
     daily: Array<SpendingDay>;
     /**
      * The budgets the reader sees spent past their limit today or this month, whatever `period`: all of the organization's for whoever sees its whole spending, the reader's own otherwise; empty when none
@@ -3062,11 +3066,11 @@ export type Spending = {
  */
 export type ExceededBudget = {
     /**
-     * `organization` or `member`
+     * `organization`, `member`, or `workflow` (planned)
      */
     scope: string;
     /**
-     * For `member`: the member's `id`
+     * For `member`: the member's `id`; for `workflow` (planned): the workflow's `id`
      */
     subject?: string;
     period: 'day' | 'month';
@@ -4423,6 +4427,10 @@ export type CreateLaunchData = {
         repo?: string;
         agent: string;
         model?: string;
+        /**
+         * The workflow this launch plays (`Workflow.id` of the organization; 404 otherwise): every model call of its sessions counts under it, for the budgets of scope `workflow` and `Spending.byWorkflow`. Absent, the calls count under no workflow. Planned: the server does not read it yet
+         */
+        workflowId?: string;
     };
     headers?: {
         /**
@@ -5966,6 +5974,10 @@ export type StartGithubAppInstallErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type StartGithubAppInstallError = StartGithubAppInstallErrors[keyof StartGithubAppInstallErrors];
@@ -6411,6 +6423,10 @@ export type ListOrgMembersData = {
          * The `next` of the previous page: the members who joined after this one
          */
         after?: string;
+        /**
+         * Only the members whose login or name starts with it, whatever the case; it combines with `limit` and `after`. Planned: the server does not read it yet
+         */
+        q?: string;
     };
     url: '/api/v1/orgs/{org}/members';
 };
@@ -6496,7 +6512,7 @@ export type InviteOrgMembersResponses = {
      */
     200: OrgInvited;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -6546,7 +6562,7 @@ export type RemoveOrgMemberError = RemoveOrgMemberErrors[keyof RemoveOrgMemberEr
 
 export type RemoveOrgMemberResponses = {
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -6647,7 +6663,7 @@ export type UpdateOrgMemberResponses = {
      */
     200: OrgMember;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -6742,7 +6758,7 @@ export type CreateInvitationLinkResponses = {
      */
     201: InvitationLink;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -8363,7 +8379,7 @@ export type SetGatePolicyResponses = {
         selfApproval: string;
     };
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -8608,7 +8624,7 @@ export type AnswerApprovalErrors = {
      */
     401: ApiError;
     /**
-     * self_approval_refused, step_up_required, or not an approver (the key is `error.type`)
+     * self_approval_refused, github_link_required, step_up_required, or not an approver (the key is `error.type`)
      */
     403: SelfApprovalRefused | StepUpRequired | Forbidden;
     /**
@@ -9760,7 +9776,7 @@ export type CreateRuleResponses = {
      */
     201: Rule;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -9816,7 +9832,7 @@ export type DeleteRuleError = DeleteRuleErrors[keyof DeleteRuleErrors];
 
 export type DeleteRuleResponses = {
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -9942,7 +9958,7 @@ export type UpdateRuleResponses = {
      */
     200: Rule;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -10005,7 +10021,7 @@ export type BulkUpdateRulesResponses = {
         updated: number;
     };
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -10116,7 +10132,7 @@ export type CreateWorkflowResponses = {
      */
     201: Workflow;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -10172,7 +10188,7 @@ export type DeleteWorkflowError = DeleteWorkflowErrors[keyof DeleteWorkflowError
 
 export type DeleteWorkflowResponses = {
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -10288,7 +10304,7 @@ export type SaveWorkflowResponses = {
      */
     200: Workflow;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -12885,7 +12901,7 @@ export type SetModelPolicyResponses = {
      */
     200: ModelPolicy;
     /**
-     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
      * once, as before.
@@ -13941,6 +13957,10 @@ export type RunnerHeartbeatData = {
          * The sessions whose workspace volumes the machine holds.
          */
         workspaces?: Array<string>;
+        /**
+         * The sessions the machine runs at once at most; the server never hands it more, and a session with no room anywhere stays queued. 0 drains the machine. Absent, as from an older runner: no limit.
+         */
+        capacity?: number;
     };
     headers?: {
         /**
@@ -14419,9 +14439,9 @@ export type AttachCloudTerminalErrors = {
      */
     403: ApiError;
     /**
-     * A refusal
+     * An HTTP 404 answered to a request that does not open the socket (observed by ostrom-server's isolation matrix) has no body; a socket that opens refuses with a close, 4404 for an unknown or foreign session
      */
-    404: ApiError;
+    404: unknown;
     /**
      * A refusal
      */
@@ -14441,6 +14461,10 @@ export type AttachRunnerTerminalData = {
 };
 
 export type AttachRunnerTerminalErrors = {
+    /**
+     * An HTTP 400 answered to a request that does not open the socket (observed by ostrom-server's isolation matrix) has no body; a socket that opens refuses with a close (4401, 4409)
+     */
+    400: unknown;
     /**
      * A refusal
      */
