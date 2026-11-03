@@ -33,7 +33,7 @@ echo "$cfg" | grep -q '^window.__OSTROM_CONFIG__={"OSTROM_API_URL":"https://api.
 # S2-09: the same security headers on the page, the runtime settings, a deep route, a script, the API and /healthz.
 csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'"
 header() { printf '%s\n' "$1" | tr -d '\r' | sed -n "s/^$2: //Ip"; }
-for path in / /config.js /some/route /theme.js /api/v1/health /healthz; do
+for path in / /config.js /some/route /theme.js /language.js /api/v1/health /healthz; do
   h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$path")
   [ "$(header "$h" content-security-policy)" = "$csp" ] || fail "CSP on $path: $(header "$h" content-security-policy)"
   [ "$(header "$h" strict-transport-security)" = 'max-age=63072000; includeSubDomains' ] || fail "HSTS on $path"
@@ -49,6 +49,10 @@ html=$(get /)
 [ "$(printf '%s' "$html" | grep -o '<script' | wc -l)" = "$(printf '%s' "$html" | grep -o '<script[^>]* src=' | wc -l)" ] \
   || fail "inline script in index.html: $html"
 get /theme.js | grep -q "dataset.theme" || fail "/theme.js"
+# The wording of the person's language, preloaded with the entry (vite.config.ts, preloadLanguage): the script, not the
+# SPA fallback, and named in the page.
+get /language.js | grep -q "modulepreload" || fail "/language.js"
+printf '%s' "$html" | grep -q '<script async src="/language.js">' || fail "/language.js not in index.html"
 # A script leaves compressed when the browser accepts it, still whole otherwise, with its year of cache.
 js=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.js' | head -n 1)
 [ -n "$js" ] || fail "no entry script in index.html"
@@ -124,4 +128,21 @@ if curl -fsS -o /dev/null http://127.0.0.1:18080/assets/missing.js; then fail "m
 if docker exec web sh -c 'ls /usr/share/nginx/html/assets/*.map' >/dev/null 2>&1; then fail "source maps shipped"; fi
 # A build without VITE_MOCKS ships neither the mock API nor its demo data (audit AUDIT-SECU-WEB-2 B7).
 if docker exec web grep -rlqe ml_demo -e '\[MSW\]' /usr/share/nginx/html/assets; then fail "mock API shipped"; fi
+# W4 (web audit 2, passage 2): the access log keeps the path, never a query string nor the one of a Referer. A device
+# code (`/device?code=`, `GET /api/v1/auth/device?userCode=`), a terminal ticket (`?ticket=`) or a link never lands there.
+docker exec web grep -q 'log_format ostrom_noquery' /etc/nginx/conf.d/default.conf \
+  || fail "the rendered configuration has no ostrom_noquery log format"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors -H 'Referer: http://127.0.0.1:18080/device?code=REFCODE-SMOKE' \
+  'http://127.0.0.1:18080/api/v1/auth/device?userCode=APICODE-SMOKE' || fail "device lookup: the request failed"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors 'http://127.0.0.1:18080/device?code=PAGECODE-SMOKE' \
+  || fail "/device: the request failed"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  'http://127.0.0.1:18080/api/v1/cloud/sessions/s1/terminal?ticket=TICKET-SMOKE' || fail "terminal: the request failed"
+logs=$(docker logs web 2>&1)
+for secret in REFCODE-SMOKE APICODE-SMOKE PAGECODE-SMOKE TICKET-SMOKE; do
+  if printf '%s\n' "$logs" | grep -q "$secret"; then fail "the access log keeps a query string ($secret)"; fi
+done
+printf '%s\n' "$logs" | grep -q '"GET /api/v1/auth/device HTTP/1.1" 200 .* "http://127.0.0.1:18080/device"' \
+  || fail "the access log lost the path or the Referer's page"
+printf '%s\n' "$logs" | grep -q '"GET /api/v1/cloud/sessions/s1/terminal HTTP/1.1"' || fail "the access log lost the terminal's path"
 echo "web image smoke test: ok"
