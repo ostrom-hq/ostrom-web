@@ -36,3 +36,14 @@ export function formatAbsolute(iso: string, locale: string): string {
     timeZoneName: 'short',
   }).format(new Date(at));
 }
+
+/** "2 h 29 min", "45 min", "0 min": how long something ran (a session, a run), in the viewer's language. */
+export function formatDuration(fromIso: string, toIso: string, locale: string): string {
+  const minutes = Math.max(0, Math.floor((Date.parse(toIso) - Date.parse(fromIso)) / 60_000));
+  const unit = (value: number, name: 'hour' | 'minute'): string =>
+    new Intl.NumberFormat(locale, { style: 'unit', unit: name, unitDisplay: 'short' }).format(value);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return unit(rest, 'minute');
+  return rest === 0 ? unit(hours, 'hour') : `${unit(hours, 'hour')} ${unit(rest, 'minute')}`;
+}

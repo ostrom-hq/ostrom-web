@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { orgRoleOf } from '@/shared/org/roles';
 import { type Fact, Facts } from '@/shared/ui/Screen';
-import { type MemberChange, memberName } from '../model';
+import type { MemberChange } from '../model';
 
 /** A change of the organization's people in words: who, which role, which address; never JSON to read. */
 export function MemberChangeView({ change }: { readonly change: MemberChange }): ReactElement {
@@ -35,7 +35,7 @@ export function MemberChangeView({ change }: { readonly change: MemberChange }):
   switch (change.kind) {
     case 'role':
       facts = [
-        { label: t('confirm.member.person'), value: memberName(change.member) },
+        { label: t('confirm.member.person'), value: change.login },
         {
           label: t('confirm.member.role'),
           value: t('confirm.member.roleChange', { from: role(change.from), to: role(change.to) }),
@@ -44,10 +44,10 @@ export function MemberChangeView({ change }: { readonly change: MemberChange }):
       break;
     case 'remove':
       facts = [
-        { label: t('confirm.member.person'), value: memberName(change.member) },
+        { label: t('confirm.member.person'), value: change.login },
         {
           label: t('confirm.member.role'),
-          value: t('confirm.member.leaves', { role: role(change.member.role) }),
+          value: t('confirm.member.leaves', { role: role(change.role) }),
         },
       ];
       break;

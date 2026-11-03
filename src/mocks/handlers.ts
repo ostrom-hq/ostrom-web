@@ -94,6 +94,7 @@ import type {
   Spending,
   Team,
   Workflow,
+  WorkflowRun,
 } from '@gen/api/types.gen';
 import {
   type zRuleGate,
@@ -179,9 +180,11 @@ import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/con
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
+import { createRunHandlers } from '@/mocks/runs';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
+import { initialWorkflowRuns } from '@/mocks/fixtures/runs';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 import { sameValue } from '@/features/workflows/model';
 
@@ -217,6 +220,8 @@ export interface MockDb
   members: Member[];
   teams: Team[];
   workflows: Workflow[];
+  /** The organization's workflow runs, newest first. */
+  workflowRuns: WorkflowRun[];
   /**
    * `never` (the server's default since core#66 and server#159, S2-15): the asker never approves their own request;
    * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
@@ -280,6 +285,7 @@ export function createMockDb(): MockDb {
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
+    workflowRuns: initialWorkflowRuns(),
     selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
@@ -1266,6 +1272,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createGithubHandlers(
       () => db,
       (request) => organizationOf(db, request),
+    ),
+    // The demo's role in the organization the request names. The mock `/auth/me` keeps the fixture's admin, which the
+    // console reads first: a test of a member overrides it too (as workflows.integration.test.tsx does).
+    ...createRunHandlers(
+      () => db,
+      (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+      () => DEMO_LOGIN,
+      now,
     ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');
