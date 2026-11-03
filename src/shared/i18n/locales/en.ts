@@ -1384,7 +1384,12 @@ export const en = {
       title: 'Shared subscriptions',
       lead: 'Personal AI subscriptions lent to the organization’s agents: who uses each one, its daily share, and a pause.',
       empty: 'No shared subscription yet.',
-      state: { paused: 'Paused', active: 'Active', expired: 'Sign-in expired' },
+      state: {
+        paused: 'Paused',
+        active: 'Active',
+        expired: 'Sign-in expired',
+        wrongAccount: 'Signed in to another account: share it again',
+      },
       pool: 'pool {{pool}}',
       daily: '{{amount}} a day',
       noDaily: 'no daily limit',

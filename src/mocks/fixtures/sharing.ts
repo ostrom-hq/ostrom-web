@@ -81,7 +81,7 @@ const accounts: SharedAccount[] = [
     provider: 'codex',
     label: 'Theo’s ChatGPT Pro',
     owner: 'theo',
-    status: 'reconnect_required',
+    status: 'disabled',
     sharedWith: ['maya'],
     paused: true,
   },

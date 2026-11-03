@@ -347,6 +347,12 @@ const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() })
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
 const SESSIONS_PAGE = 50;
+/** What a pause or a resume leaves of a shared account's status, as ostrom-server's `AccountStatus.awaitsSignIn`. */
+function statusAfterPause(status: string, paused: boolean): string {
+  if (paused) return 'disabled';
+  return status === 'disabled' ? 'ready' : status;
+}
+
 /** The vendor's name the console sends, and the agent the server keeps for it (ostrom-server `AccountProvider`). */
 const PROVIDERS = new Map([
   ['anthropic', 'claude'],
@@ -1180,7 +1186,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...(body.data.dailyAllocationUsd === undefined
           ? {}
           : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
-        ...(body.data.paused === undefined ? {} : { paused: body.data.paused }),
+        // A pause writes `disabled`, a resume `ready` again (ostrom-server); one waiting for a sign-in stays so.
+        ...(body.data.paused === undefined
+          ? {}
+          : { paused: body.data.paused, status: statusAfterPause(account.status, body.data.paused) }),
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);

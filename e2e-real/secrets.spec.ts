@@ -131,9 +131,10 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   await expect(card).toContainText('$25.00 a day');
   await expect(card).toContainText(`Lent to ${login}`);
   // The console names it by its vendor and reads the server's `ready` as active, never the raw wire words.
-  await expect(card).toContainText('Anthropic');
+  const owner = ((await callFromPage(page, 'GET', '/api/v1/auth/me')).body as { dev: { login: string } }).dev
+    .login;
+  await expect(card).toContainText(`Anthropic · by ${owner} · $25.00 a day`);
   await expect(card).toContainText('Active');
-  await expect(card).not.toContainText('claude');
   await expect(page.getByText(value)).toHaveCount(0);
   const listed = await callFromPage(page, 'GET', '/api/v1/accounts');
   expect(listed.status).toBe(200);

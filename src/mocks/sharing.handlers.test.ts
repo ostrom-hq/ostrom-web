@@ -172,6 +172,7 @@ describe('mock shared subscriptions', () => {
     });
     expect(paused.data).toMatchObject({
       paused: true,
+      status: 'disabled',
       sharedWith: ['theo', 'samir'],
       dailyAllocationUsd: 40,
     });
@@ -181,6 +182,21 @@ describe('mock shared subscriptions', () => {
       throwOnError: true,
     });
     expect(changed.data).toMatchObject({ paused: true, sharedWith: ['theo'], dailyAllocationUsd: 20 });
+    const resumed = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(resumed.data).toMatchObject({ paused: false, status: 'ready' });
+    db.sharedAccounts = db.sharedAccounts.map((item) =>
+      item.id === 'acc-1' ? { ...item, status: 'reconnect_required' } : item,
+    );
+    const stillWaiting = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(stillWaiting.data).toMatchObject({ paused: false, status: 'reconnect_required' });
     expect(
       await statusOf(async () =>
         updateSharedAccount({ path: { id: 'acc-2' }, body: { paused: false }, throwOnError: true }),

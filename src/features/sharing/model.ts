@@ -22,39 +22,41 @@ export function isProvider(value: string): value is Provider {
 }
 
 /**
- * The subscription a shared account belongs to, by its vendor: the form sends the vendor's name, and the server keeps
+ * The vendor a shared account's subscription is named by. The form sends the vendor's name; the server keeps and lists
  * the agent it serves (ostrom-server `AccountProvider`: `claude` for anthropic, `codex` for openai).
  */
-const AGENT_PROVIDERS: Readonly<Record<string, Provider>> = { claude: 'anthropic', codex: 'openai' };
+const AGENT_PROVIDERS: ReadonlyMap<string, Provider> = new Map([
+  ['claude', 'anthropic'],
+  ['codex', 'openai'],
+]);
 
 export function providerOf(value: string): Provider | undefined {
-  return isProvider(value) ? value : AGENT_PROVIDERS[value];
+  return AGENT_PROVIDERS.get(value);
 }
 
-/** A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again. */
-export type AccountState = 'paused' | 'active' | 'expired' | 'unknown';
-
 /**
- * The server's statuses (ostrom-server `AccountStatus`): `ready` serves; `reconnect_required` and `wrong_account` wait
- * for the owner to sign in again; `disabled` was turned off. `active` and `expired` are the same states, older words.
+ * A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again; one
+ * signed in to another account than the one shared needs its owner to share it again.
  */
-const STATES: Readonly<Record<string, AccountState>> = {
-  ready: 'active',
-  active: 'active',
-  reconnect_required: 'expired',
-  wrong_account: 'expired',
-  expired: 'expired',
-  disabled: 'paused',
-};
+export type AccountState = 'paused' | 'active' | 'expired' | 'wrongAccount' | 'unknown';
+
+/** The server's statuses (ostrom-server `AccountStatus`); `disabled` is what a pause writes. */
+const STATES: ReadonlyMap<string, AccountState> = new Map([
+  ['ready', 'active'],
+  ['reconnect_required', 'expired'],
+  ['wrong_account', 'wrongAccount'],
+  ['disabled', 'paused'],
+]);
 
 export function accountState(account: SharedAccount): AccountState {
   if (account.paused) return 'paused';
-  return STATES[account.status] ?? 'unknown';
+  return STATES.get(account.status) ?? 'unknown';
 }
 
 export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {
   paused: 'neutral',
   active: 'success',
   expired: 'danger',
+  wrongAccount: 'danger',
   unknown: 'warning',
 };
