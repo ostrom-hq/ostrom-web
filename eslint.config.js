@@ -14,6 +14,7 @@ export default defineConfig(
     ignores: [
       'dist',
       'dist-real',
+      'dist-budget',
       'playwright-report-real',
       'coverage',
       'playwright-report',
@@ -133,7 +134,30 @@ export default defineConfig(
         {
           patterns: [
             { group: ['@ee/*'], message: 'ee/ is loaded through its single lazy entry point only.' },
-            { group: ['@/features/*/*'], message: 'Import a feature through its index only.' },
+            {
+              group: ['@/features/*/*', '!@/features/*/route'],
+              message:
+                'Import a feature through its index, or its route entry for what the router reads first.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // A feature's route entry stays light: its screens load with their route, never in the first download.
+    files: ['src/features/*/route.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['./screens/*', './components/*'], message: 'A route entry never imports a screen.' },
+            { group: ['@/app/*'], message: 'features/ never imports app/.' },
+            { group: ['@ee/*'], message: 'ee/ is loaded lazily by app/, never imported by features/.' },
+            { group: ['@/mocks/*'], message: 'Mocks are wired by app/ (and tests), never by features/.' },
+            { group: ['@/features/*/*'], message: 'Import another feature through its index only.' },
+            { group: ['../../*'], message: 'Use the @/ alias across folders.' },
           ],
         },
       ],
@@ -146,7 +170,7 @@ export default defineConfig(
     },
   },
   {
-    files: ['e2e/**/*.ts', 'e2e-real/**/*.ts', '*.config.ts'],
+    files: ['e2e/**/*.ts', 'e2e-real/**/*.ts', 'scripts/**/*.ts', '*.config.ts'],
     languageOptions: { globals: globals.node },
   },
 );

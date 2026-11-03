@@ -63,6 +63,8 @@ server {
         gzip_vary on;
         # Behind an ingress or a CDN too (a request with `Via`): the default would send them whole there.
         gzip_proxied any;
+        # And from a proxy that speaks HTTP/1.0 to the pod (the default answers it whole).
+        gzip_http_version 1.0;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         include /etc/nginx/ostrom/security-headers.conf;
         try_files $uri =404;
