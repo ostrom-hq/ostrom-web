@@ -4,6 +4,14 @@ import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import {
+  BOOTED,
+  type BootCall,
+  type BootRoute,
+  bootScript,
+  ORG_CHOICE_KEY,
+} from './src/shared/build/bootScript';
+import { patternOf, routesOf } from './src/shared/build/routes';
 import { languageScript } from './src/shared/i18n/languageScript';
 
 const here = fileURLToPath(new URL('./', import.meta.url));
@@ -66,6 +74,103 @@ function preloadLanguage(): Plugin {
 }
 
 /**
+ * The reads every signed-in screen's first paint waits for, as the console asks them at its start (vitals.spec.ts
+ * lists them): who is signed in, their organizations, and who they are in the one they chose and kept.
+ */
+const FIRST_READS: readonly BootCall[] = [
+  { path: '/api/v1/auth/me', org: 'none' },
+  { path: '/api/v1/me/organizations', org: 'none' },
+  { path: '/api/v1/orgs', org: 'none' },
+  { path: '/api/v1/auth/me', org: 'chosen' },
+];
+
+/** The reads a screen's own first paint waits for, beyond FIRST_READS, as the console asks them at its start. */
+const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
+  '/yes': [
+    { path: '/api/v1/approvals?mine=true', org: 'if-chosen' },
+    { path: '/api/v1/approvals?status=approved', org: 'if-chosen' },
+    { path: '/api/v1/approvals?status=rejected', org: 'if-chosen' },
+    { path: '/api/v1/approvals?status=expired', org: 'if-chosen' },
+  ],
+  '/rules': [{ path: '/api/v1/rules', org: 'if-chosen' }],
+  '/sessions': [
+    { path: '/api/v1/sessions?open=true', org: 'if-chosen' },
+    { path: '/api/v1/sessions?open=false', org: 'if-chosen' },
+  ],
+  '/spend': [
+    { path: '/api/v1/spending?period=month', org: 'if-chosen' },
+    { path: '/api/v1/budgets', org: 'if-chosen' },
+  ],
+};
+
+/** The screens open to someone not signed in: nothing to read for them before the entry. */
+const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
+
+/**
+ * Starts, from the page's head, what the route opened needs before its first paint, instead of once the entry has
+ * run: its screen's chunks (`modulepreload`) and its first API reads, which the console then takes up instead of
+ * asking again (src/shared/build/bootScript.ts, src/shared/api/bootFetch.ts). `/boot.js`, a file from 'self' as the
+ * CSP allows, loaded `async`. Not with the mock API: its worker starts with the entry, and the reads would miss it.
+ */
+function preloadBoot(): Plugin {
+  let base = '/';
+  const mocks = process.env['VITE_MOCKS'] === 'true';
+  return {
+    name: 'ostrom:preload-boot',
+    apply: 'build',
+    configResolved(config) {
+      base = config.base;
+    },
+    transformIndexHtml: () =>
+      mocks
+        ? []
+        : [{ tag: 'script', attrs: { async: true, src: `${base}boot.js` }, injectTo: 'head-prepend' }],
+    generateBundle(_options, bundle) {
+      if (mocks) return;
+      const chunks = Object.values(bundle).flatMap((file) => (file.type === 'chunk' ? [file] : []));
+      const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
+      const closure = (fileName: string, seen: Set<string>): Set<string> => {
+        if (seen.has(fileName)) return seen;
+        seen.add(fileName);
+        for (const imported of byName.get(fileName)?.imports ?? []) closure(imported, seen);
+        return seen;
+      };
+      const entry = new Set<string>();
+      for (const chunk of chunks) if (chunk.isEntry) closure(chunk.fileName, entry);
+      const routes = routesOf(readFileSync(resolve(src, 'app', 'router.ts'), 'utf8')).map(
+        (route): BootRoute => {
+          const feature = route.feature;
+          const screen =
+            feature === undefined
+              ? undefined
+              : chunks.find((chunk) =>
+                  new RegExp(`[\\/]src[\\/]features[\\/]${feature}[\\/]index\\.`).test(
+                    chunk.facadeModuleId ?? '',
+                  ),
+                );
+          if (feature !== undefined && screen === undefined)
+            throw new Error(`no chunk for the feature ${feature}`);
+          const own =
+            screen === undefined
+              ? []
+              : [...closure(screen.fileName, new Set())].filter((file) => !entry.has(file));
+          return {
+            pattern: patternOf(route.path),
+            chunks: own.map((file) => `${base}${file}`),
+            calls: SIGNED_OUT.has(route.path) ? [] : [...FIRST_READS, ...(SCREEN_READS[route.path] ?? [])],
+          };
+        },
+      );
+      this.emitFile({
+        type: 'asset',
+        fileName: 'boot.js',
+        source: bootScript(routes, { storageKey: ORG_CHOICE_KEY, store: BOOTED }),
+      });
+    },
+  };
+}
+
+/**
  * What each chunk is made of, module by module, as the build rendered it (bytes before compression): written to
  * `.vite/modules.json` beside the manifest, and only when the manifest is asked for (the budget's build, never the
  * image's), for scripts/bundle-budget.ts to name what weighs most in the first download.
@@ -117,7 +222,7 @@ function imageSecurityHeaders(): Record<string, string> {
 }
 
 export default defineConfig({
-  plugins: [react(), dropMockWorkerUnlessMocks(), preloadLanguage(), reportModules()],
+  plugins: [react(), dropMockWorkerUnlessMocks(), preloadLanguage(), preloadBoot(), reportModules()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: {
@@ -145,6 +250,10 @@ export default defineConfig({
               name: 'zod',
               test: /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?zod[\\/]|[\\/]src[\\/]shared[\\/]lib[\\/]zodConfig\.ts$/,
             },
+            // Everything the entry loads anyway in one chunk (react, the router, i18n, the API client, the shared
+            // screens' parts): on a slow link, fifteen small files share the bandwidth and each waits its turn,
+            // where one comes in a single response. What a lazy screen alone uses stays in its own chunk.
+            { name: 'boot', tags: ['$initial'] },
           ],
         },
       },

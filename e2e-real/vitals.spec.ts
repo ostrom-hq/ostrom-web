@@ -6,6 +6,7 @@
 import { appendFileSync } from 'node:fs';
 import { type CDPSession, expect, type Locator, type Page, test } from '@playwright/test';
 import { z } from 'zod';
+import { BOOTED } from '../src/shared/build/bootScript';
 import { askingToken, askPushToMain, gatedRepository, loginOf, requestOf } from './gate';
 import { ownerOfNewOrganization } from './real';
 
@@ -225,6 +226,18 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
       lcps.push(measured.largestPaint);
       element = measured.largestElement;
       const loaded = [...calls];
+      // A read /boot.js started and the console never took up was made for nothing.
+      const untaken = z.array(z.string()).parse(
+        await page.evaluate((key): unknown => {
+          const store: unknown = Reflect.get(globalThis, key);
+          return typeof store === 'object' && store !== null ? Object.keys(store) : [];
+        }, BOOTED),
+      );
+      problems.push(
+        ...untaken.map(
+          (key) => `${screen.path}, load ${String(run + 1)}: ${key} started by /boot.js, never taken up`,
+        ),
+      );
       if (run === 0) firstCalls = loaded;
       problems.push(
         ...callProblems(loaded, org).map((problem) => `${screen.path}, load ${String(run + 1)}: ${problem}`),

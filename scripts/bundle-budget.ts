@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { z } from 'zod';
 import { checkRouteBudgets, type MeasuredRoute } from '../src/shared/build/routeBudget.ts';
+import { routesOf } from '../src/shared/build/routes.ts';
 
 const zManifest = z.record(
   z.string(),
@@ -45,30 +46,6 @@ function filesOf(manifest: Manifest, key: string, seen = new Set<string>()): Set
   for (const css of chunk.css ?? []) seen.add(css);
   for (const imported of chunk.imports ?? []) filesOf(manifest, imported, seen);
   return seen;
-}
-
-/** The routes whose screens are in the first download on purpose (src/app/router.ts says why): nothing of their own. */
-const IN_FIRST_DOWNLOAD = new Set(['/yes', '/yes/$approvalId']);
-
-/**
- * Each route of the router with the feature its screen loads from. Every route loads its screen lazily: one that does
- * not would put its screen back in the first download, so it fails here, as does a route this reading cannot follow.
- */
-function routesOf(router: string): { path: string; feature: string | undefined }[] {
-  // Each `path:` up to the next one is a route's definition, its screen's lazy import in it.
-  return router
-    .split(/(?=path: ['"`])/)
-    .slice(1)
-    .map((definition) => {
-      const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
-      const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
-      if (path !== undefined && feature === undefined && IN_FIRST_DOWNLOAD.has(path))
-        return { path, feature: undefined };
-      if (path === undefined || feature === undefined) {
-        throw new Error(`src/app/router.ts: a route without a lazy screen: ${definition.slice(0, 120)}`);
-      }
-      return { path, feature };
-    });
 }
 
 /** The manifest key of a feature's index, whatever its extension. */

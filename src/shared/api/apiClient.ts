@@ -1,5 +1,6 @@
 import { client } from '@gen/api/client.gen';
 import { toApiFailure } from '@/shared/api/ApiFailure';
+import { bootFetch } from '@/shared/api/bootFetch';
 import { withCsrf } from '@/shared/api/csrf';
 import { namesOrganization, ORG_REQUIRED, withOrg } from '@/shared/api/orgHeader';
 import { useOrgStore } from '@/shared/org/orgStore';
@@ -38,7 +39,8 @@ function org(request: Request): Request {
  */
 export function configureApiClient({ baseUrl }: ApiClientConfig): void {
   apiBase = baseUrl;
-  client.setConfig({ baseUrl, credentials: 'include' });
+  // A call /boot.js already started from the page's head is taken up, never made twice (src/shared/api/bootFetch.ts).
+  client.setConfig({ baseUrl, credentials: 'include', fetch: bootFetch });
   if (!client.interceptors.error.exists(typedFailure)) client.interceptors.error.use(typedFailure);
   if (!client.interceptors.request.exists(csrf)) client.interceptors.request.use(csrf);
   if (!client.interceptors.request.exists(org)) client.interceptors.request.use(org);
