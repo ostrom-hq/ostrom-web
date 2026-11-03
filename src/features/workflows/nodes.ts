@@ -20,13 +20,16 @@ export interface NodeCondition {
 export type ConditionProblem = 'step' | 'path' | 'value' | 'pattern';
 
 export function conditionProblem(
-  _condition: NodeCondition,
-  _earlier: readonly string[],
+  condition: NodeCondition,
+  earlier: readonly string[],
 ): ConditionProblem | undefined {
+  void condition;
+  void earlier;
   return undefined;
 }
 
 /** The workflows a `workflow` step may call from [self]: never itself, nor one that calls it, even through others. */
-export function callChoices(workflows: readonly Workflow[], _self: string | undefined): Workflow[] {
+export function callChoices(workflows: readonly Workflow[], self: string | undefined): Workflow[] {
+  void self;
   return [...workflows];
 }
