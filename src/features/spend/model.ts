@@ -12,6 +12,12 @@ export function isBudgetScope(value: string): value is BudgetScope {
   return BUDGET_SCOPES.some((scope) => scope === value);
 }
 
+/** A budget's scope as the server writes it: `organization` for the organization's own, which the console sends as `org`. */
+export function budgetScopeOf(value: string): BudgetScope | undefined {
+  if (value === 'organization') return 'org';
+  return isBudgetScope(value) ? value : undefined;
+}
+
 /** Amber from 80 % of the budget, red once it is spent: the moment to act, then the moment it stops. */
 export type BudgetLevel = 'calm' | 'near' | 'over';
 
@@ -31,7 +37,8 @@ export function shares(
 /** The organization's budget first, then members, then workflows, each by subject. */
 export function sortBudgets(budgets: readonly Budget[]): Budget[] {
   const rank = (budget: Budget): number => {
-    const index = BUDGET_SCOPES.findIndex((scope) => scope === budget.scope);
+    const scope = budgetScopeOf(budget.scope);
+    const index = scope === undefined ? -1 : BUDGET_SCOPES.indexOf(scope);
     return index === -1 ? BUDGET_SCOPES.length : index;
   };
   return [...budgets].sort((a, b) => {
