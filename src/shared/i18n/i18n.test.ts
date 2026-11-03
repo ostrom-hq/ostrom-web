@@ -1,5 +1,12 @@
-import type { ReadCallback } from 'i18next';
-import { i18n, i18nReady, pickLanguage, wordingBackend } from '@/shared/i18n/i18n';
+import i18next, { type ReadCallback } from 'i18next';
+import {
+  englishIfMissing,
+  i18n,
+  i18nReady,
+  pickLanguage,
+  showLanguage,
+  wordingBackend,
+} from '@/shared/i18n/i18n';
 import { en } from '@/shared/i18n/locales/en';
 import { fr } from '@/shared/i18n/locales/fr';
 
@@ -75,16 +82,67 @@ describe('loading only the language shown', () => {
     expect(error instanceof Error && error.cause).toBe(offline);
     expect(retry).toBe(true);
   });
+});
 
-  it('follows the browser when its language changes, loading the new wording first', async () => {
+/** The browser's languages, as the person sets them. */
+function browserLanguages(languages: readonly string[]): void {
+  Object.defineProperty(navigator, 'languages', { configurable: true, value: languages });
+}
+
+describe('a change of the browser language', () => {
+  afterEach(async () => {
+    browserLanguages(['en-US']);
+    await i18n.changeLanguage('en');
+  });
+
+  it('is followed, with the new wording loaded first', async () => {
     const shown = new Promise((resolve) => {
       i18n.on('languageChanged', resolve);
     });
-    Object.defineProperty(navigator, 'languages', { configurable: true, value: ['fr-BE', 'en'] });
+    browserLanguages(['fr-BE', 'en']);
     window.dispatchEvent(new Event('languagechange'));
     expect(await shown).toBe('fr');
     expect(i18n.t('app.loading')).toBe(fr.app.loading);
-    Object.defineProperty(navigator, 'languages', { configurable: true, value: ['en-US'] });
-    await i18n.changeLanguage('en');
+  });
+
+  it('to the language already shown changes nothing', () => {
+    const changed = vi.fn();
+    i18n.on('languageChanged', changed);
+    browserLanguages(['en-GB']);
+    window.dispatchEvent(new Event('languagechange'));
+    i18n.off('languageChanged', changed);
+    expect(changed).not.toHaveBeenCalled();
+  });
+});
+
+describe('a wording that never comes', () => {
+  /** A console whose French chunk never comes, started in `language`, without retries. */
+  async function offlineFrench(language: string): Promise<typeof i18next> {
+    const instance = i18next.createInstance();
+    const offline = async (): Promise<never> => Promise.reject(new TypeError('Failed to fetch'));
+    await instance
+      .use(wordingBackend({ en: async () => Promise.resolve(en), fr: offline }))
+      .init({ lng: language, fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
+    return instance;
+  }
+
+  it('gives way to English at start', async () => {
+    const instance = await offlineFrench('fr');
+    await englishIfMissing(instance);
+    expect(instance.language).toBe('en');
+    expect(instance.t('app.loading')).toBe(en.app.loading);
+  });
+
+  it('leaves a language whose wording came as it is', async () => {
+    const instance = await offlineFrench('en');
+    await englishIfMissing(instance);
+    expect(instance.language).toBe('en');
+  });
+
+  it('keeps the screen on the words it has, when chosen later', async () => {
+    const instance = await offlineFrench('en');
+    expect(await showLanguage('fr', instance)).toBe(false);
+    expect(instance.language).toBe('en');
+    expect(instance.t('app.loading')).toBe(en.app.loading);
   });
 });
