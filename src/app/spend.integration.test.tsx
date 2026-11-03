@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { largeBudgets, largeSpending } from '@/mocks/fixtures/large';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { spendingFor } from '@/mocks/fixtures/spend';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -272,6 +273,27 @@ describe('the budgets', () => {
     expect(
       within(within(form).getByRole('combobox', { name: 'Person' })).getAllByRole('option'),
     ).toHaveLength(1);
+  });
+
+  it('offers the members a page at a time, the next one on “Show more people”', async () => {
+    const user = userEvent.setup();
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+    visit('/spend');
+    const form = await screen.findByRole('region', { name: 'Set a budget' });
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'member');
+    const person = within(form).getByRole('combobox', { name: 'Person' });
+    await waitFor(() => {
+      expect(within(person).getAllByRole('option')).toHaveLength(101);
+    });
+    const more = within(form).getByRole('button', { name: 'Show more people' });
+    await waitFor(() => {
+      expect(more).toBeEnabled();
+    });
+    await user.click(more);
+    await waitFor(() => {
+      expect(within(person).getAllByRole('option').length).toBeGreaterThan(101);
+    });
   });
 
   it('sets every member’s budget, that warns only', async () => {

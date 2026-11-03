@@ -46,13 +46,15 @@ export function SpendScreen(): ReactElement {
           </div>
         )}
       </LoadState>
-      {view.budgets === undefined ? null : <BudgetList budgets={view.budgets} members={view.members} />}
+      {view.budgets === undefined ? null : (
+        <BudgetList budgets={view.budgets} members={view.people.members} />
+      )}
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('spend.budgets.errorTag')} live>
           {change.failure.message}
         </Banner>
       )}
-      {view.canManage ? <BudgetForm change={change} members={view.members} /> : null}
+      {view.canManage ? <BudgetForm change={change} people={view.people} /> : null}
     </Screen>
   );
 }

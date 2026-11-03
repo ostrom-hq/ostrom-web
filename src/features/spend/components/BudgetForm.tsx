@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { OrgMembers } from '@/shared/org/members';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { Section } from '@/shared/ui/Screen';
 import { BUDGET_SCOPES, type BudgetScope, draftBudget, isBudgetScope } from '../model';
 import type { BudgetChangeViewModel } from '../useSpend';
 
 /**
  * Setting a budget for a scope and subject replaces the one already there. A member is chosen by login, from the
- * organization's members, and sent by id: the server knows members by id.
+ * organization's members (read a page at a time, the next on "Show more people"), and sent by id: the server knows
+ * members by id.
  */
 export function BudgetForm({
   change,
-  members,
+  people,
 }: {
   readonly change: BudgetChangeViewModel;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly people: Pick<OrgMembers, 'members' | 'more' | 'loadingMore'>;
 }): ReactElement {
   const { t } = useTranslation();
   const [scope, setScope] = useState<BudgetScope>('org');
@@ -73,12 +75,13 @@ export function BudgetForm({
                 }}
               >
                 <option value="">{t('spend.budgets.everyMember')}</option>
-                {(members ?? []).map((member) => (
+                {(people.members ?? []).map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.login}
                   </option>
                 ))}
               </select>
+              <MorePeople people={people} />
             </>
           )}
         </div>
