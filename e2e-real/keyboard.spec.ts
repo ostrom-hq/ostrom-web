@@ -118,6 +118,9 @@ test('the key journeys with the keyboard alone, every stop with a visible focus'
   const statement = `Read the runbook before a deploy (${Date.now().toString(36)}).`;
   await tabTo(page, form.getByRole('textbox', { name: 'Rule' }), unseen);
   await page.keyboard.type(statement);
+  // A rule belongs to a group: the button stays disabled until one is named.
+  await tabTo(page, form.getByRole('combobox', { name: 'Group' }), unseen);
+  await page.keyboard.type('Ops');
   await tabTo(page, form.getByRole('button', { name: 'Add the rule' }), unseen);
   await page.keyboard.press('Enter');
   await expect(page.locator('article').filter({ hasText: statement })).toBeVisible();
