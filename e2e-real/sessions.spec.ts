@@ -60,9 +60,10 @@ test('an owner follows a session from live to ended, and another organization se
   });
   expect(started.status, JSON.stringify(started.body)).toBeLessThan(300);
 
-  // Live: under the open ones, with its agent and repository, and its page.
+  // Live: under the open ones, with its agent and repository, and its page. The list is read again every 15 s
+  // (`SESSIONS_POLL_MS`), so the session shows by the next read: a whole period and a margin.
   const line = page.locator(`a[href="/sessions/${id}"]`);
-  await expect(line).toContainText(`claude · ${repo}`, { timeout: 15_000 });
+  await expect(line).toContainText(`claude · ${repo}`, { timeout: 30_000 });
   await expect(page.getByText(/^\d+ open$/)).toBeVisible();
   await line.click();
   await expect(page).toHaveURL(new RegExp(`/sessions/${id}$`));
