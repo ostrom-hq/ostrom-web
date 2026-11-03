@@ -117,36 +117,39 @@ async function heapMb(cdp: CDPSession): Promise<number> {
   return Math.round((used / 1024 / 1024) * 10) / 10;
 }
 
+/** The API calls of the page since it opened. */
+const API_CALLS =
+  "performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length";
+
 async function apiCalls(page: Page): Promise<number> {
-  return page.evaluate(
-    () =>
-      performance
-        .getEntriesByType('resource')
-        .filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length,
+  const count: unknown = await page.evaluate(API_CALLS);
+  return Number(count);
+}
+
+/** The screen's lines and every element of the page. */
+async function linesOf(
+  page: Page,
+  rows: string,
+): Promise<{ readonly rows: number; readonly domNodes: number }> {
+  const counted: unknown = await page.evaluate(
+    `[document.querySelectorAll(${JSON.stringify(rows)}).length, document.getElementsByTagName('*').length]`,
   );
+  const [lines, nodes] = Array.isArray(counted) ? counted.map(Number) : [];
+  return { rows: lines ?? 0, domNodes: nodes ?? 0 };
 }
 
 async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promise<Measure> {
   await page.goto(screen.path, { waitUntil: 'commit' });
   const shown = await page.waitForFunction(
-    (selector) => (document.querySelectorAll(selector).length > 0 ? performance.now() : false),
-    screen.rows,
+    `document.querySelectorAll(${JSON.stringify(screen.rows)}).length > 0 ? performance.now() : false`,
+    undefined,
     { timeout: 60_000 },
   );
   const firstRowsMs = Math.round(Number(await shown.jsonValue()));
   // What the screen reads after its first lines (a second page, the members of a form) comes in now.
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1_000);
-  const counts = await page.evaluate(
-    (selector) => ({
-      rows: document.querySelectorAll(selector).length,
-      domNodes: document.getElementsByTagName('*').length,
-      apiCalls: performance
-        .getEntriesByType('resource')
-        .filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length,
-    }),
-    screen.rows,
-  );
+  const counts = { ...(await linesOf(page, screen.rows)), apiCalls: await apiCalls(page) };
   const heap = await heapMb(cdp);
   const base = { path: screen.path, firstRowsMs, ...counts, heapMb: heap };
   if (screen.filter === undefined) return base;
@@ -158,13 +161,7 @@ async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promis
   await page.waitForTimeout(1_000);
   const durations: unknown = await page.evaluate('window.__interactions');
   const inpMs = Array.isArray(durations) ? Math.max(0, ...durations.map(Number)) : 0;
-  const after = await page.evaluate(
-    (selector) => ({
-      rows: document.querySelectorAll(selector).length,
-      domNodes: document.getElementsByTagName('*').length,
-    }),
-    screen.rows,
-  );
+  const after = await linesOf(page, screen.rows);
   const filter = { label: screen.filter.label, inpMs, doneMs, ...after };
   if (screen.pollMs === undefined) return { ...base, filter };
   const before = await apiCalls(page);
