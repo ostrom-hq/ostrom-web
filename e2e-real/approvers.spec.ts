@@ -1,6 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
-import { callFromPage, freshEmail, served, signIn } from './real';
+import {
+  anotherPerson,
+  callFromPage,
+  closeOthers,
+  freshEmail,
+  joinAs,
+  ownerOfNewOrganization,
+  served,
+  signIn,
+} from './real';
+
+test.afterEach(closeOthers);
 
 /**
  * A new person's new organization, with a workflow of two gates over `repos` (every repository when empty): deploying,
@@ -71,14 +82,108 @@ test('an owner reads who approves the gate of a new workflow, as the server deci
 test('the organization’s graph names the approver of a gate scoped to one of its repositories', async ({
   page,
 }) => {
-  test.fixme(
-    true,
-    'ostrom-server: GET /gates/approvers without `repo` leaves out a gate scoped to one repository ' +
-      '(GatesCatalog.covers with no repository); asked of the compiler module’s owner in the JOURNAL (02/11)',
+  // ostrom-server#184 (in sha-8118272 and later): without `repo`, the organization's graph keeps a gate scoped to one
+  // of its repositories. An older server leaves it out, and this test fails on purpose.
+  test.skip(
+    !(await served(page, 'GET', '/api/v1/gates/approvers')),
+    'GET /api/v1/gates/approvers not served yet',
   );
   await workflowOfGates(page, (slug) => [`${slug}/api`]);
   const graph = await callFromPage(page, 'GET', '/api/v1/gates/approvers');
   expect(graph.status).toBe(200);
   const { approvers } = graph.body as { approvers: { approver: string }[] };
   expect(approvers.map((line) => line.approver)).toContain('nora');
+
+  // The screen reads the same graph: nora approves the scoped gate, the other one stops an agent for good.
+  await page.goto('/approvers');
+  const steps = page.getByRole('region', { name: 'By step' });
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Deploy to production' })).toContainText('nora');
+  await expect(steps.getByRole('listitem').filter({ hasText: 'Drop a table' })).toContainText('Nobody');
+  await expect(page.getByText(/Nobody may approve Drop a table/)).toBeVisible();
+  await expect(page.getByRole('region', { name: 'By person' })).toContainText('Deploy to production');
+});
+
+/** The self-approval policy the server holds for `org`, read by the person signed in in `page`. */
+async function policyOf(page: Page, org: string): Promise<string> {
+  const read = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
+  expect(read.status).toBe(200);
+  return (read.body as { selfApproval: string }).selfApproval;
+}
+
+test('an owner sets self-approval on the console, a member reads it without changing it, and another organization keeps its own', async ({
+  page,
+  browser,
+}) => {
+  test.skip(!(await served(page, 'PUT', '/api/v1/gates/policy')), 'PUT /api/v1/gates/policy not served yet');
+  const org = await ownerOfNewOrganization(page, 'opal');
+  // An organization that never chose: a yes always comes from another person.
+  expect(await policyOf(page, org.id)).toBe('never');
+
+  await page.goto('/approvers');
+  const policy = page.getByRole('region', { name: 'When the asker is an approver' });
+  await expect(policy).toContainText('Someone who asked never approves their own request');
+  const setting = policy.getByRole('combobox', { name: 'Self-approval' });
+  await expect(setting).toHaveValue('never');
+
+  // The owner lets a gate's only approver approve their own request: the server holds it, the page says it.
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' && new URL(response.url()).pathname === '/api/v1/gates/policy',
+  );
+  await setting.selectOption({ label: 'Only as the sole approver' });
+  expect((await saved).status()).toBe(200);
+  await expect(policy).toContainText('Someone who asked may approve only when nobody else can');
+  await expect(policy.getByText('Not saved')).toHaveCount(0);
+  expect(await policyOf(page, org.id)).toBe('sole-approver');
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'When the asker is an approver' })
+      .getByRole('combobox', { name: 'Self-approval' }),
+  ).toHaveValue('sole-approver');
+
+  // A member reads the organization's policy, with no setting to change it, and the server refuses their write.
+  const member = await anotherPerson(browser);
+  await joinAs(page, org.id, member, 'pim', 'member');
+  await member.goto('/approvers');
+  const read = member.getByRole('region', { name: 'When the asker is an approver' });
+  await expect(read).toContainText('Someone who asked may approve only when nobody else can');
+  await expect(read.getByRole('combobox')).toHaveCount(0);
+  // The member reads it through the same header the refused write carries: the 403 is the role's.
+  expect(await policyOf(member, org.id)).toBe('sole-approver');
+  const refused = await callFromPage(
+    member,
+    'PUT',
+    '/api/v1/gates/policy',
+    { selfApproval: 'never' },
+    org.id,
+  );
+  expect(refused.status).toBe(403);
+  expect(await policyOf(page, org.id)).toBe('sole-approver');
+
+  // Another organization's owner keeps their own policy, the default.
+  const outsider = await anotherPerson(browser);
+  const other = await ownerOfNewOrganization(outsider, 'quin');
+  expect(await policyOf(outsider, other.id)).toBe('never');
+  // Naming the first organization opens nothing to someone outside it.
+  const foreign = await callFromPage(outsider, 'GET', '/api/v1/gates/policy', undefined, org.id);
+  expect([403, 404]).toContain(foreign.status);
+  await outsider.goto('/approvers');
+  await expect(
+    outsider
+      .getByRole('region', { name: 'When the asker is an approver' })
+      .getByRole('combobox', { name: 'Self-approval' }),
+  ).toHaveValue('never');
+
+  // Back to the default: the owner's change is undone the same way, and the server holds it.
+  const reset = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'PUT' && new URL(response.url()).pathname === '/api/v1/gates/policy',
+  );
+  await page
+    .getByRole('region', { name: 'When the asker is an approver' })
+    .getByRole('combobox', { name: 'Self-approval' })
+    .selectOption({ label: 'Never' });
+  expect((await reset).status()).toBe(200);
+  expect(await policyOf(page, org.id)).toBe('never');
 });
