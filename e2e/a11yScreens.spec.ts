@@ -2,8 +2,7 @@
 // Every screen of the console's navigation, checked by axe against WCAG 2.2 A and AA, in the light and the dark theme,
 // on a wide screen and a phone, filled with the demo data: the badges, tables and lists a new organization on the real
 // server does not have yet (e2e-real/a11yScreens.spec.ts checks those empty states). The table of what axe finds is
-// attached to the run and printed in its log. A screen in CHECKED must have nothing; the others are measured only,
-// until their pull request fixes them and adds them here.
+// attached to the run and printed in its log; every screen must have nothing.
 import AxeBuilder from '@axe-core/playwright';
 import { appendFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
@@ -38,9 +37,6 @@ const SCREENS = [
   '/accounts',
   '/signin',
 ] as const;
-
-/** The screens fixed so far: axe must find nothing on them. */
-const CHECKED: ReadonlySet<string> = new Set(['/yes']);
 
 /** What axe finds on the page as it is: one line per element and rule broken. */
 async function violationsOn(page: Page): Promise<string[]> {
@@ -87,6 +83,7 @@ for (const scheme of ['light', 'dark'] as const) {
     const summary = process.env['GITHUB_STEP_SUMMARY'];
     if (summary !== undefined) appendFileSync(summary, table);
     console.warn(table);
-    for (const path of CHECKED) expect(found.get(path), `${path} in ${scheme}`).toEqual([]);
+    // Measured clean on every screen (web#87): each must stay so, its own table attached when it does not.
+    for (const path of SCREENS) expect.soft(found.get(path), `${path} in ${scheme}`).toEqual([]);
   });
 }
