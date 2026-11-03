@@ -11,18 +11,22 @@ import { addressOfAPerson, callFromPage, freshEmail, signInToken } from './real'
 /** Tab stops a screen may take before its control: the navigation and the header come first. */
 const MAX_TABS = 80;
 
-/** What is wrong with the focused element's focus indicator, or '' when it shows. */
+/**
+ * What is wrong with the focused element's focus indicator, or '' when it shows. Read in the page as an expression:
+ * the end-to-end tests compile without the DOM's types, as the other specs that read the page do.
+ */
+const FOCUS_PROBLEM = `(() => {
+  const focused = document.activeElement;
+  if (!(focused instanceof HTMLElement) || focused === document.body) return 'the focus is on nothing';
+  const style = getComputedStyle(focused);
+  const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
+  if (outline || style.boxShadow !== 'none') return '';
+  const name = focused.getAttribute('aria-label') ?? focused.innerText.trim().slice(0, 40);
+  return focused.tagName.toLowerCase() + ' "' + name + '" shows no focus';
+})()`;
+
 async function focusProblem(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const focused = document.activeElement;
-    if (!(focused instanceof HTMLElement) || focused === document.body) return 'the focus is on nothing';
-    const style = getComputedStyle(focused);
-    const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
-    const ring = style.boxShadow !== 'none';
-    if (outline || ring) return '';
-    const name = focused.getAttribute('aria-label') ?? focused.innerText.trim().slice(0, 40);
-    return `${focused.tagName.toLowerCase()} "${name}" shows no focus`;
-  });
+  return z.string().parse(await page.evaluate(FOCUS_PROBLEM));
 }
 
 /**
@@ -35,7 +39,8 @@ async function tabTo(page: Page, target: Locator, unseen: Set<string>): Promise<
     await page.keyboard.press('Tab');
     const problem = await focusProblem(page);
     if (problem !== '') unseen.add(`${new URL(page.url()).pathname}: ${problem}`);
-    if (await target.evaluate((element) => element === document.activeElement)) return;
+    const reached: unknown = await target.evaluate('(element) => element === document.activeElement');
+    if (reached === true) return;
   }
   throw new Error(`${String(MAX_TABS)} presses of Tab never reached ${target.toString()}`);
 }
