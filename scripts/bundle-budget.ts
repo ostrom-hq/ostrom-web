@@ -149,6 +149,17 @@ function main(dist: string): void {
   const routes = checkRouteBudgets(measured, budget.routes);
   over.push(...routes.over);
 
+  // zod's configuration must stay, and in the first download: without jitless, zod's eval probe breaks the CSP
+  // (src/shared/lib/zodConfig.ts). The build takes `z.…` calls for pure (vite.config.ts), so a slip drops it.
+  if (
+    ![...entry].some(
+      (file) => file.endsWith('.js') && /jitless:\s*(?:true|!0)/.test(readFileSync(join(dist, file), 'utf8')),
+    )
+  ) {
+    console.error(`zod's configuration (jitless) is not in the first download: src/shared/lib/zodConfig.ts`);
+    process.exitCode = 1;
+  }
+
   const table = [rows.join('\n'), ...heaviestOf(dist, entry)].join('\n');
   process.stdout.write(`${table}\n`);
   const summary = process.env['GITHUB_STEP_SUMMARY'];

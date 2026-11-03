@@ -229,6 +229,11 @@ export default defineConfig({
     target: 'es2023',
     assetsInlineLimit: 0,
     rolldownOptions: {
+      // A schema is a call (`z.object(…)`), which the build keeps by default even when nothing reads it: the API's
+      // 1 032 generated schemas (gen/api/zod.gen.ts) all came in the first download. Every `z.…` call is taken for
+      // pure, so a schema nothing reads is dropped. zod's configuration is called as `config(…)` for that reason
+      // (src/shared/lib/zodConfig.ts), and scripts/bundle-budget.ts fails a build where it is gone.
+      treeshake: { manualPureFunctions: ['z'] },
       output: {
         codeSplitting: {
           // zod and its configuration in one chunk: every module that parses imports zod, so jitless is set before

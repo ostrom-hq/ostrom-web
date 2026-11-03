@@ -187,6 +187,18 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
   ];
 
   await page.addInitScript(MEASURING);
+  // Every CSP violation of the loads: the build drops what it takes for pure (vite.config.ts, `manualPureFunctions`),
+  // and a zod without its configuration would probe eval. Init scripts are not subject to the page's CSP.
+  const violations: string[] = [];
+  page.on('console', (message) => {
+    if (/content security policy/i.test(message.text())) violations.push(message.text());
+  });
+  await page.addInitScript({
+    content: `document.addEventListener('securitypolicyviolation', (event) => {
+      console.error('Content Security Policy violation: ' + event.effectiveDirective + ' blocked ' + event.blockedURI
+        + ' at ' + event.sourceFile + ':' + event.lineNumber);
+    });`,
+  });
   const cdp = await slowed(page);
   // Every API call of the page, from the navigation on: what each load asked, and when.
   let calls: ApiCall[] = [];
@@ -266,6 +278,7 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
   // Asked once the table is out: a screen over budget still leaves every figure.
   // Each call once, in this person's organization, a change with its CSRF token: a preload never doubles a call.
   expect.soft(problems, 'the API calls of each load').toEqual([]);
+  expect.soft(violations, 'the CSP violations of the loads').toEqual([]);
   for (const { path, lcp, inp } of results) {
     expect.soft(lcp, `${path}: LCP, median`).toBeGreaterThan(0);
     expect.soft(lcp, `${path}: LCP, median`).toBeLessThanOrEqual(LCP_BUDGET_MS);
