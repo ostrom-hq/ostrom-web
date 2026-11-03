@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an admin invites by e-mail, makes an invitation link and gives someone the approver role', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Members' }).click();
+  await openScreen(page, 'Members');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Acme');
   await expect(page.getByText('5 people · you are Admin')).toBeVisible();
 

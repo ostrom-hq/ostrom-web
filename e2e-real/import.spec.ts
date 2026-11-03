@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization, served } from './real';
+import { openScreen } from '../e2e/navigation';
 
 const EXPORT = {
   members: [{ id: 'tc-1', username: 'ghost' }],
@@ -61,7 +62,7 @@ test('an owner sees the plan, imports it, a second plan reads unchanged, and fin
   await expect(plan.getByRole('list', { name: 'The plan in numbers' })).toContainText('unchanged');
 
   // The imported server is on the MCP screen.
-  await page.getByRole('link', { name: 'MCP' }).click();
+  await openScreen(page, 'MCP');
   await expect(page.getByRole('heading', { level: 3, name: 'notion' })).toBeVisible();
 });
 

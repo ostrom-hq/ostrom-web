@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+
+/** The console's screens, in the order the navigation shows them: the bar on a wide screen, the menu on a phone. */
+export const NAV_LINKS = [
+  { to: '/', label: 'home' },
+  { to: '/yes', label: 'yes' },
+  { to: '/sessions', label: 'sessions' },
+  { to: '/receipts', label: 'receipts' },
+  { to: '/members', label: 'members' },
+  { to: '/github', label: 'github' },
+  { to: '/workflows', label: 'workflows' },
+  { to: '/approvers', label: 'approvers' },
+  { to: '/rules', label: 'rules' },
+  { to: '/activity', label: 'activity' },
+  { to: '/decisions', label: 'decisions' },
+  { to: '/audit', label: 'audit' },
+  { to: '/policy', label: 'policy' },
+  { to: '/mcp', label: 'mcp' },
+  { to: '/secrets', label: 'secrets' },
+  { to: '/import', label: 'import' },
+  { to: '/spend', label: 'spend' },
+  { to: '/billing', label: 'billing' },
+  { to: '/settings', label: 'settings' },
+  { to: '/tokens', label: 'tokens' },
+  { to: '/cloud', label: 'cloud' },
+  { to: '/automations', label: 'automations' },
+  { to: '/artifacts', label: 'artifacts' },
+  { to: '/accounts', label: 'accounts' },
+  { to: '/signin', label: 'signin' },
+] as const;

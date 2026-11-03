@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an owner adds a secret, then an MCP server that uses it', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Secrets' }).click();
+  await openScreen(page, 'Secrets');
   const secret = page.getByRole('region', { name: 'Add a secret' });
   await secret.getByRole('textbox', { name: 'Name', exact: true }).fill('NOTION_KEY');
   await secret.getByLabel('Value').fill('s3cret');
@@ -11,7 +12,7 @@ test('an owner adds a secret, then an MCP server that uses it', async ({ page })
   await expect(page.getByText('NOTION_KEY')).toBeVisible();
   await expect(page.getByText('s3cret')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'MCP' }).click();
+  await openScreen(page, 'MCP');
   const form = page.getByRole('region', { name: 'Add a server' });
   await form.getByRole('textbox', { name: 'Name', exact: true }).fill('notion');
   await form.getByRole('textbox', { name: 'URL' }).fill('https://mcp.notion.com/mcp');

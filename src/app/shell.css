@@ -55,6 +55,68 @@
   color: var(--text);
   box-shadow: inset 0 -2px 0 var(--signal);
 }
+/* The phone's navigation: a button in the bar, every screen in a sheet. Hidden where the bar has room. */
+.o-nav-menu-toggle {
+  display: none;
+}
+.o-nav-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: end stretch;
+  background: color-mix(in srgb, var(--text) 32%, transparent);
+}
+.o-nav-menu__panel {
+  display: grid;
+  gap: var(--space-3);
+  max-height: 85dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+}
+.o-nav-menu__panel:focus {
+  outline: none;
+}
+.o-nav-menu__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.o-nav-menu__title {
+  margin: 0;
+  font-size: var(--fs-20);
+}
+.o-nav-menu__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.o-nav-menu__list a {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.o-nav-menu__list a:hover {
+  background: var(--surface-sunken);
+}
+.o-nav-menu__list a[aria-current='page'] {
+  background: var(--surface-sunken);
+  box-shadow: inset 3px 0 0 var(--signal);
+}
 .o-topbar__end {
   margin-left: auto;
   /* The organization and the theme stay whole; the navigation is the part that scrolls. */
@@ -267,7 +329,14 @@
   .o-org-switch__viewer {
     max-width: 6rem;
   }
-  /* On a phone the mark alone says where you are: its name stays for screen readers, the room goes to the navigation. */
+  /* The bar has no room for every screen on a phone: the menu shows them. */
+  .o-nav {
+    display: none;
+  }
+  .o-nav-menu-toggle {
+    display: inline-flex;
+  }
+  /* On a phone the mark alone says where you are: its name stays for screen readers, the room goes to the menu. */
   .o-brand {
     min-width: 44px;
     min-height: 44px;

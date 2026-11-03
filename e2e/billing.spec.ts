@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an owner reads the plan, switches to Business yearly, then opens Stripe’s portal', async ({ page }) => {
   // Stripe's test pages are never called: the browser lands on a stand-in.
@@ -7,7 +8,7 @@ test('an owner reads the plan, switches to Business yearly, then opens Stripe’
     await route.fulfill({ contentType: 'text/html', body: '<title>Stripe portal (test)</title>' });
   });
   await page.goto('/');
-  await page.getByRole('link', { name: 'Billing' }).click();
+  await openScreen(page, 'Billing');
   await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
   await expect(page.getByRole('meter', { name: 'Agent hours used' })).toHaveAttribute(
     'aria-valuetext',

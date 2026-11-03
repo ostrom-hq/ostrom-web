@@ -11,6 +11,7 @@ import type { ApproversGraph } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
+import { appliedMutation } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -76,7 +77,7 @@ export function useSelfApprovalPolicy(): PolicyViewModel {
   const policy = useQuery(ready(getGatePolicyOptions()));
   const viewer = useViewer();
   const mutation = useMutation({
-    ...setGatePolicyMutation(),
+    ...appliedMutation(setGatePolicyMutation()),
     onMutate: sentInOrg,
     onSuccess: (data, _body, sent) => {
       whenSameOrg(sent, () => {

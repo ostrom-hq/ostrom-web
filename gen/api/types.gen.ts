@@ -1243,6 +1243,99 @@ export type GateStatus = 'pending' | 'approved' | 'rejected' | 'shadow' | 'ungat
 export type GitHubConnection = 'github-app' | 'gh-token';
 
 /**
+ * The governance write a confirmation holds: the operation that opened it
+ */
+export type GovernanceChangeKind = 'rules.create' | 'rules.update' | 'rules.delete' | 'rules.bulk' | 'gates.policy' | 'models.policy' | 'workflows.create' | 'workflows.save' | 'workflows.delete';
+
+/**
+ * A governance write made with a CLI token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
+ */
+export type GovernanceConfirmation = {
+    id: string;
+    kind: GovernanceChangeKind;
+    status: GovernanceConfirmationStatus;
+    /**
+     * The method of the write, such as `PUT`
+     */
+    method: string;
+    /**
+     * The path of the write, such as `/api/v1/gates/policy`
+     */
+    path: string;
+    /**
+     * The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`)
+     */
+    scope: string;
+    /**
+     * One line saying what the change does
+     */
+    summary: string;
+    /**
+     * What the change replaces, as the read routes show it; JSON null for nothing (a creation)
+     */
+    before: unknown;
+    /**
+     * What the change writes, as the read routes show it; JSON null for nothing (a deletion)
+     */
+    after: unknown;
+    requestedBy: GovernanceConfirmationPerson;
+    /**
+     * The person's token that asked: `admin` when it holds a governance scope (`ostrom login --admin`), `device` otherwise (`ostrom login`, a personal token). An agent, a runner or a service key never opens one
+     */
+    credential: 'admin' | 'device';
+    createdAt: string;
+    expiresAt: string;
+    /**
+     * Who confirmed or refused it; a confirmed change is their signed decision
+     */
+    answeredBy?: GovernanceConfirmationPerson;
+    answeredAt?: string;
+    /**
+     * What the write returned once confirmed (absent when it returns nothing, as a deletion)
+     */
+    result?: unknown;
+    /**
+     * Why a confirmed change was not written (`failed`)
+     */
+    error?: ErrorDetail;
+};
+
+export type GovernanceConfirmationAnswer = 'confirm' | 'refuse';
+
+export type GovernanceConfirmationAnswerRequest = {
+    answer: GovernanceConfirmationAnswer;
+};
+
+/**
+ * The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The same change asked again by the same person while it waits answers the same confirmation
+ */
+export type GovernanceConfirmationPending = {
+    confirmationId: string;
+    /**
+     * The absolute URL of the console page that confirms it (`<console>/confirm/<id>`)
+     */
+    confirmUrl: string;
+    expiresAt: string;
+};
+
+/**
+ * A member who asked for or answered a confirmation
+ */
+export type GovernanceConfirmationPerson = {
+    memberId: string;
+    /**
+     * Their GitHub login, when known
+     */
+    login?: string;
+    name?: string;
+};
+
+/**
+ * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ */
+export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed';
+
+/**
  * A group of members sharing subscriptions
  */
 export type Group = {
@@ -7534,6 +7627,10 @@ export type SetGatePolicyErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SetGatePolicyError = SetGatePolicyErrors[keyof SetGatePolicyErrors];
@@ -7545,6 +7642,14 @@ export type SetGatePolicyResponses = {
     200: {
         selfApproval: string;
     };
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SetGatePolicyResponse = SetGatePolicyResponses[keyof SetGatePolicyResponses];
@@ -7803,6 +7908,113 @@ export type AnswerApprovalResponses = {
 };
 
 export type AnswerApprovalResponse = AnswerApprovalResponses[keyof AnswerApprovalResponses];
+
+export type GetGovernanceConfirmationData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * Seconds to wait on a pending confirmation for its answer; absent or 0 reads at once.
+         */
+        wait?: number;
+    };
+    url: '/api/v1/confirmations/{id}';
+};
+
+export type GetGovernanceConfirmationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetGovernanceConfirmationError = GetGovernanceConfirmationErrors[keyof GetGovernanceConfirmationErrors];
+
+export type GetGovernanceConfirmationResponses = {
+    /**
+     * OK
+     */
+    200: GovernanceConfirmation;
+};
+
+export type GetGovernanceConfirmationResponse = GetGovernanceConfirmationResponses[keyof GetGovernanceConfirmationResponses];
+
+export type AnswerGovernanceConfirmationData = {
+    body: GovernanceConfirmationAnswerRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/confirmations/{id}/answer';
+};
+
+export type AnswerGovernanceConfirmationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (sign in again, then confirm), or forbidden (a token, not an owner or admin)
+     */
+    403: StepUpRequired | ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * confirmation_closed, confirmation_stale, or the confirmed write's own error (key `error.type`)
+     */
+    409: ApiError;
+    /**
+     * confirmation_expired
+     */
+    410: ApiError;
+};
+
+export type AnswerGovernanceConfirmationError = AnswerGovernanceConfirmationErrors[keyof AnswerGovernanceConfirmationErrors];
+
+export type AnswerGovernanceConfirmationResponses = {
+    /**
+     * The answered confirmation; when confirmed, `result` holds what the write returned
+     */
+    200: GovernanceConfirmation;
+};
+
+export type AnswerGovernanceConfirmationResponse = AnswerGovernanceConfirmationResponses[keyof AnswerGovernanceConfirmationResponses];
 
 export type ListDecisionsData = {
     body?: never;
@@ -8784,6 +8996,10 @@ export type CreateRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type CreateRuleError = CreateRuleErrors[keyof CreateRuleErrors];
@@ -8793,6 +9009,14 @@ export type CreateRuleResponses = {
      * Created
      */
     201: Rule;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type CreateRuleResponse = CreateRuleResponses[keyof CreateRuleResponses];
@@ -8833,11 +9057,23 @@ export type DeleteRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type DeleteRuleError = DeleteRuleErrors[keyof DeleteRuleErrors];
 
 export type DeleteRuleResponses = {
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
     /**
      * Deleted
      */
@@ -8944,6 +9180,10 @@ export type UpdateRuleErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type UpdateRuleError = UpdateRuleErrors[keyof UpdateRuleErrors];
@@ -8953,6 +9193,14 @@ export type UpdateRuleResponses = {
      * OK
      */
     200: Rule;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type UpdateRuleResponse = UpdateRuleResponses[keyof UpdateRuleResponses];
@@ -8994,6 +9242,10 @@ export type BulkUpdateRulesErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type BulkUpdateRulesError = BulkUpdateRulesErrors[keyof BulkUpdateRulesErrors];
@@ -9005,6 +9257,14 @@ export type BulkUpdateRulesResponses = {
     200: {
         updated: number;
     };
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type BulkUpdateRulesResponse = BulkUpdateRulesResponses[keyof BulkUpdateRulesResponses];
@@ -9096,6 +9356,10 @@ export type CreateWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type CreateWorkflowError = CreateWorkflowErrors[keyof CreateWorkflowErrors];
@@ -9105,6 +9369,14 @@ export type CreateWorkflowResponses = {
      * OK
      */
     201: Workflow;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type CreateWorkflowResponse = CreateWorkflowResponses[keyof CreateWorkflowResponses];
@@ -9145,11 +9417,23 @@ export type DeleteWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type DeleteWorkflowError = DeleteWorkflowErrors[keyof DeleteWorkflowErrors];
 
 export type DeleteWorkflowResponses = {
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
     /**
      * Done
      */
@@ -9246,6 +9530,10 @@ export type SaveWorkflowErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SaveWorkflowError = SaveWorkflowErrors[keyof SaveWorkflowErrors];
@@ -9255,6 +9543,14 @@ export type SaveWorkflowResponses = {
      * OK
      */
     200: Workflow;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SaveWorkflowResponse = SaveWorkflowResponses[keyof SaveWorkflowResponses];
@@ -11758,6 +12054,10 @@ export type SetModelPolicyErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * confirmation_limit: the person already has 10 governance confirmations waiting (expired, refused and answered ones do not count)
+     */
+    429: ApiError;
 };
 
 export type SetModelPolicyError = SetModelPolicyErrors[keyof SetModelPolicyErrors];
@@ -11767,6 +12067,14 @@ export type SetModelPolicyResponses = {
      * OK
      */
     200: ModelPolicy;
+    /**
+     * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+     * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
+     * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
+     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
+     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     */
+    202: GovernanceConfirmationPending;
 };
 
 export type SetModelPolicyResponse = SetModelPolicyResponses[keyof SetModelPolicyResponses];

@@ -48,6 +48,16 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(await violationsOn(page)).toEqual([]);
     });
 
+    test('the navigation menu open on a phone', async ({ page, isMobile }) => {
+      test.skip(!isMobile, 'a wide screen shows the bar, not the menu');
+      await page.goto('/yes');
+      await page.getByRole('button', { name: 'Menu' }).click();
+      await expect(
+        page.getByRole('dialog', { name: 'Menu' }).getByRole('link', { name: 'Requests' }),
+      ).toBeVisible();
+      expect(await violationsOn(page)).toEqual([]);
+    });
+
     test('the organization switch under the pointer and with the focus', async ({ page, isMobile }) => {
       await page.goto('/yes');
       const sw = page.getByRole('button', { name: /^Organization: / });

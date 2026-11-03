@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactElement } from 'react';
+import type { ButtonHTMLAttributes, ReactElement, Ref } from 'react';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'md' | 'icon';
@@ -7,6 +7,8 @@ export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement
   readonly variant?: ButtonVariant;
   /** `icon` is a square button: give it an `aria-label`. */
   readonly size?: ButtonSize;
+  /** The button itself, for a dialog that gives it the focus back. */
+  readonly ref?: Ref<HTMLButtonElement>;
 }
 
 /** Garnet (`primary`) is the approve gesture only (PB-C2): one per request, never for another action or a warning. */
