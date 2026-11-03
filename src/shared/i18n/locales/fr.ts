@@ -87,6 +87,8 @@ export const fr = {
     signin: {
       tag: 'Connexion',
       invalid: 'Ce lien de connexion n’est pas valide. Demandes-en un nouveau.',
+      offer:
+        'Ce lien connecte ce navigateur à un compte Ostrom. Ne t’en sers que si tu l’as demandé toi-même : les demandes que tu approuves et ce que tu ajoutes seront dans ce compte.',
       switch:
         'Quelqu’un est déjà connecté sur ce navigateur, et ce lien est peut-être un autre compte. Les demandes que tu approuves sont signées au nom du compte du lien.',
       accept: 'Me connecter avec le lien',
