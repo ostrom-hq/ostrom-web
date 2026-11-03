@@ -34,7 +34,7 @@ function SettingsPage({
   const rename = useRenameOrg(org);
   const deletion = useDeleteOrg(org);
   const sessions = useAuthSessions();
-  const sessionActions = useSessionActions();
+  const sessionActions = useSessionActions('/settings');
   const devices = useDevices();
   const manages = managesMembers(role);
   const serviceKeys = useServiceKeys(manages);

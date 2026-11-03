@@ -51,23 +51,6 @@ export function personalDevices(devices: readonly Device[]): Device[] {
 /** How a person signs in with GitHub, in the account's `providers`. */
 export const GITHUB = 'github';
 
-/** The machine itself: a provider there is the person's own (an instance run locally, or a journey's fake GitHub). */
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
-
-/**
- * A consent page the browser may be sent to: over https, or on the machine itself. Anything else the server named
- * stays unvisited.
- */
-export function providerPage(url: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return false;
-  }
-  return parsed.protocol === 'https:' || (parsed.protocol === 'http:' && LOOPBACK.has(parsed.hostname));
-}
-
 /**
  * What a service key may carry: what a CI calls, nothing else (contract `createServiceKey`). The server refuses any
  * other scope, and a key on any other operation.

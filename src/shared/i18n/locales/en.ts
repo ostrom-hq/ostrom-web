@@ -1529,8 +1529,8 @@ export const en = {
         'Link your GitHub: a gate then knows which pull requests are yours, and never counts you as the approver of your own.',
       link: 'Link GitHub',
       linking: 'Opening GitHub…',
-      errorTag: 'Not linked',
-      unsafe: 'The server named a GitHub page that is not https: nothing was opened.',
+      errorTag: 'Not done',
+      unsafe: 'The server named a page that is not https: nothing was opened.',
     },
   },
   settings: {

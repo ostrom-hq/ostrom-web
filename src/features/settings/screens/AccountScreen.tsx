@@ -17,7 +17,7 @@ export function AccountScreen(): ReactElement {
   const { t } = useTranslation();
   const github = useGithubLink();
   const sessions = useAuthSessions();
-  const sessionActions = useSessionActions();
+  const sessionActions = useSessionActions('/account');
   const devices = useDevices(true);
   const login = github.account?.login;
   return (

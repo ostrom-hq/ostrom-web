@@ -34,9 +34,12 @@ test('a person in no organization links their GitHub from their account', async 
   const login = `zoe-gh-${uniqueRun()}`;
   github.signInAs(login, `${login}@${uniqueRun()}.e2e.ostrom.test`);
   await section.getByRole('button', { name: 'Link GitHub' }).click();
-  // GitHub's consent page, then the server's callback, then back on the account.
-  await expect(page).toHaveURL(/\/account$/);
+  // GitHub's consent page, then the server's callback, then back on the account: the page was left and came back.
+  await expect
+    .poll(() => github.requests.some((r) => r.port === SIGN_IN_PORT && r.path === '/login/oauth/authorize'))
+    .toBe(true);
   await expect(section.getByText('Linked', { exact: true })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe('/account');
   await expect(section.getByRole('button', { name: 'Link GitHub' })).toHaveCount(0);
 
   const read = await callFromPage(page, 'GET', '/api/v1/auth/me/account');

@@ -54,6 +54,20 @@ describe('my account', () => {
     expect(within(workstations).getAllByRole('listitem')).toHaveLength(1);
   });
 
+  it('comes back to the account after signing this browser out everywhere', async () => {
+    const user = userEvent.setup();
+    const router = visit('/account');
+    await account();
+    const security = region('Security');
+    await user.click(within(security).getByRole('button', { name: 'Sign out everywhere' }));
+    await user.click(within(security).getByRole('button', { name: 'Sign out of every session' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/signin');
+    });
+    expect(router.state.location.search).toEqual({ redirect: '/account' });
+    expect(db.signedIn).toBe(false);
+  });
+
   it('is read by a person in no organization yet', async () => {
     freshAccount(db);
     visit('/account');

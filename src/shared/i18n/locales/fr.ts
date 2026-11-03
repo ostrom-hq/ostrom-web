@@ -1568,8 +1568,8 @@ export const fr = {
         'Lie ton GitHub : une porte sait alors quelles pull requests sont les tiennes, et ne te compte jamais comme approbateur des tiennes.',
       link: 'Lier GitHub',
       linking: 'Ouverture de GitHub…',
-      errorTag: 'Non lié',
-      unsafe: 'Le serveur a donné une page GitHub qui n’est pas en https : rien n’a été ouvert.',
+      errorTag: 'Non fait',
+      unsafe: 'Le serveur a donné une page qui n’est pas en https : rien n’a été ouvert.',
     },
   },
   settings: {

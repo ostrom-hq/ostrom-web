@@ -5,8 +5,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { exit } from '@/shared/lib/leave';
-import { GITHUB, providerPage } from './model';
+import { leaveFor } from '@/shared/lib/leave';
+import { GITHUB } from './model';
 
 export interface GithubLinkViewModel {
   /** Who is signed in and how they sign in; undefined while it loads. */
@@ -27,10 +27,9 @@ export interface GithubLinkViewModel {
 export function useGithubLink(): GithubLinkViewModel {
   const query = useQuery(ready(getMyAccountOptions(), { retry: false }));
   const [unsafePage, setUnsafePage] = useState(false);
+  // A local instance names its provider on the machine itself, over plain http.
   const leave = useCallback((started: LinkStarted) => {
-    const safe = providerPage(started.authorizationUrl);
-    setUnsafePage(!safe);
-    if (safe) exit.assign(started.authorizationUrl);
+    setUnsafePage(!leaveFor(started.authorizationUrl, { loopback: true }));
   }, []);
   const linking = useMutation({ ...linkSignInProviderMutation(), onSuccess: leave });
   const { mutate, reset } = linking;

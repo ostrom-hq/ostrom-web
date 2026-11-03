@@ -6,14 +6,14 @@ import { Banner } from '@/shared/ui/Banner';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { Section } from '@/shared/ui/Screen';
 import { Skeleton } from '@/shared/ui/Skeleton';
-import type { SessionActionsViewModel, SessionsViewModel } from '../useSettings';
+import type { SessionActionsViewModel, SessionsPage, SessionsViewModel } from '../useSettings';
 import { SessionRow } from './SessionRow';
 
 export interface SecuritySectionProps {
   readonly view: SessionsViewModel;
   readonly actions: SessionActionsViewModel;
   /** The page a new sign-in comes back to. */
-  readonly back: '/settings' | '/account';
+  readonly back: SessionsPage;
 }
 
 /** How fresh a sign-in a yes needs, the person's signed-in sessions, and the way to end them all. */
