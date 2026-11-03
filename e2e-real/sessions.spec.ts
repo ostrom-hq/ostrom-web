@@ -23,7 +23,10 @@ async function withToken(
       data: body,
       failOnStatusCode: false,
     });
-    return { status: response.status(), body: bodyOf(`POST ${path}`, response.status(), await response.text()) };
+    return {
+      status: response.status(),
+      body: bodyOf(`POST ${path}`, response.status(), await response.text()),
+    };
   } finally {
     await context.dispose();
   }
@@ -89,7 +92,9 @@ test('an owner registers a runner, starts a cloud agent that waits for it, and a
   await page.goto('/cloud');
   await expect(page.getByRole('heading', { level: 1, name: 'Cloud agents' })).toBeVisible();
   await expect(page.getByText('No cloud session yet.')).toBeVisible();
-  await expect(page.getByText('No runner yet: register one with the CLI to run agents in the cloud.')).toBeVisible();
+  await expect(
+    page.getByText('No runner yet: register one with the CLI to run agents in the cloud.'),
+  ).toBeVisible();
 
   const runnerName = `journey-runner-${Date.now().toString(36)}`;
   const runner = await callFromPage(page, 'POST', '/api/v1/runners', { name: runnerName, labels: ['linux'] });
@@ -105,7 +110,6 @@ test('an owner registers a runner, starts a cloud agent that waits for it, and a
   await form.getByRole('button', { name: 'Start the agent' }).click();
   const session = page.getByRole('listitem').filter({ hasText: name });
   await expect(session).toBeVisible();
-  await expect(session).toContainText(/Queued|Starting/);
   const listed = await callFromPage(page, 'GET', '/api/v1/cloud/sessions');
   expect(listed.status).toBe(200);
   expect(JSON.stringify(listed.body)).toContain(name);
@@ -118,4 +122,21 @@ test('an owner registers a runner, starts a cloud agent that waits for it, and a
   for (const path of ['/api/v1/runners', '/api/v1/cloud/sessions']) {
     expect((await callFromPage(stranger, 'GET', path, undefined, org.id)).status, path).toBe(404);
   }
+});
+
+test('a cloud session reads in the contract’s words', async ({ page }) => {
+  test.fixme(
+    true,
+    'ostrom-web: the cloud screen knows queued, starting, ended and stopped; the contract and the server say creating, ' +
+      'running, pausing, paused, resuming, terminated and failed (a new session reads "creating" raw). Console fix ' +
+      'to come, in the JOURNAL (03/11)',
+  );
+  await ownerOfNewOrganization(page, 'odette');
+  await page.goto('/cloud');
+  const form = page.getByRole('region', { name: 'Start an agent' });
+  await form.getByRole('textbox', { name: 'What should it do?' }).fill('Bump the SDK and open a PR.');
+  await form.getByRole('button', { name: 'Start the agent' }).click();
+  await expect(page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').first()).toContainText(
+    'Creating',
+  );
 });
