@@ -1,4 +1,5 @@
-/* Approvals: one column, phone first. The garnet stays on "a human is awaited" and the yes button. */
+/* A decision a person makes, phone first: the approval (features/yes) and the governance confirmation
+   (features/confirm) pages. One column; the garnet stays on "a human is awaited" and the yes button. */
 .ys-page {
   display: flex;
   flex-direction: column;
@@ -152,7 +153,7 @@
 }
 .ys-chip--bad {
   border-color: var(--danger);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .ys-line {

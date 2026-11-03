@@ -49,6 +49,11 @@ export type EmailLinkState = 'missing' | 'asking' | 'verifying' | 'failed';
 export interface EmailLinkViewModel {
   readonly state: EmailLinkState;
   readonly failure: Error | undefined;
+  /**
+   * The link was asked for in another browser (`email_link_other_browser`): opened from the mail on another device,
+   * it signs nobody in here, and a new link asked from this browser does.
+   */
+  readonly otherBrowser: boolean;
   /** Who this browser is signed in as while the link waits for a yes, when the server said. */
   readonly signedInAs: string | undefined;
   /** Spends the link, replacing the session in this browser: only offered while asking. */
@@ -108,6 +113,7 @@ export function useEmailLink(): EmailLinkViewModel {
   return {
     state,
     failure: failureOf(mutation.error),
+    otherBrowser: isApiFailure(mutation.error) && mutation.error.code === 'email_link_other_browser',
     signedInAs: current === undefined ? undefined : signedInName(current),
     accept,
     keep,

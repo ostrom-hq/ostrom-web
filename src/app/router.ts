@@ -10,9 +10,13 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens';
 import { activitySearchSchema } from '@/features/activity/route';
+import { deviceSearchSchema } from '@/features/device/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
 import { fragmentValue, useEmailLinkStore } from '@/features/signin/route';
+// The yes screens are in the first download: an approver opens a link to one on a phone, and a screen fetched after the
+// entry costs a round trip more on a slow network (first paint 1.9 s with it, 2.2 s split; e2e-real/firstPaint.spec.ts).
+import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
@@ -70,7 +74,7 @@ const yesRoute = createRoute({
       replace: true,
     });
   },
-  component: lazyRouteComponent(async () => import('@/features/yes'), 'YesQueueScreen'),
+  component: YesQueueScreen,
 });
 
 /** A link to one request (`/yes/apr-1#signin=opk_…`) signs in the same way, then shows that request. */
@@ -84,7 +88,17 @@ const approvalRoute = createRoute({
     useAuthStore.getState().offer(signin);
     throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
   },
-  component: lazyRouteComponent(async () => import('@/features/yes'), 'ApprovalScreen'),
+  component: ApprovalScreen,
+});
+
+/**
+ * `/confirm/gc-…` is the link `ostrom` prints when a governance write made with a CLI token waits for a person
+ * (core#57): an owner or an admin reads the exact change here, then confirms or refuses it.
+ */
+const confirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm/$confirmationId',
+  component: lazyRouteComponent(async () => import('@/features/confirm'), 'ConfirmScreen'),
 });
 
 const sessionsRoute = createRoute({
@@ -108,6 +122,16 @@ const githubRoute = createRoute({
   path: '/github',
   validateSearch: githubSearchSchema,
   component: lazyRouteComponent(async () => import('@/features/github'), 'GithubScreen'),
+});
+/**
+ * `/device?code=…`, where `ostrom login` sends the person to approve their terminal (RFC 8628). Signed in only: the
+ * page offers a sign-in that comes back to it, its code kept.
+ */
+const deviceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/device',
+  validateSearch: deviceSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/device'), 'DeviceScreen'),
 });
 const approversRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -280,12 +304,14 @@ export const routeTree = rootRoute.addChildren([
   emailLinkRoute,
   yesRoute,
   approvalRoute,
+  confirmRoute,
   sessionsRoute,
   sessionRoute,
   receiptsRoute,
   receiptRoute,
   membersRoute,
   githubRoute,
+  deviceRoute,
   approversRoute,
   rulesRoute,
   activityRoute,

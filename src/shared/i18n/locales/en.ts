@@ -183,6 +183,126 @@ export const en = {
       errorTag: 'Error',
     },
   },
+  confirm: {
+    status: {
+      pending: 'Waiting for you',
+      confirmed: 'Confirmed',
+      refused: 'Refused',
+      expired: 'Expired',
+      failed: 'Failed',
+    },
+    kind: {
+      rules: {
+        create: 'Add a rule',
+        update: 'Change a rule',
+        delete: 'Delete a rule',
+        bulk: 'Decide several rules',
+      },
+      gates: { policy: 'Change the self-approval policy' },
+      models: { policy: 'Change the model policy' },
+      workflows: {
+        create: 'Add a workflow',
+        save: 'Change a workflow',
+        delete: 'Delete a workflow',
+      },
+    },
+    expiresIn: 'expires in {{left}}',
+    warning: {
+      tag: 'Check',
+      text: 'If you did not run this command yourself, refuse: an agent may have asked for it.',
+    },
+    what: {
+      title: 'What it changes',
+      kind: 'Change',
+      request: 'Request',
+      scope: 'Scope',
+    },
+    change: {
+      title: 'Before and after',
+      before: 'Before',
+      after: 'After',
+      nothingBefore: 'Nothing: this change creates it.',
+      nothingAfter: 'Nothing: this change deletes it.',
+      keys_one: 'Changes {{keys}}.',
+      keys_other: 'Changes {{count}} keys: {{keys}}.',
+    },
+    who: {
+      title: 'Who asks',
+      with: 'with the token of',
+      when: 'Asked {{when}}',
+    },
+    technical: {
+      title: 'Technical details',
+      id: 'Confirmation',
+      member: 'Member',
+      expires: 'Expires',
+    },
+    act: {
+      label: 'Answer',
+      signedAs: 'You answer as {{name}}.',
+      confirm: 'Confirm the change',
+      confirming: 'Confirming…',
+      refuse: 'Refuse',
+      refusing: 'Refusing…',
+      notYoursTag: 'Owners and admins',
+      notYours:
+        'Only an owner or an admin of the organization confirms or refuses a change of its governance.',
+    },
+    notice: {
+      tag: {
+        'step-up': 'Sign in again',
+        forbidden: 'Not allowed',
+        closed: 'Already answered',
+        stale: 'Changed meanwhile',
+        expired: 'Expired',
+        failed: 'Not written',
+        error: 'Error',
+      },
+      text: {
+        'step-up':
+          'Confirming needs a sign-in of less than five minutes. Sign in again, then confirm; refusing needs none.',
+        forbidden: '{{reason}}',
+        closed: 'Someone answered this confirmation first: it shows how it ended.',
+        stale:
+          'What this change replaces is no longer what it showed: nothing was written. Run the command again to ask anew.',
+        expired: 'Its 15 minutes ran out before the answer: nothing was written.',
+        failed: 'Ostrom refused the change when writing it: {{reason}}',
+        error: 'The answer did not go through ({{reason}}). Try again.',
+      },
+      signInAgain: 'Sign in again',
+    },
+    outcome: {
+      label: 'Outcome',
+      title: {
+        confirmed: 'Confirmed and written',
+        refused: 'Refused',
+        expired: 'Expired without an answer',
+        failed: 'Confirmed, but not written',
+      },
+      by: {
+        confirmed: '{{who}} confirmed this change{{when}}. It is their signed decision.',
+        refused: '{{who}} refused this change{{when}}.',
+        failed: '{{who}} confirmed this change{{when}}.',
+      },
+      at: ' on {{when}}',
+      someone: 'Someone',
+      expired: 'Nobody answered within 15 minutes. Run the command again to ask anew.',
+      why: 'Why: {{reason}}',
+      unknown: 'Ostrom did not say.',
+      nothingWritten: 'Nothing was written.',
+      result: 'What the write returned',
+    },
+    notFound: {
+      title: 'Confirmation not found',
+      body: 'It does not exist, or it is not in this organization. If it belongs to another one, switch organization in the top bar.',
+    },
+    signedOut: {
+      tag: 'Signed out',
+      text: 'Sign in to read this confirmation.',
+      signIn: 'Sign in',
+    },
+    failure: { tag: 'Error' },
+  },
   consent: {
     title: 'Usage statistics',
     body: 'Can we measure how the console is used (pages visited and actions, never what you type) with PostHog, hosted in the EU? Nothing is sent unless you accept, and you can change your mind at any time.',
@@ -198,6 +318,8 @@ export const en = {
       open_one: '{{count}} open',
       open_other: '{{count}} open',
       ended: 'Ended',
+      more: 'Show older sessions',
+      loadingMore: 'Loading…',
       since: 'since {{when}}',
       emptyTitle: 'No agent is working right now',
       emptyBody: 'A session shows up here as soon as someone starts an agent with ostrom.',
@@ -230,6 +352,12 @@ export const en = {
       package: 'Package',
       requests_one: '{{count}} request for a person',
       requests_other: '{{count}} requests for a person',
+      unanswered: 'Waiting',
+      notAnswered: 'Not answered',
+      approved: 'Approved',
+      refused: 'Refused',
+      answeredBy: 'by {{by}}, {{when}}',
+      answerReceipt: 'Receipt',
       receipt: 'Receipt',
       noReceipt: 'The receipt is signed when the session ends.',
       openReceipt: 'Open receipt {{id}}',
@@ -1201,6 +1329,9 @@ export const en = {
       failedTag: 'Not signed in',
       missing: 'This link was already used or is incomplete.',
       again: 'Ask for a new link',
+      againHere: 'Ask for a new link here',
+      otherBrowser:
+        'This link was asked for in another browser. For your safety it only signs in the browser that asked for it: open it there, or ask for a new link from this one.',
       switchTag: 'Another account?',
       switch:
         'Someone may already be signed in on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
@@ -1743,6 +1874,55 @@ export const en = {
     dead: {
       title: 'This invitation no longer works',
       body: 'It was used up, revoked or has expired. Ask the person who invited you for a new one.',
+    },
+  },
+  device: {
+    title: 'Sign in a terminal',
+    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer. If you did not run ostrom login yourself just now, deny it.',
+    enterLead: 'Type the code your terminal shows after ostrom login.',
+    form: {
+      label: 'Code from the terminal',
+      field: 'Code shown by the terminal',
+      placeholder: 'ABCD-EFGH',
+      submit: 'Continue',
+    },
+    unknownTag: 'Unknown code',
+    unknown:
+      'No sign-in is waiting for {{code}}: it may have expired or been answered already. Check the code, or run ostrom login again.',
+    malformed:
+      'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH. Type the code your terminal shows, or run ostrom login again.',
+    code: 'Code',
+    client: 'Name given by the terminal',
+    expires: 'Expires at',
+    adminTag: 'Admin sign-in',
+    admin:
+      'This terminal asks for the governance writes below. Only an owner or an admin of the organization may approve it.',
+    scopes: 'Scopes asked',
+    approve: 'Sign in this terminal',
+    approveAdmin: 'Approve the admin sign-in',
+    deny: 'Deny',
+    forbiddenTag: 'Not allowed',
+    forbidden:
+      'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
+    severalOrgs:
+      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for: it cannot be approved here yet. Deny it, or ask an owner or an admin who belongs to this organization only.',
+    failedTag: 'Not answered',
+    signedOut: {
+      title: 'Sign in to answer',
+      body: 'Only someone signed in to the console can sign a terminal in. You will come back here after.',
+      action: 'Sign in',
+    },
+    approved: {
+      title: 'Terminal signed in',
+      body: 'Go back to your terminal: ostrom login carries on there.',
+    },
+    denied: {
+      title: 'Terminal refused',
+      body: 'Nothing was signed in. If it was you after all, run ostrom login again.',
+    },
+    gone: {
+      title: 'This code no longer works',
+      body: 'It expired or was answered already. Run ostrom login again for a new code.',
     },
   },
 } as const;

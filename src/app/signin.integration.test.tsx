@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';
 import { useEmailLinkStore } from '@/features/signin';
-import { DEMO_EMAIL_TOKEN } from '@/mocks/handlers';
+import { DEMO_EMAIL_TOKEN, OTHER_BROWSER_EMAIL_TOKEN } from '@/mocks/handlers';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
 const { server } = setupMockApp();
@@ -241,6 +241,15 @@ describe('the e-mailed link', () => {
     visit('/auth/email#token=ml_used');
     expect(await screen.findByRole('alert')).toHaveTextContent('This link was already used or has expired.');
     expect(screen.getByRole('link', { name: 'Ask for a new link' })).toHaveAttribute('href', '/signin');
+  });
+
+  it('says why a link opened in another browser does not sign in, and offers a new one from this one', async () => {
+    signedOut();
+    visit(`/auth/email#token=${OTHER_BROWSER_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This link was asked for in another browser. For your safety it only signs in the browser that asked for it',
+    );
+    expect(screen.getByRole('link', { name: 'Ask for a new link here' })).toHaveAttribute('href', '/signin');
   });
 
   it('says so on a page reached without a link', async () => {
