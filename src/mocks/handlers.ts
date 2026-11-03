@@ -118,6 +118,7 @@ import {
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
+import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
@@ -126,6 +127,7 @@ import { initialDeviceLogins } from '@/mocks/fixtures/device';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
+import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
@@ -176,6 +178,7 @@ export interface MockDb
   extends
     AccountState,
     ActivityState,
+    AuditState,
     BillingState,
     DeviceState,
     GithubState,
@@ -241,6 +244,7 @@ export interface MockDb
 export function createMockDb(): MockDb {
   return {
     activity: initialActivity(),
+    audit: initialAudit(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
     sessions: initialSessions(),
@@ -682,6 +686,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,
+    ),
+    ...createAuditHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+      () => canManage(db),
     ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;

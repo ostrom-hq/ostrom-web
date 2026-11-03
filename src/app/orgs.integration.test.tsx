@@ -230,6 +230,16 @@ describe('the organization the console acts in', () => {
     expect(screen.getByRole('button', { name: 'Organization: Acme. Switch' })).toBeInTheDocument();
   });
 
+  it('asks for the list with who is signed in, not once that is known', async () => {
+    const listed = watch('/api/v1/me/organizations');
+    // Who is signed in never answers: the list is asked all the same, one round trip sooner.
+    server.use(http.get('*/api/v1/auth/me', async () => delay('infinite')));
+    visit('/artifacts');
+    await waitFor(() => {
+      expect(listed).toHaveLength(1);
+    });
+  });
+
   it('reads the list once for a burst of not-found answers', async () => {
     const listed = watch('/api/v1/me/organizations');
     visit('/artifacts');

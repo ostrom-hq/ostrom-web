@@ -141,6 +141,11 @@ const decisionsRoute = createRoute({
   path: '/decisions',
   component: lazyRouteComponent(async () => import('@/features/decisions'), 'DecisionsScreen'),
 });
+const auditRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/audit',
+  component: lazyRouteComponent(async () => import('@/features/audit'), 'AuditScreen'),
+});
 const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows',
@@ -297,6 +302,7 @@ export const routeTree = rootRoute.addChildren([
   rulesRoute,
   activityRoute,
   decisionsRoute,
+  auditRoute,
   workflowsRoute,
   newWorkflowRoute,
   workflowRoute,

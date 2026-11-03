@@ -50,6 +50,7 @@ export function AppShell(): ReactElement {
           <Link to="/rules">{t('app.nav.rules')}</Link>
           <Link to="/activity">{t('app.nav.activity')}</Link>
           <Link to="/decisions">{t('app.nav.decisions')}</Link>
+          <Link to="/audit">{t('app.nav.audit')}</Link>
           <Link to="/policy">{t('app.nav.policy')}</Link>
           <Link to="/mcp">{t('app.nav.mcp')}</Link>
           <Link to="/secrets">{t('app.nav.secrets')}</Link>
