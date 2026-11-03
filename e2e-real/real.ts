@@ -185,15 +185,22 @@ export async function closeOthers(): Promise<void> {
   for (const context of others.splice(0)) await context.close();
 }
 
-/** A new person signed in with an organization of their own, which they own; returns its id and short name. */
-export async function ownerOfNewOrganization(page: Page, who: string): Promise<{ id: string; slug: string }> {
-  await signIn(page, freshEmail(who));
+/**
+ * A new person signed in with an organization of their own, which they own; returns its id and short name, and the
+ * address the person signed in with (verified by the sign-in link).
+ */
+export async function ownerOfNewOrganization(
+  page: Page,
+  who: string,
+): Promise<{ id: string; slug: string; email: string }> {
+  const email = freshEmail(who);
+  await signIn(page, email);
   const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
     name: `${who} ${Date.now().toString(36)}`,
   });
   expect(created.status).toBe(201);
   const { id, slug } = created.body as { id: string; slug: string };
-  return { id, slug };
+  return { id, slug, email };
 }
 
 /**
