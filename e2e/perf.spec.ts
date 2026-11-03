@@ -19,6 +19,8 @@ interface HeavyScreen {
   /** The screen's lines. */
   readonly rows: string;
   readonly filter?: Interaction;
+  /** The screen reads again on its own: count its API calls over one period once every page is on screen. */
+  readonly pollMs?: number;
 }
 
 const SCREENS: readonly HeavyScreen[] = [
@@ -49,7 +51,22 @@ const SCREENS: readonly HeavyScreen[] = [
   },
   { path: '/members', rows: 'section[aria-labelledby="mb-people"] li' },
   { path: '/accounts/groups', rows: 'main article' },
-  { path: '/sessions', rows: 'main ul.o-rows > li' },
+  {
+    path: '/sessions',
+    rows: 'main ul.o-rows > li',
+    filter: {
+      label: 'every older page',
+      run: async (page) => {
+        const more = page.getByRole('button', { name: 'Show older sessions' });
+        while (await more.isVisible()) {
+          await more.click();
+          await expect(page.getByRole('button', { name: 'Loading…' })).toHaveCount(0);
+        }
+      },
+    },
+    // SESSIONS_POLL_MS, and a second for the calls to land.
+    pollMs: 16_000,
+  },
   {
     path: '/spend',
     rows: 'main li',
@@ -72,7 +89,16 @@ interface Measure {
   readonly domNodes: number;
   readonly apiCalls: number;
   readonly heapMb: number;
-  readonly filter?: { readonly label: string; readonly inpMs: number; readonly doneMs: number };
+  readonly filter?: {
+    readonly label: string;
+    readonly inpMs: number;
+    readonly doneMs: number;
+    /** The screen's lines and DOM nodes once the filter shows its result. */
+    readonly rows: number;
+    readonly domNodes: number;
+  };
+  /** API calls over one poll period, every page on screen. */
+  readonly pollCalls?: number;
 }
 
 /** Collects the Event Timing entries of every interaction, from the page's first script. */
@@ -89,6 +115,15 @@ async function heapMb(cdp: CDPSession): Promise<number> {
   const { metrics } = await cdp.send('Performance.getMetrics');
   const used = metrics.find((metric) => metric.name === 'JSHeapUsedSize')?.value ?? 0;
   return Math.round((used / 1024 / 1024) * 10) / 10;
+}
+
+async function apiCalls(page: Page): Promise<number> {
+  return page.evaluate(
+    () =>
+      performance
+        .getEntriesByType('resource')
+        .filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length,
+  );
 }
 
 async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promise<Measure> {
@@ -123,7 +158,18 @@ async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promis
   await page.waitForTimeout(1_000);
   const durations: unknown = await page.evaluate('window.__interactions');
   const inpMs = Array.isArray(durations) ? Math.max(0, ...durations.map(Number)) : 0;
-  return { ...base, filter: { label: screen.filter.label, inpMs, doneMs } };
+  const after = await page.evaluate(
+    (selector) => ({
+      rows: document.querySelectorAll(selector).length,
+      domNodes: document.getElementsByTagName('*').length,
+    }),
+    screen.rows,
+  );
+  const filter = { label: screen.filter.label, inpMs, doneMs, ...after };
+  if (screen.pollMs === undefined) return { ...base, filter };
+  const before = await apiCalls(page);
+  await page.waitForTimeout(screen.pollMs);
+  return { ...base, filter, pollCalls: (await apiCalls(page)) - before };
 }
 
 function tableOf(project: string, measures: readonly Measure[]): string {
@@ -137,13 +183,15 @@ function tableOf(project: string, measures: readonly Measure[]): string {
       item.heapMb,
       item.filter === undefined ? '—' : `${item.filter.label}: ${String(item.filter.inpMs)}`,
       item.filter === undefined ? '—' : item.filter.doneMs,
+      item.filter === undefined ? '—' : `${String(item.filter.rows)} / ${String(item.filter.domNodes)}`,
+      item.pollCalls ?? '—',
     ].join(' | '),
   );
   return [
     `### Large organization, ${project}`,
     '',
-    '| Screen | First lines (ms) | Lines | DOM nodes | API calls | JS heap (MB) | Filter INP (ms) | Filter done (ms) |',
-    '|---|---:|---:|---:|---:|---:|---|---:|',
+    '| Screen | First lines (ms) | Lines | DOM nodes | API calls | JS heap (MB) | Filter INP (ms) | Filter done (ms) | After: lines / nodes | Calls per poll |',
+    '|---|---:|---:|---:|---:|---:|---|---:|---:|---:|',
     ...rows.map((row) => `| ${row} |`),
     '',
   ].join('\n');
