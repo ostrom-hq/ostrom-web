@@ -39,6 +39,7 @@ export const en = {
       billing: 'Billing',
       workflows: 'Workflows',
       settings: 'Settings',
+      account: 'My account',
       tokens: 'Tokens',
       import: 'Import',
       policy: 'Agent policy',
@@ -1512,6 +1513,22 @@ export const en = {
       status: { paid: 'Paid', open: 'To pay', uncollectible: 'Not collected', void: 'Void', draft: 'Draft' },
       view: 'View',
       pdf: 'PDF',
+    },
+  },
+  account: {
+    title: 'My account',
+    lead: 'Your account, whatever organization you act in: GitHub, browser sessions and workstations.',
+    leadAs: 'Signed in as {{login}}. Your account, whatever organization you act in: GitHub, browser sessions and workstations.',
+    github: {
+      title: 'GitHub',
+      linkedTag: 'Linked',
+      linked: 'Your GitHub is linked: you can sign in with it, and a gate knows your pull requests are yours.',
+      invite:
+        'Link your GitHub: a gate then knows which pull requests are yours, and never counts you as the approver of your own.',
+      link: 'Link GitHub',
+      linking: 'Opening GitHub…',
+      errorTag: 'Not linked',
+      unsafe: 'The server named a GitHub page that is not https: nothing was opened.',
     },
   },
   settings: {

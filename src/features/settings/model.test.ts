@@ -3,6 +3,8 @@ import type { AuthSession, Device } from '@gen/api/types.gen';
 import {
   browserTimeZone,
   deletionConfirmed,
+  personalDevices,
+  providerPage,
   renameProblem,
   serviceKeyDraftProblem,
   serviceKeyLifetimeOf,
@@ -83,5 +85,31 @@ describe('serviceKeyLifetimeOf', () => {
     expect(serviceKeyLifetimeOf('366')).toBe(366);
     expect(serviceKeyLifetimeOf('null')).toBeNull();
     expect(serviceKeyLifetimeOf('12')).toBe(90);
+  });
+});
+
+describe('personalDevices', () => {
+  it('keeps the workstations of ostrom login, never an elevated token of an organization', () => {
+    const devices: Device[] = [
+      { id: 'dev-1', name: 'laptop' },
+      { id: 'dev-2', name: 'runner', kind: 'cli' },
+      { id: 'dev-3', name: 'admin', kind: 'admin', orgId: 'org-1' },
+    ];
+    expect(personalDevices(devices).map((device) => device.id)).toEqual(['dev-1', 'dev-2']);
+  });
+});
+
+describe('providerPage', () => {
+  it('sends the browser over https, or to the machine itself', () => {
+    expect(providerPage('https://github.com/login/oauth/authorize?state=s')).toBe(true);
+    expect(providerPage('http://127.0.0.1:4610/login/oauth/authorize')).toBe(true);
+    expect(providerPage('http://localhost:4610/login/oauth/authorize')).toBe(true);
+    expect(providerPage('http://[::1]:4610/login/oauth/authorize')).toBe(true);
+  });
+
+  it('never anywhere else', () => {
+    expect(providerPage('http://github.com/login/oauth/authorize')).toBe(false);
+    expect(providerPage('javascript:alert(1)')).toBe(false);
+    expect(providerPage('/login/oauth/authorize')).toBe(false);
   });
 });

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Line 2.11 of the journey (demo/PARCOURS.md), console side, against the real server: a personal token created,
-// replaced and revoked; the person's browser sessions, one signed out from another; the organization's service key
-// for its CI, created with a fresh sign-in and deleted; the CLI's workstations, listed and signed out. Each secret is
-// tried against the server as a CI or the CLI would send it, alone, without the browser's cookie.
+// replaced and revoked; the person's browser sessions on their account (/account, in no organization), one signed out
+// from another; the organization's service key for its CI, created with a fresh sign-in and deleted; the CLI's
+// workstations, listed on the account and signed out. Each secret is tried against the server as a CI or the CLI would
+// send it, alone, without the browser's cookie.
 import { expect, type Page, request, test } from '@playwright/test';
 import {
   anotherPerson,
@@ -55,14 +56,6 @@ async function withSecret(
   return asProgram('GET', path, org === undefined ? { secret } : { secret, org });
 }
 
-/** Creates an organization the signed-in person owns. */
-async function ownOrganization(page: Page, who: string): Promise<void> {
-  const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
-    name: `${who} ${Date.now().toString(36)}`,
-  });
-  expect(created.status, JSON.stringify(created.body)).toBe(201);
-}
-
 /** The value of a secret shown once, read from its copy field. */
 async function shownSecret(page: Page, name: string): Promise<string> {
   const field = page.getByRole('textbox', { name: `Secret of ${name}` });
@@ -103,14 +96,14 @@ test('a person signed in on two browsers sees both sessions and signs the other 
   browser,
 }) => {
   const email = freshEmail('uma');
+  // In no organization: the sessions are the person's, read on their account.
   await signIn(page, email);
-  // The sessions are read in an organization's settings: the person has one.
-  await ownOrganization(page, 'Uma');
   const other = await anotherPerson(browser);
   await signIn(other, email);
   expect((await callFromPage(other, 'GET', '/api/v1/auth/me')).status).toBe(200);
 
-  await page.goto('/settings');
+  await page.goto('/account');
+  await expect(page.getByRole('heading', { level: 1, name: 'My account' })).toBeVisible();
   const security = page.getByRole('region', { name: 'Security' });
   const rows = security.getByRole('listitem');
   await expect(rows).toHaveCount(2);
@@ -172,12 +165,10 @@ test('an owner creates a service key for the CI, a member and another organizati
   expect((await withSecret(secret, '/api/v1/rules', org.id)).status).toBe(401);
 });
 
-test('a person signs the CLI in, finds the workstation in the settings, and signs it out', async ({
+test('a person in no organization signs the CLI in, finds the workstation on their account, and signs it out', async ({
   page,
 }) => {
   await signIn(page, freshEmail('yusuf'));
-  // The workstations are read in an organization's settings: the person has one.
-  await ownOrganization(page, 'Yusuf');
   // `ostrom login`: the CLI, without the browser's cookie, asks for a code; the person says yes in the browser; the
   // CLI collects its token.
   const started = await asProgram('POST', '/api/v1/auth/device', { data: {} });
@@ -205,7 +196,7 @@ test('a person signs the CLI in, finds the workstation in the settings, and sign
   const [device] = items;
   if (device === undefined) throw new Error('The workstation is listed above.');
 
-  await page.goto('/settings');
+  await page.goto('/account');
   const workstations = page.getByRole('region', { name: 'Workstations' });
   const row = workstations.getByRole('listitem').filter({ hasText: device.name });
   await expect(row).toBeVisible();
