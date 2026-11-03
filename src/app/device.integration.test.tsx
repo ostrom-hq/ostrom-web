@@ -36,11 +36,27 @@ describe('the device sign-in page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Sign in a terminal' })).toBeInTheDocument();
     expect(screen.getByText(DEMO_DEVICE_CODE)).toHaveClass('o-device__code');
     expect(screen.getByText('Expires at')).toBeInTheDocument();
+    // Web audit 2, W3: when and from which network the terminal asked, so a code sent by someone else shows.
+    expect(screen.getByText('Asked at')).toBeInTheDocument();
+    expect(screen.getByText('Asked from (network)')).toBeInTheDocument();
+    expect(screen.getByText('203.0.113.0/24')).toHaveClass('o-mono');
     expect(screen.queryByText('Admin sign-in')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Sign in this terminal' }));
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
     expect(screen.getByText('Go back to your terminal: ostrom login carries on there.')).toBeInTheDocument();
     expect(db.deviceLogins[0]?.status).toBe('approved');
+  });
+
+  it('leaves the network out when the server could not tell it, and still says when the terminal asked', async () => {
+    db.deviceLogins = db.deviceLogins.map((login) => {
+      const authorization = { ...login.authorization };
+      delete authorization.requestedFrom;
+      return { ...login, authorization };
+    });
+    open(DEMO_DEVICE_CODE);
+    expect(await screen.findByText('ostrom CLI on ada-laptop')).toBeInTheDocument();
+    expect(screen.getByText('Asked at')).toBeInTheDocument();
+    expect(screen.queryByText('Asked from (network)')).toBeNull();
   });
 
   it('refuses the terminal', async () => {

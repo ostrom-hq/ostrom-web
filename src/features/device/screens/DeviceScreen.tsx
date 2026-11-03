@@ -78,14 +78,18 @@ export function DeviceScreen(): ReactElement {
   }
 }
 
-/** A pending login: what asks, its code, until when, what an admin sign-in would give, and the two answers. */
+/** The hour and minute of a moment, in the reader's language: a login lives ten minutes. */
+function clockTime(iso: string, language: string): string {
+  return new Date(iso).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * A pending login: what asks, its code, when and from which network it asked (web audit 2, W3: a code someone else
+ * sent shows), until when, what an admin sign-in would give, and the two answers.
+ */
 function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElement {
   const { t, i18n } = useTranslation();
   const { login } = open;
-  const expires = new Date(login.expiresAt).toLocaleTimeString(i18n.language, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
   return (
     <Screen title={t('device.title')} lead={t('device.lead')}>
       <div className="o-stack">
@@ -94,7 +98,11 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
           <Facts
             facts={[
               { label: t('device.client'), value: login.clientName },
-              { label: t('device.expires'), value: expires },
+              { label: t('device.requestedAt'), value: clockTime(login.requestedAt, i18n.language) },
+              login.requestedFrom === undefined
+                ? undefined
+                : { label: t('device.requestedFrom'), value: login.requestedFrom, mono: true },
+              { label: t('device.expires'), value: clockTime(login.expiresAt, i18n.language) },
             ]}
           />
         </Section>

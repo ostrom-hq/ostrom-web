@@ -37,8 +37,11 @@ interface LentListProps {
 function LentList({ group, accounts }: LentListProps): ReactElement {
   const { t } = useTranslation();
   const lent = lentAccounts(group.accounts, accounts);
+  const hidden = group.accounts.length - lent.length;
   return lent.length === 0 ? (
-    <p className="o-row__meta">{t('sharing.groups.lendingNone')}</p>
+    <p className="o-row__meta">
+      {hidden === 0 ? t('sharing.groups.lendingNone') : t('sharing.groups.lendingHidden', { count: hidden })}
+    </p>
   ) : (
     <ul className="o-rows">
       {lent.map((account) => (

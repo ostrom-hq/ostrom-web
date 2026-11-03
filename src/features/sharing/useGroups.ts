@@ -201,9 +201,13 @@ export function useGroupChange(): GroupChangeViewModel {
     drop: useCallback(
       (id: string, onDone: () => void) => {
         clear();
-        dropAsync({ path: { id } }).then(onDone, ignore);
+        dropAsync({ path: { id } }).then(() => {
+          onDone();
+          // Gone: its page is never shown again from what was read before.
+          queryClient.removeQueries({ queryKey: getGroupQueryKey({ path: { id } }) });
+        }, ignore);
       },
-      [dropAsync, clear],
+      [dropAsync, clear, queryClient],
     ),
     pending: all.some((mutation) => mutation.isPending),
     failure: failureOf(all.find((mutation) => mutation.error !== null)?.error),
