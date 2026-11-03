@@ -12,6 +12,7 @@ import {
   ORG_CHOICE_KEY,
 } from './src/shared/build/bootScript';
 import { patternOf, routesOf } from './src/shared/build/routes';
+import { screenWording, sectionsIn } from './src/shared/build/screenWording';
 import { languageScript } from './src/shared/i18n/languageScript';
 
 const here = fileURLToPath(new URL('./', import.meta.url));
@@ -77,11 +78,20 @@ const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
 /** The screens open to someone not signed in: nothing to read for them before the entry. */
 const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
 
+/** An object read as a record of its keys: a module's namespace, a wording. */
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /**
  * Starts, from the page's head, what the first screen needs, instead of once the entry has run: `/boot.js`, a file
  * from 'self' as the CSP allows, loaded `async` so it holds nothing up.
- * - The wording of the person's language, first (src/shared/i18n/languageScript.ts): src/shared/i18n/i18n.ts waits
- *   for it before the first render. Measured on slow 4G, CPU ×4: without it, about 90 ms more before the first paint.
+ * - The wording of the person's language, first: src/shared/i18n/i18n.ts waits for it before the first render.
+ *   Measured on slow 4G, CPU ×4: without it, about 90 ms more before the first paint. For a route of the router, only
+ *   the sections its first download and screen chunks name (src/shared/build/screenWording.ts), a JSON file of a few
+ *   KB fetched in place of the whole language, which the console loads once the screen is up
+ *   (src/shared/i18n/firstWording.ts); elsewhere, and with the mock API, the whole language's chunk
+ *   (src/shared/i18n/languageScript.ts).
  * - For the route opened, its screen's chunks (`modulepreload`), its stylesheets (`preload`) and its first API reads,
  *   which the console then takes up instead of asking again (src/shared/build/bootScript.ts,
  *   src/shared/api/bootFetch.ts). Not with the mock API: its worker starts with the entry, and the reads would miss it.
@@ -99,17 +109,27 @@ function preloadBoot(): Plugin {
     transformIndexHtml: () => [
       { tag: 'script', attrs: { async: true, src: `${base}boot.js` }, injectTo: 'head-prepend' },
     ],
-    generateBundle(_options, bundle) {
+    async generateBundle(_options, bundle) {
       const wording: Record<string, string> = {};
+      const words = new Map<string, Readonly<Record<string, unknown>>>();
       for (const file of Object.values(bundle)) {
-        const language =
-          file.type === 'chunk' ? LANGUAGE_MODULE.exec(file.facadeModuleId ?? '')?.[1] : undefined;
-        if (language !== undefined) wording[language] = `${base}${file.fileName}`;
+        if (file.type !== 'chunk') continue;
+        const language = LANGUAGE_MODULE.exec(file.facadeModuleId ?? '')?.[1];
+        if (language === undefined) continue;
+        wording[language] = `${base}${file.fileName}`;
+        // Read from the chunk the build wrote, a module that imports nothing (`export { … as en }`).
+        const module: unknown = await import(
+          `data:text/javascript;base64,${Buffer.from(file.code).toString('base64')}`
+        );
+        const read: unknown = isRecord(module) ? module[language] : undefined;
+        if (!isRecord(read)) throw new Error(`the wording chunk of ${language} exports no ${language}`);
+        words.set(language, read);
       }
       // Every language the console speaks has its file there (LANGUAGES of src/shared/i18n/types.ts).
       const languages = readdirSync(fileURLToPath(new URL('./src/shared/i18n/locales', import.meta.url))).map(
         (name) => name.replace(/\.ts$/, ''),
       );
+      // Fails the build on a language without its chunk, as with mocks, where it is the whole of /boot.js.
       const language = languageScript(wording, languages);
       if (mocks) {
         this.emitFile({ type: 'asset', fileName: 'boot.js', source: language });
@@ -125,6 +145,33 @@ function preloadBoot(): Plugin {
       };
       const entry = new Set<string>();
       for (const chunk of chunks) if (chunk.isEntry) closure(chunk.fileName, entry);
+      const sectionsOf = new Map<string, ReadonlySet<string>>();
+      const sectionNames = Object.keys(words.get('en') ?? {});
+      const named = (file: string): ReadonlySet<string> => {
+        const known = sectionsOf.get(file);
+        if (known !== undefined) return known;
+        const found = sectionsIn(byName.get(file)?.code ?? '', sectionNames);
+        sectionsOf.set(file, found);
+        return found;
+      };
+      // One file per set of sections and language, however many routes share it.
+      const emitted = new Map<string, string>();
+      const wordingsOf = (files: Iterable<string>): Record<string, string> => {
+        const sections = new Set<string>();
+        for (const file of files) for (const section of named(file)) sections.add(section);
+        const urls: Record<string, string> = {};
+        for (const [spoken, all] of words) {
+          const source = JSON.stringify(screenWording(all, sections));
+          let url = emitted.get(source);
+          if (url === undefined) {
+            const reference = this.emitFile({ type: 'asset', name: `wording-${spoken}.json`, source });
+            url = `${base}${this.getFileName(reference)}`;
+            emitted.set(source, url);
+          }
+          urls[spoken] = url;
+        }
+        return urls;
+      };
       const routes = routesOf(readFileSync(resolve(src, 'app', 'router.ts'), 'utf8')).map(
         (route): BootRoute => {
           const feature = route.feature;
@@ -147,6 +194,8 @@ function preloadBoot(): Plugin {
             pattern: patternOf(route.path),
             chunks: own.map((file) => `${base}${file}`),
             styles: styles.map((file) => `${base}${file}`),
+            // What the first download and the screen's own chunks name: all its first paint can show.
+            wordings: wordingsOf([...entry, ...own]),
             calls: SIGNED_OUT.has(route.path) ? [] : [...FIRST_READS, ...(SCREEN_READS[route.path] ?? [])],
           };
         },
@@ -154,7 +203,7 @@ function preloadBoot(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'boot.js',
-        source: `${language}${bootScript(routes, { storageKey: ORG_CHOICE_KEY, store: BOOTED })}`,
+        source: bootScript(routes, { languages: wording, storageKey: ORG_CHOICE_KEY, store: BOOTED }),
       });
     },
   };

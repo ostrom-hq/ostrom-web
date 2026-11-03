@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 /**
- * The first part of `/boot.js`, which the build writes (vite.config.ts, `preloadBoot`): it picks the person's
+ * `/boot.js` of a build with the mock API (vite.config.ts, `preloadBoot`; src/shared/build/bootScript.ts otherwise,
+ * which picks the language the same way): it picks the person's
  * language as `pickLanguage` does and preloads that wording's chunk, so it downloads alongside the entry instead of
  * after it. `chunks` is the URL of each language's chunk; one of `languages` without one fails the build, as the script
  * would then preload English for it, and the console fetch its own wording too.

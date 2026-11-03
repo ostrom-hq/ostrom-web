@@ -54,6 +54,12 @@ get /theme.js | grep -q "dataset.theme" || fail "/theme.js"
 get /boot.js | grep -q "modulepreload" || fail "/boot.js"
 get /boot.js | grep -q "__ostromBooted" || fail "/boot.js has no first reads"
 printf '%s' "$html" | grep -q '<script async src="/boot.js">' || fail "/boot.js not in index.html"
+# The first screen's wording, compressed too (the Dockerfile's gzip): JSON, not the SPA fallback.
+words=$(get /boot.js | grep -o '/assets/wording-en-[^"]*\.json' | head -n 1)
+[ -n "$words" ] || fail "/boot.js fetches no screen wording"
+get "$words" | grep -q '"app":' || fail "$words is not a wording"
+h=$(curl -fsSI --retry 5 --retry-all-errors -H 'Accept-Encoding: gzip' "http://127.0.0.1:18080$words")
+[ "$(header "$h" content-encoding)" = gzip ] || fail "$words not compressed: $h"
 # A script leaves compressed when the browser accepts it, still whole otherwise, with its year of cache.
 js=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.js' | head -n 1)
 [ -n "$js" ] || fail "no entry script in index.html"

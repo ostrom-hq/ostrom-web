@@ -27,10 +27,22 @@ export interface BootRoute {
   readonly chunks: readonly string[];
   /** Its screen's stylesheets: the console waits for them before it shows the screen. */
   readonly styles: readonly string[];
+  /**
+   * By language, the address of the wording its first screen shows (the sections its chunks and the first download
+   * name): a few KB fetched in place of the whole language, which the console loads once the screen is up.
+   */
+  readonly wordings: Readonly<Record<string, string>>;
   readonly calls: readonly BootCall[];
 }
 
+/** The key under which `/boot.js` leaves the first screen's wording of `language` (src/shared/i18n/firstWording.ts). */
+export function wordingKey(language: string): string {
+  return `WORDING ${language}`;
+}
+
 export interface BootOptions {
+  /** By language, the address of its whole wording's chunk, preloaded when the route has no wording of its own. */
+  readonly languages: Readonly<Record<string, string>>;
   /** Where the console keeps the organization the person chose (src/shared/org/orgStore.ts, `ORG_STORAGE_KEY`). */
   readonly storageKey: string;
   /** Where the responses are left for the console (src/shared/api/bootFetch.ts, `BOOTED`). */
@@ -39,7 +51,9 @@ export interface BootOptions {
 
 /**
  * The source of `/boot.js`, which the build writes (vite.config.ts, `preloadBoot`) and the page's head loads before
- * the entry: for the route opened, it preloads the screen's chunks (`modulepreload`) and stylesheets, and starts the API reads the first
+ * the entry. It picks the language as the console does and starts its wording first: the route's own (only what its
+ * first screen shows, left under `wordingKey` for src/shared/i18n/firstWording.ts), else the whole language's chunk.
+ * For the route opened, it preloads the screen's chunks (`modulepreload`) and stylesheets, and starts the API reads the first
  * paint waits for, so that both come alongside the entry instead of after it has run. Each response is left by its key
  * (method, address, organization) for the console's `fetch` to take up once (src/shared/api/bootFetch.ts): a read is
  * never made twice. A read in an organization is made in the one the person chose and kept (BootCall says how); the
@@ -48,9 +62,20 @@ export interface BootOptions {
  */
 export function bootScript(routes: readonly BootRoute[], options: BootOptions): string {
   return `// SPDX-License-Identifier: AGPL-3.0-only
-// Written by the build (src/shared/build/bootScript.ts): the screen's chunks and first reads, with the entry.
+// Written by the build (src/shared/build/bootScript.ts): the wording, the screen's chunks and first reads, with the entry.
 (function () {
   var routes = ${JSON.stringify(routes)};
+  var languages = ${JSON.stringify(options.languages)};
+  // The language shown, as src/shared/i18n/i18n.ts picks it (pickLanguage).
+  var picked = 'en';
+  var preferred = navigator.languages || [];
+  for (var l = 0; l < preferred.length; l += 1) {
+    var base = String(preferred[l]).toLowerCase().split('-')[0];
+    if (Object.prototype.hasOwnProperty.call(languages, base)) {
+      picked = base;
+      break;
+    }
+  }
   var path = location.pathname;
   var route = null;
   for (var i = 0; i < routes.length; i += 1) {
@@ -59,7 +84,23 @@ export function bootScript(routes: readonly BootRoute[], options: BootOptions): 
       break;
     }
   }
+  var wording = route === null ? undefined : route.wordings[picked];
+  if (wording === undefined) {
+    // The whole wording, first of all: the console renders nothing without it.
+    var whole = document.createElement('link');
+    whole.rel = 'modulepreload';
+    whole.setAttribute('fetchpriority', 'high');
+    whole.href = languages[picked];
+    document.head.appendChild(whole);
+  }
   if (route === null) return;
+  var booted = {};
+  if (wording !== undefined) {
+    // Only what the first screen shows, first of all; the console loads the rest once the screen is up.
+    var words = fetch(wording, { credentials: 'same-origin', priority: 'high' });
+    words.catch(function () {});
+    booted[${JSON.stringify(wordingKey(''))} + picked] = words;
+  }
   for (var j = 0; j < route.chunks.length; j += 1) {
     var link = document.createElement('link');
     link.rel = 'modulepreload';
@@ -83,7 +124,6 @@ export function bootScript(routes: readonly BootRoute[], options: BootOptions): 
   } catch (error) {
     org = '';
   }
-  var booted = {};
   for (var k = 0; k < route.calls.length; k += 1) {
     var call = route.calls[k];
     if (call.org === 'chosen' && org === '') continue;

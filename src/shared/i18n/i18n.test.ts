@@ -84,6 +84,85 @@ describe('loading only the language shown', () => {
   });
 });
 
+describe("the first screen's own wording", () => {
+  /** An i18next started with `backend`, as the console starts. */
+  async function started(backend: ReturnType<typeof wordingBackend>): Promise<typeof i18next> {
+    const instance = i18next.createInstance();
+    await instance
+      .use(backend)
+      .init({ lng: 'en', fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
+    return instance;
+  }
+
+  it('is shown first, and the whole language merged in after it', async () => {
+    let wholeAsked = 0;
+    let arrive: (wording: typeof en) => void = () => undefined;
+    const coming = new Promise<typeof en>((resolve) => {
+      arrive = resolve;
+    });
+    const instance = await started(
+      wordingBackend(
+        {
+          en: async () => {
+            wholeAsked += 1;
+            return coming;
+          },
+          fr: async () => Promise.resolve(fr),
+        },
+        () => Promise.resolve({ app: { loading: 'First' } }),
+      ),
+    );
+    expect(instance.t('app.loading')).toBe('First');
+    expect(instance.exists('app.nav.home')).toBe(false);
+    expect(wholeAsked).toBe(1);
+    arrive(en);
+    await vi.waitFor(() => {
+      expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
+    });
+    expect(instance.t('app.loading')).toBe(en.app.loading);
+  });
+
+  it('keeps the first screen on its words when the whole language does not come', async () => {
+    const instance = await started(
+      wordingBackend(
+        { en: async () => Promise.reject(new Error('offline')), fr: async () => Promise.resolve(fr) },
+        () => Promise.resolve({ app: { loading: 'First' } }),
+      ),
+    );
+    await Promise.resolve();
+    expect(instance.t('app.loading')).toBe('First');
+  });
+
+  it('is handed alone by a backend i18next has not started', async () => {
+    let wholeAsked = 0;
+    const backend = wordingBackend(
+      {
+        en: async () => {
+          wholeAsked += 1;
+          return Promise.resolve(en);
+        },
+        fr: async () => Promise.resolve(fr),
+      },
+      () => Promise.resolve({ app: { loading: 'First' } }),
+    );
+    const [error, wording] = await read(backend, 'en');
+    expect(error).toBeNull();
+    expect(wording).toEqual({ app: { loading: 'First' } });
+    await vi.waitFor(() => {
+      expect(wholeAsked).toBe(1);
+    });
+  });
+
+  it('gives way to the whole language when it did not come, or was not fetched', async () => {
+    for (const first of [() => Promise.resolve(undefined), () => undefined]) {
+      const instance = await started(
+        wordingBackend({ en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) }, first),
+      );
+      expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
+    }
+  });
+});
+
 /** The browser's languages, as the person sets them. */
 function browserLanguages(languages: readonly string[]): void {
   Object.defineProperty(navigator, 'languages', { configurable: true, value: languages });

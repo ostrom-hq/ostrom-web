@@ -4,7 +4,9 @@ import {
   BOOTED,
   type BootRoute,
   bootScript,
+  type BootOptions,
   ORG_CHOICE_KEY,
+  wordingKey,
 } from '@/shared/build/bootScript';
 import { patternOf } from '@/shared/build/routes';
 import { ORG_STORAGE_KEY } from '@/shared/org/orgStore';
@@ -14,6 +16,7 @@ const ROUTES: readonly BootRoute[] = [
     pattern: patternOf('/yes'),
     chunks: [],
     styles: [],
+    wordings: {},
     calls: [
       { path: '/api/v1/auth/me', org: 'none' },
       { path: '/api/v1/approvals?mine=true', org: 'if-chosen' },
@@ -24,9 +27,16 @@ const ROUTES: readonly BootRoute[] = [
     pattern: patternOf('/rules'),
     chunks: ['/assets/rules-1.js', '/assets/Card-2.js'],
     styles: ['/assets/rules-3.css'],
+    wordings: { en: '/assets/wording-en-4.json', fr: '/assets/wording-fr-5.json' },
     calls: [],
   },
 ];
+
+const OPTIONS: BootOptions = {
+  languages: { en: '/assets/en-6.js', fr: '/assets/fr-7.js' },
+  storageKey: ORG_STORAGE_KEY,
+  store: BOOTED,
+};
 
 /** Runs `source` as an inline script of the page, as the browser runs /boot.js (jsdom runs them in the test). */
 function runInPage(source: string): void {
@@ -63,10 +73,18 @@ afterEach(() => {
   }
   window.localStorage.clear();
   window.history.replaceState(null, '', '/');
+  browserLanguages(['en-US']);
 });
+
+/** The browser's languages, as the person sets them (the page reads the same navigator). */
+function browserLanguages(languages: readonly string[]): void {
+  Object.defineProperty(navigator, 'languages', { configurable: true, value: languages });
+}
 
 interface Booted {
   readonly preloaded: string[];
+  /** The preloads asked first of all (`fetchpriority=high`). */
+  readonly first: string[];
   /** The stylesheets preloaded, never applied before the console links them. */
   readonly styled: string[];
   readonly asked: [string, RequestInit | undefined][];
@@ -92,8 +110,11 @@ function bootOn(path: string): Booted {
     timers.push([run, delay]);
     return timers.length;
   });
-  runInPage(bootScript(ROUTES, { storageKey: ORG_STORAGE_KEY, store: BOOTED }));
+  runInPage(bootScript(ROUTES, OPTIONS));
   const preloaded = [...document.head.querySelectorAll('link[rel="modulepreload"]')].map(
+    (link) => link.getAttribute('href') ?? '',
+  );
+  const first = [...document.head.querySelectorAll('link[fetchpriority="high"]')].map(
     (link) => link.getAttribute('href') ?? '',
   );
   const styled = [...document.head.querySelectorAll('link[rel="preload"][as="style"]')].map(
@@ -104,7 +125,7 @@ function bootOn(path: string): Booted {
   document.head.querySelectorAll('link[rel="preload"][as="style"]').forEach((link) => {
     expect(link.getAttribute('crossorigin')).toBe('');
   });
-  return { preloaded, styled, asked, store: Reflect.get(page(), BOOTED), timers };
+  return { preloaded, first, styled, asked, store: Reflect.get(page(), BOOTED), timers };
 }
 
 /** Each key of the store, with whether its value is a pending read (a promise). */
@@ -125,8 +146,25 @@ describe('the boot script', () => {
     const { preloaded, styled, asked, store } = bootOn('/rules');
     expect(preloaded).toEqual(['/assets/rules-1.js', '/assets/Card-2.js']);
     expect(styled).toEqual(['/assets/rules-3.css']);
-    expect(asked).toEqual([]);
-    expect(store).toEqual({});
+    expect(asked.map(([path]) => path)).toEqual(['/assets/wording-en-4.json']);
+    expect(entriesOf(store)).toEqual([[wordingKey('en'), true]]);
+  });
+
+  it("fetches the screen's own wording in the language picked, first, in place of the whole language", () => {
+    browserLanguages(['de-DE', 'fr-CA', 'en-US']);
+    const { preloaded, first, asked, store } = bootOn('/rules');
+    expect(first).toEqual([]);
+    expect(preloaded).not.toContain('/assets/fr-7.js');
+    expect(asked).toEqual([['/assets/wording-fr-5.json', { credentials: 'same-origin', priority: 'high' }]]);
+    expect(entriesOf(store)).toEqual([[wordingKey('fr'), true]]);
+  });
+
+  it('preloads the whole language first where the screen has no wording of its own, or English by default', () => {
+    expect(bootOn('/yes').first).toEqual(['/assets/en-6.js']);
+    browserLanguages(['fr']);
+    expect(bootOn('/yes').first).toEqual(['/assets/fr-7.js']);
+    browserLanguages(['de']);
+    expect(bootOn('/signin').first).toEqual(['/assets/en-6.js']);
   });
 
   it('starts the reads in the organization chosen and kept, each left by its key', () => {
@@ -178,9 +216,9 @@ describe('the boot script', () => {
     expect(Reflect.get(page(), BOOTED)).toBe(newer);
   });
 
-  it('does nothing on a route it does not know', () => {
+  it('only preloads the wording on a route it does not know', () => {
     const { preloaded, styled, asked, store, timers } = bootOn('/signin');
-    expect(preloaded).toEqual([]);
+    expect(preloaded).toEqual(['/assets/en-6.js']);
     expect(styled).toEqual([]);
     expect(asked).toEqual([]);
     expect(store).toBeUndefined();
