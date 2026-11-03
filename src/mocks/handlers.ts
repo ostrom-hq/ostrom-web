@@ -91,6 +91,7 @@ import type {
   Secret,
   SharedAccount,
   Session,
+  Spending,
   Team,
   Workflow,
 } from '@gen/api/types.gen';
@@ -229,6 +230,8 @@ export interface MockDb
   secrets: Secret[];
   mcpCalls: McpCall[];
   budgets: Budget[];
+  /** The spending served instead of the fixture's: the large organization's (PERF-CONSOLE). */
+  spending?: (period: 'month' | 'week') => Spending;
   cloudSessions: CloudSession[];
   runners: Runner[];
   automations: Automation[];
@@ -362,6 +365,8 @@ const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() })
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
 const SESSIONS_PAGE = 50;
+/** The server's largest page of rules, and its default (`ListRulesUseCase.MAX_RULES`). */
+const RULES_PAGE = 1000;
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
@@ -749,11 +754,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const params = new URL(request.url).searchParams;
       const status = params.get('status');
       const group = params.get('group');
-      return HttpResponse.json({
-        items: db.rules.filter(
-          (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
-        ),
-      });
+      const matching = db.rules.filter(
+        (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
+      );
+      // As the server pages them (`RulesApi`): `limit` brought into 1 to 1000, `after` the previous page's `next`.
+      const after = params.get('after');
+      const from = after === null ? 0 : matching.findIndex((rule) => rule.id === after) + 1;
+      if (from === 0 && after !== null)
+        return refusal(400, 'invalid_request', 'The cursor is not one a previous page gave.');
+      const limit = Math.min(Math.max(Number(params.get('limit') ?? RULES_PAGE), 1), RULES_PAGE);
+      const items = matching.slice(from, from + limit);
+      const last = items.at(-1);
+      return HttpResponse.json(
+        from + limit < matching.length && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleUpdateRule(async ({ request, params }) => {
       const index = db.rules.findIndex((rule) => rule.id === params.id);
@@ -1004,13 +1018,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetSpending(({ request }) => {
       const period = new URL(request.url).searchParams.get('period') ?? 'month';
       return period === 'month' || period === 'week'
-        ? HttpResponse.json(spendingFor(period))
+        ? HttpResponse.json((db.spending ?? spendingFor)(period))
         : refusal(400, 'invalid_request', 'period is week or month');
     }),
     handleListBudgets(() =>
       HttpResponse.json({
         items: db.budgets,
-        orgSpentUsd: spendingFor('month').totalUsd,
+        orgSpentUsd: (db.spending ?? spendingFor)('month').totalUsd,
         periodStart: '2026-10-01T00:00:00.000Z',
         resetsAt: '2026-11-01T00:00:00.000Z',
       }),

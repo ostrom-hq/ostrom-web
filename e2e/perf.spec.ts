@@ -1,0 +1,174 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// The console's heavy screens on a large organization (src/mocks/fixtures/large.ts: 500 members in 50 groups, 2 000
+// rules, 10 000 lines of activity, 300 sessions), on a wide screen and on a phone whose processor is slowed four
+// times. For each screen: when its first lines show, how many lines and DOM nodes it holds, how many API calls it
+// made, the JavaScript heap after a collection, and the longest interaction (INP) of its filter. The table is attached
+// to the run and printed in its summary (PERF-CONSOLE).
+import { appendFileSync } from 'node:fs';
+import { type CDPSession, expect, type Page, test } from '@playwright/test';
+
+interface Interaction {
+  /** What is measured, said in the table. */
+  readonly label: string;
+  /** Does it, then waits until the screen shows its result. */
+  readonly run: (page: Page) => Promise<void>;
+}
+
+interface HeavyScreen {
+  readonly path: string;
+  /** The screen's lines. */
+  readonly rows: string;
+  readonly filter?: Interaction;
+}
+
+const SCREENS: readonly HeavyScreen[] = [
+  {
+    path: '/activity',
+    rows: 'main ul.o-rows > li',
+    filter: {
+      label: 'repository',
+      run: async (page) => {
+        await page.getByRole('search').getByRole('textbox').fill('acme/service-07');
+        await page.getByRole('search').getByRole('textbox').press('Enter');
+        await expect(page).toHaveURL(/repo=acme/);
+        await expect(page.locator('[aria-busy="false"]')).toBeVisible();
+      },
+    },
+  },
+  {
+    path: '/rules',
+    rows: 'main article.rl-card',
+    filter: {
+      label: 'All',
+      run: async (page) => {
+        const all = page.getByRole('button', { name: /^All \d/ });
+        await all.click();
+        await expect(all).toHaveAttribute('aria-pressed', 'true');
+      },
+    },
+  },
+  { path: '/members', rows: 'section[aria-labelledby="mb-people"] li' },
+  { path: '/accounts/groups', rows: 'main article' },
+  { path: '/sessions', rows: 'main ul.o-rows > li' },
+  {
+    path: '/spend',
+    rows: 'main li',
+    filter: {
+      label: 'period',
+      run: async (page) => {
+        const week = page.getByRole('button', { name: 'Last 7 days' });
+        await week.click();
+        await expect(week).toHaveAttribute('aria-pressed', 'true');
+      },
+    },
+  },
+];
+
+interface Measure {
+  readonly path: string;
+  /** From the navigation's start to the first line on screen. */
+  readonly firstRowsMs: number;
+  readonly rows: number;
+  readonly domNodes: number;
+  readonly apiCalls: number;
+  readonly heapMb: number;
+  readonly filter?: { readonly label: string; readonly inpMs: number; readonly doneMs: number };
+}
+
+/** Collects the Event Timing entries of every interaction, from the page's first script. */
+const OBSERVE_INTERACTIONS = `
+  window.__interactions = [];
+  new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) if (entry.interactionId) window.__interactions.push(entry.duration);
+  }).observe({ type: 'event', durationThreshold: 16, buffered: true });
+  performance.setResourceTimingBufferSize(10000);
+`;
+
+async function heapMb(cdp: CDPSession): Promise<number> {
+  await cdp.send('HeapProfiler.collectGarbage');
+  const { metrics } = await cdp.send('Performance.getMetrics');
+  const used = metrics.find((metric) => metric.name === 'JSHeapUsedSize')?.value ?? 0;
+  return Math.round((used / 1024 / 1024) * 10) / 10;
+}
+
+async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promise<Measure> {
+  await page.goto(screen.path, { waitUntil: 'commit' });
+  const shown = await page.waitForFunction(
+    (selector) => (document.querySelectorAll(selector).length > 0 ? performance.now() : false),
+    screen.rows,
+    { timeout: 60_000 },
+  );
+  const firstRowsMs = Math.round(Number(await shown.jsonValue()));
+  // What the screen reads after its first lines (a second page, the members of a form) comes in now.
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1_000);
+  const counts = await page.evaluate(
+    (selector) => ({
+      rows: document.querySelectorAll(selector).length,
+      domNodes: document.getElementsByTagName('*').length,
+      apiCalls: performance
+        .getEntriesByType('resource')
+        .filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length,
+    }),
+    screen.rows,
+  );
+  const heap = await heapMb(cdp);
+  const base = { path: screen.path, firstRowsMs, ...counts, heapMb: heap };
+  if (screen.filter === undefined) return base;
+  await page.evaluate('window.__interactions = []');
+  const started = Date.now();
+  await screen.filter.run(page);
+  const doneMs = Date.now() - started;
+  // Event Timing reports an interaction once its next frame is painted.
+  await page.waitForTimeout(1_000);
+  const durations: unknown = await page.evaluate('window.__interactions');
+  const inpMs = Array.isArray(durations) ? Math.max(0, ...durations.map(Number)) : 0;
+  return { ...base, filter: { label: screen.filter.label, inpMs, doneMs } };
+}
+
+function tableOf(project: string, measures: readonly Measure[]): string {
+  const rows = measures.map((item) =>
+    [
+      `\`${item.path}\``,
+      item.firstRowsMs,
+      item.rows,
+      item.domNodes,
+      item.apiCalls,
+      item.heapMb,
+      item.filter === undefined ? '—' : `${item.filter.label}: ${String(item.filter.inpMs)}`,
+      item.filter === undefined ? '—' : item.filter.doneMs,
+    ].join(' | '),
+  );
+  return [
+    `### Large organization, ${project}`,
+    '',
+    '| Screen | First lines (ms) | Lines | DOM nodes | API calls | JS heap (MB) | Filter INP (ms) | Filter done (ms) |',
+    '|---|---:|---:|---:|---:|---:|---|---:|',
+    ...rows.map((row) => `| ${row} |`),
+    '',
+  ].join('\n');
+}
+
+test('the heavy screens on a large organization', async ({ page }) => {
+  test.setTimeout(600_000);
+  const project = test.info().project.name;
+  await page.addInitScript("localStorage.setItem('ostrom.mock.scale', 'large')");
+  await page.addInitScript(OBSERVE_INTERACTIONS);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Performance.enable');
+  // The phone: a slower processor, four times, as Lighthouse's mobile run.
+  if (project === 'mobile') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const measures: Measure[] = [];
+  for (const screen of SCREENS) measures.push(await measure(page, cdp, screen));
+  const name = project === 'mobile' ? 'phone, CPU ×4' : 'desktop';
+  const table = tableOf(name, measures);
+  await test.info().attach(`perf-${project}.json`, {
+    body: JSON.stringify(measures, null, 2),
+    contentType: 'application/json',
+  });
+  await test.info().attach(`perf-${project}.md`, { body: table, contentType: 'text/markdown' });
+  const summary = process.env['GITHUB_STEP_SUMMARY'];
+  if (summary !== undefined) appendFileSync(summary, table);
+  console.warn(table);
+  for (const item of measures) expect(item.rows, item.path).toBeGreaterThan(0);
+});
