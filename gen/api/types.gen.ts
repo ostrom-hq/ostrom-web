@@ -2783,6 +2783,9 @@ export type SharedAccount = {
     label: string;
     owner: string;
     status: string;
+    /**
+     * Whom it is lent to, sorted together: the logins of its members and `group:<id>` for each group it is lent to. Empty for the whole organization, and for a member who is neither an admin nor its owner.
+     */
     sharedWith: Array<string>;
     pool?: string;
     dailyAllocationUsd?: number;
@@ -4030,6 +4033,12 @@ export type PollDeviceLoginResponse = PollDeviceLoginResponses[keyof PollDeviceL
 
 export type AnswerDeviceLoginData = {
     body: DeviceAnswer;
+    headers?: {
+        /**
+         * The id of the organization an approved `ostrom login --admin` acts in. An option, read only for that approval; without it, the person's only organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/auth/device/answer';
@@ -4053,7 +4062,7 @@ export type AnswerDeviceLoginErrors = {
      */
     404: ApiError;
     /**
-     * A refusal
+     * org_required (approving `ostrom login --admin` without `Ostrom-Org`, for a person in several organizations)
      */
     409: ApiError;
 };
@@ -15110,6 +15119,9 @@ export type EnrollSharedAccountData = {
         provider: string;
         label: string;
         credentialSecret: string;
+        /**
+         * Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).
+         */
         sharedWith?: Array<string>;
         dailyAllocationUsd?: number;
     };
@@ -15209,6 +15221,9 @@ export type RemoveSharedAccountResponse = RemoveSharedAccountResponses[keyof Rem
 
 export type UpdateSharedAccountData = {
     body: {
+        /**
+         * Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).
+         */
         sharedWith?: Array<string>;
         dailyAllocationUsd?: number;
         paused?: boolean;

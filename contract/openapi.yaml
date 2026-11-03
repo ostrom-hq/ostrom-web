@@ -618,9 +618,23 @@ paths:
     post:
       operationId: answerDeviceLogin
       x-ostrom-status: served
+      description: "Approving an `ostrom login --admin` binds its token to an organization the person owns or
+        administers. The organization is read after the recent sign-in check: the one `Ostrom-Org` names, else the
+        person's only one. A person in several organizations names it, or gets 409 `org_required`. An `Ostrom-Org`
+        value that is not the id of one of their organizations, an organization they belong to without owning or
+        administering it, and a person in no organization are 403 `forbidden`, never 404. The ordinary `ostrom login`
+        and a denial read no organization."
       tags:
       - auth
       summary: "Approve or deny an `ostrom login` (browser session only)"
+      parameters:
+      - name: Ostrom-Org
+        in: header
+        required: false
+        description: The id of the organization an approved `ostrom login --admin` acts in. An option, read only for
+          that approval; without it, the person's only organization
+        schema:
+          type: string
       requestBody:
         required: true
         content:
@@ -647,7 +661,12 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
-          $ref: '#/components/responses/Error'
+          description: org_required (approving `ostrom login --admin` without `Ostrom-Org`, for a person in several
+            organizations)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
   /api/v1/auth/token/refresh:
     post:
       operationId: refreshToken
@@ -9235,6 +9254,7 @@ paths:
                 credentialSecret:
                   type: string
                 sharedWith:
+                  description: 'Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).'
                   type: array
                   items:
                     type: string
@@ -9284,6 +9304,7 @@ paths:
               type: object
               properties:
                 sharedWith:
+                  description: 'Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).'
                   type: array
                   items:
                     type: string
@@ -15363,6 +15384,7 @@ components:
         status:
           type: string
         sharedWith:
+          description: 'Whom it is lent to, sorted together: the logins of its members and `group:<id>` for each group it is lent to. Empty for the whole organization, and for a member who is neither an admin nor its owner.'
           type: array
           items:
             type: string
