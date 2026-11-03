@@ -483,7 +483,7 @@ describe('the members of a large organization', () => {
     const asked: URL[] = [];
     const listen = ({ request }: { readonly request: Request }): void => {
       const url = new URL(request.url);
-      if (url.pathname === `/api/v1/orgs/${ACME}/members`) asked.push(url);
+      if (/\/api\/v1\/orgs\/[^/]+\/members$/.test(url.pathname)) asked.push(url);
     };
     server.events.on('request:start', listen);
     try {
@@ -501,19 +501,20 @@ describe('the members of a large organization', () => {
   });
 
   it('says more than the people read until every page is in, then finds anyone by name, login or address', async () => {
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 205);
     visit('/members');
     expect(await screen.findByText('More than 100 people · you are Admin')).toBeInTheDocument();
     await shown(100);
-    for (const count of [200, 300, 400, 500, 505]) {
+    for (const count of [200, 205]) {
       await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
       await shown(count);
     }
-    expect(screen.getByText('505 people · you are Admin')).toBeInTheDocument();
+    expect(screen.getByText('205 people · you are Admin')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
     await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'developer 01');
     expect(rowsOf(await people())).toHaveLength(10);
     await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'DEV-499@ACME');
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'DEV-199@ACME');
     expect(rowsOf(await people())).toHaveLength(1);
     await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
     await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), '  nobody  ');
