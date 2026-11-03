@@ -10,11 +10,12 @@ import { useEmailLink } from '../useSignIn';
 
 /**
  * Where an e-mailed link lands: the token was taken from the fragment and wiped before this renders. Someone already
- * signed in on this browser is asked before the link replaces their session.
+ * signed in on this browser is asked before the link replaces their session. A link opened in another browser than
+ * the one that asked for it (the mail read on a phone) says why it is refused and offers a new link from here.
  */
 export function EmailLinkScreen(): ReactElement {
   const { t } = useTranslation();
-  const { state, failure, signedInAs, accept, keep } = useEmailLink();
+  const { state, failure, otherBrowser, signedInAs, accept, keep } = useEmailLink();
   return (
     <Screen title={t('signin.link.title')}>
       {state === 'verifying' ? (
@@ -45,12 +46,16 @@ export function EmailLinkScreen(): ReactElement {
         </Banner>
       ) : (
         <Banner tone="warning" tag={t('signin.link.failedTag')} live>
-          {failure === undefined ? t('signin.link.missing') : failure.message}
+          {otherBrowser
+            ? t('signin.link.otherBrowser')
+            : failure === undefined
+              ? t('signin.link.missing')
+              : failure.message}
         </Banner>
       )}
       {state === 'verifying' || state === 'asking' ? null : (
         <p>
-          <Link to="/signin">{t('signin.link.again')}</Link>
+          <Link to="/signin">{otherBrowser ? t('signin.link.againHere') : t('signin.link.again')}</Link>
         </p>
       )}
     </Screen>

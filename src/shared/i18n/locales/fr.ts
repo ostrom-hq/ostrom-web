@@ -1231,6 +1231,9 @@ export const fr = {
       failedTag: 'Pas connecté',
       missing: 'Ce lien a déjà servi ou il est incomplet.',
       again: 'Demander un nouveau lien',
+      againHere: 'Demander un nouveau lien ici',
+      otherBrowser:
+        'Ce lien a été demandé depuis un autre navigateur. Pour ta sécurité, il ne connecte que le navigateur qui l’a demandé : ouvre-le là-bas, ou demande un nouveau lien depuis celui-ci.',
       switchTag: 'Un autre compte ?',
       switch:
         'Quelqu’un est peut-être déjà connecté sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',

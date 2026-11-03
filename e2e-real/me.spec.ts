@@ -34,8 +34,9 @@ async function bodyOf(answer: Promise<Response>): Promise<MeBody> {
 }
 
 /**
- * The top bar's organization button, and what it says of the person there: their login and the role's own label, the
- * line visible beside the organization's name on desktop and on a phone.
+ * The top bar's organization button, and what it says of the person there: their login and the role's own label. A
+ * screen reader hears it as the button's description; the eye reads it on the line under the organization's name, in
+ * the switch around the button (since web#67 the button holds the name alone, WCAG 2.5.3), on desktop and on a phone.
  */
 async function expectTopBar(
   page: Page,
@@ -47,7 +48,10 @@ async function expectTopBar(
   await expect(button).toBeVisible();
   const escaped = login.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   await expect(button).toHaveAccessibleDescription(new RegExp(`${escaped}.* · ${role}$`));
-  await expect(button.getByText(new RegExp(` · ${role}$`))).toBeVisible();
+  const line = page
+    .locator('.o-org-switch', { has: button })
+    .getByText(new RegExp(`${escaped}.* · ${role}$`));
+  await expect(line).toBeVisible();
 }
 
 test('the top bar reads /auth/me in the organization the console acts in: its name, and the person’s name and role', async ({
