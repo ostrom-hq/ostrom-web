@@ -201,6 +201,29 @@ describe('the settings screen', () => {
     expect(await within(danger).findByRole('alert')).toHaveTextContent('deletion is down');
   });
 
+  it('says a 403 that is not a step-up as the server said it, with no sign-in to offer', async () => {
+    const user = userEvent.setup();
+    setDemoRole(db, 'owner');
+    // The contract's 403 is `StepUpOrForbidden` (ostrom-core#96): only `error.type` tells them apart.
+    server.use(
+      http.delete('*/api/v1/orgs/:org', () =>
+        HttpResponse.json(
+          { error: { type: 'forbidden', message: 'Only the owner deletes the organization.' } },
+          { status: 403 },
+        ),
+      ),
+    );
+    visit('/settings');
+    await settings();
+    const danger = region('Danger zone');
+    await user.type(within(danger).getByRole('textbox', { name: 'Type acme to confirm' }), 'acme');
+    await user.click(within(danger).getByRole('button', { name: 'Delete Acme' }));
+    const alert = await within(danger).findByRole('alert');
+    expect(alert).toHaveTextContent('Only the owner deletes the organization.');
+    expect(within(danger).queryByRole('link', { name: 'Sign in again' })).toBeNull();
+    expect(db.noOrganization).toBe(false);
+  });
+
   it('never shows another organization’s settings', async () => {
     const user = userEvent.setup();
     const globex = otherOrganization();
