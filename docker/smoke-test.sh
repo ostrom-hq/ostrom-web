@@ -33,7 +33,7 @@ echo "$cfg" | grep -q '^window.__OSTROM_CONFIG__={"OSTROM_API_URL":"https://api.
 # S2-09: the same security headers on the page, the runtime settings, a deep route, a script, the API and /healthz.
 csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'"
 header() { printf '%s\n' "$1" | tr -d '\r' | sed -n "s/^$2: //Ip"; }
-for path in / /config.js /some/route /theme.js /language.js /api/v1/health /healthz; do
+for path in / /config.js /some/route /theme.js /boot.js /api/v1/health /healthz; do
   h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$path")
   [ "$(header "$h" content-security-policy)" = "$csp" ] || fail "CSP on $path: $(header "$h" content-security-policy)"
   [ "$(header "$h" strict-transport-security)" = 'max-age=63072000; includeSubDomains' ] || fail "HSTS on $path"
@@ -49,10 +49,11 @@ html=$(get /)
 [ "$(printf '%s' "$html" | grep -o '<script' | wc -l)" = "$(printf '%s' "$html" | grep -o '<script[^>]* src=' | wc -l)" ] \
   || fail "inline script in index.html: $html"
 get /theme.js | grep -q "dataset.theme" || fail "/theme.js"
-# The wording of the person's language, preloaded with the entry (vite.config.ts, preloadLanguage): the script, not the
-# SPA fallback, and named in the page.
-get /language.js | grep -q "modulepreload" || fail "/language.js"
-printf '%s' "$html" | grep -q '<script async src="/language.js">' || fail "/language.js not in index.html"
+# The wording of the person's language and the first screen's files and reads, started with the entry
+# (vite.config.ts, preloadBoot): the script, not the SPA fallback, and named in the page.
+get /boot.js | grep -q "modulepreload" || fail "/boot.js"
+get /boot.js | grep -q "__ostromBooted" || fail "/boot.js has no first reads"
+printf '%s' "$html" | grep -q '<script async src="/boot.js">' || fail "/boot.js not in index.html"
 # A script leaves compressed when the browser accepts it, still whole otherwise, with its year of cache.
 js=$(printf '%s' "$html" | grep -o '/assets/index-[^"]*\.js' | head -n 1)
 [ -n "$js" ] || fail "no entry script in index.html"

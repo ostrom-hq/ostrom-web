@@ -40,40 +40,6 @@ function dropMockWorkerUnlessMocks(): Plugin {
 const LANGUAGE_MODULE = /[\\/]src[\\/]shared[\\/]i18n[\\/]locales[\\/]([a-z]{2})\.ts$/;
 
 /**
- * Starts the download of the wording of the person's language alongside the entry, not once the entry has run
- * (src/shared/i18n/i18n.ts waits for it before the first render): `/language.js`, written with the chunk of each
- * language (src/shared/i18n/languageScript.ts). A file from 'self', as the CSP allows, loaded `async` so it holds
- * nothing up. Measured on slow 4G, CPU ×4: without it, the wording waited for the entry, about 90 ms more before the
- * first paint.
- */
-function preloadLanguage(): Plugin {
-  let base = '/';
-  return {
-    name: 'ostrom:preload-language',
-    apply: 'build',
-    configResolved(config) {
-      base = config.base;
-    },
-    transformIndexHtml: () => [
-      { tag: 'script', attrs: { async: true, src: `${base}language.js` }, injectTo: 'head-prepend' },
-    ],
-    generateBundle(_options, bundle) {
-      const chunks: Record<string, string> = {};
-      for (const file of Object.values(bundle)) {
-        const language =
-          file.type === 'chunk' ? LANGUAGE_MODULE.exec(file.facadeModuleId ?? '')?.[1] : undefined;
-        if (language !== undefined) chunks[language] = `${base}${file.fileName}`;
-      }
-      // Every language the console speaks has its file there (LANGUAGES of src/shared/i18n/types.ts).
-      const languages = readdirSync(fileURLToPath(new URL('./src/shared/i18n/locales', import.meta.url))).map(
-        (name) => name.replace(/\.ts$/, ''),
-      );
-      this.emitFile({ type: 'asset', fileName: 'language.js', source: languageScript(chunks, languages) });
-    },
-  };
-}
-
-/**
  * The reads every signed-in screen's first paint waits for, as the console asks them at its start (vitals.spec.ts
  * lists them): who is signed in, their organizations, and who they are in the one they chose and kept.
  */
@@ -112,10 +78,14 @@ const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
 const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
 
 /**
- * Starts, from the page's head, what the route opened needs before its first paint, instead of once the entry has
- * run: its screen's chunks (`modulepreload`), its stylesheets (`preload`) and its first API reads, which the console then takes up instead of
- * asking again (src/shared/build/bootScript.ts, src/shared/api/bootFetch.ts). `/boot.js`, a file from 'self' as the
- * CSP allows, loaded `async`. Not with the mock API: its worker starts with the entry, and the reads would miss it.
+ * Starts, from the page's head, what the first screen needs, instead of once the entry has run: `/boot.js`, a file
+ * from 'self' as the CSP allows, loaded `async` so it holds nothing up.
+ * - The wording of the person's language, first (src/shared/i18n/languageScript.ts): src/shared/i18n/i18n.ts waits
+ *   for it before the first render. Measured on slow 4G, CPU ×4: without it, about 90 ms more before the first paint.
+ * - For the route opened, its screen's chunks (`modulepreload`), its stylesheets (`preload`) and its first API reads,
+ *   which the console then takes up instead of asking again (src/shared/build/bootScript.ts,
+ *   src/shared/api/bootFetch.ts). Not with the mock API: its worker starts with the entry, and the reads would miss it.
+ * One script for both: on a slow link each file is a request of its own, waiting for a connection.
  */
 function preloadBoot(): Plugin {
   let base = '/';
@@ -126,12 +96,25 @@ function preloadBoot(): Plugin {
     configResolved(config) {
       base = config.base;
     },
-    transformIndexHtml: () =>
-      mocks
-        ? []
-        : [{ tag: 'script', attrs: { async: true, src: `${base}boot.js` }, injectTo: 'head-prepend' }],
+    transformIndexHtml: () => [
+      { tag: 'script', attrs: { async: true, src: `${base}boot.js` }, injectTo: 'head-prepend' },
+    ],
     generateBundle(_options, bundle) {
-      if (mocks) return;
+      const wording: Record<string, string> = {};
+      for (const file of Object.values(bundle)) {
+        const language =
+          file.type === 'chunk' ? LANGUAGE_MODULE.exec(file.facadeModuleId ?? '')?.[1] : undefined;
+        if (language !== undefined) wording[language] = `${base}${file.fileName}`;
+      }
+      // Every language the console speaks has its file there (LANGUAGES of src/shared/i18n/types.ts).
+      const languages = readdirSync(fileURLToPath(new URL('./src/shared/i18n/locales', import.meta.url))).map(
+        (name) => name.replace(/\.ts$/, ''),
+      );
+      const language = languageScript(wording, languages);
+      if (mocks) {
+        this.emitFile({ type: 'asset', fileName: 'boot.js', source: language });
+        return;
+      }
       const chunks = Object.values(bundle).flatMap((file) => (file.type === 'chunk' ? [file] : []));
       const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
       const closure = (fileName: string, seen: Set<string>): Set<string> => {
@@ -171,7 +154,7 @@ function preloadBoot(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'boot.js',
-        source: bootScript(routes, { storageKey: ORG_CHOICE_KEY, store: BOOTED }),
+        source: `${language}${bootScript(routes, { storageKey: ORG_CHOICE_KEY, store: BOOTED })}`,
       });
     },
   };
@@ -229,7 +212,7 @@ function imageSecurityHeaders(): Record<string, string> {
 }
 
 export default defineConfig({
-  plugins: [react(), dropMockWorkerUnlessMocks(), preloadLanguage(), preloadBoot(), reportModules()],
+  plugins: [react(), dropMockWorkerUnlessMocks(), preloadBoot(), reportModules()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: {

@@ -28,11 +28,24 @@ const ROUTES: readonly BootRoute[] = [
   },
 ];
 
-/** The page's own global, where its inline scripts run: what the script reads and leaves is read and set there. */
+/** Runs `source` as an inline script of the page, as the browser runs /boot.js (jsdom runs them in the test). */
+function runInPage(source: string): void {
+  const script = document.createElement('script');
+  script.textContent = source;
+  document.head.append(script);
+  script.remove();
+}
+
+/**
+ * The global the page's scripts run in (jsdom's own, not the test's): what the script reads and leaves is set and read
+ * there. Asked of a script of the page itself, which leaves it on the document both share.
+ */
 function page(): object {
-  const view = document.defaultView;
-  if (view === null) throw new Error('no window for the document');
-  return view;
+  runInPage('document.__ostromPage = window;');
+  const global: unknown = Reflect.get(document, '__ostromPage');
+  Reflect.deleteProperty(document, '__ostromPage');
+  if (typeof global !== 'object' || global === null) throw new Error('no global for the page');
+  return global;
 }
 
 const OWN = ['fetch', 'setTimeout', BOOTED] as const;
@@ -79,11 +92,7 @@ function bootOn(path: string): Booted {
     timers.push([run, delay]);
     return timers.length;
   });
-  // The build writes it as a file; here it runs as an inline script of the page (jsdom runs them in the test).
-  const script = document.createElement('script');
-  script.textContent = bootScript(ROUTES, { storageKey: ORG_STORAGE_KEY, store: BOOTED });
-  document.head.append(script);
-  script.remove();
+  runInPage(bootScript(ROUTES, { storageKey: ORG_STORAGE_KEY, store: BOOTED }));
   const preloaded = [...document.head.querySelectorAll('link[rel="modulepreload"]')].map(
     (link) => link.getAttribute('href') ?? '',
   );
@@ -91,6 +100,10 @@ function bootOn(path: string): Booted {
     (link) => link.getAttribute('href') ?? '',
   );
   expect(document.head.querySelector('link[rel="stylesheet"][href^="/assets/rules"]')).toBeNull();
+  // In the mode the console links it, so the browser takes the preload up instead of downloading it again.
+  document.head.querySelectorAll('link[rel="preload"][as="style"]').forEach((link) => {
+    expect(link.getAttribute('crossorigin')).toBe('');
+  });
   return { preloaded, styled, asked, store: Reflect.get(page(), BOOTED), timers };
 }
 

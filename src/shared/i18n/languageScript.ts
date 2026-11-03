@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 /**
- * The source of `/language.js`, which the build writes (vite.config.ts, `preloadLanguage`): it picks the person's
+ * The first part of `/boot.js`, which the build writes (vite.config.ts, `preloadBoot`): it picks the person's
  * language as `pickLanguage` does and preloads that wording's chunk, so it downloads alongside the entry instead of
  * after it. `chunks` is the URL of each language's chunk; one of `languages` without one fails the build, as the script
  * would then preload English for it, and the console fetch its own wording too.
@@ -27,6 +27,8 @@ export function languageScript(
   }
   var link = document.createElement('link');
   link.rel = 'modulepreload';
+  // Before the screen's own files: the console renders nothing without its wording.
+  link.setAttribute('fetchpriority', 'high');
   link.href = chunks[picked];
   document.head.appendChild(link);
 })();

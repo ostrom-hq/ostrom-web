@@ -71,6 +71,8 @@ export function bootScript(routes: readonly BootRoute[], options: BootOptions): 
     var style = document.createElement('link');
     style.rel = 'preload';
     style.setAttribute('as', 'style');
+    // As the console links it (crossorigin, Vite's preload): another mode would download it a second time.
+    style.setAttribute('crossorigin', '');
     style.href = route.styles[s];
     document.head.appendChild(style);
   }
