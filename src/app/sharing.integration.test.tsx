@@ -273,10 +273,19 @@ describe('the shared subscriptions', () => {
       },
       {
         id: 'b',
-        provider: 'anthropic',
+        provider: 'claude',
         label: 'Old',
-        owner: 'theo',
-        status: 'expired',
+        owner: 'maya',
+        status: 'reconnect_required',
+        sharedWith: [],
+        paused: false,
+      },
+      {
+        id: 'c',
+        provider: 'codex',
+        label: 'Moved',
+        owner: 'maya',
+        status: 'wrong_account',
         sharedWith: [],
         paused: false,
       },
@@ -286,7 +295,15 @@ describe('the shared subscriptions', () => {
     expect(odd).toHaveTextContent('revoked');
     expect(odd).toHaveTextContent('mistral · by theo');
     expect(odd).toHaveTextContent('Lent to nobody yet');
-    expect(await findCard('Old')).toHaveTextContent('Sign-in expired');
+    const old = await findCard('Old');
+    expect(old).toHaveTextContent('Sign-in expired');
+    expect(old).toHaveTextContent('Anthropic · by maya');
+    expect(within(old).queryByRole('button', { name: 'Pause' })).toBeNull();
+    expect(within(old).getByRole('button', { name: 'Stop sharing' })).toBeInTheDocument();
+    const moved = await findCard('Moved');
+    expect(moved).toHaveTextContent('Signed in to another account: share it again');
+    expect(moved).toHaveTextContent('OpenAI · by maya');
+    expect(within(moved).queryByRole('button', { name: 'Pause' })).toBeNull();
   });
 
   it('says why the form to share a subscription is missing', async () => {

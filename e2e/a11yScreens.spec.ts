@@ -35,6 +35,8 @@ const SCREENS = [
   '/automations',
   '/artifacts',
   '/accounts',
+  // Reached by the tab of the shared accounts, not the navigation (web#97).
+  '/accounts/groups',
   '/signin',
 ] as const;
 

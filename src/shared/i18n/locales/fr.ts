@@ -1483,7 +1483,12 @@ export const fr = {
       title: 'Abonnements partagés',
       lead: 'Les abonnements IA personnels prêtés aux agents de l’organisation : qui les utilise, la part de chaque jour, et une pause.',
       empty: 'Aucun abonnement partagé pour l’instant.',
-      state: { paused: 'En pause', active: 'Actif', expired: 'Connexion expirée' },
+      state: {
+        paused: 'En pause',
+        active: 'Actif',
+        expired: 'Connexion expirée',
+        wrongAccount: 'Connecté à un autre compte : à repartager',
+      },
       pool: 'réserve {{pool}}',
       daily: '{{amount}} par jour',
       noDaily: 'sans limite par jour',
@@ -2037,8 +2042,9 @@ export const fr = {
     forbiddenTag: 'Non autorisé',
     forbidden:
       'Seul un propriétaire ou un admin de l’organisation peut approuver une connexion admin. Demande-le à l’un d’eux, ou refuse-la.',
+    org: 'Organisation où elle agit',
     severalOrgs:
-      'Tu fais partie de plusieurs organisations, et le serveur ne sait pas à laquelle cette connexion admin se rattache : elle ne peut pas encore être approuvée ici. Refuse-la, ou demande à un propriétaire ou un admin qui n’appartient qu’à cette organisation.',
+      'Le serveur n’a pas su pour laquelle de tes organisations est cette connexion admin. Recharge la page, vérifie l’organisation, puis approuve à nouveau.',
     failedTag: 'Réponse non envoyée',
     signedOut: {
       title: 'Connecte-toi pour répondre',
