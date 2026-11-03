@@ -36,8 +36,9 @@ async function analysis(): Promise<HTMLElement> {
 describe('the GitHub screen', () => {
   it('shows the app installed, where to change its repositories, and the repositories it governs', async () => {
     visit('/github');
-    expect(await screen.findByRole('heading', { level: 1, name: 'GitHub' })).toBeInTheDocument();
     expect(await screen.findByText('Installed')).toBeInTheDocument();
+    // Read once the screen is in: the title of its waiting state is another node, replaced by this one.
+    expect(screen.getByRole('heading', { level: 1, name: 'GitHub' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ostrom-dev' })).toHaveAttribute(
       'href',
       'https://github.com/apps/ostrom-dev',

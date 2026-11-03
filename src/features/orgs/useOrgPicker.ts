@@ -55,9 +55,9 @@ export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolea
   // to it signed in keeps what was read before.
   const me = useQuery(ready(getMeOptions(), { staleTime: 60_000, enabled: !anonymousPage }));
   const login = meOf(me.data)?.dev.login;
-  const list = useQuery(
-    ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: login !== undefined }),
-  );
+  // Asked with `/auth/me`, not after it: the organization is known one round trip sooner. Nothing is done with it
+  // until both are in (the step below needs the login).
+  const list = useQuery(ready(listMyOrganizationsOptions(), { staleTime: 60_000, enabled: !anonymousPage }));
   const organizations = list.data?.items;
   const { current, owner, asked, picking, unknown, choose, only, ask, forget, open, close } = useOrgStore(
     useShallow((state) => ({

@@ -29,6 +29,7 @@ export const fr = {
       rules: 'Règles',
       activity: 'Activité',
       decisions: 'Décisions',
+      audit: 'Journal d’audit',
       mcp: 'MCP',
       secrets: 'Secrets',
       spend: 'Dépenses',
@@ -573,6 +574,17 @@ export const fr = {
         'Tu peux lancer {{agent}}. Aucun modèle par défaut n’est connu : le modèle qu’il nomme est vérifié au lancement.',
       refused: 'Ce lancement serait refusé.',
     },
+  },
+  audit: {
+    title: 'Journal d’audit',
+    lead: 'Chaque changement de gouvernance de l’organisation, du plus récent au plus ancien, signé par le serveur : qui a changé quoi, et par quel moyen.',
+    forbiddenTag: 'Owners et admins',
+    forbidden: 'Seul un owner ou un admin de l’organisation peut lire son journal d’audit.',
+    unavailableTag: 'Pas encore servi',
+    unavailable: 'Ce serveur ne sert pas encore le journal d’audit.',
+    empty: 'Rien n’a encore changé dans l’organisation.',
+    more: 'Voir les lignes plus anciennes',
+    loadingMore: 'Chargement…',
   },
   activity: {
     title: 'Activité',
@@ -1219,6 +1231,9 @@ export const fr = {
       failedTag: 'Pas connecté',
       missing: 'Ce lien a déjà servi ou il est incomplet.',
       again: 'Demander un nouveau lien',
+      againHere: 'Demander un nouveau lien ici',
+      otherBrowser:
+        'Ce lien a été demandé depuis un autre navigateur. Pour ta sécurité, il ne connecte que le navigateur qui l’a demandé : ouvre-le là-bas, ou demande un nouveau lien depuis celui-ci.',
       switchTag: 'Un autre compte ?',
       switch:
         'Quelqu’un est peut-être déjà connecté sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',

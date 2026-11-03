@@ -118,12 +118,14 @@ import {
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
+import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
+import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
@@ -174,6 +176,7 @@ export interface MockDb
   extends
     AccountState,
     ActivityState,
+    AuditState,
     BillingState,
     GithubState,
     OrgsState,
@@ -238,6 +241,7 @@ export interface MockDb
 export function createMockDb(): MockDb {
   return {
     activity: initialActivity(),
+    audit: initialAudit(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
     sessions: initialSessions(),
@@ -547,6 +551,8 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
 
 /** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
 export const DEMO_EMAIL_TOKEN = 'ml_demo';
+/** A sign-in e-mail's token opened in another browser than the one that asked for it: refused with 403. */
+export const OTHER_BROWSER_EMAIL_TOKEN = 'ml_other_browser';
 
 /** How long a sign-in may say yes, as on the server (S2-54). */
 export const FRESH_SIGN_IN_MS = 5 * 60_000;
@@ -603,6 +609,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleVerifySignInEmail(async ({ request }) => {
       const body = zVerifySignInEmailBody.safeParse(await readJson(request));
+      // The server refuses a link opened in a browser other than the one that asked for it (ostrom-server#176).
+      if (body.success && body.data.token === OTHER_BROWSER_EMAIL_TOKEN)
+        return refusal(
+          403,
+          'email_link_other_browser',
+          'This sign-in link was asked for in another browser. Open it there, or ask for a new link from this one.',
+        );
       if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
         return refusal(401, 'invalid_link', 'This link was already used or has expired.');
       db.signedInAt = now().getTime();
@@ -677,6 +690,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,
+    ),
+    ...createAuditHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+      () => canManage(db),
     ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;

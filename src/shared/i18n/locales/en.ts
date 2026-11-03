@@ -25,6 +25,7 @@ export const en = {
       rules: 'Rules',
       activity: 'Activity',
       decisions: 'Decisions',
+      audit: 'Audit log',
       mcp: 'MCP',
       secrets: 'Secrets',
       spend: 'Spend',
@@ -554,6 +555,17 @@ export const en = {
         'You may launch {{agent}}. No default model is known: the model it names is checked as it starts.',
       refused: 'This launch would be refused.',
     },
+  },
+  audit: {
+    title: 'Audit log',
+    lead: 'Every governance change in the organization, newest first, signed by the server: who changed what, and through what.',
+    forbiddenTag: 'Owners and admins',
+    forbidden: 'Only an owner or an admin of the organization reads its audit log.',
+    unavailableTag: 'Not served yet',
+    unavailable: 'This server does not serve the audit log yet.',
+    empty: 'Nothing has changed in the organization yet.',
+    more: 'Show older lines',
+    loadingMore: 'Loading…',
   },
   activity: {
     title: 'Activity',
@@ -1189,6 +1201,9 @@ export const en = {
       failedTag: 'Not signed in',
       missing: 'This link was already used or is incomplete.',
       again: 'Ask for a new link',
+      againHere: 'Ask for a new link here',
+      otherBrowser:
+        'This link was asked for in another browser. For your safety it only signs in the browser that asked for it: open it there, or ask for a new link from this one.',
       switchTag: 'Another account?',
       switch:
         'Someone may already be signed in on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
