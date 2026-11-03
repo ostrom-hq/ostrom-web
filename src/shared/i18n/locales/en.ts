@@ -84,6 +84,8 @@ export const en = {
     signin: {
       tag: 'Sign-in',
       invalid: 'This sign-in link is not valid. Ask for a new one.',
+      offer:
+        'This link signs this browser in to an Ostrom account. Use it only if you asked for it yourself: requests you approve and anything you add are then in that account.',
       switch:
         'Someone is already signed in on this browser, and this link may be another account. Requests you approve are signed as the account of the link.',
       accept: 'Sign in with the link',
