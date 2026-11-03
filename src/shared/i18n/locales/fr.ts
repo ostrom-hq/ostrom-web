@@ -1743,4 +1743,53 @@ export const fr = {
       body: 'Elle a été utilisée, révoquée ou a expiré. Demande-en une nouvelle à la personne qui t’a invité.',
     },
   },
+  device: {
+    title: 'Connecter un terminal',
+    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
+    enterLead: 'Saisis le code que ton terminal affiche après ostrom login.',
+    form: {
+      label: 'Code du terminal',
+      field: 'Code affiché par le terminal',
+      placeholder: 'ABCD-EFGH',
+      submit: 'Continuer',
+    },
+    unknownTag: 'Code inconnu',
+    unknown:
+      'Aucune connexion n’attend le code {{code}} : il a peut-être expiré ou déjà reçu une réponse. Vérifie le code, ou relance ostrom login.',
+    malformed:
+      'Ce n’est pas un code d’ostrom login : il a huit lettres, comme ABCD-EFGH. Tape le code affiché par ton terminal, ou relance ostrom login.',
+    code: 'Code',
+    client: 'Nom donné par le terminal',
+    expires: 'Expire à',
+    adminTag: 'Connexion admin',
+    admin:
+      'Ce terminal demande les droits d’écriture de gouvernance ci-dessous. Seul un propriétaire ou un admin de l’organisation peut l’approuver.',
+    scopes: 'Droits demandés',
+    approve: 'Connecter ce terminal',
+    approveAdmin: 'Approuver la connexion admin',
+    deny: 'Refuser',
+    forbiddenTag: 'Non autorisé',
+    forbidden:
+      'Seul un propriétaire ou un admin de l’organisation peut approuver une connexion admin. Demande-le à l’un d’eux, ou refuse-la.',
+    severalOrgs:
+      'Tu fais partie de plusieurs organisations, et le serveur ne sait pas à laquelle cette connexion admin se rattache : elle ne peut pas encore être approuvée ici. Refuse-la, ou demande à un propriétaire ou un admin qui n’appartient qu’à cette organisation.',
+    failedTag: 'Réponse non envoyée',
+    signedOut: {
+      title: 'Connecte-toi pour répondre',
+      body: 'Seule une personne connectée à la console peut connecter un terminal. Tu reviendras ici ensuite.',
+      action: 'Se connecter',
+    },
+    approved: {
+      title: 'Terminal connecté',
+      body: 'Retourne dans ton terminal : ostrom login continue là-bas.',
+    },
+    denied: {
+      title: 'Terminal refusé',
+      body: 'Rien n’a été connecté. Si c’était bien toi, relance ostrom login.',
+    },
+    gone: {
+      title: 'Ce code ne marche plus',
+      body: 'Il a expiré ou a déjà reçu une réponse. Relance ostrom login pour avoir un nouveau code.',
+    },
+  },
 } as const satisfies LocaleShape;
