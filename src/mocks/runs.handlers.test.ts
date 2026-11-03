@@ -2,6 +2,7 @@
 import type { WorkflowRun } from '@gen/api/types.gen';
 import { zApiError, zListRunsResponse, zStartWorkflowRunResponse } from '@gen/api/zod.gen';
 import { getResponse } from 'msw';
+import type { z } from 'zod';
 import { initialWorkflowRuns } from '@/mocks/fixtures/runs';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 import { createRunHandlers, type RunsState } from '@/mocks/runs';
@@ -41,10 +42,7 @@ function start(body: unknown): RequestInit {
 }
 
 /** The run a POST started. */
-async function started(
-  path: string,
-  body: unknown,
-): Promise<ReturnType<typeof zStartWorkflowRunResponse.parse>> {
+async function started(path: string, body: unknown): Promise<z.infer<typeof zStartWorkflowRunResponse>> {
   const answer = await call(path, start(body));
   expect(answer.status).toBe(201);
   return zStartWorkflowRunResponse.parse(answer.body);

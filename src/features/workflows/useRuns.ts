@@ -60,7 +60,7 @@ function useRunList(query: RunsQuery): RunListViewModel {
 export function useWorkflowRuns(workflowId: string): RunListViewModel {
   const query = useInfiniteQuery({
     ...ready(listWorkflowRunsInfiniteOptions({ path: { id: workflowId } })),
-    // The first page names its workflow: the generated page parameter carries the path along with `before`.
+    // The first page parameter names the path, as the generated type asks; the later ones are the `before` string.
     initialPageParam: { path: { id: workflowId } },
     // Every page read would be read again, one after the other, at each return to the window.
     refetchOnWindowFocus: false,
@@ -73,8 +73,8 @@ export function useWorkflowRuns(workflowId: string): RunListViewModel {
 export function useOrgRuns(): RunListViewModel {
   const query = useInfiniteQuery({
     ...ready(listRunsInfiniteOptions()),
-    refetchOnWindowFocus: false,
     initialPageParam: {},
+    refetchOnWindowFocus: false,
     getNextPageParam: (last) => last.next,
   });
   return useRunList(query);

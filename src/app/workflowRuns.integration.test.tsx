@@ -171,7 +171,7 @@ describe('the runs of a workflow', () => {
     expect(within(runs).getByRole('button', { name: 'Run it now' })).toBeEnabled();
   });
 
-  it('asks an owner to accept a proposed workflow before running it', async () => {
+  it('asks an admin to accept a proposed workflow before running it', async () => {
     visit('/workflows/wf-migrations');
     const runs = await screen.findByRole('region', { name: 'Runs' });
     expect(await within(runs).findByText('Accept this workflow before running it.')).toBeInTheDocument();

@@ -1273,7 +1273,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => db,
       (request) => organizationOf(db, request),
     ),
-    // The role the console reads (`GET /orgs`), so a member the demo switches to is refused as the console hides it.
+    // The demo's role in the organization the request names. The mock `/auth/me` keeps the fixture's admin, which the
+    // console reads first: a test of a member overrides it too (as workflows.integration.test.tsx does).
     ...createRunHandlers(
       () => db,
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
