@@ -367,7 +367,25 @@ const LIVE = new Set(['queued', 'starting', 'running']);
 const SESSIONS_PAGE = 50;
 /** The server's largest page of rules, and its default (`ListRulesUseCase.MAX_RULES`). */
 const RULES_PAGE = 1000;
-const PROVIDERS = new Set(['anthropic', 'openai']);
+/** What a pause or a resume leaves of a shared account's status, as ostrom-server's `AccountStatus.awaitsSignIn`. */
+function statusAfterPause(status: string, paused: boolean): string {
+  if (status === 'reconnect_required' || status === 'wrong_account') return status;
+  if (paused) return 'disabled';
+  return status === 'disabled' ? 'ready' : status;
+}
+
+/** The server reports an account paused exactly when its status is disabled (ostrom-server `SharedAccount`). */
+function pausedAs(status: string): { paused: boolean; status: string } {
+  return { paused: status === 'disabled', status };
+}
+
+/** The vendor's name the console sends, and the agent the server keeps for it (ostrom-server `AccountProvider`). */
+const PROVIDERS = new Map([
+  ['anthropic', 'claude'],
+  ['claude', 'claude'],
+  ['openai', 'codex'],
+  ['codex', 'codex'],
+]);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
@@ -734,7 +752,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
     }),
     ...createAccountHandlers(() => db, now),
-    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
+    ...createDeviceHandlers(() => db, now, {
+      actsIn: (request) => resolveOrganization(db, request),
+      // The role `GET /orgs` lists: the page offers only the organizations this check accepts.
+      manages: (organization) => managesMembers(demoRoleIn(db, organization, now)),
+      freshSignInMs: FRESH_SIGN_IN_MS,
+    }),
     ...createApproversGraphHandlers(() => db),
     ...createConfirmationHandlers(
       () => db,
@@ -1187,16 +1210,17 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListSharedAccounts(() => HttpResponse.json({ items: db.sharedAccounts })),
     handleEnrollSharedAccount(async ({ request }) => {
       const body = zEnrollSharedAccountBody.safeParse(await readJson(request));
-      if (!body.success || body.data.label.trim() === '' || !PROVIDERS.has(body.data.provider))
+      const provider = body.success ? PROVIDERS.get(body.data.provider) : undefined;
+      if (!body.success || body.data.label.trim() === '' || provider === undefined)
         return refusal(400, 'invalid_request', 'a provider, a label and a credential');
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
       const account: SharedAccount = {
         id: `acc-${String(db.nextAccountId++)}`,
-        provider: body.data.provider,
+        provider,
         label: body.data.label.trim(),
         owner: me.dev.login,
-        status: 'active',
+        status: 'ready',
         sharedWith: body.data.sharedWith ?? [],
         paused: false,
         ...(body.data.dailyAllocationUsd === undefined
@@ -1220,7 +1244,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...(body.data.dailyAllocationUsd === undefined
           ? {}
           : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
-        ...(body.data.paused === undefined ? {} : { paused: body.data.paused }),
+        // A pause writes `disabled`, a resume `ready` again (ostrom-server); one waiting for a sign-in stays so.
+        ...(body.data.paused === undefined
+          ? {}
+          : pausedAs(statusAfterPause(account.status, body.data.paused))),
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);

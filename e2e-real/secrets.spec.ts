@@ -102,12 +102,8 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   page,
   browser,
 }) => {
-  test.fixme(
-    true,
-    'ostrom-server: POST /api/v1/accounts reads ShareAccountRequest (providerAccountId, accessToken, refreshToken, ' +
-      'expiresAt), not the contract’s body (credentialSecret, sharedWith, dailyAllocationUsd): 400 "The request is ' +
-      'malformed."; for the sharing module’s owner in the JOURNAL (02/11)',
-  );
+  // Since ostrom-server#201, POST /api/v1/accounts reads the contract's body: credentialSecret, sharedWith and
+  // dailyAllocationUsd.
   const org = await ownerOfNewOrganization(page, 'kira');
   const member = await anotherPerson(browser);
   await joinAs(page, org.id, member, 'liam', 'member');
@@ -134,15 +130,22 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   const card = page.getByRole('article', { name: 'Kira’s Claude Max' });
   await expect(card).toContainText('$25.00 a day');
   await expect(card).toContainText(`Lent to ${login}`);
+  // The console names it by its vendor and reads the server's `ready` as active, never the raw wire words.
+  const owner = ((await callFromPage(page, 'GET', '/api/v1/auth/me')).body as { dev: { login: string } }).dev
+    .login;
+  await expect(card).toContainText(`Anthropic · by ${owner} · $25.00 a day`);
+  await expect(card).toContainText('Active');
   await expect(page.getByText(value)).toHaveCount(0);
   const listed = await callFromPage(page, 'GET', '/api/v1/accounts');
   expect(listed.status).toBe(200);
   expect(JSON.stringify(listed.body)).not.toContain(value);
   const accounts = (listed.body as { items: { id: string; label: string; sharedWith: string[] }[] }).items;
+  // The form names the vendor (anthropic); the server keeps the agent it runs, claude (ostrom-server#201).
   expect(accounts).toEqual([
-    expect.objectContaining({ label: 'Kira’s Claude Max', provider: 'anthropic', sharedWith: [login] }),
+    expect.objectContaining({ label: 'Kira’s Claude Max', provider: 'claude', sharedWith: [login] }),
   ]);
   const id = accounts[0]?.id ?? '';
+  expect(id).not.toBe('');
 
   // Paused, then resumed: the server says so each time.
   await card.getByRole('button', { name: 'Pause' }).click();

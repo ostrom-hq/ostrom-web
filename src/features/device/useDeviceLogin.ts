@@ -1,13 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { answerDeviceLoginMutation, getDeviceLoginOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { DeviceAuthorization } from '@gen/api/types.gen';
+import {
+  answerDeviceLoginMutation,
+  getDeviceLoginOptions,
+  listOrgsOptions,
+} from '@gen/api/@tanstack/react-query.gen';
+import type { DeviceAuthorization, OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
-import { ORG_REQUIRED } from '@/shared/api/orgHeader';
+import { ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
 import { ready } from '@/shared/api/ready';
 import { stepUpOf } from '@/shared/api/stepUp';
+import { useOrgStore } from '@/shared/org/orgStore';
+import { orgRoleOf } from '@/shared/org/roles';
 import { isUserCode, normalizeCode } from './model';
 
 /** A pending `ostrom login`, read and still waiting for the person's answer. */
@@ -16,13 +23,24 @@ export interface OpenDeviceLogin {
   readonly login: DeviceAuthorization;
   /** The answer is on its way: neither button may be pressed again. */
   readonly answering: boolean;
+  /** An admin sign-in whose organizations are still being read: it cannot be approved yet, only denied. */
+  readonly choosing: boolean;
   /** An admin sign-in the person may not approve: they are neither an owner nor an admin of the organization. */
   readonly forbidden: boolean;
   /**
-   * An admin sign-in the server could not tie to one organization: the person belongs to several, and this route
-   * names none (`org_required`). It cannot be approved from here.
+   * An admin sign-in the server could not tie to one organization (`org_required`): the person belongs to several, and
+   * the approval named none the server knew them in.
    */
   readonly severalOrgs: boolean;
+  /**
+   * For an admin sign-in: the organizations the person owns or administers, where its token may act. Empty for the
+   * ordinary sign-in, and until their list is read.
+   */
+  readonly orgs: readonly OrgView[];
+  /** The organization an approved admin sign-in acts in (`Ostrom-Org`), if one can be named. */
+  readonly org: OrgView | undefined;
+  /** Chooses, among [orgs], the organization the admin sign-in acts in. */
+  readonly pick: (id: string) => void;
   /** Why the last answer did not go through (a sign-in too old to approve, the network…), if it did not. */
   readonly failure: Error | undefined;
   readonly approve: () => void;
@@ -71,6 +89,14 @@ export function useDeviceLogin(): DeviceLoginViewModel {
     }),
   );
   const answer = useMutation(answerDeviceLoginMutation());
+  // An admin sign-in acts in one organization, named by `Ostrom-Org` (ostrom-core#87): one the person owns or
+  // administers, the console's own first, else their first such one. A person who manages none still names one, so
+  // the server answers why it refuses (403), never which organization (409).
+  const admin = pending.data?.scopes !== undefined;
+  const listed = useQuery(ready(listOrgsOptions(), { staleTime: 60_000, enabled: admin }));
+  const orgs = listed.data?.items;
+  const current = useOrgStore((state) => state.current);
+  const [picked, setPicked] = useState<string | undefined>(undefined);
   const read = (typed: string): void => {
     void navigate({ to: '/device', search: { code: normalizeCode(typed) }, replace: true });
   };
@@ -104,16 +130,33 @@ export function useDeviceLogin(): DeviceLoginViewModel {
     answerFailure.kind === 'forbidden' &&
     !stepUpOf(answerFailure);
   const severalOrgs = isApiFailure(answerFailure) && answerFailure.code === ORG_REQUIRED;
+  const all = orgs ?? [];
+  const managed = admin ? all.filter((item) => manages(item)) : [];
+  const org = admin
+    ? (managed.find((item) => item.id === picked) ??
+      managed.find((item) => item.id === current) ??
+      managed[0] ??
+      all.find((item) => item.id === current) ??
+      all[0])
+    : undefined;
   const say = (approve: boolean): void => {
-    answer.mutate({ body: { userCode: code, approve } });
+    const body = { userCode: code, approve };
+    // Only an approval reads the organization: a denial and the ordinary sign-in name none.
+    answer.mutate(approve && org !== undefined ? { body, headers: { [ORG_HEADER]: org.id } } : { body });
   };
   return {
     view: {
       stage: 'open',
       login,
       answering: answer.isPending,
+      // An admin approval waits while the person's organizations are read, so that it names one. A list that could
+      // not be read lets it go without: the server then says why (409 or 403), never a button that stays off.
+      choosing: admin && listed.isPending,
       forbidden,
       severalOrgs,
+      orgs: managed,
+      org,
+      pick: setPicked,
       failure: forbidden || severalOrgs ? undefined : answerFailure,
       approve: () => {
         say(true);
@@ -124,4 +167,10 @@ export function useDeviceLogin(): DeviceLoginViewModel {
     },
     read,
   };
+}
+
+/** Whether the person owns or administers an organization: only they approve an admin sign-in there. */
+function manages(org: OrgView): boolean {
+  const role = orgRoleOf(org.role);
+  return role === 'owner' || role === 'admin';
 }

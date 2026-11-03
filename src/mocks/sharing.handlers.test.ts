@@ -126,8 +126,9 @@ describe('mock shared subscriptions', () => {
     expect(lent.data).toMatchObject({
       id: 'acc-100',
       label: 'Team Pro',
+      provider: 'codex',
       owner: 'maya',
-      status: 'active',
+      status: 'ready',
       sharedWith: ['theo'],
       dailyAllocationUsd: 12.5,
       paused: false,
@@ -171,6 +172,7 @@ describe('mock shared subscriptions', () => {
     });
     expect(paused.data).toMatchObject({
       paused: true,
+      status: 'disabled',
       sharedWith: ['theo', 'samir'],
       dailyAllocationUsd: 40,
     });
@@ -180,6 +182,42 @@ describe('mock shared subscriptions', () => {
       throwOnError: true,
     });
     expect(changed.data).toMatchObject({ paused: true, sharedWith: ['theo'], dailyAllocationUsd: 20 });
+    const resumed = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(resumed.data).toMatchObject({ paused: false, status: 'ready' });
+    const stillReady = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(stillReady.data).toMatchObject({ paused: false, status: 'ready' });
+    db.sharedAccounts = db.sharedAccounts.map((item) =>
+      item.id === 'acc-1' ? { ...item, status: 'reconnect_required' } : item,
+    );
+    const stillWaiting = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(stillWaiting.data).toMatchObject({ paused: false, status: 'reconnect_required' });
+    const notPaused = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: true },
+      throwOnError: true,
+    });
+    expect(notPaused.data).toMatchObject({ paused: false, status: 'reconnect_required' });
+    db.sharedAccounts = db.sharedAccounts.map((item) =>
+      item.id === 'acc-1' ? { ...item, status: 'wrong_account' } : item,
+    );
+    const foreign = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: true },
+      throwOnError: true,
+    });
+    expect(foreign.data).toMatchObject({ paused: false, status: 'wrong_account' });
     expect(
       await statusOf(async () =>
         updateSharedAccount({ path: { id: 'acc-2' }, body: { paused: false }, throwOnError: true }),
