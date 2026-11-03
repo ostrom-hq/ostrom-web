@@ -87,6 +87,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await test.info().attach(`a11y-${scheme}.md`, { body: table, contentType: 'text/markdown' });
     const summary = process.env['GITHUB_STEP_SUMMARY'];
     if (summary !== undefined) appendFileSync(summary, table);
+    console.warn(table);
     for (const path of CHECKED) expect(found.get(path), `${path} in ${scheme}`).toEqual([]);
   });
 }
