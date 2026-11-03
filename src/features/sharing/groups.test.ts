@@ -60,6 +60,7 @@ describe('the groups model', () => {
 
   it('names a member by name and login, or by login alone when the name says nothing more', () => {
     const member = {
+      id: 'id-lena',
       login: 'lena',
       name: 'Lena Ortiz',
       avatarUrl: '',

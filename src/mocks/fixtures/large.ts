@@ -47,8 +47,14 @@ function at(minutesAgo: number): string {
   return new Date(NOW - minutesAgo * MINUTE).toISOString();
 }
 
+/** A member's id, a UUID as the server writes it, the number of the member at its end. */
+export function largeMemberId(n: number): string {
+  return `00000000-0000-4000-8000-${pad(n, 12)}`;
+}
+
 export function largeMembers(): OrgMember[] {
   return Array.from({ length: LARGE.members }, (_, n) => ({
+    id: largeMemberId(n),
     login: largeLogin(n),
     name: `Developer ${pad(n, 3)}`,
     avatarUrl: '',

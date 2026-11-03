@@ -5,7 +5,6 @@ import {
   getGithubAppOptions,
   listInvitationsOptions,
   listMyOrganizationsQueryKey,
-  listOrgMembersOptions,
   listOrgsOptions,
   listOrgsQueryKey,
   listSharedAccountsOptions,
@@ -20,6 +19,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { meOf } from '@/shared/auth/me';
 import { ready } from '@/shared/api/ready';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
+import { useOrgMembers } from '@/shared/org/members';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
@@ -119,7 +119,8 @@ export interface SetupViewModel {
 export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel {
   const quiet = { retry: false, staleTime: 30_000 } as const;
   const github = useQuery(ready(getGithubAppOptions(), quiet));
-  const members = useQuery(ready(listOrgMembersOptions({ path: { org } }), quiet));
+  // The first page tells whether anyone else is in: no need to read them all.
+  const people = useOrgMembers(org, quiet);
   const invitations = useQuery(
     ready(listInvitationsOptions({ path: { org } }), { ...quiet, enabled: managesMembers(role) }),
   );
@@ -131,13 +132,13 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
     () =>
       setupSteps({
         githubInstalled: github.data?.installed,
-        people: members.data?.items.length,
+        people: people.members?.length,
         invitations: invitations.data?.items.length,
         accounts: accounts.data?.items.length,
         workflows: workflows.data?.items.length,
         cliDone: cli,
       }),
-    [github.data, members.data, invitations.data, accounts.data, workflows.data, cli],
+    [github.data, people.members, invitations.data, accounts.data, workflows.data, cli],
   );
   const key = `${GUIDE_HIDDEN_KEY}.${org}`;
   const [hidden, setHidden] = useState(() => safeLocalStorage.getItem(key) === '1');

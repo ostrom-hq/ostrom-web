@@ -197,6 +197,31 @@ describe('mock members of an organization', () => {
       { login: 'maya', role: 'owner' },
     ]);
   });
+
+  it('pages the members as the server does: `limit` from 1 to 1000, `after` the previous `next`', async () => {
+    const page = async (limit?: number, after?: string) =>
+      (
+        await listOrgMembers({
+          path: { org },
+          query: { ...(limit === undefined ? {} : { limit }), ...(after === undefined ? {} : { after }) },
+          throwOnError: true,
+        })
+      ).data;
+    const all = (await page()).items;
+    expect(all).toHaveLength(5);
+    expect((await page()).next).toBeUndefined();
+    const first = await page(2);
+    expect(first.items).toEqual(all.slice(0, 2));
+    expect(first.next).toBe(all[1]?.id);
+    const second = await page(2, first.next);
+    expect(second.items).toEqual(all.slice(2, 4));
+    expect(await page(2, second.next)).toEqual({ items: all.slice(4) });
+    expect(await page(2, '00000000-0000-4000-8000-000000000000')).toEqual({ items: [] });
+    expect(await raw('GET', `/orgs/${org}/members?limit=0`, '')).toBe(400);
+    expect(await raw('GET', `/orgs/${org}/members?limit=two`, '')).toBe(400);
+    expect(await raw('GET', `/orgs/${org}/members?limit=1001`, '')).toBe(400);
+    expect(await raw('GET', `/orgs/${org}/members?after=lena`, '')).toBe(400);
+  });
 });
 
 describe('mock invitations', () => {

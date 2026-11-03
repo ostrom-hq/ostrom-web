@@ -9,6 +9,7 @@ export const en = {
     skipToContent: 'Skip to content',
     showMore_one: 'Show 1 more',
     showMore_other: 'Show {{count}} more ({{left}} left)',
+    morePeople: 'Show more people',
     copy: {
       action: 'Copy',
       named: 'Copy {{label}}',
@@ -429,11 +430,14 @@ export const en = {
     title: 'Members',
     lead_one: '{{count}} person · you are {{role}}',
     lead_other: '{{count}} people · you are {{role}}',
+    leadMore_one: 'More than {{count}} person · you are {{role}}',
+    leadMore_other: 'More than {{count}} people · you are {{role}}',
     role: { owner: 'Owner', admin: 'Admin', approver: 'Approver', member: 'Member', billing: 'Billing' },
     list: {
       title: 'People',
       search: 'Find someone',
       noMatch: 'Nobody matches “{{search}}”.',
+      noMatchRead: 'Nobody matches “{{search}}” among the {{count}} people read so far.',
       you: '(you)',
       roleOf: 'Role of {{name}}',
       errorTag: 'Not saved',

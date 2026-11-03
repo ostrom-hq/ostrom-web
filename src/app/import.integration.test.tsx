@@ -411,6 +411,7 @@ describe('another organization', () => {
     db.imported[ACME] = ['server:linear', 'server:github'];
     db.orgMembers[GLOBEX] = [
       {
+        id: MEMBER_IDS.maya,
         login: 'maya',
         name: 'Maya Lind',
         avatarUrl: '',

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { largeMembers } from '@/mocks/fixtures/large';
@@ -7,7 +7,7 @@ import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 const ACME = '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c';
 
 function rowsOf(list: HTMLElement): HTMLElement[] {
@@ -57,6 +57,7 @@ describe('the members screen', () => {
     db.orgMembers[ACME] = [
       ...(db.orgMembers[ACME] ?? []),
       {
+        id: '9dcf5a7e-81a2-4de4-9f60-718293a4b5c6',
         login: 'kim',
         name: '',
         avatarUrl: '',
@@ -470,25 +471,59 @@ describe('the members of a large organization', () => {
     db.orgMembers[ACME] = [...(db.orgMembers[ACME] ?? []), ...largeMembers()];
   });
 
-  it('shows a hundred people at a time, and finds anyone by name, login or address', async () => {
+  /** The people on screen, once there are `count` of them. */
+  async function shown(count: number): Promise<void> {
+    await waitFor(async () => {
+      expect(rowsOf(await people())).toHaveLength(count);
+    });
+  }
+
+  it('asks for the first hundred on load, and for the next hundred only when asked', async () => {
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 250);
+    const asked: URL[] = [];
+    traffic.onRequest((request) => {
+      const url = new URL(request.url);
+      if (/\/api\/v1\/orgs\/[^/]+\/members$/.test(url.pathname)) asked.push(url);
+    });
     visit('/members');
-    expect(await screen.findByText('505 people · you are Admin')).toBeInTheDocument();
-    expect(rowsOf(await people())).toHaveLength(100);
-    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (405 left)' }));
-    expect(rowsOf(await people())).toHaveLength(200);
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'developer 01');
-    expect(rowsOf(await people())).toHaveLength(10);
-    expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
-    await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'DEV-499@ACME');
-    expect(rowsOf(await people())).toHaveLength(1);
+    await shown(100);
+    expect(asked.map((url) => url.search)).toEqual(['?limit=100']);
+    await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
+    await shown(200);
+    expect(asked).toHaveLength(2);
+    expect(asked[1]?.searchParams.get('limit')).toBe('100');
+    expect(asked[1]?.searchParams.get('after')).toBe(db.orgMembers[ACME][99]?.id);
   });
 
-  it('says when nobody matches', async () => {
+  it('says more than the people read until every page is in, then finds anyone by name, login or address', async () => {
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 205);
     visit('/members');
-    await userEvent.type(await screen.findByRole('searchbox', { name: 'Find someone' }), '  nobody  ');
+    expect(await screen.findByText('More than 100 people · you are Admin')).toBeInTheDocument();
+    await shown(100);
+    for (const count of [200, 205]) {
+      await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
+      await shown(count);
+    }
+    expect(screen.getByText('205 people · you are Admin')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'developer 01');
+    expect(rowsOf(await people())).toHaveLength(10);
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'DEV-199@ACME');
+    expect(rowsOf(await people())).toHaveLength(1);
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), '  nobody  ');
     expect(screen.getByText('Nobody matches “nobody”.')).toBeInTheDocument();
+  });
+
+  it('says nobody matches among the people read, and still offers the next hundred', async () => {
+    visit('/members');
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Find someone' }), '  dev-499  ');
+    expect(
+      screen.getByText('Nobody matches “dev-499” among the 100 people read so far.'),
+    ).toBeInTheDocument();
     const heading = screen.getByRole('heading', { level: 2, name: 'People' });
     expect(heading.parentElement?.querySelector('ul')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show more people' })).toBeInTheDocument();
   });
 });
