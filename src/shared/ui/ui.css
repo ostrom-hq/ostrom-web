@@ -45,7 +45,7 @@
 .o-btn--danger {
   background: var(--danger-tint);
   border-color: var(--danger);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .o-btn--icon {

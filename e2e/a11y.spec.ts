@@ -21,7 +21,8 @@ async function violationsOn(page: Page): Promise<string[]> {
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(`the yes screens, ${scheme}`, () => {
     test.beforeEach(async ({ page }) => {
-      await page.emulateMedia({ colorScheme: scheme });
+      // No transition or entry animation mid-way: axe reads the colours as they settle.
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     });
 
     test('the queue of requests', async ({ page }) => {
@@ -35,6 +36,19 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.goto('/yes/apr-merge-412');
       await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
       await expect(page.getByRole('button', { name: /^Approve/ })).toBeVisible();
+      expect(await violationsOn(page)).toEqual([]);
+    });
+
+    test('the approve button under the pointer', async ({ page, isMobile }) => {
+      test.skip(isMobile, 'a touch screen has no pointer over a button');
+      await page.goto('/yes/apr-merge-412');
+      const approve = page.getByRole('button', { name: /^Approve/ });
+      await approve.hover();
+      // The hover colour, not the resting one: the white on it is what axe reads.
+      await expect(approve).toHaveCSS(
+        'background-color',
+        scheme === 'dark' ? 'rgb(207, 58, 83)' : 'rgb(116, 21, 47)',
+      );
       expect(await violationsOn(page)).toEqual([]);
     });
 
