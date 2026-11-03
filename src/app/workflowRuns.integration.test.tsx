@@ -15,7 +15,7 @@ const never = async (): Promise<undefined> => {
 
 /** `count` finished runs of a workflow, newest first, a minute apart. */
 function finishedRuns(workflowId: string, workflowName: string, count: number): WorkflowRun[] {
-  return Array.from({ length: count }, (_, n) => {
+  return Array.from({ length: count }, (_, n): WorkflowRun => {
     const started = Date.parse('2026-10-20T08:00:00.000Z') - n * 60_000;
     return {
       id: `run-old-${String(n).padStart(3, '0')}`,
@@ -24,7 +24,7 @@ function finishedRuns(workflowId: string, workflowName: string, count: number): 
       workflowVersion: 7,
       status: 'succeeded',
       startedBy: 'lena',
-      source: 'console',
+      source: 'manual',
       startedAt: new Date(started).toISOString(),
       endedAt: new Date(started + 30_000).toISOString(),
     };
@@ -137,7 +137,7 @@ describe('the runs of a workflow', () => {
       expect(runRows(runs)).toHaveLength(4);
     });
     expect(runRows(runs)[0]).toHaveTextContent('Queued');
-    expect(runRows(runs)[0]).toHaveTextContent('Started by maya · from the console');
+    expect(runRows(runs)[0]).toHaveTextContent('Started by maya · by hand');
     expect(sent).toEqual([{ inputs: {} }]);
     expect(db.workflowRuns).toHaveLength(5);
   });
@@ -180,32 +180,45 @@ describe('the runs of a workflow', () => {
 });
 
 describe('the runs of every workflow', () => {
+  /** The screen's own content, without the navigation's list. */
+  async function runsScreen(): Promise<HTMLElement> {
+    expect(await screen.findByRole('heading', { level: 1, name: 'Runs' })).toBeInTheDocument();
+    return screen.getByRole('main');
+  }
+
   it('lists the runs of the organization, newest first, each leading to its workflow', async () => {
-    visit('/workflows');
-    const runs = await screen.findByRole('region', { name: 'Recent runs' });
-    const rows = await within(runs).findAllByRole('listitem');
+    visit('/runs');
+    const main = await runsScreen();
+    const rows = await within(main).findAllByRole('listitem');
     expect(rows).toHaveLength(4);
-    expect(within(rows[0] ?? runs).getByRole('link', { name: 'Backend changes' })).toHaveAttribute(
+    expect(within(rows[0] ?? main).getByRole('link', { name: 'Backend changes' })).toHaveAttribute(
       'href',
       '/workflows/wf-backend',
     );
     expect(rows[0]).toHaveTextContent('Running');
-    expect(rows[1]).toHaveTextContent('Database migrations');
     expect(rows[1]).toHaveTextContent('Cancelled');
-    expect(within(rows[1] ?? runs).getByRole('link', { name: 'Database migrations' })).toHaveAttribute(
+    expect(within(rows[1] ?? main).getByRole('link', { name: 'Database migrations' })).toHaveAttribute(
       'href',
       '/workflows/wf-migrations',
     );
   });
 
-  it('says when nothing ran yet', async () => {
-    db.workflowRuns = [];
+  it('is in the navigation, after the workflows', async () => {
+    const user = userEvent.setup();
     visit('/workflows');
-    const runs = await screen.findByRole('region', { name: 'Recent runs' });
-    expect(await within(runs).findByText('No run yet.')).toBeInTheDocument();
+    const nav = await screen.findByRole('navigation', { name: 'Main' });
+    await user.click(within(nav).getByRole('link', { name: 'Runs' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Runs' })).toBeInTheDocument();
   });
 
-  it('says why the runs did not come, and still lists the workflows', async () => {
+  it('says when nothing ran yet', async () => {
+    db.workflowRuns = [];
+    visit('/runs');
+    const main = await runsScreen();
+    expect(await within(main).findByText('No run yet.')).toBeInTheDocument();
+  });
+
+  it('says why the runs did not come', async () => {
     server.use(
       http.get('*/api/v1/runs', () =>
         HttpResponse.json(
@@ -214,28 +227,42 @@ describe('the runs of every workflow', () => {
         ),
       ),
     );
-    visit('/workflows');
-    const runs = await screen.findByRole('region', { name: 'Recent runs' });
-    expect(await within(runs).findByText('Your role does not let you read the runs.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Backend changes/ })).toBeInTheDocument();
+    visit('/runs');
+    const main = await runsScreen();
+    expect(await within(main).findByText('Your role does not let you read the runs.')).toBeInTheDocument();
+    expect(within(main).queryByRole('listitem')).toBeNull();
   });
 
-  it('reads the older runs a page at a time', async () => {
+  it('reads the older runs a page at a time, and says when an older page did not come', async () => {
     db.workflowRuns = finishedRuns('wf-backend', 'Backend changes', 51);
-    visit('/workflows');
-    const runs = await screen.findByRole('region', { name: 'Recent runs' });
-    expect(await within(runs).findAllByRole('listitem')).toHaveLength(50);
-    await userEvent.click(within(runs).getByRole('button', { name: 'Show older runs' }));
+    visit('/runs');
+    const main = await runsScreen();
+    expect(await within(main).findAllByRole('listitem')).toHaveLength(50);
+    server.use(
+      http.get('*/api/v1/runs', ({ request }) =>
+        new URL(request.url).searchParams.has('before')
+          ? HttpResponse.json(
+              { error: { type: 'forbidden', message: 'older page refused' } },
+              { status: 403 },
+            )
+          : undefined,
+      ),
+    );
+    await userEvent.click(within(main).getByRole('button', { name: 'Show older runs' }));
+    expect(await within(main).findByRole('alert')).toHaveTextContent('older page refused');
+    expect(runRows(main)).toHaveLength(50);
+    server.resetHandlers();
+    await userEvent.click(within(main).getByRole('button', { name: 'Show older runs' }));
     await vi.waitFor(() => {
-      expect(runRows(runs)).toHaveLength(51);
+      expect(runRows(main)).toHaveLength(51);
     });
-    expect(within(runs).queryByRole('button', { name: 'Show older runs' })).toBeNull();
+    expect(within(main).queryByRole('button', { name: 'Show older runs' })).toBeNull();
   });
 
   it('shows the shape of the runs while they load', async () => {
     server.use(http.get('*/api/v1/runs', never));
-    visit('/workflows');
-    const runs = await screen.findByRole('region', { name: 'Recent runs' });
-    expect(within(runs).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    visit('/runs');
+    const main = await runsScreen();
+    expect(within(main).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
   });
 });

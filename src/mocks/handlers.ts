@@ -180,6 +180,7 @@ import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/con
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
+import { createRunHandlers } from '@/mocks/runs';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
@@ -1271,6 +1272,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createGithubHandlers(
       () => db,
       (request) => organizationOf(db, request),
+    ),
+    // The role the console reads (`GET /orgs`), so a member the demo switches to is refused as the console hides it.
+    ...createRunHandlers(
+      () => db,
+      () => managesMembers(demoRoleIn(db, db.organization, now)),
+      () => DEMO_LOGIN,
     ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

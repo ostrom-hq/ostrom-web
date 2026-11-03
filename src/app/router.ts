@@ -169,6 +169,11 @@ const newWorkflowRoute = createRoute({
   path: '/workflows/new',
   component: lazyRouteComponent(async () => import('@/features/workflows'), 'NewWorkflowScreen'),
 });
+const runsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/runs',
+  component: lazyRouteComponent(async () => import('@/features/workflows'), 'RunsScreen'),
+});
 const workflowRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/workflows/$workflowId',
@@ -343,6 +348,7 @@ export const routeTree = rootRoute.addChildren([
   decisionsRoute,
   auditRoute,
   workflowsRoute,
+  runsRoute,
   newWorkflowRoute,
   workflowRoute,
   mcpRoute,
