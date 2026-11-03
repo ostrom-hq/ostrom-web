@@ -156,7 +156,7 @@ describe('a group', () => {
     expect(samir).toHaveTextContent(/Paused until \w+ \d+, 20\d\d/);
     expect(within(samir).getByRole('button', { name: 'Resume samir' })).toBeInTheDocument();
     const left = await findRow(LEFT_MEMBER);
-    expect(left).toHaveTextContent('Left the organization');
+    expect(await within(left).findByText('Left the organization')).toBeInTheDocument();
     expect(within(left).queryByRole('button', { name: /Pause/ })).toBeNull();
     expect(within(left).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
     const lending = screen.getByRole('region', { name: 'Subscriptions it lends' });
@@ -217,7 +217,8 @@ describe('a group', () => {
     const user = userEvent.setup();
     visit(PLATFORM);
     const members = await screen.findByRole('region', { name: 'Members' });
-    const pick = within(members).getByRole('combobox', { name: 'Add a member' });
+    // The organization's members may come after the group: the form waits for them.
+    const pick = await within(members).findByRole('combobox', { name: 'Add a member' });
     expect(within(pick).queryByRole('option', { name: 'theo' })).toBeNull();
     const add = within(members).getByRole('button', { name: 'Add' });
     expect(add).toBeDisabled();
