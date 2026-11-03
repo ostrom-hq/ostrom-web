@@ -352,6 +352,8 @@ export const pollDeviceLoginMutation = (options?: Partial<Options<PollDeviceLogi
 
 /**
  * Approve or deny an `ostrom login` (browser session only)
+ *
+ * Approving an `ostrom login --admin` binds its token to an organization the person owns or administers. The organization is read after the recent sign-in check: the one `Ostrom-Org` names, else the person's only one. A person in several organizations names it, or gets 409 `org_required`. An `Ostrom-Org` value that is not the id of one of their organizations, an organization they belong to without owning or administering it, and a person in no organization are 403 `forbidden`, never 404. The ordinary `ostrom login` and a denial read no organization.
  */
 export const answerDeviceLoginMutation = (options?: Partial<Options<AnswerDeviceLoginData>>): UseMutationOptions<AnswerDeviceLoginResponse, AnswerDeviceLoginError, Options<AnswerDeviceLoginData>> => {
     const mutationOptions: UseMutationOptions<AnswerDeviceLoginResponse, AnswerDeviceLoginError, Options<AnswerDeviceLoginData>> = {
