@@ -60,20 +60,29 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   // without it.
   const link = page.locator('#enableStripePass');
   if ((await appears(link, 2_000)) && (await link.isChecked())) await link.uncheck();
-  // The French address changes the tax, and Stripe updates the session first: a Subscribe click during that update
-  // sends no payment (run 41631712199, no confirm call). Clicked again only while the button is idle, never while a
-  // payment is processing, at most three times.
+  // The French address changes the tax: Stripe updates the session when the address field is left, and a Subscribe
+  // click during that update sends no payment (runs 41631712199 and 41637233972: one POST of the payment page, no
+  // confirm). The field is left first and the update awaited; Subscribe is clicked again only while the button is idle
+  // (SubmitButton--complete is the filled form, not a payment), never while a payment is processing, at most three times.
+  const updated = page
+    .waitForResponse(
+      (response) => response.request().method() === 'POST' && response.url().includes('/v1/payment_pages/'),
+      { timeout: 10_000 },
+    )
+    .catch(() => undefined);
+  await page.locator('#billingLocality').press('Tab');
+  await updated;
   const subscribe = page.locator('[data-testid="hosted-payment-submit-button"]');
   const back = billingPage();
   for (let click = 1; ; click += 1) {
     await subscribe.click();
-    const returned = await page.waitForURL(back, { timeout: 45_000 }).then(
+    const returned = await page.waitForURL(back, { timeout: 30_000 }).then(
       () => true,
       () => false,
     );
     if (returned) return;
-    const state = (await subscribe.getAttribute('class')) ?? '';
-    const idle = (await subscribe.isEnabled()) && !/processing|complete/i.test(state);
+    const idle =
+      (await subscribe.isEnabled()) && !/processing/i.test((await subscribe.getAttribute('class')) ?? '');
     if (!idle || click === 3) {
       await expect(page).toHaveURL(back, { timeout: 60_000 });
       return;
