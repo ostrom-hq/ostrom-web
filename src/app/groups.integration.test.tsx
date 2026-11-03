@@ -405,8 +405,10 @@ describe('a new group in a large organization', () => {
     await userEvent.click(within(people).getByRole('button', { name: /^Show 20 more/ }));
     expect(within(people).getAllByRole('checkbox')).toHaveLength(40);
     await userEvent.type(within(people).getByRole('searchbox', { name: 'Find someone' }), 'dev-42');
-    expect(within(people).getAllByRole('checkbox').map((box) => box.closest('label')?.textContent)).toEqual(
-      Array.from({ length: 10 }, (_, n) => `Developer 42${String(n)} (dev-42${String(n)})`),
-    );
+    expect(
+      within(people)
+        .getAllByRole('checkbox')
+        .map((box) => box.closest('label')?.textContent),
+    ).toEqual(Array.from({ length: 10 }, (_, n) => `Developer 42${String(n)} (dev-42${String(n)})`));
   });
 });
