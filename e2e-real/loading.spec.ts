@@ -44,6 +44,10 @@ const SETTLE_LIMIT_MS = 30_000;
  */
 const POLLS: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
   '/yes': ['GET /api/v1/approvals?mine=true'],
+  // Not a poll: the policy reads its members' names by `GET /api/v1/members`, still `planned` in the contract, which
+  // the server answers 404; a 404 in the organization reads the person's list again (shared/api/apiClient.ts). Remove this line
+  // when the server serves the route (JOURNAL, SRV-ORG).
+  '/policy': ['GET /api/v1/me/organizations'],
 };
 
 interface Call {
