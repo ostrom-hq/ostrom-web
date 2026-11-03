@@ -1369,6 +1369,8 @@ export const en = {
       pausedCount_one: '{{count}} paused',
       pausedCount_other: '{{count}} paused',
       lends: 'Lends {{list}}',
+      lendsHidden_one: 'Lends {{count}} subscription you cannot see',
+      lendsHidden_other: 'Lends {{count}} subscriptions you cannot see',
       lendsNothing: 'Lends no subscription',
       create: {
         title: 'New group',
@@ -1400,6 +1402,8 @@ export const en = {
       addSubmit: 'Add',
       lending: 'Subscriptions it lends',
       lendingNone: 'It lends no subscription.',
+      lendingHidden_one: 'It lends {{count}} subscription you cannot see.',
+      lendingHidden_other: 'It lends {{count}} subscriptions you cannot see.',
       lendingPick: 'Lend',
       lendingSave: 'Save the subscriptions',
       settings: 'Group',
