@@ -40,41 +40,79 @@ async function slowed(page: Page): Promise<CDPSession> {
   return cdp;
 }
 
+/** Where the page keeps what it measured (the script below). */
+const MEASURED = '__ostromFirstPaint';
+
 /**
- * What the page measured, read in the page: the console's tests are typed for Node, so the code that runs there is a
- * string and its answer is parsed. A paint not reported yet is -1.
+ * Measures in the page, from its first script on: the console's CSP forbids evaluating a string in it, but a script
+ * added before the document runs anyway (Playwright's init script, through the DevTools protocol). At each frame it
+ * notes when each selector first matches; the largest paint comes from an observer. A paint not reported is -1.
  */
-const zPaints = z.object({ firstPaint: z.number(), largestPaint: z.number(), sent: z.number() });
-const PAINTS = `new Promise((resolve) => {
-  const firstPaint = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? -1;
-  const sent = performance
-    .getEntriesByType('resource')
-    .filter((entry) => /\\.(?:js|css)$/.test(new URL(entry.name).pathname))
-    .reduce((total, entry) => total + entry.transferSize, 0);
+function measuring(selectors: readonly string[]): string {
+  return `(() => {
+  const wanted = ${JSON.stringify(selectors)};
+  const found = {};
   let largestPaint = -1;
   new PerformanceObserver((list) => {
     largestPaint = list.getEntries().at(-1)?.startTime ?? largestPaint;
   }).observe({ type: 'largest-contentful-paint', buffered: true });
-  // The buffered entries come in a task of their own.
-  setTimeout(() => resolve({ firstPaint, largestPaint, sent }), 0);
-})`;
+  const look = () => {
+    for (const selector of wanted)
+      if (!(selector in found) && document.querySelector(selector) !== null) found[selector] = performance.now();
+    requestAnimationFrame(look);
+  };
+  requestAnimationFrame(look);
+  Object.defineProperty(globalThis, ${JSON.stringify(MEASURED)}, {
+    get: () => ({
+      found,
+      largestPaint,
+      firstPaint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? -1,
+      sent: performance
+        .getEntriesByType('resource')
+        .filter((entry) => /\\.(?:js|css)$/.test(new URL(entry.name).pathname))
+        .reduce((total, entry) => total + entry.transferSize, 0),
+    }),
+  });
+})();`;
+}
+
+const zMeasured = z.object({
+  found: z.record(z.string(), z.number()),
+  largestPaint: z.number(),
+  firstPaint: z.number(),
+  sent: z.number(),
+});
+
+/** What the page measured so far; nothing before its first script ran. */
+async function measuredOn(page: Page): Promise<z.infer<typeof zMeasured> | undefined> {
+  const measured = zMeasured.safeParse(
+    await page.evaluate((key): unknown => Reflect.get(globalThis, key), MEASURED),
+  );
+  return measured.success ? measured.data : undefined;
+}
 
 /** Loads `path` cold and reads its paints once `selector` is on the page. */
 async function load(page: Page, path: string, selector: string): Promise<Load> {
   await page.goto(path, { waitUntil: 'commit' });
-  // Checked at each frame in the page: the time is the frame's, not a round trip to the test's.
-  const ready = await page.waitForFunction(
-    `document.querySelector(${JSON.stringify(selector)}) === null ? false : performance.now()`,
-    undefined,
-    { polling: 'raf', timeout: 60_000 },
-  );
-  const readyAt = z.number().parse(await ready.jsonValue());
-  const paints = zPaints.parse(await page.evaluate(PAINTS));
+  let ready: number | undefined;
+  // Read from the test now and then; the time is the page's own, taken at the frame the selector first matched.
+  await expect
+    .poll(
+      async () => {
+        ready = (await measuredOn(page))?.found[selector];
+        return ready;
+      },
+      { timeout: 60_000, intervals: [250] },
+    )
+    .toBeDefined();
+  // The largest paint is final once the page is ready and painted once more.
+  await page.waitForTimeout(500);
+  const measured = await measuredOn(page);
   return {
-    firstPaint: paints.firstPaint,
-    largestPaint: paints.largestPaint,
-    ready: readyAt,
-    sentKiB: paints.sent / 1024,
+    firstPaint: measured?.firstPaint ?? -1,
+    largestPaint: measured?.largestPaint ?? -1,
+    ready: ready ?? -1,
+    sentKiB: (measured?.sent ?? 0) / 1024,
   };
 }
 
@@ -104,6 +142,7 @@ test('the yes screens on a slow 4G phone network', async ({ page, browserName })
       selector: 'button[data-approval="approve"]',
     },
   ] as const;
+  await page.addInitScript(measuring(screens.map((screen) => screen.selector)));
   const cdp = await slowed(page);
   const rows = [
     `| Screen | First paint | Largest paint | Ready | Scripts and styles sent |`,
