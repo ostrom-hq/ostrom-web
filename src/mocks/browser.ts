@@ -1,4 +1,5 @@
 import { setupWorker } from 'msw/browser';
+import { growLarge } from '@/mocks/fixtures/large';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { createHandlers, createMockDb, freshAccount } from '@/mocks/handlers';
 import { setDemoRole } from '@/mocks/orgs';
@@ -13,6 +14,8 @@ import { safeLocalStorage } from '@/shared/lib/safeStorage';
 const MOCK_MEMBERSHIPS_KEY = 'ostrom.mock.memberships';
 /** Set before the demo loads: the demo person's role in Acme (`owner`, `member`…), admin otherwise. */
 const MOCK_ROLE_KEY = 'ostrom.mock.role';
+/** Set before the demo loads: `large`, Acme has 500 members, 2 000 rules, 10 000 lines of activity (PERF-CONSOLE). */
+const MOCK_SCALE_KEY = 'ostrom.mock.scale';
 
 /** The browser's Trusted Types factory, where it has one (Chromium). */
 interface TrustedTypesFactory {
@@ -53,6 +56,7 @@ export async function startMocks(): Promise<void> {
   if (memberships === 'none') freshAccount(db);
   const role = orgRoleOf(safeLocalStorage.getItem(MOCK_ROLE_KEY) ?? undefined);
   if (role !== undefined) setDemoRole(db, role);
+  if (safeLocalStorage.getItem(MOCK_SCALE_KEY) === 'large') growLarge(db);
   allowMockWorker();
   const worker = setupWorker(...createHandlers(db));
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true });
