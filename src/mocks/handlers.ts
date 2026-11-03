@@ -729,7 +729,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
     }),
     ...createAccountHandlers(() => db, now),
-    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
+    ...createDeviceHandlers(() => db, now, {
+      actsIn: (request) => resolveOrganization(db, request),
+      // The role `GET /orgs` lists: the page offers only the organizations this check accepts.
+      manages: (organization) => managesMembers(demoRoleIn(db, organization, now)),
+      freshSignInMs: FRESH_SIGN_IN_MS,
+    }),
     ...createApproversGraphHandlers(() => db),
     ...createConfirmationHandlers(
       () => db,
