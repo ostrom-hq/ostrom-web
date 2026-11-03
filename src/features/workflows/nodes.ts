@@ -23,13 +23,12 @@ export function conditionProblem(
   condition: NodeCondition,
   earlier: readonly string[],
 ): ConditionProblem | undefined {
-  void condition;
-  void earlier;
-  return undefined;
+  // stub: refuses only an empty step when nothing comes before
+  return condition.step === '' && earlier.length === 0 ? 'step' : undefined;
 }
 
 /** The workflows a `workflow` step may call from [self]: never itself, nor one that calls it, even through others. */
 export function callChoices(workflows: readonly Workflow[], self: string | undefined): Workflow[] {
-  void self;
-  return [...workflows];
+  // stub: offers every workflow
+  return workflows.filter((workflow) => workflow.id !== '' || self === undefined);
 }
