@@ -11,7 +11,7 @@ import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { WorkflowEditor } from '../components/WorkflowEditor';
 import { WorkflowFailure } from '../components/WorkflowFailure';
 import './workflows.css';
-import { readSteps, STATUS_TONES, type Step, workflowOf } from '../model';
+import { readSteps, reposText, STATUS_TONES, type Step, workflowOf } from '../model';
 import { useWorkflow, useWorkflowChange, type WorkflowChangeViewModel } from '../useWorkflows';
 
 export function WorkflowScreen(): ReactElement {
@@ -146,6 +146,10 @@ function WorkflowDetail({ workflow }: { readonly workflow: Workflow }): ReactEle
       <Facts
         facts={[
           { label: t('workflows.detail.domain'), value: workflow.domain, mono: true },
+          {
+            label: t('workflows.detail.repos'),
+            value: reposText(workflow) ?? t('workflows.list.allRepos'),
+          },
           workflow.version === undefined
             ? undefined
             : { label: t('workflows.detail.version'), value: String(workflow.version) },

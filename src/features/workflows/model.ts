@@ -85,6 +85,8 @@ export interface WorkflowDraft {
   readonly name: string;
   readonly domain: string;
   readonly description: string;
+  /** The repositories it is limited to (`repos`), as written; none: every repository of the organization. */
+  readonly repos: readonly string[];
   readonly steps: readonly StepDraft[];
   /**
    * Whether the steps follow each other in one line. Only then does the editor add, remove and move steps (the line
@@ -148,11 +150,19 @@ export function newStep(steps: readonly StepDraft[], kind: EditableKind = 'step'
 /** The draft of a workflow, or of a new one: a single step where it starts. */
 export function workflowDraftOf(workflow: Workflow | undefined): WorkflowDraft {
   if (workflow === undefined)
-    return { name: '', domain: '', description: '', steps: [newStep([], 'trigger')], linear: true };
+    return {
+      name: '',
+      domain: '',
+      description: '',
+      repos: [],
+      steps: [newStep([], 'trigger')],
+      linear: true,
+    };
   return {
     name: workflow.name,
     domain: workflow.domain,
     description: workflow.description ?? '',
+    repos: workflow.repos ?? [],
     steps: readSteps(workflow).map((step, key) => stepDraftOf(step.node, key)),
     linear: isLinear(workflow),
   };
@@ -376,14 +386,16 @@ export function workflowOf(
     })
     .map(({ node }) => node);
   const edges = edgesOf(draft, base);
+  // Repositories left as they were go back as read; none chosen sends no field, which means all of them.
+  const repos = sameValue(draft.repos, base?.repos ?? []) ? base?.repos : [...draft.repos];
   const name = draft.name === base?.name ? base.name : draft.name.trim();
   const domain = draft.domain === base?.domain ? base.domain : draft.domain.trim();
   // What nobody touched goes back as it was read, so a workflow saved untouched is the very same workflow.
   const changed =
     base === undefined ||
     !sameValue(
-      [name, domain, description, start, nodes, edges],
-      [base.name, base.domain, base.description, base.start, base.nodes, base.edges],
+      [name, domain, description, repos, start, nodes, edges],
+      [base.name, base.domain, base.description, base.repos, base.start, base.nodes, base.edges],
     );
   const status: WorkflowStatus = statusOf(base, changed);
   return {
@@ -392,6 +404,7 @@ export function workflowOf(
     domain,
     ...(description === undefined ? {} : { description }),
     ...(base?.version === undefined ? {} : { version: base.version }),
+    ...(repos === undefined || repos.length === 0 ? {} : { repos }),
     nodes,
     edges,
     ...(start === undefined ? {} : { start }),
@@ -400,4 +413,47 @@ export function workflowOf(
     status,
     foundAt: base?.foundAt ?? now,
   };
+}
+
+/**
+ * The repositories a workflow is limited to, or undefined when it names none: the server then applies it to every
+ * repository of the organization its gates or its words point to (audit of the runner 2, R6).
+ */
+export function reposOf(workflow: Workflow): readonly string[] | undefined {
+  const repos = workflow.repos ?? [];
+  return repos.length === 0 ? undefined : repos;
+}
+
+/**
+ * What the console writes for a repository of the organization: GitHub lists it by its name alone, and the console
+ * does not know the owner, so `*` stands for it (the server allows `*` for any part of a name).
+ */
+export function repoPattern(name: string): string {
+  return `*/${name}`;
+}
+
+/** How a repository reads: one the console wrote by its name, any other as it was written (`acme/api`, `acme/*`). */
+export function repoLabel(pattern: string): string {
+  return pattern.startsWith('*/') ? pattern.slice(2) : pattern;
+}
+
+/**
+ * The repositories the editor offers: the organization's, by name, then the ones the workflow already names that
+ * are not among them (written elsewhere, or no longer listed), so that a person may still take them out.
+ */
+export function repoChoices(names: readonly string[], chosen: readonly string[]): string[] {
+  const listed = names.map(repoPattern);
+  return [...new Set([...listed, ...chosen])];
+}
+
+/** The repositories chosen, with one added or taken out. */
+export function toggleRepo(chosen: readonly string[], pattern: string): string[] {
+  return chosen.includes(pattern) ? chosen.filter((other) => other !== pattern) : [...chosen, pattern];
+}
+
+/** The repositories of a limited workflow as one line, or undefined for one that names none. */
+export function reposText(workflow: Workflow): string | undefined {
+  return reposOf(workflow)
+    ?.map((pattern) => repoLabel(pattern))
+    .join(', ');
 }
