@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Line 6.1 (sessions) of the journey (demo/PARCOURS.md), console side, against the real
 // server. A session is reported as the CLI does, with a personal token holding `sessions:write`; no agent runs.
+import { randomUUID } from 'node:crypto';
 import { expect, request, test } from '@playwright/test';
 import { zCreateTokenResponse } from '../gen/api/zod.gen';
 import { anotherPerson, bodyOf, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
@@ -50,7 +51,7 @@ test('an owner follows a session from live to ended, and another organization se
   );
   expect(created.status, JSON.stringify(created.body)).toBe(201);
   const token = zCreateTokenResponse.pick({ secret: true }).parse(created.body).secret;
-  const id = crypto.randomUUID();
+  const id = randomUUID();
   const repo = `${org.slug}/api`;
   const started = await withToken(token, org.id, '/api/v1/sessions', {
     id,
@@ -73,14 +74,17 @@ test('an owner follows a session from live to ended, and another organization se
   const ended = await withToken(token, org.id, `/api/v1/sessions/${id}/end`, { tools: 3, exitCode: 0 });
   expect(ended.status, JSON.stringify(ended.body)).toBeLessThan(300);
   await page.goto('/sessions');
-  await expect(page.getByRole('heading', { name: 'Ended' })).toBeVisible();
-  await expect(page.locator(`a[href="/sessions/${id}"]`)).toBeVisible();
+  const endedOnes = page.getByRole('region', { name: 'Ended' });
+  await expect(endedOnes.locator(`a[href="/sessions/${id}"]`)).toContainText(`claude · ${repo}`);
+  await expect(page.getByRole('region', { name: '0 open' })).toBeVisible();
+  await expect(page.locator(`a[href="/sessions/${id}"]`)).toHaveCount(1);
 
   // Another organization: nothing of it on screen, and the session does not exist for them.
   const stranger = await anotherPerson(browser);
   await ownerOfNewOrganization(stranger, 'yara');
   await stranger.goto('/sessions');
   await expect(stranger.getByText('No agent is working right now')).toBeVisible();
+  await expect(stranger.locator(`a[href="/sessions/${id}"]`)).toHaveCount(0);
   await expect(stranger.getByText(repo)).toHaveCount(0);
   expect((await callFromPage(stranger, 'GET', `/api/v1/sessions/${id}`, undefined, org.id)).status).toBe(404);
 });
