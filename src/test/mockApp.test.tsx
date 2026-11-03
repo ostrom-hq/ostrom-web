@@ -91,8 +91,9 @@ describe('a retry left by a test that ended', () => {
     traffic.onRequest((request) => {
       if (readsReceipts(request)) asked += 1;
     });
-    // Well beyond the delay of the first retry (one second, the first test above).
-    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    // Past the first retry, due one second after the failure of the test above (React Query's first delay, with no
+    // jitter). Its timer was set before this one, so it would fire first however loaded the runner is.
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
     expect(asked).toBe(0);
   });
 });

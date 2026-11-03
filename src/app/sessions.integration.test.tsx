@@ -197,17 +197,16 @@ describe('the older ended sessions', () => {
 
 describe('the sessions of a large organization', () => {
   it('lists every open session, and reads the ended ones again once one ended', async () => {
-    db.sessions = largeSessions();
+    // 60 open and 99 ended: two pages of the server's 50 each. Past the first ended page nothing polls them
+    // (`endedPoll`): the ended ones are read again when a session leaves the open list, or on coming back.
+    db.sessions = largeSessions().slice(0, 159);
     visit('/sessions');
-    // 60 open: two pages of the server's 50.
     expect(await screen.findByRole('heading', { level: 2, name: '60 open' })).toBeInTheDocument();
     const user = userEvent.setup();
-    for (let page = 0; page < 4; page += 1) {
-      await user.click(await screen.findByRole('button', { name: 'Show older sessions' }));
-      await vi.waitFor(() => {
-        expect(screen.queryByRole('button', { name: 'Loading…' })).toBeNull();
-      });
-    }
+    await user.click(await screen.findByRole('button', { name: 'Show older sessions' }));
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Loading…' })).toBeNull();
+    });
     expect(screen.queryByRole('button', { name: 'Show older sessions' })).toBeNull();
     const first = db.sessions[0];
     if (first === undefined) throw new Error('no session');
