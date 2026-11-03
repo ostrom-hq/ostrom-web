@@ -17,6 +17,7 @@ export function GroupCard({ group, accounts }: GroupCardProps): ReactElement {
   const { t } = useTranslation();
   const headingId = useId();
   const lent = lentAccounts(group.accounts, accounts).map((account) => account.label);
+  const hidden = group.accounts.length - lent.length;
   const paused = group.paused?.length ?? 0;
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
@@ -32,9 +33,11 @@ export function GroupCard({ group, accounts }: GroupCardProps): ReactElement {
       </div>
       <p className="o-row__meta">{t('sharing.groups.memberCount', { count: group.members.length })}</p>
       <p className="o-row__meta">
-        {lent.length === 0
-          ? t('sharing.groups.lendsNothing')
-          : t('sharing.groups.lends', { list: lent.join(', ') })}
+        {lent.length > 0
+          ? t('sharing.groups.lends', { list: lent.join(', ') })
+          : hidden > 0
+            ? t('sharing.groups.lendsHidden', { count: hidden })
+            : t('sharing.groups.lendsNothing')}
       </p>
     </article>
   );

@@ -84,11 +84,11 @@ describe('the list of groups', () => {
     expect(await screen.findByText('groups are down')).toBeInTheDocument();
   });
 
-  it('still lists the groups when the subscriptions cannot be read, naming none of them', async () => {
+  it('still lists the groups when the subscriptions cannot be read, counting what they lend', async () => {
     server.use(http.get('*/api/v1/accounts', refuse('subscriptions are locked')));
     visit('/accounts/groups');
     expect(await screen.findByText('subscriptions are locked')).toBeInTheDocument();
-    expect(await findCard('Platform')).toHaveTextContent('Lends no subscription');
+    expect(await findCard('Platform')).toHaveTextContent('Lends 1 subscription you cannot see');
     const form = screen.getByRole('region', { name: 'New group' });
     expect(within(form).queryByRole('group', { name: 'Subscriptions it lends' })).toBeNull();
   });
@@ -194,6 +194,37 @@ describe('a group', () => {
     expect(await within(samir).findByText(/^Paused until May 2, 2099/)).toBeInTheDocument();
   });
 
+  it('puts the focus on the first choice when they open, and back on the button when they close', async () => {
+    const user = userEvent.setup();
+    visit(PLATFORM);
+    const theo = await findRow('theo');
+    const toggle = within(theo).getByRole('button', { name: 'Pause theo' });
+    await user.click(toggle);
+    expect(within(theo).getByRole('button', { name: 'For a day' })).toHaveFocus();
+    await user.click(within(theo).getByRole('button', { name: 'Cancel' }));
+    expect(toggle).toHaveFocus();
+  });
+
+  it('sends no day already over when the page stayed open past midnight', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      vi.setSystemTime(new Date('2099-05-01T23:59:00Z'));
+      const user = userEvent.setup();
+      visit(PLATFORM);
+      const theo = await findRow('theo');
+      await user.click(within(theo).getByRole('button', { name: 'Pause theo' }));
+      const day = within(theo).getByLabelText('Until');
+      fireEvent.change(day, { target: { value: '2099-05-01' } });
+      vi.setSystemTime(new Date('2099-05-02T00:01:00Z'));
+      await user.click(within(theo).getByRole('button', { name: 'Pause until that day' }));
+      expect(day).toHaveValue('');
+      expect(within(theo).getByRole('button', { name: 'Pause until that day' })).toBeDisabled();
+      expect(theo).not.toHaveTextContent('Paused until');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('pauses a member for a week', async () => {
     const user = userEvent.setup();
     visit(PLATFORM);
@@ -284,6 +315,16 @@ describe('a group', () => {
     cleanup();
     visit(`/accounts/groups/${groupId(2)}`);
     expect(await screen.findByText('It lends no subscription.')).toBeInTheDocument();
+  });
+
+  it('counts the subscriptions it lends that the person cannot read, never naming them', async () => {
+    db.sharedAccounts = db.sharedAccounts.filter((account) => account.id !== 'acc-1');
+    setDemoRole(db, 'member');
+    visit('/accounts/groups');
+    expect(await findCard('Platform')).toHaveTextContent('Lends 1 subscription you cannot see');
+    cleanup();
+    visit(PLATFORM);
+    expect(await screen.findByText('It lends 1 subscription you cannot see.')).toBeInTheDocument();
   });
 
   it('says it lends nothing when no subscription is shared', async () => {
