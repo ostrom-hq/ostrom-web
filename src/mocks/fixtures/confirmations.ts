@@ -14,7 +14,6 @@ const LENA: GovernanceConfirmationPerson = { memberId: MEMBER_IDS.lena, login: '
 
 const at = (ms: number): string => new Date(ms).toISOString();
 
-/** Theo as `/orgs/{org}/members` shows him: what a change of his role or his removal replaces. */
 // A member as the server shows them in a confirmation (`OrgsGovernanceChange`): the membership, the login and the
 // role, never the name nor the address.
 const THEO = { id: MEMBER_IDS.theo, login: 'theo', role: 'member' };

@@ -11,8 +11,8 @@ export function personName(person: GovernanceConfirmationPerson): string {
 }
 
 // How the server shows a member in a role change or a removal (`OrgsGovernanceChange`): the membership, the login and
-// the role, never the name nor the address.
-const zShownMember = zOrgMember.pick({ id: true, login: true, role: true });
+// the role, never the name nor the address. The page says the login and the role; the membership is not read.
+const zShownMember = zOrgMember.pick({ login: true, role: true });
 // How it shows invitations: the list the write sent, not the body around it.
 const zShownInvites = zOrgInvites.shape.invites;
 

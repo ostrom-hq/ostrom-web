@@ -148,6 +148,7 @@ test('2.6: a person’s API token invites, and an owner confirms on the console 
   const pending = PENDING.parse(asked.body);
   // Nobody is invited until a person confirms it.
   const before = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/invitations`);
+  expect(before.status).toBe(200);
   expect(JSON.stringify(before.body)).not.toContain(invited);
 
   await page.goto(new URL(pending.confirmUrl).pathname);
