@@ -311,10 +311,10 @@ describe('a request', () => {
       approval.id === 'apr-merge-412' ? { ...approval, group: 'gate-merge-412' } : approval,
     );
     const router = visit('/yes/gate-merge-412');
-    expect(await screen.findByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/yes/apr-merge-412');
     });
+    expect(await screen.findByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'What it lets through' })).toHaveTextContent(
       'Merge into main on acme/billing-api',
     );

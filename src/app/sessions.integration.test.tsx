@@ -149,7 +149,8 @@ describe('the older ended sessions', () => {
     await userEvent.setup().click(await screen.findByRole('button', { name: 'Show older sessions' }));
     expect(await screen.findByText('older page down', {}, { timeout: 4_000 })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /acme\/ses-new/ })).toBeInTheDocument();
-    expect(screen.queryByText('Offline')).toBeNull();
+    // The older page's warning only: the sessions already read are not replaced by a failure.
+    expect(screen.getAllByText('Offline')).toHaveLength(1);
   });
 });
 
