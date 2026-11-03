@@ -1957,7 +1957,7 @@ export const en = {
   },
   device: {
     title: 'Sign in a terminal',
-    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer. If you did not run ostrom login yourself just now, deny it.',
+    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, and that it asked when and from the network where you ran it, then answer. If you did not run ostrom login yourself just now, deny it.',
     enterLead: 'Type the code your terminal shows after ostrom login.',
     form: {
       label: 'Code from the terminal',
@@ -1972,6 +1972,8 @@ export const en = {
       'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH. Type the code your terminal shows, or run ostrom login again.',
     code: 'Code',
     client: 'Name given by the terminal',
+    requestedAt: 'Asked at',
+    requestedFrom: 'Asked from (network)',
     expires: 'Expires at',
     adminTag: 'Admin sign-in',
     admin:
