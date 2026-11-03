@@ -553,6 +553,8 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
 
 /** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
 export const DEMO_EMAIL_TOKEN = 'ml_demo';
+/** A sign-in e-mail's token opened in another browser than the one that asked for it: refused with 403. */
+export const OTHER_BROWSER_EMAIL_TOKEN = 'ml_other_browser';
 
 /** How long a sign-in may say yes, as on the server (S2-54). */
 export const FRESH_SIGN_IN_MS = 5 * 60_000;
@@ -609,6 +611,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleVerifySignInEmail(async ({ request }) => {
       const body = zVerifySignInEmailBody.safeParse(await readJson(request));
+      // The server refuses a link opened in a browser other than the one that asked for it (ostrom-server#176).
+      if (body.success && body.data.token === OTHER_BROWSER_EMAIL_TOKEN)
+        return refusal(
+          403,
+          'email_link_other_browser',
+          'This sign-in link was asked for in another browser. Open it there, or ask for a new link from this one.',
+        );
       if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
         return refusal(401, 'invalid_link', 'This link was already used or has expired.');
       db.signedInAt = now().getTime();
