@@ -24,10 +24,10 @@ async function appears(locator: Locator, timeout = 5_000): Promise<boolean> {
     );
 }
 
-/** The console's billing page, where Stripe sends the payer back. */
+/** The console's billing page as Stripe sends back a payer who paid (the server's success URL, not its cancel URL). */
 function billingPage(): RegExp {
   const { baseURL } = test.info().project.use;
-  return new RegExp(`^${(baseURL ?? '').replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/billing`);
+  return new RegExp(`^${(baseURL ?? '').replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/billing\\?checkout=success`);
 }
 
 /** Fills Stripe's hosted Checkout with the test card and a French billing address, pays, and waits to come back. */
@@ -75,14 +75,20 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   const subscribe = page.locator('[data-testid="hosted-payment-submit-button"]');
   const back = billingPage();
   for (let click = 1; ; click += 1) {
-    await subscribe.click();
+    await subscribe.click({ timeout: 10_000 });
     const returned = await page.waitForURL(back, { timeout: 30_000 }).then(
       () => true,
       () => false,
     );
     if (returned) return;
-    const idle =
-      (await subscribe.isEnabled()) && !/processing/i.test((await subscribe.getAttribute('class')) ?? '');
+    // A button that is gone or unreadable is not idle: the last wait says where the payment stands.
+    const idle = await Promise.all([
+      subscribe.isEnabled({ timeout: 5_000 }),
+      subscribe.getAttribute('class', { timeout: 5_000 }),
+    ]).then(
+      ([enabled, state]) => enabled && !/processing/i.test(state ?? ''),
+      () => false,
+    );
     if (!idle || click === 3) {
       await expect(page).toHaveURL(back, { timeout: 60_000 });
       return;
@@ -98,7 +104,7 @@ test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the
     'Stripe test mode not configured (console-journey.yml dispatched with stripe: test); stripe-mock has no Checkout',
   );
   // Checkout, the payment, Stripe's webhook and the invoice each have their own wait: the test outlasts their sum.
-  test.setTimeout(420_000);
+  test.setTimeout(480_000);
   const org = await ownerOfNewOrganization(page, 'pia');
   await page.goto('/billing');
   const plan = page.getByRole('region', { name: 'Plan', exact: true });
