@@ -15,6 +15,8 @@ export const en = {
     },
     nav: {
       label: 'Main',
+      menu: 'Menu',
+      close: 'Close',
       home: 'Home',
       yes: 'Requests',
       sessions: 'Sessions',

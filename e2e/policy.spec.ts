@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an admin narrows the models, gives a member their own list, and checks a launch', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Agent policy' }).click();
+  await openScreen(page, 'Agent policy');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Agent policy');
 
   const models = page.getByRole('region', { name: 'Models' });

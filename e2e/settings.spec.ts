@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an admin renames the organization and signs another session out', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await openScreen(page, 'Settings');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
 
   const general = page.getByRole('region', { name: 'Organization' });
@@ -41,7 +42,7 @@ test('the settings of another organization never show the first one’s', async 
 
 test('a person creates a token, copies its secret once, then revokes it', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Tokens' }).click();
+  await openScreen(page, 'Tokens');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tokens');
 
   const form = page.getByRole('region', { name: 'New token' });
