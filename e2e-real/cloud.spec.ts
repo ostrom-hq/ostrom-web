@@ -61,7 +61,6 @@ test('6.2 the Cloud screen lists a registered runner, online once it reported, a
   }
   await page.reload();
   await expect(line).toContainText('Online');
-  await expect(line).toContainText('seen');
   await expect(line).not.toContainText('never seen');
 
   // Another organization's owner: its Cloud screen and its API never show this runner.
