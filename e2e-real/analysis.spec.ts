@@ -63,10 +63,12 @@ const API_FILES: Readonly<Record<string, string>> = {
 test('3.1 an owner analyses the repositories from /github, then accepts and rejects the proposed rules', async ({
   page,
 }) => {
+  // Sign-in, install, an analysis of up to 90 s and the review: more than the default 30 s.
+  test.setTimeout(180_000);
   const { id: org } = await ownerOfNewOrganization(page, 'ada');
   const run = uniqueRun();
   const account = `acme-${run}`;
-  // An id of its own, from the run: two runs on one server never install the same one.
+  // An id drawn from the run, so the desktop and phone runs on one server almost never share one.
   const installation =
     100_000 + (Number.parseInt(createHash('sha256').update(run).digest('hex').slice(0, 6), 16) % 800_000);
   const admin = `ada-gh-${run}`;
@@ -88,10 +90,12 @@ test('3.1 an owner analyses the repositories from /github, then accepts and reje
   // The analysis, started and followed on the GitHub screen.
   const analysis = page.getByRole('region', { name: 'Rules from your repositories' });
   await analysis.getByRole('button', { name: 'Analyse the repositories' }).click();
-  await expect(analysis.getByText('The last analysis stopped.')).toBeHidden();
-  await expect(analysis.getByText('The last analysis is done. Its proposals wait in Rules.')).toBeVisible({
-    timeout: 90_000,
-  });
+  const done = analysis.getByText('The last analysis is done. Its proposals wait in Rules.');
+  const stopped = analysis.getByText('The last analysis stopped.');
+  await expect(done.or(stopped)).toBeVisible({ timeout: 90_000 });
+  // A stopped analysis fails here, with the reason the screen gives, rather than as a timeout.
+  await expect(stopped, (await analysis.textContent()) ?? '').toBeHidden();
+  await expect(done).toBeVisible();
   const found = (await analysis.getByText(/ proposed\.$/).textContent()) ?? '';
   const said = Number(/^(\d+) rules?/.exec(found)?.[1] ?? '0');
   expect(said, found).toBeGreaterThan(0);
