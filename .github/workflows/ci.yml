@@ -48,9 +48,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # TEMPORARY (removed before merge): the whole suite, 3 runs in a row, with the new end of test.
-      - name: Whole suite, 3 runs in a row
-        run: for i in 1 2 3; do echo "suite run $i"; pnpm exec vitest run --reporter=dot || exit 1; done
       # What ships in the console: a known advisory of moderate severity or above in a runtime dependency fails the
       # job (audit AUDIT-SECU-WEB-2 B9). Build tools are kept patched by pnpm-workspace.yaml overrides.
       - name: No known vulnerability in the runtime dependencies (pnpm audit --prod)
