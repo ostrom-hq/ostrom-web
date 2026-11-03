@@ -39,7 +39,7 @@ export function createOrgDeletionHandlers(state: () => OrgsState): HttpHandler[]
       const members = s.orgMembers[organization.id];
       const role =
         members === undefined ? 'owner' : members.find((member) => member.login === DEMO_LOGIN)?.role;
-      if (role !== 'owner') return refusal(403, 'not_allowed', 'Only the owner can delete the organization.');
+      if (role !== 'owner') return refusal(403, 'forbidden', 'Only the owner can delete the organization.');
       const body = zOrgDeleteConfirm.safeParse(await readJson(request));
       if (!body.success || body.data.confirm !== shortNameOf(organization))
         return refusal(400, 'invalid_request', "Type the organization's short name to confirm.");

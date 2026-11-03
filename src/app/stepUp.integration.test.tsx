@@ -103,7 +103,7 @@ describe('a sensitive write from a sign-in too old (web audit 2, M3)', () => {
     const user = userEvent.setup();
     server.use(
       http.post('*/api/v1/secrets', () =>
-        HttpResponse.json({ error: { type: 'not_allowed', message: 'not yours' } }, { status: 403 }),
+        HttpResponse.json({ error: { type: 'forbidden', message: 'not yours' } }, { status: 403 }),
       ),
     );
     visit('/secrets');

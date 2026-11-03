@@ -158,7 +158,7 @@ describe('mock organization deletion', () => {
       await failure(async () =>
         deleteOrg({ path: { org: ACME }, body: { confirm: 'acme' }, throwOnError: true }),
       ),
-    ).toMatchObject({ status: 403, code: 'not_allowed' });
+    ).toMatchObject({ status: 403, code: 'forbidden' });
     setDemoRole(db, 'owner');
     expect(
       await failure(async () =>

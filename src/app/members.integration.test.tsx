@@ -111,7 +111,7 @@ describe('the members screen', () => {
     server.use(
       http.patch('*/api/v1/orgs/:org/members/:login', () =>
         HttpResponse.json(
-          { error: { type: 'not_allowed', message: 'Your role does not allow this change.' } },
+          { error: { type: 'forbidden', message: 'Your role does not allow this change.' } },
           { status: 403 },
         ),
       ),
@@ -139,7 +139,7 @@ describe('the members screen', () => {
     server.use(http.delete('*/api/v1/orgs/:org/members/theo', async () => delay('infinite')));
     server.use(
       http.delete('*/api/v1/orgs/:org/members/samir', () =>
-        HttpResponse.json({ error: { type: 'not_allowed', message: 'not this one' } }, { status: 403 }),
+        HttpResponse.json({ error: { type: 'forbidden', message: 'not this one' } }, { status: 403 }),
       ),
     );
     visit('/members');

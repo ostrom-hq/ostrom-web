@@ -692,7 +692,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       }
       const approvers = db.approvers[approval.id] ?? [];
       if (!approvers.includes(me.dev.login))
-        return refusal(403, 'not_an_approver', 'you cannot answer this approval');
+        return refusal(403, 'forbidden', 'you cannot answer this approval');
       const refused =
         body.data.answer === 'approve'
           ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval)

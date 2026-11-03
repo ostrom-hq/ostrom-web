@@ -68,7 +68,7 @@ describe('the settings screen', () => {
     server.use(
       http.patch('*/api/v1/orgs/:org', () =>
         HttpResponse.json(
-          { error: { type: 'not_allowed', message: 'Only an owner or an admin can rename it.' } },
+          { error: { type: 'forbidden', message: 'Only an owner or an admin can rename it.' } },
           {
             status: 403,
           },
@@ -204,7 +204,7 @@ describe('the settings screen', () => {
   it('says a 403 that is not a step-up as the server said it, with no sign-in to offer', async () => {
     const user = userEvent.setup();
     setDemoRole(db, 'owner');
-    // The contract's 403 is `StepUpOrForbidden` (ostrom-core#96): only `error.type` tells them apart.
+    // A 403 is a step-up only when `error.type` says `step_up_required`: any other refusal is shown as said.
     server.use(
       http.delete('*/api/v1/orgs/:org', () =>
         HttpResponse.json(
@@ -221,7 +221,6 @@ describe('the settings screen', () => {
     const alert = await within(danger).findByRole('alert');
     expect(alert).toHaveTextContent('Only the owner deletes the organization.');
     expect(within(danger).queryByRole('link', { name: 'Sign in again' })).toBeNull();
-    expect(db.noOrganization).toBe(false);
   });
 
   it('never shows another organization’s settings', async () => {

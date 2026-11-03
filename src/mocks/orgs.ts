@@ -279,7 +279,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
         !mayManage(caller, targetRole) ||
         !givableRoles(caller).includes(role)
       )
-        return refusal(403, 'not_allowed', 'Your role does not allow this change.');
+        return refusal(403, 'forbidden', 'Your role does not allow this change.');
       const updated: OrgMember = { ...target, role };
       members[index] = updated;
       return HttpResponse.json(updated);
@@ -292,7 +292,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (target === undefined) return refusal(404, 'not_found', 'member not found');
       const targetRole = orgRoleOf(target.role);
       if (targetRole === undefined || !mayManage(roleIn(organization), targetRole))
-        return refusal(403, 'not_allowed', 'Your role does not allow removing this person.');
+        return refusal(403, 'forbidden', 'Your role does not allow removing this person.');
       state().orgMembers[organization.id] = members.filter((member) => member !== target);
       return new HttpResponse(null, { status: 204 });
     }),
@@ -301,7 +301,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (organization === undefined) return notFound();
       const caller = roleIn(organization);
       if (!managesMembers(caller))
-        return refusal(403, 'not_allowed', 'Only an owner or an admin can invite people.');
+        return refusal(403, 'forbidden', 'Only an owner or an admin can invite people.');
       const body = zOrgInvites.safeParse(await readJson(request));
       if (!body.success || body.data.invites.length === 0)
         return refusal(400, 'invalid_request', 'at least one address is needed');
@@ -310,7 +310,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       for (const { email, role } of body.data.invites) {
         const given = orgRoleOf(role ?? 'member');
         if (given === undefined || !givableRoles(caller).includes(given))
-          return refusal(403, 'not_allowed', `Your role does not allow inviting someone as ${String(role)}.`);
+          return refusal(403, 'forbidden', `Your role does not allow inviting someone as ${String(role)}.`);
         const address = email.toLowerCase();
         if (present.has(address) || invited.includes(address)) continue;
         issue(organization.id, address, given, 1);
@@ -322,7 +322,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const organization = find(params.org);
       if (organization === undefined) return notFound();
       if (!managesMembers(roleIn(organization)))
-        return refusal(403, 'not_allowed', 'Only an owner or an admin can see the invitations.');
+        return refusal(403, 'forbidden', 'Only an owner or an admin can see the invitations.');
       return HttpResponse.json({
         items: state()
           .invitations.filter((invitation) => invitation.orgId === organization.id)
@@ -334,14 +334,14 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (organization === undefined) return notFound();
       const caller = roleIn(organization);
       if (!managesMembers(caller))
-        return refusal(403, 'not_allowed', 'Only an owner or an admin can invite people.');
+        return refusal(403, 'forbidden', 'Only an owner or an admin can invite people.');
       const body = zInvitationLinkCreate.safeParse(await readJson(request));
       const role = orgRoleOf(body.success ? (body.data.role ?? 'member') : undefined);
       const maxUses = body.success ? (body.data.maxUses ?? 10) : 0;
       if (role === undefined || maxUses < 1 || maxUses > 100)
         return refusal(400, 'invalid_request', 'a role and 1 to 100 uses');
       if (!givableRoles(caller).includes(role))
-        return refusal(403, 'not_allowed', `Your role does not allow inviting someone as ${role}.`);
+        return refusal(403, 'forbidden', `Your role does not allow inviting someone as ${role}.`);
       const invitation = issue(organization.id, null, role, maxUses);
       const url = `${new URL(request.url).origin}/invite#token=${invitation.token}`;
       return HttpResponse.json({ invitation: listed(invitation), url }, { status: 201 });
@@ -350,7 +350,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const organization = find(params.org);
       if (organization === undefined) return notFound();
       if (!managesMembers(roleIn(organization)))
-        return refusal(403, 'not_allowed', 'Only an owner or an admin can revoke an invitation.');
+        return refusal(403, 'forbidden', 'Only an owner or an admin can revoke an invitation.');
       const s = state();
       const found = s.invitations.some(
         (invitation) => invitation.id === params.id && invitation.orgId === organization.id,
