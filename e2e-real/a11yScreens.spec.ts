@@ -18,6 +18,7 @@ const SCREENS = [
   '/members',
   '/github',
   '/workflows',
+  '/runs',
   '/approvers',
   '/rules',
   '/activity',

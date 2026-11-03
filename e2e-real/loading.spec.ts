@@ -18,6 +18,7 @@ const screens = [
   '/activity',
   '/decisions',
   '/workflows',
+  '/runs',
   '/policy',
   '/mcp',
   '/secrets',
