@@ -63,6 +63,17 @@ export const zAgentEvent = z.enum([
 ]);
 
 /**
+ * An error in Anthropic's shape, as the Messages endpoint of the gateway answers it
+ */
+export const zAnthropicError = z.object({
+    type: z.enum(['error']),
+    error: z.object({
+        type: z.string(),
+        message: z.string()
+    })
+});
+
+/**
  * The kind of action (clients keep an unknown kind as UNKNOWN)
  */
 export const zApprovalActionKind = z.enum([
@@ -109,6 +120,7 @@ export const zApprovalCallerView = z.object({
     self: z.boolean(),
     canApprove: z.boolean(),
     reason: z.string().optional(),
+    reasonType: z.enum(['github_link_required', 'self_approval_refused']).optional(),
     selfApproval: z.boolean().optional()
 });
 
@@ -835,7 +847,7 @@ export const zApproval = z.object({
 });
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
  */
 export const zForbidden = z.object({
     error: z.object({
@@ -845,7 +857,8 @@ export const zForbidden = z.object({
             'installation_not_yours',
             'probe_not_yours',
             'cutover_owner_required',
-            'self_approval_refused'
+            'self_approval_refused',
+            'github_link_required'
         ]),
         message: z.string()
     })
@@ -1326,6 +1339,18 @@ export const zAccount = z.object({
     createdAt: z.string(),
     emails: z.array(zAccountEmail),
     providers: z.array(z.string())
+});
+
+/**
+ * An error in OpenAI's shape, as the OpenAI-compatible endpoints of the gateway answer it
+ */
+export const zOpenAiError = z.object({
+    error: z.object({
+        message: z.string(),
+        type: z.string(),
+        code: z.string().nullish(),
+        param: z.string().nullish()
+    })
 });
 
 export const zTokenScope = z.object({
@@ -3747,7 +3772,8 @@ export const zListOrgMembersPath = z.object({
 
 export const zListOrgMembersQuery = z.object({
     limit: z.int().gte(1).lte(1000).optional().default(1000),
-    after: z.uuid().optional()
+    after: z.uuid().optional(),
+    q: z.string().min(1).max(100).optional()
 });
 
 /**
@@ -5423,6 +5449,7 @@ export const zInferenceModelsHeaders = z.object({
  * OK
  */
 export const zInferenceModelsResponse = z.object({
+    object: z.enum(['list']).optional(),
     data: z.array(z.record(z.string(), z.unknown()))
 });
 

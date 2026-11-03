@@ -95,6 +95,20 @@ export type AnswerApprovalRequest = {
 };
 
 /**
+ * An error in Anthropic's shape, as the Messages endpoint of the gateway answers it
+ */
+export type AnthropicError = {
+    type: 'error';
+    error: {
+        /**
+         * Anthropic's error type (`authentication_error`, `permission_error`, `rate_limit_error`…)
+         */
+        type: string;
+        message: string;
+    };
+};
+
+/**
  * The error body of every refusal
  */
 export type ApiError = {
@@ -168,6 +182,10 @@ export type ApprovalCallerView = {
      */
     canApprove: boolean;
     reason?: string;
+    /**
+     * The key of `reason` when the server names one, the `error.type` the answer would get: `github_link_required` when the caller must link their GitHub account before a yes (a never-self-approve policy, and a pull request whose author linked no Ostrom person; a no stays open), `self_approval_refused` when their linked GitHub account is the pull request's author. Absent for any other reason
+     */
+    reasonType?: 'github_link_required' | 'self_approval_refused';
     selfApproval?: boolean;
 };
 
@@ -1186,14 +1204,14 @@ export type Evidence = {
 };
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
  */
 export type Forbidden = {
     /**
      * `ErrorDetail`, its `type` any 403 key but `step_up_required`
      */
     error: {
-        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused';
+        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required';
         message: string;
     };
 };
@@ -1975,6 +1993,24 @@ export type Account = {
 export type AccountEmail = {
     email: string;
     verified: boolean;
+};
+
+/**
+ * An error in OpenAI's shape, as the OpenAI-compatible endpoints of the gateway answer it
+ */
+export type OpenAiError = {
+    error: {
+        message: string;
+        /**
+         * OpenAI's error type (`invalid_request_error`, `insufficient_quota`…)
+         */
+        type: string;
+        /**
+         * The gateway's refusal, in lower case (`budget_exhausted`, `no_capacity`…)
+         */
+        code?: string | null;
+        param?: string | null;
+    };
 };
 
 /**
@@ -6343,6 +6379,10 @@ export type ListOrgMembersData = {
          * The `next` of the previous page: the members who joined after this one
          */
         after?: string;
+        /**
+         * Only the members whose login or name starts with it, whatever the case; it combines with `limit` and `after`. Planned: the server does not read it yet
+         */
+        q?: string;
     };
     url: '/api/v1/orgs/{org}/members';
 };
@@ -8488,7 +8528,7 @@ export type AnswerApprovalErrors = {
      */
     401: ApiError;
     /**
-     * self_approval_refused, step_up_required, or not an approver (the key is `error.type`)
+     * self_approval_refused, github_link_required, step_up_required, or not an approver (the key is `error.type`)
      */
     403: SelfApprovalRefused | StepUpRequired | Forbidden;
     /**
@@ -12344,37 +12384,37 @@ export type InferenceMessagesData = {
 
 export type InferenceMessagesErrors = {
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    400: ApiError;
+    400: AnthropicError | ApiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    401: ApiError;
+    401: AnthropicError | ApiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    403: ApiError;
+    403: AnthropicError | ApiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    404: ApiError;
+    404: AnthropicError | ApiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    409: ApiError;
+    409: AnthropicError | ApiError;
     /**
      * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of three fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED`, `.EXHAUSTED_TODAY` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Daily budget reached: ...`: a daily limit is spent; `Retry-After` gives the seconds until the day ends (00:00 UTC). Only a limit with `hardStop` refuses a call. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
      */
-    429: ApiError;
+    429: AnthropicError | OpenAiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    502: ApiError;
+    502: AnthropicError | ApiError;
     /**
-     * A refusal
+     * An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server around it
      */
-    503: ApiError;
+    503: AnthropicError | ApiError;
 };
 
 export type InferenceMessagesError = InferenceMessagesErrors[keyof InferenceMessagesErrors];
@@ -12401,37 +12441,37 @@ export type InferenceResponsesData = {
 
 export type InferenceResponsesErrors = {
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    400: ApiError;
+    400: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    401: ApiError;
+    401: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    403: ApiError;
+    403: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    404: ApiError;
+    404: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    409: ApiError;
+    409: OpenAiError | ApiError;
     /**
      * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of three fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED`, `.EXHAUSTED_TODAY` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Daily budget reached: ...`: a daily limit is spent; `Retry-After` gives the seconds until the day ends (00:00 UTC). Only a limit with `hardStop` refuses a call. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
      */
-    429: ApiError;
+    429: AnthropicError | OpenAiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    502: ApiError;
+    502: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    503: ApiError;
+    503: OpenAiError | ApiError;
 };
 
 export type InferenceResponsesError = InferenceResponsesErrors[keyof InferenceResponsesErrors];
@@ -12458,37 +12498,37 @@ export type InferenceChatCompletionsData = {
 
 export type InferenceChatCompletionsErrors = {
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    400: ApiError;
+    400: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    401: ApiError;
+    401: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    403: ApiError;
+    403: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    404: ApiError;
+    404: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    409: ApiError;
+    409: OpenAiError | ApiError;
     /**
      * Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`, `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the Messages endpoint, `insufficient_quota` on the OpenAI-compatible ones, which also carry `error.code` `budget_exhausted` or `budget_insufficient`; `error.message` starts with one of three fixed phrases a client can match on (`LedgerSpendGuard.EXHAUSTED`, `.EXHAUSTED_TODAY` and `.INSUFFICIENT` in ostrom-server). `Monthly budget reached: ...`: a monthly limit of the organization or of the member is spent; `Retry-After` gives the seconds until the month ends (UTC), when the limit resets. `Daily budget reached: ...`: a daily limit is spent; `Retry-After` gives the seconds until the day ends (00:00 UTC). Only a limit with `hardStop` refuses a call. `Budget left too low for this call: ...`: the limit is not spent, but what is left after the calls in flight cannot cover what this call may cost (its output price times the largest of its `max_tokens`, `max_output_tokens` and `max_completion_tokens`, 32 000 when it names none, at most 1 000 000; plus its estimated input; nothing for a model without a price); the message says what is left and what the call may cost, with no `Retry-After`: lower the call's output bound, or retry once the calls in flight finish. Every shared account busy or at its limit: `rate_limit_error`, or `rate_limit_exceeded` with `error.code` `no_capacity`, with `Retry-After` when the gateway knows when one frees up. A provider's own 429, once no other account can take the call, is relayed as the provider sent it, with its `Retry-After` and rate-limit headers
      */
-    429: ApiError;
+    429: AnthropicError | OpenAiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    502: ApiError;
+    502: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    503: ApiError;
+    503: OpenAiError | ApiError;
 };
 
 export type InferenceChatCompletionsError = InferenceChatCompletionsErrors[keyof InferenceChatCompletionsErrors];
@@ -12515,25 +12555,25 @@ export type InferenceModelsData = {
 
 export type InferenceModelsErrors = {
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    400: ApiError;
+    400: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    401: ApiError;
+    401: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    403: ApiError;
+    403: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    404: ApiError;
+    404: OpenAiError | ApiError;
     /**
-     * A refusal
+     * An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the server around it
      */
-    409: ApiError;
+    409: OpenAiError | ApiError;
 };
 
 export type InferenceModelsError = InferenceModelsErrors[keyof InferenceModelsErrors];
@@ -12543,6 +12583,7 @@ export type InferenceModelsResponses = {
      * OK
      */
     200: {
+        object?: 'list';
         data: Array<{
             [key: string]: unknown;
         }>;

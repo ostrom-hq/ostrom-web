@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Approval } from '@gen/api/types.gen';
+import type { Approval, ApprovalCallerView, ApprovalQueue } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { changedOf, combineDecided, refusalOf } from './useYes';
+import {
+  changedOf,
+  combineDecided,
+  githubLinkOf,
+  githubLinkRequired,
+  linkRequiredOf,
+  refusalOf,
+} from './useYes';
 
 describe('refusalOf and changedOf', () => {
   it('read a 403 as a refusal and a shown-digest 409 as a change', () => {
@@ -47,5 +54,59 @@ describe('combineDecided', () => {
     ]);
     expect(result.decided?.map((approval) => approval.id)).toEqual(['c', 'a', 'b']);
     expect(result.error).toBe(boom);
+  });
+});
+
+describe('the GitHub link a yes waits for (Q-GATES-G1 a)', () => {
+  const you = (rights: Partial<ApprovalCallerView>): ApprovalCallerView => ({
+    login: 'maya',
+    self: false,
+    canApprove: false,
+    ...rights,
+  });
+  const approval = (id: string): Approval => ({
+    id,
+    title: id,
+    requestedFrom: 'owners',
+    channel: 'console',
+    status: 'pending',
+    shownDigest: 'sha256:x',
+  });
+
+  it('reads a yes held for the link from the rights, and nothing else', () => {
+    expect(githubLinkRequired(you({ reasonType: 'github_link_required' }))).toBe(true);
+    expect(githubLinkRequired(you({ canApprove: true, reasonType: 'github_link_required' }))).toBe(false);
+    expect(githubLinkRequired(you({ reasonType: 'self_approval_refused' }))).toBe(false);
+    expect(githubLinkRequired(you({ reason: 'not an approver' }))).toBe(false);
+    expect(githubLinkRequired(undefined)).toBe(false);
+  });
+
+  it('reads the 403 of a yes refused for want of the link', () => {
+    const link = new ApiFailure('forbidden', 'link GitHub', 403, undefined, 'github_link_required');
+    const self = new ApiFailure('forbidden', 'you asked', 403, undefined, 'self_approval_refused');
+    expect([githubLinkOf(link), githubLinkOf(self), githubLinkOf(new Error('x'))]).toEqual([
+      true,
+      false,
+      false,
+    ]);
+  });
+
+  it('lists the waiting requests held for the link, none before the queue is read', () => {
+    expect(linkRequiredOf(undefined).size).toBe(0);
+    const queue: ApprovalQueue = {
+      operator: 'maya',
+      you: { login: 'maya', via: 'console' },
+      pending: [
+        { approval: approval('a'), you: you({ reasonType: 'github_link_required' }) },
+        { approval: approval('b'), you: you({ canApprove: true }) },
+      ],
+      recent: [
+        {
+          approval: { ...approval('c'), status: 'approved' },
+          you: you({ reasonType: 'github_link_required' }),
+        },
+      ],
+    };
+    expect([...linkRequiredOf(queue)]).toEqual(['a']);
   });
 });

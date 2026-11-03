@@ -2293,7 +2293,7 @@ export const getApprovalViewOptions = (options: Options<GetApprovalViewData>) =>
 });
 
 /**
- * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval, with its signed `receipt`, a no's included
+ * Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another approver exists; 403 github_link_required when the gate's policy is never-self-approve, the pull request's author linked no Ostrom person and the answerer linked no GitHub account (the gate waits, Q-GATES-G1); 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval, with its signed `receipt`, a no's included
  */
 export const answerApprovalMutation = (options?: Partial<Options<AnswerApprovalData>>): UseMutationOptions<AnswerApprovalResponse, AnswerApprovalError, Options<AnswerApprovalData>> => {
     const mutationOptions: UseMutationOptions<AnswerApprovalResponse, AnswerApprovalError, Options<AnswerApprovalData>> = {

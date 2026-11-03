@@ -2333,6 +2333,15 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: q
+        in: query
+        required: false
+        x-ostrom-status: planned
+        description: "Only the members whose login or name starts with it, whatever the case; it combines with `limit` and `after`. Planned: the server does not read it yet"
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
       responses:
         '200':
           description: "OK"
@@ -3953,7 +3962,9 @@ paths:
       - approvals
       summary: Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed
         when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another
-        approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone
+        approver exists; 403 github_link_required when the gate's policy is never-self-approve, the pull request's author
+        linked no Ostrom person and the answerer linked no GitHub account (the gate waits, Q-GATES-G1); 403
+        step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone
         app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval,
         with its signed `receipt`, a no's included
       parameters:
@@ -3980,7 +3991,8 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '403':
-          description: self_approval_refused, step_up_required, or not an approver (the key is `error.type`)
+          description: self_approval_refused, github_link_required, step_up_required, or not an approver (the key is
+            `error.type`)
           content:
             application/json:
               schema:
@@ -6941,21 +6953,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
   /api/v1/inference/v1/responses:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -6977,21 +6989,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/v1/chat/completions:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7013,21 +7025,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/v1/models:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7045,6 +7057,10 @@ paths:
               schema:
                 type: object
                 properties:
+                  object:
+                    type: string
+                    enum:
+                    - list
                   data:
                     type: array
                     items:
@@ -7053,15 +7069,15 @@ paths:
                 required:
                 - data
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/settings:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -10819,6 +10835,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    AnthropicInferenceError:
+      description: "An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server
+        around it"
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: '#/components/schemas/AnthropicError'
+            - $ref: '#/components/schemas/ApiError'
+    OpenAiInferenceError:
+      description: "An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the
+        server around it"
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: '#/components/schemas/OpenAiError'
+            - $ref: '#/components/schemas/ApiError'
     InferenceRefused:
       description: "Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`,
         `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the
@@ -10847,7 +10881,9 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ApiError'
+            anyOf:
+            - $ref: '#/components/schemas/AnthropicError'
+            - $ref: '#/components/schemas/OpenAiError'
     RateLimited:
       description: 'Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an
         organization and per organization, over a sliding hour'
@@ -11031,6 +11067,29 @@ components:
       required:
       - answer
       - shownDigest
+    AnthropicError:
+      type: object
+      description: "An error in Anthropic's shape, as the Messages endpoint of the gateway answers it"
+      properties:
+        type:
+          type: string
+          enum:
+          - error
+        error:
+          type: object
+          properties:
+            type:
+              type: string
+              description: Anthropic's error type (`authentication_error`, `permission_error`, `rate_limit_error`…)
+            message:
+              type: string
+          required:
+          - type
+          - message
+      required:
+      - type
+      - error
+      x-ostrom-kotlin: pending
     ApiError:
       type: object
       description: The error body of every refusal
@@ -11166,6 +11225,13 @@ components:
             answer with 403 `step_up_required` until `unlockMobileApp`"
         reason:
           type: string
+        reasonType:
+          type: string
+          enum: [github_link_required, self_approval_refused]
+          description: "The key of `reason` when the server names one, the `error.type` the answer would get:
+            `github_link_required` when the caller must link their GitHub account before a yes (a never-self-approve
+            policy, and a pull request whose author linked no Ostrom person; a no stays open), `self_approval_refused`
+            when their linked GitHub account is the pull request's author. Absent for any other reason"
         selfApproval:
           type: boolean
       required:
@@ -12788,7 +12854,9 @@ components:
       description: '403 other than step_up_required: `forbidden` (a token without the scope, a member without the
         role, a credential the route does not admit), or a finer key (`email_link_other_browser`,
         `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server
-        names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)'
+        names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`;
+        `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom
+        person, from an answerer who linked no GitHub account)'
       properties:
         error:
           type: object
@@ -12797,7 +12865,7 @@ components:
             type:
               type: string
               enum: [forbidden, email_link_other_browser, installation_not_yours, probe_not_yours, cutover_owner_required,
-                self_approval_refused]
+                self_approval_refused, github_link_required]
             message:
               type: string
           required:
@@ -13981,6 +14049,33 @@ components:
       required:
       - email
       - verified
+      x-ostrom-kotlin: pending
+    OpenAiError:
+      type: object
+      description: "An error in OpenAI's shape, as the OpenAI-compatible endpoints of the gateway answer it"
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+              description: OpenAI's error type (`invalid_request_error`, `insufficient_quota`…)
+            code:
+              type:
+              - string
+              - 'null'
+              description: The gateway's refusal, in lower case (`budget_exhausted`, `no_capacity`…)
+            param:
+              type:
+              - string
+              - 'null'
+          required:
+          - message
+          - type
+      required:
+      - error
       x-ostrom-kotlin: pending
     StepUpOrForbidden:
       description: 'A 403 of a write that may need a fresh sign-in: `step_up_required` (sign in again, then send

@@ -89,3 +89,36 @@ test('a yes from a sign-in more than five minutes old asks to sign in again, the
     'maya approved: Merge PR #412 into main',
   );
 });
+
+test('an approver who linked no GitHub account reads why a yes waits, links it, comes back and approves', async ({
+  page,
+  baseURL,
+}) => {
+  // The demo person signed up by e-mail: no GitHub account linked, and PR #412's author is linked to nobody.
+  await page.goto('/yes');
+  await page.evaluate("localStorage.setItem('ostrom.mock.github', 'unlinked')");
+  await page.goto('/yes/apr-merge-412');
+  await expect(page.getByText('To approve this request, link your GitHub account.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Decline & tell the agent…' })).toBeEnabled();
+
+  await page.getByRole('link', { name: 'My account' }).click();
+  await expect(page).toHaveURL(/\/account#github$/);
+  const github = page.getByRole('region', { name: 'GitHub' });
+  await expect(github).toBeInViewport();
+  // GitHub's consent, played here: it sends the browser back to the account, which the demo then reads as linked.
+  await page.route('https://github.com/login/oauth/authorize**', async (route) => {
+    await route.fulfill({ status: 302, headers: { location: `${baseURL ?? ''}/account` } });
+  });
+  await page.evaluate("localStorage.removeItem('ostrom.mock.github')");
+  await github.getByRole('button', { name: 'Link GitHub' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(github.getByText('Linked', { exact: true })).toBeVisible();
+
+  await page.goto('/yes/apr-merge-412');
+  await expect(page.getByText('To approve this request, link your GitHub account.')).toBeHidden();
+  await page.getByRole('button', { name: 'Approve merge' }).click();
+  await expect(page.getByRole('region', { name: 'Decision' })).toContainText(
+    'maya approved: Merge PR #412 into main',
+  );
+});

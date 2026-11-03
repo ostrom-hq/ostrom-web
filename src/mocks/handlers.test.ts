@@ -16,6 +16,8 @@ import {
   disableAutomation,
   enableAutomation,
   getApproval,
+  getApprovalQueue,
+  getApprovalView,
   getGatePolicy,
   getMcpUsage,
   getMe,
@@ -57,8 +59,10 @@ import { configureApiClient } from '@/shared/api/apiClient';
 import { initialApprovals } from '@/mocks/fixtures/approvals';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import {
+  callerViewOf,
   createHandlers,
   DEMO_EMAIL_TOKEN,
+  GITHUB_LINK_REQUIRED,
   FRESH_SIGN_IN_MS,
   resetMockDb,
   selfApprovalRefusal,
@@ -310,6 +314,89 @@ describe('mock API', () => {
     });
     expect(isApiFailure(missing) && missing.status).toBe(404);
     expect(notJson.status).toBe(400);
+  });
+});
+
+describe('mock approval views (Q-GATES-G1 a)', () => {
+  it('reads a request with what the caller may do, by its id or its gate, or 404', async () => {
+    db.approvals = db.approvals.map((approval) =>
+      approval.id === 'apr-deploy-88' ? { ...approval, group: 'gate-deploy-88' } : approval,
+    );
+    const { data } = await getApprovalView({ ...merge, throwOnError: true });
+    expect([data.approval.id, data.you]).toEqual([
+      'apr-merge-412',
+      { login: 'maya', self: false, canApprove: true },
+    ]);
+    const byGate = await getApprovalView({ path: { id: 'gate-deploy-88' }, throwOnError: true });
+    expect(byGate.data.approval.id).toBe('apr-deploy-88');
+    const error = await failureOf(async () => getApprovalView({ path: { id: 'nope' }, throwOnError: true }));
+    expect(isApiFailure(error) && [error.status, error.code]).toEqual([404, 'not_found']);
+  });
+
+  it('holds a yes on a pull request of an unlinked author until the approver links GitHub, never a no', async () => {
+    db.providers = ['email'];
+    const { data } = await getApprovalView({ ...merge, throwOnError: true });
+    expect(data.you).toEqual({
+      login: 'maya',
+      self: false,
+      canApprove: false,
+      reason: GITHUB_LINK_REQUIRED,
+      reasonType: 'github_link_required',
+    });
+    const refused = await failureOf(async () =>
+      answerApproval({
+        ...merge,
+        body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
+        throwOnError: true,
+      }),
+    );
+    expect(isApiFailure(refused) && [refused.status, refused.code]).toEqual([403, 'github_link_required']);
+
+    db.providers = ['email', 'github'];
+    const linked = await getApprovalView({ ...merge, throwOnError: true });
+    expect(linked.data.you.canApprove).toBe(true);
+    db.providers = ['email'];
+    const no = await answerApproval({
+      ...merge,
+      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e' },
+      throwOnError: true,
+    });
+    expect([no.data.approval.status, no.data.you.canApprove]).toEqual(['rejected', false]);
+  });
+
+  it('asks no link under the sole-approver policy, nor of a request whose author is linked', () => {
+    db.providers = ['email'];
+    const merge412 = fixture('apr-merge-412');
+    db.selfApproval = 'sole-approver';
+    expect(callerViewOf(db, merge412).canApprove).toBe(true);
+    db.selfApproval = 'never';
+    db.unlinkedAuthors = [];
+    expect(callerViewOf(db, merge412).canApprove).toBe(true);
+  });
+
+  it('names a self-approval refusal, and says no to a request decided or not theirs', () => {
+    expect(callerViewOf(db, fixture('apr-deploy-88'))).toMatchObject({
+      self: true,
+      canApprove: false,
+      reasonType: 'self_approval_refused',
+    });
+    const decided = callerViewOf(db, fixture('apr-migration-7'));
+    expect([decided.canApprove, decided.reasonType]).toEqual([false, undefined]);
+    expect(callerViewOf(db, { ...fixture('apr-merge-412'), id: 'apr-nobody' }).canApprove).toBe(false);
+  });
+
+  it('serves the queue: what waits for the caller and what was decided, each with what they may do', async () => {
+    db.providers = ['email'];
+    db.approvals.push({ ...fixture('apr-merge-412'), id: 'apr-nobody' });
+    const { data } = await getApprovalQueue({ throwOnError: true });
+    expect([data.operator, data.you]).toEqual(['maya', { login: 'maya', via: 'console' }]);
+    expect(data.pending.map((view) => [view.approval.id, view.you.reasonType])).toEqual([
+      ['apr-merge-412', 'github_link_required'],
+      ['apr-deploy-88', 'self_approval_refused'],
+    ]);
+    expect(data.recent.map((view) => [view.approval.id, view.you.canApprove])).toEqual([
+      ['apr-migration-7', false],
+    ]);
   });
 });
 

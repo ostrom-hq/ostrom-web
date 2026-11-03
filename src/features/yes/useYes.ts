@@ -11,6 +11,8 @@ import {
 import type {
   Approval,
   ApprovalAnswer,
+  ApprovalCallerView,
+  ApprovalQueue,
   ApprovalStatus,
   ListApprovalsResponse,
   Receipt,
@@ -262,4 +264,19 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     receipt: mutation.data?.receipt,
     comment: mutation.isSuccess ? mutation.variables.body.note : undefined,
   };
+}
+
+/** RED STUB (throwaway): the behaviour is not written yet. */
+export function githubLinkRequired(you: ApprovalCallerView | undefined): boolean {
+  return you?.reasonType === 'self_approval_refused';
+}
+
+/** RED STUB (throwaway). */
+export function githubLinkOf(error: unknown): boolean {
+  return stepUpOf(error);
+}
+
+/** RED STUB (throwaway). */
+export function linkRequiredOf(queue: ApprovalQueue | undefined): ReadonlySet<string> {
+  return new Set(queue?.recent.map((view) => view.approval.id));
 }

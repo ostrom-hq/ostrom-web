@@ -17,6 +17,8 @@ import {
   handleGetMcpUsage,
   handleGetSpending,
   handleGetApproval,
+  handleGetApprovalQueue,
+  handleGetApprovalView,
   handleGetGatePolicy,
   handleExchangeSignInLink,
   handleGetMe,
@@ -69,6 +71,8 @@ import type {
   Approval,
   ApprovalView,
   ApprovalAnswer,
+  ApprovalCallerView,
+  ApprovalQueue,
   Artifact,
   ArtifactVersion,
   Automation,
@@ -204,6 +208,11 @@ export interface MockDb
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
+  /**
+   * The approvals of a pull request whose author linked no Ostrom person (Q-GATES-G1 a): under `never`, a yes waits for
+   * an approver who linked a GitHub account, as the server's `GateRules.needsLink` says.
+   */
+  unlinkedAuthors: string[];
   sessions: Session[];
   /** Newest first, as the server lists them; an answer adds its receipt at the top. */
   receipts: Receipt[];
@@ -264,6 +273,7 @@ export function createMockDb(): MockDb {
     audit: initialAudit(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
+    unlinkedAuthors: ['apr-merge-412'],
     sessions: initialSessions(),
     receipts: initialReceipts(),
     organization: initialOrganization(),
@@ -490,6 +500,34 @@ export function selfApprovalRefusal(
   return others.length === 0 ? undefined : `You asked for this: ${others.join(' or ')} has to approve it.`;
 }
 
+/** The server's refusal of a yes that waits for the approver's GitHub link (`GitHubLinkRequiredException`). */
+export const GITHUB_LINK_REQUIRED =
+  "This pull request's author has no GitHub account linked in Ostrom: link your own GitHub account in My account to approve it.";
+
+/** A yes on this approval waits for the person's GitHub link: an unlinked author, the `never` policy, no link yet. */
+function needsGithubLink(db: MockDb, approval: Approval): boolean {
+  return (
+    db.selfApproval === 'never' &&
+    db.unlinkedAuthors.includes(approval.id) &&
+    !db.providers.includes('github')
+  );
+}
+
+/** What the person may do with an approval, as the server's view says it (`ApprovalCallerView`). */
+export function callerViewOf(db: MockDb, approval: Approval): ApprovalCallerView {
+  const login = me.dev.login;
+  const you = { login, self: isAsker(approval, login) };
+  const approvers = db.approvers[approval.id] ?? [];
+  if (approval.status !== 'pending' || !approvers.includes(login))
+    return { ...you, canApprove: false, reason: 'You cannot answer this approval.' };
+  const refused = selfApprovalRefusal(approval, approvers, login, db.selfApproval);
+  if (refused !== undefined)
+    return { ...you, canApprove: false, reason: refused, reasonType: 'self_approval_refused' };
+  if (needsGithubLink(db, approval))
+    return { ...you, canApprove: false, reason: GITHUB_LINK_REQUIRED, reasonType: 'github_link_required' };
+  return { ...you, canApprove: true };
+}
+
 function answered(approval: Approval, answer: ApprovalAnswer, selfApproved: boolean, at: string): Approval {
   return {
     ...approval,
@@ -700,6 +738,28 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       });
       return HttpResponse.json({ items });
     }),
+    // Before `/approvals/{id}`, which would read `queue` as an id.
+    handleGetApprovalQueue(() => {
+      const viewOf = (approval: Approval): ApprovalView => ({ approval, you: callerViewOf(db, approval) });
+      const queue: ApprovalQueue = {
+        operator: me.dev.login,
+        you: { login: me.dev.login, via: 'console' },
+        pending: db.approvals
+          .filter(
+            (approval) =>
+              approval.status === 'pending' && (db.approvers[approval.id] ?? []).includes(me.dev.login),
+          )
+          .map(viewOf),
+        recent: db.approvals.filter((approval) => approval.status !== 'pending').map(viewOf),
+      };
+      return HttpResponse.json(queue);
+    }),
+    handleGetApprovalView(({ params }) => {
+      const approval = find(params.id) ?? db.approvals.find((item) => item.group === params.id);
+      if (approval === undefined) return notFound();
+      const view: ApprovalView = { approval, you: callerViewOf(db, approval) };
+      return HttpResponse.json(view);
+    }),
     handleGetApproval(({ params }) => {
       // As server#185 reads it: an approval of the organization, else the first request of one of its gates, so a
       // session's gate opens its request (the server prefers the reader's own request on the gate).
@@ -724,6 +784,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           ? selfApprovalRefusal(approval, approvers, me.dev.login, db.selfApproval)
           : undefined;
       if (refused !== undefined) return refusal(403, 'self_approval_refused', refused);
+      // A no never needs the link either.
+      if (body.data.answer === 'approve' && needsGithubLink(db, approval))
+        return refusal(403, 'github_link_required', GITHUB_LINK_REQUIRED);
       // A no never needs it; a yes needs a sign-in of no more than five minutes.
       if (body.data.answer === 'approve' && now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS)
         return refusal(
@@ -740,7 +803,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const view: ApprovalView = {
         approval: next,
         receipt,
-        you: { login: me.dev.login, self: isAsker(approval, me.dev.login), canApprove: false },
+        you: callerViewOf(db, next),
       };
       return HttpResponse.json(view);
     }),
