@@ -265,15 +265,25 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     handleListOrgMembers(({ params, request }) => {
       const organization = find(params.org);
       if (organization === undefined) return notFound();
-      // As the server pages them (`OrgsApi`): `limit` from 1 to 1000, `after` a member id, an unknown one ending the list.
+      // As the server pages them (`OrgsApi`): `limit` from 1 to 1000, `after` a member id, an unknown one ending the list;
+      // `q`, 1 to 100 characters, keeps the members whose login or name starts with it, whatever the case (server#323).
       const query = new URL(request.url).searchParams;
       const limit = Number(query.get('limit') ?? MEMBER_PAGE);
       const after = query.get('after');
+      const q = query.get('q');
       if (!Number.isInteger(limit) || limit < 1 || limit > MEMBER_PAGE)
         return refusal(400, 'invalid_request', `limit is 1 to ${String(MEMBER_PAGE)}.`);
       if (after !== null && !UUID.test(after))
         return refusal(400, 'invalid_request', 'after is a member id.');
-      const members = membersOf(organization);
+      if (q !== null && (q.length < 1 || q.length > 100))
+        return refusal(400, 'invalid_request', 'q is 1 to 100 characters.');
+      const prefix = q?.toLowerCase();
+      const members = membersOf(organization).filter(
+        (member) =>
+          prefix === undefined ||
+          member.login.toLowerCase().startsWith(prefix) ||
+          member.name.toLowerCase().startsWith(prefix),
+      );
       const from = after === null ? 0 : members.findIndex((member) => member.id === after) + 1;
       const items = from === 0 && after !== null ? [] : members.slice(from, from + limit);
       const last = items.at(-1);

@@ -28,12 +28,23 @@ export interface OrgMembers {
   readonly loadingMore: boolean;
   readonly error: unknown;
   readonly pending: boolean;
+  /** The pages shown are another search's, kept while this one is read. */
+  readonly stale: boolean;
 }
 
-/** The organization's members, a page of a hundred at a time (`limit`, then `after` the previous `next`). */
-export function useOrgMembers(org: string, tuning: QueryTuning = {}): OrgMembers {
+/**
+ * The organization's members, a page of a hundred at a time (`limit`, then `after` the previous `next`); with `q`,
+ * only those whose login or name starts with it, as the server finds them.
+ */
+export function useOrgMembers(org: string, tuning: QueryTuning = {}, q?: string): OrgMembers {
   const query = useInfiniteQuery({
-    ...ready(listOrgMembersInfiniteOptions({ path: { org }, query: { limit: MEMBERS_PAGE } }), tuning),
+    ...ready(
+      listOrgMembersInfiniteOptions({
+        path: { org },
+        query: q === undefined ? { limit: MEMBERS_PAGE } : { limit: MEMBERS_PAGE, q },
+      }),
+      tuning,
+    ),
     // The first page asks for nothing more than the query's own `limit`; each next one adds `after`.
     initialPageParam: { path: { org } },
     getNextPageParam: (last: OrgMemberList) => last.next,
@@ -58,5 +69,6 @@ export function useOrgMembers(org: string, tuning: QueryTuning = {}): OrgMembers
     loadingMore: query.isFetchingNextPage,
     error: query.error,
     pending: query.isPending,
+    stale: query.isPlaceholderData,
   };
 }
