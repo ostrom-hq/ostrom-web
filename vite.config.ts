@@ -59,7 +59,27 @@ export default defineConfig({
     ...(apiUpstream === undefined ? {} : { proxy: { '/api': { target: apiUpstream } } }),
   },
   // Nothing inlined as a data: URL: fonts and images come from 'self', the only source the CSP allows.
-  build: { sourcemap: true, target: 'es2023', assetsInlineLimit: 0 },
+  build: {
+    sourcemap: true,
+    target: 'es2023',
+    assetsInlineLimit: 0,
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          // zod and its configuration in one chunk: every module that parses imports zod, so jitless is set before
+          // any schema parses, whichever chunk parses first (a store reading storage as its module loads). Split
+          // from the entry, the configuration would run after the shared chunks, and zod's eval probe would be a CSP
+          // violation (audit S2-09).
+          groups: [
+            {
+              name: 'zod',
+              test: /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?zod[\\/]|[\\/]src[\\/]shared[\\/]lib[\\/]zodConfig\.ts$/,
+            },
+          ],
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

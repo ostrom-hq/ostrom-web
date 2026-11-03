@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Skeleton } from '@/shared/ui/Skeleton';
 
 export function NotFoundScreen(): ReactElement {
   const { t } = useTranslation();
@@ -11,6 +12,15 @@ export function NotFoundScreen(): ReactElement {
       <p>
         <Link to="/">{t('app.notFound.home')}</Link>
       </p>
+    </section>
+  );
+}
+
+/** While a screen's chunk is on its way (a slow network): the shape of a page, announced as loading. */
+export function PendingScreen(): ReactElement {
+  return (
+    <section className="o-page">
+      <Skeleton />
     </section>
   );
 }

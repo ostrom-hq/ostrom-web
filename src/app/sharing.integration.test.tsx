@@ -295,6 +295,13 @@ describe('the shared subscriptions', () => {
     expect(await screen.findByText('secrets are locked')).toBeInTheDocument();
   });
 
+  it('says why the form is missing when the organizations cannot be read', async () => {
+    server.use(http.get('*/api/v1/orgs', refuse('organizations are down')));
+    visit('/accounts');
+    expect(await screen.findByText('organizations are down')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Share a subscription' })).toBeNull();
+  });
+
   it('says when nothing is shared', async () => {
     db.sharedAccounts = [];
     visit('/accounts');
@@ -412,8 +419,20 @@ describe('the shared subscriptions', () => {
     expect(within(form).getByRole('link', { name: 'Add it in Secrets' })).toHaveAttribute('href', '/secrets');
   });
 
+  it('names a member whose name is their login once', async () => {
+    const org = db.organization.id;
+    db.orgMembers[org] = (db.orgMembers[org] ?? []).map((member) =>
+      member.login === 'samir' ? { ...member, name: 'samir' } : member,
+    );
+    visit('/accounts');
+    const form = await screen.findByRole('region', { name: 'Share a subscription' });
+    expect(within(form).getByRole('checkbox', { name: 'samir' })).toBeInTheDocument();
+  });
+
   it('has nobody to lend to in an organization of one', async () => {
-    db.members = db.members.filter((member) => member.login === 'maya');
+    // The organization's own list, the one the form lends from.
+    const org = db.organization.id;
+    db.orgMembers[org] = (db.orgMembers[org] ?? []).filter((member) => member.login === 'maya');
     visit('/accounts');
     const form = await screen.findByRole('region', { name: 'Share a subscription' });
     expect(within(form).queryByRole('group')).toBeNull();
