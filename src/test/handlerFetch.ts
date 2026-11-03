@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { getResponse, RequestHandler } from 'msw';
 import type { SetupServer } from 'msw/node';
 
@@ -15,11 +16,44 @@ export interface HandlerFetch {
   readonly fetch: typeof fetch;
   readonly traffic: MockTraffic;
   /**
-   * Calls off every call still waiting for its answer, as a closed page does: each is rejected as aborted, so an
-   * answer that comes after its test ended never reaches the console (and its way out) during the next test.
+   * The end of a test, as a closed page: every call still waiting for its answer is called off and stays unanswered
+   * (no answer, no rejection, so no callback of the console runs any more), then the handlers still on a finite wait
+   * are awaited, so none writes into the mock database once it is reset for the next test. A handler held for good
+   * (`delay('infinite')`, `held()`) is not awaited: it never answers, so it never writes.
    */
-  readonly abortInFlight: () => void;
+  readonly endTest: () => Promise<void>;
 }
+
+/** What one handler is doing: held for good, or on its way to an answer. */
+interface HandlerRun {
+  held: boolean;
+}
+
+/** The handler a piece of code runs for, through every await and timer of that handler. */
+export const handlerRuns = new AsyncLocalStorage<HandlerRun>();
+
+/**
+ * Holds the handler that awaits it until `until` settles, and says so: the end of a test does not wait for it. For a
+ * test of a pending state released later in the file, where `delay('infinite')` could not be released.
+ */
+export async function held<T>(until: Promise<T>): Promise<T> {
+  const run = handlerRuns.getStore();
+  if (run !== undefined) run.held = true;
+  const value = await until;
+  return value;
+}
+
+/** How long the end of a test waits for the handlers on a finite wait: well beyond the longest `delay()` of a test. */
+const SETTLE_LIMIT_MS = 2_000;
+
+/** A call of a closed page: it never settles, so nothing waits on its answer or its failure any more. */
+async function unanswered(): Promise<never> {
+  await new Promise<never>(() => undefined);
+  throw new Error('unreachable');
+}
+
+/** The reason a call is called off at the end of its test: it then stays unanswered, as on a closed page. */
+const TEST_ENDED = new DOMException('The test ended.', 'AbortError');
 
 /** Settles only when `signal` aborts, rejecting with its reason as given, as a real fetch does. */
 async function aborted(signal: AbortSignal): Promise<never> {
@@ -49,18 +83,19 @@ async function aborted(signal: AbortSignal): Promise<never> {
  * What it does not do, as no handler here needs it: `passthrough()`, `bypass()`, storing `Set-Cookie`. An aborted
  * call is rejected at once, but its handler still runs to the end, as a server would. Remove it, and answer through
  * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed. A test of a pending state holds its
- * handler (`delay('infinite')`) rather than counting on how late an answer comes. A call still waiting when its test
- * ends is called off by `abortInFlight()`.
+ * handler (`delay('infinite')`, `held()`) rather than counting on how late an answer comes. A call still waiting when
+ * its test ends is called off by `endTest()`.
  */
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
   const inFlight = new Set<AbortController>();
+  const running = new Map<Promise<unknown>, HandlerRun>();
   const requestListeners = new Set<(request: Request) => void>();
   const responseListeners = new Set<(request: Request, response: Response) => void>();
   const answer = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // The client sends a ready Request: its copy is answered, so the one it keeps for its interceptors stays readable.
     const request = input instanceof Request && init === undefined ? input.clone() : new Request(input, init);
     request.signal.throwIfAborted();
-    // Called off by the caller, or by the end of the test (`abortInFlight`).
+    // Called off by the caller, or by the end of the test (`endTest`).
     const call = new AbortController();
     const { signal } = call;
     const callerGaveUp = (): void => {
@@ -73,7 +108,14 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     // Each listener with its own copy: none reads the body away from the handler.
     for (const listener of requestListeners) listener(request.clone());
     const handlers = server.listHandlers().filter((handler) => handler instanceof RequestHandler);
-    const pending = getResponse(handlers, request).catch((error: unknown) => {
+    const run: HandlerRun = { held: false };
+    const handled = handlerRuns.run(run, async () => getResponse(handlers, request));
+    running.set(handled, run);
+    void handled.then(
+      () => running.delete(handled),
+      () => running.delete(handled),
+    );
+    const pending = handled.catch((error: unknown) => {
       // As MSW does: a handler that throws is a server error, not a failed network, and its stack is shown, unless
       // the caller gave up first and nobody reads the answer.
       if (!signal.aborted) console.error('Unhandled exception in a mock handler', error);
@@ -84,10 +126,14 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     let response: Response | undefined;
     try {
       response = await Promise.race([pending, aborted(signal)]);
+    } catch (error) {
+      if (signal.reason !== TEST_ENDED) throw error;
     } finally {
       inFlight.delete(call);
       request.signal.removeEventListener('abort', callerGaveUp);
     }
+    // Called off by the end of its test: never answered, never rejected, as a call of a page that is closed.
+    if (signal.reason === TEST_ENDED) return unanswered();
     if (response === undefined) {
       const missing = `no mock handler answers ${request.method} ${request.url}`;
       // Said in the test's output too: the console may show only a failure banner.
@@ -101,9 +147,26 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
   };
   return {
     fetch: answer,
-    abortInFlight: () => {
-      for (const call of inFlight) call.abort(new DOMException('The test ended.', 'AbortError'));
+    endTest: async () => {
+      for (const call of inFlight) call.abort(TEST_ENDED);
       inFlight.clear();
+      const finite: Promise<unknown>[] = [];
+      for (const [handled, run] of running) if (!run.held) finite.push(handled);
+      running.clear();
+      if (finite.length === 0) return;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const limit = new Promise<'late'>((resolve) => {
+        timer = setTimeout(() => {
+          resolve('late');
+        }, SETTLE_LIMIT_MS);
+      });
+      const settled = await Promise.race([Promise.allSettled(finite), limit]);
+      clearTimeout(timer);
+      if (settled === 'late') {
+        console.warn(
+          `a mock handler still ran ${String(SETTLE_LIMIT_MS)} ms after its test ended: hold it with held()`,
+        );
+      }
     },
     traffic: {
       onRequest: (listener) => {
