@@ -74,6 +74,10 @@ export function GroupForm({ change, members, accounts }: GroupFormProps): ReactE
                   onChange={(event) => {
                     setSearch(event.target.value);
                   }}
+                  onKeyDown={(event) => {
+                    // Enter searches, as in any search box: it never sends the form and its group.
+                    if (event.key === 'Enter') event.preventDefault();
+                  }}
                 />
               </>
             ) : null}

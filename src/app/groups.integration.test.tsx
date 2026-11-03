@@ -411,4 +411,17 @@ describe('a new group in a large organization', () => {
         .map((box) => box.closest('label')?.textContent),
     ).toEqual(Array.from({ length: 10 }, (_, n) => `Developer 42${String(n)} (dev-42${String(n)})`));
   });
+
+  it('searches on Enter, never creating the group', async () => {
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+    const groups = db.groups.length;
+    visit('/accounts/groups');
+    const form = await screen.findByRole('region', { name: 'New group' });
+    await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Platform');
+    await userEvent.type(within(form).getByRole('searchbox', { name: 'Find someone' }), 'dev-42{Enter}');
+    expect(within(form).getAllByRole('checkbox', { checked: false }).length).toBeGreaterThanOrEqual(10);
+    expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('Platform');
+    expect(db.groups).toHaveLength(groups);
+  });
 });
