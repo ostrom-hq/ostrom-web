@@ -1382,6 +1382,8 @@ export const listOrgMembersInfiniteOptions = (options: Options<ListOrgMembersDat
 
 /**
  * Invite people by e-mail; members and addresses already invited are left out of `invited`
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const inviteOrgMembersMutation = (options?: Partial<Options<InviteOrgMembersData>>): UseMutationOptions<InviteOrgMembersResponse, InviteOrgMembersError, Options<InviteOrgMembersData>> => {
     const mutationOptions: UseMutationOptions<InviteOrgMembersResponse, InviteOrgMembersError, Options<InviteOrgMembersData>> = {
@@ -1399,6 +1401,8 @@ export const inviteOrgMembersMutation = (options?: Partial<Options<InviteOrgMemb
 
 /**
  * Remove a member
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const removeOrgMemberMutation = (options?: Partial<Options<RemoveOrgMemberData>>): UseMutationOptions<RemoveOrgMemberResponse, RemoveOrgMemberError, Options<RemoveOrgMemberData>> => {
     const mutationOptions: UseMutationOptions<RemoveOrgMemberResponse, RemoveOrgMemberError, Options<RemoveOrgMemberData>> = {
@@ -1434,6 +1438,8 @@ export const getOrgMemberOptions = (options: Options<GetOrgMemberData>) => query
 
 /**
  * Change a member's role
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const updateOrgMemberMutation = (options?: Partial<Options<UpdateOrgMemberData>>): UseMutationOptions<UpdateOrgMemberResponse, UpdateOrgMemberError, Options<UpdateOrgMemberData>> => {
     const mutationOptions: UseMutationOptions<UpdateOrgMemberResponse, UpdateOrgMemberError, Options<UpdateOrgMemberData>> = {
@@ -1469,6 +1475,8 @@ export const listInvitationsOptions = (options: Options<ListInvitationsData>) =>
 
 /**
  * Create an invitation link: the answer is the only time its URL is shown
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const createInvitationLinkMutation = (options?: Partial<Options<CreateInvitationLinkData>>): UseMutationOptions<CreateInvitationLinkResponse, CreateInvitationLinkError, Options<CreateInvitationLinkData>> => {
     const mutationOptions: UseMutationOptions<CreateInvitationLinkResponse, CreateInvitationLinkError, Options<CreateInvitationLinkData>> = {
@@ -2031,7 +2039,8 @@ export const getGateQueryKey = (options: Options<GetGateData>) => createQueryKey
  *
  * With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
  * pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
- * answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+ * answers at once, and so does a gate of another organization (404, as if it did not exist) or of another launch
+ * of the caller's organization (403). The server caps the wait at
  * 30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
  * connection. A client sets its HTTP timeout above the wait.
  */
@@ -3419,6 +3428,36 @@ export const listWaitsOptions = (options?: Options<ListWaitsData>) => queryOptio
     },
     queryKey: listWaitsQueryKey(options)
 });
+
+export const listWaitsInfiniteQueryKey = (options?: Options<ListWaitsData>): QueryKey<Options<ListWaitsData>> => createQueryKey('listWaits', options, true);
+
+/**
+ * Waits; `mine` lists those for the caller
+ */
+export const listWaitsInfiniteOptions = (options?: Options<ListWaitsData>) => {
+    const opts = infiniteQueryOptions<ListWaitsResponse, ListWaitsError, InfiniteData<ListWaitsResponse>, QueryKey<Options<ListWaitsData>>, string | Pick<QueryKey<Options<ListWaitsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
+    // @ts-ignore
+    {
+        queryFn: async ({ pageParam, queryKey, signal }) => {
+            // @ts-ignore
+            const page: Pick<QueryKey<Options<ListWaitsData>>[0], 'body' | 'headers' | 'path' | 'query'> = typeof pageParam === 'object' ? pageParam : {
+                query: {
+                    before: pageParam
+                }
+            };
+            const params = createInfiniteParams(queryKey, page);
+            const { data } = await listWaits({
+                ...options,
+                ...params,
+                signal,
+                throwOnError: true
+            });
+            return data;
+        },
+        queryKey: listWaitsInfiniteQueryKey(options)
+    });
+    return opts as Omit<typeof opts, 'initialData'>;
+};
 
 /**
  * Ask a person (agent ask_human); Idempotency-Key header

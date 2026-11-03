@@ -63,6 +63,17 @@ export const zAgentEvent = z.enum([
 ]);
 
 /**
+ * An error in Anthropic's shape, as the Messages endpoint of the gateway answers it
+ */
+export const zAnthropicError = z.object({
+    type: z.enum(['error']),
+    error: z.object({
+        type: z.string(),
+        message: z.string()
+    })
+});
+
+/**
  * The kind of action (clients keep an unknown kind as UNKNOWN)
  */
 export const zApprovalActionKind = z.enum([
@@ -933,7 +944,11 @@ export const zGovernanceChangeKind = z.enum([
     'models.policy',
     'workflows.create',
     'workflows.save',
-    'workflows.delete'
+    'workflows.delete',
+    'members.role',
+    'members.remove',
+    'members.invite',
+    'members.link'
 ]);
 
 export const zGovernanceConfirmationAnswer = z.enum(['confirm', 'refuse']);
@@ -1326,6 +1341,18 @@ export const zAccount = z.object({
     createdAt: z.string(),
     emails: z.array(zAccountEmail),
     providers: z.array(z.string())
+});
+
+/**
+ * An error in OpenAI's shape, as the OpenAI-compatible endpoints of the gateway answer it
+ */
+export const zOpenAiError = z.object({
+    error: z.object({
+        message: z.string(),
+        type: z.string(),
+        code: z.string().nullish(),
+        param: z.string().nullish()
+    })
 });
 
 export const zTokenScope = z.object({
@@ -3367,7 +3394,7 @@ export const zGetMeResponse = z.union([
 
 export const zListMyAuditQuery = z.object({
     before: z.int().optional(),
-    limit: z.int().optional()
+    limit: z.int().gte(1).lte(200).optional()
 });
 
 /**
@@ -3761,20 +3788,20 @@ export const zInviteOrgMembersPath = z.object({
     org: z.string()
 });
 
-/**
- * OK
- */
-export const zInviteOrgMembersResponse = zOrgInvited;
+export const zInviteOrgMembersResponse = z.union([
+    zOrgInvited,
+    zGovernanceConfirmationPending
+]);
 
 export const zRemoveOrgMemberPath = z.object({
     org: z.string(),
     login: z.string()
 });
 
-/**
- * Removed
- */
-export const zRemoveOrgMemberResponse = z.void();
+export const zRemoveOrgMemberResponse = z.union([
+    zGovernanceConfirmationPending,
+    z.void()
+]);
 
 export const zGetOrgMemberPath = z.object({
     org: z.string(),
@@ -3793,10 +3820,10 @@ export const zUpdateOrgMemberPath = z.object({
     login: z.string()
 });
 
-/**
- * OK
- */
-export const zUpdateOrgMemberResponse = zOrgMember;
+export const zUpdateOrgMemberResponse = z.union([
+    zOrgMember,
+    zGovernanceConfirmationPending
+]);
 
 export const zListInvitationsPath = z.object({
     org: z.string()
@@ -3813,10 +3840,10 @@ export const zCreateInvitationLinkPath = z.object({
     org: z.string()
 });
 
-/**
- * OK
- */
-export const zCreateInvitationLinkResponse = zInvitationLink;
+export const zCreateInvitationLinkResponse = z.union([
+    zInvitationLink,
+    zGovernanceConfirmationPending
+]);
 
 export const zRevokeInvitationPath = z.object({
     org: z.string(),
@@ -3929,7 +3956,7 @@ export const zListTeamsPath = z.object({
 
 export const zListTeamsQuery = z.object({
     after: z.string().optional(),
-    limit: z.int().optional()
+    limit: z.int().gte(1).lte(100).optional()
 });
 
 /**
@@ -3946,7 +3973,7 @@ export const zListReposHeaders = z.object({
 
 export const zListReposQuery = z.object({
     after: z.string().optional(),
-    limit: z.int().optional()
+    limit: z.int().gte(1).lte(100).optional()
 });
 
 /**
@@ -3985,7 +4012,8 @@ export const zListSessionsQuery = z.object({
     repo: z.string().optional(),
     dev: z.string().optional(),
     open: z.boolean().optional(),
-    before: z.string().optional()
+    before: z.string().optional(),
+    limit: z.int().gte(1).lte(100).optional()
 });
 
 /**
@@ -4269,7 +4297,7 @@ export const zListApprovalsQuery = z.object({
     status: z.array(zApprovalStatus).optional(),
     mine: z.boolean().optional(),
     before: z.string().optional(),
-    limit: z.int().gte(1).lte(200).optional().default(50)
+    limit: z.int().gte(1).lte(100).optional().default(50)
 });
 
 /**
@@ -4387,7 +4415,8 @@ export const zListReceiptsHeaders = z.object({
 export const zListReceiptsQuery = z.object({
     subjectKind: z.string().optional(),
     subjectId: z.string().optional(),
-    before: z.string().optional()
+    before: z.string().optional(),
+    limit: z.int().gte(1).lte(200).optional()
 });
 
 /**
@@ -4627,7 +4656,7 @@ export const zListRulesQuery = z.object({
     status: z.string().optional(),
     group: z.string().optional(),
     after: z.string().optional(),
-    limit: z.int().optional()
+    limit: z.int().gte(1).lte(1000).optional()
 });
 
 /**
@@ -5037,7 +5066,9 @@ export const zListWaitsQuery = z.object({
     status: z.string().optional(),
     mine: z.boolean().optional(),
     sessionId: z.string().optional(),
-    runId: z.string().optional()
+    runId: z.string().optional(),
+    before: z.uuid().optional(),
+    limit: z.int().gte(1).lte(100).optional()
 });
 
 /**
@@ -5423,6 +5454,7 @@ export const zInferenceModelsHeaders = z.object({
  * OK
  */
 export const zInferenceModelsResponse = z.object({
+    object: z.enum(['list']).optional(),
     data: z.array(z.record(z.string(), z.unknown()))
 });
 

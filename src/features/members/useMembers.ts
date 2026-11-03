@@ -9,10 +9,16 @@ import {
   revokeInvitationMutation,
   updateOrgMemberMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Invitation, InvitationLink, OrgMember } from '@gen/api/types.gen';
+import type {
+  GovernanceConfirmationPending,
+  Invitation,
+  InvitationLink,
+  OrgMember,
+} from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
+import { appliedOf, heldOf } from '@/shared/api/held';
 import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
 import { orgMembersKey, useOrgMembers } from '@/shared/org/members';
@@ -74,6 +80,8 @@ export interface RoleChangeViewModel {
   readonly remove: (login: string) => void;
   /** The login whose role or membership is being saved. */
   readonly saving: string | undefined;
+  /** The change the server held for a confirmation rather than applied (a token's write; never the console's). */
+  readonly held: GovernanceConfirmationPending | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -100,7 +108,13 @@ export function useRoleChange(org: string): RoleChangeViewModel {
   let saving: string | undefined;
   if (update.isPending) saving = update.variables.path.login;
   else if (removal.isPending) saving = removal.variables.path.login;
-  return { change, remove, saving, failure: failureOf(update.error ?? removal.error) };
+  return {
+    change,
+    remove,
+    saving,
+    held: heldOf(update.data ?? removal.data),
+    failure: failureOf(update.error ?? removal.error),
+  };
 }
 
 export interface InviteViewModel {
@@ -109,6 +123,8 @@ export interface InviteViewModel {
   readonly sending: boolean;
   /** The addresses the server sent an invitation to; those already in the organization are left out. */
   readonly invited: readonly string[] | undefined;
+  /** The invitations the server held for a confirmation rather than sent. */
+  readonly held: GovernanceConfirmationPending | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -128,7 +144,8 @@ export function useInvite(org: string): InviteViewModel {
   return {
     invite,
     sending: mutation.isPending,
-    invited: mutation.data?.invited,
+    invited: appliedOf(mutation.data)?.invited,
+    held: heldOf(mutation.data),
     failure: failureOf(mutation.error),
   };
 }
@@ -138,6 +155,8 @@ export interface InviteLinkViewModel {
   readonly creating: boolean;
   /** The link just made: the only time its address is shown (it carries the secret). */
   readonly link: InvitationLink | undefined;
+  /** The link the server held for a confirmation rather than made. */
+  readonly held: GovernanceConfirmationPending | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -154,7 +173,8 @@ export function useInviteLink(org: string): InviteLinkViewModel {
   return {
     create,
     creating: mutation.isPending,
-    link: mutation.data,
+    link: appliedOf(mutation.data),
+    held: heldOf(mutation.data),
     failure: failureOf(mutation.error),
   };
 }

@@ -15,6 +15,7 @@ import { InviteLink } from '../components/InviteLink';
 import { MemberRow } from '../components/MemberRow';
 import { useInvite, useInviteLink, useMembers, useRevokeInvitation, useRoleChange } from '../useMembers';
 import { FailureText } from '@/shared/ui/FailureText';
+import { HeldNotice } from '@/shared/ui/HeldNotice';
 
 export function MembersScreen(): ReactElement {
   const { t } = useTranslation();
@@ -63,6 +64,7 @@ function MembersPage({
     >
       {manager ? <InviteForm invite={invite} roles={roles} /> : null}
       {manager ? <InviteLink link={link} roles={roles} /> : null}
+      <HeldNotice held={changes.held ?? invite.held ?? link.held} />
       {changes.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.list.errorTag')} live>
           <FailureText failure={changes.failure} />

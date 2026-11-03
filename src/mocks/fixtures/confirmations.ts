@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { ErrorDetail, GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
+import type {
+  ErrorDetail,
+  GovernanceConfirmation,
+  GovernanceConfirmationPerson,
+  OrgMember,
+} from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 /** A confirmation waits 15 minutes for its answer (core#57). */
@@ -13,6 +18,17 @@ export const MAYA: GovernanceConfirmationPerson = {
 const LENA: GovernanceConfirmationPerson = { memberId: MEMBER_IDS.lena, login: 'lena' };
 
 const at = (ms: number): string => new Date(ms).toISOString();
+
+/** Theo as `/orgs/{org}/members` shows him: what a change of his role or his removal replaces. */
+const THEO: OrgMember = {
+  id: MEMBER_IDS.theo,
+  login: 'theo',
+  name: '',
+  avatarUrl: '',
+  email: 'theo@acme.dev',
+  role: 'member',
+  joinedAt: '2026-09-01T09:00:00.000Z',
+};
 
 /**
  * The demo's governance confirmations, opened `now` (ms) by `ostrom` with a CLI token: three waiting (a policy, a new
@@ -160,6 +176,64 @@ export function initialConfirmations(now: number): GovernanceConfirmation[] {
       answeredAt: at(now - 3_300_000),
       error: { type: 'version_conflict', message: 'The workflow changed since version 3.' },
       ...answered,
+    },
+    // The organization's people, written with a person's API token (`ostrom invite`, `ostrom members`): F1 of the
+    // second core audit holds them for a confirmation too.
+    {
+      id: 'gc-member-role',
+      kind: 'members.role',
+      status: 'pending',
+      method: 'PATCH',
+      path: '/api/v1/orgs/acme/members/theo',
+      scope: 'orgs:write',
+      summary: 'Make theo an admin of Acme',
+      before: THEO,
+      after: { ...THEO, role: 'admin' },
+      requestedBy: LENA,
+      credential: 'device',
+      ...open,
+    },
+    {
+      id: 'gc-member-remove',
+      kind: 'members.remove',
+      status: 'pending',
+      method: 'DELETE',
+      path: '/api/v1/orgs/acme/members/theo',
+      scope: 'orgs:write',
+      summary: 'Remove theo from Acme',
+      before: THEO,
+      after: null,
+      requestedBy: LENA,
+      credential: 'device',
+      ...open,
+    },
+    {
+      id: 'gc-member-invite',
+      kind: 'members.invite',
+      status: 'pending',
+      method: 'POST',
+      path: '/api/v1/orgs/acme/members/invites',
+      scope: 'orgs:write',
+      summary: 'Invite 2 people to Acme',
+      before: null,
+      after: { invites: [{ email: 'ana@acme.dev', role: 'approver' }, { email: 'bo@acme.dev' }] },
+      requestedBy: LENA,
+      credential: 'device',
+      ...open,
+    },
+    {
+      id: 'gc-member-link',
+      kind: 'members.link',
+      status: 'pending',
+      method: 'POST',
+      path: '/api/v1/orgs/acme/invitations/links',
+      scope: 'orgs:write',
+      summary: 'Create an invitation link to Acme',
+      before: null,
+      after: { role: 'member', maxUses: 5 },
+      requestedBy: LENA,
+      credential: 'device',
+      ...open,
     },
   ];
 }

@@ -466,6 +466,59 @@ describe('the members screen', () => {
   });
 });
 
+describe('a change of the people the server holds for a confirmation', () => {
+  const HELD = {
+    confirmationId: 'gc-held',
+    confirmUrl: 'https://ostrom.test/confirm/gc-held',
+    expiresAt: '2026-11-03T18:00:00.000Z',
+  };
+
+  /** The console's own writes apply at once; a 202 is still said, with where to confirm, never swallowed. */
+  async function heldNotice(): Promise<void> {
+    const link = await screen.findByRole('link', { name: 'Open the confirmation' });
+    expect(link).toHaveAttribute('href', '/confirm/gc-held');
+    expect(
+      screen.getByText(/Ostrom holds this change until an owner or an admin confirms it\./),
+    ).toBeInTheDocument();
+  }
+
+  it('says a role change waits for a confirmation', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.patch('*/api/v1/orgs/:org/members/:login', () => HttpResponse.json(HELD, { status: 202 })),
+    );
+    visit('/members');
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Role of theo' }), 'billing');
+    await heldNotice();
+  });
+
+  it('says invitations wait for a confirmation, and names nobody as invited', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/orgs/:org/members/invites', () => HttpResponse.json(HELD, { status: 202 })),
+    );
+    visit('/members');
+    const invite = await screen.findByRole('region', { name: 'Invite people' });
+    await user.type(within(invite).getByRole('textbox', { name: 'E-mail addresses' }), 'ana@acme.dev');
+    await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
+    await heldNotice();
+    expect(screen.queryByText(/Invitation sent to/)).toBeNull();
+    expect(screen.queryByText('Everyone on the list is already in the organization.')).toBeNull();
+  });
+
+  it('says a link waits for a confirmation, and shows no address', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/orgs/:org/invitations/links', () => HttpResponse.json(HELD, { status: 202 })),
+    );
+    visit('/members');
+    const link = await screen.findByRole('region', { name: 'Invitation link' });
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    await heldNotice();
+    expect(within(link).queryByRole('button', { name: 'Copy Invitation link' })).toBeNull();
+  });
+});
+
 describe('the members of a large organization', () => {
   beforeEach(() => {
     db.orgMembers[ACME] = [...(db.orgMembers[ACME] ?? []), ...largeMembers()];
