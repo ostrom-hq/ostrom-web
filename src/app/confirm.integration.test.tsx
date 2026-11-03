@@ -415,13 +415,11 @@ describe('a change of the organization’s people', () => {
   it('says each address invited and its role, a role it does not know as the server wrote it', async () => {
     replace('gc-member-invite', (item) => ({
       ...item,
-      after: {
-        invites: [
-          { email: 'ana@acme.dev', role: 'approver' },
-          { email: 'bo@acme.dev', role: 'auditor' },
-          { email: 'ana@acme.dev', role: 'billing' },
-        ],
-      },
+      after: [
+        { email: 'ana@acme.dev', role: 'approver' },
+        { email: 'bo@acme.dev', role: 'auditor' },
+        { email: 'ana@acme.dev', role: 'billing' },
+      ],
     }));
     visit('/confirm/gc-member-invite');
     const change = await said('Who is invited');
