@@ -6,7 +6,10 @@ const home = createRoute({
   path: '/',
   component: lazyRouteComponent(async () => import('@/features/onboarding'), 'HomeScreen'),
 });
-const yes = createRoute({ path: '/yes', component: YesScreen });
+const yes = createRoute({
+  path: '/yes',
+  component: lazyRouteComponent(async () => import('@/features/yes'), 'YesQueueScreen'),
+});
 const session = createRoute({
   path: "/sessions/$sessionId",
   component: lazyRouteComponent(async () => import("@/features/sessions"), 'SessionScreen'),
@@ -14,16 +17,16 @@ const session = createRoute({
 `;
 
 describe('routesOf', () => {
-  it('reads each route with the feature its screen loads from, none for one in the first download', () => {
+  it('reads each route with the feature its screen loads from', () => {
     expect(routesOf(ROUTER)).toEqual([
       { path: '/', feature: 'onboarding' },
-      { path: '/yes', feature: undefined },
+      { path: '/yes', feature: 'yes' },
       { path: '/sessions/$sessionId', feature: 'sessions' },
     ]);
   });
 
-  it('refuses a route whose screen is not lazy, unless it is in the first download on purpose', () => {
-    expect(() => routesOf(`createRoute({ path: '/rules', component: RulesScreen })`)).toThrow(
+  it('refuses a route whose screen is not lazy: it would be in the first download', () => {
+    expect(() => routesOf(`createRoute({ path: '/yes', component: YesQueueScreen })`)).toThrow(
       /a route without a lazy screen/,
     );
   });

@@ -8,13 +8,9 @@ describe('the routes', () => {
   it('load the screen of every route', async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
     const routes = Object.values(router.routesById).filter((route) => !route.isRoot);
-    // Every screen the console has (31 today), each one lazy but the yes screens, in the first download (router.ts).
+    // Every screen the console has (31 today), each one lazy, the yes screens too since web#125 (router.ts).
     expect(routes.length).toBeGreaterThanOrEqual(31);
-    const inFirstDownload = new Set(['/yes', '/yes/$approvalId']);
-    for (const route of routes)
-      expect(typeof route.options.component?.preload, route.id).toBe(
-        inFirstDownload.has(route.id) ? 'undefined' : 'function',
-      );
+    for (const route of routes) expect(typeof route.options.component?.preload, route.id).toBe('function');
     await Promise.all(routes.map(async (route) => router.loadRouteChunk(route)));
     for (const route of routes) {
       expect(route.options.component, route.id).toBeDefined();
