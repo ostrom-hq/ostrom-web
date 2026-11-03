@@ -3157,6 +3157,10 @@ export const zPollDeviceLoginResponse = zAuthToken;
 
 export const zAnswerDeviceLoginBody = zDeviceAnswer;
 
+export const zAnswerDeviceLoginHeaders = z.object({
+    'Ostrom-Org': z.string().optional()
+});
+
 /**
  * Answered
  */
