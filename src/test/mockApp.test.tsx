@@ -43,15 +43,15 @@ describe('a call still in flight when its test ends', () => {
   });
 });
 
-/** Whether a call reads the person's account, as `/account` does: the read retried after a failure. */
-function readsAccount(request: Request): boolean {
-  return new URL(request.url).pathname.endsWith('/api/v1/auth/me/account');
+/** Whether a call reads the receipts, as `/receipts` does: a read kept on the default retry (`retryOnce`). */
+function readsReceipts(request: Request): boolean {
+  return new URL(request.url).pathname.endsWith('/api/v1/receipts');
 }
 
-/** The account read fails as a server down: `retryOnce` asks once more, a second later. */
-function accountDown(): void {
+/** The receipts read fails as a server down: `retryOnce` asks once more, a second later. */
+function receiptsDown(): void {
   server.use(
-    http.get('*/api/v1/auth/me/account', () =>
+    http.get('*/api/v1/receipts', () =>
       HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
     ),
   );
@@ -59,13 +59,13 @@ function accountDown(): void {
 
 // In this order too: the first shows the retry exists, the second ends with one to come, the third waits for it.
 describe('a retry left by a test that ended', () => {
-  it('is how a failed read of the account goes: asked once more, a second later', async () => {
+  it('is how a failed read of the receipts goes: asked once more, a second later', async () => {
     let asked = 0;
     traffic.onRequest((request) => {
-      if (readsAccount(request)) asked += 1;
+      if (readsReceipts(request)) asked += 1;
     });
-    accountDown();
-    visit('/account');
+    receiptsDown();
+    visit('/receipts');
     await vi.waitFor(
       () => {
         expect(asked).toBe(2);
@@ -77,19 +77,19 @@ describe('a retry left by a test that ended', () => {
   it('is left by a test that ends after the first failure', async () => {
     let asked = 0;
     traffic.onRequest((request) => {
-      if (readsAccount(request)) asked += 1;
+      if (readsReceipts(request)) asked += 1;
     });
-    accountDown();
-    visit('/account');
+    receiptsDown();
+    visit('/receipts');
     await vi.waitFor(() => {
       expect(asked).toBe(1);
     });
   });
 
-  it('never reaches the next test: no read of the account comes after its end', async () => {
+  it('never reaches the next test: no read of the receipts comes after its end', async () => {
     let asked = 0;
     traffic.onRequest((request) => {
-      if (readsAccount(request)) asked += 1;
+      if (readsReceipts(request)) asked += 1;
     });
     // Well beyond the delay of the first retry (one second, the first test above).
     await new Promise((resolve) => setTimeout(resolve, 2_500));
