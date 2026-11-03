@@ -18,7 +18,7 @@ export interface DeviceState {
 export interface DevicePermissions {
   /**
    * The organization an approval acts in, as `MembershipOrgResolver` resolves it: the one `Ostrom-Org` names, else the
-   * person's only one; a refusal otherwise (409 `org_required` for a person in several).
+   * person's only one; a refusal otherwise, of which only 409 `org_required` (a person in several) is said as such.
    */
   readonly actsIn: (request: Request) => Organization | HttpResponse<ApiError>;
   /** The person owns or administers that organization: only they approve `ostrom login --admin`. */
@@ -74,8 +74,10 @@ export function createDeviceHandlers(
             'Sign in again to approve an admin sign-in: your sign-in is more than five minutes old.',
           );
         const organization = permissions.actsIn(request);
-        if (organization instanceof HttpResponse) return organization;
-        if (!permissions.manages(organization))
+        // As the contract says (ostrom-core#87): `org_required` for a person in several organizations who names none;
+        // any other organization, or none, is 403 like a missing role, never 404.
+        if (organization instanceof HttpResponse && organization.status === 409) return organization;
+        if (organization instanceof HttpResponse || !permissions.manages(organization))
           return refusal(
             403,
             'forbidden',

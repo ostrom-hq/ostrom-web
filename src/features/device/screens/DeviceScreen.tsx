@@ -164,7 +164,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
           </Banner>
         )}
         <div className="o-device__actions">
-          <Button variant="primary" onClick={open.approve} disabled={open.answering}>
+          <Button variant="primary" onClick={open.approve} disabled={open.answering || open.choosing}>
             {login.scopes === undefined ? t('device.approve') : t('device.approveAdmin')}
           </Button>
           <Button onClick={open.deny} disabled={open.answering}>

@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
 import {
   accept,
+  ADMIN_SCOPES,
   addressOfAPerson,
   anotherPerson,
   bodyOf,
@@ -67,9 +68,6 @@ async function asTheCli(
     await context.dispose();
   }
 }
-
-/** The governance write scopes `ostrom login --admin` asks for, every one of them (`DeviceLoginStart`). */
-const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
 
 /**
  * `ostrom login` starts: no body, the ordinary sign-in (the contract's `DeviceLoginStart` names no client); with
@@ -164,7 +162,7 @@ test('5.1 `ostrom login`: a code typed by hand on /device leads to the same pend
   await expect(page.getByRole('button', { name: 'Sign in this terminal' })).toBeEnabled();
 });
 
-/** The tokens of `ostrom login --admin` an organization holds, as its owner's console lists them. */
+/** The tokens of `ostrom login --admin` an organization holds, as the console of one who manages it lists them. */
 async function adminTokensOf(page: Page, org: string): Promise<string[]> {
   const listed = await callFromPage(page, 'GET', '/api/v1/devices', undefined, org);
   expect(listed.status, JSON.stringify(listed.body)).toBe(200);

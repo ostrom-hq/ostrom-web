@@ -6,6 +6,7 @@ import { delay, http, HttpResponse } from 'msw';
 import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
 import { initialOrgMembers, otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS } from '@/mocks/handlers';
+import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
@@ -40,9 +41,10 @@ function alsoIn(role?: string): ReturnType<typeof otherOrganization> {
   return globex;
 }
 
-/** The demo person stops being an owner or an admin of Acme. */
+/** The demo person stops being an owner or an admin of Acme, in its members and in their list of organizations. */
 function demote(): void {
   db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
+  setDemoRole(db, 'member');
 }
 
 describe('the device sign-in page', () => {
@@ -205,10 +207,32 @@ describe('the device sign-in page', () => {
   it('signs in an ordinary terminal for a person in several organizations, naming none', async () => {
     const user = userEvent.setup();
     alsoIn();
+    const named: (string | null)[] = [];
+    server.use(
+      http.post('*/api/v1/auth/device/answer', ({ request }) => {
+        named.push(request.headers.get('Ostrom-Org'));
+      }),
+    );
     open(DEMO_DEVICE_CODE);
     await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
     expect(screen.queryByText('Organization it acts in')).toBeNull();
+    expect(named).toEqual([null]);
+  });
+
+  it('lets an admin sign-in be approved only once the person’s organizations are read, and denied at once', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/orgs', async () => {
+        await delay('infinite');
+      }),
+    );
+    open(DEMO_ADMIN_DEVICE_CODE);
+    await screen.findByText('Admin sign-in');
+    expect(screen.getByRole('button', { name: 'Approve the admin sign-in' })).toBeDisabled();
+    expect(screen.queryByText('Organization it acts in')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Deny' }));
+    expect(await screen.findByText('Terminal refused')).toBeInTheDocument();
   });
 
   it('says an ordinary sign-in refused with a 403 as the server said it, never as a missing role', async () => {
