@@ -472,8 +472,8 @@ export const fr = {
     list: {
       title: 'Personnes',
       search: 'Trouver quelqu’un',
-      noMatch: 'Personne ne correspond à « {{search}} ».',
-      noMatchRead: 'Personne ne correspond à « {{search}} » parmi les {{count}} personnes lues.',
+      noMatch: 'Aucun identifiant ni nom ne commence par « {{search}} ».',
+      searching: 'Recherche…',
       you: '(toi)',
       roleOf: 'Rôle de {{name}}',
       errorTag: 'Non enregistré',

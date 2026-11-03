@@ -594,7 +594,7 @@ describe('the members of a large organization', () => {
     expect(asked[1]?.searchParams.get('after')).toBe(db.orgMembers[ACME][99]?.id);
   });
 
-  it('says more than the people read until every page is in, then finds anyone by name, login or address', async () => {
+  it('says more than the people read until every page is in', async () => {
     // 101 people: the second page holds one, so the count is known only once both pages are read.
     db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 101);
     visit('/members');
@@ -604,25 +604,131 @@ describe('the members of a large organization', () => {
     await shown(101);
     expect(screen.getByText('101 people · you are Admin')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
-    await find('developer 01');
-    expect(rowsOf(await people())).toHaveLength(10);
-    // The one person of the second page: the search covers a page read later.
-    await find('DEV-095@ACME');
-    expect(rowsOf(await people())).toHaveLength(1);
-    await find('  nobody  ');
-    expect(screen.getByText('Nobody matches “nobody”.')).toBeInTheDocument();
   });
 
-  it('says nobody matches among the people read, and still offers the next hundred', async () => {
+  it('asks the server for the start of a login or a name, beyond the people read, then for the next hundred', async () => {
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 250);
+    const searched: URL[] = [];
+    traffic.onRequest((request) => {
+      const url = new URL(request.url);
+      if (url.pathname.endsWith('/members') && url.searchParams.has('q')) searched.push(url);
+    });
     visit('/members');
-    // Search once the first hundred are read, so the message counts them.
+    await shown(100);
+    // dev-199 is on the second page, never read: the server finds them.
+    await find('  DEV-199  ');
+    await shown(1);
+    expect(within(await people()).getByText('Developer 199')).toBeInTheDocument();
+    expect(searched.map((url) => url.search)).toEqual(['?limit=100&q=DEV-199']);
+    // The count of the organization is not the count found.
+    expect(screen.getByText('More than 100 people · you are Admin')).toBeInTheDocument();
+    await find('developer 01');
+    await shown(10);
+    // A search that finds more than a hundred is read a hundred at a time, as the list is.
+    await find('dev-');
+    await shown(100);
+    await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
+    await shown(200);
+    expect(searched.at(-1)?.searchParams.get('q')).toBe('dev-');
+    // After the hundredth found, not the hundredth of the organization (its first five are not `dev-`).
+    const found = (db.orgMembers[ACME] ?? []).filter((member) => member.login.startsWith('dev-'));
+    expect(searched.at(-1)?.searchParams.get('after')).toBe(found[99]?.id);
+    // Cleared, the list is the organization's again, from what was already read.
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
+    await shown(100);
+    expect(screen.getByRole('button', { name: 'Show more people' })).toBeInTheDocument();
+  });
+
+  it('says plainly when nobody’s login or name starts with the search, and offers no next hundred', async () => {
+    visit('/members');
     expect(await screen.findByText('More than 100 people · you are Admin')).toBeInTheDocument();
-    await find('  dev-499  ');
-    expect(
-      await screen.findByText('Nobody matches “dev-499” among the 100 people read so far.'),
-    ).toBeInTheDocument();
+    await find('  nobody  ');
+    expect(await screen.findByText('Nobody’s login or name starts with “nobody”.')).toBeInTheDocument();
     const heading = screen.getByRole('heading', { level: 2, name: 'People' });
     expect(heading.parentElement?.querySelector('ul')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  });
+
+  it('says it is searching, not that nobody matches, while the next search is read', async () => {
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('q') === 'dev-1') await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/members');
+    await shown(100);
+    await find('nobody');
+    expect(await screen.findByText('Nobody’s login or name starts with “nobody”.')).toBeInTheDocument();
+    await find('dev-1');
+    expect(await screen.findByText('Searching…')).toHaveAttribute('role', 'status');
+    expect(screen.queryByText(/starts with “dev-1”/)).toBeNull();
+    // A search that finds a hundred and more, then one still read: its next hundred is not offered meanwhile.
+    await find('dev-');
+    await shown(100);
     expect(screen.getByRole('button', { name: 'Show more people' })).toBeInTheDocument();
+    await find('dev-1');
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+    });
+    expect(await people()).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('keeps the box of a search typed once the organization is small enough not to need one', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 101);
+    visit('/members');
+    await shown(100);
+    await user.click(screen.getByRole('button', { name: 'Show more people' }));
+    await shown(101);
+    await find('dev-001');
+    await shown(1);
+    await user.click(within(rowNamed('Developer 001')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Developer 001')).getByRole('button', { name: 'Remove Developer 001' }));
+    expect(await screen.findByText('100 people · you are Admin')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Find someone' })).toHaveValue('dev-001');
+  });
+
+  it('waits for a pause in the typing, and calls off the search it replaces', async () => {
+    const searches: Request[] = [];
+    traffic.onRequest((request) => {
+      if (new URL(request.url).searchParams.has('q')) searches.push(request);
+    });
+    // The first search never answers: only the one that replaces it can.
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('q') === 'dev-1') await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/members');
+    await shown(100);
+    // Typed letter by letter, faster than the pause: one search, for the whole word.
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'dev-1');
+    await waitFor(() => {
+      expect(searches.map((request) => new URL(request.url).searchParams.get('q'))).toEqual(['dev-1']);
+    });
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), '9');
+    await shown(10);
+    expect(searches.map((request) => new URL(request.url).searchParams.get('q'))).toEqual([
+      'dev-1',
+      'dev-19',
+    ]);
+    expect(searches[0]?.signal.aborted).toBe(true);
+  });
+
+  it('says why a search failed, and keeps the box to search again', async () => {
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', ({ request }) =>
+        new URL(request.url).searchParams.has('q')
+          ? HttpResponse.json({ error: { type: 'internal', message: 'search is down' } }, { status: 500 })
+          : undefined,
+      ),
+    );
+    visit('/members');
+    await shown(100);
+    await find('dev-1');
+    expect(await screen.findByRole('alert')).toHaveTextContent('search is down');
+    expect(screen.getByRole('searchbox', { name: 'Find someone' })).toHaveValue('dev-1');
   });
 });

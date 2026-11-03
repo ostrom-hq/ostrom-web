@@ -462,8 +462,8 @@ export const en = {
     list: {
       title: 'People',
       search: 'Find someone',
-      noMatch: 'Nobody matches “{{search}}”.',
-      noMatchRead: 'Nobody matches “{{search}}” among the {{count}} people read so far.',
+      noMatch: 'Nobody’s login or name starts with “{{search}}”.',
+      searching: 'Searching…',
       you: '(you)',
       roleOf: 'Role of {{name}}',
       errorTag: 'Not saved',
