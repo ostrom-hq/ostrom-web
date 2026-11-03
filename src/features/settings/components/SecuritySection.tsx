@@ -6,16 +6,18 @@ import { Banner } from '@/shared/ui/Banner';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { Section } from '@/shared/ui/Screen';
 import { Skeleton } from '@/shared/ui/Skeleton';
-import type { SessionActionsViewModel, SessionsViewModel } from '../useSettings';
+import type { SessionActionsViewModel, SessionsPage, SessionsViewModel } from '../useSettings';
 import { SessionRow } from './SessionRow';
 
 export interface SecuritySectionProps {
   readonly view: SessionsViewModel;
   readonly actions: SessionActionsViewModel;
+  /** The page a new sign-in comes back to. */
+  readonly back: SessionsPage;
 }
 
 /** How fresh a sign-in a yes needs, the person's signed-in sessions, and the way to end them all. */
-export function SecuritySection({ view, actions }: SecuritySectionProps): ReactElement {
+export function SecuritySection({ view, actions, back }: SecuritySectionProps): ReactElement {
   const { t } = useTranslation();
   const trouble = view.failure ?? actions.failure;
   let list: ReactElement | null = null;
@@ -40,7 +42,7 @@ export function SecuritySection({ view, actions }: SecuritySectionProps): ReactE
     <Section label={t('settings.security.title')}>
       <p>
         {t('settings.security.fresh')}{' '}
-        <Link to="/signin" search={{ redirect: '/settings' }}>
+        <Link to="/signin" search={{ redirect: back }}>
           {t('settings.security.signInAgain')}
         </Link>
       </p>

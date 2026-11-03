@@ -34,14 +34,14 @@ function SettingsPage({
   const rename = useRenameOrg(org);
   const deletion = useDeleteOrg(org);
   const sessions = useAuthSessions();
-  const sessionActions = useSessionActions();
+  const sessionActions = useSessionActions('/settings');
   const devices = useDevices();
   const manages = managesMembers(role);
   const serviceKeys = useServiceKeys(manages);
   return (
     <Screen title={t('settings.title')} lead={t('settings.lead', { name: org.name })}>
       <GeneralSection org={org} canRename={manages} rename={rename} />
-      <SecuritySection view={sessions} actions={sessionActions} />
+      <SecuritySection view={sessions} actions={sessionActions} back="/settings" />
       <DevicesSection view={devices} />
       <ServiceKeysSection orgName={org.name} manages={manages} view={serviceKeys} />
       <DangerZone org={org} isOwner={role === 'owner'} deletion={deletion} />

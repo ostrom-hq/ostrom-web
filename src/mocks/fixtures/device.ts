@@ -19,10 +19,18 @@ export interface MockDeviceLogin {
 
 /** Two terminals waiting for their person: an ordinary sign-in, and an admin one. */
 export function initialDeviceLogins(): MockDeviceLogin[] {
-  const expiresAt = new Date(Date.now() + DEVICE_CODE_LIFETIME_MS).toISOString();
+  const now = Date.now();
+  const requestedAt = new Date(now).toISOString();
+  const expiresAt = new Date(now + DEVICE_CODE_LIFETIME_MS).toISOString();
   return [
     {
-      authorization: { userCode: DEMO_DEVICE_CODE, clientName: 'ostrom CLI on ada-laptop', expiresAt },
+      authorization: {
+        userCode: DEMO_DEVICE_CODE,
+        clientName: 'ostrom CLI on ada-laptop',
+        expiresAt,
+        requestedAt,
+        requestedFrom: '203.0.113.0/24',
+      },
       status: 'pending',
     },
     {
@@ -31,6 +39,8 @@ export function initialDeviceLogins(): MockDeviceLogin[] {
         clientName: 'ostrom CLI on ops-box',
         scopes: ['gates:policy', 'harness:write', 'policy:write'],
         expiresAt,
+        requestedAt,
+        requestedFrom: '2001:db8:abcd::/48',
       },
       status: 'pending',
     },

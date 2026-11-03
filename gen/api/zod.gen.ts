@@ -736,7 +736,9 @@ export const zDeviceAuthorization = z.object({
     userCode: z.string(),
     clientName: z.string(),
     scopes: z.array(z.string()).optional(),
-    expiresAt: z.iso.datetime({ offset: true })
+    expiresAt: z.iso.datetime({ offset: true }),
+    requestedAt: z.iso.datetime({ offset: true }),
+    requestedFrom: z.string().optional()
 });
 
 /**
@@ -984,7 +986,11 @@ export const zGroup = z.object({
     id: z.string(),
     name: z.string(),
     members: z.array(z.string()),
-    accounts: z.array(z.string())
+    accounts: z.array(z.string()),
+    paused: z.array(z.object({
+        login: z.string(),
+        until: z.string()
+    })).optional()
 });
 
 /**
