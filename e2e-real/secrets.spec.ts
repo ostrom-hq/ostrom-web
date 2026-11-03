@@ -102,12 +102,8 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   page,
   browser,
 }) => {
-  test.fixme(
-    true,
-    'ostrom-server: POST /api/v1/accounts reads ShareAccountRequest (providerAccountId, accessToken, refreshToken, ' +
-      'expiresAt), not the contract’s body (credentialSecret, sharedWith, dailyAllocationUsd): 400 "The request is ' +
-      'malformed."; for the sharing module’s owner in the JOURNAL (02/11)',
-  );
+  // Since ostrom-server#201, POST /api/v1/accounts reads the contract's body: credentialSecret, sharedWith and
+  // dailyAllocationUsd.
   const org = await ownerOfNewOrganization(page, 'kira');
   const member = await anotherPerson(browser);
   await joinAs(page, org.id, member, 'liam', 'member');
