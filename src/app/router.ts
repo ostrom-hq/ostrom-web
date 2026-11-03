@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens';
 import { activitySearchSchema } from '@/features/activity/route';
+import { deviceSearchSchema } from '@/features/device/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
 import { fragmentValue, useEmailLinkStore } from '@/features/signin/route';
@@ -108,6 +109,16 @@ const githubRoute = createRoute({
   path: '/github',
   validateSearch: githubSearchSchema,
   component: lazyRouteComponent(async () => import('@/features/github'), 'GithubScreen'),
+});
+/**
+ * `/device?code=…`, where `ostrom login` sends the person to approve their terminal (RFC 8628). Signed in only: the
+ * page offers a sign-in that comes back to it, its code kept.
+ */
+const deviceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/device',
+  validateSearch: deviceSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/device'), 'DeviceScreen'),
 });
 const approversRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -281,6 +292,7 @@ export const routeTree = rootRoute.addChildren([
   receiptRoute,
   membersRoute,
   githubRoute,
+  deviceRoute,
   approversRoute,
   rulesRoute,
   activityRoute,

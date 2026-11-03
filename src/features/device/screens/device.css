@@ -1,0 +1,25 @@
+/* The code the person compares with their terminal: large enough to read at a glance, letter by letter. */
+.o-device__code {
+  margin: 0;
+  font-size: var(--fs-40);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  overflow-wrap: anywhere;
+}
+
+.o-device__input {
+  max-width: 16rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.o-device__scopes {
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.o-device__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

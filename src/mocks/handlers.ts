@@ -120,7 +120,9 @@ import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
+import { initialDeviceLogins } from '@/mocks/fixtures/device';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
@@ -175,6 +177,7 @@ export interface MockDb
     AccountState,
     ActivityState,
     BillingState,
+    DeviceState,
     GithubState,
     OrgsState,
     TokensState,
@@ -286,6 +289,7 @@ export function createMockDb(): MockDb {
     signedInAt: Date.now(),
     signedIn: true,
     usedLinks: [],
+    deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
     tokens: initialTokens(),
     nextToken: 3,
@@ -673,6 +677,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
+    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
     ...createApproversGraphHandlers(() => db),
     ...createActivityHandlers(
       () => db,
