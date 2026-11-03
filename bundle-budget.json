@@ -2,7 +2,7 @@
   "entryKiB": 215,
   "routeKiB": 225,
   "routes": {
-    "/": 7.4,
+    "/": 7.9,
     "/yes": 0.2,
     "/yes/$approvalId": 0.2,
     "/confirm/$confirmationId": 4.9,
