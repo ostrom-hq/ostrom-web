@@ -13,6 +13,9 @@ import { activitySearchSchema } from '@/features/activity/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
 import { fragmentValue, useEmailLinkStore } from '@/features/signin/route';
+// The yes screens are in the first download: an approver opens a link to one on a phone, and a screen fetched after the
+// entry costs a round trip more on a slow network (first paint 1.9 s with it, 2.2 s split; e2e-real/firstPaint.spec.ts).
+import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { dropFragment } from '@/shared/lib/dropFragment';
 
@@ -70,7 +73,7 @@ const yesRoute = createRoute({
       replace: true,
     });
   },
-  component: lazyRouteComponent(async () => import('@/features/yes'), 'YesQueueScreen'),
+  component: YesQueueScreen,
 });
 
 /** A link to one request (`/yes/apr-1#signin=opk_…`) signs in the same way, then shows that request. */
@@ -84,7 +87,7 @@ const approvalRoute = createRoute({
     useAuthStore.getState().offer(signin);
     throw redirect({ to: '/yes/$approvalId', params, hash: '', replace: true });
   },
-  component: lazyRouteComponent(async () => import('@/features/yes'), 'ApprovalScreen'),
+  component: ApprovalScreen,
 });
 
 /**

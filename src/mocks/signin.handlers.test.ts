@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { exchangeSignInLink, getMe, logout, requestSignInEmail, verifySignInEmail } from '@gen/api/sdk.gen';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { DEMO_EMAIL_TOKEN, resetMockDb } from '@/mocks/handlers';
+import { DEMO_EMAIL_TOKEN, OTHER_BROWSER_EMAIL_TOKEN, resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -33,6 +33,10 @@ describe('mock e-mail sign-in', () => {
     expect(signed.data).toEqual({ redirect: '/yes', csrfToken: 'csrf-demo' });
     expect(await post('/auth/email/verify', JSON.stringify({ token: 'ml_other' }))).toBe(401);
     expect(await post('/auth/email/verify', '{"token":7}')).toBe(401);
+  });
+
+  it('refuses with 403 a link opened in another browser than the one that asked for it', async () => {
+    expect(await post('/auth/email/verify', JSON.stringify({ token: OTHER_BROWSER_EMAIL_TOKEN }))).toBe(403);
   });
 });
 

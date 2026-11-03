@@ -40,11 +40,14 @@ function filesOf(manifest: Manifest, key: string, seen = new Set<string>()): Set
   return seen;
 }
 
+/** The routes whose screens are in the first download on purpose (src/app/router.ts says why): nothing of their own. */
+const IN_FIRST_DOWNLOAD = new Set(['/yes', '/yes/$approvalId']);
+
 /**
  * Each route of the router with the feature its screen loads from. Every route loads its screen lazily: one that does
  * not would put its screen back in the first download, so it fails here, as does a route this reading cannot follow.
  */
-function routesOf(router: string): { path: string; feature: string }[] {
+function routesOf(router: string): { path: string; feature: string | undefined }[] {
   // Each `path:` up to the next one is a route's definition, its screen's lazy import in it.
   return router
     .split(/(?=path: ['"`])/)
@@ -52,6 +55,8 @@ function routesOf(router: string): { path: string; feature: string }[] {
     .map((definition) => {
       const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
       const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
+      if (path !== undefined && feature === undefined && IN_FIRST_DOWNLOAD.has(path))
+        return { path, feature: undefined };
       if (path === undefined || feature === undefined) {
         throw new Error(`src/app/router.ts: a route without a lazy screen: ${definition.slice(0, 120)}`);
       }
@@ -97,7 +102,9 @@ function main(dist: string): void {
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
     const own = new Set(
-      [...filesOf(manifest, indexOf(manifest, route.feature))].filter((f) => !entry.has(f)),
+      route.feature === undefined
+        ? []
+        : [...filesOf(manifest, indexOf(manifest, route.feature))].filter((f) => !entry.has(f)),
     );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
