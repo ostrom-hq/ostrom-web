@@ -5,7 +5,7 @@
 // approver's queue (server#79). The ask is made with a personal token, as the hook asks.
 import { expect, test } from '@playwright/test';
 import { zAskGateResponse, zGetGateCatalogResponse } from '../gen/api/zod.gen';
-import { askingToken, loginOf, requestOf, uniqueRun, withToken } from './asking';
+import { askingToken, loginOf, requestOf, uniqueRun, withToken } from './gate';
 import { callFromPage, ownerOfNewOrganization } from './real';
 
 test('3.2 an owner writes a rule with a gate on the console; once accepted, its action waits for a yes', async ({
