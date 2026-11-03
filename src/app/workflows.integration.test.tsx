@@ -183,17 +183,27 @@ describe('changing the workflows', () => {
     await user.selectOptions(field('Step 2: The step it reads'), 'Step 1 · Tests run');
     // half written: refused before sending, with what to change
     expect(
-      within(form).getByText('A check reads a simple path, such as result.items[0].name.'),
+      within(form).getByText(
+        'A check reads outcome, output, or up to 10 keys of the output, such as output.status.',
+      ),
+    ).toBeInTheDocument();
+    // what each outcome does in a line of steps
+    expect(
+      within(form).getByText(
+        'Read true, the run goes on to the next step; read false, it fails here, with the reason.',
+      ),
     ).toBeInTheDocument();
     expect(create).toBeDisabled();
     await user.type(field('Step 2: Where in its output'), '$.status');
     expect(create).toBeDisabled();
     await user.clear(field('Step 2: Where in its output'));
-    await user.type(field('Step 2: Where in its output'), 'result.status');
+    await user.type(field('Step 2: Where in its output'), 'output.status');
     await user.selectOptions(field('Step 2: How it compares'), 'matches the pattern');
-    await user.type(field('Step 2: With what'), '(');
+    await user.type(field('Step 2: With what'), 'v{{2}');
     expect(
-      within(form).getByText('A pattern compiles and is at most 200 characters long.'),
+      within(form).getByText(
+        'A pattern takes no “{”, no back-reference and no look-around, in at most 200 characters.',
+      ),
     ).toBeInTheDocument();
     await user.clear(field('Step 2: With what'));
     await user.type(field('Step 2: With what'), '^passed$');
@@ -225,10 +235,17 @@ describe('changing the workflows', () => {
         id: 'n-2',
         kind: 'check',
         label: 'Tests passed',
-        condition: { step: 'n-1', path: 'result.status', op: 'equals', value: '^passed$' },
+        condition: { step: 'n-1', path: 'output.status', op: 'equals', value: '^passed$' },
       },
       { id: 'n-3', kind: 'wait', label: 'QA', wait: { title: 'Ship it?', body: 'QA looked at the build.' } },
       { id: 'n-4', kind: 'workflow', label: 'Deploy', workflowId: 'wf-backend' },
+    ]);
+    // the check goes on when it reads true; read false, no path: the run fails there
+    expect(saved?.edges).toEqual([
+      { from: 'n-1', to: 'n-2' },
+      { from: 'n-2', to: 'n-3', on: 'true' },
+      { from: 'n-3', to: 'n-4' },
+      { from: 'n-4', to: null },
     ]);
   });
 

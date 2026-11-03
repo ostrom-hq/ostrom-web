@@ -214,10 +214,18 @@ describe('the workflow editor’s model', () => {
     expect(workflowProblem({ ...fine, steps: [step({ label: 'R', kind: 'workflow' })] })).toBe('call');
     const tests = step({ id: 'tests', label: 'Tests' });
     const check = (parts: Partial<StepDraft>): StepDraft =>
-      step({ id: 'c', label: 'C', kind: 'check', conditionStep: 'tests', conditionPath: 'status', ...parts });
+      step({
+        id: 'c',
+        label: 'C',
+        kind: 'check',
+        conditionStep: 'tests',
+        conditionPath: 'output.status',
+        ...parts,
+      });
     expect(workflowProblem({ ...fine, steps: [tests, check({ conditionValue: 'ok' })] })).toBeUndefined();
-    // a check reads a step before it, never itself or one after
-    expect(workflowProblem({ ...fine, steps: [check({ conditionValue: 'ok' }), tests] })).toBe(
+    // a check reads any step of the workflow, one after it included, never one it does not have
+    expect(workflowProblem({ ...fine, steps: [check({ conditionValue: 'ok' }), tests] })).toBeUndefined();
+    expect(workflowProblem({ ...fine, steps: [tests, check({ conditionStep: 'gone' })] })).toBe(
       'condition.step',
     );
     expect(workflowProblem({ ...fine, steps: [tests, check({ conditionPath: '$.status' })] })).toBe(
@@ -230,6 +238,72 @@ describe('the workflow editor’s model', () => {
     expect(
       workflowProblem({ ...fine, steps: [tests, check({ conditionStep: '', conditionPath: '' })] }),
     ).toBeUndefined();
+  });
+
+  it('refuses a condition on a check of a branching workflow whose paths out do not say true or false', () => {
+    const branching = workflow({
+      nodes: [
+        { id: 'tests', kind: 'step', label: 'Tests' },
+        { id: 'c', kind: 'check', label: 'C' },
+        { id: 'ship', kind: 'step', label: 'Ship' },
+      ],
+      edges: [
+        { from: 'tests', to: 'c' },
+        { from: 'c', to: 'ship' },
+        { from: 'tests', to: 'ship' },
+      ],
+    });
+    const draft = workflowDraftOf(branching);
+    const conditioned = {
+      ...draft,
+      steps: draft.steps.map((one) =>
+        one.id === 'c'
+          ? { ...one, conditionStep: 'tests', conditionPath: 'outcome', conditionValue: 'ok' }
+          : one,
+      ),
+    };
+    expect(draft.linear).toBe(false);
+    expect(workflowProblem(conditioned, branching)).toBe('condition.branches');
+    // its paths say where true and false go: it is sent as it is
+    const said = {
+      ...branching,
+      edges: [
+        { from: 'tests', to: 'c' },
+        { from: 'c', to: 'ship', on: 'true' },
+        { from: 'c', to: null, on: 'false' },
+        { from: 'tests', to: 'ship' },
+      ],
+    };
+    expect(workflowProblem(conditioned, said)).toBeUndefined();
+    // without a condition, its paths are its own
+    expect(workflowProblem(draft, branching)).toBeUndefined();
+  });
+
+  it('sends a conditioned check on when it reads true; read false, the run fails there, with its reason', () => {
+    const draft = workflowDraftOf(line);
+    const reads = {
+      kind: 'check' as const,
+      conditionStep: 'a',
+      conditionPath: 'outcome',
+      conditionValue: 'ok',
+    };
+    const checked = {
+      ...draft,
+      steps: draft.steps.map((one) => (one.id === 'b' ? { ...one, ...reads } : one)),
+    };
+    expect(edgesOf(checked, line)).toEqual([
+      { from: 'a', to: 'b', label: 'go', on: 'success' },
+      { from: 'b', to: 'c', on: 'true' },
+    ]);
+    // the last step, conditioned, ends on true, even where the workflow ended by no path
+    const last = { ...draft, steps: draft.steps.map((one) => (one.id === 'c' ? { ...one, ...reads } : one)) };
+    expect(edgesOf(last, line)).toEqual([
+      { from: 'a', to: 'b', label: 'go', on: 'success' },
+      { from: 'b', to: 'c' },
+      { from: 'c', to: null, on: 'true' },
+    ]);
+    // a line read untouched goes back as it was read
+    expect(edgesOf(draft, line)).toBe(line.edges);
   });
 
   it('reads a check’s condition from its fields, with a value except for exists', () => {

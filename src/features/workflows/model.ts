@@ -245,7 +245,14 @@ export function listOf(text: string): string[] {
 
 /** What keeps a workflow from being saved, in the order the editor says it. */
 export type WorkflowProblem =
-  'name' | 'domain' | 'noSteps' | 'label' | 'question' | 'call' | `condition.${ConditionProblem}`;
+  | 'name'
+  | 'domain'
+  | 'noSteps'
+  | 'label'
+  | 'question'
+  | 'call'
+  | `condition.${ConditionProblem}`
+  | 'condition.branches';
 
 /** A check's condition as the draft says it, or undefined when none of its fields is written. */
 export function conditionOf(step: StepDraft): NodeCondition | undefined {
@@ -263,7 +270,16 @@ export function conditionOf(step: StepDraft): NodeCondition | undefined {
   };
 }
 
-export function workflowProblem(draft: WorkflowDraft): WorkflowProblem | undefined {
+/**
+ * A check with a condition goes on by its paths `on: "true"` and `on: "false"` (core#127): in a line, the editor draws
+ * them; in a workflow that branches, the paths are the workflow's own, and each one out of the check says one of them.
+ */
+function branchesSaid(step: StepDraft, base: Workflow | undefined): boolean {
+  const out = base?.edges.filter((edge) => edge.from === step.id) ?? [];
+  return out.every((edge) => edge.on === 'true' || edge.on === 'false');
+}
+
+export function workflowProblem(draft: WorkflowDraft, base?: Workflow): WorkflowProblem | undefined {
   if (draft.name.trim() === '') return 'name';
   if (draft.domain.trim() === '') return 'domain';
   if (draft.steps.length === 0) return 'noSteps';
@@ -275,6 +291,7 @@ export function workflowProblem(draft: WorkflowDraft): WorkflowProblem | undefin
     const earlier = draft.steps.slice(0, at).map((before) => before.id);
     const problem = condition === undefined ? undefined : conditionProblem(condition, earlier);
     if (problem !== undefined) return `condition.${problem}`;
+    if (condition !== undefined && !draft.linear && !branchesSaid(step, base)) return 'condition.branches';
   }
   return undefined;
 }

@@ -885,6 +885,8 @@ export const fr = {
       stepPrefix: 'Étape {{number}} : ',
       conditionStepOption: 'Étape {{number}} · {{label}}',
       conditionStepNone: 'Choisis une étape',
+      conditionOutcome:
+        'Lue vraie, l’exécution passe à l’étape suivante ; lue fausse, elle échoue ici, avec la raison.',
       callsNone: 'Choisis un workflow',
       callsGone: '{{id}} (plus dans la liste)',
       callsLoading: 'Lecture des workflows de l’organisation…',
@@ -920,7 +922,7 @@ export const fr = {
         instructions: 'Corrige les tests qui échouent, puis pousse.',
         question: 'Déployer en production ?',
         questionBody: 'Facultatif',
-        conditionPath: 'result.status',
+        conditionPath: 'output.status',
         conditionValue: 'passed',
       },
       problem: {
@@ -931,10 +933,13 @@ export const fr = {
         question: 'Dis ce que demande chaque attente.',
         call: 'Choisis le workflow que lance chaque étape workflow.',
         condition: {
-          step: 'Un contrôle lit une étape qui vient avant lui.',
-          path: 'Un contrôle lit un chemin simple, comme result.items[0].name.',
-          value: 'Dis avec quoi un contrôle compare, sauf pour « existe », qui ne compare rien.',
-          pattern: 'Un motif se compile et fait au plus 200 caractères.',
+          step: 'Un contrôle lit une étape de ce workflow.',
+          path: 'Un contrôle lit outcome, output ou jusqu’à 10 clés de la sortie, comme output.status.',
+          value:
+            'Dis avec quoi un contrôle compare, en 200 caractères au plus, sauf pour « existe », qui ne compare rien.',
+          pattern:
+            'Un motif ne prend ni « { », ni référence arrière, ni regard avant ou arrière, en 200 caractères au plus.',
+          branches: 'Les chemins qui sortent d’un contrôle avec une condition disent true ou false.',
         },
       },
       create: 'Créer le workflow',

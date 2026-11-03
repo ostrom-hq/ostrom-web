@@ -864,6 +864,8 @@ export const en = {
       stepPrefix: 'Step {{number}}: ',
       conditionStepOption: 'Step {{number}} · {{label}}',
       conditionStepNone: 'Choose a step',
+      conditionOutcome:
+        'Read true, the run goes on to the next step; read false, it fails here, with the reason.',
       callsNone: 'Choose a workflow',
       callsGone: '{{id}} (no longer listed)',
       callsLoading: 'Reading the organization’s workflows…',
@@ -899,7 +901,7 @@ export const en = {
         instructions: 'Fix the failing tests, then push.',
         question: 'Deploy to production?',
         questionBody: 'Optional',
-        conditionPath: 'result.status',
+        conditionPath: 'output.status',
         conditionValue: 'passed',
       },
       problem: {
@@ -910,10 +912,12 @@ export const en = {
         question: 'Say what each wait asks.',
         call: 'Choose the workflow each workflow step runs.',
         condition: {
-          step: 'A check reads a step that comes before it.',
-          path: 'A check reads a simple path, such as result.items[0].name.',
-          value: 'Say what a check compares with, except for “exists”, which compares nothing.',
-          pattern: 'A pattern compiles and is at most 200 characters long.',
+          step: 'A check reads a step of this workflow.',
+          path: 'A check reads outcome, output, or up to 10 keys of the output, such as output.status.',
+          value:
+            'Say what a check compares with, in at most 200 characters, except for “exists”, which compares nothing.',
+          pattern: 'A pattern takes no “{”, no back-reference and no look-around, in at most 200 characters.',
+          branches: 'The paths out of a check with a condition say true or false.',
         },
       },
       create: 'Create the workflow',
