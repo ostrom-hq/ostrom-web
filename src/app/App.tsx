@@ -5,7 +5,7 @@ import { type ReactElement, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
-import { resetArrivals } from '@/features/yes';
+import { resetArrivals } from '@/features/yes/route';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 import { followOtherTab, useOrgStore } from '@/shared/org/orgStore';
