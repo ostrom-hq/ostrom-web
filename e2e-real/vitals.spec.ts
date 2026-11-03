@@ -33,18 +33,55 @@ const MEASURED = '__ostromVitals';
  */
 const MEASURING = `(() => {
   let largestPaint = -1;
+  let largestElement = '';
   let interaction = 0;
   new PerformanceObserver((list) => {
-    largestPaint = list.getEntries().at(-1)?.startTime ?? largestPaint;
+    const last = list.getEntries().at(-1);
+    if (last === undefined) return;
+    largestPaint = last.startTime;
+    const element = last.element;
+    largestElement = element
+      ? element.tagName.toLowerCase() + ' "' + (element.textContent ?? '').trim().slice(0, 40) + '"'
+      : last.url;
   }).observe({ type: 'largest-contentful-paint', buffered: true });
   new PerformanceObserver((list) => {
     for (const entry of list.getEntries())
       if (entry.interactionId > 0 && entry.duration > interaction) interaction = entry.duration;
   }).observe({ type: 'event', durationThreshold: 16, buffered: true });
-  Object.defineProperty(globalThis, ${JSON.stringify(MEASURED)}, { get: () => ({ largestPaint, interaction }) });
+  Object.defineProperty(globalThis, ${JSON.stringify(MEASURED)}, {
+    get: () => ({ largestPaint, largestElement, interaction }),
+  });
 })();`;
 
-const zMeasured = z.object({ largestPaint: z.number(), interaction: z.number() });
+const zMeasured = z.object({ largestPaint: z.number(), largestElement: z.string(), interaction: z.number() });
+
+/** An API call the console made while a screen loaded: what it asked, in which organization, and when. */
+interface ApiCall {
+  readonly method: string;
+  readonly path: string;
+  readonly org: string;
+  readonly csrf: boolean;
+  readonly at: number;
+}
+
+/**
+ * What is wrong with the API calls of one load: the same call made twice (same method, address and organization,
+ * so a preload the console did not take up shows here), a call in another organization than this person's, a
+ * change without its CSRF token.
+ */
+function callProblems(calls: readonly ApiCall[], org: string): string[] {
+  const problems: string[] = [];
+  const seen = new Map<string, number>();
+  for (const call of calls) {
+    const where = call.org === '' ? '' : ` [${call.org === org ? 'org' : call.org}]`;
+    const key = `${call.method} ${call.path}${where}`;
+    seen.set(key, (seen.get(key) ?? 0) + 1);
+    if (call.org !== '' && call.org !== org) problems.push(`${key}: in another organization`);
+    if (call.method !== 'GET' && call.method !== 'HEAD' && !call.csrf) problems.push(`${key}: no CSRF token`);
+  }
+  for (const [key, count] of seen) if (count > 1) problems.push(`${key}: made ${String(count)} times`);
+  return problems;
+}
 
 async function measuredOn(page: Page): Promise<z.infer<typeof zMeasured>> {
   return zMeasured.parse(await page.evaluate((key): unknown => Reflect.get(globalThis, key), MEASURED));
@@ -150,17 +187,48 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
 
   await page.addInitScript(MEASURING);
   const cdp = await slowed(page);
-  const rows = ['| Screen | LCP (median) | INP (median) | Interaction |', '|---|---:|---:|---|'];
+  // Every API call of the page, from the navigation on: what each load asked, and when.
+  let calls: ApiCall[] = [];
+  let navigatedAt = 0;
+  page.on('request', (sent) => {
+    const url = new URL(sent.url());
+    if (!url.pathname.startsWith('/api/')) return;
+    const headers = sent.headers();
+    calls.push({
+      method: sent.method(),
+      path: `${url.pathname}${url.search}`,
+      org: headers['ostrom-org'] ?? '',
+      csrf: headers['x-csrf-token'] !== undefined,
+      at: Date.now() - navigatedAt,
+    });
+  });
+  const rows = [
+    '| Screen | LCP (median) | INP (median) | Interaction | Largest paint | API calls before it is up |',
+    '|---|---:|---:|---|---|---|',
+  ];
   const results: { path: string; lcp: number; inp: number }[] = [];
+  const problems: string[] = [];
+  const timelines: string[] = [];
   for (const screen of screens) {
     const lcps: number[] = [];
     const inps: number[] = [];
+    let element = '';
+    let firstCalls: readonly ApiCall[] = [];
     for (let run = 0; run < LOADS; run += 1) {
+      calls = [];
+      navigatedAt = Date.now();
       await page.goto(screen.path, { waitUntil: 'commit' });
       await expect(screen.ready(page)).toBeVisible({ timeout: 60_000 });
       // The largest paint is final once the screen is up and painted once more; an input stops it from growing.
       await page.waitForTimeout(500);
-      lcps.push((await measuredOn(page)).largestPaint);
+      const measured = await measuredOn(page);
+      lcps.push(measured.largestPaint);
+      element = measured.largestElement;
+      const loaded = [...calls];
+      if (run === 0) firstCalls = loaded;
+      problems.push(
+        ...callProblems(loaded, org).map((problem) => `${screen.path}, load ${String(run + 1)}: ${problem}`),
+      );
       await screen.interact(page, isMobile);
       await page.waitForTimeout(500);
       inps.push((await measuredOn(page)).interaction);
@@ -168,15 +236,23 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
     const lcp = median(lcps);
     const inp = median(inps);
     results.push({ path: screen.path, lcp, inp });
-    rows.push(`| \`${screen.path}\` | ${ms(lcp)} | ${ms(inp)} | ${screen.interaction} |`);
+    const asked = firstCalls.map((call) => `${call.method} ${call.path}${call.org === '' ? '' : ' [org]'}`);
+    rows.push(
+      `| \`${screen.path}\` | ${ms(lcp)} | ${ms(inp)} | ${screen.interaction} | ${element} | ${String(asked.length)} |`,
+    );
+    timelines.push(
+      `- \`${screen.path}\`: ${firstCalls.map((call, index) => `${String(call.at)} ms ${asked[index] ?? ''}`).join('; ')}`,
+    );
   }
   await cdp.detach();
-  const table = `### Web vitals on Fast 3G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n`;
+  const table = `### Web vitals on Fast 3G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n`;
   await test.info().attach('vitals.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
   console.warn(table);
   // Asked once the table is out: a screen over budget still leaves every figure.
+  // Each call once, in this person's organization, a change with its CSRF token: a preload never doubles a call.
+  expect.soft(problems, 'the API calls of each load').toEqual([]);
   for (const { path, lcp, inp } of results) {
     expect.soft(lcp, `${path}: LCP, median`).toBeGreaterThan(0);
     expect.soft(lcp, `${path}: LCP, median`).toBeLessThanOrEqual(LCP_BUDGET_MS);

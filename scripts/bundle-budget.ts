@@ -116,7 +116,9 @@ function main(dist: string): void {
     `|---|---:|---:|---:|---:|`,
   ];
   const over: string[] = [];
-  rows.push(`| (first download) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
+  // Its files too: on a slow link each one is a request of its own, sharing the bandwidth with the others.
+  const files = `${String(entry.size)} files`;
+  rows.push(`| (first download, ${files}) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
   const measured: MeasuredRoute[] = [];
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
