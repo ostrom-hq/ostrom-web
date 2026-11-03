@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type {
   NodeRun,
+  WaitSpec,
   Workflow,
   WorkflowEdge,
   WorkflowNode,
@@ -8,6 +9,7 @@ import type {
   WorkflowStatus,
 } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
+import { type ConditionOp, type ConditionProblem, conditionProblem, type NodeCondition } from './nodes';
 
 /** A proposed workflow waits for an owner: amber until someone accepts it. */
 export const STATUS_TONES: Readonly<Record<WorkflowStatus, BadgeTone>> = {
@@ -53,13 +55,20 @@ export function approvalSteps(workflow: Workflow): number {
   return workflow.nodes.filter((node) => node.kind === 'gate').length;
 }
 
-/** The kinds a person picks for a step in the console; a `wait` or a `workflow` step keeps its kind. */
-export const EDITABLE_KINDS = ['trigger', 'step', 'check', 'gate', 'notify', 'agent'] as const;
-export type EditableKind = (typeof EDITABLE_KINDS)[number];
-
-export function isEditableKind(kind: WorkflowNodeKind): kind is EditableKind {
-  return EDITABLE_KINDS.some((editable) => editable === kind);
-}
+/**
+ * The kinds a person picks for a step in the console, in the order the editor offers them: every kind of the contract
+ * (a kind it adds is refused by `SHOWN` below until the editor says what it shows).
+ */
+export const EDITABLE_KINDS: readonly WorkflowNodeKind[] = [
+  'trigger',
+  'step',
+  'check',
+  'gate',
+  'notify',
+  'agent',
+  'wait',
+  'workflow',
+];
 
 /** A step as the editor holds it: the text of each field, and the node it was read from (kept on save). */
 export interface StepDraft {
@@ -78,8 +87,21 @@ export interface StepDraft {
   readonly message: string;
   /** What an agent step asks. */
   readonly instructions: string;
+  /** A check's condition, field by field (all empty: no condition). */
+  readonly conditionStep: string;
+  readonly conditionPath: string;
+  readonly conditionOp: ConditionOp;
+  readonly conditionValue: string;
+  /** The workflow a `workflow` step calls, by id. */
+  readonly calls: string;
+  /** The question a `wait` step asks a person (its `WaitSpec`: title and text; its fields and actions are kept). */
+  readonly question: string;
+  readonly questionBody: string;
   readonly base: WorkflowNode | undefined;
 }
+
+/** A node as the console reads and writes it: with the typed condition of a check (core, decision of 03/11). */
+export type EditedNode = WorkflowNode & { readonly condition?: NodeCondition };
 
 export interface WorkflowDraft {
   readonly name: string;
@@ -110,7 +132,8 @@ export function isLinear(workflow: Workflow): boolean {
   return followed && order.slice(0, -1).every((id) => froms.includes(id));
 }
 
-function stepDraftOf(node: WorkflowNode, key: number): StepDraft {
+function stepDraftOf(node: EditedNode, key: number): StepDraft {
+  const condition = node.condition;
   return {
     key,
     id: node.id,
@@ -122,12 +145,19 @@ function stepDraftOf(node: WorkflowNode, key: number): StepDraft {
     channel: node.run?.channel ?? '',
     message: node.run?.message ?? '',
     instructions: node.run?.instructions ?? '',
+    conditionStep: condition?.step ?? '',
+    conditionPath: condition?.path ?? '',
+    conditionOp: condition?.op ?? 'equals',
+    conditionValue: condition?.value ?? '',
+    calls: node.workflowId ?? '',
+    question: node.wait?.title ?? '',
+    questionBody: node.wait?.body ?? '',
     base: node,
   };
 }
 
 /** A step not written yet, with an id no other step has. */
-export function newStep(steps: readonly StepDraft[], kind: EditableKind = 'step'): StepDraft {
+export function newStep(steps: readonly StepDraft[], kind: WorkflowNodeKind = 'step'): StepDraft {
   const key = steps.reduce((last, step) => Math.max(last, step.key), -1) + 1;
   const ids = new Set(steps.map((step) => step.id));
   let number = steps.length + 1;
@@ -143,6 +173,13 @@ export function newStep(steps: readonly StepDraft[], kind: EditableKind = 'step'
     channel: '',
     message: '',
     instructions: '',
+    conditionStep: '',
+    conditionPath: '',
+    conditionOp: 'equals',
+    conditionValue: '',
+    calls: '',
+    question: '',
+    questionBody: '',
     base: undefined,
   };
 }
@@ -186,13 +223,38 @@ export function listOf(text: string): string[] {
 }
 
 /** What keeps a workflow from being saved, in the order the editor says it. */
-export type WorkflowProblem = 'name' | 'domain' | 'noSteps' | 'label';
+export type WorkflowProblem =
+  'name' | 'domain' | 'noSteps' | 'label' | 'question' | 'call' | `condition.${ConditionProblem}`;
+
+/** A check's condition as the draft says it, or undefined when none of its fields is written. */
+export function conditionOf(step: StepDraft): NodeCondition | undefined {
+  const written = [step.conditionStep, step.conditionPath, step.conditionValue].some(
+    (field) => field.trim() !== '',
+  );
+  if (step.kind !== 'check' || !written) return undefined;
+  const value = step.conditionValue;
+  return {
+    step: step.conditionStep.trim(),
+    path: step.conditionPath.trim(),
+    op: step.conditionOp,
+    // exists compares nothing; any other op compares the value as written, an empty one included
+    ...(step.conditionOp === 'exists' ? {} : { value }),
+  };
+}
 
 export function workflowProblem(draft: WorkflowDraft): WorkflowProblem | undefined {
   if (draft.name.trim() === '') return 'name';
   if (draft.domain.trim() === '') return 'domain';
   if (draft.steps.length === 0) return 'noSteps';
   if (draft.steps.some((step) => step.label.trim() === '')) return 'label';
+  if (draft.steps.some((step) => step.kind === 'wait' && step.question.trim() === '')) return 'question';
+  if (draft.steps.some((step) => step.kind === 'workflow' && step.calls === '')) return 'call';
+  for (const [at, step] of draft.steps.entries()) {
+    const condition = conditionOf(step);
+    const earlier = draft.steps.slice(0, at).map((before) => before.id);
+    const problem = condition === undefined ? undefined : conditionProblem(condition, earlier);
+    if (problem !== undefined) return `condition.${problem}`;
+  }
   return undefined;
 }
 
@@ -206,16 +268,19 @@ function textOf(value: string): string | undefined {
   return trimmed === '' ? undefined : trimmed;
 }
 
-/** The fields the editor shows for each kind; a wait or a called workflow shows none and keeps its own. */
-const SHOWN: Readonly<Record<EditableKind, readonly ('command' | 'channel' | 'message' | 'instructions')[]>> =
-  {
-    trigger: [],
-    step: ['command'],
-    check: ['command'],
-    gate: [],
-    notify: ['channel', 'message'],
-    agent: ['instructions'],
-  };
+/** The fields of `run` the editor shows for each kind (a wait, a check's condition and a call have their own). */
+const SHOWN: Readonly<
+  Record<WorkflowNodeKind, readonly ('command' | 'channel' | 'message' | 'instructions')[]>
+> = {
+  trigger: [],
+  step: ['command'],
+  check: ['command'],
+  gate: [],
+  notify: ['channel', 'message'],
+  agent: ['instructions'],
+  wait: [],
+  workflow: [],
+};
 
 /**
  * What the step runs, its other settings (where, timeout, network…) kept as they were. A field its kind does not show
@@ -225,7 +290,7 @@ function runOf(step: StepDraft): NodeRun | undefined {
   const base = step.base?.run ?? {};
   const kind = step.kind;
   const field = (name: 'command' | 'channel' | 'message' | 'instructions'): string | undefined =>
-    isEditableKind(kind) ? (SHOWN[kind].includes(name) ? textOf(step[name]) : undefined) : base[name];
+    SHOWN[kind].includes(name) ? textOf(step[name]) : undefined;
   const command = field('command');
   const channel = field('channel');
   const message = field('message');
@@ -250,9 +315,23 @@ function runOf(step: StepDraft): NodeRun | undefined {
  * The node a step says. What the editor does not show is kept from the node it was read from (rules, hours,
  * position, the wait form, the called workflow…); what only a gate has goes when the step is no longer a gate.
  */
-export function nodeOf(step: StepDraft): WorkflowNode {
-  const base = step.base;
+export function nodeOf(step: StepDraft): EditedNode {
+  const base: EditedNode | undefined = step.base;
   const gate = step.kind === 'gate';
+  const condition = conditionOf(step);
+  const questionBody = textOf(step.questionBody);
+  // a wait asks its question (title and text, written here); its fields, actions and links stay as they were
+  const asked = base?.wait;
+  const wait: WaitSpec | undefined =
+    step.kind === 'wait'
+      ? {
+          title: step.question.trim(),
+          ...(questionBody === undefined ? {} : { body: questionBody }),
+          ...(asked?.fields === undefined ? {} : { fields: asked.fields }),
+          ...(asked?.actions === undefined ? {} : { actions: asked.actions }),
+          ...(asked?.refs === undefined ? {} : { refs: asked.refs }),
+        }
+      : undefined;
   const approvers = listOf(step.approvers);
   const detail = textOf(step.detail);
   const run = runOf(step);
@@ -263,6 +342,9 @@ export function nodeOf(step: StepDraft): WorkflowNode {
     ...(detail === undefined ? {} : { detail }),
     ...(gate && approvers.length > 0 ? { approvers } : {}),
     ...(run === undefined ? {} : { run }),
+    ...(condition === undefined ? {} : { condition }),
+    ...(step.kind === 'workflow' && step.calls !== '' ? { workflowId: step.calls } : {}),
+    ...(wait === undefined ? {} : { wait }),
     ...(base === undefined
       ? {}
       : {
@@ -275,8 +357,6 @@ export function nodeOf(step: StepDraft): WorkflowNode {
           ...(base.ruleIds === undefined ? {} : { ruleIds: base.ruleIds }),
           ...(base.position === undefined ? {} : { position: base.position }),
           ...(base.suggested === undefined ? {} : { suggested: base.suggested }),
-          ...(base.wait === undefined ? {} : { wait: base.wait }),
-          ...(base.workflowId === undefined ? {} : { workflowId: base.workflowId }),
           ...(base.arguments === undefined ? {} : { arguments: base.arguments }),
           ...(base.maxVisits === undefined ? {} : { maxVisits: base.maxVisits }),
         }),

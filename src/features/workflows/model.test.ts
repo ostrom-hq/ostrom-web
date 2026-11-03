@@ -2,8 +2,10 @@
 import type { Workflow } from '@gen/api/types.gen';
 import {
   approvalSteps,
+  conditionOf,
+  EDITABLE_KINDS,
+  type EditedNode,
   edgesOf,
-  isEditableKind,
   isLinear,
   listOf,
   moveStep,
@@ -114,10 +116,17 @@ const line = workflow({
 const step = (parts: Partial<StepDraft>): StepDraft => ({ ...newStep([]), ...parts });
 
 describe('the workflow editor’s model', () => {
-  it('knows the kinds the editor changes', () => {
-    expect(isEditableKind('gate')).toBe(true);
-    expect(isEditableKind('wait')).toBe(false);
-    expect(isEditableKind('workflow')).toBe(false);
+  it('offers every kind of step, a wait and a called workflow included', () => {
+    expect(EDITABLE_KINDS).toEqual([
+      'trigger',
+      'step',
+      'check',
+      'gate',
+      'notify',
+      'agent',
+      'wait',
+      'workflow',
+    ]);
   });
 
   it('says a workflow is one line only when each step goes to the next and no step has two ways out', () => {
@@ -197,6 +206,47 @@ describe('the workflow editor’s model', () => {
     expect(workflowProblem({ ...fine, steps: [] })).toBe('noSteps');
     expect(workflowProblem(fine)).toBe('label');
     expect(workflowProblem({ ...fine, steps: [step({ label: 'L' })] })).toBeUndefined();
+    // a wait asks something, a workflow step runs one, a check's condition holds before it is sent
+    expect(workflowProblem({ ...fine, steps: [step({ label: 'W', kind: 'wait', question: ' ' })] })).toBe(
+      'question',
+    );
+    expect(workflowProblem({ ...fine, steps: [step({ label: 'R', kind: 'workflow' })] })).toBe('call');
+    const tests = step({ id: 'tests', label: 'Tests' });
+    const check = (parts: Partial<StepDraft>): StepDraft =>
+      step({ id: 'c', label: 'C', kind: 'check', conditionStep: 'tests', conditionPath: 'status', ...parts });
+    expect(workflowProblem({ ...fine, steps: [tests, check({ conditionValue: 'ok' })] })).toBeUndefined();
+    // a check reads a step before it, never itself or one after
+    expect(workflowProblem({ ...fine, steps: [check({ conditionValue: 'ok' }), tests] })).toBe(
+      'condition.step',
+    );
+    expect(workflowProblem({ ...fine, steps: [tests, check({ conditionPath: '$.status' })] })).toBe(
+      'condition.path',
+    );
+    expect(
+      workflowProblem({ ...fine, steps: [tests, check({ conditionOp: 'matches', conditionValue: '(' })] }),
+    ).toBe('condition.pattern');
+    // a check with no condition written sends none
+    expect(
+      workflowProblem({ ...fine, steps: [tests, check({ conditionStep: '', conditionPath: '' })] }),
+    ).toBeUndefined();
+  });
+
+  it('reads a check’s condition from its fields, with a value except for exists', () => {
+    const check = step({
+      kind: 'check',
+      conditionStep: ' tests ',
+      conditionPath: ' a.b ',
+      conditionValue: ' x ',
+    });
+    expect(conditionOf(check)).toEqual({ step: 'tests', path: 'a.b', op: 'equals', value: ' x ' });
+    expect(conditionOf({ ...check, conditionOp: 'exists' })).toEqual({
+      step: 'tests',
+      path: 'a.b',
+      op: 'exists',
+    });
+    expect(conditionOf({ ...check, kind: 'step' })).toBeUndefined();
+    expect(conditionOf(step({ kind: 'check', conditionValue: ' ' }))).toBeUndefined();
+    expect(conditionOf(step({ kind: 'check', conditionValue: '' }))).toBeUndefined();
   });
 
   it('knows a gate nobody may approve', () => {
@@ -231,14 +281,8 @@ describe('the workflow editor’s model', () => {
       ruleIds: ['R-1'],
       position: { x: 1, y: 2 },
     });
-    // A wait keeps its kind's settings, the editor shows none of them.
-    expect(nodeOf(wait)).toEqual({
-      id: 'c',
-      kind: 'wait',
-      label: 'C',
-      run: { command: 'kept' },
-      wait: { title: 'Wait for QA' },
-    });
+    // A wait writes its question; a command it does not show goes.
+    expect(nodeOf(wait)).toEqual({ id: 'c', kind: 'wait', label: 'C', wait: { title: 'Wait for QA' } });
   });
 
   it('sends only the fields a kind shows, and keeps the run’s other settings', () => {
@@ -288,7 +332,7 @@ describe('the workflow editor’s model', () => {
       },
       when: { hours: '09:00-18:00' },
       suggested: {},
-      workflowId: 'w2',
+      // a step that no longer runs a workflow names none
       arguments: { a: 'b' },
       maxVisits: 2,
     });
@@ -297,6 +341,72 @@ describe('the workflow editor’s model', () => {
     });
     expect(nodeOf(step({ label: 'T', kind: 'trigger', command: 'ignored' }))).not.toHaveProperty('run');
     expect(nodeOf(step({ label: 'G', kind: 'gate', approvers: '' }))).not.toHaveProperty('approvers');
+  });
+
+  it('writes a check’s condition, the workflow a step runs, and what a wait asks', () => {
+    expect(
+      nodeOf(
+        step({
+          label: 'C',
+          kind: 'check',
+          conditionStep: 'tests',
+          conditionPath: 'status',
+          conditionValue: 'ok',
+        }),
+      ),
+    ).toEqual({
+      id: 'n-1',
+      kind: 'check',
+      label: 'C',
+      condition: { step: 'tests', path: 'status', op: 'equals', value: 'ok' },
+    });
+    expect(nodeOf(step({ label: 'R', kind: 'workflow', calls: 'wf-release' }))).toEqual({
+      id: 'n-1',
+      kind: 'workflow',
+      label: 'R',
+      workflowId: 'wf-release',
+    });
+    expect(nodeOf(step({ label: 'R', kind: 'workflow' }))).not.toHaveProperty('workflowId');
+    // a wait read with its form keeps its fields, actions and links; its title and text are written here
+    const asked = {
+      id: 'q',
+      kind: 'wait' as const,
+      label: 'Q',
+      wait: {
+        title: 'Old',
+        body: 'Old text',
+        fields: [{ id: 'why', type: 'text', label: 'Why' }],
+        actions: [{ id: 'go', label: 'Go' }],
+        refs: [{ kind: 'pr', url: 'https://example.com' }],
+      },
+    };
+    const [read] = workflowDraftOf(workflow({ nodes: [asked] })).steps;
+    if (read === undefined) throw new Error('step');
+    expect(read).toMatchObject({ question: 'Old', questionBody: 'Old text' });
+    expect(nodeOf({ ...read, question: ' Ship it? ', questionBody: ' ' }).wait).toEqual({
+      title: 'Ship it?',
+      fields: asked.wait.fields,
+      actions: asked.wait.actions,
+      refs: asked.wait.refs,
+    });
+    expect(nodeOf({ ...read, questionBody: 'New text' }).wait).toMatchObject({
+      title: 'Old',
+      body: 'New text',
+    });
+    // a check read with its condition gives its fields back
+    const conditioned: EditedNode = {
+      id: 'k',
+      kind: 'check',
+      label: 'K',
+      condition: { step: 'a', path: 'p', op: 'exists' },
+    };
+    const [checked] = workflowDraftOf(workflow({ nodes: [conditioned] })).steps;
+    expect(checked).toMatchObject({
+      conditionStep: 'a',
+      conditionPath: 'p',
+      conditionOp: 'exists',
+      conditionValue: '',
+    });
   });
 
   it('draws one line through a linear draft, keeping a path’s words and how the workflow ends', () => {

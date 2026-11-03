@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import {
   EDITABLE_KINDS,
-  isEditableKind,
   moveStep,
   newStep,
   nobodyApproves,
@@ -17,20 +16,160 @@ import {
   type WorkflowDraft,
   workflowProblem,
 } from '../model';
-import { useOrgRepos } from '../useWorkflows';
+import { CONDITION_OPS, callChoices } from '../nodes';
+import { useOrgRepos, useWorkflows } from '../useWorkflows';
 
-/** The fields of one step, by what it does: who approves a gate, what a check runs, where a notification goes. */
-function StepFields({
+type TextKey =
+  | 'label'
+  | 'detail'
+  | 'approvers'
+  | 'command'
+  | 'channel'
+  | 'message'
+  | 'instructions'
+  | 'question'
+  | 'questionBody'
+  | 'conditionPath'
+  | 'conditionValue';
+
+/**
+ * A check's condition, typed (decision of 03/11): the step it reads among those before it, a path in its output, how
+ * it compares and with what. No expression is written here; what the server would refuse is said before sending.
+ */
+function ConditionFields({
   step,
   number,
+  earlier,
+  field,
   onChange,
 }: {
   readonly step: StepDraft;
   readonly number: number;
+  readonly earlier: readonly StepDraft[];
+  readonly field: (key: TextKey, mono?: boolean) => ReactElement;
   readonly onChange: (next: Partial<StepDraft>) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const ids = {
+  const ids = { step: useId(), op: useId() };
+  return (
+    <fieldset className="o-stack">
+      <span className="o-stack">
+        <label htmlFor={ids.step} className="o-field-label">
+          <span className="o-visually-hidden">{t('workflows.edit.stepPrefix', { number })}</span>
+          {t('workflows.edit.field.conditionStep')}
+        </label>
+        <select
+          id={ids.step}
+          className="o-input o-select"
+          value={step.conditionStep}
+          onChange={(event) => {
+            onChange({ conditionStep: event.target.value });
+          }}
+        >
+          <option value="">{t('workflows.edit.conditionStepNone')}</option>
+          {earlier.map((before) => (
+            <option key={before.key} value={before.id}>
+              {before.label.trim() === '' ? before.id : before.label}
+            </option>
+          ))}
+        </select>
+      </span>
+      {field('conditionPath', true)}
+      <span className="o-stack">
+        <label htmlFor={ids.op} className="o-field-label">
+          <span className="o-visually-hidden">{t('workflows.edit.stepPrefix', { number })}</span>
+          {t('workflows.edit.field.conditionOp')}
+        </label>
+        <select
+          id={ids.op}
+          className="o-input o-select"
+          value={step.conditionOp}
+          onChange={(event) => {
+            const op = CONDITION_OPS.find((known) => known === event.target.value);
+            if (op !== undefined) onChange({ conditionOp: op });
+          }}
+        >
+          {CONDITION_OPS.map((op) => (
+            <option key={op} value={op}>
+              {t(`workflows.edit.op.${op}`)}
+            </option>
+          ))}
+        </select>
+      </span>
+      {step.conditionOp === 'exists' ? null : field('conditionValue', step.conditionOp === 'matches')}
+    </fieldset>
+  );
+}
+
+/** The workflow a `workflow` step runs: one of the organization's, never one that would run this one again. */
+function CallPicker({
+  step,
+  number,
+  self,
+  onChange,
+}: {
+  readonly step: StepDraft;
+  readonly number: number;
+  readonly self: string | undefined;
+  readonly onChange: (next: Partial<StepDraft>) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const id = useId();
+  const { workflows } = useWorkflows();
+  const choices = callChoices(workflows ?? [], self);
+  // a workflow already called that is no longer offered stays visible, so that a person sees it and changes it
+  const gone = step.calls !== '' && !choices.some((choice) => choice.id === step.calls);
+  return (
+    <span className="o-stack">
+      <label htmlFor={id} className="o-field-label">
+        <span className="o-visually-hidden">{t('workflows.edit.stepPrefix', { number })}</span>
+        {t('workflows.edit.field.calls')}
+      </label>
+      <select
+        id={id}
+        className="o-input o-select"
+        value={step.calls}
+        onChange={(event) => {
+          onChange({ calls: event.target.value });
+        }}
+      >
+        <option value="">
+          {workflows === undefined ? t('workflows.edit.callsLoading') : t('workflows.edit.callsNone')}
+        </option>
+        {choices.map((choice) => (
+          <option key={choice.id} value={choice.id}>
+            {choice.name}
+          </option>
+        ))}
+        {gone ? (
+          <option value={step.calls}>{t('workflows.edit.callsGone', { id: step.calls })}</option>
+        ) : null}
+      </select>
+    </span>
+  );
+}
+
+/**
+ * The fields of one step, by what it does: who approves a gate, what a check runs and reads, where a notification
+ * goes, what a wait asks, which workflow a step runs.
+ */
+function StepFields({
+  step,
+  number,
+  earlier,
+  self,
+  onChange,
+}: {
+  readonly step: StepDraft;
+  readonly number: number;
+  /** The steps before this one, which a check may read. */
+  readonly earlier: readonly StepDraft[];
+  /** The workflow edited, which a `workflow` step never runs. */
+  readonly self: string | undefined;
+  readonly onChange: (next: Partial<StepDraft>) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const ids: Readonly<Record<TextKey, string>> = {
     label: useId(),
     detail: useId(),
     approvers: useId(),
@@ -38,11 +177,12 @@ function StepFields({
     channel: useId(),
     message: useId(),
     instructions: useId(),
+    question: useId(),
+    questionBody: useId(),
+    conditionPath: useId(),
+    conditionValue: useId(),
   };
-  const field = (
-    key: 'label' | 'detail' | 'approvers' | 'command' | 'channel' | 'message' | 'instructions',
-    mono = false,
-  ): ReactElement => (
+  const field = (key: TextKey, mono = false): ReactElement => (
     <span className="o-stack">
       <label htmlFor={ids[key]} className="o-field-label">
         {/* Each card says its step once; the label still names it for whoever does not see the card. */}
@@ -76,6 +216,18 @@ function StepFields({
         </>
       ) : null}
       {step.kind === 'agent' ? field('instructions') : null}
+      {step.kind === 'check' ? (
+        <ConditionFields step={step} number={number} earlier={earlier} field={field} onChange={onChange} />
+      ) : null}
+      {step.kind === 'wait' ? (
+        <>
+          {field('question')}
+          {field('questionBody')}
+        </>
+      ) : null}
+      {step.kind === 'workflow' ? (
+        <CallPicker step={step} number={number} self={self} onChange={onChange} />
+      ) : null}
     </>
   );
 }
@@ -85,6 +237,8 @@ function StepCard({
   number,
   count,
   linear,
+  earlier,
+  self,
   onChange,
   onMove,
   onRemove,
@@ -93,6 +247,8 @@ function StepCard({
   readonly number: number;
   readonly count: number;
   readonly linear: boolean;
+  readonly earlier: readonly StepDraft[];
+  readonly self: string | undefined;
   readonly onChange: (next: Partial<StepDraft>) => void;
   readonly onMove: (by: -1 | 1) => void;
   readonly onRemove: () => void;
@@ -104,31 +260,24 @@ function StepCard({
     <li className="o-card o-stack wf-step" aria-label={t('workflows.edit.step', { number })}>
       <div className="o-inline wf-step__top">
         <span className="o-row__title">{t('workflows.edit.step', { number })}</span>
-        {isEditableKind(kind) ? (
-          <>
-            <label htmlFor={kindId} className="o-visually-hidden">
-              {t('workflows.edit.kind', { number })}
-            </label>
-            <select
-              id={kindId}
-              className="o-input o-select"
-              value={kind}
-              onChange={(event) => {
-                const next = EDITABLE_KINDS.find((editable) => editable === event.target.value);
-                if (next !== undefined) onChange({ kind: next });
-              }}
-            >
-              {EDITABLE_KINDS.map((editable) => (
-                <option key={editable} value={editable}>
-                  {t(`workflows.kind.${editable}`)}
-                </option>
-              ))}
-            </select>
-          </>
-        ) : (
-          // A wait or a called workflow keeps its kind and its settings: only its words change here.
-          <span className="o-row__meta">{t(`workflows.kind.${kind}`)}</span>
-        )}
+        <label htmlFor={kindId} className="o-visually-hidden">
+          {t('workflows.edit.kind', { number })}
+        </label>
+        <select
+          id={kindId}
+          className="o-input o-select"
+          value={kind}
+          onChange={(event) => {
+            const next = EDITABLE_KINDS.find((editable) => editable === event.target.value);
+            if (next !== undefined) onChange({ kind: next });
+          }}
+        >
+          {EDITABLE_KINDS.map((editable) => (
+            <option key={editable} value={editable}>
+              {t(`workflows.kind.${editable}`)}
+            </option>
+          ))}
+        </select>
         {linear ? (
           <span className="o-inline wf-step__moves">
             <Button
@@ -157,7 +306,7 @@ function StepCard({
           </span>
         ) : null}
       </div>
-      <StepFields step={step} number={number} onChange={onChange} />
+      <StepFields step={step} number={number} earlier={earlier} self={self} onChange={onChange} />
     </li>
   );
 }
@@ -313,6 +462,8 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
             number={at + 1}
             count={draft.steps.length}
             linear={draft.linear}
+            earlier={draft.steps.slice(0, at)}
+            self={workflow?.id}
             onChange={(next) => {
               setStep(step.key, next);
             }}
