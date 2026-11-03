@@ -48,6 +48,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Red proof of ostrom-web#107 (branch never merged): its final test alone, without the fix.
+      - name: mockApp.test alone, without the fix
+        run: pnpm exec vitest run src/test/mockApp.test.tsx
       # What ships in the console: a known advisory of moderate severity or above in a runtime dependency fails the
       # job (audit AUDIT-SECU-WEB-2 B9). Build tools are kept patched by pnpm-workspace.yaml overrides.
       - name: No known vulnerability in the runtime dependencies (pnpm audit --prod)
