@@ -198,7 +198,7 @@ describe('the older ended sessions', () => {
 describe('the sessions of a large organization', () => {
   it('lists every open session, and reads the ended ones again once one ended', async () => {
     // 60 open and 99 ended: two pages of the server's 50 each. Past the first ended page nothing polls them
-    // (`endedPoll`): only a session leaving the open list reads them again.
+    // (`endedPoll`): the ended ones are read again when a session leaves the open list, or on coming back.
     db.sessions = largeSessions().slice(0, 159);
     visit('/sessions');
     expect(await screen.findByRole('heading', { level: 2, name: '60 open' })).toBeInTheDocument();
