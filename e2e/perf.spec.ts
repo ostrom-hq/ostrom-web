@@ -37,7 +37,7 @@ const SCREENS: readonly HeavyScreen[] = [
     filter: {
       label: 'repository',
       run: async (page) => {
-        await page.getByRole('search').getByRole('textbox').fill('acme/service-07');
+        await page.getByRole('search').getByRole('textbox').fill('acme/service-08');
         await page.getByRole('search').getByRole('textbox').press('Enter');
         await expect(page).toHaveURL(/repo=acme/);
         await expect(page.locator('[aria-busy="false"]')).toBeVisible();
@@ -56,8 +56,28 @@ const SCREENS: readonly HeavyScreen[] = [
       },
     },
   },
-  { path: '/members', rows: 'section[aria-labelledby="mb-people"] li' },
-  { path: '/accounts/groups', rows: 'main article' },
+  {
+    path: '/members',
+    rows: 'section[aria-labelledby="mb-people"] li',
+    filter: {
+      label: 'search',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('Developer 04');
+        await expect(page.locator('section[aria-labelledby="mb-people"] li')).toHaveCount(10);
+      },
+    },
+  },
+  {
+    path: '/accounts/groups',
+    rows: 'main article',
+    filter: {
+      label: 'people of a new group',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-42');
+        await expect(page.getByRole('group', { name: 'Members' }).getByRole('checkbox')).toHaveCount(10);
+      },
+    },
+  },
   {
     path: '/sessions',
     rows: 'main ul.o-rows > li',
@@ -65,9 +85,12 @@ const SCREENS: readonly HeavyScreen[] = [
       label: 'every older page',
       run: async (page) => {
         const more = page.getByRole('button', { name: 'Show older sessions' });
+        const rows = page.locator('main ul.o-rows > li');
         while (await more.isVisible()) {
+          const before = await rows.count();
           await more.click();
-          await expect(page.getByRole('button', { name: 'Loading…' })).toHaveCount(0);
+          // The page is on screen once the list grew; the button then says it again, or is gone.
+          await expect.poll(async () => rows.count()).toBeGreaterThan(before);
         }
       },
     },
