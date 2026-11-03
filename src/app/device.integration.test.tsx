@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ApiError } from '@gen/api/types.gen';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
@@ -45,6 +45,15 @@ function alsoIn(role?: string): ReturnType<typeof otherOrganization> {
 function demote(): void {
   db.members = db.members.map((member) => (member.login === 'maya' ? { ...member, role: 'member' } : member));
   setDemoRole(db, 'member');
+}
+
+/** The admin approval, once the person's organizations are read: before, it cannot be pressed. */
+async function approveAdmin(): Promise<HTMLElement> {
+  const button = await screen.findByRole('button', { name: 'Approve the admin sign-in' });
+  await waitFor(() => {
+    expect(button).toBeEnabled();
+  });
+  return button;
 }
 
 describe('the device sign-in page', () => {
@@ -94,7 +103,7 @@ describe('the device sign-in page', () => {
       'harness:write',
       'policy:write',
     ]);
-    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
   });
 
@@ -102,7 +111,7 @@ describe('the device sign-in page', () => {
     const user = userEvent.setup();
     demote();
     open(DEMO_ADMIN_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     expect(await within(await main()).findByRole('alert')).toHaveTextContent(
       'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
     );
@@ -115,7 +124,7 @@ describe('the device sign-in page', () => {
     const user = userEvent.setup();
     db.signedInAt = Date.now() - FRESH_SIGN_IN_MS - 1;
     open(DEMO_ADMIN_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     const again = await screen.findByRole('link', { name: 'Sign in again' });
     expect(again).toHaveAttribute('href', `/signin?redirect=%2Fdevice%3Fcode%3D${DEMO_ADMIN_DEVICE_CODE}`);
     // The step-up, not the role: the admin refusal is never shown (the scopes' own notice names owners and admins).
@@ -153,7 +162,7 @@ describe('the device sign-in page', () => {
       ),
     );
     open(DEMO_ADMIN_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     expect(await within(await main()).findByRole('alert')).toHaveTextContent(
       'The server could not tell which of your organizations this admin sign-in is for.',
     );
@@ -172,7 +181,7 @@ describe('the device sign-in page', () => {
         .map((option) => option.textContent),
     ).toEqual(['Acme', 'Globex']);
     await user.selectOptions(actsIn, 'Globex');
-    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
     // Named with `Ostrom-Org`: never the 409 a person in several organizations gets without it.
     expect(adminLogin()?.orgId).toBe(globex.id);
@@ -182,10 +191,9 @@ describe('the device sign-in page', () => {
     const user = userEvent.setup();
     alsoIn('member');
     open(DEMO_ADMIN_DEVICE_CODE);
-    await screen.findByText('Admin sign-in');
-    expect(screen.getByText('Organization it acts in').nextElementSibling).toHaveTextContent('Acme');
+    expect((await screen.findByText('Organization it acts in')).nextElementSibling).toHaveTextContent('Acme');
     expect(screen.queryByRole('combobox', { name: 'Organization it acts in' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(await approveAdmin());
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
     expect(adminLogin()?.orgId).toBe(db.organization.id);
   });
@@ -195,9 +203,9 @@ describe('the device sign-in page', () => {
     alsoIn('member');
     demote();
     open(DEMO_ADMIN_DEVICE_CODE);
-    await screen.findByText('Admin sign-in');
+    const approve = await approveAdmin();
     expect(screen.queryByText('Organization it acts in')).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    await user.click(approve);
     expect(await within(await main()).findByRole('alert')).toHaveTextContent(
       'Only an owner or an admin of the organization can approve an admin sign-in.',
     );
