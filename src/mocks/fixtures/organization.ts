@@ -18,7 +18,7 @@ export const MEMBER_IDS = {
   samir: '5f8b1c3a-4d6e-4fa0-9b2c-3d4e5f607182',
   theo: '6a9c2d4b-5e7f-4ab1-8c3d-4e5f60718293',
   jo: '7bad3e5c-6f80-4bc2-9d4e-5f60718293a4',
-  ines: '8cbe4f6d-7091-4cd3-ae5f-60718293a4b5',
+  ines: '8cbe4f6d-7091-4cd3-8e5f-60718293a4b5',
 } as const;
 
 const members: Member[] = [
@@ -70,7 +70,7 @@ export function initialTeams(): Team[] {
   return structuredClone(teams);
 }
 
-/** Acme's members as `/orgs/{org}/members` serves them: their member id, an empty name or address when there is none. */
+/** Acme's members as `/orgs/{org}/members` serves them: with their id, an empty name or address when there is none. */
 export function initialOrgMembers(): OrgMember[] {
   const joined = '2026-09-01T09:00:00.000Z';
   return [

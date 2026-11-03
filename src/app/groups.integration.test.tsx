@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { cleanup, fireEvent, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { LEFT_MEMBER } from '@/mocks/fixtures/sharing';
 import { groupId } from '@/mocks/groups';
 import { setDemoRole } from '@/mocks/orgs';
@@ -390,5 +391,69 @@ describe('a group', () => {
     server.use(http.get('*/api/v1/groups/:id', refuse('groups are down')));
     visit(PLATFORM);
     expect(await screen.findByText('groups are down')).toBeInTheDocument();
+  });
+});
+
+describe('a new group in a large organization', () => {
+  beforeEach(() => {
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+  });
+
+  /** "Show more people", once the page before it is read. */
+  async function morePeople(): Promise<void> {
+    const button = await screen.findByRole('button', { name: 'Show more people' });
+    await waitFor(() => {
+      expect(button).toBeEnabled();
+    });
+    await userEvent.click(button);
+  }
+
+  it('offers twenty people at a time, finds them by name or login, and reads the next hundred when asked', async () => {
+    visit('/accounts/groups');
+    const form = await screen.findByRole('region', { name: 'New group' });
+    const people = within(form).getByRole('group', { name: 'Members' });
+    expect(within(people).getAllByRole('checkbox')).toHaveLength(20);
+    expect(within(people).queryByRole('button', { name: 'Show more people' })).toBeNull();
+    await userEvent.click(within(people).getByRole('button', { name: /^Show 20 more/ }));
+    expect(within(people).getAllByRole('checkbox')).toHaveLength(40);
+    const search = within(people).getByRole('searchbox', { name: 'Find someone' });
+    await userEvent.type(search, 'dev-04');
+    expect(
+      within(people)
+        .getAllByRole('checkbox')
+        .map((box) => box.closest('label')?.textContent),
+    ).toEqual(Array.from({ length: 10 }, (_, n) => `Developer 04${String(n)} (dev-04${String(n)})`));
+    await userEvent.clear(search);
+    await userEvent.type(search, 'dev-42');
+    expect(within(people).queryAllByRole('checkbox')).toHaveLength(0);
+    for (let page = 2; page <= 5; page += 1) await morePeople();
+    await waitFor(() => {
+      expect(within(people).getAllByRole('checkbox')).toHaveLength(10);
+    });
+  });
+
+  it('searches on Enter, never creating the group', async () => {
+    const groups = db.groups.length;
+    visit('/accounts/groups');
+    const form = await screen.findByRole('region', { name: 'New group' });
+    await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Platform');
+    await userEvent.type(within(form).getByRole('searchbox', { name: 'Find someone' }), 'dev-04{Enter}');
+    expect(within(form).getAllByRole('checkbox', { checked: false }).length).toBeGreaterThanOrEqual(10);
+    expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('Platform');
+    expect(db.groups).toHaveLength(groups);
+  });
+
+  it('says a member left only once every page of members is read', async () => {
+    db.groups = db.groups.map((group) =>
+      group.id === groupId(1) ? { ...group, members: [...group.members, 'dev-450'] } : group,
+    );
+    visit(PLATFORM);
+    const late = await findRow('dev-450');
+    expect(within(await findRow(LEFT_MEMBER)).queryByText('Left the organization')).toBeNull();
+    for (let page = 2; page <= 6; page += 1) await morePeople();
+    expect(await within(await findRow(LEFT_MEMBER)).findByText('Left the organization')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+    expect(within(late).queryByText('Left the organization')).toBeNull();
   });
 });

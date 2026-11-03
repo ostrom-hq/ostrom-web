@@ -19,7 +19,7 @@ export const TEST_API = 'http://ostrom.test';
 /** The whole console against the in-memory API, one fresh database per test. */
 export function setupMockApp(): MockServer & { readonly traffic: MockTraffic } {
   const mock = createMockServer();
-  const { fetch: answer, traffic } = createHandlerFetch(mock.server);
+  const { fetch: answer, traffic, endTest } = createHandlerFetch(mock.server);
   const realFetch = globalThis.fetch;
   beforeAll(() => {
     // Still listening: anything that does not go through fetch is caught by MSW rather than sent out.
@@ -28,15 +28,22 @@ export function setupMockApp(): MockServer & { readonly traffic: MockTraffic } {
     globalThis.fetch = answer;
     configureApiClient({ baseUrl: TEST_API });
   });
-  afterEach(() => {
+  afterEach(async () => {
     // Unmount first: a console still mounted would act on the resets below (take the only organization again).
     cleanup();
-    mock.server.resetHandlers();
-    traffic.clear();
-    resetMockDb(mock.db);
-    useAuthStore.setState({ link: undefined, notice: undefined });
-    useOrgStore.getState().forget();
-    resetArrivals();
+    // Then end the test as a closed page: its calls still in flight stay unanswered (a mutation's own callbacks
+    // outlive the screen, and a late answer would act during the next test), and its handlers on a finite wait are
+    // awaited, so none writes into the database reset below.
+    try {
+      await endTest();
+    } finally {
+      mock.server.resetHandlers();
+      traffic.clear();
+      resetMockDb(mock.db);
+      useAuthStore.setState({ link: undefined, notice: undefined });
+      useOrgStore.getState().forget();
+      resetArrivals();
+    }
   });
   afterAll(() => {
     globalThis.fetch = realFetch;

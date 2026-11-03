@@ -1,25 +1,39 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { OrgMember, SharedAccount } from '@gen/api/types.gen';
-import { type ReactElement, useId, useState } from 'react';
+import { type ReactElement, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useStep } from '@/shared/lib/useStep';
+import type { OrgMembers } from '@/shared/org/members';
+import { isFound } from '@/shared/org/people';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { Section } from '@/shared/ui/Screen';
+import { ShowMore } from '@/shared/ui/ShowMore';
 import { GROUP_NAME_MAX, personOf, toggled } from '../groups';
 import type { GroupChangeViewModel } from '../useGroups';
 
+/** How many people the form offers at once: a large organization is searched, never listed whole. */
+export const PEOPLE_STEP = 20;
+
 export interface GroupFormProps {
   readonly change: GroupChangeViewModel;
+  /** The members read so far: twenty are offered at a time, then the next page is read when asked. */
   readonly members: readonly OrgMember[];
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly accounts: readonly SharedAccount[];
 }
 
 /** A new group: a name, the people in it and the subscriptions it lends. The server says what it refuses. */
-export function GroupForm({ change, members, accounts }: GroupFormProps): ReactElement {
+export function GroupForm({ change, members, people, accounts }: GroupFormProps): ReactElement {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [chosen, setChosen] = useState<readonly string[]>([]);
   const [lent, setLent] = useState<readonly string[]>([]);
   const nameId = useId();
+  const searchId = useId();
+  const [search, setSearch] = useState('');
+  const found = useMemo(() => members.filter((member) => isFound(member, search)), [members, search]);
+  const step = useStep(found.length, search, PEOPLE_STEP);
   const trimmed = name.trim();
   return (
     <Section label={t('sharing.groups.create.title')}>
@@ -50,7 +64,28 @@ export function GroupForm({ change, members, accounts }: GroupFormProps): ReactE
         {members.length === 0 ? null : (
           <fieldset className="o-stack sh-people">
             <legend className="o-field-label">{t('sharing.groups.create.members')}</legend>
-            {members.map((member) => (
+            {members.length > PEOPLE_STEP ? (
+              <>
+                <label htmlFor={searchId} className="o-field-label">
+                  {t('sharing.groups.create.search')}
+                </label>
+                <input
+                  id={searchId}
+                  type="search"
+                  className="o-input"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    // Enter searches, as in any search box: it never sends the form and its group.
+                    if (event.key === 'Enter') event.preventDefault();
+                  }}
+                />
+              </>
+            ) : null}
+            {found.slice(0, step.count).map((member) => (
               <label key={member.login} className="o-inline">
                 <input
                   type="checkbox"
@@ -62,6 +97,8 @@ export function GroupForm({ change, members, accounts }: GroupFormProps): ReactE
                 <span>{personOf(member)}</span>
               </label>
             ))}
+            <ShowMore step={step} />
+            {step.hidden === 0 ? <MorePeople people={people} /> : null}
           </fieldset>
         )}
         {accounts.length === 0 ? null : (

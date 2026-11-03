@@ -25,6 +25,8 @@ interface HeavyScreen {
   readonly path: string;
   /** The screen's lines. */
   readonly rows: string;
+  /** The most lines it may draw, when it holds several lists, each cut on its own: `BUDGET.rows` otherwise. */
+  readonly maxRows?: number;
   readonly filter?: Interaction;
   /** The screen reads again on its own: count its API calls over one period once every page is on screen. */
   readonly pollMs?: number;
@@ -37,7 +39,7 @@ const SCREENS: readonly HeavyScreen[] = [
     filter: {
       label: 'repository',
       run: async (page) => {
-        await page.getByRole('search').getByRole('textbox').fill('acme/service-07');
+        await page.getByRole('search').getByRole('textbox').fill('acme/service-08');
         await page.getByRole('search').getByRole('textbox').press('Enter');
         await expect(page).toHaveURL(/repo=acme/);
         await expect(page.locator('[aria-busy="false"]')).toBeVisible();
@@ -56,8 +58,28 @@ const SCREENS: readonly HeavyScreen[] = [
       },
     },
   },
-  { path: '/members', rows: 'section[aria-labelledby="mb-people"] li' },
-  { path: '/accounts/groups', rows: 'main article' },
+  {
+    path: '/members',
+    rows: 'section[aria-labelledby="mb-people"] li',
+    filter: {
+      label: 'search',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('Developer 04');
+        await expect(page.locator('section[aria-labelledby="mb-people"] li')).toHaveCount(10);
+      },
+    },
+  },
+  {
+    path: '/accounts/groups',
+    rows: 'main article',
+    filter: {
+      label: 'people of a new group',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-04');
+        await expect(page.getByRole('group', { name: 'Members' }).getByRole('checkbox')).toHaveCount(10);
+      },
+    },
+  },
   {
     path: '/sessions',
     rows: 'main ul.o-rows > li',
@@ -65,9 +87,12 @@ const SCREENS: readonly HeavyScreen[] = [
       label: 'every older page',
       run: async (page) => {
         const more = page.getByRole('button', { name: 'Show older sessions' });
+        const rows = page.locator('main ul.o-rows > li');
         while (await more.isVisible()) {
+          const before = await rows.count();
           await more.click();
-          await expect(page.getByRole('button', { name: 'Loading…' })).toHaveCount(0);
+          // The page is on screen once the list grew; the button then says it again, or is gone.
+          await expect.poll(async () => rows.count()).toBeGreaterThan(before);
         }
       },
     },
@@ -77,6 +102,8 @@ const SCREENS: readonly HeavyScreen[] = [
   {
     path: '/spend',
     rows: 'main li',
+    // Every line of the page: 20 people of the breakdown, 100 budgets, and the other breakdowns (172 measured).
+    maxRows: 180,
     filter: {
       label: 'period',
       run: async (page) => {
@@ -203,6 +230,37 @@ function tableOf(project: string, measures: readonly Measure[]): string {
   ].join('\n');
 }
 
+/**
+ * What a heavy screen may cost on the large organization before the PR fails (PERF-CONSOLE). Counts are exact
+ * from one run to the next; times move with the runner, so their budget is about twice the worst run measured.
+ */
+const BUDGET = {
+  rows: 110,
+  domNodes: 1500,
+  filteredNodes: 2500,
+  // One page of a hundred members on load, the next only when asked: 7 calls at most today (`/accounts/groups`).
+  apiCalls: 14,
+  pollCalls: 3,
+  inpMs: { desktop: 200, mobile: 500 },
+} as const;
+
+function checkBudget(project: 'desktop' | 'mobile', item: Measure): void {
+  const maxRows = SCREENS.find((screen) => screen.path === item.path)?.maxRows ?? BUDGET.rows;
+  expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(maxRows);
+  expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(BUDGET.domNodes);
+  expect.soft(item.apiCalls, `${item.path}: API calls`).toBeLessThanOrEqual(BUDGET.apiCalls);
+  if (item.filter !== undefined) {
+    expect
+      .soft(item.filter.inpMs, `${item.path}: INP of ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.inpMs[project]);
+    expect
+      .soft(item.filter.domNodes, `${item.path}: DOM nodes after ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.filteredNodes);
+  }
+  if (item.pollCalls !== undefined)
+    expect.soft(item.pollCalls, `${item.path}: calls per poll`).toBeLessThanOrEqual(BUDGET.pollCalls);
+}
+
 test('the heavy screens on a large organization', async ({ page }) => {
   test.setTimeout(600_000);
   const project = test.info().project.name;
@@ -225,4 +283,6 @@ test('the heavy screens on a large organization', async ({ page }) => {
   if (summary !== undefined) appendFileSync(summary, table);
   console.warn(table);
   for (const item of measures) expect(item.rows, item.path).toBeGreaterThan(0);
+  const device = project === 'mobile' ? 'mobile' : 'desktop';
+  for (const item of measures) checkBudget(device, item);
 });

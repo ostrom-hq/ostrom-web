@@ -26,6 +26,7 @@ export function AccountsScreen(): ReactElement {
           change={change}
           secrets={view.secrets}
           members={view.members.filter((member) => member.login !== view.login)}
+          people={view.people}
         />
       )}
       <LoadState data={view.accounts} failure={view.failure}>

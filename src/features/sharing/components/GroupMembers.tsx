@@ -3,22 +3,26 @@ import type { Group, OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
+import type { OrgMembers } from '@/shared/org/members';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { Section } from '@/shared/ui/Screen';
 import { localDay, pauseEndIn, pauseEndOn, pausedUntil, personOf } from '../groups';
 import type { GroupChangeViewModel } from '../useGroups';
 
 export interface GroupMembersProps {
   readonly group: Group;
-  /** The organization's members: who of the group left it, and who can be added. Unknown, nobody is said to have left. */
+  /** The organization's members read so far: who can be added, and, once all are read, who of the group left it. */
   readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, and whether every page is read: before that, nobody is said to have left. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'complete'>;
   /** Present for an owner or an admin. */
   readonly change: GroupChangeViewModel | undefined;
 }
 
 /** Who is in the group, who is paused until when, and, for an owner or an admin, the gestures on each. */
-export function GroupMembers({ group, members, change }: GroupMembersProps): ReactElement {
+export function GroupMembers({ group, members, people, change }: GroupMembersProps): ReactElement {
   const { t } = useTranslation();
   const candidates = (members ?? []).filter((member) => !group.members.includes(member.login));
   return (
@@ -32,7 +36,9 @@ export function GroupMembers({ group, members, change }: GroupMembersProps): Rea
               key={login}
               group={group}
               login={login}
-              left={members !== undefined && !members.some((member) => member.login === login)}
+              left={
+                people.complete && members !== undefined && !members.some((member) => member.login === login)
+              }
               change={change}
             />
           ))}
@@ -41,6 +47,7 @@ export function GroupMembers({ group, members, change }: GroupMembersProps): Rea
       {change === undefined || candidates.length === 0 ? null : (
         <AddMember group={group} candidates={candidates} change={change} />
       )}
+      {change === undefined ? null : <MorePeople people={people} />}
     </Section>
   );
 }

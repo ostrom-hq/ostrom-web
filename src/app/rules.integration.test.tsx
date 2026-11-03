@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { largeRules } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db } = setupMockApp();
@@ -278,6 +279,37 @@ describe('the rules', () => {
     server.use(http.get('*/api/v1/rules', () => HttpResponse.error()));
     visit('/rules');
     expect(await screen.findByText('Offline', {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
+});
+
+describe('the rules of a large organization', () => {
+  beforeEach(() => {
+    db.rules = largeRules();
+  });
+
+  it('reads every page of rules, and shows a hundred cards at a time', async () => {
+    visit('/rules');
+    // 2 000 rules: two pages of the server's 1 000.
+    expect(await screen.findByRole('button', { name: 'All 2000' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'To review 667' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('article')).toHaveLength(100);
+    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (567 left)' }));
+    expect(screen.getAllByRole('article')).toHaveLength(200);
+    // Another filter starts again from its first hundred.
+    await userEvent.click(screen.getByRole('button', { name: 'All 2000' }));
+    expect(screen.getAllByRole('article')).toHaveLength(100);
+    expect(screen.getByRole('button', { name: 'Show 100 more (1900 left)' })).toBeInTheDocument();
+  });
+
+  it('says it once the last lines are one more', async () => {
+    db.rules = largeRules().slice(0, 301);
+    visit('/rules');
+    await userEvent.click(await screen.findByRole('button', { name: 'All 301' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (201 left)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (101 left)' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
+    expect(screen.getAllByRole('article')).toHaveLength(301);
+    expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
   });
 });
 

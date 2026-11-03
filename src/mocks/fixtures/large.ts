@@ -47,10 +47,14 @@ function at(minutesAgo: number): string {
   return new Date(NOW - minutesAgo * MINUTE).toISOString();
 }
 
+/** A member's id, a UUID as the server writes it, the number of the member at its end. */
+export function largeMemberId(n: number): string {
+  return `00000000-0000-4000-8000-${pad(n, 12)}`;
+}
+
 export function largeMembers(): OrgMember[] {
   return Array.from({ length: LARGE.members }, (_, n) => ({
-    // A version 4 UUID per member, stable across runs: `OrgMember.id` is required (ostrom-core#86).
-    id: `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`,
+    id: largeMemberId(n),
     login: largeLogin(n),
     name: `Developer ${pad(n, 3)}`,
     avatarUrl: '',

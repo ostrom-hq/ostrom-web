@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { type ReactElement, useState } from 'react';
+import { type ReactElement, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import { useStep } from '@/shared/lib/useStep';
 import { LoadState, Screen } from '@/shared/ui/Screen';
+import { ShowMore } from '@/shared/ui/ShowMore';
 import { RuleCard } from '../components/RuleCard';
 import { RuleForm } from '../components/RuleForm';
 import {
   countRules,
+  firstOfGroups,
   groupRules,
   matches,
   newRuleOf,
@@ -27,9 +30,17 @@ export function RulesScreen(): ReactElement {
   const removal = useDeleteRule();
   const [filter, setFilter] = useState<RuleFilter>('todo');
   const [writing, setWriting] = useState(false);
-  const groups = [...new Set((view.rules ?? []).map((rule) => rule.group))].sort((a, b) =>
-    a.localeCompare(b, 'en'),
+  const groups = useMemo(
+    () => [...new Set((view.rules ?? []).map((rule) => rule.group))].sort((a, b) => a.localeCompare(b, 'en')),
+    [view.rules],
   );
+  const shown = useMemo(
+    () => (view.rules ?? []).filter((rule) => matches(rule, filter)),
+    [view.rules, filter],
+  );
+  const grouped = useMemo(() => groupRules(shown), [shown]);
+  // A hundred cards at a time: 2 000 rules on screen at once are seconds of rendering on a phone (PERF-CONSOLE).
+  const step = useStep(shown.length, filter);
   return (
     <Screen title={t('rules.title')} lead={t('rules.lead')}>
       {create.failure === undefined ? null : (
@@ -92,8 +103,8 @@ export function RulesScreen(): ReactElement {
       <LoadState data={view.rules} failure={view.failure}>
         {(rules) => {
           const counts = countRules(rules);
-          const shown = rules.filter((rule) => matches(rule, filter));
           const sure = sureProposals(shown);
+          const onScreen = new Set(shown);
           return (
             <>
               <div className="o-inline rl-filters" role="group" aria-label={t('rules.filter.label')}>
@@ -123,7 +134,7 @@ export function RulesScreen(): ReactElement {
               </div>
               {/* A refusal that came back once its rule left the list is still said, here. */}
               {rules
-                .filter((rule) => !shown.includes(rule))
+                .filter((rule) => !onScreen.has(rule))
                 .map((rule) => {
                   const refused = decision.failure(rule.id);
                   return refused === undefined ? null : (
@@ -135,7 +146,7 @@ export function RulesScreen(): ReactElement {
               {shown.length === 0 ? (
                 <p className="o-empty">{t(`rules.empty.${filter}`)}</p>
               ) : (
-                groupRules(shown).map((group) => (
+                firstOfGroups(grouped, step.count).map((group) => (
                   <section key={group.name} className="o-stack" aria-label={group.name}>
                     <h2 className="o-label">{group.name}</h2>
                     {group.rules.map((rule) => (
@@ -161,6 +172,7 @@ export function RulesScreen(): ReactElement {
                   </section>
                 ))
               )}
+              <ShowMore step={step} />
             </>
           );
         }}
