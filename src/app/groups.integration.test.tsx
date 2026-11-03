@@ -313,10 +313,13 @@ describe('a group', () => {
     await user.type(name, ' Core ');
     await user.click(rename);
     expect(await screen.findByRole('heading', { level: 1, name: 'Core' })).toBeInTheDocument();
-    expect(name).toHaveValue('Core');
-    await user.clear(name);
-    await user.type(name, 'billing');
-    await user.click(rename);
+    // The settings start again from the new name.
+    const renamed = screen.getByRole('region', { name: 'Group' });
+    const field = within(renamed).getByRole('textbox', { name: 'Name' });
+    expect(field).toHaveValue('Core');
+    await user.clear(field);
+    await user.type(field, 'billing');
+    await user.click(within(renamed).getByRole('button', { name: 'Rename' }));
     expect(await screen.findByText('Another group already has this name.')).toBeInTheDocument();
   });
 
