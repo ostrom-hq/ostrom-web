@@ -43,10 +43,20 @@ const SETTLE_LIMIT_MS = 30_000;
  * approvers' answers; the organization joins the question once it is known (shared/api/apiClient.ts).
  */
 const POLLS: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
-  '/yes': ['GET /api/v1/approvals?mine=true'],
-  // Not a poll: the policy reads its members' names by `GET /api/v1/members`, still `planned` in the contract, which
-  // the server answers 404; a 404 in the organization reads the person's list again (shared/api/apiClient.ts). Remove this line
-  // when the server serves the route (JOURNAL, SRV-ORG).
+  // The decided requests are read again every 10 s (useYes.ts), seen when a load lasts that long.
+  '/yes': [
+    'GET /api/v1/approvals?mine=true',
+    'GET /api/v1/approvals?status=approved',
+    'GET /api/v1/approvals?status=rejected',
+    'GET /api/v1/approvals?status=expired',
+  ],
+};
+/**
+ * Questions asked again for a cause outside the console, each with it; shown apart, and removed with their cause. The
+ * policy reads its members' names by `GET /api/v1/members`, still `planned` in the contract, which the server answers
+ * 404; a 404 in the organization reads the person's list again (shared/api/apiClient.ts). Served by the server: SRV-ORG.
+ */
+const KNOWN: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
   '/policy': ['GET /api/v1/me/organizations'],
 };
 
@@ -59,7 +69,10 @@ interface Call {
   readonly end: number;
 }
 
-/** The calls to the API a full load of `path` makes, until none has started for a second and a half. */
+/**
+ * The calls to the API a full load of `path` makes, until none has started for a second and a half (or 30 s, a load
+ * that never settles). A call the page aborted (a query cancelled) is no call: it had no answer.
+ */
 async function callsOnLoad(
   page: Page,
   path: string,
@@ -67,6 +80,7 @@ async function callsOnLoad(
   const started = new Map<Request, number>();
   let settled = false;
   const ended = new Map<Request, number>();
+  const aborted = new Set<Request>();
   const onRequest = (request: Request): void => {
     if (new URL(request.url()).pathname.startsWith('/api/')) started.set(request, performance.now());
   };
@@ -74,8 +88,12 @@ async function callsOnLoad(
     if (started.has(request)) ended.set(request, performance.now());
   };
   page.on('request', onRequest);
+  const onFail = (request: Request): void => {
+    if (request.failure()?.errorText.includes('ERR_ABORTED') === true) aborted.add(request);
+    else onEnd(request);
+  };
   page.on('requestfinished', onEnd);
-  page.on('requestfailed', onEnd);
+  page.on('requestfailed', onFail);
   try {
     await page.goto(path);
     const limit = performance.now() + SETTLE_LIMIT_MS;
@@ -88,19 +106,21 @@ async function callsOnLoad(
   } finally {
     page.off('request', onRequest);
     page.off('requestfinished', onEnd);
-    page.off('requestfailed', onEnd);
+    page.off('requestfailed', onFail);
   }
-  const calls = [...started].map(([request, start]) => {
-    const url = new URL(request.url());
-    // The same path in an organization or out of one is not the same question (`GET /auth/me`, ostrom-server#92).
-    const inOrg = request.headers()['ostrom-org'] === undefined ? '' : ' (in the org)';
-    return {
-      name: `${request.method()} ${url.pathname}${url.search}${inOrg}`,
-      asked: `${request.method()} ${url.pathname}${url.search}`,
-      start,
-      end: ended.get(request) ?? Number.POSITIVE_INFINITY,
-    };
-  });
+  const calls = [...started]
+    .filter(([request]) => !aborted.has(request))
+    .map(([request, start]) => {
+      const url = new URL(request.url());
+      // The same path in an organization or out of one is not the same question (`GET /auth/me`, ostrom-server#92).
+      const inOrg = request.headers()['ostrom-org'] === undefined ? '' : ' (in the org)';
+      return {
+        name: `${request.method()} ${url.pathname}${url.search}${inOrg}`,
+        asked: `${request.method()} ${url.pathname}${url.search}`,
+        start,
+        end: ended.get(request) ?? Number.POSITIVE_INFINITY,
+      };
+    });
   return { calls, settled };
 }
 
@@ -142,33 +162,50 @@ function twiceIn(calls: readonly Call[]): string[] {
   return [...new Set(twice.map((call) => call.name))];
 }
 
+/** The names of `calls`, once each, as code. */
+function listed(calls: readonly Call[], key: 'name' | 'asked'): string {
+  return [...new Set(calls.map((call) => call[key]))].map((name) => `\`${name}\``).join(' ');
+}
+
 test('what each screen asks the server when it loads', async ({ page }) => {
-  test.setTimeout(180_000);
+  // 23 screens, each up to its 30 s limit: the table is always written, whatever the screens do.
+  test.setTimeout(900_000);
   await ownerOfNewOrganization(page, 'ada');
 
   const rows = [
-    '| Screen | Calls | Depth | Asked twice | Polled | Calls in order |',
-    '|---|---:|---:|---|---|---|',
+    '| Screen | Calls | Depth | Asked twice | Asked again | Polled | Known | Calls in order |',
+    '|---|---:|---:|---|---|---|---|---|',
   ];
   const problems: string[] = [];
   for (const screen of screens) {
     const { calls: all, settled } = await callsOnLoad(page, screen);
-    // Only a poll the screen means is left out; any other question asked again counts, and is reported.
-    const polls = againIn(all).filter((call) => POLLS[screen]?.includes(call.asked) === true);
-    const calls = all.filter((call) => !polls.includes(call));
-    const again = [...new Set(againIn(calls).map((call) => call.name))];
-    const ordered = calls.toSorted((a, b) => a.start - b.start).map((call) => `\`${call.name}\``);
+    // Only a poll the screen means, or a known second read, is left out; any other question asked again counts.
+    const asked = againIn(all);
+    const polls = asked.filter((call) => POLLS[screen]?.includes(call.asked) === true);
+    const known = asked.filter(
+      (call) => !polls.includes(call) && KNOWN[screen]?.includes(call.asked) === true,
+    );
+    const calls = all.filter((call) => !polls.includes(call) && !known.includes(call));
+    const again = againIn(calls);
     const depth = depthOf(calls);
     const twice = twiceIn(calls);
     if (!settled) problems.push(`${screen}: still asking after ${String(SETTLE_LIMIT_MS / 1000)} s`);
     if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
-    if (again.length > 0) problems.push(`${screen}: asked again once answered ${again.join(', ')}`);
+    if (again.length > 0) problems.push(`${screen}: asked again once answered ${listed(again, 'name')}`);
     if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
     if (calls.length > MAX_CALLS) problems.push(`${screen}: ${String(calls.length)} calls`);
-    const polled = [...new Set(polls.map((call) => call.asked))].map((asked) => `\`${asked}\``);
-    rows.push(
-      `| \`${screen}\` | ${String(calls.length)} | ${String(depth)} | ${[...twice, ...again].join(', ')} | ${String(polls.length)} ${polled.join(' ')} | ${ordered.join(' ')} |`,
-    );
+    const ordered = calls.toSorted((a, b) => a.start - b.start);
+    const cells = [
+      `\`${screen}\``,
+      String(calls.length),
+      String(depth),
+      twice.join(', '),
+      listed(again, 'name'),
+      polls.length === 0 ? '' : `${String(polls.length)} ${listed(polls, 'asked')}`,
+      known.length === 0 ? '' : `${String(known.length)} ${listed(known, 'asked')}`,
+      ordered.map((call) => `\`${call.name}\``).join(' '),
+    ];
+    rows.push(`| ${cells.join(' | ')} |`);
   }
   const table = `### API calls on load (${test.info().project.name})\n\n${rows.join('\n')}\n`;
   await test.info().attach('api-calls-on-load.md', { body: table, contentType: 'text/markdown' });

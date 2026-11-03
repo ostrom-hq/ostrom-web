@@ -87,8 +87,9 @@ describe('the billing', () => {
 
   it('shows the plan, the period’s usage against it, and what it allows', async () => {
     visit('/billing');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Billing' })).toBeInTheDocument();
     const plan = await region('Plan');
+    // Read once the screen is in: the title of its waiting state is another node, replaced by this one.
+    expect(screen.getByRole('heading', { level: 1, name: 'Billing' })).toBeInTheDocument();
     expect(within(plan).getByText('Team')).toBeInTheDocument();
     expect(within(plan).getByText(/^Billed monthly · Renews on Nov 1, 2026/)).toBeInTheDocument();
     expect(within(plan).getByText('Active')).toBeInTheDocument();
