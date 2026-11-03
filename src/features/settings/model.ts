@@ -40,6 +40,18 @@ export function sortDevices(devices: readonly Device[]): Device[] {
 }
 
 /**
+ * The person's own workstations: those of `ostrom login`. An elevated token of `ostrom login --admin` is bound to one
+ * organization, and the list read in an organization holds every member's for an owner or an admin: they stay on
+ * that organization's settings.
+ */
+export function personalDevices(devices: readonly Device[]): Device[] {
+  return devices.filter((device) => device.kind !== 'admin');
+}
+
+/** How a person signs in with GitHub, in the account's `providers`. */
+export const GITHUB = 'github';
+
+/**
  * What a service key may carry: what a CI calls, nothing else (contract `createServiceKey`). The server refuses any
  * other scope, and a key on any other operation.
  */

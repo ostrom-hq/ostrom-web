@@ -309,6 +309,7 @@ export function createMockDb(): MockDb {
     usedLinks: [],
     deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
+    providers: ['github'],
     tokens: initialTokens(),
     nextToken: 3,
     devices: initialDevices(),
@@ -407,6 +408,9 @@ export function resetMockDb(db: MockDb): void {
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
+
+/** The routes that act in an organization only when the call names one (`namedMember` on the server). */
+const WITH_ORG_IF_NAMED = /^\/api\/v1\/devices(?:\/[^/]+)?$/;
 
 /** The organization a call acts in, once the first handler let it through. */
 function organizationOf(db: MockDb, request: Request): Organization {
@@ -589,7 +593,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
-      if (!actsInOrganization(new URL(request.url).pathname)) return undefined;
+      const { pathname } = new URL(request.url);
+      if (!actsInOrganization(pathname)) return undefined;
+      // The workstations are the person's: `/devices` reads an organization only when the call names one.
+      if (WITH_ORG_IF_NAMED.test(pathname) && !request.headers.has(ORG_HEADER)) return undefined;
       const organization = resolveOrganization(db, request);
       return organization instanceof HttpResponse ? organization : undefined;
     }),

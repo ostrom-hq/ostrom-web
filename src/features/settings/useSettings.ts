@@ -120,6 +120,9 @@ export function useAuthSessions(): SessionsViewModel {
   return { sessions: sorted, unavailable, failure: unavailable ? undefined : failureOf(query.error) };
 }
 
+/** The page of the person's sessions, where a new sign-in comes back. */
+export type SessionsPage = '/settings' | '/account';
+
 export interface SessionActionsViewModel {
   /** Ends another session; ending this browser's signs it out. */
   readonly revoke: (session: AuthSession) => void;
@@ -130,14 +133,15 @@ export interface SessionActionsViewModel {
   readonly failure: Error | undefined;
 }
 
-export function useSessionActions(): SessionActionsViewModel {
+/** The session actions of a page (`back`): signing this browser out comes back to it after the next sign-in. */
+export function useSessionActions(back: SessionsPage): SessionActionsViewModel {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const signedOut = useCallback(async () => {
     // Off this page first, so nothing on it reads again as nobody; then everything cached, this account's, goes.
-    await navigate({ to: '/signin', search: { redirect: '/settings' } });
+    await navigate({ to: '/signin', search: { redirect: back } });
     useAuthStore.getState().changed();
-  }, [navigate]);
+  }, [navigate, back]);
   const relist = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: listAuthSessionsQueryKey() });
   }, [queryClient]);

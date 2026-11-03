@@ -43,6 +43,7 @@ export const fr = {
       billing: 'Facturation',
       workflows: 'Workflows',
       settings: 'Réglages',
+      account: 'Mon compte',
       tokens: 'Jetons',
       import: 'Importer',
       policy: 'Politique des agents',
@@ -1553,6 +1554,24 @@ export const fr = {
       },
       view: 'Voir',
       pdf: 'PDF',
+    },
+  },
+  account: {
+    title: 'Mon compte',
+    lead: 'Ton compte, quelle que soit l’organisation où tu agis : GitHub, sessions de navigateur et postes.',
+    leadAs:
+      'Connecté en tant que {{login}}. Ton compte, quelle que soit l’organisation où tu agis : GitHub, sessions de navigateur et postes.',
+    github: {
+      title: 'GitHub',
+      linkedTag: 'Lié',
+      linked:
+        'Ton GitHub est lié : tu peux te connecter avec, et une porte sait quelles pull requests sont les tiennes.',
+      invite:
+        'Lie ton GitHub : une porte sait alors quelles pull requests sont les tiennes, et ne te compte jamais comme approbateur des tiennes.',
+      link: 'Lier GitHub',
+      linking: 'Ouverture de GitHub…',
+      errorTag: 'Non fait',
+      unsafe: 'Le serveur a donné une page qui n’est pas en https : rien n’a été ouvert.',
     },
   },
   settings: {

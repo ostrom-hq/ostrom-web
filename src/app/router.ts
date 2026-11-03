@@ -209,6 +209,12 @@ const settingsRoute = createRoute({
   path: '/settings',
   component: lazyRouteComponent(async () => import('@/features/settings'), 'SettingsScreen'),
 });
+/** The person's own account, read in no organization: sessions, workstations and their GitHub. */
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/account',
+  component: lazyRouteComponent(async () => import('@/features/settings'), 'AccountScreen'),
+});
 const tokensRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tokens',
@@ -327,6 +333,7 @@ export const routeTree = rootRoute.addChildren([
   spendRoute,
   billingRoute,
   settingsRoute,
+  accountRoute,
   tokensRoute,
   cloudRoute,
   automationsRoute,
