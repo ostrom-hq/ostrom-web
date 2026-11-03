@@ -12890,6 +12890,19 @@ components:
           type: array
           items:
             type: string
+        paused:
+          type: array
+          description: The members paused now, by login, and the end of their pause
+          items:
+            type: object
+            properties:
+              login:
+                type: string
+              until:
+                type: string
+            required:
+            - login
+            - until
       required:
       - id
       - name
