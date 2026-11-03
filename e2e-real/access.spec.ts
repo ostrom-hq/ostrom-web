@@ -55,6 +55,14 @@ async function withSecret(
   return asProgram('GET', path, org === undefined ? { secret } : { secret, org });
 }
 
+/** Creates an organization the signed-in person owns. */
+async function ownOrganization(page: Page, who: string): Promise<void> {
+  const created = await callFromPage(page, 'POST', '/api/v1/orgs', {
+    name: `${who} ${Date.now().toString(36)}`,
+  });
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+}
+
 /** The value of a secret shown once, read from its copy field. */
 async function shownSecret(page: Page, name: string): Promise<string> {
   const field = page.getByRole('textbox', { name: `Secret of ${name}` });
@@ -96,6 +104,8 @@ test('a person signed in on two browsers sees both sessions and signs the other 
 }) => {
   const email = freshEmail('uma');
   await signIn(page, email);
+  // The sessions are read in an organization's settings: the person has one.
+  await ownOrganization(page, 'Uma');
   const other = await anotherPerson(browser);
   await signIn(other, email);
   expect((await callFromPage(other, 'GET', '/api/v1/auth/me')).status).toBe(200);
@@ -166,6 +176,8 @@ test('a person signs the CLI in, finds the workstation in the settings, and sign
   page,
 }) => {
   await signIn(page, freshEmail('yusuf'));
+  // The workstations are read in an organization's settings: the person has one.
+  await ownOrganization(page, 'Yusuf');
   // `ostrom login`: the CLI, without the browser's cookie, asks for a code; the person says yes in the browser; the
   // CLI collects its token.
   const started = await asProgram('POST', '/api/v1/auth/device', { data: {} });
