@@ -7,21 +7,26 @@
 //     POST /login/oauth/access_token    the code (once, with the PKCE verifier) for a token
 //     GET  /user, /user/emails          who the token is
 //   OSTROM_E2E_GITHUB_PORT (4700), the GitHub App (OSTROM_GITHUB_WEB, OSTROM_GITHUB_API):
-//     GET  /apps/<slug>/installations/new   the install page: back to the server's callback with the installation
-//                                           prepared, a web code and the server's `state`
+//     GET  /apps/<slug>/installations/new   the install page: GitHub's signed `installation.created` webhook to the
+//                                           server, then back to its callback with the installation prepared, a web
+//                                           code and the server's `state`
 //     POST /login/oauth/access_token        the web code (once, with the App's OAuth client) for a user token
 //     GET  /user/installations              the installations that user administers
 //     GET  /app/installations/<id>          the App's view of an installation (its JWT)
 //     POST /app/installations/<id>/access_tokens   an installation token
 //     GET  /installation/repositories       the repositories given to the installation
 //     POST /graphql                         no GitHub organization: no teams
-// Every request is recorded for the journey to assert on. Both ports share one state.
-import { createHash } from 'node:crypto';
+// Every request is recorded for the journey to assert on. Both ports share one state. A GitHub id is derived from the
+// login, so that two runs of the same journey (desktop, then phone) never give two people the same id.
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 
 /** The ports the server was started pointing at (ostrom-server `console-journey.yml`); 0 when not configured. */
 export const SIGN_IN_PORT = Number(process.env['OSTROM_E2E_FAKE_GITHUB_PORT'] ?? '0');
 export const APP_PORT = Number(process.env['OSTROM_E2E_GITHUB_PORT'] ?? '0');
+/** The server itself (its webhooks are outside the API the console's proxy serves), and the App's webhook secret. */
+const SERVER = (process.env['OSTROM_E2E_API_UPSTREAM'] ?? 'http://127.0.0.1:4600').replace(/\/$/, '');
+const WEBHOOK_SECRET = process.env['OSTROM_E2E_GITHUB_WEBHOOK_SECRET'] ?? '';
 
 /** The App's OAuth client in `console-journey.yml`: a web code is only exchanged with these. */
 const APP_CLIENT = { id: 'Iv1.fake', secret: 'fake-client-secret' };
@@ -77,7 +82,6 @@ export class FakeGitHub {
   readonly requests: Recorded[] = [];
   private readonly servers: Server[] = [];
   private readonly tokens = new Map<string, Person>();
-  private readonly ids = new Map<string, number>();
   private readonly signInCodes = new Map<string, SignInCode>();
   private readonly webCodes = new Map<string, string>();
   private readonly installations = new Map<number, FakeInstallation>();
@@ -126,11 +130,7 @@ export class FakeGitHub {
   }
 
   private idOf(login: string): number {
-    const known = this.ids.get(login);
-    if (known !== undefined) return known;
-    const id = 5000 + this.ids.size;
-    this.ids.set(login, id);
-    return id;
+    return 10_000_000 + Number.parseInt(createHash('sha256').update(login).digest('hex').slice(0, 7), 16);
   }
 
   private token(prefix: string, person: Person): string {
@@ -163,7 +163,7 @@ export class FakeGitHub {
     }
     // The helm demo's fake serves its API under /api: both spellings are read the same.
     const path = url.pathname.replace(/^\/api(?=\/)/, '');
-    const answer = this.route(port, method, path, url.searchParams, body, authorization);
+    const answer = await this.route(port, method, path, url.searchParams, body, authorization);
     if ('redirect' in answer) {
       response.writeHead(302, { location: answer.redirect });
       response.end();
@@ -173,16 +173,17 @@ export class FakeGitHub {
     response.end(JSON.stringify(answer[1]));
   }
 
-  private route(
+  private async route(
     port: number,
     method: string,
     path: string,
     query: URLSearchParams,
     body: unknown,
     authorization: string,
-  ): Answer {
+  ): Promise<Answer> {
     if (method === 'GET' && path === '/login/oauth/authorize') return this.authorize(query);
-    if (method === 'GET' && /^\/apps\/[^/]+\/installations\/new$/.test(path)) return this.installPage(query);
+    if (method === 'GET' && /^\/apps\/[^/]+\/installations\/new$/.test(path))
+      return await this.installPage(query);
     if (method === 'POST' && path === '/login/oauth/access_token') {
       return port === APP_PORT ? this.exchangeWebCode(body) : this.exchangeSignIn(body);
     }
@@ -249,10 +250,20 @@ export class FakeGitHub {
   }
 
   /** The install page: back to the server's callback with the installation prepared, a web code and its state. */
-  private installPage(query: URLSearchParams): Answer {
+  private async installPage(query: URLSearchParams): Promise<Answer> {
     const prepared = this.nextInstall;
-    if (prepared === undefined) return [400, { message: 'no install prepared (installs)' }];
+    const installation = prepared === undefined ? undefined : this.installations.get(prepared.installation);
+    if (prepared === undefined || installation === undefined) {
+      return [400, { message: 'no install prepared (installation, installs)' }];
+    }
     this.nextInstall = undefined;
+    // Who installed it, as GitHub tells the server before the person comes back: the callback awaits it.
+    const delivered = await this.webhook('installation', {
+      action: 'created',
+      installation: this.installationView(installation),
+      sender: { login: prepared.login, id: this.idOf(prepared.login), type: 'User' },
+    });
+    if (!delivered) return [502, { message: 'the server refused the installation webhook' }];
     const code = `web_${String(this.serial++)}`;
     this.webCodes.set(code, prepared.login);
     const to = new URL(prepared.callback);
@@ -297,8 +308,32 @@ export class FakeGitHub {
     return [201, { token: this.token('ghs', bot), expires_at: expires }];
   }
 
+  /** A delivery to the server's `/webhooks/github`, signed as GitHub signs it; true when it was taken. */
+  private async webhook(event: string, payload: unknown): Promise<boolean> {
+    const body = JSON.stringify(payload);
+    const signature = createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex');
+    try {
+      const response = await fetch(`${SERVER}/webhooks/github`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-github-event': event,
+          'x-github-delivery': randomUUID(),
+          'x-hub-signature-256': `sha256=${signature}`,
+        },
+        body,
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
   private installationView(installation: FakeInstallation): unknown {
-    return { id: installation.id, account: { login: installation.account, type: 'Organization' } };
+    return {
+      id: installation.id,
+      account: { login: installation.account, id: this.idOf(installation.account), type: 'Organization' },
+    };
   }
 
   /** `GET /installation/repositories`, with an installation's token: its repositories, a page at a time. */
