@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { type ServiceKeyLifetime, sortDevices } from './model';
+import { personalDevices, type ServiceKeyLifetime, sortDevices } from './model';
 
 export interface DevicesViewModel {
   /** Where the CLI is signed in as the person, the most recently seen first. */
@@ -26,13 +26,17 @@ export interface DevicesViewModel {
   readonly signOutFailure: Error | undefined;
 }
 
-export function useDevices(): DevicesViewModel {
+/**
+ * The workstations. `personal` keeps the person's own (`ostrom login`), for their account: read in an organization,
+ * the list also holds the elevated tokens bound to it, which stay on its settings.
+ */
+export function useDevices(personal = false): DevicesViewModel {
   const queryClient = useQueryClient();
   const query = useQuery(ready(listDevicesOptions(), { retry: false }));
-  const devices = useMemo(
-    () => (query.data === undefined ? undefined : sortDevices(query.data.items)),
-    [query.data],
-  );
+  const devices = useMemo(() => {
+    if (query.data === undefined) return undefined;
+    return sortDevices(personal ? personalDevices(query.data.items) : query.data.items);
+  }, [query.data, personal]);
   const relist = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: listDevicesQueryKey() });
   }, [queryClient]);

@@ -1101,6 +1101,14 @@ export type DeviceAuthorization = {
      */
     scopes?: Array<string>;
     expiresAt: string;
+    /**
+     * When the CLI started the login, shown before the yes: with `requestedFrom`, an approval of a code someone else sent shows
+     */
+    requestedAt: string;
+    /**
+     * The network the login was started from, never the address: a /24 for IPv4 (`203.0.113.0/24`), a /48 for IPv6 (`2001:db8:abcd::/48`), shown before the yes. Absent when the server could not tell
+     */
+    requestedFrom?: string;
 };
 
 /**
@@ -1387,6 +1395,13 @@ export type Group = {
     name: string;
     members: Array<string>;
     accounts: Array<string>;
+    /**
+     * The members paused now, by login, and the end of their pause
+     */
+    paused?: Array<{
+        login: string;
+        until: string;
+    }>;
 };
 
 /**
