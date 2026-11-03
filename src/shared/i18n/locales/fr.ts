@@ -472,6 +472,7 @@ export const fr = {
       title: 'Personnes',
       search: 'Trouver quelqu’un',
       noMatch: 'Aucun identifiant ni nom ne commence par « {{search}} ».',
+      searching: 'Recherche…',
       you: '(toi)',
       roleOf: 'Rôle de {{name}}',
       errorTag: 'Non enregistré',

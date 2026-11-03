@@ -49,7 +49,9 @@ function MembersPage({
   const searchId = useId();
   // A large organization is read a hundred people at a time, the next hundred when asked, and searched on the
   // server, beyond the people read (PERF-CONSOLE).
-  const searchable = view.read === undefined || !view.everyoneRead || view.read > MEMBERS_PAGE;
+  // A search typed keeps its box, even once the organization is small enough not to need one.
+  const searchable =
+    view.read === undefined || !view.everyoneRead || view.read > MEMBERS_PAGE || search !== '';
   // A failed search still shows its box, to search again: the list is what is left out.
   const listed = view.members ?? (view.searchFailure === undefined ? undefined : NOBODY);
   return (
@@ -102,7 +104,12 @@ function MembersPage({
               </Banner>
             )}
             {view.searchFailure !== undefined ? null : members.length === 0 ? (
-              <p className="o-empty">{t('members.list.noMatch', { search: view.search })}</p>
+              // Said as it changes; while the next search is read, it is not yet nobody.
+              <p className="o-empty" role="status">
+                {view.stale
+                  ? t('members.list.searching')
+                  : t('members.list.noMatch', { search: view.search })}
+              </p>
             ) : (
               <ul className="o-card o-rows">
                 {members.map((member) => {

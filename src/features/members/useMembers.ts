@@ -63,9 +63,10 @@ export function useMembers(org: string, role: OrgRole | undefined, search = ''):
   const people = useOrgMembers(org);
   const q = useDebounced(search.trim(), SEARCH_PAUSE_MS);
   // Without a search, the same query as `people`: one read for both.
+  // A failed search is said at once, not asked three more times; without one, the list's own options stand.
   const shown = useOrgMembers(
     org,
-    { placeholderData: keepPreviousData, retry: false },
+    q === '' ? { placeholderData: keepPreviousData } : { placeholderData: keepPreviousData, retry: false },
     q === '' ? undefined : q,
   );
   const invitations = useQuery(
@@ -85,7 +86,8 @@ export function useMembers(org: string, role: OrgRole | undefined, search = ''):
     search: q,
     members: sorted,
     stale: shown.stale,
-    more: shown.more,
+    // The next hundred of the search being read, not of the one still shown.
+    more: shown.stale ? undefined : shown.more,
     loadingMore: shown.loadingMore,
     searchFailure: q === '' ? undefined : failureOf(shown.error),
     invitations: pending,

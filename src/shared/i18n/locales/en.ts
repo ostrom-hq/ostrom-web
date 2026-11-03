@@ -462,6 +462,7 @@ export const en = {
       title: 'People',
       search: 'Find someone',
       noMatch: 'Nobody’s login or name starts with “{{search}}”.',
+      searching: 'Searching…',
       you: '(you)',
       roleOf: 'Role of {{name}}',
       errorTag: 'Not saved',

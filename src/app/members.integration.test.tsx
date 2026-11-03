@@ -649,6 +649,49 @@ describe('the members of a large organization', () => {
     expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
   });
 
+  it('says it is searching, not that nobody matches, while the next search is read', async () => {
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('q') === 'dev-1') await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/members');
+    await shown(100);
+    await find('nobody');
+    expect(await screen.findByText('Nobody’s login or name starts with “nobody”.')).toBeInTheDocument();
+    await find('dev-1');
+    expect(await screen.findByText('Searching…')).toHaveAttribute('role', 'status');
+    expect(screen.queryByText(/starts with “dev-1”/)).toBeNull();
+    // A search that finds a hundred and more, then one still read: its next hundred is not offered meanwhile.
+    await find('dev-');
+    await shown(100);
+    expect(screen.getByRole('button', { name: 'Show more people' })).toBeInTheDocument();
+    await find('dev-1');
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+    });
+    expect(screen.getByRole('heading', { level: 2, name: 'People' }).parentElement).toHaveAttribute(
+      'aria-busy',
+      'true',
+    );
+  });
+
+  it('keeps the box of a search typed once the organization is small enough not to need one', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 101);
+    visit('/members');
+    await shown(100);
+    await user.click(screen.getByRole('button', { name: 'Show more people' }));
+    await shown(101);
+    await find('dev-001');
+    await shown(1);
+    await user.click(within(rowNamed('Developer 001')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Developer 001')).getByRole('button', { name: 'Remove Developer 001' }));
+    expect(await screen.findByText('100 people · you are Admin')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Find someone' })).toHaveValue('dev-001');
+  });
+
   it('waits for a pause in the typing, and calls off the search it replaces', async () => {
     const searches: Request[] = [];
     traffic.onRequest((request) => {
