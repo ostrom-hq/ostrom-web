@@ -30,7 +30,7 @@ export function DeviceScreen(): ReactElement {
         <Screen title={t('device.title')} lead={t('device.enterLead')}>
           <div className="o-stack">
             <Banner tone="warning" tag={t('device.unknownTag')} live>
-              {t('device.unknown', { code: view.code })}
+              {view.code === undefined ? t('device.malformed') : t('device.unknown', { code: view.code })}
             </Banner>
             <CodeForm onRead={read} />
           </div>
@@ -117,6 +117,11 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
             {t('device.forbidden')}
           </Banner>
         ) : null}
+        {open.severalOrgs ? (
+          <Banner tone="danger" tag={t('device.forbiddenTag')} live>
+            {t('device.severalOrgs')}
+          </Banner>
+        ) : null}
         {open.failure === undefined ? null : (
           <Banner tone="danger" tag={t('device.failedTag')} live>
             <FailureText failure={open.failure} />
@@ -124,7 +129,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
         )}
         <div className="o-device__actions">
           <Button variant="primary" onClick={open.approve} disabled={open.answering}>
-            {t('device.approve')}
+            {login.scopes === undefined ? t('device.approve') : t('device.approveAdmin')}
           </Button>
           <Button onClick={open.deny} disabled={open.answering}>
             {t('device.deny')}

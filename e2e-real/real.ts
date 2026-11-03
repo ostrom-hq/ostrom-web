@@ -45,7 +45,7 @@ let people = 0;
  * server believes `X-Forwarded-For` only from a trusted proxy (`OSTROM_TRUSTED_PROXIES`: the runner's loopback, from
  * which `vite preview` proxies /api, in ostrom-server's `console-journey.yml`); elsewhere it is ignored.
  */
-function addressOfAPerson(): string {
+export function addressOfAPerson(): string {
   people += 1;
   return `10.${String((people >> 16) & 255)}.${String((people >> 8) & 255)}.${String(people & 255)}`;
 }

@@ -9,7 +9,19 @@ export const deviceSearchSchema = z.object({
   code: z.string().optional().catch(undefined),
 });
 
-/** A code as typed, the way the terminal shows it: no spaces around, capitals. The server reads the rest. */
+/** The letters of a code, as the server draws them (`USER_CODE_ALPHABET`): no vowels, no look-alikes. */
+const USER_CODE = /^[BCDFGHJKMNPQRSTVWXZ]{4}-[BCDFGHJKMNPQRSTVWXZ]{4}$/;
+
+/**
+ * A code as typed, the way the server reads it (`normalizeUserCode`): capitals, without spaces or dashes, then
+ * `ABCD-EFGH`. Anything that is not eight letters stays as it came, and is not a code.
+ */
 export function normalizeCode(typed: string): string {
-  return typed.trim().toUpperCase();
+  const letters = typed.toUpperCase().replace(/[\s-]/g, '');
+  return letters.length === 8 ? `${letters.slice(0, 4)}-${letters.slice(4)}` : letters;
+}
+
+/** Whether a normalized code can be one the server gave: only then is it read, or shown back to the person. */
+export function isUserCode(code: string): boolean {
+  return USER_CODE.test(code);
 }

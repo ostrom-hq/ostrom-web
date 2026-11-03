@@ -5,7 +5,7 @@
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
 import { zApiError, zAuthToken, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
-import { bodyOf, callFromPage, freshEmail, signIn } from './real';
+import { addressOfAPerson, bodyOf, callFromPage, freshEmail, signIn } from './real';
 
 /**
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
@@ -17,6 +17,16 @@ const zStartedLogin = zDeviceCode.extend({ verificationUriComplete: z.string() }
  * Calls the API as the CLI does, through the console's own origin (the preview proxies /api to the server): a
  * context of its own, without the browser's session cookie; a bearer token only once the CLI holds one.
  */
+/**
+ * The CLI's network, one per test: the server lets one address start ten logins per ten minutes, and every journey
+ * reaches it from the same machine.
+ */
+let cliAddress = addressOfAPerson();
+
+test.beforeEach(() => {
+  cliAddress = addressOfAPerson();
+});
+
 async function asTheCli(
   method: 'GET' | 'POST',
   path: string,
@@ -29,6 +39,7 @@ async function asTheCli(
       method,
       headers: {
         accept: 'application/json',
+        'X-Forwarded-For': cliAddress,
         ...(options.token === undefined ? {} : { authorization: `Bearer ${options.token}` }),
       },
       ...(options.body === undefined ? {} : { data: options.body }),

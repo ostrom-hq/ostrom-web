@@ -1691,7 +1691,7 @@ export const en = {
   },
   device: {
     title: 'Sign in a terminal',
-    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer.',
+    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer. If you did not run ostrom login yourself just now, deny it.',
     enterLead: 'Type the code your terminal shows after ostrom login.',
     form: {
       label: 'Code from the terminal',
@@ -1702,18 +1702,23 @@ export const en = {
     unknownTag: 'Unknown code',
     unknown:
       'No sign-in is waiting for {{code}}: it may have expired or been answered already. Check the code, or run ostrom login again.',
+    malformed:
+      'This link holds no code from ostrom login. Type the code your terminal shows, or run ostrom login again.',
     code: 'Code',
-    client: 'Asking',
+    client: 'Name given by the terminal',
     expires: 'Expires at',
     adminTag: 'Admin sign-in',
     admin:
       'This terminal asks for the governance writes below. Only an owner or an admin of the organization may approve it.',
     scopes: 'Scopes asked',
     approve: 'Sign in this terminal',
+    approveAdmin: 'Approve the admin sign-in',
     deny: 'Deny',
     forbiddenTag: 'Not allowed',
     forbidden:
       'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
+    severalOrgs:
+      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for: it cannot be approved here yet. Deny it, or ask an owner or an admin who belongs to this organization only.',
     failedTag: 'Not answered',
     signedOut: {
       title: 'Sign in to answer',

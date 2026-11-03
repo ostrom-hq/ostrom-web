@@ -75,7 +75,7 @@ describe('the device sign-in page', () => {
       'harness:write',
       'policy:write',
     ]);
-    await user.click(screen.getByRole('button', { name: 'Sign in this terminal' }));
+    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
   });
 
@@ -83,7 +83,7 @@ describe('the device sign-in page', () => {
     const user = userEvent.setup();
     demote();
     open(DEMO_ADMIN_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
     expect(await within(await main()).findByRole('alert')).toHaveTextContent(
       'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
     );
@@ -96,7 +96,7 @@ describe('the device sign-in page', () => {
     const user = userEvent.setup();
     db.signedInAt = Date.now() - FRESH_SIGN_IN_MS - 1;
     open(DEMO_ADMIN_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
+    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
     const again = await screen.findByRole('link', { name: 'Sign in again' });
     expect(again).toHaveAttribute('href', `/signin?redirect=%2Fdevice%3Fcode%3D${DEMO_ADMIN_DEVICE_CODE}`);
     // The step-up, not the role: the admin refusal is never shown (the scopes' own notice names owners and admins).
@@ -126,14 +126,56 @@ describe('the device sign-in page', () => {
     ).toBeInTheDocument();
   });
 
-  it('says the code no longer works when the server finds the login already answered (409)', async () => {
+  it('says an admin sign-in cannot be approved here when the server cannot tell the organization (409)', async () => {
     const user = userEvent.setup();
     server.use(
-      http.post('*/api/v1/auth/device/answer', () => refuse(409, 'conflict', 'This login was answered.')),
+      http.post('*/api/v1/auth/device/answer', () =>
+        refuse(409, 'org_required', 'Name the organization this call acts in.'),
+      ),
+    );
+    open(DEMO_ADMIN_DEVICE_CODE);
+    await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
+    expect(await within(await main()).findByRole('alert')).toHaveTextContent(
+      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for',
+    );
+    expect(screen.queryByText('This code no longer works')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
+  });
+
+  it('says an ordinary sign-in refused with a 403 as the server said it, never as a missing role', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/auth/device/answer', () => refuse(403, 'forbidden', 'The request was refused.')),
     );
     open(DEMO_DEVICE_CODE);
-    await user.click(await screen.findByRole('button', { name: 'Deny' }));
-    expect(await screen.findByText('This code no longer works')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
+    const said = await within(await main()).findByRole('alert');
+    expect(said).toHaveTextContent('Not answered');
+    expect(said).not.toHaveTextContent('can approve an admin sign-in');
+  });
+
+  it('never shows back what a link holds when it is not a code', async () => {
+    open(encodeURIComponent('Your session expired, sign in on evil.example'));
+    const said = await within(await main()).findByRole('alert');
+    expect(said).toHaveTextContent('This link holds no code from ostrom login.');
+    expect(said).not.toHaveTextContent('evil.example');
+  });
+
+  it('reads an empty code in the address as no code', async () => {
+    visit('/device?code=');
+    expect(await screen.findByRole('form', { name: 'Code from the terminal' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('reads a code typed with spaces as the server does', async () => {
+    const user = userEvent.setup();
+    const router = visit('/device');
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Code shown by the terminal' }),
+      'wdjb mjht{Enter}',
+    );
+    expect(await screen.findByText('ostrom CLI on ada-laptop')).toBeInTheDocument();
+    expect(router.state.location.search).toEqual({ code: DEMO_DEVICE_CODE });
   });
 
   it('says an unknown code is not waiting, then reads another one typed by hand', async () => {
