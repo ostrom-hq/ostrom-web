@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Line 2.1 of the journey (demo/PARCOURS.md), console side, against the real server and a fake GitHub
 // (e2e-real/fakeGithub.ts): the setup guide of a new organization counts each of its six steps as the owner takes
-// them, each read from what the server answers (the GitHub App installed, a person joined, a shared subscription, a
-// workflow), the last one said by the person.
+// them on the console, each read from what the server answers (the GitHub App installed, a person joined, a shared
+// subscription, a workflow), the last one said by the person.
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { FAKE_GITHUB_CONFIGURED, FakeGitHub } from './fakeGithub';
-import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
+import { anotherPerson, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 const github = new FakeGitHub();
 
@@ -67,36 +67,41 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   await expect(guide).toContainText('3 of 6 done');
   await expect(stepOf(guide, 'Invite your team')).toContainText('(done)');
 
-  // 4. A shared subscription, as `ostrom accounts share` sends it from a member's machine: the console's own form
-  // sends another body, which this server refuses (JOURNAL, 03/11). The guide's step leads to the accounts screen.
-  await expect(
-    stepOf(guide, 'Add a model account').getByRole('link', { name: 'Add an account' }),
-  ).toHaveAttribute('href', '/accounts');
-  const shared = await callFromPage(page, 'POST', '/api/v1/accounts', {
-    provider: 'claude',
-    label: `Gus’s Claude Max ${id}`,
-    providerAccountId: `gus-${id}@acme.test`,
-    accessToken: `sk-ant-oat01-e2e-${run()}`,
-    refreshToken: `sk-ant-ort01-e2e-${run()}`,
-    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
-  });
-  expect(shared.status, JSON.stringify(shared.body)).toBe(201);
+  // 4. A shared subscription, from the guide's step: its token stored as a secret first, then shared on /accounts.
+  await stepOf(guide, 'Add a model account').getByRole('link', { name: 'Add an account' }).click();
+  await expect(page).toHaveURL(/\/accounts$/);
+  await page.getByRole('link', { name: 'Add it in Secrets' }).click();
+  await expect(page).toHaveURL(/\/secrets$/);
+  const secret = `GUS_CLAUDE_${id.toUpperCase()}`;
+  const add = page.getByRole('region', { name: 'Add a secret' });
+  await add.getByRole('textbox', { name: 'Name', exact: true }).fill(secret);
+  await add.getByLabel('Value').fill(`sk-ant-oat01-e2e-${run()}`);
+  await add.getByRole('button', { name: 'Save the secret' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: secret })).toBeVisible();
+  await page.goto('/accounts');
+  const label = `Gus’s Claude Max ${id}`;
+  const share = page.getByRole('region', { name: 'Share a subscription' });
+  await share.getByLabel('Provider').selectOption('anthropic');
+  await share.getByLabel('Name').fill(label);
+  await share.getByLabel('Credential').selectOption(secret);
+  await share.getByLabel('Daily share in USD (optional)').fill('40');
+  await share.getByRole('button', { name: 'Share' }).click();
+  await expect(page.getByRole('article').filter({ hasText: label })).toBeVisible();
   guide = await guideOf(page);
   await expect(guide).toContainText('4 of 6 done');
   await expect(stepOf(guide, 'Add a model account')).toContainText('(done)');
 
-  // 5. A first workflow.
-  const workflow = {
-    id: `wf-guide-${id}`,
-    name: 'Release train',
-    domain: `acme-${id}/api`,
-    nodes: [{ id: 'n-1', kind: 'trigger', label: 'A tag is pushed' }],
-    edges: [{ from: 'n-1', to: null }],
-    start: 'n-1',
-    status: 'accepted',
-    foundAt: new Date().toISOString(),
-  };
-  expect((await callFromPage(page, 'POST', '/api/v1/workflows', workflow)).status).toBe(201);
+  // 5. A first workflow, from the guide's step: written on the console.
+  await stepOf(guide, 'Write a first workflow').getByRole('link', { name: 'Open workflows' }).click();
+  await expect(page).toHaveURL(/\/workflows$/);
+  await page.getByRole('link', { name: 'New workflow' }).click();
+  const form = page.getByRole('form', { name: 'A new workflow' });
+  const name = `Release train ${id}`;
+  await form.getByLabel('Name').fill(name);
+  await form.getByLabel('Repository').fill(`acme-${id}/api`);
+  await form.getByLabel('Step 1: What it is').fill('A tag is pushed');
+  await form.getByRole('button', { name: 'Create the workflow' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
   guide = await guideOf(page);
   await expect(guide).toContainText('5 of 6 done');
   await expect(stepOf(guide, 'Write a first workflow')).toContainText('(done)');
