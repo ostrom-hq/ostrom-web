@@ -26,7 +26,7 @@ export function freshEmail(who: string): string {
 }
 
 /** The token of the newest sign-in mail to `email`, if the server wrote one. */
-function signInToken(email: string): string | undefined {
+export function signInToken(email: string): string | undefined {
   const mails = readdirSync(mailDir)
     .map((name) => join(mailDir, name))
     .filter((path) => statSync(path).isFile())

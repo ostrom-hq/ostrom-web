@@ -14,6 +14,11 @@ export const fr = {
     showMore_one: 'En afficher 1 de plus',
     showMore_other: 'En afficher {{count}} de plus (reste {{left}})',
     morePeople: 'Afficher plus de personnes',
+    held: {
+      tag: 'En attente',
+      text: 'Ostrom garde ce changement jusqu’à ce qu’un propriétaire ou un admin le confirme.',
+      open: 'Ouvrir la confirmation',
+    },
     copy: {
       action: 'Copier',
       named: 'Copier {{label}}',
@@ -217,6 +222,12 @@ export const fr = {
         save: 'Modifier un workflow',
         delete: 'Supprimer un workflow',
       },
+      members: {
+        role: 'Changer le rôle d’un membre',
+        remove: 'Retirer un membre',
+        invite: 'Inviter des personnes',
+        link: 'Créer un lien d’invitation',
+      },
     },
     expiresIn: 'expire dans {{left}}',
     warning: {
@@ -237,6 +248,20 @@ export const fr = {
       nothingAfter: 'Rien : ce changement le supprime.',
       keys_one: 'Change {{keys}}.',
       keys_other: 'Change {{count}} clés : {{keys}}.',
+    },
+    member: {
+      title: {
+        role: 'Qui et quel rôle',
+        remove: 'Qui part',
+        invite: 'Qui est invité',
+        link: 'Ce que donne le lien',
+      },
+      person: 'Personne',
+      role: 'Rôle',
+      roleChange: '{{from}} → {{to}}',
+      leaves: 'Quitte l’organisation (rôle actuel : {{role}})',
+      joinsAs: 'Rejoint comme',
+      uses: 'Personnes qu’il peut faire entrer',
     },
     who: {
       title: 'Qui demande',

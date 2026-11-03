@@ -10,6 +10,11 @@ export const en = {
     showMore_one: 'Show 1 more',
     showMore_other: 'Show {{count}} more ({{left}} left)',
     morePeople: 'Show more people',
+    held: {
+      tag: 'Waiting',
+      text: 'Ostrom holds this change until an owner or an admin confirms it.',
+      open: 'Open the confirmation',
+    },
     copy: {
       action: 'Copy',
       named: 'Copy {{label}}',
@@ -214,6 +219,12 @@ export const en = {
         save: 'Change a workflow',
         delete: 'Delete a workflow',
       },
+      members: {
+        role: 'Change a member’s role',
+        remove: 'Remove a member',
+        invite: 'Invite people',
+        link: 'Create an invitation link',
+      },
     },
     expiresIn: 'expires in {{left}}',
     warning: {
@@ -234,6 +245,20 @@ export const en = {
       nothingAfter: 'Nothing: this change deletes it.',
       keys_one: 'Changes {{keys}}.',
       keys_other: 'Changes {{count}} keys: {{keys}}.',
+    },
+    member: {
+      title: {
+        role: 'Who and which role',
+        remove: 'Who leaves',
+        invite: 'Who is invited',
+        link: 'What the link gives',
+      },
+      person: 'Person',
+      role: 'Role',
+      roleChange: '{{from}} → {{to}}',
+      leaves: 'Leaves the organization, now {{role}}',
+      joinsAs: 'Joins as',
+      uses: 'People it can bring in',
     },
     who: {
       title: 'Who asks',

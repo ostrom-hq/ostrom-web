@@ -1924,7 +1924,7 @@ export type HandleInviteOrgMembersResponse = {
 /**
  * Handler for the `POST /api/v1/orgs/{org}/members/invites` operation.
  */
-export function handleInviteOrgMembers(response?: HandleInviteOrgMembersResponse | HttpResponseResolver<{
+export function handleInviteOrgMembers(response?: HandleInviteOrgMembersResponse | ToResponseUnion<InviteOrgMembersResponses> | HttpResponseResolver<{
     org: string;
 }, InviteOrgMembersData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
@@ -1948,14 +1948,14 @@ export function handleInviteOrgMembers(response?: HandleInviteOrgMembersResponse
 }
 
 export type HandleRemoveOrgMemberResponse = {
-    body: RemoveOrgMemberResponses[204];
-    status?: 204;
+    body: RemoveOrgMemberResponses[202];
+    status?: 202;
 };
 
 /**
  * Handler for the `DELETE /api/v1/orgs/{org}/members/{login}` operation.
  */
-export function handleRemoveOrgMember(response?: HandleRemoveOrgMemberResponse | HttpResponseResolver<{
+export function handleRemoveOrgMember(response?: HandleRemoveOrgMemberResponse | ToResponseUnion<RemoveOrgMemberResponses> | HttpResponseResolver<{
     org: string;
     login: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
@@ -1968,7 +1968,7 @@ export function handleRemoveOrgMember(response?: HandleRemoveOrgMemberResponse |
         }
         const body = response?.body;
         if (body !== undefined) {
-            return new HttpResponse(body, { status: response?.status ?? 204 });
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -2021,7 +2021,7 @@ export type HandleUpdateOrgMemberResponse = {
 /**
  * Handler for the `PATCH /api/v1/orgs/{org}/members/{login}` operation.
  */
-export function handleUpdateOrgMember(response?: HandleUpdateOrgMemberResponse | HttpResponseResolver<{
+export function handleUpdateOrgMember(response?: HandleUpdateOrgMemberResponse | ToResponseUnion<UpdateOrgMemberResponses> | HttpResponseResolver<{
     org: string;
     login: string;
 }, UpdateOrgMemberData['body']>, options?: RequestHandlerOptions): HttpHandler {
@@ -2085,7 +2085,7 @@ export type HandleCreateInvitationLinkResponse = {
 /**
  * Handler for the `POST /api/v1/orgs/{org}/invitations/links` operation.
  */
-export function handleCreateInvitationLink(response?: HandleCreateInvitationLinkResponse | HttpResponseResolver<{
+export function handleCreateInvitationLink(response?: HandleCreateInvitationLinkResponse | ToResponseUnion<CreateInvitationLinkResponses> | HttpResponseResolver<{
     org: string;
 }, CreateInvitationLinkData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
