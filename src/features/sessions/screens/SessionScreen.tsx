@@ -124,7 +124,11 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
             <ul className="o-rows">
               {gates.map((gate) => (
                 <li key={gate}>
-                  <GateLine gate={gate} answer={session.gateAnswers?.find((item) => item.gateId === gate)} />
+                  <GateLine
+                    gate={gate}
+                    answer={session.gateAnswers?.find((item) => item.gateId === gate)}
+                    ended={session.endedAt !== undefined}
+                  />
                 </li>
               ))}
             </ul>
@@ -149,6 +153,8 @@ interface GateLineProps {
   readonly gate: string;
   /** The server's answer to the gate, once someone said yes or no; nothing while it waits. */
   readonly answer: SessionGateAnswer | undefined;
+  /** The session ended: a gate nobody answered will not be answered any more. */
+  readonly ended: boolean;
 }
 
 function toneOf(answer: SessionGateAnswer | undefined): BadgeTone {
@@ -156,17 +162,17 @@ function toneOf(answer: SessionGateAnswer | undefined): BadgeTone {
   return answer.outcome === 'approved' ? 'success' : 'danger';
 }
 
-function labelOf(answer: SessionGateAnswer | undefined, t: TFunction): string {
-  if (answer === undefined) return t('sessions.detail.unanswered');
+function labelOf(answer: SessionGateAnswer | undefined, ended: boolean, t: TFunction): string {
+  if (answer === undefined) return ended ? t('sessions.detail.notAnswered') : t('sessions.detail.unanswered');
   return answer.outcome === 'approved' ? t('sessions.detail.approved') : t('sessions.detail.refused');
 }
 
 /** A request the session made, and who answered it: the thread of the session, read on its own page. */
-function GateLine({ gate, answer }: GateLineProps): ReactElement {
+function GateLine({ gate, answer, ended }: GateLineProps): ReactElement {
   const { t, i18n } = useTranslation();
   return (
     <span className="o-row">
-      <Badge tone={toneOf(answer)}>{labelOf(answer, t)}</Badge>
+      <Badge tone={toneOf(answer)}>{labelOf(answer, ended, t)}</Badge>
       <span className="o-row__main">
         <Link to="/yes/$approvalId" params={{ approvalId: gate }} className="o-row__title o-mono">
           {answer?.actionClass ?? gate}

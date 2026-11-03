@@ -21,7 +21,10 @@ export interface SessionListViewModel {
   /** There are older ended sessions than the ones read. */
   readonly more: boolean;
   readonly loadingMore: boolean;
-  /** Why the older sessions did not come; what was read stays. */
+  /**
+   * Why the last read of the ended sessions failed, once some were read: an older page, or a refresh. What was read
+   * stays on screen, and the next read that succeeds clears it.
+   */
   readonly moreFailure: Error | undefined;
   readonly loadMore: () => void;
 }
@@ -39,11 +42,14 @@ export function useSessionList(): SessionListViewModel {
   });
   const endedItems = useMemo(() => ended.data?.pages.flatMap((page) => page.items), [ended.data]);
   const { fetchNextPage } = ended;
-  const moreFailure = ended.isFetchNextPageError ? failureOf(ended.error) : undefined;
+  // Once a page is read, a failure never takes the list away: not even on the next poll, when TanStack forgets that
+  // the failure was an older page's (its fetch direction) but keeps the error until a read succeeds.
+  const read = ended.data !== undefined;
+  const moreFailure = read ? failureOf(ended.error) : undefined;
   return {
     open: open.data?.items,
     ended: endedItems,
-    failure: failureOf(open.error ?? (moreFailure === undefined ? ended.error : null)),
+    failure: failureOf(open.error ?? (read ? null : ended.error)),
     more: ended.hasNextPage,
     loadingMore: ended.isFetchingNextPage,
     moreFailure,

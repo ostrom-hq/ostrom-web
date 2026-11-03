@@ -229,6 +229,29 @@ describe('a session', () => {
     expect(within(wait).getByRole('link', { name: 'gate-wait' })).toHaveAttribute('href', '/yes/gate-wait');
   });
 
+  it('says a request of an ended session nobody answered was not answered, never that it waits', async () => {
+    server.use(
+      http.get('*/api/v1/sessions/:id', () =>
+        HttpResponse.json({
+          session: {
+            id: 'ses-done',
+            agent: 'claude-code',
+            dev: 'lena',
+            startedAt: '2026-10-30T07:00:00.000Z',
+            endedAt: '2026-10-30T08:00:00.000Z',
+            gates: ['gate-left'],
+            gateAnswers: [],
+          },
+        }),
+      ),
+    );
+    visit('/sessions/ses-done');
+    const what = await screen.findByRole('region', { name: 'What it did' });
+    const left = lineOf(within(what).getByRole('link', { name: 'gate-left' }));
+    expect(left).toHaveTextContent('Not answeredgate-left');
+    expect(left).not.toHaveTextContent('Waiting');
+  });
+
   it('shows an ended session with its duration, where it resumed from and its receipt', async () => {
     visit('/sessions/ses-2b9e');
     const when = await screen.findByRole('region', { name: 'When' });

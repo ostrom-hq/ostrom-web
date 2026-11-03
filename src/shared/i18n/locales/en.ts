@@ -232,6 +232,7 @@ export const en = {
       requests_one: '{{count}} request for a person',
       requests_other: '{{count}} requests for a person',
       unanswered: 'Waiting',
+      notAnswered: 'Not answered',
       approved: 'Approved',
       refused: 'Refused',
       answeredBy: 'by {{by}}, {{when}}',
