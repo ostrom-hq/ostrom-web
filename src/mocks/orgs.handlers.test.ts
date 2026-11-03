@@ -19,6 +19,7 @@ import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { freeSlug, setDemoRole } from '@/mocks/orgs';
 import { isApiFailure } from '@/shared/api/ApiFailure';
+import { appliedOf } from '@/shared/api/held';
 import { configureApiClient } from '@/shared/api/apiClient';
 
 const { server, db } = createMockServer();
@@ -150,7 +151,7 @@ describe('mock members of an organization', () => {
       body: { role: 'billing' },
       throwOnError: true,
     });
-    expect(data.role).toBe('billing');
+    expect(appliedOf(data)?.role).toBe('billing');
     const refused = async (login: string, role: string): Promise<number | undefined> =>
       (
         await failure(async () =>
@@ -237,7 +238,7 @@ describe('mock invitations', () => {
       },
       throwOnError: true,
     });
-    expect(data.invited).toEqual(['ana@acme.dev']);
+    expect(appliedOf(data)?.invited).toEqual(['ana@acme.dev']);
     const { data: listed } = await listInvitations({ path: { org }, throwOnError: true });
     expect(listed.items[0]).toEqual({
       id: 'inv-1',
@@ -273,8 +274,8 @@ describe('mock invitations', () => {
 
   it('makes a link of 1 to 100 uses, as a role the caller can give', async () => {
     const { data } = await createInvitationLink({ path: { org }, body: {}, throwOnError: true });
-    expect(data.invitation).toMatchObject({ email: null, role: 'member', maxUses: 10 });
-    expect(data.url).toBe(`${API}/invite#token=inv_1`);
+    expect(appliedOf(data)?.invitation).toMatchObject({ email: null, role: 'member', maxUses: 10 });
+    expect(appliedOf(data)?.url).toBe(`${API}/invite#token=inv_1`);
     expect(await raw('POST', `/orgs/${org}/invitations/links`, '{"maxUses":0}')).toBe(400);
     expect(await raw('POST', `/orgs/${org}/invitations/links`, '{"maxUses":101}')).toBe(400);
     expect(await raw('POST', `/orgs/${org}/invitations/links`, '{"role":"king"}')).toBe(400);

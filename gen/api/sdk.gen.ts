@@ -1325,6 +1325,8 @@ export const listOrgMembers = <ThrowOnError extends boolean = false>(options: Op
 
 /**
  * Invite people by e-mail; members and addresses already invited are left out of `invited`
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const inviteOrgMembers = <ThrowOnError extends boolean = false>(options: Options<InviteOrgMembersData, ThrowOnError>): RequestResult<InviteOrgMembersResponses, InviteOrgMembersErrors, ThrowOnError> => (options.client ?? client).post<InviteOrgMembersResponses, InviteOrgMembersErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1348,6 +1350,8 @@ export const inviteOrgMembers = <ThrowOnError extends boolean = false>(options: 
 
 /**
  * Remove a member
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const removeOrgMember = <ThrowOnError extends boolean = false>(options: Options<RemoveOrgMemberData, ThrowOnError>): RequestResult<RemoveOrgMemberResponses, RemoveOrgMemberErrors, ThrowOnError> => (options.client ?? client).delete<RemoveOrgMemberResponses, RemoveOrgMemberErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1386,6 +1390,8 @@ export const getOrgMember = <ThrowOnError extends boolean = false>(options: Opti
 
 /**
  * Change a member's role
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const updateOrgMember = <ThrowOnError extends boolean = false>(options: Options<UpdateOrgMemberData, ThrowOnError>): RequestResult<UpdateOrgMemberResponses, UpdateOrgMemberErrors, ThrowOnError> => (options.client ?? client).patch<UpdateOrgMemberResponses, UpdateOrgMemberErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1428,6 +1434,8 @@ export const listInvitations = <ThrowOnError extends boolean = false>(options: O
 
 /**
  * Create an invitation link: the answer is the only time its URL is shown
+ *
+ * Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as the rules' writes do. From the console it applies at once.
  */
 export const createInvitationLink = <ThrowOnError extends boolean = false>(options: Options<CreateInvitationLinkData, ThrowOnError>): RequestResult<CreateInvitationLinkResponses, CreateInvitationLinkErrors, ThrowOnError> => (options.client ?? client).post<CreateInvitationLinkResponses, CreateInvitationLinkErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -1971,7 +1979,8 @@ export const askGate = <ThrowOnError extends boolean = false>(options: Options<A
  *
  * With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
  * pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
- * answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+ * answers at once, and so does a gate of another organization (404, as if it did not exist) or of another launch
+ * of the caller's organization (403). The server caps the wait at
  * 30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
  * connection. A client sets its HTTP timeout above the wait.
  */

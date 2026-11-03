@@ -382,3 +382,80 @@ describe('a governance confirmation', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });
 });
+
+describe('a change of the organization’s people', () => {
+  async function said(title: string): Promise<HTMLElement> {
+    return screen.findByRole('region', { name: title }, SLOW);
+  }
+
+  it('says a role change in words: who, from which role to which, and who asked', async () => {
+    visit('/confirm/gc-member-role');
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Make theo an admin of Acme' }),
+    ).toBeInTheDocument();
+    const change = await said('Who and which role');
+    expect(within(change).getByText('theo')).toBeInTheDocument();
+    expect(within(change).getByText('Member → Admin')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Before and after' })).toBeNull();
+    expect(
+      within(screen.getByRole('region', { name: 'What it changes' })).getByText('Change a member’s role'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Who asks' })).getByText('lena', { selector: 'b' }),
+    ).toBeInTheDocument();
+  });
+
+  it('says who leaves, and the role they have now', async () => {
+    visit('/confirm/gc-member-remove');
+    const change = await said('Who leaves');
+    expect(within(change).getByText('theo')).toBeInTheDocument();
+    expect(within(change).getByText('Leaves the organization, now Member')).toBeInTheDocument();
+  });
+
+  it('says each address invited and its role, a role it does not know as the server wrote it', async () => {
+    replace('gc-member-invite', (item) => ({
+      ...item,
+      after: {
+        invites: [
+          { email: 'ana@acme.dev', role: 'approver' },
+          { email: 'bo@acme.dev', role: 'auditor' },
+          { email: 'ana@acme.dev', role: 'billing' },
+        ],
+      },
+    }));
+    visit('/confirm/gc-member-invite');
+    const change = await said('Who is invited');
+    expect(within(change).getByText('Approver')).toBeInTheDocument();
+    expect(within(change).getByText('bo@acme.dev')).toBeInTheDocument();
+    expect(within(change).getByText('auditor')).toBeInTheDocument();
+    expect(within(change).getAllByText('ana@acme.dev')).toHaveLength(2);
+    expect(within(change).getByText('Billing')).toBeInTheDocument();
+  });
+
+  it('says what an invitation link gives: the role, and how many it can bring in', async () => {
+    visit('/confirm/gc-member-link');
+    const change = await said('What the link gives');
+    expect(within(change).getByText('Member')).toBeInTheDocument();
+    expect(within(change).getByText('5')).toBeInTheDocument();
+  });
+
+  it('shows the before and after when the server wrote another shape', async () => {
+    replace('gc-member-role', (item) => ({ ...item, after: { role: 'admin' } }));
+    visit('/confirm/gc-member-role');
+    expect(await said('Before and after')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Who and which role' })).toBeNull();
+  });
+
+  it('is confirmed and refused as a rule is', async () => {
+    const user = userEvent.setup();
+    visit('/confirm/gc-member-role');
+    await user.click(await screen.findByRole('button', { name: 'Confirm the change' }));
+    expect(
+      within(await outcome()).getByRole('heading', { name: 'Confirmed and written' }),
+    ).toBeInTheDocument();
+    revisit('/confirm/gc-member-invite');
+    await user.click(await screen.findByRole('button', { name: 'Refuse' }));
+    expect(within(await outcome()).getByRole('heading', { name: 'Refused' })).toBeInTheDocument();
+    expect(confirmation('gc-member-invite').status).toBe('refused');
+  });
+});

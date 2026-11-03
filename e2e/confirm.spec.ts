@@ -50,6 +50,35 @@ test('an admin reads the exact change a CLI token asked for, before and after, a
   await expect(page.getByRole('button', { name: 'Confirm the change' })).toHaveCount(0);
 });
 
+test('a change of the people reads in words: who, which role, who asked; then it is confirmed', async ({
+  page,
+}) => {
+  await page.goto('/confirm/gc-member-role');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Make theo an admin of Acme');
+  const change = page.getByRole('region', { name: 'Who and which role' });
+  await expect(change).toContainText('theo');
+  await expect(change).toContainText('Member → Admin');
+  await expect(page.getByRole('region', { name: 'Before and after' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'What it changes' })).toContainText('Change a member’s role');
+  await expect(page.getByRole('region', { name: 'Who asks' })).toContainText('lena');
+  await expectNoSidewaysScroll(page);
+
+  await page.goto('/confirm/gc-member-invite');
+  const invited = page.getByRole('region', { name: 'Who is invited' });
+  await expect(invited).toContainText('ana@acme.dev');
+  await expect(invited).toContainText('Approver');
+  // A long address wraps on a phone rather than push the page sideways.
+  await expect(invited).toContainText(
+    'bartholomew.oyelaran-whitfield+ostrom-invitations@platform-engineering.acme.dev',
+  );
+  await expectNoSidewaysScroll(page);
+
+  const confirm = page.getByRole('button', { name: 'Confirm the change' });
+  await expect(confirm).toBeInViewport();
+  await confirm.click();
+  await expect(page.getByRole('region', { name: 'Outcome' })).toContainText('Confirmed and written');
+});
+
 test('refusing goes by keyboard, and a creation shows nothing before', async ({ page }) => {
   await page.goto('/confirm/gc-rule-new');
   await expect(page.getByText('Nothing: this change creates it.')).toBeVisible();
