@@ -1,10 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type {
-  ErrorDetail,
-  GovernanceConfirmation,
-  GovernanceConfirmationPerson,
-  OrgMember,
-} from '@gen/api/types.gen';
+import type { ErrorDetail, GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 /** A confirmation waits 15 minutes for its answer (core#57). */
@@ -19,16 +14,9 @@ const LENA: GovernanceConfirmationPerson = { memberId: MEMBER_IDS.lena, login: '
 
 const at = (ms: number): string => new Date(ms).toISOString();
 
-/** Theo as `/orgs/{org}/members` shows him: what a change of his role or his removal replaces. */
-const THEO: OrgMember = {
-  id: MEMBER_IDS.theo,
-  login: 'theo',
-  name: '',
-  avatarUrl: '',
-  email: 'theo@acme.dev',
-  role: 'member',
-  joinedAt: '2026-09-01T09:00:00.000Z',
-};
+// A member as the server shows them in a confirmation (`OrgsGovernanceChange`): the membership, the login and the
+// role, never the name nor the address.
+const THEO = { id: MEMBER_IDS.theo, login: 'theo', role: 'member' };
 
 /**
  * The demo's governance confirmations, opened `now` (ms) by `ostrom` with a CLI token: three waiting (a policy, a new
@@ -216,12 +204,11 @@ export function initialConfirmations(now: number): GovernanceConfirmation[] {
       scope: 'orgs:write',
       summary: 'Invite 2 people to Acme',
       before: null,
-      after: {
-        invites: [
-          { email: 'ana@acme.dev', role: 'approver' },
-          { email: 'bartholomew.oyelaran-whitfield+ostrom-invitations@platform-engineering.acme.dev' },
-        ],
-      },
+      // The invitations as the write sent them, as the server shows them: a list, not the body around it.
+      after: [
+        { email: 'ana@acme.dev', role: 'approver' },
+        { email: 'bartholomew.oyelaran-whitfield+ostrom-invitations@platform-engineering.acme.dev' },
+      ],
       requestedBy: LENA,
       credential: 'device',
       ...open,
