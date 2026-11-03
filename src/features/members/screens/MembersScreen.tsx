@@ -49,7 +49,7 @@ function MembersPage({
   const searchId = useId();
   // A large organization is read a hundred people at a time, the next hundred when asked, and searched on the
   // server, beyond the people read (PERF-CONSOLE).
-  const searchable = !view.everyoneRead || (view.read ?? 0) > MEMBERS_PAGE;
+  const searchable = view.read === undefined || !view.everyoneRead || view.read > MEMBERS_PAGE;
   // A failed search still shows its box, to search again: the list is what is left out.
   const listed = view.members ?? (view.searchFailure === undefined ? undefined : NOBODY);
   return (
