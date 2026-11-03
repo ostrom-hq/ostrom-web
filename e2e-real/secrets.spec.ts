@@ -135,8 +135,9 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   expect(listed.status).toBe(200);
   expect(JSON.stringify(listed.body)).not.toContain(value);
   const accounts = (listed.body as { items: { id: string; label: string; sharedWith: string[] }[] }).items;
+  // The form names the vendor (anthropic); the server keeps the agent it runs, claude (ostrom-server#201).
   expect(accounts).toEqual([
-    expect.objectContaining({ label: 'Kira’s Claude Max', provider: 'anthropic', sharedWith: [login] }),
+    expect.objectContaining({ label: 'Kira’s Claude Max', provider: 'claude', sharedWith: [login] }),
   ]);
   const id = accounts[0]?.id ?? '';
 
