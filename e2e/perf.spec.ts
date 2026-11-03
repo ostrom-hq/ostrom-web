@@ -117,17 +117,20 @@ async function heapMb(cdp: CDPSession): Promise<number> {
   return Math.round((used / 1024 / 1024) * 10) / 10;
 }
 
+/** The API calls of the page since it opened. */
+const API_CALLS =
+  "performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length";
+
 async function apiCalls(page: Page): Promise<number> {
-  return page.evaluate(
-    () =>
-      performance
-        .getEntriesByType('resource')
-        .filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length,
-  );
+  const count: unknown = await page.evaluate(API_CALLS);
+  return Number(count);
 }
 
 /** The screen's lines and every element of the page. */
-async function linesOf(page: Page, rows: string): Promise<{ readonly rows: number; readonly domNodes: number }> {
+async function linesOf(
+  page: Page,
+  rows: string,
+): Promise<{ readonly rows: number; readonly domNodes: number }> {
   const counted: unknown = await page.evaluate(
     `[document.querySelectorAll(${JSON.stringify(rows)}).length, document.getElementsByTagName('*').length]`,
   );
