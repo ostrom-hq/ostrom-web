@@ -1400,6 +1400,8 @@ export const fr = {
       pausedCount_one: '{{count}} en pause',
       pausedCount_other: '{{count}} en pause',
       lends: 'Prête {{list}}',
+      lendsHidden_one: 'Prête {{count}} abonnement que tu ne vois pas',
+      lendsHidden_other: 'Prête {{count}} abonnements que tu ne vois pas',
       lendsNothing: 'Ne prête aucun abonnement',
       create: {
         title: 'Nouveau groupe',
@@ -1431,6 +1433,8 @@ export const fr = {
       addSubmit: 'Ajouter',
       lending: 'Abonnements qu’il prête',
       lendingNone: 'Il ne prête aucun abonnement.',
+      lendingHidden_one: 'Il prête {{count}} abonnement que tu ne vois pas.',
+      lendingHidden_other: 'Il prête {{count}} abonnements que tu ne vois pas.',
       lendingPick: 'Prêter',
       lendingSave: 'Enregistrer les abonnements',
       settings: 'Groupe',

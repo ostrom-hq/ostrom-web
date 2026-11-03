@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Group, OrgMember } from '@gen/api/types.gen';
-import { type ReactElement, useId, useState } from 'react';
+import { type ReactElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
@@ -56,6 +56,7 @@ interface MemberRowProps {
 function MemberRow({ group, login, left, change }: MemberRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [choosing, setChoosing] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
   const until = pausedUntil(group, login);
   return (
     <li className="o-row">
@@ -72,6 +73,7 @@ function MemberRow({ group, login, left, change }: MemberRowProps): ReactElement
         <span className="o-inline">
           {left ? null : until === undefined ? (
             <Button
+              ref={toggle}
               disabled={change.pending}
               aria-expanded={choosing}
               aria-label={t('sharing.groups.pauseLabel', { login })}
@@ -114,6 +116,8 @@ function MemberRow({ group, login, left, change }: MemberRowProps): ReactElement
           }}
           onCancel={() => {
             setChoosing(false);
+            // Back where the choices were opened from.
+            toggle.current?.focus();
           }}
         />
       )}
@@ -133,10 +137,16 @@ function PauseChoices({ login, busy, onPause, onCancel }: PauseChoicesProps): Re
   const { t } = useTranslation();
   const [day, setDay] = useState('');
   const dayId = useId();
+  const first = useRef<HTMLButtonElement>(null);
   const end = pauseEndOn(day, new Date());
+  // Opened: the first choice takes the focus, so the keyboard lands among them.
+  useEffect(() => {
+    first.current?.focus();
+  }, []);
   return (
     <div className="o-inline sh-pause" role="group" aria-label={t('sharing.groups.pauseChoices', { login })}>
       <Button
+        ref={first}
         disabled={busy}
         onClick={() => {
           onPause(pauseEndIn('day', new Date()));
@@ -171,7 +181,10 @@ function PauseChoices({ login, busy, onPause, onCancel }: PauseChoicesProps): Re
         <Button
           disabled={busy}
           onClick={() => {
-            onPause(end);
+            // Read again at the tap: a page left open past midnight may hold a day already over, never sent.
+            const fresh = pauseEndOn(day, new Date());
+            if (fresh === undefined) setDay('');
+            else onPause(fresh);
           }}
         >
           {t('sharing.groups.pauseOn')}
