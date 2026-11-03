@@ -30,19 +30,37 @@ function billingPage(): RegExp {
   return new RegExp(`^${(baseURL ?? '').replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}/billing\\?checkout=success`);
 }
 
-/** Fills Stripe's hosted Checkout with the test card and a French billing address, pays, and waits to come back. */
-async function payOnStripeCheckout(page: Page): Promise<void> {
+/**
+ * Stripe's Checkout already holds the payer's verified address, which the server gives the Stripe customer: shown as
+ * read-only text, or as the e-mail field filled with it. An empty field, which asks for it, fails. It runs once the card
+ * form is up, when Checkout's contact field, if it has one, is mounted too: a text seen first cannot hide a field that
+ * mounts empty after. On checkout.stripe.com only the Stripe customer knows the address, so seeing it there is the
+ * proof. The address is compared in any case: Stripe or the server may lower it.
+ */
+async function expectAddressPrefilled(page: Page, email: string, form: Locator): Promise<void> {
+  await expect(form).toBeVisible({ timeout: 30_000 });
+  const address = new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  const field = page.locator('#email');
+  if ((await field.count()) > 0 && (await field.first().isVisible())) {
+    await expect(field.first()).toHaveValue(address);
+  } else {
+    await expect(page.getByText(address).first()).toBeVisible();
+  }
+}
+
+/**
+ * Fills Stripe's hosted Checkout with the test card and a French billing address, pays, and waits to come back. The
+ * payer's address is never typed: Checkout must already show it.
+ */
+async function payOnStripeCheckout(page: Page, email: string): Promise<void> {
   // Checkout may list several payment methods: the card is then one item to open first, unless it already is.
   const card = page.locator('[data-testid="card-accordion-item-button"]');
   const number = page.locator('#cardNumber');
   await expect(card.or(number).first()).toBeVisible({ timeout: 60_000 });
   if ((await appears(card, 1_000)) && (await card.getAttribute('aria-expanded')) !== 'true')
     await card.click();
-  // The server opens Checkout for a customer without an email (ostrom-server's createCustomer): Stripe asks for one.
-  const email = page.locator('#email');
-  if ((await appears(email)) && (await email.isEditable()) && (await email.inputValue()) === '') {
-    await email.fill('billing-journey@example.com');
-  }
+  // The server creates the Stripe customer with the payer's verified address (ostrom-server#282): Checkout shows it.
+  await expectAddressPrefilled(page, email, number);
   await number.fill(CARD.number);
   await page.locator('#cardExpiry').fill(CARD.expiry);
   await page.locator('#cardCvc').fill(CARD.cvc);
@@ -123,7 +141,7 @@ test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the
   await expect(page).toHaveURL(/^https:\/\/checkout\.stripe\.com\//, { timeout: 30_000 });
 
   // Stripe sends the payer back to the console's billing page.
-  await payOnStripeCheckout(page);
+  await payOnStripeCheckout(page, org.email);
 
   // The plan changes only when the server has Stripe's signed event: the console never trusts the way back.
   const billingPath = `/api/v1/orgs/${org.id}/billing`;
