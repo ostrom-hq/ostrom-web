@@ -130,6 +130,10 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
   const card = page.getByRole('article', { name: 'Kira’s Claude Max' });
   await expect(card).toContainText('$25.00 a day');
   await expect(card).toContainText(`Lent to ${login}`);
+  // The console names it by its vendor and reads the server's `ready` as active, never the raw wire words.
+  await expect(card).toContainText('Anthropic');
+  await expect(card).toContainText('Active');
+  await expect(card).not.toContainText('claude');
   await expect(page.getByText(value)).toHaveCount(0);
   const listed = await callFromPage(page, 'GET', '/api/v1/accounts');
   expect(listed.status).toBe(200);
@@ -140,6 +144,7 @@ test('an owner lends a subscription to a member from a secret, pauses it and sto
     expect.objectContaining({ label: 'Kira’s Claude Max', provider: 'claude', sharedWith: [login] }),
   ]);
   const id = accounts[0]?.id ?? '';
+  expect(id).not.toBe('');
 
   // Paused, then resumed: the server says so each time.
   await card.getByRole('button', { name: 'Pause' }).click();

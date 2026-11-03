@@ -67,10 +67,10 @@ const members: Record<string, string[]> = { 'art-7': [MEMBER_IDS.maya, MEMBER_ID
 const accounts: SharedAccount[] = [
   {
     id: 'acc-1',
-    provider: 'anthropic',
+    provider: 'claude',
     label: 'Maya’s Claude Max',
     owner: 'maya',
-    status: 'active',
+    status: 'ready',
     sharedWith: ['theo', 'samir'],
     pool: 'billing',
     dailyAllocationUsd: 40,
@@ -78,10 +78,10 @@ const accounts: SharedAccount[] = [
   },
   {
     id: 'acc-2',
-    provider: 'openai',
+    provider: 'codex',
     label: 'Theo’s ChatGPT Pro',
     owner: 'theo',
-    status: 'expired',
+    status: 'reconnect_required',
     sharedWith: ['maya'],
     paused: true,
   },

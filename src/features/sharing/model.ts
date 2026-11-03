@@ -21,13 +21,35 @@ export function isProvider(value: string): value is Provider {
   return (PROVIDERS as readonly string[]).includes(value);
 }
 
+/**
+ * The subscription a shared account belongs to, by its vendor: the form sends the vendor's name, and the server keeps
+ * the agent it serves (ostrom-server `AccountProvider`: `claude` for anthropic, `codex` for openai).
+ */
+const AGENT_PROVIDERS: Readonly<Record<string, Provider>> = { claude: 'anthropic', codex: 'openai' };
+
+export function providerOf(value: string): Provider | undefined {
+  return isProvider(value) ? value : AGENT_PROVIDERS[value];
+}
+
 /** A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again. */
 export type AccountState = 'paused' | 'active' | 'expired' | 'unknown';
 
+/**
+ * The server's statuses (ostrom-server `AccountStatus`): `ready` serves; `reconnect_required` and `wrong_account` wait
+ * for the owner to sign in again; `disabled` was turned off. `active` and `expired` are the same states, older words.
+ */
+const STATES: Readonly<Record<string, AccountState>> = {
+  ready: 'active',
+  active: 'active',
+  reconnect_required: 'expired',
+  wrong_account: 'expired',
+  expired: 'expired',
+  disabled: 'paused',
+};
+
 export function accountState(account: SharedAccount): AccountState {
   if (account.paused) return 'paused';
-  if (account.status === 'active' || account.status === 'expired') return account.status;
-  return 'unknown';
+  return STATES[account.status] ?? 'unknown';
 }
 
 export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {

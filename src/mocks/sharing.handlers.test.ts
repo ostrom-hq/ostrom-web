@@ -126,8 +126,9 @@ describe('mock shared subscriptions', () => {
     expect(lent.data).toMatchObject({
       id: 'acc-100',
       label: 'Team Pro',
+      provider: 'codex',
       owner: 'maya',
-      status: 'active',
+      status: 'ready',
       sharedWith: ['theo'],
       dailyAllocationUsd: 12.5,
       paused: false,

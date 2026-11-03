@@ -347,7 +347,13 @@ const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() })
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
 const SESSIONS_PAGE = 50;
-const PROVIDERS = new Set(['anthropic', 'openai']);
+/** The vendor's name the console sends, and the agent the server keeps for it (ostrom-server `AccountProvider`). */
+const PROVIDERS = new Map([
+  ['anthropic', 'claude'],
+  ['claude', 'claude'],
+  ['openai', 'codex'],
+  ['codex', 'codex'],
+]);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
@@ -1140,16 +1146,17 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListSharedAccounts(() => HttpResponse.json({ items: db.sharedAccounts })),
     handleEnrollSharedAccount(async ({ request }) => {
       const body = zEnrollSharedAccountBody.safeParse(await readJson(request));
-      if (!body.success || body.data.label.trim() === '' || !PROVIDERS.has(body.data.provider))
+      const provider = body.success ? PROVIDERS.get(body.data.provider) : undefined;
+      if (!body.success || body.data.label.trim() === '' || provider === undefined)
         return refusal(400, 'invalid_request', 'a provider, a label and a credential');
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
       const account: SharedAccount = {
         id: `acc-${String(db.nextAccountId++)}`,
-        provider: body.data.provider,
+        provider,
         label: body.data.label.trim(),
         owner: me.dev.login,
-        status: 'active',
+        status: 'ready',
         sharedWith: body.data.sharedWith ?? [],
         paused: false,
         ...(body.data.dailyAllocationUsd === undefined
