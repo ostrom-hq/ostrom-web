@@ -2,8 +2,8 @@
 /**
  * The console's download budget, per route: what a first visit to a route fetches, gzipped. That is the entry with
  * the chunks it imports and the wording of one language, the heaviest (the first download, shared by every route),
- * plus the route's own chunk and the chunks it imports. Above its budget (bundle-budget.json), the job fails, and the
- * table says which route and by how much.
+ * plus the route's own chunk and the chunks it imports. Above its budget (bundle-budget.json: the first download, each
+ * route's own chunks, and a ceiling on any first visit), the job fails, and the table says which route and by how much.
  *
  * Usage: node scripts/bundle-budget.ts <dist built with --manifest>
  */
@@ -11,6 +11,7 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { z } from 'zod';
+import { checkRouteBudgets, type MeasuredRoute } from '../src/shared/build/routeBudget.ts';
 
 const zManifest = z.record(
   z.string(),
@@ -28,6 +29,11 @@ const zBudget = z.object({
   entryKiB: z.number().positive(),
   /** A first visit to any route: the first download plus the route's own chunks, KiB gzipped. */
   routeKiB: z.number().positive(),
+  /**
+   * Each lazy route's own chunks, KiB gzipped: its measure plus 2 % and 0.2 KiB. A lazy route missing here fails, as
+   * does a line without its lazy route (src/shared/build/routeBudget.ts).
+   */
+  routes: z.record(z.string(), z.number().nonnegative()),
 });
 
 /** Every file a chunk brings, its CSS and the chunks it imports, each once. */
@@ -106,12 +112,13 @@ function main(dist: string): void {
   const entryKiB = kib(entry);
 
   const rows = [
-    `| Route | Own chunks (KiB gzip) | First visit (KiB gzip) | Budget |`,
-    `|---|---:|---:|---:|`,
+    `| Route | Own chunks (KiB gzip) | Own budget | First visit (KiB gzip) | Budget |`,
+    `|---|---:|---:|---:|---:|`,
   ];
   const over: string[] = [];
-  rows.push(`| (first download) | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
+  rows.push(`| (first download) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
+  const measured: MeasuredRoute[] = [];
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
     const own = new Set(
       route.feature === undefined
@@ -120,11 +127,15 @@ function main(dist: string): void {
     );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
+    const ownBudget = route.feature === undefined ? 'in the first download' : budget.routes[route.path];
     rows.push(
-      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
+      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${String(ownBudget ?? 'none')} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
     );
+    measured.push({ path: route.path, ownKiB: route.feature === undefined ? undefined : ownKiB });
     if (total > budget.routeKiB) over.push(`${route.path}: ${total.toFixed(1)} KiB`);
   }
+  const routes = checkRouteBudgets(measured, budget.routes);
+  over.push(...routes.over);
 
   const table = rows.join('\n');
   process.stdout.write(`${table}\n`);
@@ -132,6 +143,11 @@ function main(dist: string): void {
   if (summary !== undefined) appendFileSync(summary, `### Download per route\n\n${table}\n`);
   if (over.length > 0) {
     console.error(`Over budget (bundle-budget.json): ${over.join(', ')}`);
+    process.exitCode = 1;
+  }
+  // Not a size: the lines of bundle-budget.json no longer match the router's lazy routes.
+  if (routes.outOfStep.length > 0) {
+    console.error(`bundle-budget.json out of step with src/app/router.ts: ${routes.outOfStep.join(', ')}`);
     process.exitCode = 1;
   }
 }
