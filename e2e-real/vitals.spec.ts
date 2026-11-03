@@ -65,6 +65,27 @@ interface ApiCall {
   readonly at: number;
 }
 
+const zResources = z.array(z.tuple([z.string(), z.number(), z.number(), z.number(), z.number()]));
+
+/**
+ * The files of the page's load until now, from its Resource Timing: when each was asked for, sent (after its wait for a
+ * connection), done, and its size over the wire; where the time before the first paint goes, without a trace.
+ */
+async function filesOf(page: Page): Promise<string> {
+  const entries = zResources.parse(
+    await page.evaluate(`performance.getEntriesByType('resource').map((entry) => [
+      entry.name.replace(location.origin, ''), entry.startTime, entry.requestStart, entry.responseEnd, entry.transferSize,
+    ])`),
+  );
+  return entries
+    .filter(([name]) => !name.startsWith('/api/'))
+    .map(
+      ([name, asked, sent, done, size]) =>
+        `${name.replace(/^\/assets\//, '')} ${ms(asked)}/${ms(sent)}/${ms(done)} ${(size / 1000).toFixed(1)}`,
+    )
+    .join('; ');
+}
+
 /**
  * What is wrong with the API calls of one load: the same call made twice (same method, address and organization,
  * so a preload the console did not take up shows here), a call in another organization than this person's, a
@@ -222,6 +243,7 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
   const results: { path: string; lcp: number; inp: number }[] = [];
   const problems: string[] = [];
   const timelines: string[] = [];
+  const files: string[] = [];
   for (const screen of screens) {
     const lcps: number[] = [];
     const inps: number[] = [];
@@ -250,7 +272,10 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
           (key) => `${screen.path}, load ${String(run + 1)}: ${key} started by /boot.js, never taken up`,
         ),
       );
-      if (run === 0) firstCalls = loaded;
+      if (run === 0) {
+        firstCalls = loaded;
+        files.push(`- \`${screen.path}\` (LCP ${ms(measured.largestPaint)}): ${await filesOf(page)}`);
+      }
       problems.push(
         ...callProblems(loaded, org).map((problem) => `${screen.path}, load ${String(run + 1)}: ${problem}`),
       );
@@ -270,7 +295,7 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
     );
   }
   await cdp.detach();
-  const table = `### Web vitals on Fast 3G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n`;
+  const table = `### Web vitals on Fast 3G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n\nFiles of the first load (asked, sent, done in ms; KB over the wire):\n\n${files.join('\n')}\n`;
   await test.info().attach('vitals.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
