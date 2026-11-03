@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 /**
  * The source of `/language.js`, which the build writes (vite.config.ts, `preloadLanguage`): it picks the person's
