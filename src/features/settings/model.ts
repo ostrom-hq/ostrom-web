@@ -33,7 +33,10 @@ export function browserTimeZone(): string {
 export function sortDevices(devices: readonly Device[]): Device[] {
   const seen = (device: Device): number =>
     device.lastSeenAt === undefined ? 0 : Date.parse(device.lastSeenAt);
-  return [...devices].sort((a, b) => seen(b) - seen(a) || a.name.localeCompare(b.name));
+  return [...devices].sort((a, b) => {
+    const byLastSeen = seen(b) - seen(a);
+    return byLastSeen === 0 ? a.name.localeCompare(b.name) : byLastSeen;
+  });
 }
 
 /**
