@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an admin reads who approves what and stops the asker from approving', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Approvers' }).click();
+  await openScreen(page, 'Approvers');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Who approves what');
   await expect(
     page.getByText('No gate covers push-main: an agent does it without asking anyone.'),

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { type ReactElement, useEffect, useId, useRef } from 'react';
+import { type ReactElement, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import { useModal } from '@/shared/ui/useModal';
 import type { OrgOption } from '../useOrgPicker';
 
 export interface OrgPickerProps {
@@ -30,24 +31,7 @@ export function OrgPicker({
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useEffect(() => {
-    // Modal for real: the rest of the page cannot be reached while it is open, and focus goes back where it was.
-    const opener = document.activeElement;
-    const behind = [...document.body.children].filter(
-      (child) => child !== overlay.current && !child.hasAttribute('inert'),
-    );
-    for (const element of behind) element.setAttribute('inert', '');
-    panel.current?.focus();
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      for (const element of behind) element.removeAttribute('inert');
-      if (opener instanceof HTMLElement) opener.focus();
-    };
-  }, [onClose]);
+  useModal(overlay, panel, onClose);
   return createPortal(
     <div ref={overlay} className="o-org-picker">
       <div

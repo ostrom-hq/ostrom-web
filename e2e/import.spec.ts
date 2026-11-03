@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 const EXPORT = {
   members: [{ id: 'tc-1', username: 'maya' }],
@@ -29,7 +30,7 @@ async function chooseExport(page: Page): Promise<void> {
 test('an owner sees the plan, imports it, then cuts over once TeamCode is stopped', async ({ page }) => {
   await page.addInitScript("localStorage.setItem('ostrom.mock.role', 'owner')");
   await page.goto('/');
-  await page.getByRole('link', { name: 'Import' }).click();
+  await openScreen(page, 'Import');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Import from TeamCode');
   await chooseExport(page);
   await expect(page.getByRole('region', { name: 'TeamCode export' })).toContainText('teamcode.json');

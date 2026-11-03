@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an admin reads the governed repositories, analyses them and opens the proposed rules', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'GitHub', exact: true }).click();
+  await openScreen(page, 'GitHub');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('GitHub');
   await expect(page.getByText('Installed', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Choose repositories on GitHub' })).toHaveAttribute(

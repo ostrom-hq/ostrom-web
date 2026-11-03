@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('a developer reads how a change goes to production and who approves it', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Workflows', exact: true }).click();
+  await openScreen(page, 'Workflows');
   await page.getByRole('link', { name: /Backend changes/ }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Backend changes');
   const steps = page.getByRole('region', { name: 'Steps' });

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('someone asks for a sign-in link, then opens it and lands on the requests', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Sign in' }).click();
+  await openScreen(page, 'Sign in');
   await expect(page.getByRole('link', { name: 'Continue with GitHub' })).toHaveAttribute(
     'href',
     /\/api\/v1\/auth\/github\/start\?redirect=%2F$/,
