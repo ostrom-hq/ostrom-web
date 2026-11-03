@@ -19,6 +19,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  // A test that came back to the window leaves the focus to the browser again.
+  focusManager.setFocused(undefined);
 });
 
 /** The line of the list that holds `link`. */
@@ -183,7 +185,10 @@ describe('the older ended sessions', () => {
     await vi.waitFor(() => {
       expect(readAgain).toBe(true);
     });
-    expect(screen.getByText('older page down')).toBeInTheDocument();
+    // Under the ended sessions, as the older page's warning: never at the top, in place of the open ones.
+    expect(within(screen.getByRole('region', { name: 'Ended' })).getByRole('alert')).toHaveTextContent(
+      'older page down',
+    );
     expect(screen.getAllByText('Offline')).toHaveLength(1);
     expect(screen.getByRole('link', { name: /acme\/ses-new/ })).toBeInTheDocument();
   });
