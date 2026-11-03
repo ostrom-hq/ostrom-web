@@ -147,11 +147,13 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
 }) => {
   const { id: org } = await ownerOfNewOrganization(page, 'ada');
   const run = uniqueRun();
+  // The one repository the workflow names, the package is read for, and the session is launched in.
+  const repo = 'acme/att';
   await acceptedWorkflow(page, org, {
     id: `checks-${run}`,
     // A repository's package holds the workflows that name it (PackageCompiler.workflowsFor in ostrom-server): the
     // repository the session is launched in is in the name.
-    name: `Checks before push to acme/att ${run}`,
+    name: `Checks before push to ${repo} ${run}`,
     nodes: [
       { id: 'start', kind: 'trigger', label: 'Session start' },
       { id: 'tests', kind: 'check', label: 'Tests', run: { command: 'npm test' } },
@@ -164,25 +166,25 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
   });
   // The package of the launch's repository: since ostrom-server#174 a session reports its checks only under it (409
   // "This session runs another package" otherwise).
-  const current = await callFromPage(page, 'GET', '/api/v1/packages/current?repo=acme%2Fatt', undefined, org);
+  const current = await callFromPage(
+    page,
+    'GET',
+    `/api/v1/packages/current?repo=${encodeURIComponent(repo)}`,
+    undefined,
+    org,
+  );
   expect(current.status, JSON.stringify(current.body)).toBe(200);
   const { digest } = zGetCurrentPackageResponse.pick({ digest: true }).parse(current.body);
 
   // What a workstation does: a launch, its session, the checks it ran, the end, the receipt.
-  const launch = await callFromPage(
-    page,
-    'POST',
-    '/api/v1/launches',
-    { agent: 'claude', repo: 'acme/att' },
-    org,
-  );
+  const launch = await callFromPage(page, 'POST', '/api/v1/launches', { agent: 'claude', repo }, org);
   expect(launch.status, JSON.stringify(launch.body)).toBe(201);
   const { launchId, agentToken } = zCreateLaunchResponse.parse(launch.body);
   const session = crypto.randomUUID();
   const opened = await withToken(agentToken, org, 'POST', '/api/v1/sessions', {
     id: session,
     launchId,
-    repo: 'acme/att',
+    repo,
     agent: 'claude',
     packageDigest: digest,
   });
