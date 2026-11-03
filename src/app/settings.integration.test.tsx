@@ -429,9 +429,7 @@ describe('the service keys', () => {
     expect(within(keys).getByRole('combobox', { name: 'Expires' })).toHaveValue('90');
     await user.click(create);
     expect(await within(keys).findByText(/The secret of Nightly is shown once/)).toBeInTheDocument();
-    expect(within(keys).getByRole('textbox', { name: 'Secret of Nightly' })).toHaveValue(
-      expect.stringMatching(/^osk_demo/),
-    );
+    expect(within(keys).getByRole('textbox', { name: 'Secret of Nightly' })).toHaveDisplayValue(/^osk_demo/);
     expect(db.serviceKeys[0]).toMatchObject({ name: 'Nightly', scopes: ['sessions:write'] });
     expect(db.serviceKeys[0]?.expiresAt).toBeDefined();
     expect(within(keys).getByRole('textbox', { name: 'Name' })).toHaveValue('');
