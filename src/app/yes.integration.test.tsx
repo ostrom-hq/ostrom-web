@@ -160,7 +160,9 @@ describe('the queue', () => {
     db.signedIn = false;
     const router = visit('/yes#signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
-    expect(await screen.findByText(/This link signs this browser in to an Ostrom account/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/This link signs this browser in to an Ostrom account/),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
     expect(db.usedLinks).toEqual([]);
     expect(db.signedIn).toBe(false);
@@ -184,7 +186,9 @@ describe('the queue', () => {
   it('takes a 204 with no body as nobody signed in, and still asks first', async () => {
     server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
     visit('/yes#signin=opk_test_12345678');
-    expect(await screen.findByText(/This link signs this browser in to an Ostrom account/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/This link signs this browser in to an Ostrom account/),
+    ).toBeInTheDocument();
     expect(db.usedLinks).toEqual([]);
   });
 
