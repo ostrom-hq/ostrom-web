@@ -5,7 +5,7 @@
 // approver's queue (server#79). The ask is made with a personal token, as the hook asks. The second journey gates an
 // action of the catalogue the server ships (ostrom-server#231 serves it as the contract says, ostrom-core#82).
 import { expect, test } from '@playwright/test';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { zAskGateResponse, zGateCatalog } from '../gen/api/zod.gen';
 import { askingToken, loginOf, requestOf, uniqueRun, withToken } from './gate';
 import { callFromPage, ownerOfNewOrganization } from './real';
