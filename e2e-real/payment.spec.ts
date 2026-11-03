@@ -22,7 +22,7 @@ async function shown(page: Page, selector: string): Promise<boolean> {
     .catch(() => false);
 }
 
-/** Fills Stripe's hosted Checkout with the test card and a French billing address, then pays. */
+/** Fills Stripe's hosted Checkout with the test card and a French billing address, pays, and waits to come back. */
 async function payOnStripeCheckout(page: Page): Promise<void> {
   // Checkout may list several payment methods: the card is then one item to open first.
   const card = page.locator('[data-testid="card-accordion-item-button"]');
@@ -44,21 +44,19 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   if (!(await shown(page, '#billingAddressLine1')) && (await manual.isVisible().catch(() => false))) {
     await manual.click();
   }
-  const line1 = page.locator('#billingAddressLine1');
-  await line1.fill('60 rue François 1er');
-  // Stripe's address search opens a list of suggestions over the form. Escape leaves it open (run 41633046566): a
-  // click outside the field closes it, so the Subscribe click lands on the button.
-  const address = page.getByRole('combobox', { name: 'Address' });
-  await page.locator('#billingName').click();
-  await expect(address).not.toHaveAttribute('aria-expanded', 'true');
+  await page.locator('#billingAddressLine1').fill('60 rue François 1er');
   await page.locator('#billingPostalCode').fill('75008');
   await page.locator('#billingLocality').fill('Paris');
   // Stripe's Link would ask for a phone number to save the card: the journey pays without it.
   const link = page.locator('#enableStripePass');
   if ((await shown(page, '#enableStripePass')) && (await link.isChecked())) await link.uncheck();
-  await page.locator('#billingName').click();
-  await expect(address).not.toHaveAttribute('aria-expanded', 'true');
-  await page.locator('[data-testid="hosted-payment-submit-button"]').click();
+  // The French address changes the tax, and Stripe updates the session first: a Subscribe click during that update
+  // sends no payment (run 41631712199, no confirm call). Clicked again until Stripe sends the payer back.
+  const subscribe = page.locator('[data-testid="hosted-payment-submit-button"]');
+  await expect(async () => {
+    if (new URL(page.url()).hostname === 'checkout.stripe.com') await subscribe.click({ timeout: 10_000 });
+    await expect(page).toHaveURL(/^http:\/\/localhost:4173\/billing/, { timeout: 20_000 });
+  }).toPass({ timeout: 120_000, intervals: [1_000] });
 }
 
 test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the console shows the paid plan once Stripe’s webhook says so', async ({
@@ -81,10 +79,8 @@ test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the
   await plans.getByRole('button', { name: 'Choose Team' }).click();
   await expect(page).toHaveURL(/^https:\/\/checkout\.stripe\.com\//, { timeout: 30_000 });
 
-  await payOnStripeCheckout(page);
-
   // Stripe sends the payer back to the console's billing page.
-  await expect(page).toHaveURL(/^http:\/\/localhost:4173\/billing/, { timeout: 90_000 });
+  await payOnStripeCheckout(page);
 
   // The plan changes only when the server has Stripe's signed event: the console never trusts the way back.
   const billingPath = `/api/v1/orgs/${org.id}/billing`;
