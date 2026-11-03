@@ -12,29 +12,45 @@ import { addressOfAPerson, callFromPage, freshEmail, signInToken } from './real'
 const MAX_TABS = 80;
 
 /**
- * What is wrong with the focused element's focus indicator, or '' when it shows. Read in the page as an expression:
- * the end-to-end tests compile without the DOM's types, as the other specs that read the page do.
+ * The focus probe, run in the page after each stop: what is wrong with the previous stop's focus indicator, or ''.
+ * A stop shows its focus when something of it, or of its parent (a control ringed as one with its parent, as the
+ * organization switch is), looks different focused than once the focus has left it: an outline, a ring, a border, a
+ * background. A permanent shadow or outline is the same both ways, so it never counts. Read in the page as an
+ * expression: the end-to-end tests compile without the DOM's types, as the other specs that read the page do.
  */
-const FOCUS_PROBLEM = `(() => {
-  const focused = document.activeElement;
-  // Past the last stop the focus leaves for the page itself before it comes round: nothing to show there.
-  if (!(focused instanceof HTMLElement) || focused === document.body) return '';
-  const ringed = (element) => {
+const FOCUS_PROBE = `(() => {
+  const look = (element) => {
+    if (element === null) return '';
     const style = getComputedStyle(element);
-    const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
-    return outline || style.boxShadow !== 'none';
+    return [style.outlineStyle, style.outlineWidth, style.outlineColor, style.outlineOffset, style.boxShadow,
+      style.borderColor, style.backgroundColor, style.textDecorationLine].join('|');
   };
-  if (ringed(focused)) return '';
-  // A control drawn as one with its parent (the organization switch) rings the parent while the button inside has
-  // the focus: seen, as long as the parent's ring is the one its :has(:focus-visible) puts.
-  const parent = focused.parentElement;
-  if (parent !== null && parent.matches(':has(> :focus-visible)') && ringed(parent)) return '';
-  const name = focused.getAttribute('aria-label') ?? focused.innerText.trim().slice(0, 40);
-  return focused.tagName.toLowerCase() + ' "' + name + '" shows no focus';
+  const signature = (element) => look(element) + '#' + look(element.parentElement);
+  const before = globalThis.__ostromFocus;
+  const focused = document.activeElement;
+  let problem = '';
+  // Judged once the focus has left it; a stop that left the page with it (a screen that changed) is not.
+  if (before !== undefined && before.element !== focused && before.element.isConnected &&
+      signature(before.element) === before.focused) {
+    problem = before.path + ': ' + before.name + ' shows no focus';
+  }
+  globalThis.__ostromFocus =
+    focused instanceof Element && focused !== document.body && focused !== document.documentElement
+      ? {
+          element: focused,
+          focused: signature(focused),
+          path: location.pathname.replace(/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}/g, '$id'),
+          name: focused.tagName.toLowerCase() + ' "' +
+            (focused.getAttribute('aria-label') ?? (focused.textContent ?? '').trim().slice(0, 40)) + '"',
+        }
+      : undefined;
+  return problem;
 })()`;
 
-async function focusProblem(page: Page): Promise<string> {
-  return z.string().parse(await page.evaluate(FOCUS_PROBLEM));
+/** Runs the probe: the previous stop's problem, noted in `unseen`, and the focused element kept for the next. */
+async function probeFocus(page: Page, unseen: Set<string>): Promise<void> {
+  const problem = z.string().parse(await page.evaluate(FOCUS_PROBE));
+  if (problem !== '') unseen.add(problem);
 }
 
 /**
@@ -46,12 +62,13 @@ async function tabTo(page: Page, target: Locator, unseen: Set<string>): Promise<
   // A string handed to locator.evaluate is never called (Playwright only calls real functions), so the focus is
   // read through the `:focus` selector instead.
   const reached = async (): Promise<boolean> => (await target.and(page.locator(':focus')).count()) === 1;
-  // A screen may give its first field the focus as it opens: already there, no Tab needed.
+  // A screen may give its first field the focus as it opens: already there, no Tab needed, and judged by the probe
+  // once the focus leaves it, as every stop is.
+  await probeFocus(page, unseen);
   if (await reached()) return;
   for (let step = 0; step < MAX_TABS; step += 1) {
     await page.keyboard.press('Tab');
-    const problem = await focusProblem(page);
-    if (problem !== '') unseen.add(`${new URL(page.url()).pathname}: ${problem}`);
+    await probeFocus(page, unseen);
     if (await reached()) return;
   }
   throw new Error(`${String(MAX_TABS)} presses of Tab never reached ${target.toString()}`);
@@ -59,6 +76,8 @@ async function tabTo(page: Page, target: Locator, unseen: Set<string>): Promise<
 
 test('the key journeys with the keyboard alone, every stop with a visible focus', async ({ page }) => {
   test.setTimeout(300_000);
+  // No transition between a focused and a left stop: the probe compares the two as they settle.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   const unseen = new Set<string>();
 
   // Signing in: the e-mail typed and sent with Enter.
