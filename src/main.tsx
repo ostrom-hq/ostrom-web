@@ -6,7 +6,7 @@ import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { parseEnv } from '@/shared/config/env';
-import '@/shared/i18n/i18n';
+import { i18nReady } from '@/shared/i18n/i18n';
 import '@fontsource-variable/archivo/wdth.css';
 import '@fontsource-variable/azeret-mono';
 import '@/shared/theme/tokens.css';
@@ -31,7 +31,9 @@ async function startMocksOrWarn(): Promise<void> {
 async function boot(container: HTMLElement): Promise<void> {
   // Read as the build wrote it, not through `env`: Vite then drops the mock API (handlers and demo data) from a build
   // without VITE_MOCKS, instead of shipping it unused (audit AUDIT-SECU-WEB-2 B7). `env.mocks` says the same.
-  if (import.meta.env.VITE_MOCKS === 'true') await startMocksOrWarn();
+  // The wording of the language shown comes in its own chunk, asked for as the entry runs: the console renders once it
+  // is in, so the first screen is in the person's language from its first paint (no bare keys, no English then French).
+  await Promise.all([i18nReady, import.meta.env.VITE_MOCKS === 'true' ? startMocksOrWarn() : undefined]);
   createRoot(container).render(
     <StrictMode>
       <App router={createAppRouter()} mocks={env.mocks} />
