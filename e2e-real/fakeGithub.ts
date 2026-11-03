@@ -27,6 +27,11 @@ export const APP_PORT = Number(process.env['OSTROM_E2E_GITHUB_PORT'] ?? '0');
 /** The server itself (its webhooks are outside the API the console's proxy serves), and the App's webhook secret. */
 const SERVER = (process.env['OSTROM_E2E_API_UPSTREAM'] ?? 'http://127.0.0.1:4600').replace(/\/$/, '');
 const WEBHOOK_SECRET = process.env['OSTROM_E2E_GITHUB_WEBHOOK_SECRET'] ?? '';
+/** Whether this run's server points at a fake GitHub: both ports, and the secret its webhooks are signed with. */
+export const FAKE_GITHUB_CONFIGURED = SIGN_IN_PORT !== 0 && APP_PORT !== 0 && WEBHOOK_SECRET !== '';
+
+/** The sign-in OAuth client in `console-journey.yml`: a sign-in code is only exchanged with it. */
+const SIGN_IN_CLIENT = { id: 'Iv1.webjourney', secret: 'web-journey-fake-github' };
 
 /** The App's OAuth client in `console-journey.yml`: a web code is only exchanged with these. */
 const APP_CLIENT = { id: 'Iv1.fake', secret: 'fake-client-secret' };
@@ -47,6 +52,7 @@ interface Person {
 interface SignInCode {
   readonly person: Person;
   readonly challenge: string;
+  readonly redirectUri: string;
 }
 
 /** An installation of the App on `account`, which `admins` reach, with the repositories given to it. */
@@ -93,9 +99,20 @@ export class FakeGitHub {
   async start(): Promise<void> {
     for (const port of [SIGN_IN_PORT, APP_PORT]) {
       const server = createServer((request, response) => {
-        void this.handle(port, request, response);
+        // A fake that throws answers 500, so the journey fails on it rather than waiting for an answer.
+        this.handle(port, request, response).catch((error: unknown) => {
+          if (!response.headersSent) response.writeHead(500, { 'content-type': 'text/plain' });
+          response.end(`fake GitHub: ${error instanceof Error ? error.message : 'failed'}`);
+        });
       });
-      await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
+      // A port already taken says so at once, instead of hanging the journey until its timeout.
+      await new Promise<void>((resolve, reject) => {
+        server.once('error', reject);
+        server.listen(port, '127.0.0.1', () => {
+          server.off('error', reject);
+          resolve();
+        });
+      });
       this.servers.push(server);
     }
   }
@@ -217,28 +234,40 @@ export class FakeGitHub {
     const person = this.nextSignIn;
     const back = query.get('redirect_uri');
     if (person === undefined || back === null) return [400, { message: 'no sign-in prepared (signInAs)' }];
+    // The server signs in with PKCE (S256) and its own client: anything else is refused, as a regression would be.
+    const challenge = query.get('code_challenge');
+    if (challenge === null || query.get('code_challenge_method') !== 'S256')
+      return [400, { message: 'PKCE with S256 is required' }];
+    if (query.get('client_id') !== SIGN_IN_CLIENT.id) return [400, { message: 'unknown client_id' }];
     this.nextSignIn = undefined;
     const code = `code_${String(this.serial++)}`;
-    this.signInCodes.set(code, { person, challenge: query.get('code_challenge') ?? '' });
+    this.signInCodes.set(code, { person, challenge, redirectUri: back });
     const to = new URL(back);
     to.searchParams.set('code', code);
     to.searchParams.set('state', query.get('state') ?? '');
     return { redirect: to.href };
   }
 
-  /** The sign-in code, once, and with the verifier of its challenge when one was sent. */
+  /**
+   * The sign-in code, once, with its client, the verifier of its challenge and, when sent, the redirect it was given
+   * for: what GitHub checks.
+   */
   private exchangeSignIn(body: unknown): Answer {
     const code = fieldOf(body, 'code') ?? '';
     const prepared = this.signInCodes.get(code);
     this.signInCodes.delete(code);
     if (prepared === undefined) return [200, { error: 'bad_verification_code' }];
-    const verifier = fieldOf(body, 'code_verifier');
     if (
-      prepared.challenge !== '' &&
-      (verifier === undefined || challengeOf(verifier) !== prepared.challenge)
-    ) {
+      fieldOf(body, 'client_id') !== SIGN_IN_CLIENT.id ||
+      fieldOf(body, 'client_secret') !== SIGN_IN_CLIENT.secret
+    )
+      return [200, { error: 'incorrect_client_credentials' }];
+    const verifier = fieldOf(body, 'code_verifier');
+    if (verifier === undefined || challengeOf(verifier) !== prepared.challenge)
       return [200, { error: 'bad_verification_code' }];
-    }
+    const redirectUri = fieldOf(body, 'redirect_uri');
+    if (redirectUri !== undefined && redirectUri !== prepared.redirectUri)
+      return [200, { error: 'redirect_uri_mismatch' }];
     return [
       200,
       {
@@ -347,7 +376,7 @@ export class FakeGitHub {
       id: installation.id * 1000 + index,
       name,
       full_name: `${installation.account}/${name}`,
-      description: `The ${name} repository`,
+      description: `The ${name} repository of ${installation.account}`,
       language: 'TypeScript',
       default_branch: 'main',
       archived: false,

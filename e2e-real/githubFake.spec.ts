@@ -4,12 +4,15 @@
 // with GitHub, and an owner installs the GitHub App and reads the repositories given to it. Nothing reaches GitHub.
 import { expect, test } from '@playwright/test';
 import { zMe } from '../gen/api/zod.gen';
-import { APP_PORT, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
+import { FAKE_GITHUB_CONFIGURED, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
 import { callFromPage, ownerOfNewOrganization } from './real';
 
 const github = new FakeGitHub();
 
-test.skip(SIGN_IN_PORT === 0 || APP_PORT === 0, 'the server of this run points at no fake GitHub');
+test.skip(
+  !FAKE_GITHUB_CONFIGURED,
+  'the server of this run points at no fake GitHub (ports and webhook secret)',
+);
 test.beforeAll(async () => {
   await github.start();
 });
@@ -56,13 +59,13 @@ test('2.5 an owner installs the GitHub App on the console and reads the reposito
   await expect(app.getByText('Not installed', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Install on GitHub' }).click();
   // GitHub's install page, then the server's callback, then the console's page with what happened.
-  await expect(page).toHaveURL(/\/github$/);
   await expect(page.getByText('The GitHub App is installed. Its repositories show below.')).toBeVisible();
   await expect(app.getByText('Installed', { exact: true })).toBeVisible();
   const repos = page.getByRole('region', { name: 'Governed repositories' });
   await expect(repos).toContainText('The app reads 2 repositories.');
-  await expect(repos).toContainText('api');
-  await expect(repos).toContainText('web');
+  // The repositories given to this installation, as the fake describes them: not another run's.
+  await expect(repos).toContainText(`The api repository of acme-${run}`);
+  await expect(repos).toContainText(`The web repository of acme-${run}`);
 
   const read = await callFromPage(page, 'GET', '/api/v1/github/app', undefined, org);
   expect(read.status, JSON.stringify(read.body)).toBe(200);

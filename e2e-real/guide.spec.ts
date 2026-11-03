@@ -4,12 +4,15 @@
 // them, each read from what the server answers (the GitHub App installed, a person joined, a shared subscription, a
 // workflow), the last one said by the person.
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { APP_PORT, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
+import { FAKE_GITHUB_CONFIGURED, FakeGitHub } from './fakeGithub';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 const github = new FakeGitHub();
 
-test.skip(SIGN_IN_PORT === 0 || APP_PORT === 0, 'the server of this run points at no fake GitHub');
+test.skip(
+  !FAKE_GITHUB_CONFIGURED,
+  'the server of this run points at no fake GitHub (ports and webhook secret)',
+);
 test.beforeAll(async () => {
   await github.start();
 });
