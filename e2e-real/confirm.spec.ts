@@ -7,6 +7,7 @@ import {
   callFromPage,
   cliToken,
   closeOthers,
+  freshEmail,
   ownerOfNewOrganization,
 } from './real';
 
@@ -115,4 +116,46 @@ test('another organization never sees nor answers the confirmation', async ({ pa
     org.id,
   );
   expect(CONFIRMATION.parse(read.body).status).toBe('pending');
+});
+
+test('2.6: a person’s CLI token invites, and an owner confirms on the console who is invited', async ({
+  page,
+}) => {
+  const org = await ownerOfNewOrganization(page, 'ivy');
+  const token = await cliToken(page, org.id, 'device');
+  // No skip: 2.6 is proved only by a write held and confirmed. A server that refuses the login, or applies the
+  // invitation at once, fails this journey.
+  expect(token, 'POST /api/v1/auth/device gives a device token').toBeDefined();
+  const invited = freshEmail('newcomer');
+  const path = `/api/v1/orgs/${org.id}/members/invites`;
+  const asked = await callAsCli(
+    token ?? '',
+    'POST',
+    path,
+    { invites: [{ email: invited, role: 'approver' }] },
+    org.id,
+  );
+  expect(asked.status, `POST ${path} with a CLI token is held for a confirmation`).toBe(202);
+  const pending = PENDING.parse(asked.body);
+  // Nobody is invited until a person confirms it.
+  const before = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/invitations`);
+  expect(JSON.stringify(before.body)).not.toContain(invited);
+
+  await page.goto(new URL(pending.confirmUrl).pathname);
+  await expect(page.getByText('Waiting for you')).toBeVisible();
+  const who = page.getByRole('region', { name: 'Who is invited' });
+  await expect(who).toContainText(invited);
+  await expect(who).toContainText('Approver');
+  // In words, not the JSON before and after.
+  await expect(page.getByRole('region', { name: 'Before and after' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'What it changes' })).toContainText('Invite people');
+  await expect(page.getByRole('region', { name: 'Who asks' })).toContainText('ostrom login');
+
+  await page.getByRole('button', { name: 'Confirm the change' }).click();
+  await expect(page.getByRole('region', { name: 'Outcome' })).toContainText('Confirmed and written');
+  const after = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/invitations`);
+  expect(after.status).toBe(200);
+  expect(JSON.stringify(after.body)).toContain(invited);
+  await page.goto('/members');
+  await expect(page.getByRole('region', { name: 'Waiting invitations' })).toContainText(invited);
 });
