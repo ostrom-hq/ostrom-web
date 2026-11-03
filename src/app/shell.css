@@ -145,6 +145,7 @@
   align-items: center;
   column-gap: var(--space-2);
   min-width: 0;
+  min-height: 44px;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   line-height: 1.2;
@@ -152,25 +153,32 @@
 .o-org-switch:hover {
   background: var(--surface-sunken);
 }
-.o-org-switch:has(> .o-btn:focus-visible) {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-.o-org-switch > .o-btn:focus-visible {
-  outline: none;
+/* One focus ring, around the whole control, where the browser can say the button inside has the focus. */
+@supports selector(:has(a)) {
+  .o-org-switch:has(> .o-org-switch__button:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .o-org-switch > .o-org-switch__button:focus-visible {
+    outline: none;
+  }
 }
 .o-org-switch > .o-avatar {
   grid-row: 1 / span 2;
 }
-.o-org-switch > .o-btn {
-  position: static;
+.o-org-switch__button {
   justify-self: start;
-  min-height: 0;
   padding: 0;
   border: 0;
   background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
 }
-.o-org-switch > .o-btn::after {
+.o-org-switch__button::after {
   content: '';
   position: absolute;
   inset: 0;

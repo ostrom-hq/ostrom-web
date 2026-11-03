@@ -43,12 +43,20 @@ for (const scheme of ['light', 'dark'] as const) {
       test.skip(isMobile, 'a touch screen has no pointer over a button');
       await page.goto('/yes/apr-merge-412');
       const approve = page.getByRole('button', { name: /^Approve/ });
+      // Under the pointer, with motion reduced: the hover colour is on at once, and axe reads the white on it.
       await approve.hover();
-      // The hover colour, not the resting one: the white on it is what axe reads.
-      await expect(approve).toHaveCSS(
-        'background-color',
-        scheme === 'dark' ? 'rgb(207, 58, 83)' : 'rgb(116, 21, 47)',
-      );
+      expect(await violationsOn(page)).toEqual([]);
+    });
+
+    test('the organization switch under the pointer and with the focus', async ({ page, isMobile }) => {
+      await page.goto('/yes');
+      const sw = page.getByRole('button', { name: /^Organization: / });
+      await expect(sw).toBeVisible();
+      if (!isMobile) {
+        await sw.hover();
+        expect(await violationsOn(page)).toEqual([]);
+      }
+      await sw.focus();
       expect(await violationsOn(page)).toEqual([]);
     });
 

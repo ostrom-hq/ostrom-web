@@ -2,7 +2,6 @@
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/shared/ui/Avatar';
-import { Button } from '@/shared/ui/Button';
 import { useOrgPicker } from '../useOrgPicker';
 import { OrgPicker } from './OrgPicker';
 
@@ -35,15 +34,16 @@ export function OrgControls({ anonymousPage }: OrgControlsProps): ReactElement |
        */}
       <div className="o-org-switch">
         <Avatar login={name} size={20} />
-        <Button
-          variant="ghost"
+        <button
+          type="button"
+          className="o-org-switch__button"
           aria-haspopup="dialog"
           aria-label={name === undefined ? t('orgs.switch.choose') : t('orgs.switch.named', { name })}
           aria-describedby={signedIn === undefined ? undefined : viewerId}
           onClick={org.open}
         >
           <span className="o-org-switch__name">{name ?? t('orgs.switch.unnamed')}</span>
-        </Button>
+        </button>
         {signedIn === undefined ? null : (
           <span id={viewerId} className="o-org-switch__viewer" aria-hidden="true">
             {signedIn}
