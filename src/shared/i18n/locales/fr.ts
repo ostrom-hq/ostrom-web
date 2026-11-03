@@ -1923,7 +1923,7 @@ export const fr = {
   },
   device: {
     title: 'Connecter un terminal',
-    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
+    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, et qu’il a été demandé à l’heure et depuis le réseau où tu l’as lancé, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
     enterLead: 'Saisis le code que ton terminal affiche après ostrom login.',
     form: {
       label: 'Code du terminal',
@@ -1938,6 +1938,8 @@ export const fr = {
       'Ce n’est pas un code d’ostrom login : il a huit lettres, comme ABCD-EFGH. Tape le code affiché par ton terminal, ou relance ostrom login.',
     code: 'Code',
     client: 'Nom donné par le terminal',
+    requestedAt: 'Demandé à',
+    requestedFrom: 'Demandé depuis (réseau)',
     expires: 'Expire à',
     adminTag: 'Connexion admin',
     admin:

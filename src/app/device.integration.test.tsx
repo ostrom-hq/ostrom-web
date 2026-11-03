@@ -48,10 +48,11 @@ describe('the device sign-in page', () => {
   });
 
   it('leaves the network out when the server could not tell it, and still says when the terminal asked', async () => {
-    db.deviceLogins = db.deviceLogins.map(({ authorization: { requestedFrom: _, ...authorization }, status }) => ({
-      authorization,
-      status,
-    }));
+    db.deviceLogins = db.deviceLogins.map((login) => {
+      const authorization = { ...login.authorization };
+      delete authorization.requestedFrom;
+      return { ...login, authorization };
+    });
     open(DEMO_DEVICE_CODE);
     expect(await screen.findByText('ostrom CLI on ada-laptop')).toBeInTheDocument();
     expect(screen.getByText('Asked at')).toBeInTheDocument();
