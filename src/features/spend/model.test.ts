@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Budget } from '@gen/api/types.gen';
-import { budgetLevel, draftBudget, isBudgetScope, shares, sortBudgets } from './model';
+import { budgetLevel, budgetScopeOf, draftBudget, isBudgetScope, shares, sortBudgets } from './model';
 
 describe('budgetLevel', () => {
   it('is calm below 80 %, near from 80 %, over once spent', () => {
@@ -19,6 +19,25 @@ describe('shares', () => {
     expect(shares([line(50), line(100), line(25)]).map((scaled) => scaled.share)).toEqual([0.5, 1, 0.25]);
     expect(shares([line(0)])).toEqual([{ line: line(0), share: 0 }]);
     expect(shares([])).toEqual([]);
+  });
+});
+
+describe('budgetScopeOf', () => {
+  it('reads the server’s organization as the organization’s own, a known scope as is, and nothing else', () => {
+    expect([
+      budgetScopeOf('organization'),
+      budgetScopeOf('org'),
+      budgetScopeOf('member'),
+      budgetScopeOf('team'),
+    ]).toEqual(['org', 'org', 'member', undefined]);
+  });
+
+  it('puts the server’s organization budget first', () => {
+    const sorted = sortBudgets([
+      { scope: 'member', subject: 'ana', hardStop: true },
+      { scope: 'organization', hardStop: true },
+    ]);
+    expect(sorted.map((budget) => budget.scope)).toEqual(['organization', 'member']);
   });
 });
 
