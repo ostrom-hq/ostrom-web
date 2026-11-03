@@ -18,12 +18,25 @@ map "$ostrom_from_trusted_proxy:$http_x_forwarded_proto" $ostrom_forwarded_proto
     "1:http"  http;
 }
 
+# The access log keeps the path, never the query string nor a Referer's (web audit 2, W4): a device code (`/device?code=`,
+# `GET /api/v1/auth/device?userCode=`) or a terminal ticket (`?ticket=`) never lands in it. nginx's error log still
+# names the whole request when the server cannot be reached: it has no format to change.
+map $request_uri $ostrom_log_path {
+    ~^([^?]*) $1;
+}
+map $http_referer $ostrom_log_referer {
+    ~^([^?#]*) $1;
+}
+log_format ostrom_noquery '$remote_addr - $remote_user [$time_local] "$request_method $ostrom_log_path $server_protocol" '
+                          '$status $body_bytes_sent "$ostrom_log_referer" "$http_user_agent"';
+
 server {
     listen 8080;
     listen [::]:8080;
     server_name _;
     root /usr/share/nginx/html;
     server_tokens off;
+    access_log /var/log/nginx/access.log ostrom_noquery;
 
     include /etc/nginx/ostrom/security-headers.conf;
 
