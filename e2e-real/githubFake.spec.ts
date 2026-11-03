@@ -52,18 +52,19 @@ test('2.5 an owner installs the GitHub App on the console and reads the reposito
   github.installs(installation, admin, `${baseURL ?? ''}/api/v1/github/app/install/callback`);
 
   await page.goto('/github');
-  await expect(page.getByText('Not installed', { exact: true })).toBeVisible();
+  const app = page.getByRole('region', { name: 'GitHub App' });
+  await expect(app.getByText('Not installed', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'Install on GitHub' }).click();
   // GitHub's install page, then the server's callback, then the console's page with what happened.
   await expect(page).toHaveURL(/\/github$/);
   await expect(page.getByText('The GitHub App is installed. Its repositories show below.')).toBeVisible();
-  await expect(page.getByText('Installed', { exact: true })).toBeVisible();
+  await expect(app.getByText('Installed', { exact: true })).toBeVisible();
   const repos = page.getByRole('region', { name: 'Governed repositories' });
   await expect(repos).toContainText('The app reads 2 repositories.');
   await expect(repos).toContainText('api');
   await expect(repos).toContainText('web');
 
-  const app = await callFromPage(page, 'GET', '/api/v1/github/app', undefined, org);
-  expect(app.status, JSON.stringify(app.body)).toBe(200);
-  expect(app.body).toMatchObject({ installed: true });
+  const read = await callFromPage(page, 'GET', '/api/v1/github/app', undefined, org);
+  expect(read.status, JSON.stringify(read.body)).toBe(200);
+  expect(read.body).toMatchObject({ installed: true });
 });
