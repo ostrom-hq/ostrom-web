@@ -9,6 +9,7 @@ export const NAV_LINKS = [
   { to: '/members', label: 'members' },
   { to: '/github', label: 'github' },
   { to: '/workflows', label: 'workflows' },
+  { to: '/runs', label: 'runs' },
   { to: '/approvers', label: 'approvers' },
   { to: '/rules', label: 'rules' },
   { to: '/activity', label: 'activity' },
