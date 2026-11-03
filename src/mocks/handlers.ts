@@ -1276,8 +1276,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     // The role the console reads (`GET /orgs`), so a member the demo switches to is refused as the console hides it.
     ...createRunHandlers(
       () => db,
-      () => managesMembers(demoRoleIn(db, db.organization, now)),
+      (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       () => DEMO_LOGIN,
+      now,
     ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

@@ -762,6 +762,7 @@ export const en = {
       start: 'Run it now',
       starting: 'Starting…',
       startFailedTag: 'Not started',
+      acceptFirst: 'Accept this workflow before running it.',
       version: 'Version {{version}}',
       by: 'Started by {{who}}',
       source: {

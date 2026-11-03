@@ -6,7 +6,7 @@ import {
   listWorkflowRunsInfiniteQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { startWorkflowRun } from '@gen/api/sdk.gen';
-import type { WorkflowRun } from '@gen/api/types.gen';
+import type { Workflow, WorkflowRun } from '@gen/api/types.gen';
 import { type InfiniteData, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -62,6 +62,8 @@ export function useWorkflowRuns(workflowId: string): RunListViewModel {
     ...ready(listWorkflowRunsInfiniteOptions({ path: { id: workflowId } })),
     // The first page names its workflow: the generated page parameter carries the path along with `before`.
     initialPageParam: { path: { id: workflowId } },
+    // Every page read would be read again, one after the other, at each return to the window.
+    refetchOnWindowFocus: false,
     getNextPageParam: (last) => last.next,
   });
   return useRunList(query);
@@ -71,6 +73,7 @@ export function useWorkflowRuns(workflowId: string): RunListViewModel {
 export function useOrgRuns(): RunListViewModel {
   const query = useInfiniteQuery({
     ...ready(listRunsInfiniteOptions()),
+    refetchOnWindowFocus: false,
     initialPageParam: {},
     getNextPageParam: (last) => last.next,
   });
@@ -78,15 +81,18 @@ export function useOrgRuns(): RunListViewModel {
 }
 
 export interface StartRunViewModel {
-  /** Owners and admins run a workflow, as they change it; everyone else reads its runs. */
+  /** Owners and admins run an accepted workflow, as they change it; everyone else reads its runs. */
   readonly canStart: boolean;
+  /** An owner or an admin on a workflow still proposed: they accept it before running it (the server's 409). */
+  readonly acceptFirst: boolean;
   readonly start: () => void;
   readonly starting: boolean;
   /** Why the last run did not start: the server's words. */
   readonly failure: Error | undefined;
 }
 
-export function useStartRun(workflowId: string): StartRunViewModel {
+export function useStartRun(workflow: Workflow): StartRunViewModel {
+  const workflowId = workflow.id;
   const queryClient = useQueryClient();
   const viewer = useViewer();
   const mutation = useMutation({
@@ -104,7 +110,8 @@ export function useStartRun(workflowId: string): StartRunViewModel {
   });
   const { mutate } = mutation;
   return {
-    canStart: viewer.canManage,
+    canStart: viewer.canManage && workflow.status !== 'proposed',
+    acceptFirst: viewer.canManage && workflow.status === 'proposed',
     start: () => {
       mutate();
     },

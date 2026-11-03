@@ -12,6 +12,7 @@ const handlers = createRunHandlers(
   () => state,
   () => manager,
   () => 'maya',
+  () => new Date('2026-11-03T09:00:00.000Z'),
 );
 
 /** The handler's answer, without a socket. */
@@ -97,6 +98,7 @@ describe('the mock runs', () => {
     expect(first.ids).toHaveLength(50);
     expect(first.next).toBe('run-49');
     expect(await list('/runs?before=run-49')).toEqual({ ids: ['run-50'], next: undefined });
+    expect(await list('/runs?before=run-gone')).toEqual({ ids: [], next: undefined });
   });
 
   it('says a workflow it does not know', async () => {
@@ -114,6 +116,7 @@ describe('the mock runs', () => {
       startedBy: 'maya',
       source: 'manual',
       inputs: { branch: 'main' },
+      startedAt: '2026-11-03T09:00:00.000Z',
     });
     expect(run.id).toMatch(/^wfr_[0-9a-f]{32}$/);
     expect(state.workflowRuns[0]).toEqual(run);
@@ -133,6 +136,8 @@ describe('the mock runs', () => {
       400,
       'invalid_request',
     ]);
+    const notJson = { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' };
+    expect(await refused('/workflows/wf-backend/runs', notJson)).toEqual([400, 'invalid_request']);
     manager = false;
     expect(await refused('/workflows/wf-backend/runs', start({ inputs: {} }))).toEqual([403, 'forbidden']);
     expect(state.workflowRuns).toHaveLength(4);

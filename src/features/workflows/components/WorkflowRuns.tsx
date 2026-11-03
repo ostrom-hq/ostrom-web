@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { Workflow } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
@@ -8,10 +9,10 @@ import { useStartRun, useWorkflowRuns } from '../useRuns';
 import { RunList } from './RunList';
 
 /** A workflow's runs, and for an owner or an admin the button that starts one. */
-export function WorkflowRuns({ workflowId }: { readonly workflowId: string }): ReactElement {
+export function WorkflowRuns({ workflow }: { readonly workflow: Workflow }): ReactElement {
   const { t } = useTranslation();
-  const list = useWorkflowRuns(workflowId);
-  const run = useStartRun(workflowId);
+  const list = useWorkflowRuns(workflow.id);
+  const run = useStartRun(workflow);
   return (
     <Section label={t('workflows.runs.title')}>
       {run.canStart ? (
@@ -21,6 +22,7 @@ export function WorkflowRuns({ workflowId }: { readonly workflowId: string }): R
           </Button>
         </div>
       ) : null}
+      {run.acceptFirst ? <p className="o-screen__lead">{t('workflows.runs.acceptFirst')}</p> : null}
       {run.failure === undefined ? null : (
         <Banner tone="danger" tag={t('workflows.runs.startFailedTag')} live>
           {run.failure.message}

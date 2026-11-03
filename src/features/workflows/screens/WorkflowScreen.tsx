@@ -84,7 +84,7 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
                 <p className="o-screen__lead">{t('workflows.actions.readOnly')}</p>
               )}
               <WorkflowDetail workflow={workflow} />
-              <WorkflowRuns workflowId={workflow.id} />
+              <WorkflowRuns workflow={workflow} />
             </>
           )}
         </Screen>

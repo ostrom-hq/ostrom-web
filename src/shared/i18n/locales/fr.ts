@@ -776,13 +776,14 @@ export const fr = {
     runs: {
       title: 'Exécutions',
       allLead:
-        'Toutes les exécutions de vos workflows, les plus récentes d’abord : leur issue, qui les a lancées, et leur session.',
+        'Toutes les exécutions de tes workflows, les plus récentes d’abord : leur issue, qui les a lancées, et leur session.',
       empty: 'Aucune exécution pour l’instant.',
       more: 'Voir les exécutions plus anciennes',
       loadingMore: 'Chargement…',
       start: 'Lancer maintenant',
       starting: 'Lancement…',
       startFailedTag: 'Pas lancée',
+      acceptFirst: 'Accepte ce workflow avant de le lancer.',
       version: 'Version {{version}}',
       by: 'Lancée par {{who}}',
       source: {

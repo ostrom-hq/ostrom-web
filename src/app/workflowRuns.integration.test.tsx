@@ -170,6 +170,13 @@ describe('the runs of a workflow', () => {
     expect(within(runs).getByRole('button', { name: 'Run it now' })).toBeEnabled();
   });
 
+  it('asks an owner to accept a proposed workflow before running it', async () => {
+    visit('/workflows/wf-migrations');
+    const runs = await screen.findByRole('region', { name: 'Runs' });
+    expect(await within(runs).findByText('Accept this workflow before running it.')).toBeInTheDocument();
+    expect(within(runs).queryByRole('button', { name: 'Run it now' })).toBeNull();
+  });
+
   it('gives a member the runs to read, and no button to run it', async () => {
     setDemoRole(db, 'member');
     visit('/workflows/wf-backend');
@@ -257,6 +264,20 @@ describe('the runs of every workflow', () => {
       expect(runRows(main)).toHaveLength(51);
     });
     expect(within(main).queryByRole('button', { name: 'Show older runs' })).toBeNull();
+  });
+
+  it('holds the button while an older page loads', async () => {
+    db.workflowRuns = finishedRuns('wf-backend', 'Backend changes', 51);
+    visit('/runs');
+    const main = await runsScreen();
+    expect(await within(main).findAllByRole('listitem')).toHaveLength(50);
+    server.use(
+      http.get('*/api/v1/runs', async ({ request }) =>
+        new URL(request.url).searchParams.has('before') ? never() : undefined,
+      ),
+    );
+    await userEvent.click(within(main).getByRole('button', { name: 'Show older runs' }));
+    expect(await within(main).findByRole('button', { name: 'Loading…' })).toBeDisabled();
   });
 
   it('shows the shape of the runs while they load', async () => {
