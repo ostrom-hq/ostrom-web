@@ -25,6 +25,8 @@ interface HeavyScreen {
   readonly path: string;
   /** The screen's lines. */
   readonly rows: string;
+  /** The most lines it may draw, when it holds several lists, each cut on its own: `BUDGET.rows` otherwise. */
+  readonly maxRows?: number;
   readonly filter?: Interaction;
   /** The screen reads again on its own: count its API calls over one period once every page is on screen. */
   readonly pollMs?: number;
@@ -100,6 +102,8 @@ const SCREENS: readonly HeavyScreen[] = [
   {
     path: '/spend',
     rows: 'main li',
+    // Every line of the page: 20 people of the breakdown, 100 budgets, and the other breakdowns (172 measured).
+    maxRows: 180,
     filter: {
       label: 'period',
       run: async (page) => {
@@ -241,7 +245,8 @@ const BUDGET = {
 } as const;
 
 function checkBudget(project: 'desktop' | 'mobile', item: Measure): void {
-  expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(BUDGET.rows);
+  const maxRows = SCREENS.find((screen) => screen.path === item.path)?.maxRows ?? BUDGET.rows;
+  expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(maxRows);
   expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(BUDGET.domNodes);
   expect.soft(item.apiCalls, `${item.path}: API calls`).toBeLessThanOrEqual(BUDGET.apiCalls);
   if (item.filter !== undefined) {
