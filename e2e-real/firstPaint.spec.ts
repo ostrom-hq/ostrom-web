@@ -18,6 +18,12 @@ const SLOW_4G = {
 const CPU_SLOWDOWN = 4;
 /** Each screen is loaded this many times; the median is kept. */
 const LOADS = 3;
+/**
+ * The yes screens show what they are for within this, median, on the line above: about 1.95 s measured (web#75), the
+ * rest is the runners' noise. A screen back behind a second round trip (2.4 s and more) or a heavier first download
+ * crosses it before long, and every journey run says so.
+ */
+const READY_BUDGET_MS = 3_000;
 
 interface Load {
   /** First contentful paint, ms from the navigation (-1: none yet). */
@@ -144,6 +150,7 @@ test('the yes screens on a slow 4G phone network', async ({ page, browserName })
   ] as const;
   await page.addInitScript(measuring(screens.map((screen) => screen.selector)));
   const cdp = await slowed(page);
+  const ready: { path: string; ms: number }[] = [];
   const rows = [
     `| Screen | First paint | Largest paint | Ready | Scripts and styles sent |`,
     '|---|---:|---:|---:|---:|',
@@ -155,10 +162,15 @@ test('the yes screens on a slow 4G phone network', async ({ page, browserName })
       `| ${screen.name} | ${ms(median(loads.map((one) => one.firstPaint)))} | ${ms(median(loads.map((one) => one.largestPaint)))} | ${ms(median(loads.map((one) => one.ready)))} | ${median(loads.map((one) => one.sentKiB)).toFixed(1)} KiB |`,
     );
     for (const one of loads) expect(one.ready, `${screen.path} shows what it is for`).toBeGreaterThan(0);
+    ready.push({ path: screen.path, ms: median(loads.map((one) => one.ready)) });
   }
   await cdp.detach();
   const table = `### First paint on slow 4G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\n${rows.join('\n')}\n`;
   await test.info().attach('first-paint.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
+  // Asked once the table is out: a screen over budget still leaves its figures.
+  for (const screen of ready) {
+    expect(screen.ms, `${screen.path} ready on slow 4G, median`).toBeLessThanOrEqual(READY_BUDGET_MS);
+  }
 });
