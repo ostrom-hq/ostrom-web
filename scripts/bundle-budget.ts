@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 /**
  * The console's download budget, per route: what a first visit to a route fetches, gzipped. That is the entry with
- * the chunks it imports (the first download, shared by every route), plus the route's own chunk and the chunks it
- * imports. Above its budget (bundle-budget.json), the job fails, and the table says which route and by how much.
+ * the chunks it imports and the wording of one language, the heaviest (the first download, shared by every route), plus
+ * the route's own chunk and the chunks it imports. Above its budget (bundle-budget.json), the job fails, and the table says which route and by how much.
  *
  * Usage: node scripts/bundle-budget.ts <dist built with --manifest>
  */
@@ -91,6 +91,14 @@ function main(dist: string): void {
   const entryKey = Object.keys(manifest).find((key) => manifest[key]?.isEntry === true);
   if (entryKey === undefined) throw new Error('manifest: no entry');
   const entry = filesOf(manifest, entryKey);
+  // The wording of one language is part of every first visit (src/shared/i18n/i18n.ts loads it before the first
+  // render): counted here with the heaviest language, so the budget holds whichever language the person reads.
+  const languages = Object.keys(manifest).filter((key) => key.startsWith('src/shared/i18n/locales/'));
+  if (languages.length === 0) throw new Error('manifest: no language chunk in src/shared/i18n/locales/');
+  const heaviest = languages
+    .map((key) => [...filesOf(manifest, key)].filter((file) => !entry.has(file)))
+    .reduce((a, b) => (kib(b) > kib(a) ? b : a));
+  for (const file of heaviest) entry.add(file);
   const entryKiB = kib(entry);
 
   const rows = [
