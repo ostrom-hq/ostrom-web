@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { handleAnswerDeviceLogin, handleGetDeviceLogin } from '@gen/api/msw.gen';
-import type { ApiError } from '@gen/api/types.gen';
+import type { ApiError, Organization } from '@gen/api/types.gen';
 import { zDeviceAnswer } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { MockDeviceLogin } from '@/mocks/fixtures/device';
@@ -16,8 +16,13 @@ export interface DeviceState {
 
 /** What the console asks of the person, beyond being signed in. */
 export interface DevicePermissions {
-  /** The person owns or administers the organization they act in: only they approve `ostrom login --admin`. */
-  readonly manages: () => boolean;
+  /**
+   * The organization an approval acts in, as `MembershipOrgResolver` resolves it: the one `Ostrom-Org` names, else the
+   * person's only one; a refusal otherwise (409 `org_required` for a person in several).
+   */
+  readonly actsIn: (request: Request) => Organization | HttpResponse<ApiError>;
+  /** The person owns or administers that organization: only they approve `ostrom login --admin`. */
+  readonly manages: (organization: Organization) => boolean;
   /** How long a sign-in may approve an admin sign-in (ms), as for a yes on the server. */
   readonly freshSignInMs: number;
 }
@@ -59,7 +64,8 @@ export function createDeviceHandlers(
       if (!body.success) return refusal(400, 'invalid_request', 'a user code and an answer are needed');
       const login = pendingOf(body.data.userCode);
       if (login === undefined) return gone();
-      // `ostrom login --admin`: a recent sign-in first, then an owner or an admin, as the server checks them.
+      // `ostrom login --admin`: a recent sign-in first, then the organization it acts in, then an owner or an admin
+      // of it, as the server checks them.
       if (body.data.approve && login.authorization.scopes !== undefined) {
         if (now().getTime() - s.signedInAt > permissions.freshSignInMs)
           return refusal(
@@ -67,12 +73,15 @@ export function createDeviceHandlers(
             'step_up_required',
             'Sign in again to approve an admin sign-in: your sign-in is more than five minutes old.',
           );
-        if (!permissions.manages())
+        const organization = permissions.actsIn(request);
+        if (organization instanceof HttpResponse) return organization;
+        if (!permissions.manages(organization))
           return refusal(
             403,
             'forbidden',
             'Only an owner or an admin of the organization approves ostrom login --admin.',
           );
+        login.orgId = organization.id;
       }
       login.status = body.data.approve ? 'approved' : 'denied';
       return new HttpResponse(null, { status: 204 });

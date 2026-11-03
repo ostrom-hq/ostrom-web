@@ -13,6 +13,8 @@ const DEVICE_CODE_LIFETIME_MS = 10 * 60_000;
 export interface MockDeviceLogin {
   readonly authorization: DeviceAuthorization;
   status: 'pending' | 'approved' | 'denied';
+  /** The organization an approved admin sign-in's token is bound to, as the server records it. */
+  orgId?: string;
 }
 
 /** Two terminals waiting for their person: an ordinary sign-in, and an admin one. */

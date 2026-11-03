@@ -1862,8 +1862,9 @@ export const en = {
     forbiddenTag: 'Not allowed',
     forbidden:
       'Only an owner or an admin of the organization can approve an admin sign-in. Ask one of them, or deny it.',
+    org: 'Organization it acts in',
     severalOrgs:
-      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for: it cannot be approved here yet. Deny it, or ask an owner or an admin who belongs to this organization only.',
+      'The server could not tell which of your organizations this admin sign-in is for. Reload the page, check the organization, then approve again.',
     failedTag: 'Not answered',
     signedOut: {
       title: 'Sign in to answer',

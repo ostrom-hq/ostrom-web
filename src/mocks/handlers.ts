@@ -356,6 +356,16 @@ function canManage(db: MockDb): boolean {
   return role === 'owner' || role === 'admin';
 }
 
+/**
+ * Whether the person owns or administers an organization: the demo's own by its members, another by the members the
+ * organizations' slice keeps of it (an organization it knows nothing of is the person's own).
+ */
+function managesOrganization(db: MockDb, organization: Organization): boolean {
+  if (organization.id === db.organization.id) return canManage(db);
+  const role = db.orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role ?? 'owner';
+  return role === 'owner' || role === 'admin';
+}
+
 /** An automation changes by its owner, or by an owner or an admin of the organization. */
 function mayChange(db: MockDb, automation: Automation): boolean {
   return automation.owner === me.dev.login || canManage(db);
@@ -701,7 +711,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
-    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
+    ...createDeviceHandlers(() => db, now, {
+      actsIn: (request) => resolveOrganization(db, request),
+      manages: (organization) => managesOrganization(db, organization),
+      freshSignInMs: FRESH_SIGN_IN_MS,
+    }),
     ...createApproversGraphHandlers(() => db),
     ...createConfirmationHandlers(
       () => db,

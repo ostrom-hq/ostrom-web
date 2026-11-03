@@ -4,6 +4,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
+import { initialOrgMembers, otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS } from '@/mocks/handlers';
 import { setupMockApp, visit } from '@/test/mockApp';
 
@@ -21,6 +22,22 @@ function open(code: string): ReturnType<typeof visit> {
 /** What the page says, apart from the shell around it (its own sign-in link, its banners). */
 async function main(): Promise<HTMLElement> {
   return screen.findByRole('main');
+}
+
+/** The admin sign-in the demo's terminal started, as the server keeps it. */
+function adminLogin(): (typeof db.deviceLogins)[number] | undefined {
+  return db.deviceLogins.find((login) => login.authorization.userCode === DEMO_ADMIN_DEVICE_CODE);
+}
+
+/** The demo person also belongs to Globex: with `role` there, or as the owner who made it. */
+function alsoIn(role?: string): ReturnType<typeof otherOrganization> {
+  const globex = otherOrganization();
+  db.otherOrganizations = [globex];
+  if (role !== undefined)
+    db.orgMembers[globex.id] = initialOrgMembers().map((member) =>
+      member.login === 'maya' ? { ...member, role } : member,
+    );
+  return globex;
 }
 
 /** The demo person stops being an owner or an admin of Acme. */
@@ -136,10 +153,62 @@ describe('the device sign-in page', () => {
     open(DEMO_ADMIN_DEVICE_CODE);
     await user.click(await screen.findByRole('button', { name: 'Approve the admin sign-in' }));
     expect(await within(await main()).findByRole('alert')).toHaveTextContent(
-      'You belong to several organizations, and the server cannot tell which one this admin sign-in is for',
+      'The server could not tell which of your organizations this admin sign-in is for.',
     );
     expect(screen.queryByText('This code no longer works')).toBeNull();
     expect(screen.getByRole('button', { name: 'Deny' })).toBeEnabled();
+  });
+
+  it('approves an admin sign-in for the organization chosen among those the person manages', async () => {
+    const user = userEvent.setup();
+    const globex = alsoIn();
+    open(DEMO_ADMIN_DEVICE_CODE);
+    const actsIn = await screen.findByRole('combobox', { name: 'Organization it acts in' });
+    expect(
+      within(actsIn)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Acme', 'Globex']);
+    await user.selectOptions(actsIn, 'Globex');
+    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
+    // Named with `Ostrom-Org`: never the 409 a person in several organizations gets without it.
+    expect(adminLogin()?.orgId).toBe(globex.id);
+  });
+
+  it('says the organization of an admin sign-in when the person manages only one of theirs', async () => {
+    const user = userEvent.setup();
+    alsoIn('member');
+    open(DEMO_ADMIN_DEVICE_CODE);
+    await screen.findByText('Admin sign-in');
+    expect(screen.getByText('Organization it acts in').nextElementSibling).toHaveTextContent('Acme');
+    expect(screen.queryByRole('combobox', { name: 'Organization it acts in' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
+    expect(adminLogin()?.orgId).toBe(db.organization.id);
+  });
+
+  it('tells a person in several organizations who manages none why they cannot approve, never which one', async () => {
+    const user = userEvent.setup();
+    alsoIn('member');
+    demote();
+    open(DEMO_ADMIN_DEVICE_CODE);
+    await screen.findByText('Admin sign-in');
+    expect(screen.queryByText('Organization it acts in')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Approve the admin sign-in' }));
+    expect(await within(await main()).findByRole('alert')).toHaveTextContent(
+      'Only an owner or an admin of the organization can approve an admin sign-in.',
+    );
+    expect(adminLogin()?.status).toBe('pending');
+  });
+
+  it('signs in an ordinary terminal for a person in several organizations, naming none', async () => {
+    const user = userEvent.setup();
+    alsoIn();
+    open(DEMO_DEVICE_CODE);
+    await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
+    expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
+    expect(screen.queryByText('Organization it acts in')).toBeNull();
   });
 
   it('says an ordinary sign-in refused with a 403 as the server said it, never as a missing role', async () => {

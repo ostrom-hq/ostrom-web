@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Link } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
@@ -78,6 +78,41 @@ export function DeviceScreen(): ReactElement {
   }
 }
 
+/**
+ * The organization an admin sign-in acts in: chosen among those the person owns or administers when there are
+ * several, said when there is one, and nothing when there is none (the approval then says why it is refused).
+ */
+function ActsIn({ open }: { readonly open: OpenDeviceLogin }): ReactElement | null {
+  const { t } = useTranslation();
+  const id = useId();
+  const { orgs, org } = open;
+  // Not read yet, or none the person manages: the approval then says why the server refuses it.
+  if (org === undefined || orgs.length === 0) return null;
+  if (orgs.length === 1) return <Facts facts={[{ label: t('device.org'), value: org.name }]} />;
+  return (
+    <div className="o-stack">
+      <label htmlFor={id} className="o-field-label">
+        {t('device.org')}
+      </label>
+      <select
+        id={id}
+        className="o-input"
+        value={org.id}
+        disabled={open.answering}
+        onChange={(event) => {
+          open.pick(event.target.value);
+        }}
+      >
+        {orgs.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 /** A pending login: what asks, its code, until when, what an admin sign-in would give, and the two answers. */
 function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElement {
   const { t, i18n } = useTranslation();
@@ -110,6 +145,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
                 </li>
               ))}
             </ul>
+            <ActsIn open={open} />
           </div>
         )}
         {open.forbidden ? (
