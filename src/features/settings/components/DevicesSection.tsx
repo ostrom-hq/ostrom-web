@@ -45,7 +45,7 @@ export function DevicesSection({ view }: { readonly view: DevicesViewModel }): R
                       label={t('settings.devices.signOut')}
                       confirm={t('settings.devices.signOutConfirm', { name: device.name })}
                       keep={t('settings.devices.keep')}
-                      disabled={view.signingOut !== undefined}
+                      disabled={view.signingOut}
                       onConfirm={() => {
                         view.signOut(device);
                       }}

@@ -21,8 +21,8 @@ export interface DevicesViewModel {
   readonly failure: Error | undefined;
   /** Signs a workstation out: its CLI token stops working at once. */
   readonly signOut: (device: Device) => void;
-  /** The workstation being signed out. */
-  readonly signingOut: string | undefined;
+  /** A workstation is being signed out: no other sign-out starts meanwhile. */
+  readonly signingOut: boolean;
   readonly signOutFailure: Error | undefined;
 }
 
@@ -49,7 +49,7 @@ export function useDevices(): DevicesViewModel {
     devices,
     failure: failureOf(query.error),
     signOut,
-    signingOut: deletion.isPending ? deletion.variables.path.id : undefined,
+    signingOut: deletion.isPending,
     signOutFailure: failureOf(deletion.error),
   };
 }
@@ -73,8 +73,8 @@ export interface ServiceKeysViewModel {
   readonly created: ServiceKey | undefined;
   readonly dismiss: () => void;
   readonly remove: (key: ServiceKey) => void;
-  /** The key being deleted. */
-  readonly removing: string | undefined;
+  /** A key is being deleted. */
+  readonly removing: boolean;
   /** Why the last creation or deletion failed; a stale sign-in reads as such (`FailureText`). */
   readonly changeFailure: Error | undefined;
 }
@@ -123,7 +123,7 @@ export function useServiceKeys(manages: boolean): ServiceKeysViewModel {
     created: creation.data,
     dismiss: resetCreation,
     remove,
-    removing: deletion.isPending ? deletion.variables.path.id : undefined,
+    removing: deletion.isPending,
     changeFailure: failureOf(creation.error ?? deletion.error),
   };
 }

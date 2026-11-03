@@ -380,6 +380,24 @@ describe('the workstations', () => {
     expect(await screen.findByText('The CLI is signed in nowhere.')).toBeInTheDocument();
   });
 
+  it('signs one workstation out at a time', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/devices/:id', async () => {
+        await delay(200);
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    visit('/settings');
+    await settings();
+    const devices = region('Workstations');
+    const runner = (await within(devices).findAllByRole('listitem'))[1] ?? devices;
+    await user.click(within(runner).getByRole('button', { name: 'Sign out' }));
+    await user.click(within(runner).getByRole('button', { name: 'Sign out ci-runner-3' }));
+    const laptop = within(devices).getAllByRole('listitem')[0] ?? devices;
+    expect(within(laptop).getByRole('button', { name: 'Sign out' })).toBeDisabled();
+  });
+
   it('says why a sign-out failed', async () => {
     const user = userEvent.setup();
     server.use(
@@ -453,6 +471,31 @@ describe('the service keys', () => {
     expect(await within(keys).findByText(/The secret of Forever is shown once/)).toBeInTheDocument();
     expect(db.serviceKeys[0]).toMatchObject({ name: 'Forever', scopes: ['rules:read'] });
     expect(db.serviceKeys[0]?.expiresAt).toBeUndefined();
+  });
+
+  it('says it is creating, and locks every change until the server answered', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/service-keys', async () => {
+        await delay(200);
+        return HttpResponse.json(
+          { id: 'key-9', name: 'Slow', scopes: ['rules:read'], createdAt: '2026-10-30T00:00:00Z' },
+          { status: 201 },
+        );
+      }),
+    );
+    visit('/settings');
+    await settings();
+    const keys = region('Service keys');
+    await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'Slow');
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
+    await user.click(within(keys).getByRole('button', { name: 'Create the key' }));
+    expect(await within(keys).findByRole('button', { name: 'Creating…' })).toBeDisabled();
+    expect(within(keys).getByRole('button', { name: 'Delete' })).toBeDisabled();
+    expect(await within(keys).findByRole('button', { name: 'Create the key' })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(within(keys).getAllByRole('button', { name: 'Delete' })[0]).toBeEnabled();
+    });
   });
 
   it('needs at least one thing the key may do', async () => {

@@ -50,7 +50,7 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
   // One change at a time, and one secret: nothing changes while a key is made, deleted or its secret is on screen.
   const created =
     view.created?.secret === undefined ? undefined : { ...view.created, secret: view.created.secret };
-  const locked = view.creating || created !== undefined || view.removing !== undefined;
+  const locked = view.creating || created !== undefined || view.removing;
   const problem = serviceKeyDraftProblem(name, scopes);
   return (
     <Section label={t('settings.serviceKeys.title')}>
