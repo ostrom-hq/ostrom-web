@@ -736,7 +736,9 @@ export const zDeviceAuthorization = z.object({
     userCode: z.string(),
     clientName: z.string(),
     scopes: z.array(z.string()).optional(),
-    expiresAt: z.iso.datetime({ offset: true })
+    expiresAt: z.iso.datetime({ offset: true }),
+    requestedAt: z.iso.datetime({ offset: true }),
+    requestedFrom: z.string().optional()
 });
 
 /**
