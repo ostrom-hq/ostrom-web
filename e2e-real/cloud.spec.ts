@@ -91,7 +91,9 @@ test('6.2 the Cloud screen lists a registered runner, online once it reported, a
 /** Where the server takes the session: the runner image pulled and started on the job's Docker, then its heartbeat. */
 const START_TIMEOUT = 4 * 60_000;
 
-test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops it, and it ends', async ({ page }) => {
+test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops it, and it ends', async ({
+  page,
+}) => {
   test.setTimeout(START_TIMEOUT + 2 * 60_000);
   const { id: org } = await ownerOfNewOrganization(page, 'cyd');
   const name = `agent-${Date.now().toString(36)}`;
@@ -123,7 +125,13 @@ test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops
   await expect
     .poll(
       async () => {
-        const read = await callFromPage(page, 'GET', `/api/v1/cloud/sessions/${session?.id ?? ''}`, undefined, org);
+        const read = await callFromPage(
+          page,
+          'GET',
+          `/api/v1/cloud/sessions/${session?.id ?? ''}`,
+          undefined,
+          org,
+        );
         return read.status === 404 ? 'gone' : z.object({ status: z.string() }).parse(read.body).status;
       },
       { timeout: 2 * 60_000, intervals: [2_000] },
