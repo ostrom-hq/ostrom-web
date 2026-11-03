@@ -54,6 +54,18 @@ export function groupRules(rules: readonly Rule[]): RuleGroup[] {
     .map(([name, list]) => ({ name, rules: [...list].sort((a, b) => b.confidence - a.confidence) }));
 }
 
+/** The first `count` rules of the groups, in their order on screen: the groups after them are left out. */
+export function firstOfGroups(groups: readonly RuleGroup[], count: number): RuleGroup[] {
+  const kept: RuleGroup[] = [];
+  let left = count;
+  for (const group of groups) {
+    if (left <= 0) break;
+    kept.push(group.rules.length > left ? { name: group.name, rules: group.rules.slice(0, left) } : group);
+    left -= group.rules.length;
+  }
+  return kept;
+}
+
 /** Rules sure enough to accept in one gesture: proposed, and at 90 % confidence or more. */
 export const SURE = 0.9;
 

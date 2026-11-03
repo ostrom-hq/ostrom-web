@@ -2,6 +2,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -461,5 +462,33 @@ describe('the members screen', () => {
       within(screen.getByRole('main')).getByRole('button', { name: 'Choose an organization' }),
     );
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+});
+
+describe('the members of a large organization', () => {
+  beforeEach(() => {
+    db.orgMembers[ACME] = [...(db.orgMembers[ACME] ?? []), ...largeMembers()];
+  });
+
+  it('shows a hundred people at a time, and finds anyone by name, login or address', async () => {
+    visit('/members');
+    expect(await screen.findByText('505 people · you are Admin')).toBeInTheDocument();
+    expect(rowsOf(await people())).toHaveLength(100);
+    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (405 left)' }));
+    expect(rowsOf(await people())).toHaveLength(200);
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'developer 01');
+    expect(rowsOf(await people())).toHaveLength(10);
+    expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
+    await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'DEV-499@ACME');
+    expect(rowsOf(await people())).toHaveLength(1);
+  });
+
+  it('says when nobody matches', async () => {
+    visit('/members');
+    await userEvent.type(await screen.findByRole('searchbox', { name: 'Find someone' }), '  nobody  ');
+    expect(screen.getByText('Nobody matches “nobody”.')).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 2, name: 'People' });
+    expect(heading.parentElement?.querySelector('ul')).toBeNull();
   });
 });

@@ -8,6 +8,8 @@ import {
   offeredActions,
   changeOf,
   countRules,
+  firstOfGroups,
+  type RuleGroup,
   draftOf,
   draftProblem,
   gateActions,
@@ -61,6 +63,25 @@ describe('groupRules', () => {
       ['Style', ['e']],
       ['Tests', ['a', 'b']],
     ]);
+  });
+});
+
+describe('firstOfGroups', () => {
+  const group = (name: string, size: number): RuleGroup => ({
+    name,
+    rules: Array.from({ length: size }, (_, n) => rule(`${name}-${String(n)}`, 'proposed', name, 0.5)),
+  });
+
+  it('keeps the first rules in their order, cutting the group where the count ends', () => {
+    const kept = firstOfGroups([group('A', 3), group('B', 3), group('C', 3)], 5);
+    expect(kept.map((item) => [item.name, item.rules.length])).toEqual([
+      ['A', 3],
+      ['B', 2],
+    ]);
+  });
+
+  it('keeps every group when the count reaches past them', () => {
+    expect(firstOfGroups([group('A', 2)], 10)).toHaveLength(1);
   });
 });
 

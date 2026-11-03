@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { OrgView } from '@gen/api/types.gen';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isFound } from '@/shared/org/people';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
+import { STEP, useStep } from '@/shared/lib/useStep';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
+import { ShowMore } from '@/shared/ui/ShowMore';
 import { InvitationRow } from '../components/InvitationRow';
 import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
@@ -36,6 +39,15 @@ function MembersPage({
   const invitations = view.invitations ?? [];
   // The invitations that did not load, or the one that was not revoked: said in their section.
   const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
+  const [search, setSearch] = useState('');
+  const searchId = useId();
+  // A large organization is searched, and shown a hundred people at a time (PERF-CONSOLE).
+  const searchable = (view.members?.length ?? 0) > STEP;
+  const found = useMemo(
+    () => view.members?.filter((member) => isFound(member, search)),
+    [view.members, search],
+  );
+  const step = useStep(found?.length ?? 0, search);
   return (
     <Screen
       title={org.name}
@@ -55,39 +67,61 @@ function MembersPage({
           <FailureText failure={changes.failure} />
         </Banner>
       )}
-      <LoadState data={view.members} failure={view.failure}>
+      <LoadState data={found} failure={view.failure}>
         {(members) => (
           <section aria-labelledby="mb-people" className="o-stack">
             <h2 id="mb-people" className="o-label">
               {t('members.list.title')}
             </h2>
-            <ul className="o-card o-rows">
-              {members.map((member) => {
-                const target = orgRoleOf(member.role);
-                const editable =
-                  member.login !== view.viewer && target !== undefined && mayManage(role, target);
-                return (
-                  <li key={member.login}>
-                    <MemberRow
-                      member={member}
-                      isViewer={member.login === view.viewer}
-                      saving={changes.saving === member.login}
-                      roles={editable ? roles : []}
-                      onRole={(next) => {
-                        changes.change(member.login, next);
-                      }}
-                      onRemove={
-                        editable
-                          ? () => {
-                              changes.remove(member.login);
-                            }
-                          : undefined
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
+            {searchable ? (
+              <div className="o-stack">
+                <label htmlFor={searchId} className="o-field-label">
+                  {t('members.list.search')}
+                </label>
+                <input
+                  id={searchId}
+                  type="search"
+                  className="o-input"
+                  autoComplete="off"
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                  }}
+                />
+              </div>
+            ) : null}
+            {members.length === 0 ? (
+              <p className="o-empty">{t('members.list.noMatch', { search: search.trim() })}</p>
+            ) : (
+              <ul className="o-card o-rows">
+                {members.slice(0, step.count).map((member) => {
+                  const target = orgRoleOf(member.role);
+                  const editable =
+                    member.login !== view.viewer && target !== undefined && mayManage(role, target);
+                  return (
+                    <li key={member.login}>
+                      <MemberRow
+                        member={member}
+                        isViewer={member.login === view.viewer}
+                        saving={changes.saving === member.login}
+                        roles={editable ? roles : []}
+                        onRole={(next) => {
+                          changes.change(member.login, next);
+                        }}
+                        onRemove={
+                          editable
+                            ? () => {
+                                changes.remove(member.login);
+                              }
+                            : undefined
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            <ShowMore step={step} />
           </section>
         )}
       </LoadState>
