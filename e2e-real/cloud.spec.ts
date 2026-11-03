@@ -5,9 +5,13 @@
 // CLI's `POST /runners`, played here through the owner's session, as the console's screen has no form for it), the
 // Cloud screen lists it offline and never seen, the runner reports with its key (`POST /runners/{id}/heartbeat`), the
 // screen lists it online; once removed, it is gone. Another organization never sees it.
-import { expect, request, test } from '@playwright/test';
+// When the server hands its sessions to registered runners (`OSTROM_E2E_MACHINE_IMAGE`, machines.ts), the owner's
+// agent runs on a machine of the organization; and when that machine is lost, the session comes back running on the
+// other one.
+import { expect, request, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { zCloudSession, zRunner } from '../gen/api/zod.gen';
+import { holder, lose, machineImage, online, removeMachines, startMachine, type Machine } from './machines';
 import { anotherPerson, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
 
 // The key is in ostrom-core's `Runner` (shown once, at registration); this repository's contract is older.
@@ -15,6 +19,7 @@ const zRegistered = zRunner.extend({ token: z.string() });
 
 test.afterEach(async () => {
   await closeOthers();
+  await removeMachines();
 });
 
 test('6.2 the Cloud screen lists a registered runner, online once it reported, and no longer once removed', async ({
@@ -97,6 +102,7 @@ test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops
   test.setTimeout(START_TIMEOUT + 2 * 60_000);
   const { id: org } = await ownerOfNewOrganization(page, 'cyd');
   const name = `agent-${Date.now().toString(36)}`;
+  if (machineImage !== undefined) await online(page, org, [await startMachine(page, org, 'machine-1')]);
 
   await page.goto('/cloud');
   // The console starts prompt agents only (a plain shell needs a terminal it has not): Claude Code, the default. No
@@ -141,4 +147,82 @@ test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops
   const ended = { timeout: 30_000 };
   await expect(row.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, ended);
   await expect(row.filter({ hasText: 'Running' })).toHaveCount(0, ended);
+});
+
+/** A session lives in the console: its status, its execution and its id. */
+async function sessionNamed(page: Page, org: string, name: string): Promise<CloudSession | undefined> {
+  const listed = await callFromPage(page, 'GET', '/api/v1/cloud/sessions', undefined, org);
+  expect(listed.status).toBe(200);
+  return z
+    .object({ items: z.array(zCloudSession) })
+    .parse(listed.body)
+    .items.find((item) => item.name === name);
+}
+
+type CloudSession = z.infer<typeof zCloudSession>;
+
+/** The server sees a machine silent after 90 s, then hands its sessions to another runner of the organization. */
+const TAKEOVER_TIMEOUT = 5 * 60_000;
+
+test('6.2 when the machine running an agent is lost, the agent comes back running on another machine', async ({
+  page,
+}) => {
+  test.skip(
+    machineImage === undefined,
+    "Sessions run on the server's own Docker driver, not on registered runners",
+  );
+  // One device is enough: the takeover is the server's and the machines', the screen is the one tested above.
+  test.skip(test.info().project.name === 'mobile', 'The takeover is proved once, on desktop');
+  test.setTimeout(START_TIMEOUT + TAKEOVER_TIMEOUT + 2 * 60_000);
+  const { id: org } = await ownerOfNewOrganization(page, 'dee');
+  const machines: Machine[] = [
+    await startMachine(page, org, 'machine-a'),
+    await startMachine(page, org, 'machine-b'),
+  ];
+  await online(page, org, machines);
+
+  const name = `agent-${Date.now().toString(36)}`;
+  await page.goto('/cloud');
+  const form = page.getByRole('region', { name: 'Start an agent' });
+  await form.getByRole('textbox', { name: 'What should it do?' }).fill('Say hello, then wait.');
+  await form.getByRole('textbox', { name: 'Name' }).fill(name);
+  await form.getByRole('button', { name: 'Start the agent' }).click();
+  const row = page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').filter({ hasText: name });
+  await expect(row).toContainText('Running', { timeout: START_TIMEOUT });
+
+  const first = await sessionNamed(page, org, name);
+  expect(first?.status).toBe('running');
+  const id = first?.id ?? '';
+  const holding = holder(id);
+  const lost = machines.find((machine) => machine.id === holding);
+  const other = machines.find((machine) => machine.id !== holding);
+  if (lost === undefined) throw new Error(`Neither machine runs the session (held by ${String(holding)})`);
+  lose(lost);
+
+  // The same session, a new execution, on the machine that is left.
+  await expect
+    .poll(
+      async () => {
+        const now = await sessionNamed(page, org, name);
+        return now?.status === 'running' && now.epoch !== first?.epoch && holder(id) === other?.id;
+      },
+      { timeout: TAKEOVER_TIMEOUT, intervals: [5_000] },
+    )
+    .toBe(true);
+  await page.reload();
+  await expect(row).toContainText('Running', { timeout: 30_000 });
+
+  await row.getByRole('button', { name: 'Stop', exact: true }).click();
+  await row.getByRole('button', { name: `Stop ${name}` }).click();
+  await expect
+    .poll(
+      async () => {
+        const read = await callFromPage(page, 'GET', `/api/v1/cloud/sessions/${id}`, undefined, org);
+        return read.status === 404 ? 'gone' : z.object({ status: z.string() }).parse(read.body).status;
+      },
+      { timeout: 2 * 60_000, intervals: [2_000] },
+    )
+    .toMatch(/^(terminated|gone)$/);
+  // The machine that is left removes the session's containers once the server no longer lists it.
+  await expect.poll(() => holder(id), { timeout: 60_000, intervals: [2_000] }).toBeUndefined();
 });
