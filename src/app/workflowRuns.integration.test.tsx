@@ -3,6 +3,7 @@ import type { WorkflowRun } from '@gen/api/types.gen';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
 
@@ -178,7 +179,17 @@ describe('the runs of a workflow', () => {
   });
 
   it('gives a member the runs to read, and no button to run it', async () => {
+    // A member in both answers the console reads: the organization list and who they are in it.
     setDemoRole(db, 'member');
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({
+          dev: { login: 'maya', verified: true, via: 'github' },
+          member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+          capabilities: [],
+        }),
+      ),
+    );
     visit('/workflows/wf-backend');
     const runs = await screen.findByRole('region', { name: 'Runs' });
     expect(await within(runs).findAllByRole('listitem')).toHaveLength(3);
