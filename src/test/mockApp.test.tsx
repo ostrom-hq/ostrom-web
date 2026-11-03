@@ -48,18 +48,38 @@ function readsAccount(request: Request): boolean {
   return new URL(request.url).pathname.endsWith('/api/v1/auth/me/account');
 }
 
-// In this order too: the first ends with a read that failed once and would be retried (`retryOnce`, after a second).
+/** The account read fails as a server down: `retryOnce` asks once more, a second later. */
+function accountDown(): void {
+  server.use(
+    http.get('*/api/v1/auth/me/account', () =>
+      HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
+    ),
+  );
+}
+
+// In this order too: the first shows the retry exists, the second ends with one to come, the third waits for it.
 describe('a retry left by a test that ended', () => {
+  it('is how a failed read of the account goes: asked once more, a second later', async () => {
+    let asked = 0;
+    traffic.onRequest((request) => {
+      if (readsAccount(request)) asked += 1;
+    });
+    accountDown();
+    visit('/account');
+    await vi.waitFor(
+      () => {
+        expect(asked).toBe(2);
+      },
+      { timeout: 3_000 },
+    );
+  });
+
   it('is left by a test that ends after the first failure', async () => {
     let asked = 0;
     traffic.onRequest((request) => {
       if (readsAccount(request)) asked += 1;
     });
-    server.use(
-      http.get('*/api/v1/auth/me/account', () =>
-        HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
-      ),
-    );
+    accountDown();
     visit('/account');
     await vi.waitFor(() => {
       expect(asked).toBe(1);
@@ -71,8 +91,8 @@ describe('a retry left by a test that ended', () => {
     traffic.onRequest((request) => {
       if (readsAccount(request)) asked += 1;
     });
-    // Well beyond the delay of the first retry (one second in TanStack Query).
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    // Well beyond the delay of the first retry (one second, the first test above).
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
     expect(asked).toBe(0);
   });
 });

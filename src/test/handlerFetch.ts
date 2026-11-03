@@ -17,28 +17,28 @@ export interface HandlerFetch {
   readonly traffic: MockTraffic;
   /**
    * The end of a test, as a closed page: every call still waiting for its answer is called off and stays unanswered
-   * (no answer, no rejection, so no callback of the console runs any more), then the handlers still on a finite wait
-   * are awaited, so none writes into the mock database once it is reset for the next test. A handler held for good
-   * (`delay('infinite')`, `held()`) is not awaited: it never answers, so it never writes.
+   * (no answer, no rejection, so no callback of the console runs any more), then each handler still running is
+   * awaited until it answers or reaches a hold (`delay('infinite')`, `held()`), so none writes into the mock database
+   * once it is reset for the next test. Fails the test when a handler is still running 2 s after it.
    */
   readonly endTest: () => Promise<void>;
 }
 
-/** What one handler is doing: held for good, or on its way to an answer. */
+/** One handler on its way: `hold` is called when it reaches `held()` (or `delay('infinite')`). */
 interface HandlerRun {
-  held: boolean;
+  readonly hold: () => void;
 }
 
 /** The handler a piece of code runs for, through every await and timer of that handler. */
 export const handlerRuns = new AsyncLocalStorage<HandlerRun>();
 
 /**
- * Holds the handler that awaits it until `until` settles, and says so: the end of a test does not wait for it. For a
- * test of a pending state released later in the file, where `delay('infinite')` could not be released.
+ * Holds the handler that awaits it until `until` settles, and says so: the end of a test stops waiting for it. For a
+ * test of a pending state released later in the file, where `delay('infinite')` could not be released. Once released
+ * after its test ended, the handler is no longer waited for: it should then answer and write nothing more.
  */
 export async function held<T>(until: Promise<T>): Promise<T> {
-  const run = handlerRuns.getStore();
-  if (run !== undefined) run.held = true;
+  handlerRuns.getStore()?.hold();
   const value = await until;
   return value;
 }
@@ -88,7 +88,8 @@ async function aborted(signal: AbortSignal): Promise<never> {
  */
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
   const inFlight = new Set<AbortController>();
-  const running = new Map<Promise<unknown>, HandlerRun>();
+  // Each handler still running, with what the end of a test waits for: its end, or its reaching a hold.
+  const running = new Map<Promise<unknown>, Promise<void>>();
   const requestListeners = new Set<(request: Request) => void>();
   const responseListeners = new Set<(request: Request, response: Response) => void>();
   const answer = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -108,9 +109,16 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     // Each listener with its own copy: none reads the body away from the handler.
     for (const listener of requestListeners) listener(request.clone());
     const handlers = server.listHandlers().filter((handler) => handler instanceof RequestHandler);
-    const run: HandlerRun = { held: false };
-    const handled = handlerRuns.run(run, async () => getResponse(handlers, request));
-    running.set(handled, run);
+    let hold: () => void = () => undefined;
+    const reachedHold = new Promise<void>((resolve) => {
+      hold = resolve;
+    });
+    const handled = handlerRuns.run({ hold }, async () => getResponse(handlers, request));
+    const ended = handled.then(
+      () => undefined,
+      () => undefined,
+    );
+    running.set(handled, Promise.race([ended, reachedHold]));
     void handled.then(
       () => running.delete(handled),
       () => running.delete(handled),
@@ -150,20 +158,22 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
     endTest: async () => {
       for (const call of inFlight) call.abort(TEST_ENDED);
       inFlight.clear();
-      const finite: Promise<unknown>[] = [];
-      for (const [handled, run] of running) if (!run.held) finite.push(handled);
+      // Each handler is waited for until it answers or reaches a hold, whenever it gets there: even one that has not
+      // run its first line yet when the test ends is waited for no longer than it takes to reach `delay('infinite')`.
+      const settling = [...running.values()];
       running.clear();
-      if (finite.length === 0) return;
+      if (settling.length === 0) return;
       let timer: ReturnType<typeof setTimeout> | undefined;
       const limit = new Promise<'late'>((resolve) => {
         timer = setTimeout(() => {
           resolve('late');
         }, SETTLE_LIMIT_MS);
       });
-      const settled = await Promise.race([Promise.allSettled(finite), limit]);
+      const settled = await Promise.race([Promise.all(settling), limit]);
       clearTimeout(timer);
+      // Loud: a handler still writing after the reset would make the next test fail for no reason of its own.
       if (settled === 'late') {
-        console.warn(
+        throw new Error(
           `a mock handler still ran ${String(SETTLE_LIMIT_MS)} ms after its test ended: hold it with held()`,
         );
       }

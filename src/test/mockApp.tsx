@@ -34,13 +34,16 @@ export function setupMockApp(): MockServer & { readonly traffic: MockTraffic } {
     // Then end the test as a closed page: its calls still in flight stay unanswered (a mutation's own callbacks
     // outlive the screen, and a late answer would act during the next test), and its handlers on a finite wait are
     // awaited, so none writes into the database reset below.
-    await endTest();
-    mock.server.resetHandlers();
-    traffic.clear();
-    resetMockDb(mock.db);
-    useAuthStore.setState({ link: undefined, notice: undefined });
-    useOrgStore.getState().forget();
-    resetArrivals();
+    try {
+      await endTest();
+    } finally {
+      mock.server.resetHandlers();
+      traffic.clear();
+      resetMockDb(mock.db);
+      useAuthStore.setState({ link: undefined, notice: undefined });
+      useOrgStore.getState().forget();
+      resetArrivals();
+    }
   });
   afterAll(() => {
     globalThis.fetch = realFetch;
