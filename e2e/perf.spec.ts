@@ -226,6 +226,36 @@ function tableOf(project: string, measures: readonly Measure[]): string {
   ].join('\n');
 }
 
+/**
+ * What a heavy screen may cost on the large organization before the PR fails (PERF-CONSOLE). Counts are exact
+ * from one run to the next; times move with the runner, so their budget is about twice the worst run measured.
+ */
+const BUDGET = {
+  rows: 110,
+  domNodes: 1500,
+  filteredNodes: 2500,
+  // The members are read 100 at a time: 505 of them are 6 calls, on `/members` and on the groups.
+  apiCalls: 14,
+  pollCalls: 3,
+  inpMs: { desktop: 200, mobile: 500 },
+} as const;
+
+function checkBudget(project: 'desktop' | 'mobile', item: Measure): void {
+  expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(BUDGET.rows);
+  expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(BUDGET.domNodes);
+  expect.soft(item.apiCalls, `${item.path}: API calls`).toBeLessThanOrEqual(BUDGET.apiCalls);
+  if (item.filter !== undefined) {
+    expect
+      .soft(item.filter.inpMs, `${item.path}: INP of ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.inpMs[project]);
+    expect
+      .soft(item.filter.domNodes, `${item.path}: DOM nodes after ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.filteredNodes);
+  }
+  if (item.pollCalls !== undefined)
+    expect.soft(item.pollCalls, `${item.path}: calls per poll`).toBeLessThanOrEqual(BUDGET.pollCalls);
+}
+
 test('the heavy screens on a large organization', async ({ page }) => {
   test.setTimeout(600_000);
   const project = test.info().project.name;
@@ -248,4 +278,6 @@ test('the heavy screens on a large organization', async ({ page }) => {
   if (summary !== undefined) appendFileSync(summary, table);
   console.warn(table);
   for (const item of measures) expect(item.rows, item.path).toBeGreaterThan(0);
+  const device = project === 'mobile' ? 'mobile' : 'desktop';
+  for (const item of measures) checkBudget(device, item);
 });
