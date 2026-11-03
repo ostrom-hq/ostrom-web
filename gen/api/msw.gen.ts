@@ -4590,21 +4590,21 @@ export function handleListWaits(response?: HandleListWaitsResponse | HttpRespons
 }
 
 export type HandleCreateWaitResponse = {
-    body: CreateWaitResponses[201];
-    status?: 201;
+    body: CreateWaitResponses[200];
+    status?: 200;
 };
 
 /**
  * Handler for the `POST /api/v1/waits` operation.
  */
-export function handleCreateWait(response?: HandleCreateWaitResponse | HttpResponseResolver<never, CreateWaitData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleCreateWait(response?: HandleCreateWaitResponse | ToResponseUnion<CreateWaitResponses> | HttpResponseResolver<never, CreateWaitData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, CreateWaitData['body']>(`${options?.baseUrl ?? '*'}/api/v1/waits`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
         const body = response?.body;
         if (body !== undefined) {
-            return HttpResponse.json(body, { status: response?.status ?? 201 });
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -5106,7 +5106,7 @@ export type HandleRelayMcpResponse = {
 /**
  * Handler for the `POST /api/v1/mcp/{server}` operation.
  */
-export function handleRelayMcp(response?: HandleRelayMcpResponse | HttpResponseResolver<{
+export function handleRelayMcp(response?: HandleRelayMcpResponse | ToResponseUnion<RelayMcpResponses> | HttpResponseResolver<{
     server: string;
 }, DefaultBodyType>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
@@ -6991,7 +6991,7 @@ export type HandleCreateArtifactTicketResponse = {
 /**
  * Handler for the `POST /api/v1/artifacts/{id}/tickets` operation.
  */
-export function handleCreateArtifactTicket(response?: HandleCreateArtifactTicketResponse | HttpResponseResolver<{
+export function handleCreateArtifactTicket(response?: HandleCreateArtifactTicketResponse | ToResponseUnion<CreateArtifactTicketResponses> | HttpResponseResolver<{
     id: string;
 }, CreateArtifactTicketData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{

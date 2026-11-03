@@ -25,6 +25,7 @@ import {
   zOrgRename,
 } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
@@ -96,6 +97,7 @@ export function freeSlug(base: string, used: ReadonlySet<string>): string {
 /** The person as the owner of an organization they made. */
 function owner(at: string): OrgMember {
   return {
+    id: MEMBER_IDS.maya,
     login: DEMO_LOGIN,
     name: 'Maya Lind',
     avatarUrl: '',

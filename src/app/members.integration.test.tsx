@@ -56,6 +56,7 @@ describe('the members screen', () => {
     db.orgMembers[ACME] = [
       ...(db.orgMembers[ACME] ?? []),
       {
+        id: '9dcf5a7e-81a2-4de4-bf60-718293a4b5c6',
         login: 'kim',
         name: '',
         avatarUrl: '',
