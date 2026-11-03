@@ -32,14 +32,20 @@ function billingPage(): RegExp {
 
 /**
  * Stripe's Checkout already holds the payer's verified address, which the server gives the Stripe customer: shown as
- * read-only text, or as the e-mail field filled with it. An empty field, which asks for it, fails.
+ * read-only text, or as the e-mail field filled with it. An empty field, which asks for it, fails. It runs once the card
+ * form is up, when Checkout's contact field, if it has one, is mounted too: a text seen first cannot hide a field that
+ * mounts empty after. On checkout.stripe.com only the Stripe customer knows the address, so seeing it there is the
+ * proof. The address is compared in any case: Stripe or the server may lower it.
  */
-async function expectAddressPrefilled(page: Page, email: string): Promise<void> {
+async function expectAddressPrefilled(page: Page, email: string, form: Locator): Promise<void> {
+  await expect(form).toBeVisible({ timeout: 30_000 });
+  const address = new RegExp(`^${email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
   const field = page.locator('#email');
-  const shown = page.getByText(email, { exact: true });
-  await expect(field.or(shown).first()).toBeVisible({ timeout: 30_000 });
-  if (await field.isVisible()) await expect(field).toHaveValue(email);
-  else await expect(shown.first()).toBeVisible();
+  if ((await field.count()) > 0 && (await field.first().isVisible())) {
+    await expect(field.first()).toHaveValue(address);
+  } else {
+    await expect(page.getByText(address).first()).toBeVisible();
+  }
 }
 
 /**
@@ -54,7 +60,7 @@ async function payOnStripeCheckout(page: Page, email: string): Promise<void> {
   if ((await appears(card, 1_000)) && (await card.getAttribute('aria-expanded')) !== 'true')
     await card.click();
   // The server creates the Stripe customer with the payer's verified address (ostrom-server#282): Checkout shows it.
-  await expectAddressPrefilled(page, email);
+  await expectAddressPrefilled(page, email, number);
   await number.fill(CARD.number);
   await page.locator('#cardExpiry').fill(CARD.expiry);
   await page.locator('#cardCvc').fill(CARD.cvc);
