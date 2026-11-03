@@ -36,9 +36,13 @@ export interface InvoicesViewModel {
 /** The last twelve invoices: a year of a monthly plan. */
 export const INVOICE_LIMIT = 12;
 
-export function useInvoices(orgId: string): InvoicesViewModel {
+/**
+ * The invoices of `orgId`. The billing screen asks for them with the overview (`enabled`, for whoever may read them),
+ * not once the overview is in: the list below it then needs no second round trip.
+ */
+export function useInvoices(orgId: string, enabled = true): InvoicesViewModel {
   const query = useQuery(
-    ready(listBillingInvoicesOptions({ path: { orgId }, query: { limit: INVOICE_LIMIT } })),
+    ready(listBillingInvoicesOptions({ path: { orgId }, query: { limit: INVOICE_LIMIT } }), { enabled }),
   );
   return { invoices: query.data?.invoices, failure: failureOf(query.error) };
 }
