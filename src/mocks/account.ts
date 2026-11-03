@@ -24,7 +24,8 @@ export interface AccountState {
 const LINKABLE = new Set(['github', 'google']);
 
 /** GitHub's consent page for the demo's link: the demo leaves for it as the console would. */
-export const DEMO_GITHUB_CONSENT = 'https://github.com/login/oauth/authorize?client_id=ostrom-demo&state=demo';
+export const DEMO_GITHUB_CONSENT =
+  'https://github.com/login/oauth/authorize?client_id=ostrom-demo&state=demo';
 
 /** Maya's account, as `GET /auth/me/account` reads it. */
 function accountOf(s: AccountState): Account {

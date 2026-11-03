@@ -1562,7 +1562,8 @@ export const fr = {
     github: {
       title: 'GitHub',
       linkedTag: 'Lié',
-      linked: 'Ton GitHub est lié : tu peux te connecter avec, et une porte sait quelles pull requests sont les tiennes.',
+      linked:
+        'Ton GitHub est lié : tu peux te connecter avec, et une porte sait quelles pull requests sont les tiennes.',
       invite:
         'Lie ton GitHub : une porte sait alors quelles pull requests sont les tiennes, et ne te compte jamais comme approbateur des tiennes.',
       link: 'Lier GitHub',
