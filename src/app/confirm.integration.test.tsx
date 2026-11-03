@@ -419,15 +419,17 @@ describe('a change of the organization’s people', () => {
         invites: [
           { email: 'ana@acme.dev', role: 'approver' },
           { email: 'bo@acme.dev', role: 'auditor' },
+          { email: 'ana@acme.dev', role: 'billing' },
         ],
       },
     }));
     visit('/confirm/gc-member-invite');
     const change = await said('Who is invited');
-    expect(within(change).getByText('ana@acme.dev')).toBeInTheDocument();
     expect(within(change).getByText('Approver')).toBeInTheDocument();
     expect(within(change).getByText('bo@acme.dev')).toBeInTheDocument();
     expect(within(change).getByText('auditor')).toBeInTheDocument();
+    expect(within(change).getAllByText('ana@acme.dev')).toHaveLength(2);
+    expect(within(change).getByText('Billing')).toBeInTheDocument();
   });
 
   it('says what an invitation link gives: the role, and how many it can bring in', async () => {

@@ -18,7 +18,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
-import { appliedOf, heldOf } from '@/shared/api/held';
+import { appliedOf, type HeldWrite, heldOf } from '@/shared/api/held';
 import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
 import { orgMembersKey, useOrgMembers } from '@/shared/org/members';
@@ -75,7 +75,7 @@ function useInvalidate(org: string): () => Promise<void> {
   }, [queryClient, org]);
 }
 
-export interface RoleChangeViewModel {
+export interface RoleChangeViewModel extends HeldWrite {
   readonly change: (login: string, role: OrgRole) => void;
   readonly remove: (login: string) => void;
   /** The login whose role or membership is being saved. */
@@ -113,11 +113,13 @@ export function useRoleChange(org: string): RoleChangeViewModel {
     remove,
     saving,
     held: heldOf(update.data ?? removal.data),
+    // One of the two is reset when the other is sent: the later is the one that was.
+    sentAt: Math.max(update.submittedAt, removal.submittedAt),
     failure: failureOf(update.error ?? removal.error),
   };
 }
 
-export interface InviteViewModel {
+export interface InviteViewModel extends HeldWrite {
   /** Sends the invitations; `onSent` runs once the server took them (the form clears then, not before). */
   readonly invite: (emails: readonly string[], role: OrgRole, onSent: () => void) => void;
   readonly sending: boolean;
@@ -146,11 +148,12 @@ export function useInvite(org: string): InviteViewModel {
     sending: mutation.isPending,
     invited: appliedOf(mutation.data)?.invited,
     held: heldOf(mutation.data),
+    sentAt: mutation.submittedAt,
     failure: failureOf(mutation.error),
   };
 }
 
-export interface InviteLinkViewModel {
+export interface InviteLinkViewModel extends HeldWrite {
   readonly create: (role: OrgRole, maxUses: number) => void;
   readonly creating: boolean;
   /** The link just made: the only time its address is shown (it carries the secret). */
@@ -175,6 +178,7 @@ export function useInviteLink(org: string): InviteLinkViewModel {
     creating: mutation.isPending,
     link: appliedOf(mutation.data),
     held: heldOf(mutation.data),
+    sentAt: mutation.submittedAt,
     failure: failureOf(mutation.error),
   };
 }

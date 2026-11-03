@@ -517,6 +517,43 @@ describe('a change of the people the server holds for a confirmation', () => {
     await heldNotice();
     expect(within(link).queryByRole('button', { name: 'Copy Invitation link' })).toBeNull();
   });
+
+  it('says a removal waits for a confirmation', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/orgs/:org/members/:login', () => HttpResponse.json(HELD, { status: 202 })),
+    );
+    visit('/members');
+    await screen.findByText('Samir Haddad');
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove' }));
+    await user.click(within(rowNamed('Samir Haddad')).getByRole('button', { name: 'Remove Samir Haddad' }));
+    await heldNotice();
+  });
+
+  it('says only the last write: a newer one held points to its own confirmation, one applied says none', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/orgs/:org/members/invites', () =>
+        HttpResponse.json({ ...HELD, confirmationId: 'gc-older' }, { status: 202 }),
+      ),
+      http.post('*/api/v1/orgs/:org/invitations/links', () => HttpResponse.json(HELD, { status: 202 })),
+    );
+    visit('/members');
+    const invite = await screen.findByRole('region', { name: 'Invite people' });
+    await user.type(within(invite).getByRole('textbox', { name: 'E-mail addresses' }), 'ana@acme.dev');
+    await user.click(within(invite).getByRole('button', { name: 'Send 1 invitation' }));
+    expect(await screen.findByRole('link', { name: 'Open the confirmation' })).toHaveAttribute(
+      'href',
+      '/confirm/gc-older',
+    );
+    const link = screen.getByRole('region', { name: 'Invitation link' });
+    await user.click(within(link).getByRole('button', { name: 'Create a link' }));
+    await heldNotice();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Role of theo' }), 'billing');
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: 'Open the confirmation' })).toBeNull();
+    });
+  });
 });
 
 describe('the members of a large organization', () => {

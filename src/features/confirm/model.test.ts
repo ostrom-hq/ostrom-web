@@ -185,6 +185,29 @@ describe('memberChangeOf', () => {
     expect(memberChangeOf({ kind: 'members.invite', before: null, after: { emails: [] } })).toBeUndefined();
   });
 
+  it('says an invitation written twice once, an address with two roles twice, and nothing for none', () => {
+    expect(
+      memberChangeOf({
+        kind: 'members.invite',
+        before: null,
+        after: {
+          invites: [
+            { email: 'ana@acme.dev' },
+            { email: 'ana@acme.dev', role: 'member' },
+            { email: 'ana@acme.dev', role: 'approver' },
+          ],
+        },
+      }),
+    ).toEqual({
+      kind: 'invite',
+      invites: [
+        { email: 'ana@acme.dev', role: 'member' },
+        { email: 'ana@acme.dev', role: 'approver' },
+      ],
+    });
+    expect(memberChangeOf({ kind: 'members.invite', before: null, after: { invites: [] } })).toBeUndefined();
+  });
+
   it('reads an invitation link as the role it gives and how many it brings in, ten by default', () => {
     expect(
       memberChangeOf({ kind: 'members.link', before: null, after: { role: 'approver', maxUses: 3 } }),

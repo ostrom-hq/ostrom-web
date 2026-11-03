@@ -53,15 +53,15 @@ export function memberChangeOf(
   }
   if (kind === 'members.invite') {
     const is = zOrgInvites.safeParse(after);
-    return is.success
-      ? {
-          kind: 'invite',
-          invites: is.data.invites.map((invite) => ({
-            email: invite.email,
-            role: invite.role ?? DEFAULT_ROLE,
-          })),
-        }
-      : undefined;
+    if (!is.success) return undefined;
+    // The same address with the same role twice is one invitation; an address with two roles is said twice.
+    const invites = new Map(
+      is.data.invites.map((invite) => {
+        const role = invite.role ?? DEFAULT_ROLE;
+        return [`${invite.email} ${role}`, { email: invite.email, role }];
+      }),
+    );
+    return invites.size === 0 ? undefined : { kind: 'invite', invites: [...invites.values()] };
   }
   if (kind === 'members.link') {
     const is = zInvitationLinkCreate.safeParse(after);

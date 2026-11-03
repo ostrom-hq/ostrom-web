@@ -67,7 +67,10 @@ test('a change of the people reads in words: who, which role, who asked; then it
   const invited = page.getByRole('region', { name: 'Who is invited' });
   await expect(invited).toContainText('ana@acme.dev');
   await expect(invited).toContainText('Approver');
-  await expect(invited).toContainText('bo@acme.dev');
+  // A long address wraps on a phone rather than push the page sideways.
+  await expect(invited).toContainText(
+    'bartholomew.oyelaran-whitfield+ostrom-invitations@platform-engineering.acme.dev',
+  );
   await expectNoSidewaysScroll(page);
 
   const confirm = page.getByRole('button', { name: 'Confirm the change' });

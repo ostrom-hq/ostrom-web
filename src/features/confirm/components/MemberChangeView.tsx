@@ -13,6 +13,24 @@ export function MemberChangeView({ change }: { readonly change: MemberChange }):
     const known = orgRoleOf(name);
     return known === undefined ? name : t(`members.role.${known}`);
   };
+  if (change.kind === 'invite') {
+    return (
+      <section className="o-card ys-section" aria-labelledby="cf-member">
+        <h2 id="cf-member" className="ys-label">
+          {t('confirm.member.title.invite')}
+        </h2>
+        {/* An address can be long and come twice with two roles: a list, not label and value pairs. */}
+        <ul className="o-invitees">
+          {change.invites.map((invite) => (
+            <li key={`${invite.email} ${invite.role}`}>
+              <span className="o-invitees__email">{invite.email}</span>
+              <span className="o-invitees__role">{role(invite.role)}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+  }
   let facts: readonly Fact[];
   switch (change.kind) {
     case 'role':
@@ -32,9 +50,6 @@ export function MemberChangeView({ change }: { readonly change: MemberChange }):
           value: t('confirm.member.leaves', { role: role(change.member.role) }),
         },
       ];
-      break;
-    case 'invite':
-      facts = change.invites.map((invite) => ({ label: invite.email, value: role(invite.role) }));
       break;
     case 'link':
       facts = [

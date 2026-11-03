@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GovernanceConfirmationPending } from '@gen/api/types.gen';
+import { zGovernanceConfirmationPending } from '@gen/api/zod.gen';
 
 function isHeld(data: unknown): data is GovernanceConfirmationPending {
-  return typeof data === 'object' && data !== null && 'confirmationId' in data;
+  return zGovernanceConfirmationPending.safeParse(data).success;
 }
 
 /**
@@ -16,4 +17,17 @@ export function heldOf(data: unknown): GovernanceConfirmationPending | undefined
 /** What a write returned once applied: nothing while it waits for a confirmation. */
 export function appliedOf<T>(data: T | GovernanceConfirmationPending | undefined): T | undefined {
   return data === undefined || isHeld(data) ? undefined : data;
+}
+
+/** A write of a screen: the confirmation the server held it for, if it did, and when it was sent (0 before). */
+export interface HeldWrite {
+  readonly held: GovernanceConfirmationPending | undefined;
+  readonly sentAt: number;
+}
+
+/** The last write's confirmation: once another write is sent, an older one held is no longer the news. */
+export function latestHeld(writes: readonly HeldWrite[]): GovernanceConfirmationPending | undefined {
+  let latest: HeldWrite | undefined;
+  for (const write of writes) if (latest === undefined || write.sentAt > latest.sentAt) latest = write;
+  return latest?.held;
 }

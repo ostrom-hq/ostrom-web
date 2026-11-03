@@ -258,7 +258,7 @@ export const fr = {
       person: 'Personne',
       role: 'Rôle',
       roleChange: '{{from}} → {{to}}',
-      leaves: 'Quitte l’organisation, aujourd’hui {{role}}',
+      leaves: 'Quitte l’organisation (rôle actuel : {{role}})',
       joinsAs: 'Rejoint comme',
       uses: 'Personnes qu’il peut faire entrer',
     },

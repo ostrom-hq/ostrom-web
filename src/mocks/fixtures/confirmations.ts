@@ -216,7 +216,12 @@ export function initialConfirmations(now: number): GovernanceConfirmation[] {
       scope: 'orgs:write',
       summary: 'Invite 2 people to Acme',
       before: null,
-      after: { invites: [{ email: 'ana@acme.dev', role: 'approver' }, { email: 'bo@acme.dev' }] },
+      after: {
+        invites: [
+          { email: 'ana@acme.dev', role: 'approver' },
+          { email: 'bartholomew.oyelaran-whitfield+ostrom-invitations@platform-engineering.acme.dev' },
+        ],
+      },
       requestedBy: LENA,
       credential: 'device',
       ...open,
