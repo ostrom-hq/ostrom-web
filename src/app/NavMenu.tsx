@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Link } from '@tanstack/react-router';
-import { type ReactElement, useCallback, useId, useRef, useState } from 'react';
+import { type ReactElement, type RefObject, useCallback, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
@@ -14,12 +14,14 @@ import { NAV_LINKS } from '@/app/navigation';
 export function NavMenu(): ReactElement {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
   const close = useCallback(() => {
     setOpen(false);
   }, []);
   return (
     <span className="o-nav-menu-toggle">
       <Button
+        ref={button}
         variant="ghost"
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -30,17 +32,23 @@ export function NavMenu(): ReactElement {
         <span aria-hidden="true">☰</span>
         {t('app.nav.menu')}
       </Button>
-      {open ? <NavSheet onClose={close} /> : null}
+      {open ? <NavSheet onClose={close} opener={button} /> : null}
     </span>
   );
 }
 
-function NavSheet({ onClose }: { readonly onClose: () => void }): ReactElement {
+function NavSheet({
+  onClose,
+  opener,
+}: {
+  readonly onClose: () => void;
+  readonly opener: RefObject<HTMLButtonElement | null>;
+}): ReactElement {
   const { t } = useTranslation();
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useModal(overlay, panel, onClose);
+  useModal(overlay, panel, onClose, opener);
   return createPortal(
     <div ref={overlay} className="o-nav-menu">
       <div

@@ -14,6 +14,8 @@ export function useModal(
   overlay: RefObject<HTMLElement | null>,
   panel: RefObject<HTMLElement | null>,
   onClose: () => void,
+  /** Where the focus goes back: Safari focuses no button on a tap, so what had it before may be the page. */
+  returnTo?: RefObject<HTMLElement | null>,
 ): void {
   useEffect(() => {
     const opener = document.activeElement;
@@ -44,7 +46,8 @@ export function useModal(
     return () => {
       document.removeEventListener('keydown', onKey);
       for (const element of behind) element.removeAttribute('inert');
-      if (opener instanceof HTMLElement) opener.focus();
+      const back = returnTo?.current ?? opener;
+      if (back instanceof HTMLElement) back.focus();
     };
-  }, [overlay, panel, onClose]);
+  }, [overlay, panel, onClose, returnTo]);
 }

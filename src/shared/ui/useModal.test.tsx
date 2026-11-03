@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { type ReactElement, useRef } from 'react';
+import { type ReactElement, type RefObject, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useModal } from './useModal';
 
 function Modal({
   onClose,
   buttons,
+  returnTo,
 }: {
   readonly onClose: () => void;
   readonly buttons: readonly string[];
+  readonly returnTo?: RefObject<HTMLElement | null>;
 }): ReactElement {
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
-  useModal(overlay, panel, onClose);
+  useModal(overlay, panel, onClose, returnTo);
   return createPortal(
     <div ref={overlay}>
       <div ref={panel} role="dialog" aria-label="Test" tabIndex={-1}>
@@ -62,6 +64,25 @@ describe('useModal', () => {
     await user.keyboard('a');
     expect(screen.getByRole('button', { name: 'Last' })).toHaveFocus();
     unmount();
+  });
+
+  it('gives the focus to what it is told, or to what had it when that is not there', () => {
+    const target: RefObject<HTMLElement | null> = { current: null };
+    const { unmount: unmountOpener } = render(<button type="button">Opener</button>);
+    const opener = screen.getByRole('button', { name: 'Opener' });
+    opener.focus();
+    const { unmount } = render(<Modal onClose={nothing} buttons={['Only']} returnTo={target} />);
+    unmount();
+    expect(opener).toHaveFocus();
+
+    const { unmount: unmountTarget } = render(<button type="button">Target</button>);
+    target.current = screen.getByRole('button', { name: 'Target' });
+    opener.focus();
+    const again = render(<Modal onClose={nothing} buttons={['Only']} returnTo={target} />);
+    again.unmount();
+    expect(screen.getByRole('button', { name: 'Target' })).toHaveFocus();
+    unmountTarget();
+    unmountOpener();
   });
 
   it('closes on Escape', async () => {
