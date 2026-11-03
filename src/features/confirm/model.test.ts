@@ -6,7 +6,6 @@ import {
   formatCountdown,
   jsonLines,
   memberChangeOf,
-  memberName,
   personName,
   remainingMs,
 } from './model';
@@ -139,28 +138,22 @@ describe('answerNoticeOf', () => {
 });
 
 describe('memberChangeOf', () => {
-  const theo = {
-    id: '6a9c2d4b-5e7f-4ab1-8c3d-4e5f60718293',
-    login: 'theo',
-    name: 'Theo Martin',
-    avatarUrl: '',
-    email: 'theo@acme.dev',
-    role: 'member',
-    joinedAt: '2026-09-01T09:00:00.000Z',
-  };
+  // As the server shows a member in a confirmation (`OrgsGovernanceChange`): no name, no address.
+  const theo = { id: '6a9c2d4b-5e7f-4ab1-8c3d-4e5f60718293', login: 'theo', role: 'member' };
 
   it('reads a role change as who, from which role, to which', () => {
     expect(memberChangeOf({ kind: 'members.role', before: theo, after: { ...theo, role: 'admin' } })).toEqual(
-      { kind: 'role', member: { ...theo, role: 'admin' }, from: 'member', to: 'admin' },
+      { kind: 'role', login: 'theo', from: 'member', to: 'admin' },
     );
     expect(memberChangeOf({ kind: 'members.role', before: null, after: theo })).toBeUndefined();
     expect(memberChangeOf({ kind: 'members.role', before: theo, after: { role: 'admin' } })).toBeUndefined();
   });
 
-  it('reads a removal as who leaves, only when nothing is written after', () => {
+  it('reads a removal as who leaves and their role, only when nothing is written after', () => {
     expect(memberChangeOf({ kind: 'members.remove', before: theo, after: null })).toEqual({
       kind: 'remove',
-      member: theo,
+      login: 'theo',
+      role: 'member',
     });
     expect(memberChangeOf({ kind: 'members.remove', before: theo, after: theo })).toBeUndefined();
     expect(
@@ -173,7 +166,7 @@ describe('memberChangeOf', () => {
       memberChangeOf({
         kind: 'members.invite',
         before: null,
-        after: { invites: [{ email: 'ana@acme.dev', role: 'approver' }, { email: 'bo@acme.dev' }] },
+        after: [{ email: 'ana@acme.dev', role: 'approver' }, { email: 'bo@acme.dev' }],
       }),
     ).toEqual({
       kind: 'invite',
@@ -182,7 +175,14 @@ describe('memberChangeOf', () => {
         { email: 'bo@acme.dev', role: 'member' },
       ],
     });
-    expect(memberChangeOf({ kind: 'members.invite', before: null, after: { emails: [] } })).toBeUndefined();
+    // The body of the write is not what the server shows.
+    expect(
+      memberChangeOf({
+        kind: 'members.invite',
+        before: null,
+        after: { invites: [{ email: 'ana@acme.dev' }] },
+      }),
+    ).toBeUndefined();
   });
 
   it('says an invitation written twice once, an address with two roles twice, and nothing for none', () => {
@@ -190,13 +190,11 @@ describe('memberChangeOf', () => {
       memberChangeOf({
         kind: 'members.invite',
         before: null,
-        after: {
-          invites: [
-            { email: 'ana@acme.dev' },
-            { email: 'ana@acme.dev', role: 'member' },
-            { email: 'ana@acme.dev', role: 'approver' },
-          ],
-        },
+        after: [
+          { email: 'ana@acme.dev' },
+          { email: 'ana@acme.dev', role: 'member' },
+          { email: 'ana@acme.dev', role: 'approver' },
+        ],
       }),
     ).toEqual({
       kind: 'invite',
@@ -205,7 +203,7 @@ describe('memberChangeOf', () => {
         { email: 'ana@acme.dev', role: 'approver' },
       ],
     });
-    expect(memberChangeOf({ kind: 'members.invite', before: null, after: { invites: [] } })).toBeUndefined();
+    expect(memberChangeOf({ kind: 'members.invite', before: null, after: [] })).toBeUndefined();
   });
 
   it('reads an invitation link as the role it gives and how many it brings in, ten by default', () => {
@@ -222,13 +220,5 @@ describe('memberChangeOf', () => {
 
   it('leaves every other kind to the before and after', () => {
     expect(memberChangeOf({ kind: 'rules.create', before: null, after: theo })).toBeUndefined();
-  });
-});
-
-describe('memberName', () => {
-  it('names a member by name and login, or by login alone when the name says nothing more', () => {
-    expect(memberName({ login: 'theo', name: 'Theo Martin' })).toBe('Theo Martin (theo)');
-    expect(memberName({ login: 'theo', name: '' })).toBe('theo');
-    expect(memberName({ login: 'theo', name: 'theo' })).toBe('theo');
   });
 });

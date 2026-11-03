@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { GovernanceConfirmation, GovernanceConfirmationPerson, OrgMember } from '@gen/api/types.gen';
+import type { GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
 import { zInvitationLinkCreate, zOrgInvites, zOrgMember } from '@gen/api/zod.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
@@ -10,17 +10,16 @@ export function personName(person: GovernanceConfirmationPerson): string {
   return name ?? login ?? memberId;
 }
 
-/** "Theo Martin (theo)", or the login alone when the name is empty or the login again. */
-export function memberName(member: Pick<OrgMember, 'login' | 'name'>): string {
-  return member.name === '' || member.name === member.login
-    ? member.login
-    : `${member.name} (${member.login})`;
-}
+// How the server shows a member in a role change or a removal (`OrgsGovernanceChange`): the membership, the login and
+// the role, never the name nor the address. The page says the login and the role; the membership is not read.
+const zShownMember = zOrgMember.pick({ login: true, role: true });
+// How it shows invitations: the list the write sent, not the body around it.
+const zShownInvites = zOrgInvites.shape.invites;
 
 /** A change of the organization's people, as the page says it in words rather than JSON. */
 export type MemberChange =
-  | { readonly kind: 'role'; readonly member: OrgMember; readonly from: string; readonly to: string }
-  | { readonly kind: 'remove'; readonly member: OrgMember }
+  | { readonly kind: 'role'; readonly login: string; readonly from: string; readonly to: string }
+  | { readonly kind: 'remove'; readonly login: string; readonly role: string }
   | {
       readonly kind: 'invite';
       readonly invites: readonly { readonly email: string; readonly role: string }[];
@@ -41,22 +40,24 @@ export function memberChangeOf(
 ): MemberChange | undefined {
   const { kind, before, after } = confirmation;
   if (kind === 'members.role') {
-    const was = zOrgMember.safeParse(before);
-    const is = zOrgMember.safeParse(after);
+    const was = zShownMember.safeParse(before);
+    const is = zShownMember.safeParse(after);
     return was.success && is.success
-      ? { kind: 'role', member: is.data, from: was.data.role, to: is.data.role }
+      ? { kind: 'role', login: is.data.login, from: was.data.role, to: is.data.role }
       : undefined;
   }
   if (kind === 'members.remove') {
-    const was = zOrgMember.safeParse(before);
-    return was.success && after === null ? { kind: 'remove', member: was.data } : undefined;
+    const was = zShownMember.safeParse(before);
+    return was.success && after === null
+      ? { kind: 'remove', login: was.data.login, role: was.data.role }
+      : undefined;
   }
   if (kind === 'members.invite') {
-    const is = zOrgInvites.safeParse(after);
+    const is = zShownInvites.safeParse(after);
     if (!is.success) return undefined;
     // The same address with the same role twice is one invitation; an address with two roles is said twice.
     const invites = new Map(
-      is.data.invites.map((invite) => {
+      is.data.map((invite) => {
         const role = invite.role ?? DEFAULT_ROLE;
         return [`${invite.email} ${role}`, { email: invite.email, role }];
       }),

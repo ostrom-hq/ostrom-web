@@ -4,12 +4,12 @@ import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { formatAbsolute } from '@/shared/lib/time';
+import { formatAbsolute, formatDuration } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';
 import { type Fact, Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { StateBadge } from '../components/StateBadge';
-import { formatDuration, sessionState } from '../model';
+import { sessionState } from '../model';
 import { useSession } from '../useSessions';
 
 export function SessionScreen(): ReactElement {

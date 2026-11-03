@@ -10,6 +10,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { WorkflowEditor } from '../components/WorkflowEditor';
 import { WorkflowFailure } from '../components/WorkflowFailure';
+import { WorkflowRuns } from '../components/WorkflowRuns';
 import './workflows.css';
 import { readSteps, reposText, STATUS_TONES, type Step, workflowOf } from '../model';
 import { useWorkflow, useWorkflowChange, type WorkflowChangeViewModel } from '../useWorkflows';
@@ -83,6 +84,7 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
                 <p className="o-screen__lead">{t('workflows.actions.readOnly')}</p>
               )}
               <WorkflowDetail workflow={workflow} />
+              <WorkflowRuns workflow={workflow} />
             </>
           )}
         </Screen>
