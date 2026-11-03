@@ -118,12 +118,16 @@ import {
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
+import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
+import { initialDeviceLogins } from '@/mocks/fixtures/device';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
+import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
@@ -174,7 +178,9 @@ export interface MockDb
   extends
     AccountState,
     ActivityState,
+    AuditState,
     BillingState,
+    DeviceState,
     GithubState,
     OrgsState,
     TokensState,
@@ -238,6 +244,7 @@ export interface MockDb
 export function createMockDb(): MockDb {
   return {
     activity: initialActivity(),
+    audit: initialAudit(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
     sessions: initialSessions(),
@@ -286,6 +293,7 @@ export function createMockDb(): MockDb {
     signedInAt: Date.now(),
     signedIn: true,
     usedLinks: [],
+    deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
     tokens: initialTokens(),
     nextToken: 3,
@@ -329,6 +337,8 @@ const zBudgetWrite = zBudget
 const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() });
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
+/** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
+const SESSIONS_PAGE = 50;
 const PROVIDERS = new Set(['anthropic', 'openai']);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
@@ -547,6 +557,8 @@ function decided(rule: Rule, status: RuleStatus, at: string): Rule {
 
 /** The token of the demo sign-in e-mail: `/auth/email#token=ml_demo` signs in once in the mock console. */
 export const DEMO_EMAIL_TOKEN = 'ml_demo';
+/** A sign-in e-mail's token opened in another browser than the one that asked for it: refused with 403. */
+export const OTHER_BROWSER_EMAIL_TOKEN = 'ml_other_browser';
 
 /** How long a sign-in may say yes, as on the server (S2-54). */
 export const FRESH_SIGN_IN_MS = 5 * 60_000;
@@ -603,6 +615,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleVerifySignInEmail(async ({ request }) => {
       const body = zVerifySignInEmailBody.safeParse(await readJson(request));
+      // The server refuses a link opened in a browser other than the one that asked for it (ostrom-server#176).
+      if (body.success && body.data.token === OTHER_BROWSER_EMAIL_TOKEN)
+        return refusal(
+          403,
+          'email_link_other_browser',
+          'This sign-in link was asked for in another browser. Open it there, or ask for a new link from this one.',
+        );
       if (!body.success || body.data.token !== DEMO_EMAIL_TOKEN)
         return refusal(401, 'invalid_link', 'This link was already used or has expired.');
       db.signedInAt = now().getTime();
@@ -625,7 +644,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({ items });
     }),
     handleGetApproval(({ params }) => {
-      const approval = find(params.id);
+      // As server#185 reads it: an approval of the organization, else the first request of one of its gates, so a
+      // session's gate opens its request (the server prefers the reader's own request on the gate).
+      const approval = find(params.id) ?? db.approvals.find((item) => item.group === params.id);
       return approval === undefined ? notFound() : HttpResponse.json(approval);
     }),
     handleAnswerApproval(async ({ params, request }) => {
@@ -673,10 +694,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createAccountHandlers(() => db, now),
+    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
     ...createApproversGraphHandlers(() => db),
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,
+    ),
+    ...createAuditHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+      () => canManage(db),
     ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
@@ -1222,11 +1249,19 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json({ selfApproval: db.selfApproval });
     }),
     handleListSessions(({ request }) => {
-      const open = new URL(request.url).searchParams.get('open');
-      const items = db.sessions.filter(
+      const query = new URL(request.url).searchParams;
+      const open = query.get('open');
+      const matching = db.sessions.filter(
         (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
       );
-      return HttpResponse.json({ items });
+      // As the server pages it: a full page carries `next`, its last id, which the next call reads back as `before`.
+      const before = query.get('before');
+      const from = before === null ? 0 : matching.findIndex((session) => session.id === before) + 1;
+      const items = matching.slice(from, from + SESSIONS_PAGE);
+      const last = items.at(-1);
+      return HttpResponse.json(
+        items.length === SESSIONS_PAGE && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleGetSession(({ params }) => {
       const session = db.sessions.find((item) => item.id === params.id);

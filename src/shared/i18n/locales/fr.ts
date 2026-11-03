@@ -29,6 +29,7 @@ export const fr = {
       rules: 'Règles',
       activity: 'Activité',
       decisions: 'Décisions',
+      audit: 'Journal d’audit',
       mcp: 'MCP',
       secrets: 'Secrets',
       spend: 'Dépenses',
@@ -200,6 +201,8 @@ export const fr = {
       open_one: '{{count}} ouverte',
       open_other: '{{count}} ouvertes',
       ended: 'Terminées',
+      more: 'Voir les sessions plus anciennes',
+      loadingMore: 'Chargement…',
       since: 'depuis {{when}}',
       emptyTitle: 'Aucun agent ne travaille en ce moment',
       emptyBody: 'Une session apparaît ici dès que quelqu’un lance un agent avec ostrom.',
@@ -232,6 +235,12 @@ export const fr = {
       package: 'Paquet',
       requests_one: '{{count}} demande à une personne',
       requests_other: '{{count}} demandes à une personne',
+      unanswered: 'En attente',
+      notAnswered: 'Sans réponse',
+      approved: 'Approuvée',
+      refused: 'Refusée',
+      answeredBy: 'par {{by}}, {{when}}',
+      answerReceipt: 'Reçu',
       receipt: 'Reçu',
       noReceipt: 'Le reçu est signé à la fin de la session.',
       openReceipt: 'Ouvrir le reçu {{id}}',
@@ -573,6 +582,17 @@ export const fr = {
         'Tu peux lancer {{agent}}. Aucun modèle par défaut n’est connu : le modèle qu’il nomme est vérifié au lancement.',
       refused: 'Ce lancement serait refusé.',
     },
+  },
+  audit: {
+    title: 'Journal d’audit',
+    lead: 'Chaque changement de gouvernance de l’organisation, du plus récent au plus ancien, signé par le serveur : qui a changé quoi, et par quel moyen.',
+    forbiddenTag: 'Owners et admins',
+    forbidden: 'Seul un owner ou un admin de l’organisation peut lire son journal d’audit.',
+    unavailableTag: 'Pas encore servi',
+    unavailable: 'Ce serveur ne sert pas encore le journal d’audit.',
+    empty: 'Rien n’a encore changé dans l’organisation.',
+    more: 'Voir les lignes plus anciennes',
+    loadingMore: 'Chargement…',
   },
   activity: {
     title: 'Activité',
@@ -1219,6 +1239,9 @@ export const fr = {
       failedTag: 'Pas connecté',
       missing: 'Ce lien a déjà servi ou il est incomplet.',
       again: 'Demander un nouveau lien',
+      againHere: 'Demander un nouveau lien ici',
+      otherBrowser:
+        'Ce lien a été demandé depuis un autre navigateur. Pour ta sécurité, il ne connecte que le navigateur qui l’a demandé : ouvre-le là-bas, ou demande un nouveau lien depuis celui-ci.',
       switchTag: 'Un autre compte ?',
       switch:
         'Quelqu’un est peut-être déjà connecté sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',
@@ -1726,6 +1749,55 @@ export const fr = {
     dead: {
       title: 'Cette invitation ne marche plus',
       body: 'Elle a été utilisée, révoquée ou a expiré. Demande-en une nouvelle à la personne qui t’a invité.',
+    },
+  },
+  device: {
+    title: 'Connecter un terminal',
+    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
+    enterLead: 'Saisis le code que ton terminal affiche après ostrom login.',
+    form: {
+      label: 'Code du terminal',
+      field: 'Code affiché par le terminal',
+      placeholder: 'ABCD-EFGH',
+      submit: 'Continuer',
+    },
+    unknownTag: 'Code inconnu',
+    unknown:
+      'Aucune connexion n’attend le code {{code}} : il a peut-être expiré ou déjà reçu une réponse. Vérifie le code, ou relance ostrom login.',
+    malformed:
+      'Ce n’est pas un code d’ostrom login : il a huit lettres, comme ABCD-EFGH. Tape le code affiché par ton terminal, ou relance ostrom login.',
+    code: 'Code',
+    client: 'Nom donné par le terminal',
+    expires: 'Expire à',
+    adminTag: 'Connexion admin',
+    admin:
+      'Ce terminal demande les droits d’écriture de gouvernance ci-dessous. Seul un propriétaire ou un admin de l’organisation peut l’approuver.',
+    scopes: 'Droits demandés',
+    approve: 'Connecter ce terminal',
+    approveAdmin: 'Approuver la connexion admin',
+    deny: 'Refuser',
+    forbiddenTag: 'Non autorisé',
+    forbidden:
+      'Seul un propriétaire ou un admin de l’organisation peut approuver une connexion admin. Demande-le à l’un d’eux, ou refuse-la.',
+    severalOrgs:
+      'Tu fais partie de plusieurs organisations, et le serveur ne sait pas à laquelle cette connexion admin se rattache : elle ne peut pas encore être approuvée ici. Refuse-la, ou demande à un propriétaire ou un admin qui n’appartient qu’à cette organisation.',
+    failedTag: 'Réponse non envoyée',
+    signedOut: {
+      title: 'Connecte-toi pour répondre',
+      body: 'Seule une personne connectée à la console peut connecter un terminal. Tu reviendras ici ensuite.',
+      action: 'Se connecter',
+    },
+    approved: {
+      title: 'Terminal connecté',
+      body: 'Retourne dans ton terminal : ostrom login continue là-bas.',
+    },
+    denied: {
+      title: 'Terminal refusé',
+      body: 'Rien n’a été connecté. Si c’était bien toi, relance ostrom login.',
+    },
+    gone: {
+      title: 'Ce code ne marche plus',
+      body: 'Il a expiré ou a déjà reçu une réponse. Relance ostrom login pour avoir un nouveau code.',
     },
   },
 } as const satisfies LocaleShape;

@@ -101,10 +101,9 @@ describe('the TeamCode import', () => {
     const user = userEvent.setup();
     visit('/');
     await user.click(await screen.findByRole('link', { name: 'Import' }));
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Import from TeamCode' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Move a TeamCode team into Acme/)).toBeInTheDocument();
+    expect(await screen.findByText(/Move a TeamCode team into Acme/)).toBeInTheDocument();
+    // Read once the screen is in: the title of its waiting state is another node, replaced by this one.
+    expect(screen.getByRole('heading', { level: 1, name: 'Import from TeamCode' })).toBeInTheDocument();
   });
 
   it('sums up the file in counts, names the unmapped members, and shows no credential', async () => {

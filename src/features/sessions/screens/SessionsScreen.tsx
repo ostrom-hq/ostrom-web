@@ -5,6 +5,8 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute, formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
+import { Banner } from '@/shared/ui/Banner';
+import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadState, Screen } from '@/shared/ui/Screen';
 import { StateBadge } from '../components/StateBadge';
 import { formatDuration, sessionState } from '../model';
@@ -12,7 +14,7 @@ import { useSessionList } from '../useSessions';
 
 export function SessionsScreen(): ReactElement {
   const { t } = useTranslation();
-  const { open, ended, failure } = useSessionList();
+  const { open, ended, failure, more, loadingMore, moreFailure, loadMore } = useSessionList();
   return (
     <Screen title={t('sessions.list.title')} lead={t('sessions.list.lead')}>
       <LoadState data={open} failure={failure}>
@@ -35,6 +37,16 @@ export function SessionsScreen(): ReactElement {
             {t('sessions.list.ended')}
           </h2>
           <SessionRows sessions={ended} />
+          {moreFailure === undefined ? null : (
+            <Banner tone="warning" tag={t('app.failure.tag')} live>
+              {moreFailure.message}
+            </Banner>
+          )}
+          {more ? (
+            <Button disabled={loadingMore} onClick={loadMore}>
+              {loadingMore ? t('sessions.list.loadingMore') : t('sessions.list.more')}
+            </Button>
+          ) : null}
         </section>
       )}
     </Screen>

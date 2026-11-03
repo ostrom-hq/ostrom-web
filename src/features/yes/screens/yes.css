@@ -152,7 +152,7 @@
 }
 .ys-chip--bad {
   border-color: var(--danger);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .ys-line {

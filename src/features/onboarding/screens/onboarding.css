@@ -73,7 +73,7 @@
 .o-setup__step--done .o-setup__mark {
   border-color: transparent;
   background: var(--success-tint);
-  color: var(--success);
+  color: var(--success-text);
 }
 
 .o-setup__step--done .o-row__title {
