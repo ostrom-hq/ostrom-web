@@ -100,7 +100,9 @@ test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the
     .poll(
       async () => {
         const read = await callFromPage(page, 'GET', `${billingPath}/invoices`);
-        return ((read.body as { items?: { status: string }[] }).items ?? []).map((invoice) => invoice.status);
+        return ((read.body as { invoices?: { status: string }[] }).invoices ?? []).map(
+          (invoice) => invoice.status,
+        );
       },
       { timeout: 60_000, intervals: [1_000, 2_000, 5_000] },
     )
