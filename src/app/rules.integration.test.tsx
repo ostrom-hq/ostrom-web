@@ -302,13 +302,13 @@ describe('the rules of a large organization', () => {
   });
 
   it('says it once the last lines are one more', async () => {
-    db.rules = largeRules().slice(0, 301);
+    // 101 rules: one line past the first hundred. The hundreds in between are the test above.
+    db.rules = largeRules().slice(0, 101);
     visit('/rules');
-    await userEvent.click(await screen.findByRole('button', { name: 'All 301' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (201 left)' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (101 left)' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'All 101' }));
+    expect(screen.getAllByRole('article')).toHaveLength(100);
     await userEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
-    expect(screen.getAllByRole('article')).toHaveLength(301);
+    expect(screen.getAllByRole('article')).toHaveLength(101);
     expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
   });
 });
