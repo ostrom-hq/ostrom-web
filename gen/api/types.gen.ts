@@ -1124,6 +1124,13 @@ export type DiffStats = {
 };
 
 /**
+ * 403 email_link_other_browser: the e-mailed link was asked for in another browser (its `ostrom_email_link` nonce is missing or not that browser's). The link is not used: open it in the browser that asked for it, or ask for a new link from this one
+ */
+export type EmailLinkOtherBrowser = {
+    error: ErrorDetail;
+};
+
+/**
  * Ends a session (hook `SessionEnd` or the launcher): the server signs the segment's receipt
  */
 export type EndSessionRequest = {
@@ -1158,8 +1165,19 @@ export type GateAction = {
     class: string;
     label: string;
     patterns: Array<string>;
-    repos: Array<string>;
+    /**
+     * Repositories where the gate covers it. Absent or empty: every repository of the organization
+     */
+    repos?: Array<string>;
     tools?: Array<string>;
+    /**
+     * Catalogue only: the words of the class that a guessed gate matches
+     */
+    keywords?: Array<string>;
+    /**
+     * Catalogue only: the gate that covers the action in this repository; `null` when none does
+     */
+    gate?: GateRef | null;
 };
 
 /**
@@ -1187,6 +1205,14 @@ export type GateAskRequest = {
 export type GateCatalog = {
     gates: Array<GateRef>;
     actions: Array<GateAction>;
+    /**
+     * What the hooks do when the server cannot be reached
+     */
+    failMode?: 'closed';
+    /**
+     * How long a hook waits for an answer before it gives up
+     */
+    waitSeconds?: number;
 };
 
 /**
@@ -1375,7 +1401,7 @@ export type GovernanceConfirmationPerson = {
 };
 
 /**
- * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ * pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a server stopped between the two leaves it confirmed without the write, and the change is then asked again
  */
 export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed';
 
@@ -1387,6 +1413,13 @@ export type Group = {
     name: string;
     members: Array<string>;
     accounts: Array<string>;
+    /**
+     * The members paused now, by login, and the end of their pause
+     */
+    paused?: Array<{
+        login: string;
+        until: string;
+    }>;
 };
 
 /**
@@ -3260,6 +3293,10 @@ export type Workflow = {
     domain: string;
     description?: string;
     version?: number;
+    /**
+     * Repositories the workflow applies to, `owner/name` where `*` is any part of a name (1 to 100). Absent: every repository of the organization, as before. Present: these only, whether the workflow is observed or enforced, in the session packages and the gates catalogue
+     */
+    repos?: Array<string>;
     nodes: Array<WorkflowNode>;
     edges: Array<WorkflowEdge>;
     start?: string;
@@ -4181,6 +4218,37 @@ export type CreateLaunchResponses = {
 
 export type CreateLaunchResponse = CreateLaunchResponses[keyof CreateLaunchResponses];
 
+export type EndLaunchData = {
+    body?: never;
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}';
+};
+
+export type EndLaunchErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type EndLaunchError = EndLaunchErrors[keyof EndLaunchErrors];
+
+export type EndLaunchResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type EndLaunchResponse = EndLaunchResponses[keyof EndLaunchResponses];
+
 export type CheckAgentPolicyData = {
     body?: never;
     headers?: {
@@ -4451,9 +4519,9 @@ export type VerifySignInEmailErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * email_link_other_browser (a valid link presented without the nonce of the browser that asked for it; it is not used and still signs in there), or forbidden (key `error.type`)
      */
-    403: ApiError;
+    403: EmailLinkOtherBrowser | ApiError;
     /**
      * A refusal
      */
@@ -7938,8 +8006,7 @@ export type SetGatePolicyResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9213,6 +9280,14 @@ export type ListRulesData = {
         repo?: string;
         status?: string;
         group?: string;
+        /**
+         * The `next` of the previous page (opaque); 400 when no page gave it
+         */
+        after?: string;
+        /**
+         * The page size, 1 to 1000 (1000 by default); a value outside is brought into it
+         */
+        limit?: number;
     };
     url: '/api/v1/rules';
 };
@@ -9248,6 +9323,9 @@ export type ListRulesResponses = {
      */
     200: {
         items: Array<Rule>;
+        /**
+         * The `after` of the next page; absent on the last one
+         */
         next?: string;
     };
 };
@@ -9305,8 +9383,7 @@ export type CreateRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9362,8 +9439,7 @@ export type DeleteRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
     /**
@@ -9489,8 +9565,7 @@ export type UpdateRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9553,8 +9628,7 @@ export type BulkUpdateRulesResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9665,8 +9739,7 @@ export type CreateWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9722,8 +9795,7 @@ export type DeleteWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
     /**
@@ -9839,8 +9911,7 @@ export type SaveWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -12399,8 +12470,7 @@ export type SetModelPolicyResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -13436,7 +13506,20 @@ export type DeleteRunnerResponses = {
 export type DeleteRunnerResponse = DeleteRunnerResponses[keyof DeleteRunnerResponses];
 
 export type RunnerHeartbeatData = {
-    body?: never;
+    body?: {
+        /**
+         * The executions the machine has, and those it is creating.
+         */
+        executions?: Array<{
+            sessionId: string;
+            epoch: number;
+            state: 'pending' | 'running' | 'ended';
+        }>;
+        /**
+         * The sessions whose workspace volumes the machine holds.
+         */
+        workspaces?: Array<string>;
+    };
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -13481,6 +13564,34 @@ export type RunnerHeartbeatResponses = {
      */
     200: {
         sessions: Array<CloudSession>;
+        /**
+         * The executions to run. A plan comes once, when the execution is handed over to this runner; later answers name the execution without it.
+         */
+        executions: Array<{
+            sessionId: string;
+            epoch: number;
+            /**
+             * The Docker Engine objects to create, in order: the session's volumes, then the execution's containers, each with its Engine API creation body.
+             */
+            plan?: {
+                volumes: Array<{
+                    name: string;
+                    body: {
+                        [key: string]: unknown;
+                    };
+                }>;
+                containers: Array<{
+                    name: string;
+                    body: {
+                        [key: string]: unknown;
+                    };
+                }>;
+            };
+        }>;
+        /**
+         * The sessions whose workspace to keep.
+         */
+        workspaces: Array<string>;
     };
 };
 

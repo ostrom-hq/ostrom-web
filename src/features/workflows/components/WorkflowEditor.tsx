@@ -9,11 +9,15 @@ import {
   moveStep,
   newStep,
   nobodyApproves,
+  repoChoices,
+  repoLabel,
   type StepDraft,
+  toggleRepo,
   workflowDraftOf,
   type WorkflowDraft,
   workflowProblem,
 } from '../model';
+import { useOrgRepos } from '../useWorkflows';
 
 /** The fields of one step, by what it does: who approves a gate, what a check runs, where a notification goes. */
 function StepFields({
@@ -158,6 +162,66 @@ function StepCard({
   );
 }
 
+/**
+ * The repositories the workflow is limited to, picked among the organization's. None picked: it applies to every
+ * repository its gates or its words point to, which the editor says, since a name in its words is enough (R6).
+ */
+function RepoPicker({
+  chosen,
+  onChange,
+}: {
+  readonly chosen: readonly string[];
+  readonly onChange: (next: string[]) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const repos = useOrgRepos();
+  const choices = repoChoices(repos.names ?? [], chosen);
+  return (
+    <fieldset className="o-stack wf-repos">
+      <legend className="o-field-label">{t('workflows.edit.repos')}</legend>
+      {choices.length === 0 ? (
+        <p className="o-screen__lead">
+          {repos.names === undefined && repos.failure === undefined
+            ? t('workflows.edit.reposLoading')
+            : t('workflows.edit.reposNone')}
+        </p>
+      ) : (
+        <ul className="wf-repos__list">
+          {choices.map((pattern) => (
+            <li key={pattern}>
+              <label className="o-inline wf-repos__choice">
+                <input
+                  type="checkbox"
+                  checked={chosen.includes(pattern)}
+                  onChange={() => {
+                    onChange(toggleRepo(chosen, pattern));
+                  }}
+                />
+                <span className="o-mono">{repoLabel(pattern)}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+      {repos.more ? (
+        <span className="o-self-start">
+          <Button variant="ghost" disabled={repos.loadingMore} onClick={repos.loadMore}>
+            {t('workflows.edit.reposMore')}
+          </Button>
+        </span>
+      ) : null}
+      {repos.failure === undefined ? null : (
+        <p className="o-screen__lead">{t('workflows.edit.reposFailure')}</p>
+      )}
+      {chosen.length === 0 ? (
+        <p className="o-screen__lead wf-repos__warning" role="note">
+          {t('workflows.edit.reposEmpty')}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
 export interface WorkflowEditorProps {
   /** The workflow edited, or undefined for a new one. */
   readonly workflow: Workflow | undefined;
@@ -166,7 +230,7 @@ export interface WorkflowEditorProps {
   readonly onCancel: () => void;
 }
 
-/** Writes a workflow: its name, its repository, and its steps in order. */
+/** Writes a workflow: its name, its domain, the repositories it is limited to, and its steps in order. */
 export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowEditorProps): ReactElement {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<WorkflowDraft>(() => workflowDraftOf(workflow));
@@ -227,6 +291,12 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
         value={draft.description}
         onChange={(event) => {
           setDraft({ ...draft, description: event.target.value });
+        }}
+      />
+      <RepoPicker
+        chosen={draft.repos}
+        onChange={(repos) => {
+          setDraft({ ...draft, repos });
         }}
       />
       <h2 className="o-label">{t('workflows.detail.steps')}</h2>

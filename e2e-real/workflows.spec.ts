@@ -28,7 +28,7 @@ test('an owner writes a workflow in the console, changes it, and deletes it', as
   await page.getByRole('link', { name: 'New workflow' }).click();
   const form = page.getByRole('form', { name: 'A new workflow' });
   await form.getByLabel('Name').fill(name);
-  await form.getByLabel('Repository').fill('acme/web');
+  await form.getByLabel('Domain').fill('Release');
   await form.getByLabel('Step 1: What it is').fill('A tag is pushed');
   await form.getByRole('button', { name: 'Add a step' }).click();
   await form.getByLabel('What step 2 does').selectOption('Check');

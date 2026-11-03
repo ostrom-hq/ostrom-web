@@ -786,6 +786,13 @@ export const zApiError = z.object({
 });
 
 /**
+ * 403 email_link_other_browser: the e-mailed link was asked for in another browser (its `ostrom_email_link` nonce is missing or not that browser's). The link is not used: open it in the browser that asked for it, or ask for a new link from this one
+ */
+export const zEmailLinkOtherBrowser = z.object({
+    error: zErrorDetail
+});
+
+/**
  * A line of evidence shown with an approval
  */
 export const zEvidence = z.object({
@@ -821,17 +828,6 @@ export const zApproval = z.object({
     action: zApprovalAction.optional(),
     diffStats: zDiffStats.optional(),
     diffTruncated: z.boolean().optional()
-});
-
-/**
- * A boundary action a gate covers
- */
-export const zGateAction = z.object({
-    class: z.string(),
-    label: z.string(),
-    patterns: z.array(z.string()),
-    repos: z.array(z.string()),
-    tools: z.array(z.string()).optional()
 });
 
 /**
@@ -944,7 +940,7 @@ export const zGovernanceConfirmationPerson = z.object({
 });
 
 /**
- * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ * pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a server stopped between the two leaves it confirmed without the write, and the change is then asked again
  */
 export const zGovernanceConfirmationStatus = z.enum([
     'pending',
@@ -984,7 +980,11 @@ export const zGroup = z.object({
     id: z.string(),
     name: z.string(),
     members: z.array(z.string()),
-    accounts: z.array(z.string())
+    accounts: z.array(z.string()),
+    paused: z.array(z.object({
+        login: z.string(),
+        until: z.string()
+    })).optional()
 });
 
 /**
@@ -1848,16 +1848,6 @@ export const zRuleGateCheck = z.object({
 });
 
 /**
- * The gate a rule puts on boundary actions. An accepted or edited rule blocks the actions until one of the approvers says yes; a proposed rule only records them (shadow); a rejected rule gates nothing.
- */
-export const zRuleGate = z.object({
-    actions: z.array(zGateAction),
-    approvers: z.array(z.string()),
-    reason: z.string().optional(),
-    checks: z.array(zRuleGateCheck).optional()
-});
-
-/**
  * Where a rule or a workflow was found
  */
 export const zRuleSource = z.object({
@@ -1874,44 +1864,6 @@ export const zRuleStatus = z.enum([
 ]);
 
 export const zRuleStrength = z.enum(['required', 'recommended']);
-
-/**
- * A rule of the organization, learned by the analysis or written by the team
- */
-export const zRule = z.object({
-    id: z.string(),
-    statement: z.string(),
-    output: z.string(),
-    group: z.string(),
-    scope: z.array(z.string()).optional(),
-    sources: z.array(zRuleSource).optional(),
-    why: z.string().optional(),
-    strength: zRuleStrength,
-    confidence: z.number(),
-    status: zRuleStatus,
-    foundBy: z.string(),
-    foundAt: z.string(),
-    reviewBy: z.string().optional(),
-    decidedBy: z.string().optional(),
-    decidedAt: z.string().optional(),
-    origin: z.string().optional(),
-    gate: zRuleGate.optional()
-});
-
-/**
- * A rule written by the team
- */
-export const zNewRule = z.object({
-    statement: z.string(),
-    group: z.string(),
-    output: z.string().optional(),
-    scope: z.array(z.string()).optional(),
-    strength: zRuleStrength.optional(),
-    why: z.string().optional(),
-    status: zRuleStatus.optional(),
-    reviewBy: z.string().optional(),
-    gate: zRuleGate.optional()
-});
 
 export const zRunLocation = z.enum(['workstation', 'ostrom']);
 
@@ -2679,31 +2631,6 @@ export const zNodeVisit = z.object({
 });
 
 /**
- * A workflow node
- */
-export const zWorkflowNode = z.object({
-    id: z.string(),
-    kind: zWorkflowNodeKind,
-    label: z.string(),
-    detail: z.string().optional(),
-    owner: z.string().optional(),
-    approvers: z.array(z.string()).optional(),
-    approverReason: z.string().optional(),
-    when: zNodeWhen.optional(),
-    ruleIds: z.array(z.string()).optional(),
-    position: zNodePosition.optional(),
-    actions: z.array(zGateAction).optional(),
-    actionsBy: z.string().optional(),
-    actionsAt: z.string().optional(),
-    run: zNodeRun.optional(),
-    suggested: zNodeSuggestions.optional(),
-    wait: zWaitSpec.optional(),
-    workflowId: z.string().optional(),
-    arguments: z.record(z.string(), z.string()).optional(),
-    maxVisits: z.int().optional()
-});
-
-/**
  * A workflow run
  */
 export const zWorkflowRun = z.object({
@@ -2749,42 +2676,16 @@ export const zGateRef = z.object({
 });
 
 /**
- * An approval as the console and the app show it: the request, the gate, the rules, the commits and checks (in `approval`), the receipt once answered
+ * A boundary action a gate covers
  */
-export const zApprovalView = z.object({
-    approval: zApproval,
-    who: z.object({
-        dev: z.string().optional(),
-        agent: z.string().optional(),
-        model: z.string().optional(),
-        session: z.string().optional()
-    }).optional(),
-    what: z.object({
-        action: z.string().optional(),
-        command: z.string().optional(),
-        repo: z.string().optional(),
-        sessionRepo: z.string().optional(),
-        harness: z.string().optional()
-    }).optional(),
-    gate: zGateRef.optional(),
-    rules: z.array(zRule).optional(),
-    diff: z.string().optional(),
-    pr: zGatePullRequest.optional(),
-    askedVia: z.array(z.string()).optional(),
-    note: z.string().optional(),
-    receipt: zReceipt.optional(),
-    verification: zVerification.optional(),
-    you: zApprovalCallerView
-});
-
-/**
- * The yes queue of the caller
- */
-export const zApprovalQueue = z.object({
-    operator: z.string(),
-    you: zApprovalViewer,
-    pending: z.array(zApprovalView),
-    recent: z.array(zApprovalView)
+export const zGateAction = z.object({
+    class: z.string(),
+    label: z.string(),
+    patterns: z.array(z.string()),
+    repos: z.array(z.string()).optional(),
+    tools: z.array(z.string()).optional(),
+    keywords: z.array(z.string()).optional(),
+    gate: zGateRef.nullish()
 });
 
 /**
@@ -2792,7 +2693,9 @@ export const zApprovalQueue = z.object({
  */
 export const zGateCatalog = z.object({
     gates: z.array(zGateRef),
-    actions: z.array(zGateAction)
+    actions: z.array(zGateAction),
+    failMode: z.enum(['closed']).optional(),
+    waitSeconds: z.int().optional()
 });
 
 /**
@@ -2850,6 +2753,93 @@ export const zPackageWorkflow = z.object({
 });
 
 /**
+ * The gate a rule puts on boundary actions. An accepted or edited rule blocks the actions until one of the approvers says yes; a proposed rule only records them (shadow); a rejected rule gates nothing.
+ */
+export const zRuleGate = z.object({
+    actions: z.array(zGateAction),
+    approvers: z.array(z.string()),
+    reason: z.string().optional(),
+    checks: z.array(zRuleGateCheck).optional()
+});
+
+/**
+ * A rule of the organization, learned by the analysis or written by the team
+ */
+export const zRule = z.object({
+    id: z.string(),
+    statement: z.string(),
+    output: z.string(),
+    group: z.string(),
+    scope: z.array(z.string()).optional(),
+    sources: z.array(zRuleSource).optional(),
+    why: z.string().optional(),
+    strength: zRuleStrength,
+    confidence: z.number(),
+    status: zRuleStatus,
+    foundBy: z.string(),
+    foundAt: z.string(),
+    reviewBy: z.string().optional(),
+    decidedBy: z.string().optional(),
+    decidedAt: z.string().optional(),
+    origin: z.string().optional(),
+    gate: zRuleGate.optional()
+});
+
+/**
+ * An approval as the console and the app show it: the request, the gate, the rules, the commits and checks (in `approval`), the receipt once answered
+ */
+export const zApprovalView = z.object({
+    approval: zApproval,
+    who: z.object({
+        dev: z.string().optional(),
+        agent: z.string().optional(),
+        model: z.string().optional(),
+        session: z.string().optional()
+    }).optional(),
+    what: z.object({
+        action: z.string().optional(),
+        command: z.string().optional(),
+        repo: z.string().optional(),
+        sessionRepo: z.string().optional(),
+        harness: z.string().optional()
+    }).optional(),
+    gate: zGateRef.optional(),
+    rules: z.array(zRule).optional(),
+    diff: z.string().optional(),
+    pr: zGatePullRequest.optional(),
+    askedVia: z.array(z.string()).optional(),
+    note: z.string().optional(),
+    receipt: zReceipt.optional(),
+    verification: zVerification.optional(),
+    you: zApprovalCallerView
+});
+
+/**
+ * The yes queue of the caller
+ */
+export const zApprovalQueue = z.object({
+    operator: z.string(),
+    you: zApprovalViewer,
+    pending: z.array(zApprovalView),
+    recent: z.array(zApprovalView)
+});
+
+/**
+ * A rule written by the team
+ */
+export const zNewRule = z.object({
+    statement: z.string(),
+    group: z.string(),
+    output: z.string().optional(),
+    scope: z.array(z.string()).optional(),
+    strength: zRuleStrength.optional(),
+    why: z.string().optional(),
+    status: zRuleStatus.optional(),
+    reviewBy: z.string().optional(),
+    gate: zRuleGate.optional()
+});
+
+/**
  * A compiled session package: the harness a coding agent session runs under (hooks, scripts, skills, sub-agents, MCP
  */
 export const zSessionPackage = z.object({
@@ -2885,6 +2875,31 @@ export const zSignedGatePolicyPayload = z.object({
 });
 
 /**
+ * A workflow node
+ */
+export const zWorkflowNode = z.object({
+    id: z.string(),
+    kind: zWorkflowNodeKind,
+    label: z.string(),
+    detail: z.string().optional(),
+    owner: z.string().optional(),
+    approvers: z.array(z.string()).optional(),
+    approverReason: z.string().optional(),
+    when: zNodeWhen.optional(),
+    ruleIds: z.array(z.string()).optional(),
+    position: zNodePosition.optional(),
+    actions: z.array(zGateAction).optional(),
+    actionsBy: z.string().optional(),
+    actionsAt: z.string().optional(),
+    run: zNodeRun.optional(),
+    suggested: zNodeSuggestions.optional(),
+    wait: zWaitSpec.optional(),
+    workflowId: z.string().optional(),
+    arguments: z.record(z.string(), z.string()).optional(),
+    maxVisits: z.int().optional()
+});
+
+/**
  * A workflow
  */
 export const zWorkflow = z.object({
@@ -2893,6 +2908,7 @@ export const zWorkflow = z.object({
     domain: z.string(),
     description: z.string().optional(),
     version: z.int().optional(),
+    repos: z.array(z.string()).optional(),
     nodes: z.array(zWorkflowNode),
     edges: z.array(zWorkflowEdge),
     start: z.string().optional(),
@@ -3192,6 +3208,15 @@ export const zCreateLaunchResponse = z.object({
     agentToken: z.string(),
     expiresAt: z.string()
 });
+
+export const zEndLaunchPath = z.object({
+    launchId: z.string()
+});
+
+/**
+ * Done
+ */
+export const zEndLaunchResponse = z.void();
 
 export const zCheckAgentPolicyHeaders = z.object({
     'Ostrom-Org': z.string().optional()
@@ -4486,7 +4511,9 @@ export const zListRulesHeaders = z.object({
 export const zListRulesQuery = z.object({
     repo: z.string().optional(),
     status: z.string().optional(),
-    group: z.string().optional()
+    group: z.string().optional(),
+    after: z.string().optional(),
+    limit: z.int().optional()
 });
 
 /**
@@ -5602,6 +5629,19 @@ export const zDeleteRunnerPath = z.object({
  */
 export const zDeleteRunnerResponse = z.void();
 
+export const zRunnerHeartbeatBody = z.object({
+    executions: z.array(z.object({
+        sessionId: z.uuid(),
+        epoch: z.coerce.bigint().min(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
+        state: z.enum([
+            'pending',
+            'running',
+            'ended'
+        ])
+    })).optional(),
+    workspaces: z.array(z.uuid()).optional()
+});
+
 export const zRunnerHeartbeatHeaders = z.object({
     'Ostrom-Org': z.string().optional()
 });
@@ -5614,7 +5654,22 @@ export const zRunnerHeartbeatPath = z.object({
  * OK
  */
 export const zRunnerHeartbeatResponse = z.object({
-    sessions: z.array(zCloudSession)
+    sessions: z.array(zCloudSession),
+    executions: z.array(z.object({
+        sessionId: z.uuid(),
+        epoch: z.coerce.bigint().min(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }).max(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }),
+        plan: z.object({
+            volumes: z.array(z.object({
+                name: z.string(),
+                body: z.record(z.string(), z.unknown())
+            })),
+            containers: z.array(z.object({
+                name: z.string(),
+                body: z.record(z.string(), z.unknown())
+            }))
+        }).optional()
+    })),
+    workspaces: z.array(z.uuid())
 });
 
 export const zListCloudSessionsHeaders = z.object({
