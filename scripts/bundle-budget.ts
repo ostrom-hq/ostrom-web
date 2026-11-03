@@ -2,8 +2,8 @@
 /**
  * The console's download budget, per route: what a first visit to a route fetches, gzipped. That is the entry with
  * the chunks it imports and the wording of one language, the heaviest (the first download, shared by every route),
- * plus the route's own chunk and the chunks it imports. Above its budget (bundle-budget.json), the job fails, and the
- * table says which route and by how much.
+ * plus the route's own chunk and the chunks it imports. Above its budget (bundle-budget.json: the first download, each
+ * route's own chunks, and a ceiling on any first visit), the job fails, and the table says which route and by how much.
  *
  * Usage: node scripts/bundle-budget.ts <dist built with --manifest>
  */
@@ -28,6 +28,11 @@ const zBudget = z.object({
   entryKiB: z.number().positive(),
   /** A first visit to any route: the first download plus the route's own chunks, KiB gzipped. */
   routeKiB: z.number().positive(),
+  /**
+   * Each route's own chunks, KiB gzipped: its measure plus 2 % and 0.2 KiB. A route of the router missing here fails,
+   * as does one here the router no longer has, so a new screen gets its own line and a removed one leaves none.
+   */
+  routes: z.record(z.string(), z.number().nonnegative()),
 });
 
 /** Every file a chunk brings, its CSS and the chunks it imports, each once. */
@@ -106,13 +111,19 @@ function main(dist: string): void {
   const entryKiB = kib(entry);
 
   const rows = [
-    `| Route | Own chunks (KiB gzip) | First visit (KiB gzip) | Budget |`,
-    `|---|---:|---:|---:|`,
+    `| Route | Own chunks (KiB gzip) | Own budget | First visit (KiB gzip) | Budget |`,
+    `|---|---:|---:|---:|---:|`,
   ];
   const over: string[] = [];
-  rows.push(`| (first download) | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
+  rows.push(`| (first download) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
-  for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
+  const routes = routesOf(readFileSync('src/app/router.ts', 'utf8'));
+  for (const path of Object.keys(budget.routes)) {
+    if (!routes.some((route) => route.path === path)) {
+      over.push(`${path}: in bundle-budget.json, not in the router`);
+    }
+  }
+  for (const route of routes) {
     const own = new Set(
       route.feature === undefined
         ? []
@@ -120,9 +131,17 @@ function main(dist: string): void {
     );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
+    const ownBudget = budget.routes[route.path];
+    const shownBudget = ownBudget === undefined ? 'none' : String(ownBudget);
     rows.push(
-      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
+      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${shownBudget} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
     );
+    // Compared at the precision the table shows, so a route is never over by a difference nobody can read.
+    if (ownBudget === undefined) {
+      over.push(`${route.path}: no line in bundle-budget.json`);
+    } else if (Number(ownKiB.toFixed(1)) > ownBudget) {
+      over.push(`${route.path}: its own ${ownKiB.toFixed(1)} KiB`);
+    }
     if (total > budget.routeKiB) over.push(`${route.path}: ${total.toFixed(1)} KiB`);
   }
 
