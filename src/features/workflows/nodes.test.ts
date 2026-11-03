@@ -36,7 +36,9 @@ describe('the condition of a check', () => {
 
   it('takes a condition on an earlier step, with a simple path and what to compare', () => {
     expect(conditionProblem(condition({}), earlier)).toBeUndefined();
-    expect(conditionProblem(condition({ path: 'items[0].name', op: 'notEquals', value: '' }), earlier)).toBeUndefined();
+    expect(
+      conditionProblem(condition({ path: 'items[0].name', op: 'notEquals', value: '' }), earlier),
+    ).toBeUndefined();
     expect(conditionProblem(bare({ op: 'exists' }), earlier)).toBeUndefined();
     expect(conditionProblem(condition({ op: 'matches', value: '^v[0-9]+$' }), earlier)).toBeUndefined();
   });
