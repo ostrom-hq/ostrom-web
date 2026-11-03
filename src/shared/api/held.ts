@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GovernanceConfirmationPending } from '@gen/api/types.gen';
 
+/** Red stub: the write ignores the 202. */
+const held = Symbol('held');
+
 function isHeld(data: unknown): data is GovernanceConfirmationPending {
   return typeof data === 'object' && data !== null && 'confirmationId' in data;
 }
@@ -10,7 +13,7 @@ function isHeld(data: unknown): data is GovernanceConfirmationPending {
  * made with an API token; one made from the console applies at once, so this is only ever a surprise to say.
  */
 export function heldOf(data: unknown): GovernanceConfirmationPending | undefined {
-  return isHeld(data) ? data : undefined;
+  return data === held ? undefined : undefined;
 }
 
 /** What a write returned once applied: nothing while it waits for a confirmation. */

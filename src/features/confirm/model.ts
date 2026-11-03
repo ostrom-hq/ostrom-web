@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GovernanceConfirmation, GovernanceConfirmationPerson, OrgMember } from '@gen/api/types.gen';
-import { zInvitationLinkCreate, zOrgInvites, zOrgMember } from '@gen/api/zod.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** "Theo Martin (theo)", the login or the name alone, else the member id: never an empty requester. */
@@ -10,11 +9,9 @@ export function personName(person: GovernanceConfirmationPerson): string {
   return name ?? login ?? memberId;
 }
 
-/** "Theo Martin (theo)", or the login alone when the name is empty or the login again. */
+/** Red stub: the login alone, whatever the name. */
 export function memberName(member: Pick<OrgMember, 'login' | 'name'>): string {
-  return member.name === '' || member.name === member.login
-    ? member.login
-    : `${member.name} (${member.login})`;
+  return member.login;
 }
 
 /** A change of the organization's people, as the page says it in words rather than JSON. */
@@ -27,49 +24,11 @@ export type MemberChange =
     }
   | { readonly kind: 'link'; readonly role: string; readonly maxUses: number };
 
-/** A role the server takes when the write names none. */
-const DEFAULT_ROLE = 'member';
-/** How many people a link brings in when the write does not say. */
-const DEFAULT_LINK_USES = 10;
-
-/**
- * A `members.*` confirmation read from its before and after: the member and both roles, who leaves, each address
- * invited, a link's role. Anything of another shape, or another kind, is left to the JSON before and after.
- */
+/** Red stub: no `members.*` change is read, so the page falls back to the JSON before and after. */
 export function memberChangeOf(
   confirmation: Pick<GovernanceConfirmation, 'kind' | 'before' | 'after'>,
 ): MemberChange | undefined {
-  const { kind, before, after } = confirmation;
-  if (kind === 'members.role') {
-    const was = zOrgMember.safeParse(before);
-    const is = zOrgMember.safeParse(after);
-    return was.success && is.success
-      ? { kind: 'role', member: is.data, from: was.data.role, to: is.data.role }
-      : undefined;
-  }
-  if (kind === 'members.remove') {
-    const was = zOrgMember.safeParse(before);
-    return was.success && after === null ? { kind: 'remove', member: was.data } : undefined;
-  }
-  if (kind === 'members.invite') {
-    const is = zOrgInvites.safeParse(after);
-    return is.success
-      ? {
-          kind: 'invite',
-          invites: is.data.invites.map((invite) => ({
-            email: invite.email,
-            role: invite.role ?? DEFAULT_ROLE,
-          })),
-        }
-      : undefined;
-  }
-  if (kind === 'members.link') {
-    const is = zInvitationLinkCreate.safeParse(after);
-    return is.success
-      ? { kind: 'link', role: is.data.role ?? DEFAULT_ROLE, maxUses: is.data.maxUses ?? DEFAULT_LINK_USES }
-      : undefined;
-  }
-  return undefined;
+  return confirmation.kind === 'members.role' ? undefined : undefined;
 }
 
 /** A JSON object, as a change of a rule, a policy or a workflow reads; arrays and scalars are shown whole. */

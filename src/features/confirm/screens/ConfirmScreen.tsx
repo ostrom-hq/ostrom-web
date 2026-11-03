@@ -16,10 +16,9 @@ import './confirm.css';
 import { AnswerBar } from '../components/AnswerBar';
 import { AnswerNotice } from '../components/AnswerNotice';
 import { ChangeView } from '../components/ChangeView';
-import { MemberChangeView } from '../components/MemberChangeView';
 import { Outcome } from '../components/Outcome';
 import { Countdown } from '../components/Countdown';
-import { memberChangeOf, personName } from '../model';
+import { personName } from '../model';
 import { type AnswerViewModel, useAnswerConfirmation, useConfirmation } from '../useConfirmation';
 
 const TONES: Readonly<Record<GovernanceConfirmation['status'], BadgeTone>> = {
@@ -91,8 +90,6 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
   const { t, i18n } = useTranslation();
   const viewer = useViewer();
   const { requestedBy, credential, status } = confirmation;
-  // A change of the organization's people reads in words; any other change as its JSON before and after.
-  const member = memberChangeOf(confirmation);
   return (
     <>
       <header className="ys-head">
@@ -134,11 +131,7 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
         />
       </section>
 
-      {member === undefined ? (
-        <ChangeView before={confirmation.before} after={confirmation.after} />
-      ) : (
-        <MemberChangeView change={member} />
-      )}
+      <ChangeView before={confirmation.before} after={confirmation.after} />
 
       <section className="o-card ys-section" aria-labelledby="cf-who">
         <h2 id="cf-who" className="ys-label">
