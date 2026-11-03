@@ -179,8 +179,8 @@ describe('changing the workflows', () => {
     await user.click(within(form).getByRole('button', { name: 'Add a step' }));
     await user.selectOptions(field('What step 2 does'), 'Check');
     await user.type(field('Step 2: What it is'), 'Tests passed');
-    expect(within(form).getByRole('option', { name: 'Tests run' })).toBeInTheDocument();
-    await user.selectOptions(field('Step 2: The step it reads'), 'Tests run');
+    expect(within(form).getByRole('option', { name: 'Step 1 · Tests run' })).toBeInTheDocument();
+    await user.selectOptions(field('Step 2: The step it reads'), 'Step 1 · Tests run');
     // half written: refused before sending, with what to change
     expect(
       within(form).getByText('A check reads a simple path, such as result.items[0].name.'),
@@ -199,6 +199,9 @@ describe('changing the workflows', () => {
     await user.type(field('Step 2: With what'), '^passed$');
     await user.selectOptions(field('Step 2: How it compares'), 'exists');
     expect(screen.queryByLabelText('Step 2: With what')).toBeNull();
+    // a comparison the contract does not have changes nothing
+    fireEvent.change(field('Step 2: How it compares'), { target: { value: 'contains' } });
+    expect(field('Step 2: How it compares')).toHaveValue('exists');
     await user.selectOptions(field('Step 2: How it compares'), 'equals');
     // a wait asks a question; none written is said
     await user.click(within(form).getByRole('button', { name: 'Add a step' }));
@@ -229,23 +232,35 @@ describe('changing the workflows', () => {
     ]);
   });
 
-  it('never offers a workflow that would run the one edited again', async () => {
+  it('never offers a workflow that would run the one edited again, and shows one no longer listed', async () => {
     const user = userEvent.setup();
-    const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
-    if (base === undefined) throw new Error('wf-migrations');
-    db.workflows = db.workflows.map((workflow) =>
-      workflow.id === 'wf-migrations'
-        ? {
-            ...base,
-            nodes: [
-              ...base.nodes,
-              { id: 'm-call', kind: 'workflow', label: 'Backend', workflowId: 'wf-backend' },
-            ],
-          }
-        : workflow,
-    );
+    const migrations = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
+    const backend = db.workflows.find((workflow) => workflow.id === 'wf-backend');
+    if (migrations === undefined || backend === undefined) throw new Error('fixtures');
+    // wf-migrations runs wf-backend, and wf-backend ran a workflow deleted since
+    db.workflows = [
+      {
+        ...migrations,
+        nodes: [
+          ...migrations.nodes,
+          { id: 'm-call', kind: 'workflow', label: 'Backend', workflowId: 'wf-backend' },
+        ],
+      },
+      {
+        ...backend,
+        nodes: [...backend.nodes, { id: 'b-call', kind: 'workflow', label: 'Gone', workflowId: 'wf-gone' }],
+      },
+    ];
     visit('/workflows/wf-backend');
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    const count = backend.nodes.length + 1;
+    const gone = field(`Step ${String(count)}: The workflow it runs`);
+    expect(gone).toHaveValue('wf-gone');
+    expect(
+      within(gone)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Choose a workflow', 'wf-gone (no longer listed)']);
     await user.selectOptions(field('What step 1 does'), 'Workflow');
     const calls = field('Step 1: The workflow it runs');
     expect(

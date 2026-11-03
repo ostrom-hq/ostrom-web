@@ -67,9 +67,9 @@ function ConditionFields({
           }}
         >
           <option value="">{t('workflows.edit.conditionStepNone')}</option>
-          {earlier.map((before) => (
+          {earlier.map((before, at) => (
             <option key={before.key} value={before.id}>
-              {before.label.trim() === '' ? before.id : before.label}
+              {t('workflows.edit.conditionStepOption', { number: at + 1, label: before.label })}
             </option>
           ))}
         </select>

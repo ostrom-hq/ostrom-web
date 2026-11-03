@@ -862,6 +862,7 @@ export const en = {
       removeShort: 'Remove',
       addStep: 'Add a step',
       stepPrefix: 'Step {{number}}: ',
+      conditionStepOption: 'Step {{number}} · {{label}}',
       conditionStepNone: 'Choose a step',
       callsNone: 'Choose a workflow',
       callsGone: '{{id}} (no longer listed)',

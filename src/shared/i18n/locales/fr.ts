@@ -883,6 +883,7 @@ export const fr = {
       removeShort: 'Retirer',
       addStep: 'Ajouter une étape',
       stepPrefix: 'Étape {{number}} : ',
+      conditionStepOption: 'Étape {{number}} · {{label}}',
       conditionStepNone: 'Choisis une étape',
       callsNone: 'Choisis un workflow',
       callsGone: '{{id}} (plus dans la liste)',
