@@ -39,14 +39,34 @@ async function wordingsFetched(page: Page): Promise<string[]> {
   return scripts.flatMap((path) => /\/assets\/(en|fr)-[\w-]+\.js$/.exec(path)?.[1] ?? []).sort();
 }
 
+/** The browser's languages from the next page on, as the person set them (the journeys sign in in English). */
+async function browserIn(page: Page, languages: readonly string[]): Promise<void> {
+  await page.addInitScript((set) => {
+    Object.defineProperty(navigator, 'languages', { configurable: true, get: () => set });
+  }, languages);
+}
+
 test.describe('a French browser', () => {
-  test.use({ locale: 'fr-FR' });
+  test.skip(
+    ({ browserName }) => browserName !== 'chromium',
+    'the line is slowed through the DevTools protocol',
+  );
 
   test('reads French from the first words, and downloads English only once the browser asks for it', async ({
     page,
   }) => {
     await ownerOfNewOrganization(page, 'ada');
+    await browserIn(page, ['fr-FR', 'fr']);
     await page.addInitScript(watchFirstWords);
+    // A slow line (Lighthouse's slow 4G, as firstPaint.spec.ts), so the order of the downloads below means something.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Network.enable');
+    await cdp.send('Network.emulateNetworkConditions', {
+      offline: false,
+      latency: 150,
+      downloadThroughput: (1.6 * 1024 * 1024) / 8,
+      uploadThroughput: (750 * 1024) / 8,
+    });
     await page.goto('/yes');
     const skip = page.locator('a.o-skip');
     await expect(skip).toHaveText(SKIP.fr);
@@ -57,6 +77,20 @@ test.describe('a French browser', () => {
     expect(first.lang, 'the document says French from the first words').toBe('fr');
     for (const word of ENGLISH) expect(first.text, 'no English before French').not.toContain(word);
     expect(await wordingsFetched(page), 'only the French wording').toEqual(['fr']);
+    // `/language.js` asks for the wording while the entry still downloads: no second round trip after it.
+    const entry = await page.locator('script[type="module"]').getAttribute('src');
+    const timing = await page.evaluate(
+      (entryPath) =>
+        performance.getEntriesByType('resource').flatMap((one) => {
+          const { pathname } = new URL(one.name);
+          if (pathname === entryPath) return [{ what: 'entry', at: one.startTime + one.duration }]; // its response's end
+          return /\/assets\/fr-[\w-]+\.js$/.test(pathname) ? [{ what: 'wording', at: one.startTime }] : [];
+        }),
+      entry,
+    );
+    const at = (what: string): number => timing.find((one) => one.what === what)?.at ?? Number.NaN;
+    expect(at('wording'), 'the wording asked for before the entry is in').toBeLessThan(at('entry'));
+    await cdp.detach();
 
     // The person switches the browser to English: the console follows, with the wording it fetches now.
     await page.evaluate(() => {
@@ -71,8 +105,6 @@ test.describe('a French browser', () => {
 });
 
 test.describe('an English browser', () => {
-  test.use({ locale: 'en-US' });
-
   test('reads English, without the French wording', async ({ page }) => {
     await ownerOfNewOrganization(page, 'grace');
     await page.goto('/yes');
