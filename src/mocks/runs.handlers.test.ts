@@ -22,14 +22,14 @@ afterAll(() => {
 });
 
 /** The status and error type of a refused call. */
-async function refusalOf(call: () => Promise<unknown>): Promise<{ status?: number; code?: string }> {
+async function refusalOf(call: () => Promise<unknown>): Promise<{ status: number | undefined; code: string | undefined }> {
   try {
     await call();
   } catch (error) {
     if (isApiFailure(error)) return { status: error.status, code: error.code };
     throw error;
   }
-  return {};
+  return { status: 200, code: undefined };
 }
 
 function run(id: string, workflowId: string, startedAt: string, status: WorkflowRun['status']): WorkflowRun {
