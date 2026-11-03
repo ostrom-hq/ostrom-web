@@ -49,6 +49,8 @@ function at(minutesAgo: number): string {
 
 export function largeMembers(): OrgMember[] {
   return Array.from({ length: LARGE.members }, (_, n) => ({
+    // A version 4 UUID per member, stable across runs: `OrgMember.id` is required (ostrom-core#86).
+    id: `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`,
     login: largeLogin(n),
     name: `Developer ${pad(n, 3)}`,
     avatarUrl: '',
