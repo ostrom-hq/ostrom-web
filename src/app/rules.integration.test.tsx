@@ -287,29 +287,30 @@ describe('the rules of a large organization', () => {
     db.rules = largeRules();
   });
 
-  it('reads every page of rules, and shows a hundred cards at a time', async () => {
+  it('reads every page of rules, and shows the first hundred cards', async () => {
     visit('/rules');
     // 2 000 rules: two pages of the server's 1 000.
     expect(await screen.findByRole('button', { name: 'All 2000' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'To review 667' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getAllByRole('article')).toHaveLength(100);
-    await userEvent.click(screen.getByRole('button', { name: 'Show 100 more (567 left)' }));
-    expect(screen.getAllByRole('article')).toHaveLength(200);
-    // Another filter starts again from its first hundred.
-    await userEvent.click(screen.getByRole('button', { name: 'All 2000' }));
-    expect(screen.getAllByRole('article')).toHaveLength(100);
-    expect(screen.getByRole('button', { name: 'Show 100 more (1900 left)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show 100 more (567 left)' })).toBeInTheDocument();
   });
 
-  it('says it once the last lines are one more', async () => {
-    // 101 rules: one line past the first hundred. The hundreds in between are the test above.
-    db.rules = largeRules().slice(0, 101);
+  it('says it once the last lines are one more, and another filter starts again from its first hundred', async () => {
+    // 301 rules, 101 of them to review: one line past the first hundred, in the filter shown first.
+    db.rules = largeRules().slice(0, 301);
     visit('/rules');
-    await userEvent.click(await screen.findByRole('button', { name: 'All 101' }));
+    expect(await screen.findByRole('button', { name: 'To review 101' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getAllByRole('article')).toHaveLength(100);
     await userEvent.click(screen.getByRole('button', { name: 'Show 1 more' }));
     expect(screen.getAllByRole('article')).toHaveLength(101);
     expect(screen.queryByRole('button', { name: /^Show / })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'All 301' }));
+    expect(screen.getAllByRole('article')).toHaveLength(100);
+    expect(screen.getByRole('button', { name: 'Show 100 more (201 left)' })).toBeInTheDocument();
   });
 });
 
