@@ -13,7 +13,9 @@ describe('the navigation menu (a phone has no room for the bar)', () => {
     expect(button).toHaveAttribute('aria-haspopup', 'dialog');
     expect(button).toHaveAttribute('aria-expanded', 'false');
     const bar = screen.getByRole('navigation', { name: 'Main' });
-    const screens = within(bar).getAllByRole('link').map((link) => link.textContent);
+    const screens = within(bar)
+      .getAllByRole('link')
+      .map((link) => link.textContent);
 
     await user.click(button);
     const dialog = screen.getByRole('dialog', { name: 'Menu' });
