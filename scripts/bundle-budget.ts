@@ -11,6 +11,7 @@ import { appendFileSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { z } from 'zod';
+import { checkRouteBudgets, type MeasuredRoute } from '../src/shared/build/routeBudget.ts';
 
 const zManifest = z.record(
   z.string(),
@@ -29,8 +30,8 @@ const zBudget = z.object({
   /** A first visit to any route: the first download plus the route's own chunks, KiB gzipped. */
   routeKiB: z.number().positive(),
   /**
-   * Each route's own chunks, KiB gzipped: its measure plus 2 % and 0.2 KiB. A route of the router missing here fails,
-   * as does one here the router no longer has, so a new screen gets its own line and a removed one leaves none.
+   * Each lazy route's own chunks, KiB gzipped: its measure plus 2 % and 0.2 KiB. A lazy route missing here fails, as
+   * does a line without its lazy route (src/shared/build/routeBudget.ts).
    */
   routes: z.record(z.string(), z.number().nonnegative()),
 });
@@ -117,13 +118,8 @@ function main(dist: string): void {
   const over: string[] = [];
   rows.push(`| (first download) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
-  const routes = routesOf(readFileSync('src/app/router.ts', 'utf8'));
-  for (const path of Object.keys(budget.routes)) {
-    if (!routes.some((route) => route.path === path)) {
-      over.push(`${path}: in bundle-budget.json, not in the router`);
-    }
-  }
-  for (const route of routes) {
+  const measured: MeasuredRoute[] = [];
+  for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
     const own = new Set(
       route.feature === undefined
         ? []
@@ -131,19 +127,15 @@ function main(dist: string): void {
     );
     const ownKiB = kib(own);
     const total = entryKiB + ownKiB;
-    const ownBudget = budget.routes[route.path];
-    const shownBudget = ownBudget === undefined ? 'none' : String(ownBudget);
+    const ownBudget = route.feature === undefined ? 'in the first download' : budget.routes[route.path];
     rows.push(
-      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${shownBudget} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
+      `| \`${route.path}\` | ${ownKiB.toFixed(1)} | ${String(ownBudget ?? 'none')} | ${total.toFixed(1)} | ${String(budget.routeKiB)} |`,
     );
-    // Compared at the precision the table shows, so a route is never over by a difference nobody can read.
-    if (ownBudget === undefined) {
-      over.push(`${route.path}: no line in bundle-budget.json`);
-    } else if (Number(ownKiB.toFixed(1)) > ownBudget) {
-      over.push(`${route.path}: its own ${ownKiB.toFixed(1)} KiB`);
-    }
+    measured.push({ path: route.path, ownKiB: route.feature === undefined ? undefined : ownKiB });
     if (total > budget.routeKiB) over.push(`${route.path}: ${total.toFixed(1)} KiB`);
   }
+  const routes = checkRouteBudgets(measured, budget.routes);
+  over.push(...routes.over);
 
   const table = rows.join('\n');
   process.stdout.write(`${table}\n`);
@@ -151,6 +143,11 @@ function main(dist: string): void {
   if (summary !== undefined) appendFileSync(summary, `### Download per route\n\n${table}\n`);
   if (over.length > 0) {
     console.error(`Over budget (bundle-budget.json): ${over.join(', ')}`);
+    process.exitCode = 1;
+  }
+  // Not a size: the lines of bundle-budget.json no longer match the router's lazy routes.
+  if (routes.outOfStep.length > 0) {
+    console.error(`bundle-budget.json out of step with src/app/router.ts: ${routes.outOfStep.join(', ')}`);
     process.exitCode = 1;
   }
 }
