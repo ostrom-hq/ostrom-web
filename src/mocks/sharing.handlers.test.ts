@@ -188,6 +188,12 @@ describe('mock shared subscriptions', () => {
       throwOnError: true,
     });
     expect(resumed.data).toMatchObject({ paused: false, status: 'ready' });
+    const stillReady = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: false },
+      throwOnError: true,
+    });
+    expect(stillReady.data).toMatchObject({ paused: false, status: 'ready' });
     db.sharedAccounts = db.sharedAccounts.map((item) =>
       item.id === 'acc-1' ? { ...item, status: 'reconnect_required' } : item,
     );
@@ -197,6 +203,21 @@ describe('mock shared subscriptions', () => {
       throwOnError: true,
     });
     expect(stillWaiting.data).toMatchObject({ paused: false, status: 'reconnect_required' });
+    const notPaused = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: true },
+      throwOnError: true,
+    });
+    expect(notPaused.data).toMatchObject({ paused: false, status: 'reconnect_required' });
+    db.sharedAccounts = db.sharedAccounts.map((item) =>
+      item.id === 'acc-1' ? { ...item, status: 'wrong_account' } : item,
+    );
+    const foreign = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { paused: true },
+      throwOnError: true,
+    });
+    expect(foreign.data).toMatchObject({ paused: false, status: 'wrong_account' });
     expect(
       await statusOf(async () =>
         updateSharedAccount({ path: { id: 'acc-2' }, body: { paused: false }, throwOnError: true }),

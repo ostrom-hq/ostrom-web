@@ -55,14 +55,17 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
       </p>
       {actions === undefined ? null : (
         <div className="o-inline">
-          <Button
-            disabled={busy}
-            onClick={() => {
-              actions.setPaused(!account.paused);
-            }}
-          >
-            {account.paused ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
-          </Button>
+          {/* An account waiting for a sign-in leaves that state only when shared again: the server ignores a pause. */}
+          {state === 'expired' || state === 'wrongAccount' ? null : (
+            <Button
+              disabled={busy}
+              onClick={() => {
+                actions.setPaused(!account.paused);
+              }}
+            >
+              {account.paused ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
+            </Button>
+          )}
           <ConfirmButton
             label={t('sharing.accounts.remove')}
             confirm={t('sharing.accounts.removeConfirm', { what: account.label })}

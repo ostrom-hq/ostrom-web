@@ -364,8 +364,14 @@ const LIVE = new Set(['queued', 'starting', 'running']);
 const SESSIONS_PAGE = 50;
 /** What a pause or a resume leaves of a shared account's status, as ostrom-server's `AccountStatus.awaitsSignIn`. */
 function statusAfterPause(status: string, paused: boolean): string {
+  if (status === 'reconnect_required' || status === 'wrong_account') return status;
   if (paused) return 'disabled';
   return status === 'disabled' ? 'ready' : status;
+}
+
+/** The server reports an account paused exactly when its status is disabled (ostrom-server `SharedAccount`). */
+function pausedAs(status: string): { paused: boolean; status: string } {
+  return { paused: status === 'disabled', status };
 }
 
 /** The vendor's name the console sends, and the agent the server keeps for it (ostrom-server `AccountProvider`). */
@@ -1222,7 +1228,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         // A pause writes `disabled`, a resume `ready` again (ostrom-server); one waiting for a sign-in stays so.
         ...(body.data.paused === undefined
           ? {}
-          : { paused: body.data.paused, status: statusAfterPause(account.status, body.data.paused) }),
+          : pausedAs(statusAfterPause(account.status, body.data.paused))),
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);
