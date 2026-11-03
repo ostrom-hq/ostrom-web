@@ -161,6 +161,7 @@ import {
   initialArtifactMembers,
   initialArtifacts,
   initialArtifactVersions,
+  initialGroups,
   initialSharedAccounts,
 } from '@/mocks/fixtures/sharing';
 import { initialBilling, initialInvoices } from '@/mocks/fixtures/billing';
@@ -177,6 +178,7 @@ import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/con
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
+import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
@@ -191,6 +193,7 @@ export interface MockDb
     ConfirmationsState,
     DeviceState,
     GithubState,
+    GroupsState,
     OrgsState,
     TokensState,
     KeysAndDevicesState,
@@ -299,6 +302,8 @@ export function createMockDb(): MockDb {
     artifactVersions: initialArtifactVersions(),
     artifactMembers: initialArtifactMembers(),
     sharedAccounts: initialSharedAccounts(),
+    groups: initialGroups(opened),
+    nextGroup: 3,
     runsByKey: {},
     nextAccountId: 100,
     signedInAt: opened,
@@ -309,6 +314,7 @@ export function createMockDb(): MockDb {
     usedLinks: [],
     deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
+    providers: ['github'],
     tokens: initialTokens(),
     nextToken: 3,
     devices: initialDevices(),
@@ -419,6 +425,9 @@ export function resetMockDb(db: MockDb): void {
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
+
+/** The routes that act in an organization only when the call names one (`namedMember` on the server). */
+const WITH_ORG_IF_NAMED = /^\/api\/v1\/devices(?:\/[^/]+)?$/;
 
 /** The organization a call acts in, once the first handler let it through. */
 function organizationOf(db: MockDb, request: Request): Organization {
@@ -601,7 +610,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
-      if (!actsInOrganization(new URL(request.url).pathname)) return undefined;
+      const { pathname } = new URL(request.url);
+      if (!actsInOrganization(pathname)) return undefined;
+      // The workstations are the person's: `/devices` reads an organization only when the call names one.
+      if (WITH_ORG_IF_NAMED.test(pathname) && !request.headers.has(ORG_HEADER)) return undefined;
       const organization = resolveOrganization(db, request);
       return organization instanceof HttpResponse ? organization : undefined;
     }),
@@ -934,6 +946,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createPolicyHandlers(
       () => db,
       (request) => organizationOf(db, request),
+    ),
+    ...createGroupsHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
     ),
     ...createTeamCodeImportHandlers(
       () => db,
