@@ -3,6 +3,7 @@ import type { AuthSession, Device } from '@gen/api/types.gen';
 import {
   browserTimeZone,
   deletionConfirmed,
+  personalDevices,
   renameProblem,
   serviceKeyDraftProblem,
   serviceKeyLifetimeOf,
@@ -83,5 +84,16 @@ describe('serviceKeyLifetimeOf', () => {
     expect(serviceKeyLifetimeOf('366')).toBe(366);
     expect(serviceKeyLifetimeOf('null')).toBeNull();
     expect(serviceKeyLifetimeOf('12')).toBe(90);
+  });
+});
+
+describe('personalDevices', () => {
+  it('keeps the workstations of ostrom login, never an elevated token of an organization', () => {
+    const devices: Device[] = [
+      { id: 'dev-1', name: 'laptop' },
+      { id: 'dev-2', name: 'runner', kind: 'cli' },
+      { id: 'dev-3', name: 'admin', kind: 'admin', orgId: 'org-1' },
+    ];
+    expect(personalDevices(devices).map((device) => device.id)).toEqual(['dev-1', 'dev-2']);
   });
 });

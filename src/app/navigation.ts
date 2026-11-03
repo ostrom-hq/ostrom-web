@@ -21,6 +21,7 @@ export const NAV_LINKS = [
   { to: '/spend', label: 'spend' },
   { to: '/billing', label: 'billing' },
   { to: '/settings', label: 'settings' },
+  { to: '/account', label: 'account' },
   { to: '/tokens', label: 'tokens' },
   { to: '/cloud', label: 'cloud' },
   { to: '/automations', label: 'automations' },
