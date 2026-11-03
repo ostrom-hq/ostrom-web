@@ -99,7 +99,8 @@ describe('the device sign-in page', () => {
     await user.click(await screen.findByRole('button', { name: 'Sign in this terminal' }));
     const again = await screen.findByRole('link', { name: 'Sign in again' });
     expect(again).toHaveAttribute('href', `/signin?redirect=%2Fdevice%3Fcode%3D${DEMO_ADMIN_DEVICE_CODE}`);
-    expect(screen.queryByText(/Only an owner or an admin/)).toBeNull();
+    // The step-up, not the role: the admin refusal is never shown (the scopes' own notice names owners and admins).
+    expect(screen.queryByText(/can approve an admin sign-in/)).toBeNull();
   });
 
   it('says why an answer did not go through, and lets the person answer again', async () => {
