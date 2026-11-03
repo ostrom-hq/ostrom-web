@@ -156,25 +156,50 @@ describe('the queue', () => {
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });
 
-  it('exchanges a link for the session cookie at once when nobody is signed in, and drops it from the address', async () => {
+  it('asks before a link signs in a browser where nobody is signed in: another site can open it (login CSRF)', async () => {
     db.signedIn = false;
     const router = visit('/yes#signin=opk_test_12345678');
     await screen.findByRole('heading', { level: 1, name: 'Requests' });
+    expect(
+      await screen.findByText(/This link signs this browser in to an Ostrom account/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in with the link' })).toBeInTheDocument();
+    expect(db.usedLinks).toEqual([]);
+    expect(db.signedIn).toBe(false);
+    // Wiped from the address before any answer: only memory holds it.
+    expect(router.state.location.hash).toBe('');
+    expect(router.state.location.href).not.toContain('opk_');
+  });
+
+  it('exchanges the link for the session cookie once the person says so', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    visit('/yes#signin=opk_test_12345678');
+    await user.click(await screen.findByRole('button', { name: 'Sign in with the link' }));
     await vi.waitFor(() => {
       expect(db.usedLinks).toEqual(['opk_test_12345678']);
     });
     expect(db.signedIn).toBe(true);
     expect(useAuthStore.getState().link).toBeUndefined();
-    expect(router.state.location.hash).toBe('');
-    expect(router.state.location.href).not.toContain('opk_');
   });
 
-  it('takes a 204 with no body as nobody signed in, and exchanges the link at once', async () => {
+  it('takes a 204 with no body as nobody signed in, and still asks first', async () => {
     server.use(http.get('*/api/v1/auth/me', () => new HttpResponse(null, { status: 204 })));
     visit('/yes#signin=opk_test_12345678');
-    await vi.waitFor(() => {
-      expect(db.usedLinks).toEqual(['opk_test_12345678']);
-    });
+    expect(
+      await screen.findByText(/This link signs this browser in to an Ostrom account/),
+    ).toBeInTheDocument();
+    expect(db.usedLinks).toEqual([]);
+  });
+
+  it('drops a link nobody wanted: dismissed, it is never used', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    visit('/yes#signin=opk_test_12345678');
+    await user.click(await screen.findByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('button', { name: 'Sign in with the link' })).toBeNull();
+    expect(useAuthStore.getState().link).toBeUndefined();
+    expect(db.usedLinks).toEqual([]);
   });
 
   it('asks before using a link when it cannot tell whether someone is signed in', async () => {
@@ -204,9 +229,11 @@ describe('the queue', () => {
   });
 
   it('says it signs in while the link is exchanged', async () => {
+    const user = userEvent.setup();
     db.signedIn = false;
     server.use(http.post('*/api/v1/auth/link', async () => delay('infinite')));
     visit('/yes#signin=opk_test_12345678');
+    await user.click(await screen.findByRole('button', { name: 'Sign in with the link' }));
     expect(await screen.findByText('Signing in with the link…')).toBeInTheDocument();
   });
 
@@ -215,6 +242,7 @@ describe('the queue', () => {
     db.signedIn = false;
     db.usedLinks = ['opk_used_12345678'];
     visit('/yes#signin=opk_used_12345678');
+    await user.click(await screen.findByRole('button', { name: 'Sign in with the link' }));
     const alert = await screen.findByText(
       /could not be used \(This link was already used or has expired\.\)/,
     );
@@ -357,7 +385,8 @@ describe('a request', () => {
     expect(await screen.findByRole('button', { name: verb })).toBeInTheDocument();
   });
 
-  it('signs in from a link to one request, wipes the token and shows that request', async () => {
+  it('signs in from a link to one request after a yes, wipes the token and shows that request', async () => {
+    const user = userEvent.setup();
     db.signedIn = false;
     const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
     expect(
@@ -365,6 +394,8 @@ describe('a request', () => {
     ).toBeInTheDocument();
     expect(router.state.location.hash).toBe('');
     expect(router.state.location.href).not.toContain('opk_');
+    expect(db.usedLinks).toEqual([]);
+    await user.click(await screen.findByRole('button', { name: 'Sign in with the link' }));
     await vi.waitFor(() => {
       expect(db.usedLinks).toEqual(['opk_test_12345678']);
     });
