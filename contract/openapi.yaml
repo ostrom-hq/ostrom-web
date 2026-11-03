@@ -804,6 +804,30 @@ paths:
           $ref: '#/components/responses/Error'
         '429':
           $ref: '#/components/responses/RateLimited'
+  /api/v1/launches/{launchId}:
+    delete:
+      operationId: endLaunch
+      x-ostrom-status: served
+      description: "The launch's own agent token only (AUDIT-SECU-RUNNER-2 R2b): `ostrom <agent>` calls it when the agent
+        ends, and the token is revoked at once instead of living until `expiresAt`. Any other credential, another
+        launch's agent token included, gets 404, the same answer as an unknown launch. Once ended, the token is refused
+        with 401 everywhere, this operation included."
+      tags:
+      - auth
+      summary: End a launch, revoking its agent token
+      parameters:
+      - name: launchId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '204':
+          description: Done
+        '401':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
   /api/v1/policy/agents:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -987,6 +1011,13 @@ paths:
       responses:
         '202':
           description: Sent if the address may sign in
+          headers:
+            Set-Cookie:
+              description: '`ostrom_email_link` (HttpOnly, `Path=/api/v1/auth`, the link''s 15 minutes): the nonce of the
+                browser that asked, which `verifySignInEmail` needs. A browser that already holds one keeps it, so each
+                link it asked for works in it. Set even when nothing is sent'
+              schema:
+                type: string
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -1004,7 +1035,8 @@ paths:
       tags:
       - auth
       summary: 'Sign in with the token of an e-mailed link, read by the console from the link''s fragment
-        (`/auth/email#token=…`). The `Origin` header must be the console''s'
+        (`/auth/email#token=…`). The `Origin` header must be the console''s, and the request must carry the
+        `ostrom_email_link` cookie of the browser that asked for the link (`requestSignInEmail`)'
       security: []
       requestBody:
         required: true
@@ -1022,7 +1054,8 @@ paths:
           description: Signed in; the session is in the cookies, never in the body
           headers:
             Set-Cookie:
-              description: '`__Host-ostrom_session` (HttpOnly) and the readable `__Host-ostrom_csrf`'
+              description: '`__Host-ostrom_session` (HttpOnly) and the readable `__Host-ostrom_csrf`; `ostrom_email_link`
+                expired'
               schema:
                 type: string
           content:
@@ -1034,7 +1067,14 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '403':
-          $ref: '#/components/responses/Error'
+          description: email_link_other_browser (a valid link presented without the nonce of the browser that asked
+            for it; it is not used and still signs in there), or forbidden (key `error.type`)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/EmailLinkOtherBrowser'
+                - $ref: '#/components/schemas/ApiError'
         '404':
           $ref: '#/components/responses/Error'
         '409':
@@ -1450,6 +1490,11 @@ paths:
       tags:
       - auth
       summary: Workstations where the caller is signed in
+      description: "A browser session only. The caller's CLI tokens (`kind: cli`), then, when `Ostrom-Org` names an
+        organization, its live tokens of `ostrom login --admin` (`kind: admin`, with `orgId`, `scopes` and `expiresAt`):
+        the caller's own for a member, every member's for an owner or an admin. Such a token is bound to its organization
+        and only listed when the request names it; the console asks once per organization. A member of another
+        organization gets 404."
       responses:
         '200':
           description: OK
@@ -1485,6 +1530,10 @@ paths:
       tags:
       - auth
       summary: Sign a workstation out
+      description: "A browser session only. Revokes one of the caller's CLI tokens, or a token of `ostrom login --admin`
+        of the organization `Ostrom-Org` names: a member their own, an owner or an admin any member's (a leaked token, a
+        member who left). Audited in that organization, naming the actor and the token's owner. Another member's for a
+        member, a token of another organization, a personal token or a service key: 404."
       parameters:
       - name: id
         in: path
@@ -1509,10 +1558,18 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: registerPushDevice
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - notifications
       summary: 'Register a phone for push notifications (push data: {kind: "approval", approvalId})'
+      description: >-
+        Scope `notifications:write`: the phone app's token or a browser session, never a personal or CLI token. The
+        phone is registered in the organization `Ostrom-Org` names, or the caller's only one (409 `org_required`
+        when they belong to several and name none). One device per push token in an organization: the same token
+        registered again keeps its device (its `id` and `createdAt`) and belongs to the member who registered it
+        last. A member keeps their ten most recently registered phones. The push token is never answered back. A
+        token that is not an Expo push token (`ExponentPushToken[…]`), a provider other than `expo` or a platform
+        other than `ios` and `android` is a 400.
       requestBody:
         required: true
         content:
@@ -1554,10 +1611,14 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     delete:
       operationId: deletePushDevice
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - notifications
       summary: Stop push notifications to a phone
+      description: >-
+        Scope `notifications:write`. Removes one of the caller's phones in the organization `Ostrom-Org` names, or
+        their only one: any other id (another member's phone, another organization's, an unknown or malformed id)
+        is a 404.
       parameters:
       - name: id
         in: path
@@ -3896,7 +3957,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getGovernanceConfirmation
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - governance
       summary: A governance confirmation, with the exact change it makes; `wait` long-polls up to that many seconds
@@ -3906,9 +3967,9 @@ paths:
 
         With `wait`, a pending confirmation is waited on for its answer: the response comes as soon as it is no longer
         pending, or with it still pending when the wait ends; the caller then asks again until `expiresAt`. A
-        confirmation that is not pending answers at once. The server caps the wait at 30 seconds and reads a value
-        outside 0 to 30 as the nearest bound. A waiting request holds no database connection. A client sets its HTTP
-        timeout above the wait.
+        confirmation that is not pending answers at once. The wait is 0 to 30 seconds (a server given a value outside
+        that range waits for the nearest bound; a client sends one within it). A waiting request holds no database
+        connection. A client sets its HTTP timeout above the wait.
       parameters:
       - name: id
         in: path
@@ -3946,7 +4007,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: answerGovernanceConfirmation
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - governance
       summary: Confirm or refuse a governance confirmation, as an owner or an admin signed in to the console
@@ -3959,8 +4020,10 @@ paths:
         the person who confirms (the requester is kept in the confirmation and the audit log). When what it changes is
         no longer what it showed as `before`, nothing is written and the confirmation closes as `failed` with 409
         `confirmation_stale`. When the write itself is refused (a version conflict, a rule deleted meanwhile), the
-        confirmation closes as `failed` with that error, and the answer is that error. Each step (created, confirmed,
-        refused, expired, failed) is an event of the organization's signed audit log.
+        confirmation closes as `failed` with that error, and the answer is that error. When it fails for a reason the
+        server does not show, the answer is 500 `internal_error` and the confirmation closes as `failed` with
+        `internal_error`. Each step (created, confirmed, refused, expired, failed) is an event of the organization's
+        signed audit log.
       parameters:
       - name: id
         in: path
@@ -4699,7 +4762,8 @@ paths:
       x-ostrom-status: served
       tags:
       - rules
-      summary: Rules
+      summary: "Rules, by group then id, a page at a time: every filter applies before the page, so a repository's rules
+        are never cut by the others'"
       description: 'Callers: a member, a token with `rules:read`, or a service key of the organization with `rules:read`
         (its CI), which reads its own organization''s rules whatever `Ostrom-Org` names. Each call of a key is recorded in
         the organization''s audit log, in the key''s name (`service_key.used`).'
@@ -4719,6 +4783,18 @@ paths:
         required: false
         schema:
           type: string
+      - name: after
+        in: query
+        required: false
+        description: "The `next` of the previous page (opaque); 400 when no page gave it"
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: "The page size, 1 to 1000 (1000 by default); a value outside is brought into it"
+        schema:
+          type: integer
       responses:
         '200':
           description: OK
@@ -4733,6 +4809,7 @@ paths:
                       $ref: '#/components/schemas/Rule'
                   next:
                     type: string
+                    description: "The `after` of the next page; absent on the last one"
                 required:
                 - items
         '400':
@@ -7837,19 +7914,59 @@ paths:
       summary: Sign of life; returns the work assigned
       description: >-
         Authenticated by the runner's own key (`Authorization: Bearer ostrom_runner_…`, from registerRunner's
-        answer), not a member's credential; no body. Marks the runner seen: listRunners shows it `online` for 90
-        seconds after its last heartbeat. An unknown runner, a malformed id, another runner's key or a runner
-        removed meanwhile all answer 401 alike. `sessions` lists the cloud sessions assigned to the runner, empty
-        until sessions are scheduled on registered runners.
+        answer), not a member's credential. Marks the runner seen: listRunners shows it `online` for 90 seconds
+        after its last heartbeat. An unknown runner, a malformed id, another runner's key or a runner removed
+        meanwhile all answer 401 alike.
+
+        A runner that runs cloud sessions (`ostrom-runner machine` with a Docker Engine, on a server whose sessions
+        run on registered runners) sends a JSON body: the executions its machine has and the workspaces it holds.
+        The answer is what it must hold: the executions to run, each handed over once with its plan (the volumes
+        and containers to create, the last one holding the execution's runner token), and the workspaces to keep.
+        Anything else of its own, it stops and deletes. A runner that sends no body is given nothing; an unknown
+        state or a malformed session id answers 400. `sessions` is kept for older runners and stays empty.
       parameters:
       - name: id
         in: path
         required: true
         schema:
           type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                executions:
+                  type: array
+                  description: The executions the machine has, and those it is creating.
+                  items:
+                    type: object
+                    properties:
+                      sessionId:
+                        type: string
+                        format: uuid
+                      epoch:
+                        type: integer
+                        format: int64
+                      state:
+                        type: string
+                        enum: [pending, running, ended]
+                    required: [sessionId, epoch, state]
+                workspaces:
+                  type: array
+                  description: The sessions whose workspace volumes the machine holds.
+                  items:
+                    type: string
+                    format: uuid
       responses:
         '200':
           description: OK
+          headers:
+            Cache-Control:
+              description: '`no-store`: a plan holds a runner token.'
+              schema:
+                type: string
           content:
             application/json:
               schema:
@@ -7859,8 +7976,60 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/CloudSession'
+                  executions:
+                    type: array
+                    description: >-
+                      The executions to run. A plan comes once, when the execution is handed over to this runner;
+                      later answers name the execution without it.
+                    items:
+                      type: object
+                      properties:
+                        sessionId:
+                          type: string
+                          format: uuid
+                        epoch:
+                          type: integer
+                          format: int64
+                        plan:
+                          type: object
+                          description: >-
+                            The Docker Engine objects to create, in order: the session's volumes, then the
+                            execution's containers, each with its Engine API creation body.
+                          properties:
+                            volumes:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  body:
+                                    type: object
+                                    additionalProperties: true
+                                required: [name, body]
+                            containers:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  name:
+                                    type: string
+                                  body:
+                                    type: object
+                                    additionalProperties: true
+                                required: [name, body]
+                          required: [volumes, containers]
+                      required: [sessionId, epoch]
+                  workspaces:
+                    type: array
+                    description: The sessions whose workspace to keep.
+                    items:
+                      type: string
+                      format: uuid
                 required:
                 - sessions
+                - executions
+                - workspaces
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -9195,10 +9364,14 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listGroups
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Sharing groups
+      description: "Every member of the organization reads its groups (`accounts:read`): name, members by login (a member who
+        left is named by member id), the ids of the shared accounts lent to the group, and the members paused now.
+        At most 100 groups, by name; `next` is never set. A person outside the organization named by `Ostrom-Org`
+        gets 404."
       responses:
         '200':
           description: OK
@@ -9227,10 +9400,14 @@ paths:
           $ref: '#/components/responses/Error'
     post:
       operationId: createGroup
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Create a group
+      description: "An owner or an admin (`accounts:write`, browser session); a member gets 403. `name` is trimmed, 1 to 120
+        characters, unique in the organization whatever the case (409). `members` are logins of members of the
+        organization and `accounts` ids of its shared accounts, else 400. At most 1000 members per group and 100 groups
+        per organization (409)."
       requestBody:
         required: true
         content:
@@ -9272,10 +9449,11 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getGroup
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: A group
+      description: "Every member reads it. A group of another organization, a deleted one or an id that is no UUID is a 404."
       parameters:
       - name: id
         in: path
@@ -9301,10 +9479,13 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: updateGroup
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Change a group
+      description: "An owner or an admin; a member gets 403. Each field given replaces the current one: `name` (409 when another
+        group has it), `accounts` (all the accounts lent, an empty list lends nothing). Members change through
+        `/members/{login}`. A group of another organization is a 404."
       parameters:
       - name: id
         in: path
@@ -9343,10 +9524,12 @@ paths:
           $ref: '#/components/responses/Error'
     delete:
       operationId: deleteGroup
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Delete a group
+      description: "An owner or an admin; a member gets 403. Its members and the accounts lent to it go with it; the accounts
+        themselves stay. A group of another organization is a 404."
       parameters:
       - name: id
         in: path
@@ -9371,10 +9554,12 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     put:
       operationId: addGroupMember
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Add a member to a group
+      description: "An owner or an admin; a member gets 403. `login` names a member of the organization (else 404). Adding a member
+        already in the group changes nothing, a pause included. A group of another organization is a 404."
       parameters:
       - name: id
         in: path
@@ -9401,10 +9586,12 @@ paths:
           $ref: '#/components/responses/Error'
     delete:
       operationId: removeGroupMember
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Remove a member from a group
+      description: "An owner or an admin; a member gets 403. `login` is the member's login, or the member id the group shows for one
+        who left the organization. 404 when they are not in the group."
       parameters:
       - name: id
         in: path
@@ -9434,10 +9621,12 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: pauseGroupMember
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Pause a member in a group
+      description: "An owner or an admin; a member gets 403. `until` is an ISO 8601 instant (else 400): the group lends nothing to
+        the member until then, and an instant already past ends the pause. 404 when they are not in the group."
       parameters:
       - name: id
         in: path
@@ -10520,8 +10709,7 @@ components:
         Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
         opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
         (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-        once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-        the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+        once, as before.
       content:
         application/json:
           schema:
@@ -12439,6 +12627,17 @@ components:
       - files
       - additions
       - deletions
+    EmailLinkOtherBrowser:
+      type: object
+      description: '403 email_link_other_browser: the e-mailed link was asked for in another browser (its
+        `ostrom_email_link` nonce is missing or not that browser''s). The link is not used: open it in the browser
+        that asked for it, or ask for a new link from this one'
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+      required:
+      - error
+      x-ostrom-kotlin: pending
     EndSessionRequest:
       type: object
       description: 'Ends a session (hook `SessionEnd` or the launcher): the server signs the segment''s receipt'
@@ -12491,17 +12690,27 @@ components:
             type: string
         repos:
           type: array
+          description: 'Repositories where the gate covers it. Absent or empty: every repository of the organization'
           items:
             type: string
         tools:
           type: array
           items:
             type: string
+        keywords:
+          type: array
+          description: 'Catalogue only: the words of the class that a guessed gate matches'
+          items:
+            type: string
+        gate:
+          description: 'Catalogue only: the gate that covers the action in this repository; `null` when none does'
+          oneOf:
+          - $ref: '#/components/schemas/GateRef'
+          - type: 'null'
       required:
       - class
       - label
       - patterns
-      - repos
     GateAskRequest:
       type: object
       description: Asks for a gate (hook `PreToolUse`, CI check, MCP). A request in a closed session is refused with 409
@@ -12546,6 +12755,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GateAction'
+        failMode:
+          type: string
+          description: What the hooks do when the server cannot be reached
+          enum:
+          - closed
+        waitSeconds:
+          type: integer
+          description: How long a hook waits for an answer before it gives up
       required:
       - gates
       - actions
@@ -12876,8 +13093,9 @@ components:
       x-ostrom-kotlin: pending
     GovernanceConfirmationStatus:
       type: string
-      description: 'pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or
-        failed (confirmed, but the write was refused: see `error`)'
+      description: 'pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed
+        (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a
+        server stopped between the two leaves it confirmed without the write, and the change is then asked again'
       enum:
       - pending
       - confirmed
@@ -16088,6 +16306,13 @@ components:
           type: string
         version:
           type: integer
+        repos:
+          type: array
+          description: 'Repositories the workflow applies to, `owner/name` where `*` is any part of a name (1 to
+            100). Absent: every repository of the organization, as before. Present: these only, whether the workflow
+            is observed or enforced, in the session packages and the gates catalogue'
+          items:
+            type: string
         nodes:
           type: array
           items:

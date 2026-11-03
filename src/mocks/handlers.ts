@@ -555,8 +555,12 @@ function savedWorkflow(workflow: Workflow, version: number, at: string): Workflo
 /** A gate as the zod schema reads it, with the optional fields it left out really absent. */
 function ruleGateOf(gate: z.infer<typeof zRuleGate>): RuleGate {
   return {
-    actions: gate.actions.map(({ tools, ...action }) => ({
-      ...action,
+    // `keywords` and `gate` are the catalogue's, never a rule's: a rule gate keeps its own fields only.
+    actions: gate.actions.map(({ class: actionClass, label, patterns, repos, tools }) => ({
+      class: actionClass,
+      label,
+      patterns,
+      ...(repos === undefined ? {} : { repos }),
       ...(tools === undefined ? {} : { tools }),
     })),
     approvers: gate.approvers,
@@ -1266,8 +1270,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(409, 'conflict', 'workflow_conflict: someone saved this workflow in between.');
       const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
       db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
-      // As the server: a decision is signed only when something decided changed (steps, paths, status, name).
-      const decidedParts = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
+      // As the server: a decision is signed only when something decided changed (steps, paths, status, name, the
+      // repositories it is limited to).
+      const decidedParts = (item: Workflow): unknown[] => [
+        item.nodes,
+        item.edges,
+        item.status,
+        item.name,
+        item.repos ?? null,
+      ];
       if (!sameValue(decidedParts(current), decidedParts(workflow)))
         recordWorkflowDecision(
           db,

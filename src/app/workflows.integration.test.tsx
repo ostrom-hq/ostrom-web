@@ -17,10 +17,10 @@ describe('the workflows', () => {
     const user = userEvent.setup();
     visit('/workflows');
     const backend = await screen.findByRole('link', { name: /Backend changes/ });
-    expect(backend).toHaveTextContent('acme/billing-api · 5 steps · 2 approvals');
+    expect(backend).toHaveTextContent('acme/billing-api · All repositories · 5 steps · 2 approvals');
     expect(within(backend).getByText('Accepted')).toBeInTheDocument();
     const migrations = screen.getByRole('link', { name: /Database migrations/ });
-    expect(migrations).toHaveTextContent('2 steps · 2 approvals');
+    expect(migrations).toHaveTextContent('All repositories · 2 steps · 2 approvals');
     expect(within(migrations).getByText('Proposed')).toBeInTheDocument();
     await user.click(backend);
     expect(await screen.findByRole('heading', { level: 1, name: 'Backend changes' })).toBeInTheDocument();
@@ -29,7 +29,8 @@ describe('the workflows', () => {
   it('reads a workflow step by step, from the start, with its branches and approvers', async () => {
     visit('/workflows/wf-backend');
     expect(await screen.findByText('From a branch to production for the billing API.')).toBeInTheDocument();
-    expect(screen.getByText('Repository').nextSibling).toHaveTextContent('acme/billing-api');
+    expect(screen.getByText('Domain').nextSibling).toHaveTextContent('acme/billing-api');
+    expect(screen.getByText('Repositories').nextSibling).toHaveTextContent('All repositories');
     expect(screen.getByText('Version').nextSibling).toHaveTextContent('7');
     expect(screen.getByText('Last change').nextSibling).toHaveTextContent(/^maya · /);
     const steps = within(screen.getByRole('region', { name: 'Steps' })).getAllByRole('listitem');
@@ -112,8 +113,14 @@ describe('changing the workflows', () => {
     expect(within(form).getByText('Name the workflow.')).toBeInTheDocument();
     expect(create).toBeDisabled();
     await user.type(field('Name'), 'Release train');
-    expect(within(form).getByText('Say which repository it is for.')).toBeInTheDocument();
-    await user.type(field('Repository'), 'acme/web');
+    expect(within(form).getByText('Say which domain it covers.')).toBeInTheDocument();
+    await user.type(field('Domain'), 'Mobile');
+    // No repository picked yet: the editor says the workflow then reaches every repository its words point to.
+    expect(within(form).getByRole('note')).toHaveTextContent(/No repository picked/);
+    await user.click(await within(form).findByRole('checkbox', { name: 'web' }));
+    expect(within(form).queryByRole('note')).toBeNull();
+    await user.click(within(form).getByRole('checkbox', { name: 'api' }));
+    await user.click(within(form).getByRole('checkbox', { name: 'api' }));
     expect(within(form).getByText('Say what each step is.')).toBeInTheDocument();
     await user.type(field('Step 1: What it is'), 'A tag is pushed');
     await user.type(field('What it is for'), 'From a tag to the store.');
@@ -147,8 +154,10 @@ describe('changing the workflows', () => {
     expect(steps[1]).toHaveTextContent('Then: Ship it');
     expect(steps[2]).toHaveTextContent('Approved by maya, samir');
     expect(screen.getByText('Version').nextSibling).toHaveTextContent('1');
+    expect(screen.getByText('Repositories').nextSibling).toHaveTextContent(/^web$/);
     expect(db.workflows.find((workflow) => workflow.id === 'wf-release-train')).toMatchObject({
       status: 'accepted',
+      repos: ['*/web'],
       description: 'From a tag to the store.',
       start: 'n-1',
     });
@@ -173,7 +182,7 @@ describe('changing the workflows', () => {
     );
     visit('/workflows/new');
     await user.type(await screen.findByLabelText('Name'), 'Backend changes');
-    await user.type(field('Repository'), 'acme/billing-api');
+    await user.type(field('Domain'), 'acme/billing-api');
     await user.type(field('Step 1: What it is'), 'Pushed');
     await user.click(screen.getByRole('button', { name: 'Create the workflow' }));
     expect(
@@ -375,6 +384,93 @@ describe('changing the workflows', () => {
     await user.click(screen.getByRole('button', { name: 'Save and accept' }));
     expect(await screen.findByText('Accepted')).toBeInTheDocument();
     expect(db.decisions[0]).toMatchObject({ action: 'accept', subject: { id: 'wf-migrations' } });
+  });
+
+  it("shows the repositories a workflow is limited to, and changes them among the organization's", async () => {
+    const user = userEvent.setup();
+    db.workflows = db.workflows.map((workflow) =>
+      workflow.id === 'wf-backend' ? { ...workflow, repos: ['acme/payments', '*/api'] } : workflow,
+    );
+    visit('/workflows');
+    const backend = await screen.findByRole('link', { name: /Backend changes/ });
+    expect(backend).toHaveTextContent('acme/billing-api · acme/payments, api · 5 steps');
+    await user.click(backend);
+    expect(await screen.findByText('Repositories')).toBeInTheDocument();
+    expect(screen.getByText('Repositories').nextSibling).toHaveTextContent('acme/payments, api');
+    const before = db.decisions.length;
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+    const form = screen.getByRole('form', { name: 'Edit the workflow' });
+    // The organization's, by name, then the one written elsewhere that GitHub does not list: it can still be taken out.
+    const api = await within(form).findByRole('checkbox', { name: 'api' });
+    expect(api).toBeChecked();
+    expect(within(form).getByRole('checkbox', { name: 'web' })).not.toBeChecked();
+    const payments = within(form).getByRole('checkbox', { name: 'acme/payments' });
+    expect(payments).toBeChecked();
+    await user.click(payments);
+    await user.click(api);
+    expect(within(form).getByRole('note')).toHaveTextContent(
+      'No repository picked: this workflow applies to every repository of the organization its gates or its words point to.',
+    );
+    await user.click(within(form).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('Version')).toBeInTheDocument();
+    expect(screen.getByText('Repositories').nextSibling).toHaveTextContent('All repositories');
+    const saved = db.workflows.find((workflow) => workflow.id === 'wf-backend');
+    expect(saved).not.toHaveProperty('repos');
+    // The repositories are a decided part: changing them alone is signed.
+    expect(db.decisions).toHaveLength(before + 1);
+  });
+
+  it("keeps the repositories already picked when the organization's cannot be read", async () => {
+    db.workflows = db.workflows.map((workflow) =>
+      workflow.id === 'wf-backend' ? { ...workflow, repos: ['*/api'] } : workflow,
+    );
+    server.use(
+      http.get('*/api/v1/repos', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
+      ),
+    );
+    const user = userEvent.setup();
+    visit('/workflows/wf-backend');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    const form = screen.getByRole('form', { name: 'Edit the workflow' });
+    expect(
+      await within(form).findByText(/could not be read\. Those already picked stay\./),
+    ).toBeInTheDocument();
+    expect(within(form).getByRole('checkbox', { name: 'api' })).toBeChecked();
+  });
+
+  it('says the repositories are being read, then that there are none to pick', async () => {
+    server.use(http.get('*/api/v1/repos', never, { once: true }));
+    visit('/workflows/new');
+    const form = await screen.findByRole('form', { name: 'A new workflow' });
+    expect(within(form).getByText('Reading the organization’s repositories…')).toBeInTheDocument();
+    expect(within(form).queryByRole('checkbox')).toBeNull();
+  });
+
+  it('says there is no repository to pick when GitHub lists none', async () => {
+    server.use(http.get('*/api/v1/repos', () => HttpResponse.json({ items: [] })));
+    visit('/workflows/new');
+    const form = await screen.findByRole('form', { name: 'A new workflow' });
+    expect(await within(form).findByText(/No repository read/)).toBeInTheDocument();
+    expect(within(form).getByRole('note')).toHaveTextContent(/No repository picked/);
+  });
+
+  it("reads the organization's repositories a page at a time", async () => {
+    const repo = (name: string) => ({ name, defaultBranch: 'main', archived: false, owners: [] });
+    server.use(
+      http.get('*/api/v1/repos', ({ request }) =>
+        new URL(request.url).searchParams.get('after') === null
+          ? HttpResponse.json({ items: [repo('first')], next: 'first' })
+          : HttpResponse.json({ items: [repo('second')] }),
+      ),
+    );
+    const user = userEvent.setup();
+    visit('/workflows/new');
+    const form = await screen.findByRole('form', { name: 'A new workflow' });
+    expect(await within(form).findByRole('checkbox', { name: 'first' })).toBeInTheDocument();
+    await user.click(within(form).getByRole('button', { name: 'More repositories' }));
+    expect(await within(form).findByRole('checkbox', { name: 'second' })).toBeInTheDocument();
+    expect(within(form).queryByRole('button', { name: 'More repositories' })).toBeNull();
   });
 
   it('signs nothing for a save that changes no decided part', async () => {
