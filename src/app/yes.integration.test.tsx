@@ -385,7 +385,8 @@ describe('a request', () => {
     expect(await screen.findByRole('button', { name: verb })).toBeInTheDocument();
   });
 
-  it('signs in from a link to one request, wipes the token and shows that request', async () => {
+  it('signs in from a link to one request after a yes, wipes the token and shows that request', async () => {
+    const user = userEvent.setup();
     db.signedIn = false;
     const router = visit('/yes/apr-merge-412#signin=opk_test_12345678');
     expect(
@@ -393,6 +394,8 @@ describe('a request', () => {
     ).toBeInTheDocument();
     expect(router.state.location.hash).toBe('');
     expect(router.state.location.href).not.toContain('opk_');
+    expect(db.usedLinks).toEqual([]);
+    await user.click(await screen.findByRole('button', { name: 'Sign in with the link' }));
     await vi.waitFor(() => {
       expect(db.usedLinks).toEqual(['opk_test_12345678']);
     });
