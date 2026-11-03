@@ -22,7 +22,9 @@ afterAll(() => {
 });
 
 /** The status and error type of a refused call. */
-async function refusalOf(call: () => Promise<unknown>): Promise<{ status: number | undefined; code: string | undefined }> {
+async function refusalOf(
+  call: () => Promise<unknown>,
+): Promise<{ status: number | undefined; code: string | undefined }> {
   try {
     await call();
   } catch (error) {
@@ -85,12 +87,14 @@ describe('the runs, as the mock serves them', () => {
   });
 
   it('says a workflow it does not know', async () => {
-    expect(await refusalOf(() => listWorkflowRuns({ path: { id: 'wf-nope' }, throwOnError: true }))).toEqual({
+    expect(
+      await refusalOf(async () => listWorkflowRuns({ path: { id: 'wf-nope' }, throwOnError: true })),
+    ).toEqual({
       status: 404,
       code: 'not_found',
     });
     expect(
-      await refusalOf(() =>
+      await refusalOf(async () =>
         startWorkflowRun({ path: { id: 'wf-nope' }, body: { inputs: {} }, throwOnError: true }),
       ),
     ).toEqual({ status: 404, code: 'not_found' });
@@ -117,13 +121,13 @@ describe('the runs, as the mock serves them', () => {
 
   it('refuses a run to a member, and of a workflow still proposed', async () => {
     expect(
-      await refusalOf(() =>
+      await refusalOf(async () =>
         startWorkflowRun({ path: { id: 'wf-migrations' }, body: { inputs: {} }, throwOnError: true }),
       ),
     ).toEqual({ status: 409, code: 'conflict' });
     setDemoRole(db, 'member');
     expect(
-      await refusalOf(() =>
+      await refusalOf(async () =>
         startWorkflowRun({ path: { id: 'wf-backend' }, body: { inputs: {} }, throwOnError: true }),
       ),
     ).toEqual({ status: 403, code: 'forbidden' });
