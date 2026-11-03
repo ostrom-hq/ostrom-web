@@ -13,6 +13,8 @@ test('an admin reads who approves what and stops the asker from approving', asyn
   );
 
   const policy = page.getByRole('region', { name: 'When the asker is an approver' });
-  await policy.getByRole('combobox', { name: 'Self-approval' }).selectOption('never');
+  // Never by default (S2-15): the organization may let a sole approver approve their own request.
   await expect(policy).toContainText('never approves their own request');
+  await policy.getByRole('combobox', { name: 'Self-approval' }).selectOption('sole-approver');
+  await expect(policy).toContainText('only when nobody else can');
 });

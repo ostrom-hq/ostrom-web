@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   getSpendingOptions,
+  getSpendingQueryKey,
   listBudgetsOptions,
   listBudgetsQueryKey,
   setBudgetMutation,
@@ -53,7 +54,11 @@ export function useBudgetChange(): BudgetChangeViewModel {
   const mutation = useMutation({
     ...setBudgetMutation(),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() });
+      // The spending carries the organization's budget too: its meter follows the new one.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getSpendingQueryKey() }),
+      ]);
     },
   });
   const { mutate } = mutation;

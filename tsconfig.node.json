@@ -11,6 +11,7 @@
     "playwright.real.config.ts",
     "e2e",
     "e2e-real",
-    "openapi-ts.config.ts"
+    "openapi-ts.config.ts",
+    "scripts"
   ]
 }

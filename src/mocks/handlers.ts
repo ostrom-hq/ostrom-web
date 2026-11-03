@@ -118,12 +118,14 @@ import {
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
+import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialRepos } from '@/mocks/fixtures/github';
 import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
+import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
@@ -174,6 +176,7 @@ export interface MockDb
   extends
     AccountState,
     ActivityState,
+    AuditState,
     BillingState,
     GithubState,
     OrgsState,
@@ -197,7 +200,10 @@ export interface MockDb
   members: Member[];
   teams: Team[];
   workflows: Workflow[];
-  /** `sole-approver`: the asker who is the only approver may approve, and the receipt says so; `never`. */
+  /**
+   * `never` (the server's default since core#66 and server#159, S2-15): the asker never approves their own request;
+   * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
+   */
   selfApproval: string;
   rules: Rule[];
   /** Signed decisions on rules, workflows, owners and policies; newest first. */
@@ -235,6 +241,7 @@ export interface MockDb
 export function createMockDb(): MockDb {
   return {
     activity: initialActivity(),
+    audit: initialAudit(),
     approvals: initialApprovals(),
     approvers: initialApprovers(),
     sessions: initialSessions(),
@@ -253,7 +260,7 @@ export function createMockDb(): MockDb {
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
-    selfApproval: 'sole-approver',
+    selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
     mcpServers: initialMcpServers(),
@@ -408,14 +415,15 @@ function isAsker(approval: Approval, login: string): boolean {
 }
 
 /**
- * The server's rule (prototype `selfCheck`): the person who asked cannot approve while another approver exists;
- * as the only approver, the approval passes and is marked self-approved. A refusal always passes.
+ * The server's rule (prototype `selfCheck`): by default (`never`) the person who asked never approves; under
+ * `sole-approver` they cannot while another approver exists, and as the only approver the approval passes and is
+ * marked self-approved. A refusal always passes.
  */
 export function selfApprovalRefusal(
   approval: Approval,
   approvers: readonly string[],
   login: string,
-  policy = 'sole-approver',
+  policy = 'never',
 ): string | undefined {
   const asked = new Set((approval.askedBy ?? []).map((author) => author.toLowerCase()));
   if (!asked.has(login.toLowerCase())) return undefined;
@@ -673,6 +681,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,
+    ),
+    ...createAuditHandlers(
+      () => db,
+      (request) => organizationOf(db, request).id === db.organization.id,
+      () => canManage(db),
     ),
     handleListRules(({ request }) => {
       const params = new URL(request.url).searchParams;
