@@ -249,11 +249,6 @@ export default defineConfig({
             // screens' parts): on a slow link, fifteen small files share the bandwidth and each waits its turn,
             // where one comes in a single response. What a lazy screen alone uses stays in its own chunk.
             { name: 'boot', tags: ['$initial'] },
-            // What several screens share, outside the first download, in one chunk too: split, it came as twenty files
-            // of under 1 KB, each waiting for one of the six connections a browser opens on HTTP/1.1 and costing a
-            // round trip (/yes: the last one asked at 1.26 s, sent at 2.47 s, in at 3.03 s; console-journey
-            // 41722651188). One file, alongside the screen's own, is in after a single round trip.
-            { name: 'shared', minShareCount: 2 },
           ],
         },
       },
