@@ -246,7 +246,7 @@ describe('mock API', () => {
         throwOnError: true,
       }),
     );
-    expect(isApiFailure(error) && error.code).toBe('not_an_approver');
+    expect(isApiFailure(error) && error.code).toBe('forbidden');
   });
 
   it('answers 409 when what was shown changed, or when the approval is already decided', async () => {
@@ -284,7 +284,7 @@ describe('mock API', () => {
         throwOnError: true,
       }),
     );
-    expect(isApiFailure(refused) && refused.code).toBe('not_an_approver');
+    expect(isApiFailure(refused) && refused.code).toBe('forbidden');
 
     db.approvers['apr-orphan'] = ['maya'];
     const { data } = await answerApproval({
