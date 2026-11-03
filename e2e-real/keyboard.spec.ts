@@ -17,7 +17,8 @@ const MAX_TABS = 80;
  */
 const FOCUS_PROBLEM = `(() => {
   const focused = document.activeElement;
-  if (!(focused instanceof HTMLElement) || focused === document.body) return 'the focus is on nothing';
+  // Past the last stop the focus leaves for the page itself before it comes round: nothing to show there.
+  if (!(focused instanceof HTMLElement) || focused === document.body) return '';
   const style = getComputedStyle(focused);
   const outline = style.outlineStyle !== 'none' && Number.parseFloat(style.outlineWidth) > 0;
   if (outline || style.boxShadow !== 'none') return '';
@@ -35,12 +36,15 @@ async function focusProblem(page: Page): Promise<string> {
  */
 async function tabTo(page: Page, target: Locator, unseen: Set<string>): Promise<void> {
   await expect(target).toBeVisible({ timeout: 30_000 });
+  const reached = async (): Promise<boolean> =>
+    (await target.evaluate('(element) => element === document.activeElement')) === true;
+  // A screen may give its first field the focus as it opens: already there, no Tab needed.
+  if (await reached()) return;
   for (let step = 0; step < MAX_TABS; step += 1) {
     await page.keyboard.press('Tab');
     const problem = await focusProblem(page);
     if (problem !== '') unseen.add(`${new URL(page.url()).pathname}: ${problem}`);
-    const reached: unknown = await target.evaluate('(element) => element === document.activeElement');
-    if (reached === true) return;
+    if (await reached()) return;
   }
   throw new Error(`${String(MAX_TABS)} presses of Tab never reached ${target.toString()}`);
 }
