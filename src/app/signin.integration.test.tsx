@@ -206,7 +206,10 @@ describe('the e-mailed link', () => {
     await vi.waitFor(() => {
       expect(router.state.location.pathname).toBe('/');
     });
-    expect(useEmailLinkStore.getState().token).toBeUndefined();
+    // Dropped as the page is left (the route's onLeave), once the next screen's chunk has loaded.
+    await vi.waitFor(() => {
+      expect(useEmailLinkStore.getState().token).toBeUndefined();
+    });
     expect(spent).toEqual([]);
   });
 

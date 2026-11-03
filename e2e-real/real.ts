@@ -50,13 +50,16 @@ function addressOfAPerson(): string {
   return `10.${String((people >> 16) & 255)}.${String((people >> 8) & 255)}.${String(people & 255)}`;
 }
 
-/** Signs `email` in through the console: the form, the e-mailed link, the queue. */
-export async function signIn(page: Page, email: string): Promise<void> {
+/**
+ * Signs `email` in through the console: the form, the e-mailed link, then the screen it was asked from (`back`, the
+ * queue by default), as a person signing in again from a screen that asked them to comes back to it.
+ */
+export async function signIn(page: Page, email: string, back = '/yes'): Promise<void> {
   // Every request of this person's browser, the console's calls through the proxy and `page.request` included, comes
   // from their own address.
   await page.context().setExtraHTTPHeaders({ 'X-Forwarded-For': addressOfAPerson() });
-  // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
-  await page.goto('/signin?redirect=%2Fyes');
+  // The screen asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
+  await page.goto(`/signin?redirect=${encodeURIComponent(back)}`);
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
   const said = page.getByRole('alert');
@@ -77,9 +80,10 @@ export async function signIn(page: Page, email: string): Promise<void> {
   await page.goto(`/auth/email#token=${encodeURIComponent(token ?? '')}`);
   // A page already signed in is asked before the link replaces its session (login CSRF): say yes.
   const ask = page.getByRole('button', { name: 'Sign in with the link' });
-  await expect(page.getByRole('heading', { name: 'Requests' }).or(ask)).toBeVisible();
-  if (await ask.isVisible()) await ask.click();
-  await expect(page).toHaveURL(/\/yes$/);
+  const arrived = (): boolean => new URL(page.url()).pathname === back;
+  await expect.poll(async () => arrived() || (await ask.isVisible())).toBe(true);
+  if (!arrived()) await ask.click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe(back);
 }
 
 /** Whether the server serves `path` at all: anything but 404 and 405, signed out. */

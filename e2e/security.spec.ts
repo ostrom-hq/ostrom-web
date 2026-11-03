@@ -39,7 +39,9 @@ test('the console works under its Content-Security-Policy without a single viola
   // the e2e project is typed without the DOM library.
   await page.addInitScript({
     content: `document.addEventListener('securitypolicyviolation', (event) => {
-      const what = event.effectiveDirective + ' blocked ' + event.blockedURI;
+      const where = event.sourceFile + ':' + event.lineNumber + ':' + event.columnNumber;
+      // The sample names a Trusted Types sink and the start of what was given to it.
+      const what = event.effectiveDirective + ' blocked ' + event.blockedURI + ' (' + event.sample + ') at ' + where;
       console.error('Content Security Policy violation: ' + what);
     });`,
   });

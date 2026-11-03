@@ -59,6 +59,12 @@ jobs:
       - run: pnpm format:check
       - name: Unit and integration tests, 100 % lines, branches, functions, statements
         run: pnpm test:coverage
+      # What a first visit downloads, per route, from the build that ships (no mock API), gzipped: above its budget
+      # (bundle-budget.json), the job fails, and the table in the run's summary says which route and by how much.
+      - name: Download budget per route (gzip)
+        run: |
+          pnpm exec vite build --outDir dist-budget --manifest
+          node scripts/bundle-budget.ts dist-budget
       # No Ostrom server image yet: the journeys run against the MSW mocks generated from the contract.
       # Once ostrom-server ships its container, this job starts it with PostgreSQL and drops VITE_MOCKS.
       - name: Build (mock API)
