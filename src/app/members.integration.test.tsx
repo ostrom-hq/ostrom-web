@@ -7,7 +7,7 @@ import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 const ACME = '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c';
 
 function rowsOf(list: HTMLElement): HTMLElement[] {
@@ -481,23 +481,18 @@ describe('the members of a large organization', () => {
   it('asks for the first hundred on load, and for the next hundred only when asked', async () => {
     db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).slice(0, 250);
     const asked: URL[] = [];
-    const listen = ({ request }: { readonly request: Request }): void => {
+    traffic.onRequest((request) => {
       const url = new URL(request.url);
       if (/\/api\/v1\/orgs\/[^/]+\/members$/.test(url.pathname)) asked.push(url);
-    };
-    server.events.on('request:start', listen);
-    try {
-      visit('/members');
-      await shown(100);
-      expect(asked.map((url) => url.search)).toEqual(['?limit=100']);
-      await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
-      await shown(200);
-      expect(asked).toHaveLength(2);
-      expect(asked[1]?.searchParams.get('limit')).toBe('100');
-      expect(asked[1]?.searchParams.get('after')).toBe(db.orgMembers[ACME][99]?.id);
-    } finally {
-      server.events.removeListener('request:start', listen);
-    }
+    });
+    visit('/members');
+    await shown(100);
+    expect(asked.map((url) => url.search)).toEqual(['?limit=100']);
+    await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
+    await shown(200);
+    expect(asked).toHaveLength(2);
+    expect(asked[1]?.searchParams.get('limit')).toBe('100');
+    expect(asked[1]?.searchParams.get('after')).toBe(db.orgMembers[ACME][99]?.id);
   });
 
   it('says more than the people read until every page is in, then finds anyone by name, login or address', async () => {
