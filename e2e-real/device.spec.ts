@@ -4,8 +4,8 @@
 // where the server's link sends them.
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
-import { zApiError, zAuthToken, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
-import { addressOfAPerson, bodyOf, callFromPage, freshEmail, signIn } from './real';
+import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
+import { addressOfAPerson, bodyOf, callFromPage, freshEmail, ownerOfNewOrganization, signIn } from './real';
 
 /**
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
@@ -54,9 +54,19 @@ async function asTheCli(
   }
 }
 
-/** `ostrom login` starts: no body, the ordinary sign-in (the contract's `DeviceLoginStart` names no client). */
-async function startLogin(): Promise<{ deviceCode: string; userCode: string; page: string }> {
-  const started = await asTheCli('POST', '/api/v1/auth/device');
+/** The governance write scopes `ostrom login --admin` asks for, every one of them (`DeviceLoginStart`). */
+const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
+
+/**
+ * `ostrom login` starts: no body, the ordinary sign-in (the contract's `DeviceLoginStart` names no client); with
+ * `admin`, `ostrom login --admin`.
+ */
+async function startLogin(admin = false): Promise<{ deviceCode: string; userCode: string; page: string }> {
+  const started = await asTheCli(
+    'POST',
+    '/api/v1/auth/device',
+    admin ? { body: { scopes: ADMIN_SCOPES } } : {},
+  );
   expect(started.status).toBe(200);
   const login = zStartedLogin.parse(started.body);
   // The console the server names may not be this one's host: its path and query are what the person opens.
@@ -138,4 +148,41 @@ test('5.1 `ostrom login`: a code typed by hand on /device leads to the same pend
   await expect.poll(() => new URL(page.url()).searchParams.get('code')).toBe(login.userCode);
   await seesTheLogin(page, login.userCode);
   await expect(page.getByRole('button', { name: 'Sign in this terminal' })).toBeEnabled();
+});
+
+/** The tokens of `ostrom login --admin` an organization holds, as its owner's console lists them. */
+async function adminTokensOf(page: Page, org: string): Promise<string[]> {
+  const listed = await callFromPage(page, 'GET', '/api/v1/devices', undefined, org);
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  return z
+    .object({ items: z.array(zDevice.pick({ kind: true, orgId: true })) })
+    .parse(listed.body)
+    .items.filter((device) => device.kind === 'admin')
+    .map((device) => device.orgId ?? '');
+}
+
+test('5.1 `ostrom login --admin`: a person who owns two organizations approves it for the one they choose', async ({
+  page,
+}) => {
+  const first = await ownerOfNewOrganization(page, 'ines');
+  const made = await callFromPage(page, 'POST', '/api/v1/orgs', {
+    name: `ines second ${Date.now().toString(36)}`,
+  });
+  expect(made.status).toBe(201);
+  const second = z.object({ id: z.string(), name: z.string() }).parse(made.body);
+
+  const login = await startLogin(true);
+  await page.goto(login.page);
+  await seesTheLogin(page, login.userCode);
+  await expect(page.getByText('Admin sign-in', { exact: true })).toBeVisible();
+  // Before the console named it, the server could only answer 409 `org_required` to this person.
+  await page.getByLabel('Organization it acts in').selectOption({ label: second.name });
+  await page.getByRole('button', { name: 'Approve the admin sign-in' }).click();
+  await expect(page.getByText('Terminal signed in')).toBeVisible();
+
+  const answered = await poll(login.deviceCode);
+  expect(answered.status, JSON.stringify(answered.body)).toBe(200);
+  // Bound to the organization chosen, and to that one only.
+  expect(await adminTokensOf(page, second.id)).toEqual([second.id]);
+  expect(await adminTokensOf(page, first.id)).toEqual([]);
 });
