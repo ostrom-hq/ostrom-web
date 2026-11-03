@@ -516,7 +516,8 @@ describe('the members of a large organization', () => {
     expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
     await find('developer 01');
     expect(rowsOf(await people())).toHaveLength(10);
-    await find('DEV-042@ACME');
+    // The one person of the second page: the search covers a page read later.
+    await find('DEV-095@ACME');
     expect(rowsOf(await people())).toHaveLength(1);
     await find('  nobody  ');
     expect(screen.getByText('Nobody matches “nobody”.')).toBeInTheDocument();
@@ -524,7 +525,7 @@ describe('the members of a large organization', () => {
 
   it('says nobody matches among the people read, and still offers the next hundred', async () => {
     visit('/members');
-    // The search box shows before the people come: search once they are read.
+    // Search once the first hundred are read, so the message counts them.
     expect(await screen.findByText('More than 100 people · you are Admin')).toBeInTheDocument();
     await find('  dev-499  ');
     expect(
