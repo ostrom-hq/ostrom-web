@@ -36,7 +36,8 @@ async function analysis(): Promise<HTMLElement> {
 describe('the GitHub screen', () => {
   it('shows the app installed, where to change its repositories, and the repositories it governs', async () => {
     visit('/github');
-    expect(await screen.findByRole('heading', { level: 1, name: 'GitHub' })).toBeInTheDocument();
+    // The title shows while the organization is read, then again with the screen: a new node, so it is found, not kept.
+    await screen.findByRole('heading', { level: 1, name: 'GitHub' });
     expect(await screen.findByText('Installed')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'ostrom-dev' })).toHaveAttribute(
       'href',

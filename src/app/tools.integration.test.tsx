@@ -43,7 +43,8 @@ function secretRow(name: string): HTMLElement {
 describe('the MCP servers', () => {
   it('shows each server with its state, tools, secrets and calls, then the recent calls', async () => {
     visit('/mcp');
-    expect(await screen.findByRole('heading', { level: 1, name: 'MCP servers' })).toBeInTheDocument();
+    // The title shows while the organization is read, then again with the screen: a new node, so it is found, not kept.
+    await screen.findByRole('heading', { level: 1, name: 'MCP servers' });
     const linear = await findServer('linear');
     expect(linear).toHaveTextContent('On');
     expect(linear).toHaveTextContent('SSE');
@@ -229,7 +230,8 @@ describe('the MCP servers', () => {
 describe('the secrets', () => {
   it('lists each secret with its scope, who changed it and what uses it, never a value', async () => {
     visit('/secrets');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Secrets' })).toBeInTheDocument();
+    // The title shows while the organization is read, then again with the screen: a new node, so it is found, not kept.
+    await screen.findByRole('heading', { level: 1, name: 'Secrets' });
     expect(await screen.findByText('LINEAR_TOKEN')).toBeInTheDocument();
     expect(secretRow('LINEAR_TOKEN')).toHaveTextContent(
       /Scope org · Changed by maya · .* · Used by mcp:linear/,
