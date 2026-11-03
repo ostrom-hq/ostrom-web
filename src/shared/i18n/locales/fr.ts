@@ -19,6 +19,8 @@ export const fr = {
     },
     nav: {
       label: 'Principal',
+      menu: 'Menu',
+      close: 'Fermer',
       home: 'Accueil',
       yes: 'Demandes',
       sessions: 'Sessions',

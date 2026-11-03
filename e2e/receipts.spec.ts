@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('from an ended session to its receipt, verified by the server and ready to check offline', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Sessions' }).click();
+  await openScreen(page, 'Sessions');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sessions');
 
   await page.getByRole('link', { name: /acme\/web/ }).click();

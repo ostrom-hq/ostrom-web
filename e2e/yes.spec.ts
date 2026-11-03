@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('an approver opens a request from the queue, reads the proof, approves and gets the signed receipt', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Requests' }).click();
+  await openScreen(page, 'Requests');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
   await expect(page.getByText('Approving as Maya Lind (maya)')).toBeVisible();
 
