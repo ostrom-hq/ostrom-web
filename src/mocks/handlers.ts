@@ -39,7 +39,6 @@ import {
   handleListMcpCalls,
   handleListMcpServers,
   handleListMembers,
-  handleListMyOrganizations,
   handleListReceipts,
   handleListRules,
   handleListRunners,
@@ -123,10 +122,16 @@ import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialRepos } from '@/mocks/fixtures/github';
-import { initialAuthSessions, initialTokens } from '@/mocks/fixtures/account';
+import {
+  initialAuthSessions,
+  initialDevices,
+  initialServiceKeys,
+  initialTokens,
+} from '@/mocks/fixtures/account';
 import { initialActivity } from '@/mocks/fixtures/activity';
 import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
+import { createKeysAndDevicesHandlers, type KeysAndDevicesState } from '@/mocks/keysAndDevices';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
 import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
@@ -142,7 +147,7 @@ import {
   MEMBER_IDS,
 } from '@/mocks/fixtures/organization';
 import { actsInOrganization, ORG_HEADER, ORG_REQUIRED } from '@/shared/api/orgHeader';
-import { managesBilling, orgRoleOf } from '@/shared/org/roles';
+import { managesBilling, managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { initialDecisions, initialRules } from '@/mocks/fixtures/rules';
 import {
   initialAutomationRuns,
@@ -181,6 +186,7 @@ export interface MockDb
     GithubState,
     OrgsState,
     TokensState,
+    KeysAndDevicesState,
     McpAccessState,
     PolicyState,
     TeamCodeImportState {
@@ -293,6 +299,9 @@ export function createMockDb(): MockDb {
     authSessions: initialAuthSessions(),
     tokens: initialTokens(),
     nextToken: 3,
+    devices: initialDevices(),
+    serviceKeys: initialServiceKeys(),
+    nextServiceKey: 2,
     billing: initialBilling(),
     invoices: initialInvoices(),
   };
@@ -578,7 +587,6 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const organization = membershipsOf(db).find((item) => item.id === named);
       return HttpResponse.json(organization === undefined ? signedIn : { ...signedIn, member, organization });
     }),
-    handleListMyOrganizations(() => HttpResponse.json({ items: membershipsOf(db) })),
     // An approver's link (`opk_…`) is exchanged once for the session cookies; the body carries no secret.
     handleExchangeSignInLink(async ({ request }) => {
       const body = zExchangeSignInLinkBody.safeParse(await readJson(request));
@@ -676,6 +684,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgsHandlers(() => db, now),
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
+    ...createKeysAndDevicesHandlers(() => db, now, {
+      manages: (request) =>
+        managesMembers(
+          orgRoleOf(
+            db.orgMembers[organizationOf(db, request).id]?.find((member) => member.login === DEMO_LOGIN)
+              ?.role,
+          ),
+        ),
+      stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
+    }),
     ...createAccountHandlers(() => db, now),
     ...createApproversGraphHandlers(() => db),
     ...createActivityHandlers(

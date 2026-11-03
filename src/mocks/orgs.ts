@@ -6,6 +6,7 @@ import {
   handleGetOrg,
   handleInviteOrgMembers,
   handleListInvitations,
+  handleListMyOrganizations,
   handleListOrgMembers,
   handleListOrgs,
   handlePreviewInvitation,
@@ -118,11 +119,13 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
   };
   const roleIn = (organization: Organization): OrgRole | undefined =>
     orgRoleOf(membersOf(organization).find((member) => member.login === DEMO_LOGIN)?.role);
+  // A person the demo lists in no role reads as a member.
+  const roleOf = (organization: Organization): OrgRole => roleIn(organization) ?? 'member';
   const view = (organization: Organization): OrgView => ({
     id: organization.id,
     slug: shortNameOf(organization),
     name: organization.name,
-    role: roleIn(organization) ?? 'member',
+    role: roleOf(organization),
     createdAt: organization.createdAt ?? now().toISOString(),
   });
   /** `{org}` is an id or a short name; an organization the person is not in is not found. */
@@ -173,6 +176,18 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     uses: invitation.uses,
   });
   return [
+    // The person's organizations, with what the console needs before it names one: short name and role.
+    handleListMyOrganizations(() =>
+      HttpResponse.json({
+        items: membershipsOf(state()).map((organization) => ({
+          id: organization.id,
+          slug: shortNameOf(organization),
+          name: organization.name,
+          avatarUrl: organization.avatarUrl,
+          role: roleOf(organization),
+        })),
+      }),
+    ),
     handleListOrgs(() => HttpResponse.json({ items: membershipsOf(state()).map(view) })),
     handleCreateOrg(async ({ request }) => {
       const body = zOrgCreate.safeParse(await readJson(request));

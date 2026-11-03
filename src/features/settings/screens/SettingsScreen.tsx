@@ -6,8 +6,11 @@ import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Screen } from '@/shared/ui/Screen';
 import { DangerZone } from '../components/DangerZone';
+import { DevicesSection } from '../components/DevicesSection';
 import { GeneralSection } from '../components/GeneralSection';
 import { SecuritySection } from '../components/SecuritySection';
+import { ServiceKeysSection } from '../components/ServiceKeysSection';
+import { useDevices, useServiceKeys } from '../useKeysAndDevices';
 import { useAuthSessions, useDeleteOrg, useRenameOrg, useSessionActions } from '../useSettings';
 import './settings.css';
 
@@ -32,10 +35,15 @@ function SettingsPage({
   const deletion = useDeleteOrg(org);
   const sessions = useAuthSessions();
   const sessionActions = useSessionActions();
+  const devices = useDevices();
+  const manages = managesMembers(role);
+  const serviceKeys = useServiceKeys(manages);
   return (
     <Screen title={t('settings.title')} lead={t('settings.lead', { name: org.name })}>
-      <GeneralSection org={org} canRename={managesMembers(role)} rename={rename} />
+      <GeneralSection org={org} canRename={manages} rename={rename} />
       <SecuritySection view={sessions} actions={sessionActions} />
+      <DevicesSection view={devices} />
+      <ServiceKeysSection orgName={org.name} manages={manages} view={serviceKeys} />
       <DangerZone org={org} isOwner={role === 'owner'} deletion={deletion} />
     </Screen>
   );

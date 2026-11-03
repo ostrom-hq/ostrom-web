@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { AuthSession, Token } from '@gen/api/types.gen';
+import type { AuthSession, Device, ServiceKey, Token } from '@gen/api/types.gen';
 
 /** Maya's sessions: this browser, her phone and a laptop left signed in. */
 export function initialAuthSessions(): AuthSession[] {
@@ -44,6 +44,27 @@ export function initialTokens(): Token[] {
       createdAt: '2026-10-01T14:30:00Z',
       expiresAt: null,
       lastUsedAt: null,
+    },
+  ];
+}
+
+/** Where the CLI is signed in as Maya: her laptop, used this morning, and a CI box never seen since. */
+export function initialDevices(): Device[] {
+  return [
+    { id: 'dev-2', name: 'ci-runner-3', kind: 'cli' },
+    { id: 'dev-1', name: 'maya-mbp', kind: 'cli', lastSeenAt: '2026-10-30T08:05:00Z' },
+  ];
+}
+
+/** Acme's service key: GitHub Actions reports its checks and reads the rules. */
+export function initialServiceKeys(): ServiceKey[] {
+  return [
+    {
+      id: 'key-1',
+      name: 'GitHub Actions',
+      scopes: ['rules:read', 'sessions:write'],
+      createdAt: '2026-10-25T10:00:00Z',
+      lastUsedAt: '2026-10-30T06:10:00Z',
     },
   ];
 }
