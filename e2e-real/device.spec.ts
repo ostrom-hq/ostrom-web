@@ -5,7 +5,18 @@
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
 import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
-import { addressOfAPerson, bodyOf, callFromPage, freshEmail, ownerOfNewOrganization, signIn } from './real';
+import {
+  accept,
+  addressOfAPerson,
+  anotherPerson,
+  bodyOf,
+  callFromPage,
+  closeOthers,
+  freshEmail,
+  invitationTo,
+  ownerOfNewOrganization,
+  signIn,
+} from './real';
 
 /**
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
@@ -21,6 +32,9 @@ let cliAddress = '';
 
 test.beforeEach(() => {
   cliAddress = addressOfAPerson();
+});
+test.afterEach(async () => {
+  await closeOthers();
 });
 
 /**
@@ -161,22 +175,22 @@ async function adminTokensOf(page: Page, org: string): Promise<string[]> {
     .map((device) => device.orgId ?? '');
 }
 
-test('5.1 `ostrom login --admin`: a person who owns two organizations approves it for the one they choose', async ({
+test('5.1 `ostrom login --admin`: a person who manages two organizations approves it for the one they choose', async ({
   page,
+  browser,
 }) => {
+  // Ines owns her organization and administers Olga's: a person makes one free organization, and joins the others.
+  const other = await anotherPerson(browser);
+  const second = await ownerOfNewOrganization(other, 'olga');
   const first = await ownerOfNewOrganization(page, 'ines');
-  const made = await callFromPage(page, 'POST', '/api/v1/orgs', {
-    name: `ines second ${Date.now().toString(36)}`,
-  });
-  expect(made.status).toBe(201);
-  const second = z.object({ id: z.string(), name: z.string() }).parse(made.body);
+  await accept(page, await invitationTo(other, second.id, 'admin'));
 
   const login = await startLogin(true);
   await page.goto(login.page);
   await seesTheLogin(page, login.userCode);
   await expect(page.getByText('Admin sign-in', { exact: true })).toBeVisible();
   // Before the console named it, the server could only answer 409 `org_required` to this person.
-  await page.getByLabel('Organization it acts in').selectOption({ label: second.name });
+  await page.getByLabel('Organization it acts in').selectOption(second.id);
   await page.getByRole('button', { name: 'Approve the admin sign-in' }).click();
   await expect(page.getByText('Terminal signed in')).toBeVisible();
 
