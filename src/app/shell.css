@@ -57,6 +57,8 @@
 }
 .o-topbar__end {
   margin-left: auto;
+  /* The organization and the theme stay whole; the navigation is the part that scrolls. */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -136,15 +138,63 @@
 }
 
 /* The organization picker: a dialog over the console, a sheet from the bottom on a phone. */
-.o-org-switch__text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
+/* The avatar and the viewer line sit beside the button (label in name, OrgControls.tsx), yet the whole control is its
+   target: the button's ::after covers the control. Compact, so the two lines fit the top bar as before. */
+.o-org-switch {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  /* The names are capped below: the control keeps its size and the navigation scrolls, never a text over the theme button. */
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
   line-height: 1.2;
+}
+.o-org-switch:hover {
+  background: var(--surface-sunken);
+}
+/* One focus ring, around the whole control, where the browser can say the button inside has the focus. */
+@supports selector(:has(a)) {
+  .o-org-switch:has(> .o-org-switch__button:focus-visible) {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .o-org-switch > .o-org-switch__button:focus-visible {
+    outline: none;
+  }
+}
+.o-org-switch > .o-avatar {
+  grid-row: 1 / span 2;
+}
+.o-org-switch__button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  /* A target of 24 px at least on its own, the whole control around it answers the pointer too. */
+  min-width: 24px;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+}
+.o-org-switch__button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
 }
 
 .o-org-switch__viewer {
+  grid-column: 2;
   max-width: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -216,6 +266,20 @@
   .o-org-switch__name,
   .o-org-switch__viewer {
     max-width: 6rem;
+  }
+  /* On a phone the mark alone says where you are: its name stays for screen readers, the room goes to the navigation. */
+  .o-brand {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .o-brand > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
