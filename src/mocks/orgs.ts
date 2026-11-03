@@ -105,20 +105,29 @@ function owner(at: string): OrgMember {
   };
 }
 
+/** The members of an organization; one the demo knows nothing about is the person's own, and is kept so. */
+function membersIn(state: OrgsState, organization: Organization, now: () => Date): OrgMember[] {
+  const known = state.orgMembers[organization.id];
+  if (known !== undefined) return known;
+  const created = [owner(organization.createdAt ?? now().toISOString())];
+  state.orgMembers[organization.id] = created;
+  return created;
+}
+
+/** The demo person's role in an organization, as every mock that checks a role reads it; none if not listed. */
+export function demoRoleIn(
+  state: OrgsState,
+  organization: Organization,
+  now: () => Date,
+): OrgRole | undefined {
+  return orgRoleOf(membersIn(state, organization, now).find((member) => member.login === DEMO_LOGIN)?.role);
+}
+
 export function createOrgsHandlers(state: () => OrgsState, now: () => Date): HttpHandler[] {
   const shortNameOf = (organization: Organization): string =>
     state().slugs[organization.id] ?? slugOf(organization.name);
-  const membersOf = (organization: Organization): OrgMember[] => {
-    const s = state();
-    const known = s.orgMembers[organization.id];
-    if (known !== undefined) return known;
-    // An organization the demo knows nothing about is the person's own.
-    const created = [owner(organization.createdAt ?? now().toISOString())];
-    s.orgMembers[organization.id] = created;
-    return created;
-  };
-  const roleIn = (organization: Organization): OrgRole | undefined =>
-    orgRoleOf(membersOf(organization).find((member) => member.login === DEMO_LOGIN)?.role);
+  const membersOf = (organization: Organization): OrgMember[] => membersIn(state(), organization, now);
+  const roleIn = (organization: Organization): OrgRole | undefined => demoRoleIn(state(), organization, now);
   // A person the demo lists in no role reads as a member.
   const roleOf = (organization: Organization): OrgRole => roleIn(organization) ?? 'member';
   const view = (organization: Organization): OrgView => ({

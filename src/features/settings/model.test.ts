@@ -5,6 +5,7 @@ import {
   deletionConfirmed,
   renameProblem,
   serviceKeyDraftProblem,
+  serviceKeyLifetimeOf,
   sortDevices,
   sortSessions,
   toggleServiceKeyScope,
@@ -74,5 +75,13 @@ describe('toggleServiceKeyScope', () => {
     const both = toggleServiceKeyScope(['rules:read'], 'sessions:write', true);
     expect(both).toEqual(['sessions:write', 'rules:read']);
     expect(toggleServiceKeyScope(both, 'sessions:write', false)).toEqual(['rules:read']);
+  });
+});
+
+describe('serviceKeyLifetimeOf', () => {
+  it('reads a select value, never as the default when it says never', () => {
+    expect(serviceKeyLifetimeOf('366')).toBe(366);
+    expect(serviceKeyLifetimeOf('null')).toBeNull();
+    expect(serviceKeyLifetimeOf('12')).toBe(90);
   });
 });

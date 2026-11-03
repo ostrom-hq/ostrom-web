@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
+import { FailureText } from '@/shared/ui/FailureText';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import type { DevicesViewModel } from '../useKeysAndDevices';
 
@@ -58,7 +59,7 @@ export function DevicesSection({ view }: { readonly view: DevicesViewModel }): R
       </LoadState>
       {view.signOutFailure === undefined ? null : (
         <Banner tone="danger" tag={t('settings.devices.errorTag')} live>
-          {view.signOutFailure.message}
+          <FailureText failure={view.signOutFailure} />
         </Banner>
       )}
     </Section>

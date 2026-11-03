@@ -47,6 +47,21 @@ export const SERVICE_KEY_SCOPES = [
 
 export const SERVICE_KEY_NAME_MAX = 100;
 
+/**
+ * The lifetimes offered to a key, in days (the server takes 1 to 366); `null` is a key that works until deleted. 90
+ * days is the default: a key acts for the whole organization, so it ends unless someone chose otherwise.
+ */
+export const SERVICE_KEY_LIFETIMES = [30, 90, 366, null] as const;
+export type ServiceKeyLifetime = (typeof SERVICE_KEY_LIFETIMES)[number];
+export const DEFAULT_SERVICE_KEY_LIFETIME: ServiceKeyLifetime = 90;
+
+/** The lifetime a select's value stands for: anything else reads as the default. */
+export function serviceKeyLifetimeOf(value: string): ServiceKeyLifetime {
+  // Not `find(…) ?? default`: the lifetime found may be `null`, a key that never expires.
+  for (const days of SERVICE_KEY_LIFETIMES) if (String(days) === value) return days;
+  return DEFAULT_SERVICE_KEY_LIFETIME;
+}
+
 /** Why the form cannot send yet: a name of 1 to 100 characters and at least one scope. */
 export function serviceKeyDraftProblem(
   name: string,

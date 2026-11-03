@@ -9,6 +9,7 @@ import {
 import type { ApiError, Device, ServiceKey } from '@gen/api/types.gen';
 import { zCreateServiceKeyBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { SERVICE_KEY_NAME_MAX, SERVICE_KEY_SCOPES } from '@/features/settings/model';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface KeysAndDevicesState {
@@ -21,7 +22,10 @@ export interface KeysAndDevicesState {
 }
 
 /** What a key may carry, as the server checks it: what a CI calls, nothing else. */
-const SERVICE_KEY_SCOPES = new Set(['sessions:write', 'rules:read']);
+const ALLOWED_SCOPES: ReadonlySet<string> = new Set(SERVICE_KEY_SCOPES.map((item) => item.scope));
+/** The longest life the server gives a key, in days. */
+const MAX_DAYS = 366;
+const DAY_MS = 86_400_000;
 
 /** A secret the demo can show once: never one the real server would take. */
 function secretOf(number: number): string {
@@ -69,17 +73,30 @@ export function createKeysAndDevicesHandlers(
       const body = zCreateServiceKeyBody.safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
       const scopes = body.success ? [...new Set(body.data.scopes)].sort() : [];
+      const days = body.success ? body.data.expiresInDays : undefined;
       if (
         name === '' ||
-        name.length > 100 ||
+        name.length > SERVICE_KEY_NAME_MAX ||
         scopes.length === 0 ||
-        scopes.some((scope) => !SERVICE_KEY_SCOPES.has(scope))
+        scopes.some((scope) => !ALLOWED_SCOPES.has(scope)) ||
+        (days !== undefined && (days < 1 || days > MAX_DAYS))
       )
-        return refusal(400, 'invalid_request', 'A name and sessions:write, rules:read or both are needed.');
+        return refusal(
+          400,
+          'invalid_request',
+          'A name, sessions:write, rules:read or both, and a life of 1 to 366 days if any.',
+        );
       const s = state();
       const number = s.nextServiceKey;
       s.nextServiceKey += 1;
-      const key: ServiceKey = { id: `key-${String(number)}`, name, scopes, createdAt: now().toISOString() };
+      const at = now();
+      const key: ServiceKey = {
+        id: `key-${String(number)}`,
+        name,
+        scopes,
+        createdAt: at.toISOString(),
+        ...(days === undefined ? {} : { expiresAt: new Date(at.getTime() + days * DAY_MS).toISOString() }),
+      };
       s.serviceKeys = [key, ...s.serviceKeys];
       return HttpResponse.json({ ...key, secret: secretOf(number) }, { status: 201 });
     }),

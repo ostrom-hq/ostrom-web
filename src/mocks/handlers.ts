@@ -134,7 +134,7 @@ import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createKeysAndDevicesHandlers, type KeysAndDevicesState } from '@/mocks/keysAndDevices';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
-import { createOrgsHandlers, DEMO_LOGIN, membershipsOf, type OrgsState } from '@/mocks/orgs';
+import { createOrgsHandlers, DEMO_LOGIN, demoRoleIn, membershipsOf, type OrgsState } from '@/mocks/orgs';
 import { z } from 'zod';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import {
@@ -685,13 +685,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
     ...createKeysAndDevicesHandlers(() => db, now, {
-      manages: (request) =>
-        managesMembers(
-          orgRoleOf(
-            db.orgMembers[organizationOf(db, request).id]?.find((member) => member.login === DEMO_LOGIN)
-              ?.role,
-          ),
-        ),
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
     }),
     ...createAccountHandlers(() => db, now),

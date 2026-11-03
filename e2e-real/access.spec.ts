@@ -17,30 +17,42 @@ import {
 
 test.afterEach(closeOthers);
 
-/** Calls the API with a bearer secret alone, through the console's own origin, without any cookie. */
-async function withSecret(
-  secret: string,
+/**
+ * Calls the API as a CI or the CLI does: through the console's own origin, without any cookie, with a bearer secret
+ * when one is given.
+ */
+async function asProgram(
+  method: string,
   path: string,
-  org?: string,
+  options: { secret?: string; org?: string; data?: unknown } = {},
 ): Promise<{ status: number; body: unknown }> {
   const { baseURL } = test.info().project.use;
   const context = await request.newContext(baseURL === undefined ? {} : { baseURL });
   try {
     const response = await context.fetch(path, {
+      method,
       headers: {
-        authorization: `Bearer ${secret}`,
         accept: 'application/json',
-        ...(org === undefined ? {} : { 'Ostrom-Org': org }),
+        ...(options.secret === undefined ? {} : { authorization: `Bearer ${options.secret}` }),
+        ...(options.org === undefined ? {} : { 'Ostrom-Org': options.org }),
       },
+      ...(options.data === undefined ? {} : { data: options.data }),
       failOnStatusCode: false,
     });
-    return {
-      status: response.status(),
-      body: bodyOf(`GET ${path}`, response.status(), await response.text()),
-    };
+    const status = response.status();
+    return { status, body: bodyOf(`${method} ${path}`, status, await response.text()) };
   } finally {
     await context.dispose();
   }
+}
+
+/** A GET with a secret alone. */
+async function withSecret(
+  secret: string,
+  path: string,
+  org?: string,
+): Promise<{ status: number; body: unknown }> {
+  return asProgram('GET', path, org === undefined ? { secret } : { secret, org });
 }
 
 /** The value of a secret shown once, read from its copy field. */
@@ -110,6 +122,8 @@ test('an owner creates a service key for the CI, a member and another organizati
   const keys = page.getByRole('region', { name: 'Service keys' });
   await expect(keys.getByText('No service key yet.')).toBeVisible();
   await keys.getByRole('textbox', { name: 'Name' }).fill('GitHub Actions');
+  await keys.getByRole('checkbox', { name: 'Report checks and sign workflow receipts' }).check();
+  await keys.getByRole('checkbox', { name: 'Read the rules' }).check();
   await keys.getByRole('button', { name: 'Create the key' }).click();
   const secret = await shownSecret(page, 'GitHub Actions');
   // A key reads the rules (`rules:read`), for its own organization only, and nothing else a person could.
@@ -119,6 +133,7 @@ test('an owner creates a service key for the CI, a member and another organizati
   const row = keys.getByRole('listitem').filter({ hasText: 'GitHub Actions' });
   await expect(row).toContainText('Report checks and sign workflow receipts');
   await expect(row).toContainText('Read the rules');
+  await expect(row).toContainText('expires');
   const listed = await callFromPage(page, 'GET', '/api/v1/service-keys');
   expect(listed.status).toBe(200);
   expect(JSON.stringify(listed.body)).not.toContain(secret);
@@ -151,10 +166,11 @@ test('a person signs the CLI in, finds the workstation in the settings, and sign
   page,
 }) => {
   await signIn(page, freshEmail('yusuf'));
-  // `ostrom login`: the CLI asks for a code, the person says yes in the browser, the CLI collects its token.
-  const started = await page.request.post('/api/v1/auth/device', { data: {}, failOnStatusCode: false });
-  expect(started.status()).toBe(200);
-  const { deviceCode, userCode } = (await started.json()) as { deviceCode: string; userCode: string };
+  // `ostrom login`: the CLI, without the browser's cookie, asks for a code; the person says yes in the browser; the
+  // CLI collects its token.
+  const started = await asProgram('POST', '/api/v1/auth/device', { data: {} });
+  expect(started.status, JSON.stringify(started.body)).toBe(200);
+  const { deviceCode, userCode } = started.body as { deviceCode: string; userCode: string };
   const answered = await callFromPage(page, 'POST', '/api/v1/auth/device/answer', {
     userCode,
     approve: true,
@@ -163,12 +179,9 @@ test('a person signs the CLI in, finds the workstation in the settings, and sign
   let cli = '';
   await expect
     .poll(async () => {
-      const polled = await page.request.post('/api/v1/auth/device/token', {
-        data: { deviceCode },
-        failOnStatusCode: false,
-      });
-      if (polled.status() === 200) cli = ((await polled.json()) as { token: string }).token;
-      return polled.status();
+      const polled = await asProgram('POST', '/api/v1/auth/device/token', { data: { deviceCode } });
+      if (polled.status === 200) cli = (polled.body as { token: string }).token;
+      return polled.status;
     })
     .toBe(200);
   expect((await withSecret(cli, '/api/v1/auth/me')).status).toBe(200);

@@ -71,6 +71,7 @@ describe('mock service keys', () => {
       throwOnError: true,
     });
     expect(made.data).toMatchObject({ name: 'Nightly', scopes: ['rules:read', 'sessions:write'] });
+    expect(made.data.expiresAt).toBeUndefined();
     expect(made.data.secret).toMatch(/^osk_demo/);
     const listed = (await listServiceKeys({ throwOnError: true })).data.items;
     expect(listed.map((key) => key.name)).toEqual(['Nightly', 'GitHub Actions']);
@@ -87,6 +88,19 @@ describe('mock service keys', () => {
     expect(await post(JSON.stringify({ name: 'CI', scopes: [] }))).toBe(400);
     expect(await post(JSON.stringify({ name: 'CI', scopes: ['orgs:read'] }))).toBe(400);
     expect(await post('not json')).toBe(400);
+    expect(await post(JSON.stringify({ name: 'CI', scopes: ['rules:read'], expiresInDays: 0 }))).toBe(400);
+    expect(await post(JSON.stringify({ name: 'CI', scopes: ['rules:read'], expiresInDays: 367 }))).toBe(400);
+  });
+
+  it('gives a key the life asked for', async () => {
+    const before = Date.now();
+    const made = await createServiceKey({
+      body: { name: 'CI', scopes: ['rules:read'], expiresInDays: 30 },
+      throwOnError: true,
+    });
+    const left = Date.parse(made.data.expiresAt ?? '') - before;
+    expect(left).toBeGreaterThanOrEqual(30 * 86_400_000 - 1_000);
+    expect(left).toBeLessThanOrEqual(30 * 86_400_000 + 60_000);
   });
 
   it('asks for a fresh sign-in to create one', async () => {

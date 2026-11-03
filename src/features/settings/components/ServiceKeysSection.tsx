@@ -8,9 +8,13 @@ import { CopyField } from '@/shared/ui/CopyField';
 import { FailureText } from '@/shared/ui/FailureText';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
+  DEFAULT_SERVICE_KEY_LIFETIME,
+  SERVICE_KEY_LIFETIMES,
   SERVICE_KEY_NAME_MAX,
   SERVICE_KEY_SCOPES,
+  type ServiceKeyLifetime,
   serviceKeyDraftProblem,
+  serviceKeyLifetimeOf,
   toggleServiceKeyScope,
 } from '../model';
 import type { ServiceKeysViewModel } from '../useKeysAndDevices';
@@ -26,8 +30,11 @@ export interface ServiceKeysSectionProps {
 export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectionProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState('');
-  const [scopes, setScopes] = useState<readonly string[]>(SERVICE_KEY_SCOPES.map((item) => item.scope));
+  // Nothing ticked: a key acts for the whole organization, so it carries only what someone chose for it.
+  const [scopes, setScopes] = useState<readonly string[]>([]);
+  const [days, setDays] = useState<ServiceKeyLifetime>(DEFAULT_SERVICE_KEY_LIFETIME);
   const nameId = useId();
+  const daysId = useId();
   if (!manages)
     return (
       <Section label={t('settings.serviceKeys.title')}>
@@ -41,8 +48,9 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
     return known === undefined ? scope : t(`settings.serviceKeys.scope.${known.label}`);
   };
   // One change at a time, and one secret: nothing changes while a key is made, deleted or its secret is on screen.
-  const secret = view.created?.secret;
-  const locked = view.creating || secret !== undefined || view.removing !== undefined;
+  const created =
+    view.created?.secret === undefined ? undefined : { ...view.created, secret: view.created.secret };
+  const locked = view.creating || created !== undefined || view.removing !== undefined;
   const problem = serviceKeyDraftProblem(name, scopes);
   return (
     <Section label={t('settings.serviceKeys.title')}>
@@ -51,7 +59,7 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
         className="o-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          view.create(name, scopes, () => {
+          view.create(name, scopes, days, () => {
             setName('');
           });
         }}
@@ -85,19 +93,38 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
           ))}
         </fieldset>
         {problem === 'scopes' ? <p className="o-row__meta">{t('settings.serviceKeys.pickScope')}</p> : null}
+        <label htmlFor={daysId} className="o-field-label">
+          {t('settings.serviceKeys.expires')}
+        </label>
+        <select
+          id={daysId}
+          className="o-input o-select"
+          value={String(days)}
+          onChange={(event) => {
+            setDays(serviceKeyLifetimeOf(event.target.value));
+          }}
+        >
+          {SERVICE_KEY_LIFETIMES.map((option) => (
+            <option key={String(option)} value={String(option)}>
+              {option === null
+                ? t('settings.serviceKeys.never')
+                : t('settings.serviceKeys.days', { count: option })}
+            </option>
+          ))}
+        </select>
         <span className="o-self-start">
           <Button type="submit" disabled={locked || problem !== undefined}>
             {view.creating ? t('settings.serviceKeys.creating') : t('settings.serviceKeys.create')}
           </Button>
         </span>
       </form>
-      {secret === undefined || view.created === undefined ? null : (
+      {created === undefined ? null : (
         <Banner tone="warning" tag={t('settings.serviceKeys.secret.tag')} live>
           <span className="o-stack">
-            <span>{t('settings.serviceKeys.secret.once', { name: view.created.name })}</span>
+            <span>{t('settings.serviceKeys.secret.once', { name: created.name })}</span>
             <CopyField
-              label={t('settings.serviceKeys.secret.label', { name: view.created.name })}
-              value={secret}
+              label={t('settings.serviceKeys.secret.label', { name: created.name })}
+              value={created.secret}
             />
             <Button variant="ghost" onClick={view.dismiss}>
               {t('settings.serviceKeys.secret.done')}
@@ -124,6 +151,9 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
                     <span className="o-row__meta">
                       {[
                         t('settings.serviceKeys.created', { date: day(key.createdAt) }),
+                        key.expiresAt === undefined
+                          ? t('settings.serviceKeys.noExpiry')
+                          : t('settings.serviceKeys.expiresOn', { date: day(key.expiresAt) }),
                         key.lastUsedAt === undefined
                           ? t('settings.serviceKeys.neverUsed')
                           : t('settings.serviceKeys.used', { date: day(key.lastUsedAt) }),

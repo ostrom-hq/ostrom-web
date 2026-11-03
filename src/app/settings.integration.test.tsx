@@ -418,19 +418,41 @@ describe('the service keys', () => {
     expect(first).toHaveTextContent('GitHub Actions');
     expect(first).toHaveTextContent('Read the rules · Report checks and sign workflow receipts');
     expect(first).toHaveTextContent('last used');
+    expect(first).toHaveTextContent('never expires');
     const create = within(keys).getByRole('button', { name: 'Create the key' });
     expect(create).toBeDisabled();
     await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'Nightly');
-    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
+    expect(within(keys).getByRole('checkbox', { name: 'Read the rules' })).not.toBeChecked();
+    await user.click(
+      within(keys).getByRole('checkbox', { name: 'Report checks and sign workflow receipts' }),
+    );
+    expect(within(keys).getByRole('combobox', { name: 'Expires' })).toHaveValue('90');
     await user.click(create);
     expect(await within(keys).findByText(/The secret of Nightly is shown once/)).toBeInTheDocument();
     expect(within(keys).getByText(/^osk_demo/)).toBeInTheDocument();
     expect(db.serviceKeys[0]).toMatchObject({ name: 'Nightly', scopes: ['sessions:write'] });
+    expect(db.serviceKeys[0]?.expiresAt).toBeDefined();
     expect(within(keys).getByRole('textbox', { name: 'Name' })).toHaveValue('');
     expect(within(keys).getAllByRole('button', { name: 'Delete' })[0]).toBeDisabled();
     await user.click(within(keys).getByRole('button', { name: 'I copied it' }));
     expect(within(keys).queryByText(/The secret of Nightly/)).toBeNull();
-    expect(await within(keys).findByText('never used')).toBeInTheDocument();
+    const rows = await within(keys).findAllByRole('listitem');
+    expect(rows[0]).toHaveTextContent('never used');
+    expect(rows[0]).not.toHaveTextContent('never expires');
+  });
+
+  it('creates a key that never expires when asked to', async () => {
+    const user = userEvent.setup();
+    visit('/settings');
+    await settings();
+    const keys = region('Service keys');
+    await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'Forever');
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
+    await user.selectOptions(within(keys).getByRole('combobox', { name: 'Expires' }), 'Never');
+    await user.click(within(keys).getByRole('button', { name: 'Create the key' }));
+    expect(await within(keys).findByText(/The secret of Forever is shown once/)).toBeInTheDocument();
+    expect(db.serviceKeys[0]).toMatchObject({ name: 'Forever', scopes: ['rules:read'] });
+    expect(db.serviceKeys[0]?.expiresAt).toBeUndefined();
   });
 
   it('needs at least one thing the key may do', async () => {
@@ -439,11 +461,10 @@ describe('the service keys', () => {
     await settings();
     const keys = region('Service keys');
     await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'CI');
-    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
-    await user.click(
-      within(keys).getByRole('checkbox', { name: 'Report checks and sign workflow receipts' }),
-    );
     expect(within(keys).getByText('Tick at least one thing it may do.')).toBeInTheDocument();
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
+    expect(within(keys).queryByText('Tick at least one thing it may do.')).toBeNull();
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
     expect(within(keys).getByRole('button', { name: 'Create the key' })).toBeDisabled();
   });
 
@@ -466,6 +487,7 @@ describe('the service keys', () => {
     await settings();
     const keys = region('Service keys');
     await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'CI');
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
     await user.click(within(keys).getByRole('button', { name: 'Create the key' }));
     const alert = await within(keys).findByRole('alert');
     expect(alert).toHaveTextContent('This change needs a sign-in less than five minutes old.');
@@ -495,6 +517,7 @@ describe('the service keys', () => {
     const keys = region('Service keys');
     expect(await within(keys).findByText('audit:read')).toBeInTheDocument();
     await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'CI');
+    await user.click(within(keys).getByRole('checkbox', { name: 'Read the rules' }));
     await user.click(within(keys).getByRole('button', { name: 'Create the key' }));
     await waitFor(() => {
       expect(within(keys).getByRole('textbox', { name: 'Name' })).toHaveValue('');

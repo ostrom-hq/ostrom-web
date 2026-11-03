@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { sortDevices } from './model';
+import { type ServiceKeyLifetime, sortDevices } from './model';
 
 export interface DevicesViewModel {
   /** Where the CLI is signed in as the person, the most recently seen first. */
@@ -62,7 +62,12 @@ export interface ServiceKeysViewModel {
   readonly keys: readonly ServiceKey[] | undefined;
   readonly failure: Error | undefined;
   /** Creates a key; `onCreated` runs once the server issued it (the form clears then, not before). */
-  readonly create: (name: string, scopes: readonly string[], onCreated: () => void) => void;
+  readonly create: (
+    name: string,
+    scopes: readonly string[],
+    days: ServiceKeyLifetime,
+    onCreated: () => void,
+  ) => void;
   readonly creating: boolean;
   /** The key just created, with its secret, until the person says they copied it. */
   readonly created: ServiceKey | undefined;
@@ -94,9 +99,12 @@ export function useServiceKeys(manages: boolean): ServiceKeysViewModel {
   // Only a failed creation is cleared: a secret on screen, shown once, is never wiped from here.
   const creationFailed = creation.isError;
   const create = useCallback(
-    (name: string, scopes: readonly string[], onCreated: () => void) => {
+    (name: string, scopes: readonly string[], days: ServiceKeyLifetime, onCreated: () => void) => {
       resetDeletion();
-      createMutate({ body: { name: name.trim(), scopes: [...scopes] } }, { onSuccess: onCreated });
+      const body = { name: name.trim(), scopes: [...scopes] };
+      createMutate(days === null ? { body } : { body: { ...body, expiresInDays: days } }, {
+        onSuccess: onCreated,
+      });
     },
     [createMutate, resetDeletion],
   );
