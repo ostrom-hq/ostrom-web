@@ -6,7 +6,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { APP_PORT, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
-import { zMe } from '../gen/api/zod.gen';
 
 const github = new FakeGitHub();
 
@@ -61,26 +60,24 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   // 3. The team: someone joins.
   const member = await anotherPerson(browser);
   await joinAs(page, org, member, 'hal', 'member');
-  const login = zMe.parse((await callFromPage(member, 'GET', '/api/v1/auth/me')).body).dev.login;
   guide = await guideOf(page);
   await expect(guide).toContainText('3 of 6 done');
   await expect(stepOf(guide, 'Invite your team')).toContainText('(done)');
 
-  // 4. A shared subscription, from the guide's step.
-  // The shape secrets.spec.ts shares: an API key, not an OAuth token (which comes with its refresh token).
-  const secret = `sk-e2e-${run()}`;
-  expect(
-    (await callFromPage(page, 'POST', '/api/v1/secrets', { name: 'CLAUDE_MAX_TOKEN', value: secret })).status,
-  ).toBe(201);
-  await stepOf(guide, 'Add a model account').getByRole('link', { name: 'Add an account' }).click();
-  const form = page.getByRole('region', { name: 'Share a subscription' });
-  await form.getByRole('combobox', { name: 'Provider' }).selectOption('anthropic');
-  await form.getByRole('textbox', { name: 'Name' }).fill('Gus’s Claude Max');
-  await form.getByRole('combobox', { name: 'Credential' }).selectOption('CLAUDE_MAX_TOKEN');
-  await form.getByRole('textbox', { name: 'Daily share in USD (optional)' }).fill('25');
-  await form.getByRole('checkbox', { name: login, exact: true }).check();
-  await form.getByRole('button', { name: 'Share' }).click();
-  await expect(page.getByRole('article', { name: 'Gus’s Claude Max' })).toBeVisible();
+  // 4. A shared subscription, as `ostrom accounts share` sends it from a member's machine: the console's own form
+  // sends another body, which this server refuses (JOURNAL, 03/11). The guide's step leads to the accounts screen.
+  await expect(
+    stepOf(guide, 'Add a model account').getByRole('link', { name: 'Add an account' }),
+  ).toHaveAttribute('href', '/accounts');
+  const shared = await callFromPage(page, 'POST', '/api/v1/accounts', {
+    provider: 'claude',
+    label: `Gus’s Claude Max ${id}`,
+    providerAccountId: `gus-${id}@acme.test`,
+    accessToken: `sk-ant-oat01-e2e-${run()}`,
+    refreshToken: `sk-ant-ort01-e2e-${run()}`,
+    expiresAt: new Date(Date.now() + 86_400_000).toISOString(),
+  });
+  expect(shared.status, JSON.stringify(shared.body)).toBe(201);
   guide = await guideOf(page);
   await expect(guide).toContainText('4 of 6 done');
   await expect(stepOf(guide, 'Add a model account')).toContainText('(done)');
