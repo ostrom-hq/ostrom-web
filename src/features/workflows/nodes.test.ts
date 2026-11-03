@@ -26,11 +26,18 @@ describe('the condition of a check', () => {
     value: 'passed',
     ...parts,
   });
+  // the same condition with no value at all (an absent key, not an undefined one)
+  const bare = (parts: Omit<Partial<NodeCondition>, 'value'>): NodeCondition => ({
+    step: 'tests',
+    path: 'result.status',
+    op: 'equals',
+    ...parts,
+  });
 
   it('takes a condition on an earlier step, with a simple path and what to compare', () => {
     expect(conditionProblem(condition({}), earlier)).toBeUndefined();
     expect(conditionProblem(condition({ path: 'items[0].name', op: 'notEquals', value: '' }), earlier)).toBeUndefined();
-    expect(conditionProblem(condition({ op: 'exists', value: undefined }), earlier)).toBeUndefined();
+    expect(conditionProblem(bare({ op: 'exists' }), earlier)).toBeUndefined();
     expect(conditionProblem(condition({ op: 'matches', value: '^v[0-9]+$' }), earlier)).toBeUndefined();
   });
 
@@ -45,8 +52,8 @@ describe('the condition of a check', () => {
   });
 
   it('wants a value to compare, except for exists, which takes none', () => {
-    expect(conditionProblem(condition({ value: undefined }), earlier)).toBe('value');
-    expect(conditionProblem(condition({ op: 'matches', value: undefined }), earlier)).toBe('value');
+    expect(conditionProblem(bare({}), earlier)).toBe('value');
+    expect(conditionProblem(bare({ op: 'matches' }), earlier)).toBe('value');
     expect(conditionProblem(condition({ op: 'exists', value: 'x' }), earlier)).toBe('value');
   });
 
@@ -70,8 +77,9 @@ describe('the workflow a step calls', () => {
       workflow('review', ['deploy']),
       workflow('release', ['review']),
       workflow('lint', ['lint']),
-      workflow('docs'),
+      workflow('docs', ['gone']),
     ];
+    // a call to a workflow no longer listed leads nowhere
     expect(callChoices(all, 'deploy').map((w) => w.id)).toEqual(['lint', 'docs']);
   });
 });
