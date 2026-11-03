@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
@@ -6,8 +7,17 @@ import { Section } from '@/shared/ui/Screen';
 import { BUDGET_SCOPES, type BudgetScope, draftBudget, isBudgetScope } from '../model';
 import type { BudgetChangeViewModel } from '../useSpend';
 
-/** Setting a budget for a scope and subject replaces the one already there. */
-export function BudgetForm({ change }: { readonly change: BudgetChangeViewModel }): ReactElement {
+/**
+ * Setting a budget for a scope and subject replaces the one already there. A member is chosen by login, from the
+ * organization's members, and sent by id: the server knows members by id.
+ */
+export function BudgetForm({
+  change,
+  members,
+}: {
+  readonly change: BudgetChangeViewModel;
+  readonly members: readonly OrgMember[] | undefined;
+}): ReactElement {
   const { t } = useTranslation();
   const [scope, setScope] = useState<BudgetScope>('org');
   const [subject, setSubject] = useState('');
@@ -52,19 +62,23 @@ export function BudgetForm({ change }: { readonly change: BudgetChangeViewModel 
           {scope === 'org' ? null : (
             <>
               <label htmlFor={ids.subject} className="o-visually-hidden">
-                {t(`spend.budgets.subject.${scope}`)}
+                {t('spend.budgets.person')}
               </label>
-              <input
+              <select
                 id={ids.subject}
-                className="o-input o-mono"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={t(`spend.budgets.subject.${scope}`)}
+                className="o-input o-select"
                 value={subject}
                 onChange={(event) => {
                   setSubject(event.target.value);
                 }}
-              />
+              >
+                <option value="">{t('spend.budgets.everyMember')}</option>
+                {(members ?? []).map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.login}
+                  </option>
+                ))}
+              </select>
             </>
           )}
         </div>

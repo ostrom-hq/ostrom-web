@@ -511,7 +511,7 @@ export const zBillingWebhookAck = z.object({
 });
 
 /**
- * A spending limit
+ * A subject's spending limits, per calendar month and per day (UTC). A day starts at 00:00 UTC, a month on the 1st at 00:00 UTC; the spend is the model gateway's measured cost
  */
 export const zBudget = z.object({
     scope: z.string(),
@@ -1365,9 +1365,10 @@ export const zOrgInvites = z.object({
 });
 
 /**
- * A member as `/api/v1/orgs/{org}/members` serves it (no member id there)
+ * A member as `/api/v1/orgs/{org}/members` serves it
  */
 export const zOrgMember = z.object({
+    id: z.uuid(),
     login: z.string(),
     name: z.string(),
     avatarUrl: z.string(),
@@ -2123,6 +2124,18 @@ export const zSkill = z.object({
 });
 
 /**
+ * A budget spent past its limit in its current day or month
+ */
+export const zExceededBudget = z.object({
+    scope: z.string(),
+    subject: z.string().optional(),
+    period: z.enum(['day', 'month']),
+    usd: z.number(),
+    hardStop: z.boolean(),
+    since: z.iso.datetime({ offset: true })
+});
+
+/**
  * Spending of one day
  */
 export const zSpendingDay = z.object({
@@ -2152,7 +2165,8 @@ export const zSpending = z.object({
     byAgent: z.array(zSpendingLine),
     byRepo: z.array(zSpendingLine),
     byPerson: z.array(zSpendingLine),
-    daily: z.array(zSpendingDay)
+    daily: z.array(zSpendingDay),
+    exceeded: z.array(zExceededBudget).optional()
 });
 
 /**

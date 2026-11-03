@@ -740,13 +740,28 @@ export type BillingWebhookAck = {
 };
 
 /**
- * A spending limit
+ * A subject's spending limits, per calendar month and per day (UTC). A day starts at 00:00 UTC, a month on the 1st at 00:00 UTC; the spend is the model gateway's measured cost
  */
 export type Budget = {
+    /**
+     * `organization` (also `org`) or `member`
+     */
     scope: string;
+    /**
+     * For `member`: the member's `id` (`OrgMember.id`); absent, every member without limits of their own
+     */
     subject?: string;
+    /**
+     * The monthly limit in US dollars; absent, none
+     */
     usdPerMonth?: number;
+    /**
+     * The daily limit in US dollars; absent, none
+     */
     usdPerDay?: number;
+    /**
+     * True: a reached limit refuses the model calls until its period ends (`InferenceRefused`, `Monthly budget reached` or `Daily budget reached`). False: the calls go on; the overrun is written once per period to the organization's audit log (`budget.exceeded`) and listed in `Spending.exceeded`
+     */
     hardStop: boolean;
 };
 
@@ -1969,9 +1984,13 @@ export type OrgInvites = {
 };
 
 /**
- * A member as `/api/v1/orgs/{org}/members` serves it (no member id there)
+ * A member as `/api/v1/orgs/{org}/members` serves it
  */
 export type OrgMember = {
+    /**
+     * The member's id, stable across their tokens and sessions: the `subject` of their `Budget`
+     */
+    id: string;
     login: string;
     name: string;
     /**
@@ -2726,6 +2745,37 @@ export type Spending = {
     byRepo: Array<SpendingLine>;
     byPerson: Array<SpendingLine>;
     daily: Array<SpendingDay>;
+    /**
+     * The budgets the reader sees spent past their limit today or this month, whatever `period`: all of the organization's for whoever sees its whole spending, the reader's own otherwise; empty when none
+     */
+    exceeded?: Array<ExceededBudget>;
+};
+
+/**
+ * A budget spent past its limit in its current day or month
+ */
+export type ExceededBudget = {
+    /**
+     * `organization` or `member`
+     */
+    scope: string;
+    /**
+     * For `member`: the member's `id`
+     */
+    subject?: string;
+    period: 'day' | 'month';
+    /**
+     * The limit in US dollars
+     */
+    usd: number;
+    /**
+     * Whether it stops the calls; false, it only warns and the calls go on
+     */
+    hardStop: boolean;
+    /**
+     * When the server saw it reached
+     */
+    since: string;
 };
 
 /**

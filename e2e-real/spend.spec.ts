@@ -66,25 +66,35 @@ test('an owner reads a new organization’s spend, sets its monthly budget that 
   }
 });
 
-test('an owner sets a member’s daily budget that warns only', async ({ page, browser }) => {
-  test.fixme(
-    true,
-    'ostrom-server: PUT /budgets takes a member by id (the console knows logins: /orgs/{org}/members has no id), ' +
-      'monthly budgets only and always stopping; the console offers login, per day and warn only. For the budgets ' +
-      'module’s owner and WEB in the JOURNAL (02/11)',
-  );
+test('an owner sets a member’s daily budget that warns only, chosen by login and held by id', async ({
+  page,
+  browser,
+}) => {
   const org = await ownerOfNewOrganization(page, 'sora');
   const member = await anotherPerson(browser);
   await joinAs(page, org.id, member, 'tara', 'member');
   const login = ((await callFromPage(member, 'GET', '/api/v1/auth/me')).body as { dev: { login: string } })
     .dev.login;
+  // The members list carries each member's id: what a member budget names.
+  const listed = await callFromPage(page, 'GET', `/api/v1/orgs/${org.id}/members`);
+  const id = (listed.body as { items: { id: string; login: string }[] }).items.find(
+    (item) => item.login === login,
+  )?.id;
+  expect(id).toBeDefined();
+
   await page.goto('/spend');
   const form = page.getByRole('region', { name: 'Set a budget' });
   await form.getByRole('combobox', { name: 'For' }).selectOption('member');
-  await form.getByRole('textbox', { name: 'Login' }).fill(login);
+  await form.getByRole('combobox', { name: 'Person' }).selectOption({ label: login });
   await form.getByRole('textbox', { name: 'Per day ($)' }).fill('20');
   await form.getByRole('button', { name: 'Save the budget' }).click();
   const line = page.getByRole('region', { name: 'Budgets' }).getByRole('listitem').filter({ hasText: login });
   await expect(line).toContainText('$20.00 a day');
   await expect(line).toContainText('Warns');
+
+  // The server holds it by the member's id, by the day, warning only.
+  const held = await callFromPage(page, 'GET', '/api/v1/budgets');
+  const own = (held.body as { items: BudgetLine[] }).items.filter((item) => item.subject === id);
+  expect(own).toEqual([expect.objectContaining({ scope: 'member', usdPerDay: 20, hardStop: false })]);
+  expect(own[0]).not.toHaveProperty('usdPerMonth');
 });

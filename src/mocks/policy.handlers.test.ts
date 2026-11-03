@@ -141,6 +141,7 @@ describe('the mock agent policy, as the gateway keeps it', () => {
     db.otherOrganizations = [globex];
     db.orgMembers[globex.id] = [
       {
+        id: MEMBER_IDS.maya,
         login: 'maya',
         name: '',
         avatarUrl: '',

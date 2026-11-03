@@ -55,6 +55,7 @@ import type { Approval } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { initialApprovals } from '@/mocks/fixtures/approvals';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import {
   createHandlers,
   DEMO_EMAIL_TOKEN,
@@ -895,21 +896,18 @@ describe('mock spending and budgets', () => {
   it('adds a budget or replaces the one with the same scope and subject', async () => {
     expect((await listBudgets({ throwOnError: true })).data.items).toHaveLength(2);
     await setBudget({ body: { scope: 'org', usdPerMonth: 1_500, hardStop: true }, throwOnError: true });
-    await setBudget({
-      body: { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
-      throwOnError: true,
-    });
+    await setBudget({ body: { scope: 'member', usdPerDay: 10, hardStop: false }, throwOnError: true });
     expect(db.budgets).toEqual([
       { scope: 'org', usdPerMonth: 1_500, hardStop: true },
-      { scope: 'member', subject: 'theo', usdPerDay: 25, hardStop: true },
-      { scope: 'workflow', subject: 'wf-backend', usdPerDay: 10, hardStop: false },
+      { scope: 'member', subject: MEMBER_IDS.theo, usdPerDay: 25, hardStop: true },
+      { scope: 'member', usdPerDay: 10, hardStop: false },
     ]);
   });
 
   it('refuses a budget without an amount, with a wrong subject or scope, and from a member', async () => {
     expect(await send({ scope: 'org', hardStop: false })).toBe(400);
     expect(await send({ scope: 'org', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
-    expect(await send({ scope: 'member', usdPerDay: 1, hardStop: false })).toBe(400);
+    expect(await send({ scope: 'workflow', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
     expect(await send({ scope: 'team', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
     expect(await send({ scope: 'org', usdPerDay: -1, hardStop: false })).toBe(400);
     db.members = db.members.map((member) =>

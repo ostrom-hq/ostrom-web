@@ -3992,7 +3992,9 @@ export const listBudgets = <ThrowOnError extends boolean = false>(options?: Opti
 });
 
 /**
- * Set a budget (organization, member, workflow)
+ * Set a budget (the organization, every member, or one member)
+ *
+ * Replaces the subject's limits whole: a monthly one (`usdPerMonth`) and a daily one (`usdPerDay`), both stopping the calls (`hardStop` true) or both only warning (false); neither amount removes the subject's limits. The subject is the organization (`scope` `organization`), every member without limits of their own (`member` without `subject`), or one member (`member`, `subject` = the member's `id` from `/api/v1/orgs/{org}/members`). A workflow budget is not served: `scope` `workflow` is a 400
  */
 export const setBudget = <ThrowOnError extends boolean = false>(options: Options<SetBudgetData, ThrowOnError>): RequestResult<SetBudgetResponses, SetBudgetErrors, ThrowOnError> => (options.client ?? client).put<SetBudgetResponses, SetBudgetErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({

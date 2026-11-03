@@ -18,6 +18,7 @@ export const MEMBER_IDS = {
   samir: '5f8b1c3a-4d6e-4fa0-9b2c-3d4e5f607182',
   theo: '6a9c2d4b-5e7f-4ab1-8c3d-4e5f60718293',
   jo: '7bad3e5c-6f80-4bc2-9d4e-5f60718293a4',
+  ines: '8cbe4f6d-7091-4cd3-8e5f-60718293a4b5',
 } as const;
 
 const members: Member[] = [
@@ -69,11 +70,12 @@ export function initialTeams(): Team[] {
   return structuredClone(teams);
 }
 
-/** Acme's members as `/orgs/{org}/members` serves them: no member id, an empty name or address when there is none. */
+/** Acme's members as `/orgs/{org}/members` serves them: with their id, an empty name or address when there is none. */
 export function initialOrgMembers(): OrgMember[] {
   const joined = '2026-09-01T09:00:00.000Z';
   return [
     {
+      id: MEMBER_IDS.lena,
       login: 'lena',
       name: 'Lena Ortiz',
       avatarUrl: '',
@@ -82,6 +84,7 @@ export function initialOrgMembers(): OrgMember[] {
       joinedAt: joined,
     },
     {
+      id: MEMBER_IDS.maya,
       login: 'maya',
       name: 'Maya Lind',
       avatarUrl: '',
@@ -89,9 +92,26 @@ export function initialOrgMembers(): OrgMember[] {
       role: 'admin',
       joinedAt: joined,
     },
-    { login: 'samir', name: 'Samir Haddad', avatarUrl: '', email: null, role: 'approver', joinedAt: joined },
-    { login: 'theo', name: '', avatarUrl: '', email: 'theo@acme.dev', role: 'member', joinedAt: joined },
     {
+      id: MEMBER_IDS.samir,
+      login: 'samir',
+      name: 'Samir Haddad',
+      avatarUrl: '',
+      email: null,
+      role: 'approver',
+      joinedAt: joined,
+    },
+    {
+      id: MEMBER_IDS.theo,
+      login: 'theo',
+      name: '',
+      avatarUrl: '',
+      email: 'theo@acme.dev',
+      role: 'member',
+      joinedAt: joined,
+    },
+    {
+      id: MEMBER_IDS.ines,
       login: 'ines',
       name: 'Inès Morel',
       avatarUrl: '',

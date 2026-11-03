@@ -8,7 +8,7 @@ import {
   putMcpSettings,
   unassignMcpServer,
 } from '@gen/api/sdk.gen';
-import { otherOrganization } from '@/mocks/fixtures/organization';
+import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { setDemoRole } from '@/mocks/orgs';
@@ -68,6 +68,7 @@ describe('the mock relay access, as the server refuses', () => {
     db.otherOrganizations = [globex];
     db.orgMembers[globex.id] = [
       {
+        id: MEMBER_IDS.maya,
         login: 'maya',
         name: '',
         avatarUrl: '',

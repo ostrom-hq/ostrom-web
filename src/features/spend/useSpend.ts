@@ -4,14 +4,16 @@ import {
   getSpendingQueryKey,
   listBudgetsOptions,
   listBudgetsQueryKey,
+  listOrgMembersOptions,
   setBudgetMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Budget, Spending } from '@gen/api/types.gen';
+import type { Budget, OrgMember, Spending } from '@gen/api/types.gen';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
+import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { type Period, sortBudgets } from './model';
 
 export interface SpendViewModel {
@@ -20,6 +22,8 @@ export interface SpendViewModel {
   readonly switching: boolean;
   readonly failure: Error | undefined;
   readonly budgets: readonly Budget[] | undefined;
+  /** The organization's members: a member budget names them by id, people choose and read them by login. */
+  readonly members: readonly OrgMember[] | undefined;
   readonly canManage: boolean;
 }
 
@@ -28,6 +32,14 @@ export function useSpend(period: Period): SpendViewModel {
     ready(getSpendingOptions({ query: { period } }), { placeholderData: keepPreviousData }),
   );
   const budgets = useQuery(ready(listBudgetsOptions()));
+  const { org } = useCurrentOrg();
+  // Only a name for each budget: without the list, budgets still show, by id.
+  const members = useQuery(
+    ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), {
+      enabled: org !== undefined,
+      retry: false,
+    }),
+  );
   const viewer = useViewer();
   const sorted = useMemo(
     () => (budgets.data === undefined ? undefined : sortBudgets(budgets.data.items)),
@@ -38,6 +50,7 @@ export function useSpend(period: Period): SpendViewModel {
     switching: spending.isPlaceholderData,
     failure: failureOf(spending.error ?? budgets.error),
     budgets: sorted,
+    members: members.data?.items,
     canManage: viewer.canManage,
   };
 }

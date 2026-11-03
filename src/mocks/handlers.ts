@@ -332,14 +332,17 @@ function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
 }
 /** Secrets are environment variables in the agent's sandbox: CAPITALS, digits and underscores. */
 const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
-/** A budget names who it limits (no subject for the organization) and at least one positive amount. */
+/**
+ * A budget names who it limits (no subject for the organization; for members, a member's id, or none for every
+ * member) and at least one positive amount. As the server, no workflow budget.
+ */
 const zBudgetWrite = zBudget
   .extend({
-    scope: z.enum(['org', 'member', 'workflow']),
+    scope: z.enum(['org', 'member']),
     usdPerMonth: z.number().positive().optional(),
     usdPerDay: z.number().positive().optional(),
   })
-  .refine((budget) => (budget.scope === 'org') === (budget.subject === undefined))
+  .refine((budget) => budget.scope === 'member' || budget.subject === undefined)
   .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
 // The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
 const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() });
