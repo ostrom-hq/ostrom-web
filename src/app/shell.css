@@ -57,6 +57,8 @@
 }
 .o-topbar__end {
   margin-left: auto;
+  /* The organization and the theme stay whole; the navigation is the part that scrolls. */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -264,6 +266,20 @@
   .o-org-switch__name,
   .o-org-switch__viewer {
     max-width: 6rem;
+  }
+  /* On a phone the mark alone says where you are: its name stays for screen readers, the room goes to the navigation. */
+  .o-brand {
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .o-brand > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
