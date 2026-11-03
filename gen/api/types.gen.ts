@@ -2452,11 +2452,36 @@ export type Session = {
     endedBy?: string;
     lastSeenAt?: string;
     gates?: Array<string>;
+    /**
+     * On a single read only, the answers to those of `gates` someone answered, oldest gate first. A token that reads sessions without reading gates (the device of `ostrom login`) sees them here; nothing of another session's gates.
+     */
+    gateAnswers?: Array<SessionGateAnswer>;
     receiptId?: string;
     tools?: number;
     costUsd?: number;
     exitCode?: number;
     runId?: string;
+};
+
+/**
+ * The answer to a gate a session asked or joined, as the session's thread shows it.
+ */
+export type SessionGateAnswer = {
+    gateId: string;
+    actionClass: string;
+    /**
+     * `approved` stays once the session reserved or used the yes.
+     */
+    outcome: 'approved' | 'refused';
+    /**
+     * Who answered, the approver whose yes or no decided the gate.
+     */
+    by: string;
+    at: string;
+    /**
+     * The gate's signed receipt, once signed.
+     */
+    receiptId?: string;
 };
 
 /**
