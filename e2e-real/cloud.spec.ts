@@ -129,5 +129,8 @@ test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops
       { timeout: 2 * 60_000, intervals: [2_000] },
     )
     .toMatch(/^(terminated|gone)$/);
-  await expect(row.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0);
+  // The screen reads the list every 10 s (useCloud's POLL_MS): its next read shows the session over, or without it.
+  const ended = { timeout: 30_000 };
+  await expect(row.getByRole('button', { name: 'Stop', exact: true })).toHaveCount(0, ended);
+  await expect(row.filter({ hasText: 'Running' })).toHaveCount(0, ended);
 });
