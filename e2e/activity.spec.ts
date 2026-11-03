@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, test } from '@playwright/test';
+import { openScreen } from './navigation';
 
 test('a member reads what happened, opens the older lines and one repository’s sessions', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Activity' }).click();
+  await openScreen(page, 'Activity');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Activity');
   const list = page.getByRole('main').getByRole('list');
   await expect(list.getByRole('listitem')).toHaveCount(5);
