@@ -6,6 +6,7 @@ import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { languageScript } from './src/shared/i18n/languageScript';
 
+const here = fileURLToPath(new URL('./', import.meta.url));
 const src = fileURLToPath(new URL('./src', import.meta.url));
 const ee = fileURLToPath(new URL('./ee', import.meta.url));
 const gen = fileURLToPath(new URL('./gen', import.meta.url));
@@ -65,6 +66,37 @@ function preloadLanguage(): Plugin {
 }
 
 /**
+ * What each chunk is made of, module by module, as the build rendered it (bytes before compression): written to
+ * `.vite/modules.json` beside the manifest, and only when the manifest is asked for (the budget's build, never the
+ * image's), for scripts/bundle-budget.ts to name what weighs most in the first download.
+ */
+function reportModules(): Plugin {
+  let manifest = false;
+  return {
+    name: 'ostrom:report-modules',
+    apply: 'build',
+    configResolved(config) {
+      manifest = config.build.manifest !== false;
+    },
+    generateBundle(_options, bundle) {
+      if (!manifest) return;
+      const chunks: Record<string, { id: string; bytes: number }[]> = {};
+      for (const file of Object.values(bundle)) {
+        if (file.type !== 'chunk') continue;
+        chunks[file.fileName] = Object.entries(file.modules).map(([id, module]) => ({
+          // Where it comes from, not the machine's path: a package's name, or the path in the repository.
+          id: id
+            .replace(/^.*[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?/, 'npm:')
+            .replace(here, ''),
+          bytes: module.renderedLength,
+        }));
+      }
+      this.emitFile({ type: 'asset', fileName: '.vite/modules.json', source: JSON.stringify(chunks) });
+    },
+  };
+}
+
+/**
  * The console image's security headers (docker/security-headers.conf), sent by `vite preview` too: the
  * Playwright journeys run under the very policy the image ships (audit S2-09). The image's one variable, the
  * analytics origin of connect-src, is empty here, as in an image without analytics.
@@ -85,7 +117,7 @@ function imageSecurityHeaders(): Record<string, string> {
 }
 
 export default defineConfig({
-  plugins: [react(), dropMockWorkerUnlessMocks(), preloadLanguage()],
+  plugins: [react(), dropMockWorkerUnlessMocks(), preloadLanguage(), reportModules()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: {

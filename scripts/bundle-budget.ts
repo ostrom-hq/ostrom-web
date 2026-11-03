@@ -78,6 +78,39 @@ function indexOf(manifest: Manifest, feature: string): string {
   return key;
 }
 
+const zModules = z.record(z.string(), z.array(z.object({ id: z.string(), bytes: z.number() })));
+
+/** A module's package (`npm:react-dom`) or its place in the repository (`src/features/approvals`). */
+function groupOf(id: string): string {
+  if (id.startsWith('npm:')) {
+    const [scope = '', name = ''] = id.slice(4).split('/');
+    return scope.startsWith('@') ? `npm:${scope}/${name}` : `npm:${scope}`;
+  }
+  return id.split('/').slice(0, 3).join('/');
+}
+
+/**
+ * The heaviest packages and folders of the first download, before compression, from `.vite/modules.json`
+ * (vite.config.ts, `reportModules`): what a smaller first download would have to leave out.
+ */
+function heaviestOf(dist: string, entry: ReadonlySet<string>): string[] {
+  const modules = zModules.parse(JSON.parse(readFileSync(join(dist, '.vite', 'modules.json'), 'utf8')));
+  const bytes = new Map<string, number>();
+  for (const [file, parts] of Object.entries(modules)) {
+    if (!entry.has(file)) continue;
+    for (const { id, bytes: size } of parts) bytes.set(groupOf(id), (bytes.get(groupOf(id)) ?? 0) + size);
+  }
+  const heaviest = [...bytes].toSorted((a, b) => b[1] - a[1]).slice(0, 15);
+  return [
+    '',
+    '**The first download, heaviest first** (KiB before compression):',
+    '',
+    '| Package or folder | KiB |',
+    '|---|---:|',
+    ...heaviest.map(([group, size]) => `| \`${group}\` | ${(size / 1024).toFixed(1)} |`),
+  ];
+}
+
 function main(dist: string): void {
   const manifest = zManifest.parse(JSON.parse(readFileSync(join(dist, '.vite', 'manifest.json'), 'utf8')));
   const budget = zBudget.parse(JSON.parse(readFileSync('bundle-budget.json', 'utf8')));
@@ -139,7 +172,7 @@ function main(dist: string): void {
   const routes = checkRouteBudgets(measured, budget.routes);
   over.push(...routes.over);
 
-  const table = rows.join('\n');
+  const table = [rows.join('\n'), ...heaviestOf(dist, entry)].join('\n');
   process.stdout.write(`${table}\n`);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, `### Download per route\n\n${table}\n`);
