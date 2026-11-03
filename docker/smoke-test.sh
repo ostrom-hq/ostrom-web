@@ -128,4 +128,21 @@ if curl -fsS -o /dev/null http://127.0.0.1:18080/assets/missing.js; then fail "m
 if docker exec web sh -c 'ls /usr/share/nginx/html/assets/*.map' >/dev/null 2>&1; then fail "source maps shipped"; fi
 # A build without VITE_MOCKS ships neither the mock API nor its demo data (audit AUDIT-SECU-WEB-2 B7).
 if docker exec web grep -rlqe ml_demo -e '\[MSW\]' /usr/share/nginx/html/assets; then fail "mock API shipped"; fi
+# W4 (web audit 2, passage 2): the access log keeps the path, never a query string nor the one of a Referer. A device
+# code (`/device?code=`, `GET /api/v1/auth/device?userCode=`), a terminal ticket (`?ticket=`) or a link never lands there.
+docker exec web grep -q 'log_format ostrom_noquery' /etc/nginx/conf.d/default.conf \
+  || fail "the rendered configuration has no ostrom_noquery log format"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors -H 'Referer: http://127.0.0.1:18080/device?code=REFCODE-SMOKE' \
+  'http://127.0.0.1:18080/api/v1/auth/device?userCode=APICODE-SMOKE' || fail "device lookup: the request failed"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors 'http://127.0.0.1:18080/device?code=PAGECODE-SMOKE' \
+  || fail "/device: the request failed"
+curl -fsS -o /dev/null --retry 5 --retry-all-errors -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+  'http://127.0.0.1:18080/api/v1/cloud/sessions/s1/terminal?ticket=TICKET-SMOKE' || fail "terminal: the request failed"
+logs=$(docker logs web 2>&1)
+for secret in REFCODE-SMOKE APICODE-SMOKE PAGECODE-SMOKE TICKET-SMOKE; do
+  if printf '%s\n' "$logs" | grep -q "$secret"; then fail "the access log keeps a query string ($secret)"; fi
+done
+printf '%s\n' "$logs" | grep -q '"GET /api/v1/auth/device HTTP/1.1" 200 .* "http://127.0.0.1:18080/device"' \
+  || fail "the access log lost the path or the Referer's page"
+printf '%s\n' "$logs" | grep -q '"GET /api/v1/cloud/sessions/s1/terminal HTTP/1.1"' || fail "the access log lost the terminal's path"
 echo "web image smoke test: ok"
