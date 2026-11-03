@@ -29,6 +29,11 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   const number = page.locator('#cardNumber');
   await expect(card.or(number).first()).toBeVisible({ timeout: 60_000 });
   if (await shown(page, '[data-testid="card-accordion-item-button"]')) await card.click();
+  // The server opens Checkout for a customer without an email (ostrom-server's createCustomer): Stripe asks for one.
+  const email = page.locator('#email');
+  if ((await shown(page, '#email')) && (await email.isEditable()) && (await email.inputValue()) === '') {
+    await email.fill('billing-journey@example.com');
+  }
   await number.fill(CARD.number);
   await page.locator('#cardExpiry').fill(CARD.expiry);
   await page.locator('#cardCvc').fill(CARD.cvc);
