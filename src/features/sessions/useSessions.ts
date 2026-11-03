@@ -2,11 +2,13 @@
 import {
   getSessionOptions,
   listSessionsInfiniteOptions,
+  listSessionsInfiniteQueryKey,
   listSessionsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Receipt, Session } from '@gen/api/types.gen';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { listSessions } from '@gen/api/sdk.gen';
+import type { ListSessionsResponse, Receipt, Session } from '@gen/api/types.gen';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
@@ -29,17 +31,60 @@ export interface SessionListViewModel {
   readonly loadMore: () => void;
 }
 
+/**
+ * Every open session, a page after the other (`next`, read back as `before`): the server gives 50 at a time, and
+ * the list says how many run. Open sessions are the work going on now, a few per person.
+ */
+export async function everyOpenSession(signal: AbortSignal): Promise<ListSessionsResponse> {
+  const items: Session[] = [];
+  let before: string | undefined;
+  do {
+    const query = before === undefined ? { open: true } : { open: true, before };
+    const { data } = await listSessions({ query, signal, throwOnError: true });
+    items.push(...data.items);
+    before = data.next;
+  } while (before !== undefined);
+  return { items };
+}
+
+/** Polls the ended sessions while only their first page is read: each poll would read every older page again. */
+export function endedPoll(query: { readonly state: { readonly data?: unknown } }): number | false {
+  const { data } = query.state;
+  const pages =
+    typeof data === 'object' && data !== null && 'pages' in data && Array.isArray(data.pages)
+      ? data.pages.length
+      : 0;
+  return pages > 1 ? false : SESSIONS_POLL_MS;
+}
+
 export function useSessionList(): SessionListViewModel {
+  const queryClient = useQueryClient();
   const open = useQuery(
-    ready(listSessionsOptions({ query: { open: true } }), { refetchInterval: SESSIONS_POLL_MS }),
+    ready(
+      {
+        ...listSessionsOptions({ query: { open: true } }),
+        queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyOpenSession(signal),
+      },
+      { refetchInterval: SESSIONS_POLL_MS },
+    ),
   );
-  // A session that ends leaves the open list: the ended one follows at the same pace so it shows up there. The server
-  // serves it a page at a time (`next`, read back as `before`): the older pages come when asked.
+  // A session that ends leaves the open list: the ended one follows so it shows up there. The server serves it a
+  // page at a time (`next`, read back as `before`): the older pages come when asked, and are read again only when a
+  // session ended, not at every poll.
   const ended = useInfiniteQuery({
-    ...ready(listSessionsInfiniteOptions({ query: { open: false } }), { refetchInterval: SESSIONS_POLL_MS }),
+    ...ready(listSessionsInfiniteOptions({ query: { open: false } }), { refetchInterval: endedPoll }),
     initialPageParam: {},
     getNextPageParam: (last) => last.next,
   });
+  const openIds = useMemo(() => open.data?.items.map((session) => session.id), [open.data]);
+  const seen = useRef<readonly string[]>([]);
+  useEffect(() => {
+    if (openIds === undefined) return;
+    const left = seen.current.some((id) => !openIds.includes(id));
+    seen.current = openIds;
+    const endedKey = listSessionsInfiniteQueryKey({ query: { open: false } });
+    if (left) void queryClient.invalidateQueries({ queryKey: endedKey });
+  }, [openIds, queryClient]);
   const endedItems = useMemo(() => ended.data?.pages.flatMap((page) => page.items), [ended.data]);
   const { fetchNextPage } = ended;
   // Once a page is read, a failure never takes the list away: not even on the next poll, when TanStack forgets that

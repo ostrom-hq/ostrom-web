@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { Link } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
@@ -78,14 +78,53 @@ export function DeviceScreen(): ReactElement {
   }
 }
 
-/** A pending login: what asks, its code, until when, what an admin sign-in would give, and the two answers. */
+/**
+ * The organization an admin sign-in acts in: chosen among those the person owns or administers when there are
+ * several, said when there is one, and nothing when there is none (the approval then says why it is refused).
+ */
+function ActsIn({ open }: { readonly open: OpenDeviceLogin }): ReactElement | null {
+  const { t } = useTranslation();
+  const id = useId();
+  const { orgs, org } = open;
+  // Not read yet, or none the person manages: the approval then says why the server refuses it.
+  if (org === undefined || orgs.length === 0) return null;
+  if (orgs.length === 1) return <Facts facts={[{ label: t('device.org'), value: org.name }]} />;
+  return (
+    <div className="o-stack">
+      <label htmlFor={id} className="o-field-label">
+        {t('device.org')}
+      </label>
+      <select
+        id={id}
+        className="o-input"
+        value={org.id}
+        disabled={open.answering}
+        onChange={(event) => {
+          open.pick(event.target.value);
+        }}
+      >
+        {orgs.map((item) => (
+          <option key={item.id} value={item.id}>
+            {item.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/** The hour and minute of a moment, in the reader's language: a login lives ten minutes. */
+function clockTime(iso: string, language: string): string {
+  return new Date(iso).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * A pending login: what asks, its code, when and from which network it asked (web audit 2, W3: a code someone else
+ * sent shows), until when, what an admin sign-in would give, and the two answers.
+ */
 function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElement {
   const { t, i18n } = useTranslation();
   const { login } = open;
-  const expires = new Date(login.expiresAt).toLocaleTimeString(i18n.language, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
   return (
     <Screen title={t('device.title')} lead={t('device.lead')}>
       <div className="o-stack">
@@ -94,7 +133,11 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
           <Facts
             facts={[
               { label: t('device.client'), value: login.clientName },
-              { label: t('device.expires'), value: expires },
+              { label: t('device.requestedAt'), value: clockTime(login.requestedAt, i18n.language) },
+              login.requestedFrom === undefined
+                ? undefined
+                : { label: t('device.requestedFrom'), value: login.requestedFrom, mono: true },
+              { label: t('device.expires'), value: clockTime(login.expiresAt, i18n.language) },
             ]}
           />
         </Section>
@@ -110,6 +153,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
                 </li>
               ))}
             </ul>
+            <ActsIn open={open} />
           </div>
         )}
         {open.forbidden ? (
@@ -128,7 +172,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
           </Banner>
         )}
         <div className="o-device__actions">
-          <Button variant="primary" onClick={open.approve} disabled={open.answering}>
+          <Button variant="primary" onClick={open.approve} disabled={open.answering || open.choosing}>
             {login.scopes === undefined ? t('device.approve') : t('device.approveAdmin')}
           </Button>
           <Button onClick={open.deny} disabled={open.answering}>

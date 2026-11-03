@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen } from '@/shared/ui/Screen';
-import { approvalSteps, STATUS_TONES } from '../model';
+import { approvalSteps, reposText, STATUS_TONES } from '../model';
 import { useWorkflows } from '../useWorkflows';
 
 export function WorkflowsScreen(): ReactElement {
@@ -31,6 +31,7 @@ export function WorkflowsScreen(): ReactElement {
                       <span className="o-row__meta">
                         {[
                           workflow.domain,
+                          reposText(workflow) ?? t('workflows.list.allRepos'),
                           t('workflows.list.steps', { count: workflow.nodes.length }),
                           t('workflows.list.approvals', { count: approvalSteps(workflow) }),
                         ].join(' · ')}

@@ -8,7 +8,6 @@ import {
   listArtifactsQueryKey,
   listArtifactVersionsOptions,
   listMembersOptions,
-  listOrgMembersOptions,
   listSecretsOptions,
   listSharedAccountsOptions,
   listSharedAccountsQueryKey,
@@ -32,6 +31,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
+import { type OrgMembers, useOrgMembers } from '@/shared/org/members';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 
 export interface ArtifactsViewModel {
@@ -173,6 +173,8 @@ export interface AccountsViewModel {
   readonly secrets: readonly Secret[] | undefined;
   /** The organization's members, to lend a subscription to. */
   readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly failure: Error | undefined;
   /** Only a subscription's owner changes or removes it. */
   readonly login: string | undefined;
@@ -184,17 +186,16 @@ export function useAccounts(): AccountsViewModel {
   // From the organization's own route, which the server serves (`GET /members` is still planned), once it is known.
   const current = useCurrentOrg();
   const { org } = current;
-  const members = useQuery(
-    ready(listOrgMembersOptions({ path: { org: org?.id ?? '' } }), { enabled: org !== undefined }),
-  );
+  const people = useOrgMembers(org?.id ?? '', { enabled: org !== undefined });
   const viewer = useViewer();
   return {
     accounts: accounts.data?.items,
     secrets: secrets.data?.items,
-    members: members.data?.items,
+    members: people.members,
+    people: { more: people.more, loadingMore: people.loadingMore },
     // Without the secrets or the members the form to share a subscription cannot show: say why.
     // Without its organization, the members cannot be asked for: that says why too.
-    failure: failureOf(accounts.error ?? secrets.error ?? members.error) ?? current.failure,
+    failure: failureOf(accounts.error ?? secrets.error ?? people.error) ?? current.failure,
     login: viewer.login,
   };
 }

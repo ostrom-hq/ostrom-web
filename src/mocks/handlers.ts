@@ -91,6 +91,7 @@ import type {
   Secret,
   SharedAccount,
   Session,
+  Spending,
   Team,
   Workflow,
 } from '@gen/api/types.gen';
@@ -161,6 +162,7 @@ import {
   initialArtifactMembers,
   initialArtifacts,
   initialArtifactVersions,
+  initialGroups,
   initialSharedAccounts,
 } from '@/mocks/fixtures/sharing';
 import { initialBilling, initialInvoices } from '@/mocks/fixtures/billing';
@@ -177,6 +179,7 @@ import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/con
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
+import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
@@ -191,6 +194,7 @@ export interface MockDb
     ConfirmationsState,
     DeviceState,
     GithubState,
+    GroupsState,
     OrgsState,
     TokensState,
     KeysAndDevicesState,
@@ -226,6 +230,8 @@ export interface MockDb
   secrets: Secret[];
   mcpCalls: McpCall[];
   budgets: Budget[];
+  /** The spending served instead of the fixture's: the large organization's (PERF-CONSOLE). */
+  spending?: (period: 'month' | 'week') => Spending;
   cloudSessions: CloudSession[];
   runners: Runner[];
   automations: Automation[];
@@ -299,6 +305,8 @@ export function createMockDb(): MockDb {
     artifactVersions: initialArtifactVersions(),
     artifactMembers: initialArtifactMembers(),
     sharedAccounts: initialSharedAccounts(),
+    groups: initialGroups(opened),
+    nextGroup: 3,
     runsByKey: {},
     nextAccountId: 100,
     signedInAt: opened,
@@ -309,6 +317,7 @@ export function createMockDb(): MockDb {
     usedLinks: [],
     deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
+    providers: ['github'],
     tokens: initialTokens(),
     nextToken: 3,
     devices: initialDevices(),
@@ -359,7 +368,27 @@ const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() })
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
 const SESSIONS_PAGE = 50;
-const PROVIDERS = new Set(['anthropic', 'openai']);
+/** The server's largest page of rules, and its default (`ListRulesUseCase.MAX_RULES`). */
+const RULES_PAGE = 1000;
+/** What a pause or a resume leaves of a shared account's status, as ostrom-server's `AccountStatus.awaitsSignIn`. */
+function statusAfterPause(status: string, paused: boolean): string {
+  if (status === 'reconnect_required' || status === 'wrong_account') return status;
+  if (paused) return 'disabled';
+  return status === 'disabled' ? 'ready' : status;
+}
+
+/** The server reports an account paused exactly when its status is disabled (ostrom-server `SharedAccount`). */
+function pausedAs(status: string): { paused: boolean; status: string } {
+  return { paused: status === 'disabled', status };
+}
+
+/** The vendor's name the console sends, and the agent the server keeps for it (ostrom-server `AccountProvider`). */
+const PROVIDERS = new Map([
+  ['anthropic', 'claude'],
+  ['claude', 'claude'],
+  ['openai', 'codex'],
+  ['codex', 'codex'],
+]);
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
@@ -410,6 +439,9 @@ export function resetMockDb(db: MockDb): void {
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
+
+/** The routes that act in an organization only when the call names one (`namedMember` on the server). */
+const WITH_ORG_IF_NAMED = /^\/api\/v1\/devices(?:\/[^/]+)?$/;
 
 /** The organization a call acts in, once the first handler let it through. */
 function organizationOf(db: MockDb, request: Request): Organization {
@@ -549,8 +581,12 @@ function savedWorkflow(workflow: Workflow, version: number, at: string): Workflo
 /** A gate as the zod schema reads it, with the optional fields it left out really absent. */
 function ruleGateOf(gate: z.infer<typeof zRuleGate>): RuleGate {
   return {
-    actions: gate.actions.map(({ tools, ...action }) => ({
-      ...action,
+    // `keywords` and `gate` are the catalogue's, never a rule's: a rule gate keeps its own fields only.
+    actions: gate.actions.map(({ class: actionClass, label, patterns, repos, tools }) => ({
+      class: actionClass,
+      label,
+      patterns,
+      ...(repos === undefined ? {} : { repos }),
       ...(tools === undefined ? {} : { tools }),
     })),
     approvers: gate.approvers,
@@ -592,7 +628,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
-      if (!actsInOrganization(new URL(request.url).pathname)) return undefined;
+      const { pathname } = new URL(request.url);
+      if (!actsInOrganization(pathname)) return undefined;
+      // The workstations are the person's: `/devices` reads an organization only when the call names one.
+      if (WITH_ORG_IF_NAMED.test(pathname) && !request.headers.has(ORG_HEADER)) return undefined;
       const organization = resolveOrganization(db, request);
       return organization instanceof HttpResponse ? organization : undefined;
     }),
@@ -716,7 +755,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
     }),
     ...createAccountHandlers(() => db, now),
-    ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
+    ...createDeviceHandlers(() => db, now, {
+      actsIn: (request) => resolveOrganization(db, request),
+      // The role `GET /orgs` lists: the page offers only the organizations this check accepts.
+      manages: (organization) => managesMembers(demoRoleIn(db, organization, now)),
+      freshSignInMs: FRESH_SIGN_IN_MS,
+    }),
     ...createApproversGraphHandlers(() => db),
     ...createConfirmationHandlers(
       () => db,
@@ -736,11 +780,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const params = new URL(request.url).searchParams;
       const status = params.get('status');
       const group = params.get('group');
-      return HttpResponse.json({
-        items: db.rules.filter(
-          (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
-        ),
-      });
+      const matching = db.rules.filter(
+        (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
+      );
+      // As the server pages them (`RulesApi`): `limit` brought into 1 to 1000, `after` the previous page's `next`.
+      const after = params.get('after');
+      const from = after === null ? 0 : matching.findIndex((rule) => rule.id === after) + 1;
+      if (from === 0 && after !== null)
+        return refusal(400, 'invalid_request', 'The cursor is not one a previous page gave.');
+      const limit = Math.min(Math.max(Number(params.get('limit') ?? RULES_PAGE), 1), RULES_PAGE);
+      const items = matching.slice(from, from + limit);
+      const last = items.at(-1);
+      return HttpResponse.json(
+        from + limit < matching.length && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleUpdateRule(async ({ request, params }) => {
       const index = db.rules.findIndex((rule) => rule.id === params.id);
@@ -926,6 +979,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => db,
       (request) => organizationOf(db, request),
     ),
+    ...createGroupsHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
+    ),
     ...createTeamCodeImportHandlers(
       () => db,
       (request) => organizationOf(db, request),
@@ -986,13 +1044,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetSpending(({ request }) => {
       const period = new URL(request.url).searchParams.get('period') ?? 'month';
       return period === 'month' || period === 'week'
-        ? HttpResponse.json(spendingFor(period))
+        ? HttpResponse.json((db.spending ?? spendingFor)(period))
         : refusal(400, 'invalid_request', 'period is week or month');
     }),
     handleListBudgets(() =>
       HttpResponse.json({
         items: db.budgets,
-        orgSpentUsd: spendingFor('month').totalUsd,
+        orgSpentUsd: (db.spending ?? spendingFor)('month').totalUsd,
         periodStart: '2026-10-01T00:00:00.000Z',
         resetsAt: '2026-11-01T00:00:00.000Z',
       }),
@@ -1155,16 +1213,17 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListSharedAccounts(() => HttpResponse.json({ items: db.sharedAccounts })),
     handleEnrollSharedAccount(async ({ request }) => {
       const body = zEnrollSharedAccountBody.safeParse(await readJson(request));
-      if (!body.success || body.data.label.trim() === '' || !PROVIDERS.has(body.data.provider))
+      const provider = body.success ? PROVIDERS.get(body.data.provider) : undefined;
+      if (!body.success || body.data.label.trim() === '' || provider === undefined)
         return refusal(400, 'invalid_request', 'a provider, a label and a credential');
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
       const account: SharedAccount = {
         id: `acc-${String(db.nextAccountId++)}`,
-        provider: body.data.provider,
+        provider,
         label: body.data.label.trim(),
         owner: me.dev.login,
-        status: 'active',
+        status: 'ready',
         sharedWith: body.data.sharedWith ?? [],
         paused: false,
         ...(body.data.dailyAllocationUsd === undefined
@@ -1188,7 +1247,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...(body.data.dailyAllocationUsd === undefined
           ? {}
           : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
-        ...(body.data.paused === undefined ? {} : { paused: body.data.paused }),
+        // A pause writes `disabled`, a resume `ready` again (ostrom-server); one waiting for a sign-in stays so.
+        ...(body.data.paused === undefined
+          ? {}
+          : pausedAs(statusAfterPause(account.status, body.data.paused))),
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);
@@ -1247,8 +1309,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(409, 'conflict', 'workflow_conflict: someone saved this workflow in between.');
       const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
       db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
-      // As the server: a decision is signed only when something decided changed (steps, paths, status, name).
-      const decidedParts = (item: Workflow): unknown[] => [item.nodes, item.edges, item.status, item.name];
+      // As the server: a decision is signed only when something decided changed (steps, paths, status, name, the
+      // repositories it is limited to).
+      const decidedParts = (item: Workflow): unknown[] => [
+        item.nodes,
+        item.edges,
+        item.status,
+        item.name,
+        item.repos ?? null,
+      ];
       if (!sameValue(decidedParts(current), decidedParts(workflow)))
         recordWorkflowDecision(
           db,

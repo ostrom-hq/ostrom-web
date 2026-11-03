@@ -29,6 +29,11 @@ import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
+/** The most members a page of `/orgs/{org}/members` holds, and its size without a `limit`. */
+const MEMBER_PAGE = 1000;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /** The demo person, as `/orgs/{org}/members` lists them. */
 export const DEMO_LOGIN = 'maya';
 export const DEMO_EMAIL = 'maya@acme.dev';
@@ -257,9 +262,24 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       organization.name = name;
       return HttpResponse.json(view(organization));
     }),
-    handleListOrgMembers(({ params }) => {
+    handleListOrgMembers(({ params, request }) => {
       const organization = find(params.org);
-      return organization === undefined ? notFound() : HttpResponse.json({ items: membersOf(organization) });
+      if (organization === undefined) return notFound();
+      // As the server pages them (`OrgsApi`): `limit` from 1 to 1000, `after` a member id, an unknown one ending the list.
+      const query = new URL(request.url).searchParams;
+      const limit = Number(query.get('limit') ?? MEMBER_PAGE);
+      const after = query.get('after');
+      if (!Number.isInteger(limit) || limit < 1 || limit > MEMBER_PAGE)
+        return refusal(400, 'invalid_request', `limit is 1 to ${String(MEMBER_PAGE)}.`);
+      if (after !== null && !UUID.test(after))
+        return refusal(400, 'invalid_request', 'after is a member id.');
+      const members = membersOf(organization);
+      const from = after === null ? 0 : members.findIndex((member) => member.id === after) + 1;
+      const items = from === 0 && after !== null ? [] : members.slice(from, from + limit);
+      const last = items.at(-1);
+      return HttpResponse.json(
+        from + limit < members.length && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleUpdateOrgMember(async ({ params, request }) => {
       const organization = find(params.org);

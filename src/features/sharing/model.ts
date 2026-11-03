@@ -21,18 +21,42 @@ export function isProvider(value: string): value is Provider {
   return (PROVIDERS as readonly string[]).includes(value);
 }
 
-/** A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again. */
-export type AccountState = 'paused' | 'active' | 'expired' | 'unknown';
+/**
+ * The vendor a shared account's subscription is named by. The form sends the vendor's name; the server keeps and lists
+ * the agent it serves (ostrom-server `AccountProvider`: `claude` for anthropic, `codex` for openai).
+ */
+const AGENT_PROVIDERS: ReadonlyMap<string, Provider> = new Map([
+  ['claude', 'anthropic'],
+  ['codex', 'openai'],
+]);
+
+export function providerOf(value: string): Provider | undefined {
+  return AGENT_PROVIDERS.get(value);
+}
+
+/**
+ * A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again; one
+ * signed in to another account than the one shared needs its owner to share it again.
+ */
+export type AccountState = 'paused' | 'active' | 'expired' | 'wrongAccount' | 'unknown';
+
+/** The server's statuses (ostrom-server `AccountStatus`); `disabled` is what a pause writes. */
+const STATES: ReadonlyMap<string, AccountState> = new Map([
+  ['ready', 'active'],
+  ['reconnect_required', 'expired'],
+  ['wrong_account', 'wrongAccount'],
+  ['disabled', 'paused'],
+]);
 
 export function accountState(account: SharedAccount): AccountState {
   if (account.paused) return 'paused';
-  if (account.status === 'active' || account.status === 'expired') return account.status;
-  return 'unknown';
+  return STATES.get(account.status) ?? 'unknown';
 }
 
 export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {
   paused: 'neutral',
   active: 'success',
   expired: 'danger',
+  wrongAccount: 'danger',
   unknown: 'warning',
 };

@@ -628,7 +628,8 @@ describe('mock rules and decisions', () => {
         scope: ['acme/web'],
         reviewBy: '2027-01-01',
         gate: {
-          actions: [{ class: 'x', label: 'X', patterns: [], repos: [], tools: ['Bash'] }],
+          // No `repos`: the contract leaves it out for every repository of the organization.
+          actions: [{ class: 'x', label: 'X', patterns: [], tools: ['Bash'] }],
           approvers: [],
           reason: 'because',
           checks: [{ check: 'n-a' }, { check: 'n-b', attested: true }],
@@ -644,6 +645,9 @@ describe('mock rules and decisions', () => {
     });
     expect(applied(full.data).decidedBy).toBeUndefined();
     expect(applied(full.data).gate?.checks).toEqual([{ check: 'n-a' }, { check: 'n-b', attested: true }]);
+    expect(applied(full.data).gate?.actions).toEqual([
+      { class: 'x', label: 'X', patterns: [], tools: ['Bash'] },
+    ]);
   });
 
   it('refuses a rule without its words, a status it cannot start with, and someone who does not decide', async () => {

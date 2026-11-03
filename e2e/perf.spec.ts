@@ -1,0 +1,288 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// The console's heavy screens on a large organization (src/mocks/fixtures/large.ts: 500 members in 50 groups, 2 000
+// rules, 10 000 lines of activity, 300 sessions), on a wide screen and on a phone whose processor is slowed four
+// times. For each screen: when its first lines show, how many lines and DOM nodes it holds, how many API calls it
+// made, the JavaScript heap after a collection, and the longest interaction (INP) of its filter. The table is attached
+// to the run and printed in its summary (PERF-CONSOLE).
+import { appendFileSync } from 'node:fs';
+import { type CDPSession, expect, type Page, test } from '@playwright/test';
+
+/** The page's globals the measure reads in the browser: the e2e project has no DOM types. */
+declare const document: {
+  readonly querySelectorAll: (selector: string) => { readonly length: number };
+  readonly getElementsByTagName: (name: string) => { readonly length: number };
+};
+declare const window: { __interactions: number[] };
+
+interface Interaction {
+  /** What is measured, said in the table. */
+  readonly label: string;
+  /** Does it, then waits until the screen shows its result. */
+  readonly run: (page: Page) => Promise<void>;
+}
+
+interface HeavyScreen {
+  readonly path: string;
+  /** The screen's lines. */
+  readonly rows: string;
+  /** The most lines it may draw, when it holds several lists, each cut on its own: `BUDGET.rows` otherwise. */
+  readonly maxRows?: number;
+  readonly filter?: Interaction;
+  /** The screen reads again on its own: count its API calls over one period once every page is on screen. */
+  readonly pollMs?: number;
+}
+
+const SCREENS: readonly HeavyScreen[] = [
+  {
+    path: '/activity',
+    rows: 'main ul.o-rows > li',
+    filter: {
+      label: 'repository',
+      run: async (page) => {
+        await page.getByRole('search').getByRole('textbox').fill('acme/service-08');
+        await page.getByRole('search').getByRole('textbox').press('Enter');
+        await expect(page).toHaveURL(/repo=acme/);
+        await expect(page.locator('[aria-busy="false"]')).toBeVisible();
+      },
+    },
+  },
+  {
+    path: '/rules',
+    rows: 'main article.rl-card',
+    filter: {
+      label: 'All',
+      run: async (page) => {
+        const all = page.getByRole('button', { name: /^All \d/ });
+        await all.click();
+        await expect(all).toHaveAttribute('aria-pressed', 'true');
+      },
+    },
+  },
+  {
+    path: '/members',
+    rows: 'section[aria-labelledby="mb-people"] li',
+    filter: {
+      label: 'search',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('Developer 04');
+        await expect(page.locator('section[aria-labelledby="mb-people"] li')).toHaveCount(10);
+      },
+    },
+  },
+  {
+    path: '/accounts/groups',
+    rows: 'main article',
+    filter: {
+      label: 'people of a new group',
+      run: async (page) => {
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-04');
+        await expect(page.getByRole('group', { name: 'Members' }).getByRole('checkbox')).toHaveCount(10);
+      },
+    },
+  },
+  {
+    path: '/sessions',
+    rows: 'main ul.o-rows > li',
+    filter: {
+      label: 'every older page',
+      run: async (page) => {
+        const more = page.getByRole('button', { name: 'Show older sessions' });
+        const rows = page.locator('main ul.o-rows > li');
+        while (await more.isVisible()) {
+          const before = await rows.count();
+          await more.click();
+          // The page is on screen once the list grew; the button then says it again, or is gone.
+          await expect.poll(async () => rows.count()).toBeGreaterThan(before);
+        }
+      },
+    },
+    // SESSIONS_POLL_MS, and a second for the calls to land.
+    pollMs: 16_000,
+  },
+  {
+    path: '/spend',
+    rows: 'main li',
+    // Every line of the page: 20 people of the breakdown, 100 budgets, and the other breakdowns (172 measured).
+    maxRows: 180,
+    filter: {
+      label: 'period',
+      run: async (page) => {
+        const week = page.getByRole('button', { name: 'Last 7 days' });
+        await week.click();
+        await expect(week).toHaveAttribute('aria-pressed', 'true');
+      },
+    },
+  },
+];
+
+interface Measure {
+  readonly path: string;
+  /** From the navigation's start to the first line on screen. */
+  readonly firstRowsMs: number;
+  readonly rows: number;
+  readonly domNodes: number;
+  readonly apiCalls: number;
+  readonly heapMb: number;
+  readonly filter?: {
+    readonly label: string;
+    readonly inpMs: number;
+    readonly doneMs: number;
+    /** The screen's lines and DOM nodes once the filter shows its result. */
+    readonly rows: number;
+    readonly domNodes: number;
+  };
+  /** API calls over one poll period, every page on screen. */
+  readonly pollCalls?: number;
+}
+
+/** Collects the Event Timing entries of every interaction, from the page's first script. */
+const OBSERVE_INTERACTIONS = `
+  window.__interactions = [];
+  new PerformanceObserver((list) => {
+    for (const entry of list.getEntries()) if (entry.interactionId) window.__interactions.push(entry.duration);
+  }).observe({ type: 'event', durationThreshold: 16, buffered: true });
+  performance.setResourceTimingBufferSize(10000);
+`;
+
+async function heapMb(cdp: CDPSession): Promise<number> {
+  await cdp.send('HeapProfiler.collectGarbage');
+  const { metrics } = await cdp.send('Performance.getMetrics');
+  const used = metrics.find((metric) => metric.name === 'JSHeapUsedSize')?.value ?? 0;
+  return Math.round((used / 1024 / 1024) * 10) / 10;
+}
+
+/** The API calls of the page since it opened. */
+async function apiCalls(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const entries = performance.getEntriesByType('resource');
+    return entries.filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length;
+  });
+}
+
+/** The screen's lines and every element of the page. */
+async function linesOf(
+  page: Page,
+  rows: string,
+): Promise<{ readonly rows: number; readonly domNodes: number }> {
+  return page.evaluate(
+    (selector) => ({
+      rows: document.querySelectorAll(selector).length,
+      domNodes: document.getElementsByTagName('*').length,
+    }),
+    rows,
+  );
+}
+
+async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promise<Measure> {
+  await page.goto(screen.path, { waitUntil: 'commit' });
+  const shown = await page.waitForFunction(
+    (selector) => (document.querySelectorAll(selector).length > 0 ? performance.now() : false),
+    screen.rows,
+    { timeout: 60_000 },
+  );
+  const firstRowsMs = Math.round(Number(await shown.jsonValue()));
+  // What the screen reads after its first lines (a second page, the members of a form) comes in now.
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(1_000);
+  const counts = { ...(await linesOf(page, screen.rows)), apiCalls: await apiCalls(page) };
+  const heap = await heapMb(cdp);
+  const base = { path: screen.path, firstRowsMs, ...counts, heapMb: heap };
+  if (screen.filter === undefined) return base;
+  await page.evaluate(() => {
+    window.__interactions = [];
+  });
+  const started = Date.now();
+  await screen.filter.run(page);
+  const doneMs = Date.now() - started;
+  // Event Timing reports an interaction once its next frame is painted.
+  await page.waitForTimeout(1_000);
+  const inpMs = Math.max(0, ...(await page.evaluate(() => window.__interactions)));
+  const after = await linesOf(page, screen.rows);
+  const filter = { label: screen.filter.label, inpMs, doneMs, ...after };
+  if (screen.pollMs === undefined) return { ...base, filter };
+  const before = await apiCalls(page);
+  await page.waitForTimeout(screen.pollMs);
+  return { ...base, filter, pollCalls: (await apiCalls(page)) - before };
+}
+
+function tableOf(project: string, measures: readonly Measure[]): string {
+  const rows = measures.map((item) =>
+    [
+      `\`${item.path}\``,
+      item.firstRowsMs,
+      item.rows,
+      item.domNodes,
+      item.apiCalls,
+      item.heapMb,
+      item.filter === undefined ? '—' : `${item.filter.label}: ${String(item.filter.inpMs)}`,
+      item.filter === undefined ? '—' : item.filter.doneMs,
+      item.filter === undefined ? '—' : `${String(item.filter.rows)} / ${String(item.filter.domNodes)}`,
+      item.pollCalls ?? '—',
+    ].join(' | '),
+  );
+  return [
+    `### Large organization, ${project}`,
+    '',
+    '| Screen | First lines (ms) | Lines | DOM nodes | API calls | JS heap (MB) | Filter INP (ms) | Filter done (ms) | After: lines / nodes | Calls per poll |',
+    '|---|---:|---:|---:|---:|---:|---|---:|---:|---:|',
+    ...rows.map((row) => `| ${row} |`),
+    '',
+  ].join('\n');
+}
+
+/**
+ * What a heavy screen may cost on the large organization before the PR fails (PERF-CONSOLE). Counts are exact
+ * from one run to the next; times move with the runner, so their budget is about twice the worst run measured.
+ */
+const BUDGET = {
+  rows: 110,
+  domNodes: 1500,
+  filteredNodes: 2500,
+  // One page of a hundred members on load, the next only when asked: 7 calls at most today (`/accounts/groups`).
+  apiCalls: 14,
+  pollCalls: 3,
+  inpMs: { desktop: 200, mobile: 500 },
+} as const;
+
+function checkBudget(project: 'desktop' | 'mobile', item: Measure): void {
+  const maxRows = SCREENS.find((screen) => screen.path === item.path)?.maxRows ?? BUDGET.rows;
+  expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(maxRows);
+  expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(BUDGET.domNodes);
+  expect.soft(item.apiCalls, `${item.path}: API calls`).toBeLessThanOrEqual(BUDGET.apiCalls);
+  if (item.filter !== undefined) {
+    expect
+      .soft(item.filter.inpMs, `${item.path}: INP of ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.inpMs[project]);
+    expect
+      .soft(item.filter.domNodes, `${item.path}: DOM nodes after ${item.filter.label}`)
+      .toBeLessThanOrEqual(BUDGET.filteredNodes);
+  }
+  if (item.pollCalls !== undefined)
+    expect.soft(item.pollCalls, `${item.path}: calls per poll`).toBeLessThanOrEqual(BUDGET.pollCalls);
+}
+
+test('the heavy screens on a large organization', async ({ page }) => {
+  test.setTimeout(600_000);
+  const project = test.info().project.name;
+  await page.addInitScript("localStorage.setItem('ostrom.mock.scale', 'large')");
+  await page.addInitScript(OBSERVE_INTERACTIONS);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Performance.enable');
+  // The phone: a slower processor, four times, as Lighthouse's mobile run.
+  if (project === 'mobile') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  const measures: Measure[] = [];
+  for (const screen of SCREENS) measures.push(await measure(page, cdp, screen));
+  const name = project === 'mobile' ? 'phone, CPU ×4' : 'desktop';
+  const table = tableOf(name, measures);
+  await test.info().attach(`perf-${project}.json`, {
+    body: JSON.stringify(measures, null, 2),
+    contentType: 'application/json',
+  });
+  await test.info().attach(`perf-${project}.md`, { body: table, contentType: 'text/markdown' });
+  const summary = process.env['GITHUB_STEP_SUMMARY'];
+  if (summary !== undefined) appendFileSync(summary, table);
+  console.warn(table);
+  for (const item of measures) expect(item.rows, item.path).toBeGreaterThan(0);
+  const device = project === 'mobile' ? 'mobile' : 'desktop';
+  for (const item of measures) checkBudget(device, item);
+});

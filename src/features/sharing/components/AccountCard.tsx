@@ -6,7 +6,7 @@ import { formatUsd } from '@/shared/lib/money';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { ACCOUNT_TONES, accountState, isProvider } from '../model';
+import { ACCOUNT_TONES, accountState, providerOf } from '../model';
 
 export interface AccountCardProps {
   readonly account: SharedAccount;
@@ -25,6 +25,7 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
   const { t, i18n } = useTranslation();
   const headingId = useId();
   const state = accountState(account);
+  const provider = providerOf(account.provider);
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
       <div className="o-inline sh-head">
@@ -37,7 +38,7 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
       </div>
       <p className="o-row__meta">
         {[
-          isProvider(account.provider) ? t(`sharing.provider.${account.provider}`) : account.provider,
+          provider === undefined ? account.provider : t(`sharing.provider.${provider}`),
           t('sharing.owner', { owner: account.owner }),
           account.pool === undefined ? undefined : t('sharing.accounts.pool', { pool: account.pool }),
           account.dailyAllocationUsd === undefined
@@ -54,14 +55,17 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
       </p>
       {actions === undefined ? null : (
         <div className="o-inline">
-          <Button
-            disabled={busy}
-            onClick={() => {
-              actions.setPaused(!account.paused);
-            }}
-          >
-            {account.paused ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
-          </Button>
+          {/* An account waiting for a sign-in leaves that state only when shared again: the server ignores a pause. */}
+          {state === 'expired' || state === 'wrongAccount' ? null : (
+            <Button
+              disabled={busy}
+              onClick={() => {
+                actions.setPaused(!account.paused);
+              }}
+            >
+              {account.paused ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
+            </Button>
+          )}
           <ConfirmButton
             label={t('sharing.accounts.remove')}
             confirm={t('sharing.accounts.removeConfirm', { what: account.label })}

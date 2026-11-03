@@ -10,7 +10,8 @@ import {
   listRulesQueryKey,
   updateRuleMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { GateAction, NewRule, Rule } from '@gen/api/types.gen';
+import { listRules } from '@gen/api/sdk.gen';
+import type { GateAction, ListRulesResponse, NewRule, Rule } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { appliedMutation } from '@/shared/api/applied';
@@ -26,8 +27,29 @@ export interface RulesViewModel {
   readonly canDecide: boolean;
 }
 
+/**
+ * Every rule of the organization, a page after the other: the server gives at most 1 000 at a time (`next`, read back
+ * as `after`), and the screen counts, filters and accepts them all.
+ */
+export async function everyRule(signal: AbortSignal): Promise<ListRulesResponse> {
+  const items: Rule[] = [];
+  let after: string | undefined;
+  do {
+    const query = after === undefined ? {} : { after };
+    const { data } = await listRules({ query, signal, throwOnError: true });
+    items.push(...data.items);
+    after = data.next;
+  } while (after !== undefined);
+  return { items };
+}
+
 export function useRules(): RulesViewModel {
-  const rules = useQuery(ready(listRulesOptions()));
+  const rules = useQuery(
+    ready({
+      ...listRulesOptions(),
+      queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyRule(signal),
+    }),
+  );
   const viewer = useViewer();
   return {
     rules: rules.data?.items,

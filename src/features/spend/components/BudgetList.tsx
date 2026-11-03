@@ -3,8 +3,10 @@ import type { Budget, OrgMember } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatUsd } from '@/shared/lib/money';
+import { useStep } from '@/shared/lib/useStep';
 import { Badge } from '@/shared/ui/Badge';
 import { Section } from '@/shared/ui/Screen';
+import { ShowMore } from '@/shared/ui/ShowMore';
 import { budgetScopeOf, budgetSubjectLabel } from '../model';
 
 /** The budgets, each member named by their login: the server names them by id. */
@@ -16,13 +18,15 @@ export function BudgetList({
   readonly members: readonly OrgMember[] | undefined;
 }): ReactElement {
   const { t, i18n } = useTranslation();
+  // One budget a member makes hundreds of lines: a hundred at a time (PERF-CONSOLE).
+  const step = useStep(budgets.length);
   return (
     <Section label={t('spend.budgets.title')}>
       {budgets.length === 0 ? (
         <p className="o-empty">{t('spend.budgets.empty')}</p>
       ) : (
         <ul className="o-card o-rows">
-          {budgets.map((budget) => {
+          {budgets.slice(0, step.count).map((budget) => {
             const scope = budgetScopeOf(budget.scope);
             const who = scope === undefined ? budget.scope : t(`spend.budgets.scope.${scope}`);
             // A member's budget reads as the person (their login), or every member's.
@@ -57,6 +61,7 @@ export function BudgetList({
           })}
         </ul>
       )}
+      <ShowMore step={step} />
     </Section>
   );
 }

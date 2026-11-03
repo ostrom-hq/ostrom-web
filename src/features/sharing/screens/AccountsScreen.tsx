@@ -5,6 +5,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { AccountCard } from '../components/AccountCard';
 import { EnrollForm } from '../components/EnrollForm';
+import { SharingTabs } from '../components/SharingTabs';
 import { useAccountChange, useAccounts } from '../useSharing';
 import './sharing.css';
 
@@ -14,7 +15,7 @@ export function AccountsScreen(): ReactElement {
   const view = useAccounts();
   const change = useAccountChange();
   return (
-    <Screen title={t('sharing.accounts.title')} lead={t('sharing.accounts.lead')}>
+    <Screen top={<SharingTabs />} title={t('sharing.accounts.title')} lead={t('sharing.accounts.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('sharing.errorTag')} live>
           {change.failure.message}
@@ -25,6 +26,7 @@ export function AccountsScreen(): ReactElement {
           change={change}
           secrets={view.secrets}
           members={view.members.filter((member) => member.login !== view.login)}
+          people={view.people}
         />
       )}
       <LoadState data={view.accounts} failure={view.failure}>

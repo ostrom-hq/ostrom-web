@@ -6,6 +6,8 @@ import { type HttpHandler, HttpResponse } from 'msw';
 export interface ActivityState {
   /** Newest first, as the server lists them. */
   activity: ActivityItem[];
+  /** The page's size: the demo's small one by default, the server's (50) for the large organization. */
+  activityPage?: number;
 }
 
 /** Small, so the demo shows the next page; the server's pages are larger. */
@@ -55,11 +57,12 @@ export function createActivityHandlers(
       const matching = state().activity.filter(
         (item) => (repo === null || item.repo === repo) && older(item),
       );
-      const page = matching.slice(0, ACTIVITY_PAGE);
+      const size = state().activityPage ?? ACTIVITY_PAGE;
+      const page = matching.slice(0, size);
       const last = page.at(-1);
       return HttpResponse.json({
         items: page,
-        ...(matching.length > ACTIVITY_PAGE && last !== undefined ? { next: cursorOf(last) } : {}),
+        ...(matching.length > size && last !== undefined ? { next: cursorOf(last) } : {}),
       });
     }),
   ];

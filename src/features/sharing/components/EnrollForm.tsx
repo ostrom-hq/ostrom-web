@@ -4,8 +4,10 @@ import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { parseUsd } from '@/shared/lib/money';
+import type { OrgMembers } from '@/shared/org/members';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { Section } from '@/shared/ui/Screen';
 import { isProvider, PROVIDERS, type Provider } from '../model';
 import type { AccountChangeViewModel } from '../useSharing';
@@ -15,10 +17,12 @@ export interface EnrollFormProps {
   readonly secrets: readonly Secret[];
   /** The other members, to lend the subscription to. */
   readonly members: readonly OrgMember[];
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
 }
 
 /** The token is never typed here: it is a secret already stored, named by the form and encrypted by the server. */
-export function EnrollForm({ change, secrets, members }: EnrollFormProps): ReactElement {
+export function EnrollForm({ change, secrets, members, people }: EnrollFormProps): ReactElement {
   const { t } = useTranslation();
   const [provider, setProvider] = useState<Provider>('anthropic');
   const [label, setLabel] = useState('');
@@ -156,6 +160,7 @@ export function EnrollForm({ change, secrets, members }: EnrollFormProps): React
               ))}
             </fieldset>
           )}
+          <MorePeople people={people} />
           <div className="o-inline">
             <Button
               type="submit"

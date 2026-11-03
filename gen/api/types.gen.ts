@@ -770,7 +770,7 @@ export type BillingUsage = {
 
 export type BillingWebhookAck = {
     received: boolean;
-    outcome: 'processed' | 'duplicate' | 'ignored';
+    outcome: 'processed' | 'duplicate' | 'ignored' | 'ignored_unknown_org';
 };
 
 /**
@@ -1116,6 +1116,14 @@ export type DeviceAuthorization = {
      */
     scopes?: Array<string>;
     expiresAt: string;
+    /**
+     * When the CLI started the login, shown before the yes: with `requestedFrom`, an approval of a code someone else sent shows
+     */
+    requestedAt: string;
+    /**
+     * The network the login was started from, never the address: a /24 for IPv4 (`203.0.113.0/24`), a /48 for IPv6 (`2001:db8:abcd::/48`), shown before the yes. Absent when the server could not tell
+     */
+    requestedFrom?: string;
 };
 
 /**
@@ -1127,6 +1135,10 @@ export type DeviceCode = {
     verificationUri: string;
     interval: number;
     expiresIn: number;
+    /**
+     * The verification page with the code filled in
+     */
+    verificationUriComplete?: string;
 };
 
 /**
@@ -1136,6 +1148,13 @@ export type DiffStats = {
     files: number;
     additions: number;
     deletions: number;
+};
+
+/**
+ * 403 email_link_other_browser: the e-mailed link was asked for in another browser (its `ostrom_email_link` nonce is missing or not that browser's). The link is not used: open it in the browser that asked for it, or ask for a new link from this one
+ */
+export type EmailLinkOtherBrowser = {
+    error: ErrorDetail;
 };
 
 /**
@@ -1167,14 +1186,38 @@ export type Evidence = {
 };
 
 /**
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)
+ */
+export type Forbidden = {
+    /**
+     * `ErrorDetail`, its `type` any 403 key but `step_up_required`
+     */
+    error: {
+        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused';
+        message: string;
+    };
+};
+
+/**
  * A boundary action a gate covers
  */
 export type GateAction = {
     class: string;
     label: string;
     patterns: Array<string>;
-    repos: Array<string>;
+    /**
+     * Repositories where the gate covers it. Absent or empty: every repository of the organization
+     */
+    repos?: Array<string>;
     tools?: Array<string>;
+    /**
+     * Catalogue only: the words of the class that a guessed gate matches
+     */
+    keywords?: Array<string>;
+    /**
+     * Catalogue only: the gate that covers the action in this repository; `null` when none does
+     */
+    gate?: GateRef | null;
 };
 
 /**
@@ -1202,6 +1245,14 @@ export type GateAskRequest = {
 export type GateCatalog = {
     gates: Array<GateRef>;
     actions: Array<GateAction>;
+    /**
+     * What the hooks do when the server cannot be reached
+     */
+    failMode?: 'closed';
+    /**
+     * How long a hook waits for an answer before it gives up
+     */
+    waitSeconds?: number;
 };
 
 /**
@@ -1390,7 +1441,7 @@ export type GovernanceConfirmationPerson = {
 };
 
 /**
- * pending until answered; confirmed (applied), refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`)
+ * pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a server stopped between the two leaves it confirmed without the write, and the change is then asked again
  */
 export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed';
 
@@ -1402,6 +1453,13 @@ export type Group = {
     name: string;
     members: Array<string>;
     accounts: Array<string>;
+    /**
+     * The members paused now, by login, and the end of their pause
+     */
+    paused?: Array<{
+        login: string;
+        until: string;
+    }>;
 };
 
 /**
@@ -1569,6 +1627,21 @@ export type InvitationToken = {
 };
 
 /**
+ * A JSON-RPC 2.0 error, as the MCP relay answers it
+ */
+export type JsonRpcError = {
+    jsonrpc: '2.0';
+    /**
+     * The request's id; null when it could not be read
+     */
+    id?: string | number | null;
+    error: {
+        code: number;
+        message: string;
+    };
+};
+
+/**
  * The consent page of a started link
  */
 export type LinkStarted = {
@@ -1696,6 +1769,18 @@ export type McpCall = {
     launchId?: string;
     durationMs?: number;
     ok: boolean;
+    /**
+     * `OK`, `DENIED`, `UPSTREAM_ERROR`…
+     */
+    outcome?: string;
+    /**
+     * The upstream answer's size
+     */
+    responseBytes?: number;
+    /**
+     * The argument policy that refused the call
+     */
+    policyId?: string;
 };
 
 /**
@@ -1802,6 +1887,10 @@ export type Me = {
     member?: Member;
     organization?: Organization;
     capabilities: Array<string>;
+    /**
+     * For a browser session, the token to send in `X-CSRF-Token` on state-changing requests
+     */
+    csrfToken?: string;
 };
 
 /**
@@ -1887,6 +1976,11 @@ export type AccountEmail = {
     email: string;
     verified: boolean;
 };
+
+/**
+ * A 403 of a write that may need a fresh sign-in: `step_up_required` (sign in again, then send it again) or `forbidden`, told apart by `error.type`
+ */
+export type StepUpOrForbidden = StepUpRequired | Forbidden;
 
 export type TokenScope = {
     /**
@@ -2114,6 +2208,10 @@ export type OrgMember = {
  */
 export type OrgMemberList = {
     items: Array<OrgMember>;
+    /**
+     * The `after` of the next page; absent when no member follows
+     */
+    next?: string;
 };
 
 /**
@@ -2152,6 +2250,10 @@ export type OrgView = {
      */
     role: string;
     createdAt: string;
+    /**
+     * The organization's IANA time zone, `UTC` by default
+     */
+    timeZone?: string;
 };
 
 /**
@@ -2314,6 +2416,21 @@ export type PublicKey = {
     kid: string;
     alg: string;
     publicKeyPem: string;
+    rotation?: KeyRotation;
+};
+
+/**
+ * How a receipt key was handed over by the key it replaces. Absent on a key handed over by nobody (the first key, or a key changed without its previous one). A reader that pinned the previous key trusts this one only if `signature` verifies; it follows a chain of rotations key by key
+ */
+export type KeyRotation = {
+    /**
+     * The id of the key this key replaces
+     */
+    kid: string;
+    /**
+     * The replaced key's Ed25519 signature, in base64, over the UTF-8 text `ostrom-receipt-key-rotation/v1\n` followed by the lowercase hex of this key's 32 raw bytes (the end of its SPKI DER)
+     */
+    signature: string;
 };
 
 /**
@@ -2682,6 +2799,14 @@ export type Session = {
     costUsd?: number;
     exitCode?: number;
     runId?: string;
+    /**
+     * True once ended (the answer to a sign of life)
+     */
+    ended?: boolean;
+    /**
+     * True when closed for lack of a sign of life; its launcher reopens a segment
+     */
+    lost?: boolean;
 };
 
 /**
@@ -2733,6 +2858,10 @@ export type SessionPackage = {
 export type SessionResponse = {
     session: Session;
     receipt?: Receipt;
+    /**
+     * For `reopenSession`, false when the segment was already open
+     */
+    reopened?: boolean;
 };
 
 /**
@@ -2761,10 +2890,46 @@ export type SharedAccount = {
     label: string;
     owner: string;
     status: string;
+    /**
+     * Whom it is lent to, sorted together: the logins of its members and `group:<id>` for each group it is lent to. Empty for the whole organization, and for a member who is neither an admin nor its owner.
+     */
     sharedWith: Array<string>;
     pool?: string;
     dailyAllocationUsd?: number;
     paused: boolean;
+    email?: string;
+    providerAccountId?: string;
+    /**
+     * True when the caller enrolled it
+     */
+    mine?: boolean;
+    priority?: number;
+    limits?: {
+        maxConcurrent?: number;
+        utilizationCeiling?: number;
+        monthlyBudgetMicros?: number;
+        dailyBudgetMicros?: number;
+        allowedMembers?: Array<string>;
+    };
+    /**
+     * Until when the account rests after the provider limited it
+     */
+    cooldownUntil?: string;
+    /**
+     * The provider's quota windows, as last observed
+     */
+    windows?: Array<{
+        window?: string;
+        utilization?: number;
+        resetsAt?: string;
+        observedAt?: string;
+    }>;
+    /**
+     * Requests in flight
+     */
+    inFlight?: number;
+    spentMicros?: number;
+    createdAt?: string;
 };
 
 /**
@@ -2925,7 +3090,13 @@ export type StartSessionRequest = {
  * 403 step_up_required: a yes, and a sensitive write from the console or the app (a personal token, a service key, a sign-in link, an invitation, a role, a member removed, a transfer, a secret, an MCP server, its assignments, policies and settings, the model keys), need a sign-in less than 5 minutes old (a sign-in of unknown age is refused too); sign in again, then send it again. A no never needs it, and an API token is never asked: it has no sign-in to renew
  */
 export type StepUpRequired = {
-    error: ErrorDetail;
+    /**
+     * `ErrorDetail`, its `type` `step_up_required`
+     */
+    error: {
+        type: 'step_up_required';
+        message: string;
+    };
 };
 
 /**
@@ -3310,6 +3481,10 @@ export type Workflow = {
     domain: string;
     description?: string;
     version?: number;
+    /**
+     * Repositories the workflow applies to, `owner/name` where `*` is any part of a name (1 to 100). Absent: every repository of the organization, as before. Present: these only, whether the workflow is observed or enforced, in the session packages and the gates catalogue
+     */
+    repos?: Array<string>;
     nodes: Array<WorkflowNode>;
     edges: Array<WorkflowEdge>;
     start?: string;
@@ -3880,6 +4055,15 @@ export type OauthLoginCallbackData = {
     url: '/api/v1/auth/{provider}/callback';
 };
 
+export type OauthLoginCallbackResponses = {
+    /**
+     * A mobile sign-in's code: the page that names who signed in and links to the app's deep link (`ostrom://auth/callback?code=&state=`), on the person's tap; no script, never framed or cached
+     */
+    200: string;
+};
+
+export type OauthLoginCallbackResponse = OauthLoginCallbackResponses[keyof OauthLoginCallbackResponses];
+
 export type LinkSignInProviderData = {
     body?: never;
     path: {
@@ -3985,6 +4169,10 @@ export type StartDeviceLoginErrors = {
      * A refusal
      */
     404: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
 };
 
 export type StartDeviceLoginError = StartDeviceLoginErrors[keyof StartDeviceLoginErrors];
@@ -4035,6 +4223,12 @@ export type PollDeviceLoginResponse = PollDeviceLoginResponses[keyof PollDeviceL
 
 export type AnswerDeviceLoginData = {
     body: DeviceAnswer;
+    headers?: {
+        /**
+         * The id of the organization an approved `ostrom login --admin` acts in. An option, read only for that approval; without it, the person's only organization
+         */
+        'Ostrom-Org'?: string;
+    };
     path?: never;
     query?: never;
     url: '/api/v1/auth/device/answer';
@@ -4052,13 +4246,13 @@ export type AnswerDeviceLoginErrors = {
     /**
      * step_up_required (approving `ostrom login --admin` needs a sign-in less than 5 minutes old; sign in again, then answer again; a denial and the ordinary `ostrom login` are not asked for it), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
     404: ApiError;
     /**
-     * A refusal
+     * org_required (approving `ostrom login --admin` without `Ostrom-Org`, for a person in several organizations)
      */
     409: ApiError;
 };
@@ -4154,6 +4348,10 @@ export type LauncherLoginErrors = {
     /**
      * A refusal
      */
+    401: ApiError;
+    /**
+     * A refusal
+     */
     404: ApiError;
 };
 
@@ -4230,6 +4428,37 @@ export type CreateLaunchResponses = {
 };
 
 export type CreateLaunchResponse = CreateLaunchResponses[keyof CreateLaunchResponses];
+
+export type EndLaunchData = {
+    body?: never;
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}';
+};
+
+export type EndLaunchErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type EndLaunchError = EndLaunchErrors[keyof EndLaunchErrors];
+
+export type EndLaunchResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type EndLaunchResponse = EndLaunchResponses[keyof EndLaunchResponses];
 
 export type CheckAgentPolicyData = {
     body?: never;
@@ -4501,9 +4730,9 @@ export type VerifySignInEmailErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * email_link_other_browser (a valid link presented without the nonce of the browser that asked for it; it is not used and still signs in there), or forbidden (key `error.type`)
      */
-    403: ApiError;
+    403: EmailLinkOtherBrowser | ApiError;
     /**
      * A refusal
      */
@@ -4669,7 +4898,7 @@ export type CreateSignInLinkErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -4826,7 +5055,7 @@ export type CreateTokenErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
 };
 
 export type CreateTokenError = CreateTokenErrors[keyof CreateTokenErrors];
@@ -4892,7 +5121,7 @@ export type RotateTokenErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -4995,7 +5224,7 @@ export type CreateServiceKeyErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -5857,6 +6086,10 @@ export type CreateOrgErrors = {
     /**
      * A refusal
      */
+    402: ApiError;
+    /**
+     * A refusal
+     */
     403: ApiError;
     /**
      * A refusal
@@ -6029,7 +6262,7 @@ export type TransferOrgErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -6101,11 +6334,24 @@ export type ListOrgMembersData = {
          */
         org: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * The most members of the page. Without it, up to 1000: the whole team of every organization today
+         */
+        limit?: number;
+        /**
+         * The `next` of the previous page: the members who joined after this one
+         */
+        after?: string;
+    };
     url: '/api/v1/orgs/{org}/members';
 };
 
 export type ListOrgMembersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
     /**
      * A refusal
      */
@@ -6153,9 +6399,13 @@ export type InviteOrgMembersErrors = {
      */
     401: ApiError;
     /**
+     * A refusal
+     */
+    402: ApiError;
+    /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -6202,7 +6452,7 @@ export type RemoveOrgMemberErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -6288,7 +6538,7 @@ export type UpdateOrgMemberErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -6372,7 +6622,7 @@ export type CreateInvitationLinkErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -6907,6 +7157,10 @@ export type ListReposErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type ListReposError = ListReposErrors[keyof ListReposErrors];
@@ -7517,6 +7771,10 @@ export type AskGateErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type AskGateError = AskGateErrors[keyof AskGateErrors];
@@ -7571,6 +7829,10 @@ export type GetGateErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
 };
 
 export type GetGateError = GetGateErrors[keyof GetGateErrors];
@@ -7988,8 +8250,7 @@ export type SetGatePolicyResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -8229,7 +8490,7 @@ export type AnswerApprovalErrors = {
     /**
      * self_approval_refused, step_up_required, or not an approver (the key is `error.type`)
      */
-    403: SelfApprovalRefused | StepUpRequired;
+    403: SelfApprovalRefused | StepUpRequired | Forbidden;
     /**
      * A refusal
      */
@@ -8332,7 +8593,7 @@ export type AnswerGovernanceConfirmationErrors = {
     /**
      * step_up_required (sign in again, then confirm), or forbidden (a token, not an owner or admin)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -9263,6 +9524,14 @@ export type ListRulesData = {
         repo?: string;
         status?: string;
         group?: string;
+        /**
+         * The `next` of the previous page (opaque); 400 when no page gave it
+         */
+        after?: string;
+        /**
+         * The page size, 1 to 1000 (1000 by default); a value outside is brought into it
+         */
+        limit?: number;
     };
     url: '/api/v1/rules';
 };
@@ -9298,6 +9567,9 @@ export type ListRulesResponses = {
      */
     200: {
         items: Array<Rule>;
+        /**
+         * The `after` of the next page; absent on the last one
+         */
         next?: string;
     };
 };
@@ -9355,8 +9627,7 @@ export type CreateRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9412,8 +9683,7 @@ export type DeleteRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
     /**
@@ -9539,8 +9809,7 @@ export type UpdateRuleResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9603,8 +9872,7 @@ export type BulkUpdateRulesResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9715,8 +9983,7 @@ export type CreateWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -9772,8 +10039,7 @@ export type DeleteWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
     /**
@@ -9889,8 +10155,7 @@ export type SaveWorkflowResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -10544,6 +10809,10 @@ export type RotateAutomationSecretResponses = {
      */
     200: {
         secret: string;
+        /**
+         * Until when the previous secret still signs, when one was replaced
+         */
+        previousSecretValidUntil?: string;
     };
 };
 
@@ -10810,6 +11079,10 @@ export type CreateWaitErrors = {
 export type CreateWaitError = CreateWaitErrors[keyof CreateWaitErrors];
 
 export type CreateWaitResponses = {
+    /**
+     * A replay of the same `Idempotency-Key`, answered with `Idempotency-Replayed: true`: the wait first created
+     */
+    200: Wait;
     /**
      * OK
      */
@@ -11108,7 +11381,7 @@ export type CreateMcpServerErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11157,7 +11430,7 @@ export type DeleteMcpServerErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11206,7 +11479,7 @@ export type SaveMcpServerErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11308,7 +11581,7 @@ export type UnassignMcpServerErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11361,7 +11634,7 @@ export type AssignMcpServerErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11459,7 +11732,7 @@ export type CreateMcpArgumentPolicyErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11509,7 +11782,7 @@ export type DeleteMcpArgumentPolicyErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11603,7 +11876,7 @@ export type PutMcpSettingsErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11642,9 +11915,9 @@ export type RelayMcpData = {
 
 export type RelayMcpErrors = {
     /**
-     * A refusal
+     * A JSON-RPC error from the relay (a malformed message, an unknown tool or server), or a refusal before the relay (`ApiError`)
      */
-    400: ApiError;
+    400: JsonRpcError | ApiError;
     /**
      * A refusal
      */
@@ -11654,13 +11927,17 @@ export type RelayMcpErrors = {
      */
     403: ApiError;
     /**
-     * A refusal
+     * A JSON-RPC error from the relay (a malformed message, an unknown tool or server), or a refusal before the relay (`ApiError`)
      */
-    404: ApiError;
+    404: JsonRpcError | ApiError;
     /**
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type RelayMcpError = RelayMcpErrors[keyof RelayMcpErrors];
@@ -11670,6 +11947,10 @@ export type RelayMcpResponses = {
      * OK
      */
     200: unknown;
+    /**
+     * Accepted, without a body (a JSON-RPC notification or response sent to the server)
+     */
+    202: unknown;
 };
 
 export type ListMcpCallsData = {
@@ -11775,6 +12056,19 @@ export type GetMcpUsageResponses = {
         byTool: {
             [key: string]: number;
         };
+        /**
+         * Details by member and server
+         */
+        rows?: Array<{
+            dev?: string;
+            server?: string;
+            calls?: number;
+            lists?: number;
+            errors?: number;
+            denied?: number;
+            bytes?: number;
+            durationMs?: number;
+        }>;
     };
 };
 
@@ -11855,7 +12149,7 @@ export type CreateSecretErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11904,7 +12198,7 @@ export type DeleteSecretErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -11953,7 +12247,7 @@ export type RotateSecretErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -12329,7 +12623,7 @@ export type SetInferenceSettingsErrors = {
     /**
      * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: StepUpRequired | ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -12449,8 +12743,7 @@ export type SetModelPolicyResponses = {
      * Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
      * opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
      * (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
-     * once, as before. Planned: ostrom-server answers it once its governance confirmations are served; until then
-     * the write applies (`getGovernanceConfirmation` is `planned` meanwhile).
+     * once, as before.
      */
     202: GovernanceConfirmationPending;
 };
@@ -13486,7 +13779,20 @@ export type DeleteRunnerResponses = {
 export type DeleteRunnerResponse = DeleteRunnerResponses[keyof DeleteRunnerResponses];
 
 export type RunnerHeartbeatData = {
-    body?: never;
+    body?: {
+        /**
+         * The executions the machine has, and those it is creating.
+         */
+        executions?: Array<{
+            sessionId: string;
+            epoch: number;
+            state: 'pending' | 'running' | 'ended';
+        }>;
+        /**
+         * The sessions whose workspace volumes the machine holds.
+         */
+        workspaces?: Array<string>;
+    };
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -13531,6 +13837,34 @@ export type RunnerHeartbeatResponses = {
      */
     200: {
         sessions: Array<CloudSession>;
+        /**
+         * The executions to run. A plan comes once, when the execution is handed over to this runner; later answers name the execution without it.
+         */
+        executions: Array<{
+            sessionId: string;
+            epoch: number;
+            /**
+             * The Docker Engine objects to create, in order: the session's volumes, then the execution's containers, each with its Engine API creation body.
+             */
+            plan?: {
+                volumes: Array<{
+                    name: string;
+                    body: {
+                        [key: string]: unknown;
+                    };
+                }>;
+                containers: Array<{
+                    name: string;
+                    body: {
+                        [key: string]: unknown;
+                    };
+                }>;
+            };
+        }>;
+        /**
+         * The sessions whose workspace to keep.
+         */
+        workspaces: Array<string>;
     };
 };
 
@@ -13628,6 +13962,10 @@ export type CreateCloudSessionErrors = {
      * A refusal
      */
     401: ApiError;
+    /**
+     * A refusal
+     */
+    402: ApiError;
     /**
      * A refusal
      */
@@ -14006,6 +14344,10 @@ export type CloudRunnerHeartbeatErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type CloudRunnerHeartbeatError = CloudRunnerHeartbeatErrors[keyof CloudRunnerHeartbeatErrors];
@@ -14420,7 +14762,7 @@ export type GetArtifactContentData = {
 
 export type GetArtifactContentErrors = {
     /**
-     * A refusal
+     * Not found, or not readable with this ticket, in plain text without detail (`no-store`): the content origin answers no JSON. The same path asked of the API origin is not served there, and gets the API's JSON `ApiError`
      */
     404: ApiError;
 };
@@ -14982,6 +15324,10 @@ export type CreateArtifactTicketResponses = {
      * OK
      */
     200: ArtifactTicket;
+    /**
+     * Created
+     */
+    201: ArtifactTicket;
 };
 
 export type CreateArtifactTicketResponse = CreateArtifactTicketResponses[keyof CreateArtifactTicketResponses];
@@ -15041,6 +15387,9 @@ export type EnrollSharedAccountData = {
         provider: string;
         label: string;
         credentialSecret: string;
+        /**
+         * Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).
+         */
         sharedWith?: Array<string>;
         dailyAllocationUsd?: number;
     };
@@ -15140,6 +15489,9 @@ export type RemoveSharedAccountResponse = RemoveSharedAccountResponses[keyof Rem
 
 export type UpdateSharedAccountData = {
     body: {
+        /**
+         * Whom it is lent to: members by login, and groups as `group:<id>` (the id of a group of `/api/v1/groups`). Empty: the whole organization. Only groups named: their members who are not paused, no one else. A group of another organization, or a malformed id, is refused (400).
+         */
         sharedWith?: Array<string>;
         dailyAllocationUsd?: number;
         paused?: boolean;
@@ -16666,6 +17018,10 @@ export type GetBillingErrors = {
      * A refusal
      */
     401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
     /**
      * A refusal
      */
