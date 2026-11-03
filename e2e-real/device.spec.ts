@@ -185,12 +185,26 @@ test('5.1 `ostrom login --admin`: a person who manages two organizations approve
   const first = await ownerOfNewOrganization(page, 'ines');
   await accept(page, await invitationTo(other, second.id, 'admin'));
 
+  const orgs = await callFromPage(page, 'GET', '/api/v1/orgs');
+  const own = z
+    .object({ items: z.array(z.object({ id: z.string(), name: z.string() })) })
+    .parse(orgs.body)
+    .items.find((item) => item.id === first.id);
+  if (own === undefined) throw new Error('her own organization is not in her list');
+
   const login = await startLogin(true);
   await page.goto(login.page);
+  // With two organizations and none chosen yet, the console asks which one it works in, here as anywhere.
+  const picker = page.getByRole('dialog', { name: 'Which organization?' });
+  await picker.getByRole('button', { name: own.name }).click();
+  await expect(picker).toHaveCount(0);
   await seesTheLogin(page, login.userCode);
   await expect(page.getByText('Admin sign-in', { exact: true })).toBeVisible();
-  // Before the console named it, the server could only answer 409 `org_required` to this person.
-  await page.getByLabel('Organization it acts in').selectOption(second.id);
+  // The console's organization comes first; the admin sign-in is for the other one. Before the console named it, the
+  // server could only answer 409 `org_required` to this person.
+  const actsIn = page.getByLabel('Organization it acts in');
+  await expect(actsIn).toHaveValue(first.id);
+  await actsIn.selectOption(second.id);
   await page.getByRole('button', { name: 'Approve the admin sign-in' }).click();
   await expect(page.getByText('Terminal signed in')).toBeVisible();
 
