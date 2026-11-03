@@ -26,7 +26,13 @@ info:
     A route without `orgs/{orgId}` in its path acts in the caller''s organization. A person who is a member of several
     organizations names it with the `Ostrom-Org` header (the organization''s id); without it they get 409 with
     `error.type` `org_required`. With exactly one active membership the header may be left out. `getMe` and
-    `listMyOrganizations` never need it.'
+    `listMyOrganizations` never need it.
+
+    A resource of another organization, or of an organization the caller is not a member of, answers 404 exactly
+    like a resource that does not exist, never 403: no answer tells "exists elsewhere" from "does not exist". A 403
+    only refuses what the caller can already see in their own organization (a missing scope, a role, a token where a
+    browser session is needed). A costly read or a sign-in step may answer 429 `rate_limited`; a read throttled per
+    caller also sends `Retry-After`.'
 servers:
 - url: https://{host}
   variables:
@@ -299,7 +305,7 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/mobile/unlock:
     post:
       operationId: unlockMobileApp
@@ -337,7 +343,7 @@ paths:
         '403':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/github/callback:
     get:
       operationId: githubLoginCallback
@@ -519,6 +525,8 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/device:
     get:
       operationId: getDeviceLogin
@@ -548,6 +556,8 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
     post:
       operationId: startDeviceLogin
       x-ostrom-status: served
@@ -579,7 +589,7 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/device/token:
     post:
       operationId: pollDeviceLogin
@@ -675,6 +685,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/token/refresh:
     post:
       operationId: refreshToken
@@ -774,6 +786,8 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/launches:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -801,6 +815,13 @@ paths:
                   type: string
                 model:
                   type: string
+                workflowId:
+                  type: string
+                  x-ostrom-status: planned
+                  description: "The workflow this launch plays (`Workflow.id` of the organization; 404 otherwise):
+                    every model call of its sessions counts under it, for the budgets of scope `workflow` and
+                    `Spending.byWorkflow`. Absent, the calls count under no workflow. Planned: the server does not
+                    read it yet"
               required:
               - agent
       responses:
@@ -1002,6 +1023,8 @@ paths:
         description: "1 to 200, 50 by default"
         schema:
           type: integer
+          minimum: 1
+          maximum: 200
       responses:
         '200':
           description: "OK"
@@ -1057,6 +1080,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/email/verify:
     post:
       operationId: verifySignInEmail
@@ -1153,6 +1178,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/logout:
     post:
       operationId: logout
@@ -1229,6 +1256,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/auth/sessions:
     get:
       operationId: listAuthSessions
@@ -1791,6 +1820,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/spending:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -1823,6 +1854,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/github/app:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -1958,6 +1991,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '503':
           $ref: '#/components/responses/Error'
   /api/v1/github/app/install/callback:
     get:
@@ -2144,7 +2179,7 @@ paths:
         '409':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/orgs/{org}:
     get:
       operationId: getOrg
@@ -2333,6 +2368,15 @@ paths:
         schema:
           type: string
           format: uuid
+      - name: q
+        in: query
+        required: false
+        x-ostrom-status: planned
+        description: "Only the members whose login or name starts with it, whatever the case; it combines with `limit` and `after`. Planned: the server does not read it yet"
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
       responses:
         '200':
           description: "OK"
@@ -2355,6 +2399,9 @@ paths:
       tags:
       - organization
       summary: "Invite people by e-mail; members and addresses already invited are left out of `invited`"
+      description: "Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it
+        opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as
+        the rules' writes do. From the console it applies at once."
       parameters:
       - name: org
         in: path
@@ -2375,6 +2422,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrgInvited'
+        '202':
+          $ref: '#/components/responses/GovernanceConfirmationPending'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -2393,7 +2442,7 @@ paths:
         '409':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/InvitationLimit'
   /api/v1/orgs/{org}/members/{login}:
     get:
       operationId: getOrgMember
@@ -2432,6 +2481,9 @@ paths:
       tags:
       - organization
       summary: "Change a member's role"
+      description: "Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it
+        opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as
+        the rules' writes do. From the console it applies at once."
       parameters:
       - name: org
         in: path
@@ -2457,6 +2509,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrgMember'
+        '202':
+          $ref: '#/components/responses/GovernanceConfirmationPending'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -2472,12 +2526,17 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/ConfirmationLimit'
     delete:
       operationId: removeOrgMember
       x-ostrom-status: served
       tags:
       - organization
       summary: "Remove a member"
+      description: "Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it
+        opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as
+        the rules' writes do. From the console it applies at once."
       parameters:
       - name: org
         in: path
@@ -2493,6 +2552,8 @@ paths:
       responses:
         '204':
           description: "Removed"
+        '202':
+          $ref: '#/components/responses/GovernanceConfirmationPending'
         '401':
           $ref: '#/components/responses/Error'
         '403':
@@ -2506,6 +2567,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/ConfirmationLimit'
   /api/v1/orgs/{org}/invitations:
     get:
       operationId: listInvitations
@@ -2540,6 +2603,12 @@ paths:
       tags:
       - organization
       summary: "Create an invitation link: the answer is the only time its URL is shown"
+      description: "Made with a person's API token (`orgs:write`, a personal token), the write is not applied: it
+        opens a governance confirmation (202) that an owner or an admin confirms on the console within 15 minutes, as
+        the rules' writes do. From the console it applies at once. Confirmed, the URL is shown once, to the person who
+        asked, in the confirmation's `result` (`GET /confirmations/{id}`): their first read with a token returns
+        `{url, invitation}`; later reads, and any console session, get `{invitation, shown: true}`, without the URL. A
+        first answer lost on the way is not shown again: revoke the link and create another."
       parameters:
       - name: org
         in: path
@@ -2560,6 +2629,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InvitationLink'
+        '202':
+          $ref: '#/components/responses/GovernanceConfirmationPending'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -2576,7 +2647,7 @@ paths:
         '409':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/InvitationLimit'
   /api/v1/orgs/{org}/invitations/{id}:
     delete:
       operationId: revokeInvitation
@@ -2901,6 +2972,8 @@ paths:
         description: The page size, 1 to 100 (100 by default)
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -2950,6 +3023,8 @@ paths:
         description: The page size, 1 to 100 (100 by default)
         schema:
           type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -3092,6 +3167,14 @@ paths:
         required: false
         schema:
           type: string
+      - name: limit
+        in: query
+        required: false
+        description: "The page size, 1 to 100 (50 by default); a value outside is brought into it"
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -3118,6 +3201,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/sessions/{id}:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -3150,6 +3235,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/sessions/{id}/alive:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -3476,7 +3563,8 @@ paths:
       description: |-
         With `wait`, a pending gate is waited on for its answer: the response comes as soon as the gate is no longer
         pending, or with it still pending when the wait ends; the caller then asks again. A gate that is not pending
-        answers at once, and so does another organization's gate or launch's (404, 403). The server caps the wait at
+        answers at once, and so does a gate of another organization (404, as if it did not exist) or of another launch
+        of the caller's organization (403). The server caps the wait at
         30 seconds and reads a value outside 0 to 30 as the nearest bound. A waiting request holds no database
         connection. A client sets its HTTP timeout above the wait.
       parameters:
@@ -3512,7 +3600,7 @@ paths:
         '409':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/Throttled'
   /api/v1/gates/{id}/consume:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -3825,7 +3913,7 @@ paths:
         schema:
           type: integer
           minimum: 1
-          maximum: 200
+          maximum: 100
           default: 50
       responses:
         '200':
@@ -3853,6 +3941,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/approvals/queue:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -3953,7 +4043,9 @@ paths:
       - approvals
       summary: Say yes or no, as the caller. 409 shown_digest_mismatch when the shown digest differs, 409 approval_closed
         when already answered (a signed answer never changes); 403 self_approval_refused when the asker answers while another
-        approver exists; 403 step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone
+        approver exists; 403 github_link_required when the gate's policy is never-self-approve, the pull request's author
+        linked no Ostrom person and the answerer linked no GitHub account (the gate waits, Q-GATES-G1); 403
+        step_up_required when a yes comes from a sign-in more than 5 minutes old, or from the phone
         app not unlocked in the last 5 minutes (`unlockMobileApp`); the 200 is the `ApprovalView` of the answered approval,
         with its signed `receipt`, a no's included
       parameters:
@@ -3980,7 +4072,8 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '403':
-          description: self_approval_refused, step_up_required, or not an approver (the key is `error.type`)
+          description: self_approval_refused, github_link_required, step_up_required, or not an approver (the key is
+            `error.type`)
           content:
             application/json:
               schema:
@@ -4183,6 +4276,14 @@ paths:
         required: false
         schema:
           type: string
+      - name: limit
+        in: query
+        required: false
+        description: "The page size, 1 to 200 (50 by default); a value outside is brought into it"
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
       responses:
         '200':
           description: OK
@@ -4209,6 +4310,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/receipts/keys:
     get:
       operationId: listReceiptKeys
@@ -4267,6 +4370,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/receipts/{id}/verify:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -4299,6 +4404,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/receipts/{id}/bundle:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -4833,6 +4940,8 @@ paths:
         description: "The page size, 1 to 1000 (1000 by default); a value outside is brought into it"
         schema:
           type: integer
+          minimum: 1
+          maximum: 1000
       responses:
         '200':
           description: OK
@@ -5864,7 +5973,7 @@ paths:
         '409':
           $ref: '#/components/responses/Error'
         '429':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/waits:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -5895,6 +6004,21 @@ paths:
         required: false
         schema:
           type: string
+      - name: before
+        in: query
+        required: false
+        description: "The `next` of the previous page: the id of its last wait"
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        in: query
+        required: false
+        description: "The page size, 1 to 100 (50 by default); 400 outside"
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -6941,21 +7065,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/AnthropicInferenceError'
   /api/v1/inference/v1/responses:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -6977,21 +7101,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/v1/chat/completions:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7013,21 +7137,21 @@ paths:
             application/json:
               schema: {}
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '429':
           $ref: '#/components/responses/InferenceRefused'
         '502':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '503':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/v1/models:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7045,6 +7169,10 @@ paths:
               schema:
                 type: object
                 properties:
+                  object:
+                    type: string
+                    enum:
+                    - list
                   data:
                     type: array
                     items:
@@ -7053,15 +7181,15 @@ paths:
                 required:
                 - data
         '400':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '401':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '403':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '404':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
         '409':
-          $ref: '#/components/responses/Error'
+          $ref: '#/components/responses/OpenAiInferenceError'
   /api/v1/inference/settings:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7564,6 +7692,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/TooManyAttempts'
   /api/v1/usage/live:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7992,7 +8122,8 @@ paths:
         The answer is what it must hold: the executions to run, each handed over once with its plan (the volumes
         and containers to create, the last one holding the execution's runner token), and the workspaces to keep.
         Anything else of its own, it stops and deletes. A runner that sends no body is given nothing; an unknown
-        state or a malformed session id answers 400. `sessions` is kept for older runners and stays empty.
+        state, a malformed session id or a capacity outside 0 to 256 answers 400. `sessions` is kept for older
+        runners and stays empty.
       parameters:
       - name: id
         in: path
@@ -8028,6 +8159,15 @@ paths:
                   items:
                     type: string
                     format: uuid
+                capacity:
+                  type: integer
+                  format: int32
+                  minimum: 0
+                  maximum: 256
+                  description: >-
+                    The sessions the machine runs at once at most; the server never hands it more, and a session
+                    with no room anywhere stays queued. 0 drains the machine. Absent, as from an older runner: no
+                    limit.
       responses:
         '200':
           description: OK
@@ -8409,7 +8549,7 @@ paths:
         '403':
           $ref: '#/components/responses/Error'
         '404':
-          $ref: '#/components/responses/Error'
+          description: An HTTP 404 answered to a request that does not open the socket (observed by ostrom-server's isolation matrix) has no body; a socket that opens refuses with a close, 4404 for an unknown or foreign session
         '409':
           $ref: '#/components/responses/Error'
   /api/v1/cloud/runner/terminal:
@@ -8435,6 +8575,8 @@ paths:
       responses:
         '101':
           description: "Switching protocols"
+        '400':
+          description: An HTTP 400 answered to a request that does not open the socket (observed by ostrom-server's isolation matrix) has no body; a socket that opens refuses with a close (4401, 4409)
         '401':
           $ref: '#/components/responses/Error'
         '409':
@@ -10175,6 +10317,8 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Throttled'
   /api/v1/events:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -10798,7 +10942,7 @@ components:
   responses:
     GovernanceConfirmationPending:
       description: |-
-        Not applied: made with a person's API token (the CLI's, `ostrom login --admin` or not), the governance write
+        Not applied: made with a person's API token (a personal token, the CLI's included), the governance write
         opened a confirmation, which an owner or an admin confirms on the console within 15 minutes
         (`getGovernanceConfirmation`). A browser session's write and an `inference:admin` service key's are applied at
         once, as before.
@@ -10819,6 +10963,24 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+    AnthropicInferenceError:
+      description: "An error of the Messages endpoint: in Anthropic's shape from the gateway, `ApiError` from the server
+        around it"
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: '#/components/schemas/AnthropicError'
+            - $ref: '#/components/schemas/ApiError'
+    OpenAiInferenceError:
+      description: "An error of an OpenAI-compatible endpoint: in OpenAI's shape from the gateway, `ApiError` from the
+        server around it"
+      content:
+        application/json:
+          schema:
+            anyOf:
+            - $ref: '#/components/schemas/OpenAiError'
+            - $ref: '#/components/schemas/ApiError'
     InferenceRefused:
       description: "Too many requests, in the provider's own error shape, which satisfies `ApiError` (`error.type`,
         `error.message`). Refused by the budgets before any provider is called: `error.type` `rate_limit_error` on the
@@ -10847,7 +11009,9 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ApiError'
+            anyOf:
+            - $ref: '#/components/schemas/AnthropicError'
+            - $ref: '#/components/schemas/OpenAiError'
     RateLimited:
       description: 'Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an
         organization and per organization, over a sliding hour'
@@ -10856,6 +11020,35 @@ components:
           description: Seconds until a place frees up
           schema:
             type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Throttled:
+      description: 'Too many reads lately (`rate_limited`): nothing was read. A costly read is bounded per caller (a
+        person, a device, an agent or a service): calls per minute, reads and waits together, and calls at once, the
+        waits of `getGate` counted apart from the reads'
+      headers:
+        Retry-After:
+          description: Seconds to wait before reading again
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InvitationLimit:
+      description: 'Not done: `rate_limited`, the organization sent too many invitations this hour; or, made with a
+        person''s API token, `confirmation_limit`, the person already has 10 governance confirmations waiting (the
+        key is `error.type`)'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyAttempts:
+      description: 'Too many attempts lately (`rate_limited`): nothing was done. A sign-in step, an organization''s
+        creations, a webhook trigger or a batch of usage events is limited per address, person, organization or
+        automation over a window; wait, then try again'
       content:
         application/json:
           schema:
@@ -11031,6 +11224,29 @@ components:
       required:
       - answer
       - shownDigest
+    AnthropicError:
+      type: object
+      description: "An error in Anthropic's shape, as the Messages endpoint of the gateway answers it"
+      properties:
+        type:
+          type: string
+          enum:
+          - error
+        error:
+          type: object
+          properties:
+            type:
+              type: string
+              description: Anthropic's error type (`authentication_error`, `permission_error`, `rate_limit_error`…)
+            message:
+              type: string
+          required:
+          - type
+          - message
+      required:
+      - type
+      - error
+      x-ostrom-kotlin: pending
     ApiError:
       type: object
       description: The error body of every refusal
@@ -12101,11 +12317,13 @@ components:
       properties:
         scope:
           type: string
-          description: '`organization` (also `org`) or `member`'
+          description: "`organization` (also `org`), `member`, or `workflow` (planned: the server answers 400 to it
+            until it serves it)"
         subject:
           type: string
           description: "For `member`: the member's `id` (`OrgMember.id`); absent, every member without limits of their
-            own"
+            own. For `workflow` (planned): the workflow's `id` (`Workflow.id`), required; the spend is that of the
+            model calls of the launches that play it (`workflowId` of `createLaunch`)"
         usdPerMonth:
           type: number
           description: The monthly limit in US dollars; absent, none
@@ -12788,7 +13006,9 @@ components:
       description: '403 other than step_up_required: `forbidden` (a token without the scope, a member without the
         role, a credential the route does not admit), or a finer key (`email_link_other_browser`,
         `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server
-        names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`)'
+        names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`;
+        `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom
+        person, from an answerer who linked no GitHub account)'
       properties:
         error:
           type: object
@@ -12797,7 +13017,7 @@ components:
             type:
               type: string
               enum: [forbidden, email_link_other_browser, installation_not_yours, probe_not_yours, cutover_owner_required,
-                self_approval_refused]
+                self_approval_refused, github_link_required]
             message:
               type: string
           required:
@@ -13101,10 +13321,14 @@ components:
       - workflows.create
       - workflows.save
       - workflows.delete
+      - members.role
+      - members.remove
+      - members.invite
+      - members.link
       x-ostrom-kotlin: pending
     GovernanceConfirmation:
       type: object
-      description: 'A governance write made with a CLI token, held until an owner or an admin confirms it on the
+      description: 'A governance write made with a person''s API token, held until an owner or an admin confirms it on the
         console. `before` and `after` are what the change replaces and what it writes, as the read routes show them
         (JSON null for nothing: a creation has no `before`, a deletion no `after`)'
       properties:
@@ -13122,7 +13346,8 @@ components:
           description: The path of the write, such as `/api/v1/gates/policy`
         scope:
           type: string
-          description: The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`)
+          description: The governance scope the write uses (`policy:write`, `harness:write`, `gates:policy`,
+            `orgs:write`)
         summary:
           type: string
           description: One line saying what the change does
@@ -13154,7 +13379,11 @@ components:
           type: string
           format: date-time
         result:
-          description: What the write returned once confirmed (absent when it returns nothing, as a deletion)
+          description: "What the write returned once confirmed (absent when it returns nothing, as a deletion). A
+            secret in it is shown once, to the person who asked: for `members.link`, their first read with a token
+            returns `{url, invitation}`, then the result is `{invitation, shown: true}`. No console session reads the
+            `url`, the asker's included; a first answer lost on the way is not shown again (revoke the link and create
+            another)."
         error:
           description: Why a confirmed change was not written (`failed`)
           allOf:
@@ -13190,7 +13419,7 @@ components:
       x-ostrom-kotlin: pending
     GovernanceConfirmationPending:
       type: object
-      description: 'The 202 of a governance write made with a CLI token: nothing was written. An owner or an admin
+      description: 'The 202 of a governance write made with a person''s API token: nothing was written. An owner or an admin
         confirms it at `confirmUrl` before `expiresAt` (15 minutes); the CLI waits on `getGovernanceConfirmation`. The
         same change asked again by the same person while it waits answers the same confirmation'
       properties:
@@ -13981,6 +14210,33 @@ components:
       required:
       - email
       - verified
+      x-ostrom-kotlin: pending
+    OpenAiError:
+      type: object
+      description: "An error in OpenAI's shape, as the OpenAI-compatible endpoints of the gateway answer it"
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+              description: OpenAI's error type (`invalid_request_error`, `insufficient_quota`…)
+            code:
+              type:
+              - string
+              - 'null'
+              description: The gateway's refusal, in lower case (`budget_exhausted`, `no_capacity`…)
+            param:
+              type:
+              - string
+              - 'null'
+          required:
+          - message
+          - type
+      required:
+      - error
       x-ostrom-kotlin: pending
     StepUpOrForbidden:
       description: 'A 403 of a write that may need a fresh sign-in: `step_up_required` (sign in again, then send
@@ -15791,6 +16047,14 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SpendingLine'
+        byWorkflow:
+          type: array
+          x-ostrom-status: planned
+          description: "By workflow: the model calls of the launches that play one (`workflowId` of `createLaunch`),
+            `key` the workflow's `id`, `label` its name; the calls of no workflow are in no line. Planned: the server
+            does not send it yet"
+          items:
+            $ref: '#/components/schemas/SpendingLine'
         daily:
           type: array
           items:
@@ -15817,10 +16081,10 @@ components:
       properties:
         scope:
           type: string
-          description: '`organization` or `member`'
+          description: '`organization`, `member`, or `workflow` (planned)'
         subject:
           type: string
-          description: "For `member`: the member's `id`"
+          description: "For `member`: the member's `id`; for `workflow` (planned): the workflow's `id`"
         period:
           type: string
           enum: [day, month]
