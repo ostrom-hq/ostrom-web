@@ -101,7 +101,9 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   const form = page.getByRole('form', { name: 'A new workflow' });
   const name = `Release train ${id}`;
   await form.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
-  await form.getByLabel('Repository').fill(`acme-${id}/api`);
+  await form.getByLabel('Domain').fill('Release');
+  // The repository of the installation, picked among the organization's.
+  await form.getByRole('checkbox', { name: 'api', exact: true }).check();
   await form.getByLabel('Step 1: What it is').fill('A tag is pushed');
   await form.getByRole('button', { name: 'Create the workflow' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);

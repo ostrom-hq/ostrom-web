@@ -773,10 +773,12 @@ export const fr = {
       steps_other: '{{count}} étapes',
       approvals_one: '{{count}} approbation',
       approvals_other: '{{count}} approbations',
+      allRepos: 'Tous les dépôts',
     },
     detail: {
       back: 'Tous les workflows',
-      domain: 'Dépôt',
+      domain: 'Domaine',
+      repos: 'Dépôts',
       version: 'Version',
       updated: 'Dernier changement',
       steps: 'Étapes',
@@ -798,9 +800,16 @@ export const fr = {
       new: 'Nouveau workflow',
       name: 'Nom',
       namePlaceholder: 'Changements du backend',
-      domain: 'Dépôt',
-      domainPlaceholder: 'acme/billing-api',
+      domain: 'Domaine',
+      domainPlaceholder: 'Backend',
       description: 'À quoi il sert',
+      repos: 'Dépôts où il s’applique',
+      reposLoading: 'Lecture des dépôts de l’organisation…',
+      reposNone: 'Aucun dépôt lu : installe l’app GitHub de l’organisation pour en choisir.',
+      reposMore: 'Plus de dépôts',
+      reposFailure: 'Les dépôts de l’organisation n’ont pas pu être lus. Ceux déjà choisis restent.',
+      reposEmpty:
+        'Aucun dépôt choisi : ce workflow s’applique à tous les dépôts de l’organisation que ses portes ou ses mots désignent. Un dépôt dont il cite le nom, même en partie, le reçoit aussi. Choisis ses dépôts pour le limiter.',
       linearLead: 'Les étapes s’enchaînent dans cet ordre, l’une après l’autre.',
       branchesLead:
         'Ce workflow a des embranchements : ses chemins restent tels quels, seuls les mots de ses étapes changent ici. Change ses chemins avec « ostrom harness update ».',
@@ -832,7 +841,7 @@ export const fr = {
       },
       problem: {
         name: 'Donne un nom au workflow.',
-        domain: 'Dis pour quel dépôt il vaut.',
+        domain: 'Dis quel domaine il couvre.',
         noSteps: 'Un workflow a au moins une étape.',
         label: 'Dis ce qu’est chaque étape.',
       },
@@ -1400,6 +1409,8 @@ export const fr = {
       pausedCount_one: '{{count}} en pause',
       pausedCount_other: '{{count}} en pause',
       lends: 'Prête {{list}}',
+      lendsHidden_one: 'Prête {{count}} abonnement que tu ne vois pas',
+      lendsHidden_other: 'Prête {{count}} abonnements que tu ne vois pas',
       lendsNothing: 'Ne prête aucun abonnement',
       create: {
         title: 'Nouveau groupe',
@@ -1431,6 +1442,8 @@ export const fr = {
       addSubmit: 'Ajouter',
       lending: 'Abonnements qu’il prête',
       lendingNone: 'Il ne prête aucun abonnement.',
+      lendingHidden_one: 'Il prête {{count}} abonnement que tu ne vois pas.',
+      lendingHidden_other: 'Il prête {{count}} abonnements que tu ne vois pas.',
       lendingPick: 'Prêter',
       lendingSave: 'Enregistrer les abonnements',
       settings: 'Groupe',
@@ -1996,7 +2009,7 @@ export const fr = {
   },
   device: {
     title: 'Connecter un terminal',
-    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
+    lead: 'Un terminal a lancé ostrom login. Vérifie que ce code est bien celui qu’il affiche, et qu’il a été demandé à l’heure et depuis le réseau où tu l’as lancé, puis réponds. Si tu n’as pas lancé ostrom login toi-même à l’instant, refuse.',
     enterLead: 'Saisis le code que ton terminal affiche après ostrom login.',
     form: {
       label: 'Code du terminal',
@@ -2011,6 +2024,8 @@ export const fr = {
       'Ce n’est pas un code d’ostrom login : il a huit lettres, comme ABCD-EFGH. Tape le code affiché par ton terminal, ou relance ostrom login.',
     code: 'Code',
     client: 'Nom donné par le terminal',
+    requestedAt: 'Demandé à',
+    requestedFrom: 'Demandé depuis (réseau)',
     expires: 'Expire à',
     adminTag: 'Connexion admin',
     admin:

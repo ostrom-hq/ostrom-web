@@ -753,10 +753,12 @@ export const en = {
       steps_other: '{{count}} steps',
       approvals_one: '{{count}} approval',
       approvals_other: '{{count}} approvals',
+      allRepos: 'All repositories',
     },
     detail: {
       back: 'All workflows',
-      domain: 'Repository',
+      domain: 'Domain',
+      repos: 'Repositories',
       version: 'Version',
       updated: 'Last change',
       steps: 'Steps',
@@ -778,9 +780,16 @@ export const en = {
       new: 'New workflow',
       name: 'Name',
       namePlaceholder: 'Backend changes',
-      domain: 'Repository',
-      domainPlaceholder: 'acme/billing-api',
+      domain: 'Domain',
+      domainPlaceholder: 'Backend',
       description: 'What it is for',
+      repos: 'Repositories it applies to',
+      reposLoading: 'Reading the organization’s repositories…',
+      reposNone: 'No repository read: install the organization’s GitHub App to pick some.',
+      reposMore: 'More repositories',
+      reposFailure: 'The organization’s repositories could not be read. Those already picked stay.',
+      reposEmpty:
+        'No repository picked: this workflow applies to every repository of the organization its gates or its words point to. A repository whose name it mentions, even in part, gets it too. Pick its repositories to limit it.',
       linearLead: 'The steps run in this order, one after the other.',
       branchesLead:
         'This workflow branches: its paths stay as they are, and only its steps’ words change here. Change its paths with “ostrom harness update”.',
@@ -812,7 +821,7 @@ export const en = {
       },
       problem: {
         name: 'Name the workflow.',
-        domain: 'Say which repository it is for.',
+        domain: 'Say which domain it covers.',
         noSteps: 'A workflow has at least one step.',
         label: 'Say what each step is.',
       },
@@ -1369,6 +1378,8 @@ export const en = {
       pausedCount_one: '{{count}} paused',
       pausedCount_other: '{{count}} paused',
       lends: 'Lends {{list}}',
+      lendsHidden_one: 'Lends {{count}} subscription you cannot see',
+      lendsHidden_other: 'Lends {{count}} subscriptions you cannot see',
       lendsNothing: 'Lends no subscription',
       create: {
         title: 'New group',
@@ -1400,6 +1411,8 @@ export const en = {
       addSubmit: 'Add',
       lending: 'Subscriptions it lends',
       lendingNone: 'It lends no subscription.',
+      lendingHidden_one: 'It lends {{count}} subscription you cannot see.',
+      lendingHidden_other: 'It lends {{count}} subscriptions you cannot see.',
       lendingPick: 'Lend',
       lendingSave: 'Save the subscriptions',
       settings: 'Group',
@@ -1953,7 +1966,7 @@ export const en = {
   },
   device: {
     title: 'Sign in a terminal',
-    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, then answer. If you did not run ostrom login yourself just now, deny it.',
+    lead: 'A terminal ran ostrom login. Check that this code is the one it shows, and that it asked when and from the network where you ran it, then answer. If you did not run ostrom login yourself just now, deny it.',
     enterLead: 'Type the code your terminal shows after ostrom login.',
     form: {
       label: 'Code from the terminal',
@@ -1968,6 +1981,8 @@ export const en = {
       'This is not a code from ostrom login: it has eight letters, like ABCD-EFGH. Type the code your terminal shows, or run ostrom login again.',
     code: 'Code',
     client: 'Name given by the terminal',
+    requestedAt: 'Asked at',
+    requestedFrom: 'Asked from (network)',
     expires: 'Expires at',
     adminTag: 'Admin sign-in',
     admin:
