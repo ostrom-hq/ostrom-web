@@ -20,7 +20,7 @@ describe('the audit log', () => {
     const lines = rows();
     expect(lines).toHaveLength(5);
     expect(lines[0]).toHaveTextContent(/^budget\.changedtheo · budget:organization · .*2026/);
-    expect(lines[0]).toHaveTextContent('monthlyUsd: 500 · alerts: [50,80] · credential: browser');
+    expect(lines[0]).toHaveTextContent('monthlyUsd: 500 · alerts: 50,80 · credential: browser');
     expect(lines[4]).toHaveTextContent('member.joinedsamir · member:samir');
   });
 
