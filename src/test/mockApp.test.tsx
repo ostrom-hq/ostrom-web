@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { DEMO_GITHUB_CONSENT } from '@/mocks/account';
 import { exit } from '@/shared/lib/leave';
+import { held } from '@/test/handlerFetch';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 
 /** Holds the link's answer until the second test lets it go: nothing here depends on how late it comes. */
 let release: () => void = () => undefined;
-const held = new Promise<void>((resolve) => {
+const gate = new Promise<void>((resolve) => {
   release = resolve;
 });
 
@@ -22,7 +23,7 @@ describe('a call still in flight when its test ends', () => {
     db.providers = ['email'];
     server.use(
       http.post('*/api/v1/auth/:provider/link', async () => {
-        await held;
+        await held(gate);
         return HttpResponse.json({ authorizationUrl: DEMO_GITHUB_CONSENT });
       }),
     );
@@ -39,5 +40,59 @@ describe('a call still in flight when its test ends', () => {
     // Without the call off, the answer reaches this test's spy within a few ticks.
     await new Promise((resolve) => setTimeout(resolve, 200));
     expect(assign).not.toHaveBeenCalled();
+  });
+});
+
+/** Whether a call reads the receipts, as `/receipts` does: a read kept on the default retry (`retryOnce`). */
+function readsReceipts(request: Request): boolean {
+  return new URL(request.url).pathname.endsWith('/api/v1/receipts');
+}
+
+/** The receipts read fails as a server down: `retryOnce` asks once more, a second later. */
+function receiptsDown(): void {
+  server.use(
+    http.get('*/api/v1/receipts', () =>
+      HttpResponse.json({ error: { type: 'internal', message: 'down' } }, { status: 500 }),
+    ),
+  );
+}
+
+// In this order too: the first shows the retry exists, the second ends with one to come, the third waits for it.
+describe('a retry left by a test that ended', () => {
+  it('is how a failed read of the receipts goes: asked once more, a second later', async () => {
+    let asked = 0;
+    traffic.onRequest((request) => {
+      if (readsReceipts(request)) asked += 1;
+    });
+    receiptsDown();
+    visit('/receipts');
+    await vi.waitFor(
+      () => {
+        expect(asked).toBe(2);
+      },
+      { timeout: 3_000 },
+    );
+  });
+
+  it('is left by a test that ends after the first failure', async () => {
+    let asked = 0;
+    traffic.onRequest((request) => {
+      if (readsReceipts(request)) asked += 1;
+    });
+    receiptsDown();
+    visit('/receipts');
+    await vi.waitFor(() => {
+      expect(asked).toBe(1);
+    });
+  });
+
+  it('never reaches the next test: no read of the receipts comes after its end', async () => {
+    let asked = 0;
+    traffic.onRequest((request) => {
+      if (readsReceipts(request)) asked += 1;
+    });
+    // Well beyond the delay of the first retry (one second, the first test above).
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    expect(asked).toBe(0);
   });
 });
