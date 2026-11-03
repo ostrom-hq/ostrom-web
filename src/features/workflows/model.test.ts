@@ -11,7 +11,13 @@ import {
   nobodyApproves,
   nodeOf,
   readSteps,
+  repoChoices,
+  repoLabel,
+  repoPattern,
+  reposOf,
+  reposText,
   type StepDraft,
+  toggleRepo,
   workflowDraftOf,
   workflowIdFor,
   workflowOf,
@@ -384,5 +390,46 @@ describe('the workflow editor’s model', () => {
     const branching = { ...workflowDraftOf(line), linear: false, steps: [] };
     expect(workflowOf(branching, line, 'w', now).start).toBe('a');
     expect(workflowOf({ ...fresh, steps: [] }, undefined, 'w', now)).not.toHaveProperty('start');
+  });
+
+  it('keeps the repositories a workflow is limited to, and says a change of them alone', () => {
+    const now = '2026-11-03T00:00:00.000Z';
+    const limited = workflow({ repos: ['acme/api', '*/web'] });
+    expect(workflowDraftOf(limited).repos).toEqual(['acme/api', '*/web']);
+    expect(workflowDraftOf(workflow({})).repos).toEqual([]);
+    expect(workflowDraftOf(undefined).repos).toEqual([]);
+    // Untouched, they go back as read, and a proposed workflow saved so is accepted as found.
+    const proposed = { ...limited, status: 'proposed' as const };
+    expect(workflowOf(workflowDraftOf(proposed), proposed, 'w', now)).toMatchObject({
+      repos: ['acme/api', '*/web'],
+      status: 'accepted',
+    });
+    // Changed, the change alone makes it edited.
+    const fewer = workflowOf({ ...workflowDraftOf(proposed), repos: ['*/web'] }, proposed, 'w', now);
+    expect(fewer).toMatchObject({ repos: ['*/web'], status: 'edited' });
+    // None left: no field, every repository again; and none on a new one.
+    expect(workflowOf({ ...workflowDraftOf(limited), repos: [] }, limited, 'w', now)).not.toHaveProperty(
+      'repos',
+    );
+    const fresh = { ...workflowDraftOf(undefined), name: 'N', domain: 'd' };
+    expect(workflowOf(fresh, undefined, 'n', now)).not.toHaveProperty('repos');
+    expect(workflowOf({ ...fresh, repos: ['*/api'] }, undefined, 'n', now).repos).toEqual(['*/api']);
+    // An empty list read from the server is the same as none.
+    const empty = workflow({ repos: [] });
+    expect(workflowOf(workflowDraftOf(empty), empty, 'w', now)).not.toHaveProperty('repos');
+  });
+
+  it('reads and writes the repositories by name, and keeps the ones written elsewhere', () => {
+    expect(reposOf(workflow({}))).toBeUndefined();
+    expect(reposOf(workflow({ repos: [] }))).toBeUndefined();
+    expect(reposText(workflow({}))).toBeUndefined();
+    expect(reposText(workflow({ repos: ['acme/api', '*/web', 'acme/*'] }))).toBe('acme/api, web, acme/*');
+    expect(repoPattern('web')).toBe('*/web');
+    expect(repoLabel('*/web')).toBe('web');
+    expect(repoLabel('acme/web')).toBe('acme/web');
+    expect(repoChoices(['api', 'web'], ['*/web', 'acme/old'])).toEqual(['*/api', '*/web', 'acme/old']);
+    expect(repoChoices([], [])).toEqual([]);
+    expect(toggleRepo(['*/api'], '*/web')).toEqual(['*/api', '*/web']);
+    expect(toggleRepo(['*/api', '*/web'], '*/api')).toEqual(['*/web']);
   });
 });

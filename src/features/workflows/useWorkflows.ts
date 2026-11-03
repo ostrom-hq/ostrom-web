@@ -4,13 +4,14 @@ import {
   getWorkflowOptions,
   getWorkflowQueryKey,
   listDecisionsQueryKey,
+  listReposInfiniteOptions,
   listWorkflowsOptions,
   listWorkflowsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { createWorkflow, deleteWorkflow, saveWorkflow } from '@gen/api/sdk.gen';
 import type { Workflow } from '@gen/api/types.gen';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useMemo } from 'react';
 import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -126,5 +127,38 @@ export function useWorkflowChange(): WorkflowChangeViewModel {
     failed: mutation.isError ? mutation.variables.kind : undefined,
     deleted: mutation.isSuccess && mutation.variables.kind === 'delete',
     reset,
+  };
+}
+
+export interface OrgReposViewModel {
+  /** The organization's repositories by their GitHub name, a page at a time; undefined until the first page. */
+  readonly names: readonly string[] | undefined;
+  /** The list could not be read: the editor still keeps and shows the repositories already chosen. */
+  readonly failure: Error | undefined;
+  readonly more: boolean;
+  readonly loadingMore: boolean;
+  readonly loadMore: () => void;
+}
+
+/** The repositories a workflow may be limited to: those the organization's GitHub App reads. */
+export function useOrgRepos(): OrgReposViewModel {
+  const repos = useInfiniteQuery({
+    ...ready(listReposInfiniteOptions(), { staleTime: 30_000, retry: false }),
+    initialPageParam: {},
+    getNextPageParam: (last) => last.next,
+  });
+  const names = useMemo(
+    () => repos.data?.pages.flatMap((page) => page.items.map((repo) => repo.name)),
+    [repos.data],
+  );
+  const { fetchNextPage } = repos;
+  return {
+    names,
+    failure: failureOf(repos.error),
+    more: repos.hasNextPage,
+    loadingMore: repos.isFetchingNextPage,
+    loadMore: () => {
+      void fetchNextPage();
+    },
   };
 }
