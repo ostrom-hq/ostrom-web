@@ -157,12 +157,15 @@ function againIn(calls: readonly Call[]): Call[] {
   );
 }
 
-/** How long after the last answer to the same question `call` was asked. */
+/**
+ * How long after the same question was last asked `call` was asked, start to start: a poll's timer runs from one ask
+ * to the next whatever the answer took, so a slow server shortens no gap and turns no poll into a read asked again.
+ */
 function gapOf(call: Call, calls: readonly Call[]): number {
   const before = calls.filter(
-    (other) => other !== call && sameQuestion(other, call) && other.end <= call.start,
+    (other) => other !== call && sameQuestion(other, call) && other.start < call.start,
   );
-  return call.start - Math.max(...before.map((other) => other.end));
+  return call.start - Math.max(...before.map((other) => other.start));
 }
 
 /** The calls asked again while the first one was still on its way: the same question, asked twice. */
