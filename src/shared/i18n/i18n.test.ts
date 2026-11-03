@@ -145,4 +145,40 @@ describe('a wording that never comes', () => {
     expect(instance.language).toBe('en');
     expect(instance.t('app.loading')).toBe(en.app.loading);
   });
+
+  it('is asked for anew the next time, and shows once it comes', async () => {
+    let tries = 0;
+    const instance = i18next.createInstance();
+    await instance
+      .use(
+        wordingBackend({
+          en: async () => Promise.resolve(en),
+          fr: async () => {
+            tries += 1;
+            return tries === 1 ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(fr);
+          },
+        }),
+      )
+      .init({ lng: 'en', fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
+    expect(await showLanguage('fr', instance)).toBe(false);
+    expect(await showLanguage('fr', instance)).toBe(true);
+    expect(instance.t('app.loading')).toBe(fr.app.loading);
+  });
 });
+
+describe('a change overtaken by a newer one', () => {
+  it('does not show its language once its wording comes', async () => {
+    const instance = await startedInEnglish();
+    expect(await showLanguage('fr', instance, () => false)).toBe(false);
+    expect(instance.language).toBe('en');
+  });
+});
+
+/** A console started in English, every wording at hand. */
+async function startedInEnglish(): Promise<typeof i18next> {
+  const instance = i18next.createInstance();
+  await instance
+    .use(wordingBackend({ en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) }))
+    .init({ lng: 'en', fallbackLng: false, interpolation: { escapeValue: false } });
+  return instance;
+}

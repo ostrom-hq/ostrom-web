@@ -1,9 +1,10 @@
-import { readFileSync, rmSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
+import { languageScript } from './src/shared/i18n/languageScript';
 
 const src = fileURLToPath(new URL('./src', import.meta.url));
 const ee = fileURLToPath(new URL('./ee', import.meta.url));
@@ -31,46 +32,34 @@ const LANGUAGE_MODULE = /[\\/]src[\\/]shared[\\/]i18n[\\/]locales[\\/]([a-z]{2})
 
 /**
  * Starts the download of the wording of the person's language alongside the entry, not once the entry has run
- * (src/shared/i18n/i18n.ts waits for it before the first render): a small script, `/language.js`, that the build writes
- * with the chunk of each language and that picks the language as `pickLanguage` does. A file from 'self', as the CSP
- * allows, loaded `async` so it holds nothing up. Measured on slow 4G, CPU ×4: without it, the wording waited for the
- * entry, about 90 ms more before the first paint.
+ * (src/shared/i18n/i18n.ts waits for it before the first render): `/language.js`, written with the chunk of each
+ * language (src/shared/i18n/languageScript.ts). A file from 'self', as the CSP allows, loaded `async` so it holds
+ * nothing up. Measured on slow 4G, CPU ×4: without it, the wording waited for the entry, about 90 ms more before the
+ * first paint.
  */
 function preloadLanguage(): Plugin {
+  let base = '/';
   return {
     name: 'ostrom:preload-language',
     apply: 'build',
+    configResolved(config) {
+      base = config.base;
+    },
     transformIndexHtml: () => [
-      { tag: 'script', attrs: { async: true, src: '/language.js' }, injectTo: 'head-prepend' },
+      { tag: 'script', attrs: { async: true, src: `${base}language.js` }, injectTo: 'head-prepend' },
     ],
     generateBundle(_options, bundle) {
       const chunks: Record<string, string> = {};
       for (const file of Object.values(bundle)) {
         const language =
           file.type === 'chunk' ? LANGUAGE_MODULE.exec(file.facadeModuleId ?? '')?.[1] : undefined;
-        if (language !== undefined) chunks[language] = `/${file.fileName}`;
+        if (language !== undefined) chunks[language] = `${base}${file.fileName}`;
       }
-      if (chunks['en'] === undefined) throw new Error('preloadLanguage: no wording chunk for English');
-      const source = `// SPDX-License-Identifier: AGPL-3.0-only
-// Written by the build (vite.config.ts, preloadLanguage): fetches the wording of the person's language with the entry.
-(function () {
-  var chunks = ${JSON.stringify(chunks)};
-  var picked = 'en';
-  var languages = navigator.languages || [];
-  for (var i = 0; i < languages.length; i += 1) {
-    var base = String(languages[i]).toLowerCase().split('-')[0];
-    if (Object.prototype.hasOwnProperty.call(chunks, base)) {
-      picked = base;
-      break;
-    }
-  }
-  var link = document.createElement('link');
-  link.rel = 'modulepreload';
-  link.href = chunks[picked];
-  document.head.appendChild(link);
-})();
-`;
-      this.emitFile({ type: 'asset', fileName: 'language.js', source });
+      // Every language the console speaks has its file there (LANGUAGES of src/shared/i18n/types.ts).
+      const languages = readdirSync(fileURLToPath(new URL('./src/shared/i18n/locales', import.meta.url))).map(
+        (name) => name.replace(/\.ts$/, ''),
+      );
+      this.emitFile({ type: 'asset', fileName: 'language.js', source: languageScript(chunks, languages) });
     },
   };
 }
