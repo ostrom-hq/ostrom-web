@@ -167,6 +167,9 @@ import {
   initialMcpServers,
   initialSecrets,
 } from '@/mocks/fixtures/tools';
+import { createConfirmationHandlers, type ConfirmationsState } from '@/mocks/confirmations';
+import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
+import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
@@ -180,6 +183,7 @@ export interface MockDb
     ActivityState,
     AuditState,
     BillingState,
+    ConfirmationsState,
     DeviceState,
     GithubState,
     OrgsState,
@@ -242,6 +246,7 @@ export interface MockDb
 }
 
 export function createMockDb(): MockDb {
+  const opened = Date.now();
   return {
     activity: initialActivity(),
     audit: initialAudit(),
@@ -290,8 +295,11 @@ export function createMockDb(): MockDb {
     sharedAccounts: initialSharedAccounts(),
     runsByKey: {},
     nextAccountId: 100,
-    signedInAt: Date.now(),
+    signedInAt: opened,
     signedIn: true,
+    confirmations: initialConfirmations(opened),
+    staleConfirmations: ['gc-models-stale'],
+    refusedWrites: initialRefusedWrites(),
     usedLinks: [],
     deviceLogins: initialDeviceLogins(),
     authSessions: initialAuthSessions(),
@@ -560,8 +568,7 @@ export const DEMO_EMAIL_TOKEN = 'ml_demo';
 /** A sign-in e-mail's token opened in another browser than the one that asked for it: refused with 403. */
 export const OTHER_BROWSER_EMAIL_TOKEN = 'ml_other_browser';
 
-/** How long a sign-in may say yes, as on the server (S2-54). */
-export const FRESH_SIGN_IN_MS = 5 * 60_000;
+export { FRESH_SIGN_IN_MS };
 
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
   const find = (id: string): Approval | undefined => db.approvals.find((approval) => approval.id === id);
@@ -696,6 +703,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createAccountHandlers(() => db, now),
     ...createDeviceHandlers(() => db, now, { manages: () => canManage(db), freshSignInMs: FRESH_SIGN_IN_MS }),
     ...createApproversGraphHandlers(() => db),
+    ...createConfirmationHandlers(
+      () => db,
+      now,
+      (request) => organizationOf(db, request),
+    ),
     ...createActivityHandlers(
       () => db,
       (request) => organizationOf(db, request).id === db.organization.id,

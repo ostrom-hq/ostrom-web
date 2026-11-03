@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { applied } from '@/shared/api/applied';
 import {
   answerApproval,
   bulkUpdateRules,
@@ -464,15 +465,12 @@ describe('mock workflows and policy', () => {
     ).toBe(409);
     // Without a version read, the save goes through; a workflow without a version gets its first.
     const migrations = (await getWorkflow({ path: { id: 'wf-migrations' }, throwOnError: true })).data;
-    expect(
-      (
-        await saveWorkflow({
-          path: { id: 'wf-migrations' },
-          body: { workflow: migrations },
-          throwOnError: true,
-        })
-      ).data.version,
-    ).toBe(1);
+    const saved = await saveWorkflow({
+      path: { id: 'wf-migrations' },
+      body: { workflow: migrations },
+      throwOnError: true,
+    });
+    expect(applied(saved.data).version).toBe(1);
     expect(await status(async () => deleteWorkflow({ path: { id: 'nope' }, throwOnError: true }))).toBe(404);
     db.members = db.members.map((member) =>
       member.login === 'maya' ? { ...member, role: 'member' } : member,
@@ -499,7 +497,7 @@ describe('mock workflows and policy', () => {
     // Never by default, as the server (S2-15); sole-approver is the organization's choice.
     expect((await getGatePolicy({ throwOnError: true })).data.selfApproval).toBe('never');
     const set = await setGatePolicy({ body: { selfApproval: 'sole-approver' }, throwOnError: true });
-    expect(set.data.selfApproval).toBe('sole-approver');
+    expect(applied(set.data).selfApproval).toBe('sole-approver');
     const bad = await failureOf(async () =>
       setGatePolicy({ body: { selfApproval: 'always' }, throwOnError: true }),
     );
@@ -537,8 +535,8 @@ describe('mock rules and decisions', () => {
       body: { status: 'proposed' },
       throwOnError: true,
     });
-    expect(reopened.data.status).toBe('proposed');
-    expect(reopened.data.decidedBy).toBeUndefined();
+    expect(applied(reopened.data).status).toBe('proposed');
+    expect(applied(reopened.data).decidedBy).toBeUndefined();
   });
 
   it('marks an edited statement as edited, and keeps a strength change without a new decision', async () => {
@@ -561,7 +559,7 @@ describe('mock rules and decisions', () => {
       body: { statement: 'Run the tests.' },
       throwOnError: true,
     });
-    expect(again.data.status).toBe('edited');
+    expect(applied(again.data).status).toBe('edited');
     expect(db.decisions).toHaveLength(before + 2);
     // A rejected rule reworded stays rejected: rewording is not accepting.
     const rejected = await updateRule({
@@ -569,7 +567,7 @@ describe('mock rules and decisions', () => {
       body: { statement: 'Commit messages are in English.' },
       throwOnError: true,
     });
-    expect(rejected.data.status).toBe('rejected');
+    expect(applied(rejected.data).status).toBe('rejected');
     expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-9' }, action: 'rejected' });
   });
 
@@ -601,7 +599,7 @@ describe('mock rules and decisions', () => {
       body: { ids: ['R-12', 'R-3', 'R-7'], status: 'accepted' },
       throwOnError: true,
     });
-    expect(data.updated).toBe(2);
+    expect(applied(data).updated).toBe(2);
     const bad = await fetch('http://ostrom.test/api/v1/rules/bulk', { method: 'POST', body: '{"ids":[]}' });
     expect(bad.status).toBe(400);
   });
@@ -643,8 +641,8 @@ describe('mock rules and decisions', () => {
       output: 'note',
       strength: 'recommended',
     });
-    expect(full.data.decidedBy).toBeUndefined();
-    expect(full.data.gate?.checks).toEqual([{ check: 'n-a' }, { check: 'n-b', attested: true }]);
+    expect(applied(full.data).decidedBy).toBeUndefined();
+    expect(applied(full.data).gate?.checks).toEqual([{ check: 'n-a' }, { check: 'n-b', attested: true }]);
   });
 
   it('refuses a rule without its words, a status it cannot start with, and someone who does not decide', async () => {
@@ -682,20 +680,20 @@ describe('mock rules and decisions', () => {
       throwOnError: true,
     });
     expect(moved.data).toMatchObject({ group: 'Deploys', why: 'Two outages.', scope: ['acme/web'] });
-    expect(moved.data.gate?.approvers).toEqual(['lena']);
+    expect(applied(moved.data).gate?.approvers).toEqual(['lena']);
     const gated = await updateRule({
       path: { id: 'R-7' },
       body: { gate: { actions: [], approvers: ['samir'] } },
       throwOnError: true,
     });
-    expect(gated.data.gate).toEqual({ actions: [], approvers: ['samir'] });
+    expect(applied(gated.data).gate).toEqual({ actions: [], approvers: ['samir'] });
     const off = await updateRule({
       path: { id: 'R-7' },
       body: { output: 'note', gate: null },
       throwOnError: true,
     });
-    expect(off.data.gate).toBeUndefined();
-    expect(off.data.output).toBe('note');
+    expect(applied(off.data).gate).toBeUndefined();
+    expect(applied(off.data).output).toBe('note');
     expect(db.decisions).toHaveLength(before + 3);
     expect(db.decisions[0]).toMatchObject({ subject: { id: 'R-7' }, action: 'edited' });
     // A rejected rule reworded stays rejected, and is signed so.

@@ -4,7 +4,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type Viewer, useViewer } from '@/shared/auth/useViewer';
-import './yes.css';
+import '@/shared/ui/decision.css';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';

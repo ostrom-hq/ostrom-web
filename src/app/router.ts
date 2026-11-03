@@ -91,6 +91,16 @@ const approvalRoute = createRoute({
   component: ApprovalScreen,
 });
 
+/**
+ * `/confirm/gc-…` is the link `ostrom` prints when a governance write made with a CLI token waits for a person
+ * (core#57): an owner or an admin reads the exact change here, then confirms or refuses it.
+ */
+const confirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/confirm/$confirmationId',
+  component: lazyRouteComponent(async () => import('@/features/confirm'), 'ConfirmScreen'),
+});
+
 const sessionsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/sessions',
@@ -294,6 +304,7 @@ export const routeTree = rootRoute.addChildren([
   emailLinkRoute,
   yesRoute,
   approvalRoute,
+  confirmRoute,
   sessionsRoute,
   sessionRoute,
   receiptsRoute,

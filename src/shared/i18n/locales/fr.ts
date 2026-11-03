@@ -186,6 +186,127 @@ export const fr = {
       errorTag: 'Erreur',
     },
   },
+  confirm: {
+    status: {
+      pending: 'Attend ta réponse',
+      confirmed: 'Confirmée',
+      refused: 'Refusée',
+      expired: 'Expirée',
+      failed: 'Échouée',
+    },
+    kind: {
+      rules: {
+        create: 'Ajouter une règle',
+        update: 'Modifier une règle',
+        delete: 'Supprimer une règle',
+        bulk: 'Décider plusieurs règles',
+      },
+      gates: { policy: 'Changer la politique d’auto-approbation' },
+      models: { policy: 'Changer la politique de modèles' },
+      workflows: {
+        create: 'Ajouter un workflow',
+        save: 'Modifier un workflow',
+        delete: 'Supprimer un workflow',
+      },
+    },
+    expiresIn: 'expire dans {{left}}',
+    warning: {
+      tag: 'Vérifie',
+      text: 'Si tu n’as pas lancé cette commande toi-même, refuse : un agent peut l’avoir demandée.',
+    },
+    what: {
+      title: 'Ce que ça change',
+      kind: 'Changement',
+      request: 'Requête',
+      scope: 'Portée',
+    },
+    change: {
+      title: 'Avant et après',
+      before: 'Avant',
+      after: 'Après',
+      nothingBefore: 'Rien : ce changement le crée.',
+      nothingAfter: 'Rien : ce changement le supprime.',
+      keys_one: 'Change {{keys}}.',
+      keys_other: 'Change {{count}} clés : {{keys}}.',
+    },
+    who: {
+      title: 'Qui demande',
+      with: 'avec le jeton de',
+      when: 'Demandé le {{when}}',
+    },
+    technical: {
+      title: 'Détails techniques',
+      id: 'Confirmation',
+      member: 'Membre',
+      expires: 'Expire',
+    },
+    act: {
+      label: 'Réponse',
+      signedAs: 'Tu réponds en tant que {{name}}.',
+      confirm: 'Confirmer le changement',
+      confirming: 'Confirmation…',
+      refuse: 'Refuser',
+      refusing: 'Refus…',
+      notYoursTag: 'Owners et admins',
+      notYours:
+        'Seul un owner ou un admin de l’organisation confirme ou refuse un changement de sa gouvernance.',
+    },
+    notice: {
+      tag: {
+        'step-up': 'Reconnecte-toi',
+        forbidden: 'Pas autorisé',
+        closed: 'Déjà répondue',
+        stale: 'Changé entre-temps',
+        expired: 'Expirée',
+        failed: 'Pas écrit',
+        error: 'Erreur',
+      },
+      text: {
+        'step-up':
+          'Confirmer demande une connexion de moins de cinq minutes. Reconnecte-toi, puis confirme ; refuser n’en a pas besoin.',
+        forbidden: '{{reason}}',
+        closed:
+          'Quelqu’un a répondu à cette confirmation avant toi : elle montre comment elle s’est terminée.',
+        stale:
+          'Ce que ce changement remplace n’est plus ce qu’il montrait : rien n’a été écrit. Relance la commande pour redemander.',
+        expired: 'Ses 15 minutes sont passées avant la réponse : rien n’a été écrit.',
+        failed: 'Ostrom a refusé le changement en l’écrivant : {{reason}}',
+        error: 'La réponse n’est pas passée ({{reason}}). Réessaie.',
+      },
+      signInAgain: 'Se reconnecter',
+    },
+    outcome: {
+      label: 'Issue',
+      title: {
+        confirmed: 'Confirmée et écrite',
+        refused: 'Refusée',
+        expired: 'Expirée sans réponse',
+        failed: 'Confirmée, mais pas écrite',
+      },
+      by: {
+        confirmed: '{{who}} a confirmé ce changement{{when}}. C’est sa décision signée.',
+        refused: '{{who}} a refusé ce changement{{when}}.',
+        failed: '{{who}} a confirmé ce changement{{when}}.',
+      },
+      at: ' le {{when}}',
+      someone: 'Quelqu’un',
+      expired: 'Personne n’a répondu en 15 minutes. Relance la commande pour redemander.',
+      why: 'Pourquoi : {{reason}}',
+      unknown: 'Ostrom ne l’a pas dit.',
+      nothingWritten: 'Rien n’a été écrit.',
+      result: 'Ce que l’écriture a renvoyé',
+    },
+    notFound: {
+      title: 'Confirmation introuvable',
+      body: 'Elle n’existe pas, ou elle n’est pas dans cette organisation. Si elle est dans une autre, change d’organisation dans la barre du haut.',
+    },
+    signedOut: {
+      tag: 'Déconnecté',
+      text: 'Connecte-toi pour lire cette confirmation.',
+      signIn: 'Se connecter',
+    },
+    failure: { tag: 'Erreur' },
+  },
   consent: {
     title: 'Statistiques d’usage',
     body: 'Pouvons-nous mesurer l’usage de la console (pages vues et actions, jamais ce que vous tapez) avec PostHog, hébergé dans l’UE ? Rien n’est envoyé sans votre accord, et vous pouvez changer d’avis à tout moment.',
