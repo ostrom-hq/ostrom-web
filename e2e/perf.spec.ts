@@ -7,6 +7,13 @@
 import { appendFileSync } from 'node:fs';
 import { type CDPSession, expect, type Page, test } from '@playwright/test';
 
+/** The page's globals the measure reads in the browser: the e2e project has no DOM types. */
+declare const document: {
+  readonly querySelectorAll: (selector: string) => { readonly length: number };
+  readonly getElementsByTagName: (name: string) => { readonly length: number };
+};
+declare const window: { __interactions: number[] };
+
 interface Interaction {
   /** What is measured, said in the table. */
   readonly label: string;
@@ -118,12 +125,11 @@ async function heapMb(cdp: CDPSession): Promise<number> {
 }
 
 /** The API calls of the page since it opened. */
-const API_CALLS =
-  "performance.getEntriesByType('resource').filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length";
-
 async function apiCalls(page: Page): Promise<number> {
-  const count: unknown = await page.evaluate(API_CALLS);
-  return Number(count);
+  return page.evaluate(() => {
+    const entries = performance.getEntriesByType('resource');
+    return entries.filter((entry) => new URL(entry.name).pathname.startsWith('/api/')).length;
+  });
 }
 
 /** The screen's lines and every element of the page. */
@@ -131,18 +137,20 @@ async function linesOf(
   page: Page,
   rows: string,
 ): Promise<{ readonly rows: number; readonly domNodes: number }> {
-  const counted: unknown = await page.evaluate(
-    `[document.querySelectorAll(${JSON.stringify(rows)}).length, document.getElementsByTagName('*').length]`,
+  return page.evaluate(
+    (selector) => ({
+      rows: document.querySelectorAll(selector).length,
+      domNodes: document.getElementsByTagName('*').length,
+    }),
+    rows,
   );
-  const [lines, nodes] = Array.isArray(counted) ? counted.map(Number) : [];
-  return { rows: lines ?? 0, domNodes: nodes ?? 0 };
 }
 
 async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promise<Measure> {
   await page.goto(screen.path, { waitUntil: 'commit' });
   const shown = await page.waitForFunction(
-    `document.querySelectorAll(${JSON.stringify(screen.rows)}).length > 0 ? performance.now() : false`,
-    undefined,
+    (selector) => (document.querySelectorAll(selector).length > 0 ? performance.now() : false),
+    screen.rows,
     { timeout: 60_000 },
   );
   const firstRowsMs = Math.round(Number(await shown.jsonValue()));
@@ -153,14 +161,15 @@ async function measure(page: Page, cdp: CDPSession, screen: HeavyScreen): Promis
   const heap = await heapMb(cdp);
   const base = { path: screen.path, firstRowsMs, ...counts, heapMb: heap };
   if (screen.filter === undefined) return base;
-  await page.evaluate('window.__interactions = []');
+  await page.evaluate(() => {
+    window.__interactions = [];
+  });
   const started = Date.now();
   await screen.filter.run(page);
   const doneMs = Date.now() - started;
   // Event Timing reports an interaction once its next frame is painted.
   await page.waitForTimeout(1_000);
-  const durations: unknown = await page.evaluate('window.__interactions');
-  const inpMs = Array.isArray(durations) ? Math.max(0, ...durations.map(Number)) : 0;
+  const inpMs = Math.max(0, ...(await page.evaluate(() => window.__interactions)));
   const after = await linesOf(page, screen.rows);
   const filter = { label: screen.filter.label, inpMs, doneMs, ...after };
   if (screen.pollMs === undefined) return { ...base, filter };
