@@ -5,14 +5,7 @@
 // its agent token, as the hook asks them, and answered in the console by the approver.
 import { expect, type Page, test } from '@playwright/test';
 import { zCreateLaunchResponse, zGetSessionResponse } from '../gen/api/zod.gen';
-import {
-  askPushToMain,
-  gatedRepository,
-  openFromQueue,
-  ownerAndMember,
-  requestOf,
-  withToken,
-} from './asking';
+import { askPushToMain, gatedRepository, openFromQueue, ownerAndMember, requestOf, withToken } from './gate';
 import { anotherPerson, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
 
 test.afterEach(closeOthers);

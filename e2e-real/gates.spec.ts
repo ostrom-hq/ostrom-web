@@ -18,24 +18,42 @@ import {
   askingToken,
   askPushToMain,
   gatedRepository,
-  openFromQueue,
-  ownerAndMember,
+  loginOf,
   requestOf,
   uniqueRun,
   withToken,
-} from './asking';
-import { anotherPerson, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
+} from './gate';
+import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
 
 test.afterEach(closeOthers);
 
 /** The answer to a yes: the contract's `ApprovalView`, which then always carries its signed receipt. */
 const zSignedAnswer = zAnswerApprovalResponse.required({ receipt: true });
 
+/** Opens the request from the queue, as a person does: the queue, then its line. */
+async function openFromQueue(page: Page, approval: { id: string; title: string }): Promise<void> {
+  await page.goto('/yes');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Requests');
+  await page.locator(`a[href$="/yes/${approval.id}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`/yes/${approval.id}$`));
+}
+
 /** The organization's self-approval setting, as the server reads it. */
 async function selfApprovalOf(page: Page, org: string): Promise<string> {
   const policy = await callFromPage(page, 'GET', '/api/v1/gates/policy', undefined, org);
   expect(policy.status, JSON.stringify(policy.body)).toBe(200);
   return zGetGatePolicyResponse.parse(policy.body).selfApproval;
+}
+
+/** The owner of a new organization on `page`, and a second person who joined it with `role` on their own browser. */
+async function ownerAndMember(
+  page: Page,
+  other: Page,
+  role: string,
+): Promise<{ org: string; owner: string; member: string }> {
+  const { id } = await ownerOfNewOrganization(page, 'ada');
+  await joinAs(page, id, other, 'ben', role);
+  return { org: id, owner: await loginOf(page), member: await loginOf(other) };
 }
 
 test('5.4 a member opens another person’s request in the console queue and says yes; the gate is open', async ({

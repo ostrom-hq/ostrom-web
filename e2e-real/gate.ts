@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-// What the journeys that ask a gate share: a workflow whose gate names its approvers, a token that asks as the hook
-// does, and the approver's queue in the console. Asked through the API, as the QA bench does it (ostrom-e2e
-// `scripts/load-setup.ts`); read and answered in the console.
+// A gate waiting for a yes, opened through the API as the QA bench does it (ostrom-e2e `scripts/load-setup.ts`): an
+// accepted workflow whose gate node names the approvers of pushes to main of a repository, and a personal token with
+// `gates:ask` that asks for such a push. Shared by the journeys that read or answer it.
 import { expect, type Page, request, test } from '@playwright/test';
 import { zAskGateResponse, zCreateTokenResponse, zListApprovalsResponse, zMe } from '../gen/api/zod.gen';
 import { bodyOf, callFromPage, joinAs, ownerOfNewOrganization } from './real';
