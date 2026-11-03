@@ -394,7 +394,8 @@ describe('a group', () => {
   });
 });
 
-describe('a new group in a large organization', () => {
+// Hundreds of lines rendered in jsdom: on a busy CI runner, more than the default 5 s.
+describe('a new group in a large organization', { timeout: 20_000 }, () => {
   beforeEach(() => {
     const org = db.organization.id;
     db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];

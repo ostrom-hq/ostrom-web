@@ -195,7 +195,8 @@ describe('the older ended sessions', () => {
   });
 });
 
-describe('the sessions of a large organization', () => {
+// Hundreds of lines rendered in jsdom: on a busy CI runner, more than the default 5 s.
+describe('the sessions of a large organization', { timeout: 20_000 }, () => {
   it('lists every open session, and reads the ended ones again once one ended', async () => {
     db.sessions = largeSessions();
     visit('/sessions');

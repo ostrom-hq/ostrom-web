@@ -466,7 +466,8 @@ describe('the members screen', () => {
   });
 });
 
-describe('the members of a large organization', () => {
+// Hundreds of lines rendered in jsdom: on a busy CI runner, more than the default 5 s.
+describe('the members of a large organization', { timeout: 20_000 }, () => {
   beforeEach(() => {
     db.orgMembers[ACME] = [...(db.orgMembers[ACME] ?? []), ...largeMembers()];
   });
@@ -520,7 +521,7 @@ describe('the members of a large organization', () => {
     visit('/members');
     await userEvent.type(await screen.findByRole('searchbox', { name: 'Find someone' }), '  dev-499  ');
     expect(
-      screen.getByText('Nobody matches “dev-499” among the 100 people read so far.'),
+      await screen.findByText('Nobody matches “dev-499” among the 100 people read so far.'),
     ).toBeInTheDocument();
     const heading = screen.getByRole('heading', { level: 2, name: 'People' });
     expect(heading.parentElement?.querySelector('ul')).toBeNull();

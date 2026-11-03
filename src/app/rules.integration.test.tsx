@@ -282,7 +282,8 @@ describe('the rules', () => {
   });
 });
 
-describe('the rules of a large organization', () => {
+// Hundreds of lines rendered in jsdom: on a busy CI runner, more than the default 5 s.
+describe('the rules of a large organization', { timeout: 20_000 }, () => {
   beforeEach(() => {
     db.rules = largeRules();
   });

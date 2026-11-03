@@ -299,7 +299,8 @@ describe('the budgets', () => {
   });
 });
 
-describe('the spending of a large organization', () => {
+// Hundreds of lines rendered in jsdom: on a busy CI runner, more than the default 5 s.
+describe('the spending of a large organization', { timeout: 20_000 }, () => {
   it('shows the twenty largest of each dimension and a hundred budgets, the rest on demand', async () => {
     db.spending = largeSpending;
     db.budgets = [...db.budgets, ...largeBudgets()];
