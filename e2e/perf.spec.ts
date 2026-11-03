@@ -73,7 +73,7 @@ const SCREENS: readonly HeavyScreen[] = [
     filter: {
       label: 'people of a new group',
       run: async (page) => {
-        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-42');
+        await page.getByRole('searchbox', { name: 'Find someone' }).fill('dev-04');
         await expect(page.getByRole('group', { name: 'Members' }).getByRole('checkbox')).toHaveCount(10);
       },
     },
@@ -234,7 +234,7 @@ const BUDGET = {
   rows: 110,
   domNodes: 1500,
   filteredNodes: 2500,
-  // The members are read 100 at a time: 505 of them are 6 calls, on `/members` and on the groups.
+  // One page of a hundred members on load, the next only when asked: 7 calls at most today (`/accounts/groups`).
   apiCalls: 14,
   pollCalls: 3,
   inpMs: { desktop: 200, mobile: 500 },

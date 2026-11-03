@@ -5,10 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { isFound } from '@/shared/org/people';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
-import { STEP, useStep } from '@/shared/lib/useStep';
+import { MEMBERS_PAGE } from '@/shared/org/members';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
-import { ShowMore } from '@/shared/ui/ShowMore';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { InvitationRow } from '../components/InvitationRow';
 import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
@@ -41,20 +41,21 @@ function MembersPage({
   const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
   const [search, setSearch] = useState('');
   const searchId = useId();
-  // A large organization is searched, and shown a hundred people at a time (PERF-CONSOLE).
-  const searchable = (view.members?.length ?? 0) > STEP;
+  // A large organization is read a hundred people at a time, the next hundred when asked, and searched among the
+  // people read (PERF-CONSOLE).
+  const read = view.members?.length ?? 0;
+  const searchable = view.more !== undefined || read > MEMBERS_PAGE;
   const found = useMemo(
     () => view.members?.filter((member) => isFound(member, search)),
     [view.members, search],
   );
-  const step = useStep(found?.length ?? 0, search);
   return (
     <Screen
       title={org.name}
       lead={
         view.members === undefined
           ? undefined
-          : t('members.lead', {
+          : t(view.more === undefined ? 'members.lead' : 'members.leadMore', {
               count: view.members.length,
               role: role === undefined ? org.role : t(`members.role.${role}`),
             })
@@ -91,10 +92,14 @@ function MembersPage({
               </div>
             ) : null}
             {members.length === 0 ? (
-              <p className="o-empty">{t('members.list.noMatch', { search: search.trim() })}</p>
+              <p className="o-empty">
+                {view.more === undefined
+                  ? t('members.list.noMatch', { search: search.trim() })
+                  : t('members.list.noMatchRead', { search: search.trim(), count: read })}
+              </p>
             ) : (
               <ul className="o-card o-rows">
-                {members.slice(0, step.count).map((member) => {
+                {members.map((member) => {
                   const target = orgRoleOf(member.role);
                   const editable =
                     member.login !== view.viewer && target !== undefined && mayManage(role, target);
@@ -121,7 +126,7 @@ function MembersPage({
                 })}
               </ul>
             )}
-            <ShowMore step={step} />
+            <MorePeople people={view} />
           </section>
         )}
       </LoadState>

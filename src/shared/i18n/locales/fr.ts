@@ -13,6 +13,7 @@ export const fr = {
     skipToContent: 'Aller au contenu',
     showMore_one: 'En afficher 1 de plus',
     showMore_other: 'En afficher {{count}} de plus (reste {{left}})',
+    morePeople: 'Afficher plus de personnes',
     copy: {
       action: 'Copier',
       named: 'Copier {{label}}',
@@ -433,6 +434,8 @@ export const fr = {
     title: 'Membres',
     lead_one: '{{count}} personne · tu es {{role}}',
     lead_other: '{{count}} personnes · tu es {{role}}',
+    leadMore_one: 'Plus de {{count}} personne · tu es {{role}}',
+    leadMore_other: 'Plus de {{count}} personnes · tu es {{role}}',
     role: {
       owner: 'Propriétaire',
       admin: 'Admin',
@@ -444,6 +447,7 @@ export const fr = {
       title: 'Personnes',
       search: 'Trouver quelqu’un',
       noMatch: 'Personne ne correspond à « {{search}} ».',
+      noMatchRead: 'Personne ne correspond à « {{search}} » parmi les {{count}} personnes lues.',
       you: '(toi)',
       roleOf: 'Rôle de {{name}}',
       errorTag: 'Non enregistré',

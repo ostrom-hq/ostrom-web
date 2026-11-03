@@ -1,35 +1,62 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { listOrgMembersOptions } from '@gen/api/@tanstack/react-query.gen';
-import { listOrgMembers } from '@gen/api/sdk.gen';
+import {
+  listOrgMembersInfiniteOptions,
+  listOrgMembersInfiniteQueryKey,
+} from '@gen/api/@tanstack/react-query.gen';
 import type { OrgMember, OrgMemberList } from '@gen/api/types.gen';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { type QueryTuning, ready } from '@/shared/api/ready';
 
-/** The members a page asks the server for: the screens show a hundred at a time. */
+/** The members a page asks the server for: the first page on load, the next one when the person asks. */
 export const MEMBERS_PAGE = 100;
 
-/** Every member of the organization, read a page at a time, `after` the previous page's `next`. */
-export async function everyMember(org: string, signal: AbortSignal): Promise<OrgMemberList> {
-  const items: OrgMember[] = [];
-  let after: string | undefined;
-  do {
-    const { data } = await listOrgMembers({
-      path: { org },
-      query: after === undefined ? { limit: MEMBERS_PAGE } : { limit: MEMBERS_PAGE, after },
-      signal,
-      throwOnError: true,
-    });
-    items.push(...data.items);
-    after = data.next;
-  } while (after !== undefined);
-  return { items };
+/** The one query every screen reads the members through: a change invalidates it, wherever they are shown. */
+export function orgMembersKey(org: string): ReturnType<typeof listOrgMembersInfiniteQueryKey> {
+  return listOrgMembersInfiniteQueryKey({ path: { org }, query: { limit: MEMBERS_PAGE } });
 }
 
-/**
- * The members query every screen shares: the generated key, so a change invalidates it as before, and every page
- * read into one list.
- */
-export function orgMembersOptions(org: string): ReturnType<typeof listOrgMembersOptions> {
+export interface OrgMembers {
+  /** Each page read, in the order read. */
+  readonly pages: readonly (readonly OrgMember[])[] | undefined;
+  /** The members read so far, oldest first: the first page, then each page asked for. */
+  readonly members: readonly OrgMember[] | undefined;
+  /** Every page is read: a login missing from `members` is then someone who left. */
+  readonly complete: boolean;
+  /** Reads the next page; absent once every page is read. */
+  readonly more: (() => void) | undefined;
+  readonly loadingMore: boolean;
+  readonly error: unknown;
+  readonly pending: boolean;
+}
+
+/** The organization's members, a page of a hundred at a time (`limit`, then `after` the previous `next`). */
+export function useOrgMembers(org: string, tuning: QueryTuning = {}): OrgMembers {
+  const query = useInfiniteQuery({
+    ...ready(listOrgMembersInfiniteOptions({ path: { org }, query: { limit: MEMBERS_PAGE } }), tuning),
+    // The first page asks for nothing more than the query's own `limit`; each next one adds `after`.
+    initialPageParam: { path: { org } },
+    getNextPageParam: (last: OrgMemberList) => last.next,
+  });
+  const { data, hasNextPage, fetchNextPage } = query;
+  const pages = useMemo(() => data?.pages.map((page) => page.items), [data]);
+  const members = useMemo(() => pages?.flat(), [pages]);
+  const more = useMemo(
+    () =>
+      hasNextPage
+        ? () => {
+            void fetchNextPage();
+          }
+        : undefined,
+    [hasNextPage, fetchNextPage],
+  );
   return {
-    ...listOrgMembersOptions({ path: { org } }),
-    queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyMember(org, signal),
+    pages,
+    members,
+    complete: data !== undefined && !hasNextPage,
+    more,
+    loadingMore: query.isFetchingNextPage,
+    error: query.error,
+    pending: query.isPending,
   };
 }

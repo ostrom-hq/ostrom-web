@@ -5,7 +5,6 @@ import {
   inviteOrgMembersMutation,
   listInvitationsOptions,
   listInvitationsQueryKey,
-  listOrgMembersQueryKey,
   removeOrgMemberMutation,
   revokeInvitationMutation,
   updateOrgMemberMutation,
@@ -16,12 +15,16 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
-import { orgMembersOptions } from '@/shared/org/members';
+import { orgMembersKey, useOrgMembers } from '@/shared/org/members';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { sortInvitations, sortMembers } from './model';
 
 export interface MembersViewModel {
+  /** The people read so far, a page of a hundred at a time. */
   readonly members: readonly OrgMember[] | undefined;
+  /** Reads the next hundred; absent once everyone is read. */
+  readonly more: (() => void) | undefined;
+  readonly loadingMore: boolean;
   /** The live invitations, read by owners and admins only (the server refuses everyone else). */
   readonly invitations: readonly Invitation[] | undefined;
   /** Why the people did not load. */
@@ -33,24 +36,24 @@ export interface MembersViewModel {
 }
 
 export function useMembers(org: string, role: OrgRole | undefined): MembersViewModel {
-  const members = useQuery(ready(orgMembersOptions(org)));
+  const people = useOrgMembers(org);
   const invitations = useQuery(
     ready(listInvitationsOptions({ path: { org } }), { enabled: managesMembers(role), retry: false }),
   );
   // The same freshness as the top bar's: one `/me` for both.
   const me = useQuery(ready(getMeOptions(), { staleTime: 60_000 }));
-  const sorted = useMemo(
-    () => (members.data === undefined ? undefined : sortMembers(members.data.items)),
-    [members.data],
-  );
+  // Sorted page by page: the next hundred come under the people already on screen, never among them.
+  const sorted = useMemo(() => people.pages?.flatMap(sortMembers), [people.pages]);
   const pending = useMemo(
     () => (invitations.data === undefined ? undefined : sortInvitations(invitations.data.items)),
     [invitations.data],
   );
   return {
     members: sorted,
+    more: people.more,
+    loadingMore: people.loadingMore,
     invitations: pending,
-    failure: failureOf(members.error),
+    failure: failureOf(people.error),
     invitationsFailure: failureOf(invitations.error),
     viewer: meOf(me.data)?.dev.login,
   };
@@ -60,7 +63,7 @@ function useInvalidate(org: string): () => Promise<void> {
   const queryClient = useQueryClient();
   return useCallback(async () => {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: listOrgMembersQueryKey({ path: { org } }) }),
+      queryClient.invalidateQueries({ queryKey: orgMembersKey(org) }),
       queryClient.invalidateQueries({ queryKey: listInvitationsQueryKey({ path: { org } }) }),
     ]);
   }, [queryClient, org]);

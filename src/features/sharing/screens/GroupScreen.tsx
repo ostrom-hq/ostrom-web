@@ -40,7 +40,7 @@ export function GroupScreen(): ReactElement {
               {change.failure.message}
             </Banner>
           )}
-          <GroupMembers group={group} members={view.members} change={writes} />
+          <GroupMembers group={group} members={view.members} people={view.people} change={writes} />
           <GroupLending group={group} accounts={view.accounts} change={writes} />
           {writes === undefined ? (
             <p className="o-row__meta">{t('sharing.groups.readOnly')}</p>

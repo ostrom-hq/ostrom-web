@@ -29,7 +29,12 @@ export function GroupsScreen(): ReactElement {
         </Banner>
       )}
       {!view.canManage || view.members === undefined ? null : (
-        <GroupForm change={change} members={view.members} accounts={view.accounts ?? []} />
+        <GroupForm
+          change={change}
+          members={view.members}
+          people={view.people}
+          accounts={view.accounts ?? []}
+        />
       )}
       <LoadState data={view.groups} failure={view.failure}>
         {(groups) =>

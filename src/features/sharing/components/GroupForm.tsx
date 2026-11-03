@@ -3,8 +3,10 @@ import type { OrgMember, SharedAccount } from '@gen/api/types.gen';
 import { type ReactElement, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useStep } from '@/shared/lib/useStep';
+import type { OrgMembers } from '@/shared/org/members';
 import { isFound } from '@/shared/org/people';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { Section } from '@/shared/ui/Screen';
 import { ShowMore } from '@/shared/ui/ShowMore';
 import { GROUP_NAME_MAX, personOf, toggled } from '../groups';
@@ -15,12 +17,14 @@ export const PEOPLE_STEP = 20;
 
 export interface GroupFormProps {
   readonly change: GroupChangeViewModel;
+  /** The members read so far: twenty are offered at a time, then the next page is read when asked. */
   readonly members: readonly OrgMember[];
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly accounts: readonly SharedAccount[];
 }
 
 /** A new group: a name, the people in it and the subscriptions it lends. The server says what it refuses. */
-export function GroupForm({ change, members, accounts }: GroupFormProps): ReactElement {
+export function GroupForm({ change, members, people, accounts }: GroupFormProps): ReactElement {
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [chosen, setChosen] = useState<readonly string[]>([]);
@@ -94,6 +98,7 @@ export function GroupForm({ change, members, accounts }: GroupFormProps): ReactE
               </label>
             ))}
             <ShowMore step={step} />
+            {step.hidden === 0 ? <MorePeople people={people} /> : null}
           </fieldset>
         )}
         {accounts.length === 0 ? null : (

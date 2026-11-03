@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { orgMembersOptions } from '@/shared/org/members';
+import { type OrgMembers, useOrgMembers } from '@/shared/org/members';
 import { managesMembers } from '@/shared/org/roles';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { isGone } from './groups';
@@ -28,6 +28,8 @@ export interface GroupsContext {
   readonly accounts: readonly SharedAccount[] | undefined;
   /** The organization's members: the ones to add, and who of a group left (named by id then). */
   readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, and whether every page is read (only then is anyone said to have left). */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'complete'>;
   /** Owners and admins change groups; the server refuses anyone else (403). */
   readonly canManage: boolean;
   readonly failure: Error | undefined;
@@ -38,17 +40,13 @@ function useGroupsContext(): GroupsContext {
   const { org } = current;
   // Only names: a refusal is said once, not asked again, and the groups still show.
   const accounts = useQuery(ready(listSharedAccountsOptions(), { retry: false }));
-  const members = useQuery(
-    ready(orgMembersOptions(org?.id ?? ''), {
-      enabled: org !== undefined,
-      retry: false,
-    }),
-  );
+  const people = useOrgMembers(org?.id ?? '', { enabled: org !== undefined, retry: false });
   return {
     accounts: accounts.data?.items,
-    members: members.data?.items,
+    members: people.members,
+    people: { more: people.more, loadingMore: people.loadingMore, complete: people.complete },
     canManage: managesMembers(current.role),
-    failure: failureOf(accounts.error ?? members.error) ?? current.failure,
+    failure: failureOf(accounts.error ?? people.error) ?? current.failure,
   };
 }
 
