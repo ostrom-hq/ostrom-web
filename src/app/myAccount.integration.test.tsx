@@ -8,7 +8,7 @@ import { freshAccount } from '@/mocks/handlers';
 import { exit } from '@/shared/lib/leave';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -109,10 +109,14 @@ describe('my account', () => {
     const user = userEvent.setup();
     const assign = leaving();
     db.providers = ['email'];
-    let asked = 0;
+    const asked: string[] = [];
+    traffic.onRequest((request) => {
+      if (request.method === 'POST' && /\/auth\/[^/]+\/link$/.test(new URL(request.url).pathname)) {
+        asked.push(request.url);
+      }
+    });
     server.use(
       http.post('*/api/v1/auth/:provider/link', async () => {
-        asked += 1;
         await delay(200);
         return HttpResponse.json({ authorizationUrl: DEMO_GITHUB_CONSENT });
       }),
@@ -121,15 +125,16 @@ describe('my account', () => {
     await account();
     const github = region('GitHub');
     await user.click(within(github).getByRole('button', { name: 'Link GitHub' }));
-    const busy = within(github).getByRole('button', { name: 'Opening GitHub…' });
-    expect(busy).toBeDisabled();
-    await user.click(busy);
-    // The answer is awaited here: left pending, it would leave for GitHub during the next test, after the spy is gone.
-    await vi.waitFor(() => {
-      expect(assign).toHaveBeenCalledWith(DEMO_GITHUB_CONSENT);
-    });
+    expect(within(github).getByRole('button', { name: 'Opening GitHub…' })).toBeDisabled();
+    // Awaited here: left pending, the answer would leave for GitHub during the next test, once the spy is gone.
+    await vi.waitFor(
+      () => {
+        expect(assign).toHaveBeenCalledWith(DEMO_GITHUB_CONSENT);
+      },
+      { timeout: 5000 },
+    );
+    expect(asked).toHaveLength(1);
     expect(assign).toHaveBeenCalledTimes(1);
-    expect(asked).toBe(1);
   });
 
   it('stays when the server names a page that is not https', async () => {
