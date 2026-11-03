@@ -108,6 +108,12 @@ export const en = {
       expired: 'Expired',
     },
     badge: { new: 'New', mine: 'You asked', selfApproved: 'Self-approved' },
+    githubLink: {
+      tag: 'GitHub',
+      badge: 'Link GitHub',
+      body_one: 'To approve this request, link your GitHub account.',
+      body_other: 'To approve these {{count}} requests, link your GitHub account.',
+    },
     chip: {
       commits_one: '{{count}} commit',
       commits_other: '{{count}} commits',

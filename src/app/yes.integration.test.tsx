@@ -74,6 +74,15 @@ function expectInOrder(nodes: readonly HTMLElement[]): void {
   });
 }
 
+/** The link of a GitHub notice, to the GitHub section of « My account » (the menu's link has no anchor). */
+function githubSectionLink(): HTMLElement {
+  const link = screen
+    .getAllByRole('link', { name: 'My account' })
+    .find((item) => item.getAttribute('href') === '/account#github');
+  if (link === undefined) throw new Error('no link to the GitHub section of My account');
+  return link;
+}
+
 function addApproval(approval: Approval, approvers: readonly string[] = ['maya']): void {
   db.approvals.push(structuredClone(approval));
   db.approvers[approval.id] = approvers;
@@ -112,7 +121,7 @@ describe('the queue', () => {
     expect(await within(merge).findByText('Link GitHub')).toBeInTheDocument();
     expect(within(merge).queryByText('Waiting for you')).toBeNull();
     expect(screen.getByText('To approve this request, link your GitHub account.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'My account' })).toHaveAttribute('href', '/account#github');
+    expect(githubSectionLink()).toBeInTheDocument();
     // The asker's own request keeps its own badge: the link would not let them say yes.
     expect(
       within(screen.getByRole('link', { name: /Deploy billing-api/ })).getByText('You asked'),
@@ -580,7 +589,7 @@ describe('a request', () => {
     db.providers = ['email'];
     visit('/yes/apr-merge-412');
     expect(await screen.findByText('To approve this request, link your GitHub account.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'My account' })).toHaveAttribute('href', '/account#github');
+    expect(githubSectionLink()).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
 
     await user.click(screen.getByRole('button', { name: 'Decline & tell the agent…' }));
@@ -599,7 +608,7 @@ describe('a request', () => {
       expect(screen.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
     });
 
-    await user.click(screen.getByRole('link', { name: 'My account' }));
+    await user.click(githubSectionLink());
     const github = await screen.findByRole('region', { name: 'GitHub' });
     expect(github).toHaveAttribute('id', 'github');
     expect(router.state.location.hash).toBe('github');

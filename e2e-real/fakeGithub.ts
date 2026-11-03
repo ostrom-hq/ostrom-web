@@ -18,6 +18,9 @@
 //     GET  /repos/<owner>/<repo>/branches/main, /git/trees/<sha>, /contents/<path>, /rules/branches/main
 //                                           what the rules analysis reads of a repository (its files, its protection)
 //     POST /graphql                         no GitHub organization: no teams
+//     GET  /repos/<owner>/<repo>/pulls/<n>  a pull request opened by `openPullRequest`, which also sends GitHub's
+//                                           signed `pull_request.opened` webhook to the server
+//     POST /repos/<owner>/<repo>/check-runs, PATCH .../check-runs/<id>   the gate's check, published and updated
 // Every request is recorded for the journey to assert on. Both ports share one state. A GitHub id is derived from the
 // login, so that two runs of the same journey (desktop, then phone) never give two people the same id.
 import { createHash, createHmac, randomUUID } from 'node:crypto';
@@ -70,6 +73,13 @@ export interface FakeInstallation {
   readonly protections?: Readonly<Record<string, FakeProtection>>;
 }
 
+/** A pull request of a repository given to an installation: its number, its author's GitHub login, its base. */
+export interface FakePullRequest {
+  readonly number: number;
+  readonly author: string;
+  readonly base: string;
+}
+
 /** The protection of main: classic required checks, and a ruleset that asks for approvals when there are any. */
 export interface FakeProtection {
   readonly checks: readonly string[];
@@ -104,6 +114,8 @@ export class FakeGitHub {
   private readonly signInCodes = new Map<string, SignInCode>();
   private readonly webCodes = new Map<string, string>();
   private readonly installations = new Map<number, FakeInstallation>();
+  /** The pull requests opened, by `owner/repo#number`. */
+  private readonly pulls = new Map<string, FakePullRequest>();
   private nextSignIn: Person | undefined;
   private nextInstall: PreparedInstall | undefined;
   private serial = 1;
@@ -157,6 +169,23 @@ export class FakeGitHub {
   /** The next install page sends the browser back to `callback` with `installation`, authorized by `login`. */
   installs(installation: number, login: string, callback: string): void {
     this.nextInstall = { installation, login, callback };
+  }
+
+  /**
+   * Opens `pull` on `repo` (`owner/name`) of `installation`, and sends the server GitHub's signed
+   * `pull_request.opened` webhook, as GitHub does when it opens: true when the server took it.
+   */
+  async openPullRequest(installation: number, repo: string, pull: FakePullRequest): Promise<boolean> {
+    const known = this.installations.get(installation);
+    if (known === undefined) return false;
+    this.pulls.set(`${repo}#${String(pull.number)}`, pull);
+    return this.webhook('pull_request', {
+      action: 'opened',
+      installation: this.installationView(known),
+      sender: { login: pull.author, id: this.idOf(pull.author), type: 'User' },
+      repository: { full_name: repo },
+      pull_request: this.pullView(repo, pull),
+    });
   }
 
   private idOf(login: string): number {
@@ -239,6 +268,17 @@ export class FakeGitHub {
     }
     if (method === 'GET' && path === '/installation/repositories')
       return this.repositories(person.login, query);
+    const pull = /^\/repos\/([^/]+\/[^/]+)\/pulls\/(\d+)$/.exec(path);
+    if (method === 'GET' && pull !== null) {
+      const repo = pull[1] ?? '';
+      const opened = this.pulls.get(`${repo}#${pull[2] ?? ''}`);
+      return opened === undefined ? [404, { message: 'Not Found' }] : [200, this.pullView(repo, opened)];
+    }
+    // The gate's check: created once, then updated when the gate is answered.
+    const check = /^\/repos\/[^/]+\/[^/]+\/check-runs(?:\/(\d+))?$/.exec(path);
+    if (check !== null && method === 'POST' && check[1] === undefined) return [201, { id: this.serial++ }];
+    if (check !== null && method === 'PATCH' && check[1] !== undefined)
+      return [200, { id: Number(check[1]) }];
     const read =
       /^\/repos\/([^/]+)\/([^/]+)\/(branches\/[^/]+|git\/trees\/[0-9a-f]{40}|contents\/.+|rules\/branches\/[^/]+)$/.exec(
         path,
@@ -425,6 +465,23 @@ export class FakeGitHub {
     } catch {
       return false;
     }
+  }
+
+  /** A pull request as GitHub describes it: open, its head commit derived from where it is. */
+  private pullView(repo: string, pull: FakePullRequest): unknown {
+    return {
+      number: pull.number,
+      state: 'open',
+      merged: false,
+      head: {
+        ref: `feature-${String(pull.number)}`,
+        sha: createHash('sha1')
+          .update(`${repo}#${String(pull.number)}`)
+          .digest('hex'),
+      },
+      base: { ref: pull.base },
+      user: { login: pull.author, id: this.idOf(pull.author), type: 'User' },
+    };
   }
 
   private installationView(installation: FakeInstallation): unknown {

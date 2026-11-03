@@ -29,13 +29,15 @@ export function Screen({ title, lead, top, children }: ScreenProps): ReactElemen
 
 export interface SectionProps {
   readonly label: string;
+  /** The anchor a link points at (`/account#github`). */
+  readonly id?: string;
   readonly children: ReactNode;
 }
 
 /** A card with a small uppercase heading, named for screen readers by that heading. */
-export function Section({ label, children }: SectionProps): ReactElement {
+export function Section({ label, id, children }: SectionProps): ReactElement {
   return (
-    <section className="o-card o-section" aria-label={label}>
+    <section id={id} className="o-card o-section" aria-label={label}>
       <h2 className="o-label">{label}</h2>
       {children}
     </section>

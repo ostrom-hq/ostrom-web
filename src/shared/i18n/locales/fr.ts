@@ -112,6 +112,12 @@ export const fr = {
       expired: 'Expirée',
     },
     badge: { new: 'Nouvelle', mine: 'Ta demande', selfApproved: 'Auto-approuvée' },
+    githubLink: {
+      tag: 'GitHub',
+      badge: 'GitHub à lier',
+      body_one: 'Pour approuver cette demande, lie ton compte GitHub.',
+      body_other: 'Pour approuver ces {{count}} demandes, lie ton compte GitHub.',
+    },
     chip: {
       commits_one: '{{count}} commit',
       commits_other: '{{count}} commits',

@@ -102,7 +102,8 @@ test('an approver who linked no GitHub account reads why a yes waits, links it, 
   await expect(page.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Decline & tell the agent…' })).toBeEnabled();
 
-  await page.getByRole('link', { name: 'My account' }).click();
+  // The notice's link, not the menu's: it opens the GitHub section of the account.
+  await page.locator('a[href="/account#github"]').click();
   await expect(page).toHaveURL(/\/account#github$/);
   const github = page.getByRole('region', { name: 'GitHub' });
   await expect(github).toBeInViewport();

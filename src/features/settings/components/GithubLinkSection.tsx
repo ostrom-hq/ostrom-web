@@ -15,7 +15,7 @@ import type { GithubLinkViewModel } from '../useAccount';
 export function GithubLinkSection({ view }: { readonly view: GithubLinkViewModel }): ReactElement {
   const { t } = useTranslation();
   return (
-    <Section label={t('account.github.title')}>
+    <Section id="github" label={t('account.github.title')}>
       <LoadState data={view.account} failure={view.failure} rows={1}>
         {() =>
           view.linked ? (

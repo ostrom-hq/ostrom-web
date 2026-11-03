@@ -3,6 +3,9 @@ import {
   answerApprovalMutation,
   exchangeSignInLinkMutation,
   getApprovalOptions,
+  getApprovalQueueOptions,
+  getApprovalViewOptions,
+  getApprovalViewQueryKey,
   getMeOptions,
   getApprovalQueryKey,
   listApprovalsOptions,
@@ -35,6 +38,28 @@ export const POLL_MS = 2_000;
 const DECIDED_POLL_MS = 10_000;
 const DECIDED_SHOWN = 10;
 
+/**
+ * A yes waits for the person to link their GitHub account (Q-GATES-G1 a): the pull request's author is linked to no
+ * Ostrom person and the organization never lets an author approve, so only another GitHub account may say yes. A no
+ * stays open. Any other reason the server gives is left to the answer's refusal.
+ */
+export function githubLinkRequired(you: ApprovalCallerView | undefined): boolean {
+  return you !== undefined && !you.canApprove && you.reasonType === 'github_link_required';
+}
+
+/** The ids of the waiting requests whose yes waits for the person's GitHub link. */
+export function linkRequiredOf(queue: ApprovalQueue | undefined): ReadonlySet<string> {
+  return new Set(
+    (queue?.pending ?? []).filter((view) => githubLinkRequired(view.you)).map((view) => view.approval.id),
+  );
+}
+
+/**
+ * The rights are read afresh each time a screen mounts: back from linking GitHub, the page never serves the "no" it
+ * cached before. They only add to a screen, so a failure is never retried nor shown: the answer says it instead.
+ */
+const RIGHTS = { staleTime: 0, retry: false } as const;
+
 export interface QueueViewModel {
   readonly waiting: readonly Approval[] | undefined;
   /** The server has more waiting requests than the first page shows. */
@@ -42,6 +67,8 @@ export interface QueueViewModel {
   readonly decided: readonly Approval[] | undefined;
   readonly failure: ApiFailure | Error | undefined;
   readonly fresh: ReadonlySet<string>;
+  /** The waiting requests the person cannot say yes to until they link their GitHub account. */
+  readonly linkRequired: ReadonlySet<string>;
 }
 
 /** Asked by status: one page of each holds the latest decisions, whatever is still pending. */
@@ -88,12 +115,17 @@ export function useApprovalsQueue(): QueueViewModel {
   // Query data keeps its identity while nothing changes (structural sharing): the ids follow it.
   const ids = useMemo(() => waiting.data?.items.map((approval) => approval.id), [waiting.data]);
   const fresh = useArrivals(ids);
+  const rights = useQuery(
+    ready(getApprovalQueueOptions(), { ...RIGHTS, refetchInterval: pollUnlessRefused(DECIDED_POLL_MS) }),
+  );
+  const linkRequired = useMemo(() => linkRequiredOf(rights.data), [rights.data]);
   return {
     waiting: waiting.data?.items,
     more: waiting.data?.next !== undefined,
     decided: decided.decided,
     failure: failureOf(waiting.error ?? decided.error),
     fresh,
+    linkRequired,
   };
 }
 
@@ -111,6 +143,12 @@ export function useApproval(id: string): ApprovalViewModel {
     }),
   );
   return { approval: query.data, failure: failureOf(query.error) };
+}
+
+/** Whether a yes on this request waits for the person to link their GitHub account. */
+export function useGithubLinkRequired(id: string): boolean {
+  const view = useQuery(ready(getApprovalViewOptions({ path: { id } }), RIGHTS));
+  return githubLinkRequired(view.data?.you);
 }
 
 export interface ShownApprovalViewModel extends ApprovalViewModel {
@@ -208,6 +246,11 @@ export function refusalOf(error: unknown): string | undefined {
   return isApiFailure(error) && error.kind === 'forbidden' ? error.message : undefined;
 }
 
+/** The yes was refused until the person links their GitHub account (`github_link_required`). */
+export function githubLinkOf(error: unknown): boolean {
+  return isApiFailure(error) && error.kind === 'forbidden' && error.code === 'github_link_required';
+}
+
 /** The approval changed after it was shown: the answer was not taken, the page reloads it. */
 export function changedOf(error: unknown): boolean {
   return isApiFailure(error) && error.code === 'shown_digest_mismatch';
@@ -221,6 +264,8 @@ export interface AnswerViewModel {
   readonly refusal: string | undefined;
   /** The refusal asks to sign in again before saying yes. */
   readonly stepUp: boolean;
+  /** The refusal asks to link a GitHub account before saying yes. */
+  readonly githubLink: boolean;
   readonly changed: boolean;
   readonly failure: ApiFailure | Error | undefined;
   /** The receipt the server signed for this answer, and what the agent was told. */
@@ -242,6 +287,9 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     onError: async (error) => {
       if (changedOf(error))
         await queryClient.invalidateQueries({ queryKey: getApprovalQueryKey({ path: { id } }) });
+      // The rights the page read said yes was open: read them again, so the button follows the server.
+      if (githubLinkOf(error))
+        await queryClient.invalidateQueries({ queryKey: getApprovalViewQueryKey({ path: { id } }) });
     },
   });
   const { mutate } = mutation;
@@ -259,24 +307,10 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     sending: mutation.isPending ? mutation.variables.body.answer : undefined,
     refusal,
     stepUp: stepUpOf(mutation.error),
+    githubLink: githubLinkOf(mutation.error),
     changed,
     failure: refusal === undefined && !changed ? failureOf(mutation.error) : undefined,
     receipt: mutation.data?.receipt,
     comment: mutation.isSuccess ? mutation.variables.body.note : undefined,
   };
-}
-
-/** RED STUB (throwaway): the behaviour is not written yet. */
-export function githubLinkRequired(you: ApprovalCallerView | undefined): boolean {
-  return you?.reasonType === 'self_approval_refused';
-}
-
-/** RED STUB (throwaway). */
-export function githubLinkOf(error: unknown): boolean {
-  return stepUpOf(error);
-}
-
-/** RED STUB (throwaway). */
-export function linkRequiredOf(queue: ApprovalQueue | undefined): ReadonlySet<string> {
-  return new Set(queue?.recent.map((view) => view.approval.id));
 }
