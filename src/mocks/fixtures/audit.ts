@@ -10,7 +10,7 @@ export function initialAudit(): AuditEvent[] {
       event: 'budget.changed',
       actor: 'theo',
       subject: 'budget:organization',
-      meta: { monthlyUsd: '500', credential: 'browser' },
+      meta: { monthlyUsd: '500', alerts: [50, 80], credential: 'browser' },
     },
     {
       id: 'aud-06',

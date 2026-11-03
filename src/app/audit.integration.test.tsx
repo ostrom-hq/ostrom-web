@@ -20,7 +20,7 @@ describe('the audit log', () => {
     const lines = rows();
     expect(lines).toHaveLength(5);
     expect(lines[0]).toHaveTextContent(/^budget\.changedtheo · budget:organization · .*2026/);
-    expect(lines[0]).toHaveTextContent('monthlyUsd: 500 · credential: browser');
+    expect(lines[0]).toHaveTextContent('monthlyUsd: 500 · alerts: [50,80] · credential: browser');
     expect(lines[4]).toHaveTextContent('member.joinedsamir · member:samir');
   });
 
@@ -37,7 +37,7 @@ describe('the audit log', () => {
   /** One line and the promise of more; `older` answers the next page. */
   const paged = (older: () => Promise<Response | undefined> | Response): void => {
     server.use(
-      http.get('*/api/v1/audit', ({ request }) =>
+      http.get('*/api/v1/audit', async ({ request }) =>
         new URL(request.url).searchParams.has('before')
           ? older()
           : HttpResponse.json({

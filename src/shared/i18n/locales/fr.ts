@@ -579,7 +579,7 @@ export const fr = {
     title: 'Journal d’audit',
     lead: 'Chaque changement de gouvernance de l’organisation, du plus récent au plus ancien, signé par le serveur : qui a changé quoi, et par quel moyen.',
     forbiddenTag: 'Owners et admins',
-    forbidden: 'Seuls un owner ou un admin de l’organisation lisent son journal d’audit.',
+    forbidden: 'Seul un owner ou un admin de l’organisation peut lire son journal d’audit.',
     unavailableTag: 'Pas encore servi',
     unavailable: 'Ce serveur ne sert pas encore le journal d’audit.',
     empty: 'Rien n’a encore changé dans l’organisation.',
