@@ -80,24 +80,29 @@ function preloadLanguage(): Plugin {
 const FIRST_READS: readonly BootCall[] = [
   { path: '/api/v1/auth/me', org: 'none' },
   { path: '/api/v1/me/organizations', org: 'none' },
-  { path: '/api/v1/orgs', org: 'none' },
   { path: '/api/v1/auth/me', org: 'chosen' },
 ];
 
+/** The person's organizations, read by the screens that show or act in one (src/shared/org/useCurrentOrg.ts). */
+const ORGS: BootCall = { path: '/api/v1/orgs', org: 'none' };
+
 /** The reads a screen's own first paint waits for, beyond FIRST_READS, as the console asks them at its start. */
 const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
+  '/': [ORGS],
   '/yes': [
+    ORGS,
     { path: '/api/v1/approvals?mine=true', org: 'if-chosen' },
     { path: '/api/v1/approvals?status=approved', org: 'if-chosen' },
     { path: '/api/v1/approvals?status=rejected', org: 'if-chosen' },
     { path: '/api/v1/approvals?status=expired', org: 'if-chosen' },
   ],
-  '/rules': [{ path: '/api/v1/rules', org: 'if-chosen' }],
+  '/rules': [ORGS, { path: '/api/v1/rules', org: 'if-chosen' }],
   '/sessions': [
     { path: '/api/v1/sessions?open=true', org: 'if-chosen' },
     { path: '/api/v1/sessions?open=false', org: 'if-chosen' },
   ],
   '/spend': [
+    ORGS,
     { path: '/api/v1/spending?period=month', org: 'if-chosen' },
     { path: '/api/v1/budgets', org: 'if-chosen' },
   ],
@@ -108,7 +113,7 @@ const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
 
 /**
  * Starts, from the page's head, what the route opened needs before its first paint, instead of once the entry has
- * run: its screen's chunks (`modulepreload`) and its first API reads, which the console then takes up instead of
+ * run: its screen's chunks (`modulepreload`), its stylesheets (`preload`) and its first API reads, which the console then takes up instead of
  * asking again (src/shared/build/bootScript.ts, src/shared/api/bootFetch.ts). `/boot.js`, a file from 'self' as the
  * CSP allows, loaded `async`. Not with the mock API: its worker starts with the entry, and the reads would miss it.
  */
@@ -154,9 +159,11 @@ function preloadBoot(): Plugin {
             screen === undefined
               ? []
               : [...closure(screen.fileName, new Set())].filter((file) => !entry.has(file));
+          const styles = own.flatMap((file) => [...(byName.get(file)?.viteMetadata?.importedCss ?? [])]);
           return {
             pattern: patternOf(route.path),
             chunks: own.map((file) => `${base}${file}`),
+            styles: styles.map((file) => `${base}${file}`),
             calls: SIGNED_OUT.has(route.path) ? [] : [...FIRST_READS, ...(SCREEN_READS[route.path] ?? [])],
           };
         },

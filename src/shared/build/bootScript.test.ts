@@ -13,13 +13,19 @@ const ROUTES: readonly BootRoute[] = [
   {
     pattern: patternOf('/yes'),
     chunks: [],
+    styles: [],
     calls: [
       { path: '/api/v1/auth/me', org: 'none' },
       { path: '/api/v1/approvals?mine=true', org: 'if-chosen' },
       { path: '/api/v1/auth/me', org: 'chosen' },
     ],
   },
-  { pattern: patternOf('/rules'), chunks: ['/assets/rules-1.js', '/assets/Card-2.js'], calls: [] },
+  {
+    pattern: patternOf('/rules'),
+    chunks: ['/assets/rules-1.js', '/assets/Card-2.js'],
+    styles: ['/assets/rules-3.css'],
+    calls: [],
+  },
 ];
 
 /** The page's own global, where its inline scripts run: what the script reads and leaves is read and set there. */
@@ -48,6 +54,8 @@ afterEach(() => {
 
 interface Booted {
   readonly preloaded: string[];
+  /** The stylesheets preloaded, never applied before the console links them. */
+  readonly styled: string[];
   readonly asked: [string, RequestInit | undefined][];
   readonly store: unknown;
   /** The timers the script set to drop what was not taken up, and after how long. */
@@ -57,16 +65,15 @@ interface Booted {
 /** Runs the script as the browser does on `path`, and says what it preloaded, which reads it started, its timers. */
 function bootOn(path: string): Booted {
   window.history.replaceState(null, '', path);
-  document.head.querySelectorAll('link[rel="modulepreload"]').forEach((link) => {
+  document.head.querySelectorAll('link[rel="modulepreload"], link[rel="preload"]').forEach((link) => {
     link.remove();
   });
   const asked: [string, RequestInit | undefined][] = [];
   const timers: [() => void, number][] = [];
-  Reflect.set(page(), 'fetch', (input: string, init?: RequestInit) => {
+  Reflect.set(page(), 'fetch', async (input: string, init?: RequestInit) => {
     asked.push([input, init]);
-    return input.includes('approvals')
-      ? Promise.reject(new Error('offline'))
-      : Promise.resolve(new Response('{}'));
+    if (input.includes('approvals')) throw new Error('offline');
+    return Promise.resolve(new Response('{}'));
   });
   Reflect.set(page(), 'setTimeout', (run: () => void, delay: number) => {
     timers.push([run, delay]);
@@ -80,7 +87,11 @@ function bootOn(path: string): Booted {
   const preloaded = [...document.head.querySelectorAll('link[rel="modulepreload"]')].map(
     (link) => link.getAttribute('href') ?? '',
   );
-  return { preloaded, asked, store: Reflect.get(page(), BOOTED), timers };
+  const styled = [...document.head.querySelectorAll('link[rel="preload"][as="style"]')].map(
+    (link) => link.getAttribute('href') ?? '',
+  );
+  expect(document.head.querySelector('link[rel="stylesheet"][href^="/assets/rules"]')).toBeNull();
+  return { preloaded, styled, asked, store: Reflect.get(page(), BOOTED), timers };
 }
 
 /** Each key of the store, with whether its value is a pending read (a promise). */
@@ -97,9 +108,10 @@ describe('the boot script', () => {
     expect(ORG_CHOICE_KEY).toBe(ORG_STORAGE_KEY);
   });
 
-  it('preloads the chunks of the route opened, and starts nothing it has no read for', () => {
-    const { preloaded, asked, store } = bootOn('/rules');
+  it('preloads the chunks and stylesheets of the route opened, and starts nothing it has no read for', () => {
+    const { preloaded, styled, asked, store } = bootOn('/rules');
     expect(preloaded).toEqual(['/assets/rules-1.js', '/assets/Card-2.js']);
+    expect(styled).toEqual(['/assets/rules-3.css']);
     expect(asked).toEqual([]);
     expect(store).toEqual({});
   });
@@ -154,8 +166,9 @@ describe('the boot script', () => {
   });
 
   it('does nothing on a route it does not know', () => {
-    const { preloaded, asked, store, timers } = bootOn('/signin');
+    const { preloaded, styled, asked, store, timers } = bootOn('/signin');
     expect(preloaded).toEqual([]);
+    expect(styled).toEqual([]);
     expect(asked).toEqual([]);
     expect(store).toBeUndefined();
     expect(timers).toEqual([]);

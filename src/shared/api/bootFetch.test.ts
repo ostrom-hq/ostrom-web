@@ -57,7 +57,7 @@ describe('bootFetch', () => {
   });
 
   it('makes the call when nothing was booted, or the booted one failed or is no response', async () => {
-    const network = vi.fn<typeof fetch>(() => Promise.resolve(new Response('{"network":true}')));
+    const network = vi.fn<typeof fetch>(async () => Promise.resolve(new Response('{"network":true}')));
     vi.stubGlobal('fetch', network);
     booted({
       'GET /api/v1/auth/me ': Promise.reject(new Error('offline')),

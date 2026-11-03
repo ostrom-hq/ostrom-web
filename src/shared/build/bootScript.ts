@@ -25,6 +25,8 @@ export interface BootRoute {
   /** A regular expression's source that matches the whole pathname (src/shared/build/routes.ts, `patternOf`). */
   readonly pattern: string;
   readonly chunks: readonly string[];
+  /** Its screen's stylesheets: the console waits for them before it shows the screen. */
+  readonly styles: readonly string[];
   readonly calls: readonly BootCall[];
 }
 
@@ -37,7 +39,7 @@ export interface BootOptions {
 
 /**
  * The source of `/boot.js`, which the build writes (vite.config.ts, `preloadBoot`) and the page's head loads before
- * the entry: for the route opened, it preloads the screen's chunks (`modulepreload`) and starts the API reads the first
+ * the entry: for the route opened, it preloads the screen's chunks (`modulepreload`) and stylesheets, and starts the API reads the first
  * paint waits for, so that both come alongside the entry instead of after it has run. Each response is left by its key
  * (method, address, organization) for the console's `fetch` to take up once (src/shared/api/bootFetch.ts): a read is
  * never made twice. A read in an organization is made in the one the person chose and kept (BootCall says how); the
@@ -63,6 +65,14 @@ export function bootScript(routes: readonly BootRoute[], options: BootOptions): 
     link.rel = 'modulepreload';
     link.href = route.chunks[j];
     document.head.appendChild(link);
+  }
+  // Preloaded, not applied: the console links each one as it opens the screen, and finds it already in.
+  for (var s = 0; s < route.styles.length; s += 1) {
+    var style = document.createElement('link');
+    style.rel = 'preload';
+    style.setAttribute('as', 'style');
+    style.href = route.styles[s];
+    document.head.appendChild(style);
   }
   var org = '';
   try {
