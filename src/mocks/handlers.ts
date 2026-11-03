@@ -94,6 +94,7 @@ import type {
   Spending,
   Team,
   Workflow,
+  WorkflowRun,
 } from '@gen/api/types.gen';
 import {
   type zRuleGate,
@@ -182,6 +183,7 @@ import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mo
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
+import { initialWorkflowRuns } from '@/mocks/fixtures/runs';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 import { sameValue } from '@/features/workflows/model';
 
@@ -217,6 +219,8 @@ export interface MockDb
   members: Member[];
   teams: Team[];
   workflows: Workflow[];
+  /** The organization's workflow runs, newest first. */
+  workflowRuns: WorkflowRun[];
   /**
    * `never` (the server's default since core#66 and server#159, S2-15): the asker never approves their own request;
    * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
@@ -280,6 +284,7 @@ export function createMockDb(): MockDb {
     members: initialMembers(),
     teams: initialTeams(),
     workflows: initialWorkflows(),
+    workflowRuns: initialWorkflowRuns(),
     selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
