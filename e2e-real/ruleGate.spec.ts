@@ -4,9 +4,17 @@
 // is accepted, the action is in the organization's gate catalogue, and asking for it opens a gate that waits in the
 // approver's queue (server#79). The ask is made with a personal token, as the hook asks.
 import { expect, test } from '@playwright/test';
-import { zAskGateResponse, zGetGateCatalogResponse } from '../gen/api/zod.gen';
+import { z } from 'zod';
+import { zAskGateResponse, zGateAction } from '../gen/api/zod.gen';
 import { askingToken, loginOf, requestOf, uniqueRun, withToken } from './gate';
 import { callFromPage, ownerOfNewOrganization } from './real';
+
+/**
+ * The catalogue's actions, read for their class and label only: the server sends no `repos` on an action, which the
+ * contract's `GateAction` requires (signalled to CONTRAT-SYNC in the JOURNAL), and keywords and the gate it does not
+ * list.
+ */
+const zCatalogActions = z.object({ actions: z.array(zGateAction.pick({ class: true, label: true })) });
 
 test('3.2 an owner writes a rule with a gate on the console; once accepted, its action waits for a yes', async ({
   page,
@@ -42,7 +50,7 @@ test('3.2 an owner writes a rule with a gate on the console; once accepted, its 
       const catalog = await callFromPage(page, 'GET', '/api/v1/gates/catalog', undefined, org);
       action =
         catalog.status === 200
-          ? zGetGateCatalogResponse.parse(catalog.body).actions.find((item) => item.label === label)?.class
+          ? zCatalogActions.parse(catalog.body).actions.find((item) => item.label === label)?.class
           : undefined;
       return action;
     })
