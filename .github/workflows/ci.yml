@@ -116,21 +116,25 @@ jobs:
           # Repository variable: `true` once the image is reachable and recent, so a skip fails the job from then on.
           REQUIRED: ${{ vars.OSTROM_WEB_REQUIRE_REAL_SERVER == 'true' }}
         run: |
+          # How many spec files the skip leaves out: a green run then says, in its annotations and its summary, that
+          # none of them ran (a green job without them proves nothing about the real server).
+          specs=$(find e2e-real -maxdepth 1 -name '*.spec.ts' | wc -l | tr -d ' ')
           skip() {
-            echo "::warning title=Journeys against the real server skipped::$1"
-            echo "Journeys against the real server **skipped**: $1" >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Real-server specs skipped::${specs} specs of e2e-real did not run: $1"
+            echo "**${specs} specs against the real server skipped** (e2e-real, none ran): $1" >> "$GITHUB_STEP_SUMMARY"
             echo "ready=false" >> "$GITHUB_OUTPUT"
             [ "$REQUIRED" = "true" ] && exit 1
             exit 0
           }
           if [ "$HAS_SERVER_KEY" != "true" ]; then
             # Never fatal: a pull request from outside has no deploy key.
-            echo "Journeys against the real server **skipped**: no deploy key for ostrom-server." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning title=Real-server specs skipped::${specs} specs of e2e-real did not run: no deploy key for ostrom-server."
+            echo "**${specs} specs against the real server skipped** (e2e-real, none ran): no deploy key for ostrom-server." >> "$GITHUB_STEP_SUMMARY"
             echo "ready=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          docker pull --quiet "$IMAGE" || skip "$IMAGE cannot be pulled from this repository (package Actions access)."
+          docker pull --quiet "$IMAGE" || skip "no access to the ostrom-server image: $IMAGE cannot be pulled from this repository (package Actions access)."
           revision=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
           main=$(git -C .ostrom/server rev-parse HEAD)
           echo "Server image built from ostrom-server@${revision:0:7}; main is at ${main:0:7}." >> "$GITHUB_STEP_SUMMARY"
