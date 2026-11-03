@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { largeBudgets, largeSpending } from '@/mocks/fixtures/large';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { spendingFor } from '@/mocks/fixtures/spend';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -166,7 +167,9 @@ describe('the budgets', () => {
     expect(budgets[0]).toHaveTextContent('The organization');
     expect(budgets[0]).toHaveTextContent('$1,200.00 a month');
     expect(budgets[0]).toHaveTextContent('Warns');
-    expect(budgets[1]).toHaveTextContent('A member · theo');
+    // The server names a member by id; the screen by login.
+    expect(budgets[1]).toHaveTextContent('theo');
+    expect(budgets[1]).not.toHaveTextContent(MEMBER_IDS.theo);
     expect(budgets[1]).toHaveTextContent('$25.00 a day');
     expect(budgets[1]).toHaveTextContent('Stops');
   });
@@ -225,7 +228,7 @@ describe('the budgets', () => {
     expect(await screen.findByText('No budget yet.')).toBeInTheDocument();
   });
 
-  it('sets a member budget that stops the agents, only once it is complete', async () => {
+  it('sets a person’s budget, chosen by login and sent by id, only once it is complete', async () => {
     const user = userEvent.setup();
     visit('/spend');
     const form = await screen.findByRole('region', { name: 'Set a budget' });
@@ -237,19 +240,75 @@ describe('the budgets', () => {
     expect(db.budgets).toHaveLength(budgets);
     const scope = within(form).getByRole('combobox', { name: 'For' });
     await user.selectOptions(scope, 'member');
-    fireEvent.change(scope, { target: { value: 'team' } });
+    fireEvent.change(scope, { target: { value: 'workflow' } });
+    expect(within(scope).queryByRole('option', { name: /workflow/i })).toBeNull();
+    const person = within(form).getByRole('combobox', { name: 'Person' });
+    expect(within(person).getByRole('option', { name: 'Every member' })).toBeInTheDocument();
+    await user.selectOptions(person, 'samir');
     await user.type(within(form).getByRole('textbox', { name: 'Per day ($)' }), '12,50');
-    expect(save).toBeDisabled();
-    await user.type(within(form).getByRole('textbox', { name: 'Login' }), 'ana');
     await user.type(within(form).getByRole('textbox', { name: 'Per month ($)' }), 'ten');
     expect(save).toBeDisabled();
     await user.clear(within(form).getByRole('textbox', { name: 'Per month ($)' }));
     await user.click(within(form).getByRole('checkbox', { name: /Stop the agents/ }));
     await user.click(save);
-    expect(await screen.findByText('A member · ana')).toBeInTheDocument();
-    expect(db.budgets).toContainEqual({ scope: 'member', subject: 'ana', usdPerDay: 12.5, hardStop: true });
-    expect(within(form).getByRole('textbox', { name: 'Login' })).toHaveValue('');
+    const list = await screen.findByRole('region', { name: 'Budgets' });
+    expect(await within(list).findByText('samir')).toBeInTheDocument();
+    expect(db.budgets).toContainEqual({
+      scope: 'member',
+      subject: MEMBER_IDS.samir,
+      usdPerDay: 12.5,
+      hardStop: true,
+    });
+    expect(person).toHaveValue('');
     expect(within(form).getByRole('checkbox', { name: /Stop the agents/ })).not.toBeChecked();
+  });
+
+  it('still shows and sets budgets without the members list, naming a member by id', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/orgs/:org/members', never));
+    visit('/spend');
+    expect(await screen.findByText(MEMBER_IDS.theo)).toBeInTheDocument();
+    const form = screen.getByRole('region', { name: 'Set a budget' });
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'member');
+    expect(
+      within(within(form).getByRole('combobox', { name: 'Person' })).getAllByRole('option'),
+    ).toHaveLength(1);
+  });
+
+  it('offers the members a page at a time, the next one on “Show more people”', async () => {
+    const user = userEvent.setup();
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+    visit('/spend');
+    const form = await screen.findByRole('region', { name: 'Set a budget' });
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'member');
+    const person = within(form).getByRole('combobox', { name: 'Person' });
+    await waitFor(() => {
+      expect(within(person).getAllByRole('option')).toHaveLength(101);
+    });
+    const more = within(form).getByRole('button', { name: 'Show more people' });
+    await waitFor(() => {
+      expect(more).toBeEnabled();
+    });
+    await user.click(more);
+    await waitFor(() => {
+      expect(within(person).getAllByRole('option').length).toBeGreaterThan(101);
+    });
+  });
+
+  it('sets every member’s budget, that warns only', async () => {
+    const user = userEvent.setup();
+    visit('/spend');
+    const form = await screen.findByRole('region', { name: 'Set a budget' });
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'member');
+    await user.type(within(form).getByRole('textbox', { name: 'Per day ($)' }), '20');
+    await user.click(within(form).getByRole('button', { name: 'Save the budget' }));
+    const line = await within(await screen.findByRole('region', { name: 'Budgets' })).findByText(
+      'Every member',
+    );
+    expect(line.closest('li')).toHaveTextContent('$20.00 a day');
+    expect(line.closest('li')).toHaveTextContent('Warns');
+    expect(db.budgets).toContainEqual({ scope: 'member', usdPerDay: 20, hardStop: false });
   });
 
   it('replaces the organization budget, and refuses a bad daily amount', async () => {
@@ -260,9 +319,10 @@ describe('the budgets', () => {
     await user.type(within(form).getByRole('textbox', { name: 'Per month ($)' }), '1500');
     expect(within(form).getByRole('button', { name: 'Save the budget' })).toBeDisabled();
     await user.clear(within(form).getByRole('textbox', { name: 'Per day ($)' }));
-    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'workflow');
-    expect(within(form).getByRole('textbox', { name: 'Workflow ID' })).toBeInTheDocument();
+    await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'member');
+    expect(within(form).getByRole('combobox', { name: 'Person' })).toBeInTheDocument();
     await user.selectOptions(within(form).getByRole('combobox', { name: 'For' }), 'org');
+    expect(within(form).queryByRole('combobox', { name: 'Person' })).toBeNull();
     await user.click(within(form).getByRole('button', { name: 'Save the budget' }));
     expect(await screen.findByText('$1,500.00 a month')).toBeInTheDocument();
   });

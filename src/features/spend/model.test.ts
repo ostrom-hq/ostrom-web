@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Budget } from '@gen/api/types.gen';
-import { budgetLevel, budgetScopeOf, draftBudget, isBudgetScope, shares, sortBudgets } from './model';
+import {
+  budgetLevel,
+  budgetScopeOf,
+  budgetSubjectLabel,
+  draftBudget,
+  isBudgetScope,
+  shares,
+  sortBudgets,
+} from './model';
 
 describe('budgetLevel', () => {
   it('is calm below 80 %, near from 80 %, over once spent', () => {
@@ -42,18 +50,18 @@ describe('budgetScopeOf', () => {
 });
 
 describe('isBudgetScope', () => {
-  it('knows the organization, a member and a workflow', () => {
+  it('knows the organization and members, not a workflow: the server has no workflow budget', () => {
     expect([
       isBudgetScope('org'),
       isBudgetScope('member'),
       isBudgetScope('workflow'),
       isBudgetScope('team'),
-    ]).toEqual([true, true, true, false]);
+    ]).toEqual([true, true, false, false]);
   });
 });
 
 describe('sortBudgets', () => {
-  it('puts the organization first, then members and workflows by subject, then what it does not know', () => {
+  it('puts the organization first, then members by subject, then what it does not know', () => {
     const sorted = sortBudgets([
       { scope: 'workflow', subject: 'wf', hardStop: false },
       { scope: 'team', subject: 't', hardStop: false },
@@ -67,8 +75,8 @@ describe('sortBudgets', () => {
       'member:',
       'member:ana',
       'member:theo',
-      'workflow:wf',
       'team:t',
+      'workflow:wf',
     ]);
   });
 
@@ -80,16 +88,32 @@ describe('sortBudgets', () => {
   });
 });
 
+describe('budgetSubjectLabel', () => {
+  const members = [
+    { id: 'm-1', login: 'ana', name: 'Ana', avatarUrl: '', email: null, role: 'member', joinedAt: '' },
+  ];
+  it('names a member by login, an unknown id as is, and nobody for every member', () => {
+    expect(budgetSubjectLabel('m-1', members)).toBe('ana');
+    expect(budgetSubjectLabel('m-2', members)).toBe('m-2');
+    expect(budgetSubjectLabel('m-1', undefined)).toBe('m-1');
+    expect(budgetSubjectLabel(undefined, members)).toBeUndefined();
+  });
+});
+
 describe('draftBudget', () => {
   const draft = { scope: 'org' as const, subject: ' x ', month: '', day: '', hardStop: false };
-  it('needs an amount, a subject outside the organization, and readable amounts', () => {
+  it('needs an amount and readable amounts; a member budget without a subject is every member’s', () => {
     expect(draftBudget(draft)).toBeUndefined();
     expect(draftBudget({ ...draft, month: '10' })).toEqual({
       scope: 'org',
       hardStop: false,
       usdPerMonth: 10,
     });
-    expect(draftBudget({ ...draft, scope: 'member', subject: '', day: '2' })).toBeUndefined();
+    expect(draftBudget({ ...draft, scope: 'member', subject: '', day: '2' })).toEqual({
+      scope: 'member',
+      usdPerDay: 2,
+      hardStop: false,
+    });
     expect(draftBudget({ ...draft, scope: 'member', day: '2', hardStop: true })).toEqual({
       scope: 'member',
       subject: 'x',

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Budget, Spending, SpendingDay } from '@gen/api/types.gen';
+import { MEMBER_IDS } from './organization';
 
 const DAILY = [41.2, 38.75, 12.1, 9.4, 55.3, 61.85, 47.05];
 
@@ -44,7 +45,7 @@ export function spendingFor(period: 'month' | 'week'): Spending {
 
 const budgets: Budget[] = [
   { scope: 'org', usdPerMonth: 1_200, hardStop: false },
-  { scope: 'member', subject: 'theo', usdPerDay: 25, hardStop: true },
+  { scope: 'member', subject: MEMBER_IDS.theo, usdPerDay: 25, hardStop: true },
 ];
 
 export function initialBudgets(): Budget[] {

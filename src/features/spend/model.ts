@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Budget, SpendingLine } from '@gen/api/types.gen';
+import type { Budget, OrgMember, SpendingLine } from '@gen/api/types.gen';
 import { parseUsd } from '@/shared/lib/money';
 
 export const PERIODS = ['month', 'week'] as const;
 export type Period = (typeof PERIODS)[number];
 
-export const BUDGET_SCOPES = ['org', 'member', 'workflow'] as const;
+/** What a budget limits: the organization, or members (every one, or one by their id). A workflow has none. */
+export const BUDGET_SCOPES = ['org', 'member'] as const;
 export type BudgetScope = (typeof BUDGET_SCOPES)[number];
 
 export function isBudgetScope(value: string): value is BudgetScope {
@@ -34,7 +35,7 @@ export function shares(
   return lines.map((line) => ({ line, share: largest === 0 ? 0 : line.usd / largest }));
 }
 
-/** The organization's budget first, then members, then workflows, each by subject. */
+/** The organization's budget first, then every member's, then each member's by subject. */
 export function sortBudgets(budgets: readonly Budget[]): Budget[] {
   const rank = (budget: Budget): number => {
     const scope = budgetScopeOf(budget.scope);
@@ -47,7 +48,22 @@ export function sortBudgets(budgets: readonly Budget[]): Budget[] {
   });
 }
 
-/** The budget to send, or undefined while the form does not describe one yet. */
+/**
+ * Who a member budget is for, as people read it: the member's login for their id, as is when the id names nobody
+ * listed (a member who left), and undefined for every member (no subject).
+ */
+export function budgetSubjectLabel(
+  subject: string | undefined,
+  members: readonly OrgMember[] | undefined,
+): string | undefined {
+  if (subject === undefined) return undefined;
+  return members?.find((member) => member.id === subject)?.login ?? subject;
+}
+
+/**
+ * The budget to send, or undefined while the form does not describe one yet. A member budget without a subject is
+ * every member's (each one without a budget of their own); with one, the subject is the member's id.
+ */
 export function draftBudget(draft: {
   readonly scope: BudgetScope;
   readonly subject: string;
@@ -60,12 +76,12 @@ export function draftBudget(draft: {
   const usdPerDay = parseUsd(draft.day);
   const monthOk = draft.month.trim() === '' || usdPerMonth !== undefined;
   const dayOk = draft.day.trim() === '' || usdPerDay !== undefined;
-  if ((draft.scope !== 'org' && subject === '') || !monthOk || !dayOk) return undefined;
+  if (!monthOk || !dayOk) return undefined;
   if (usdPerMonth === undefined && usdPerDay === undefined) return undefined;
   return {
     scope: draft.scope,
     hardStop: draft.hardStop,
-    ...(draft.scope === 'org' ? {} : { subject }),
+    ...(draft.scope === 'org' || subject === '' ? {} : { subject }),
     ...(usdPerMonth === undefined ? {} : { usdPerMonth }),
     ...(usdPerDay === undefined ? {} : { usdPerDay }),
   };
