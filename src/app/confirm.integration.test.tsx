@@ -240,7 +240,9 @@ describe('a governance confirmation', () => {
   it('offers no answer to a member who is neither owner nor admin', async () => {
     // A member everywhere the console reads the role: the organization's list and their own member (`/auth/me`).
     setDemoRole(db, 'member');
-    db.members = db.members.map((member) => (member.login === DEMO_LOGIN ? { ...member, role: 'member' } : member));
+    db.members = db.members.map((member) =>
+      member.login === DEMO_LOGIN ? { ...member, role: 'member' } : member,
+    );
     server.use(
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
