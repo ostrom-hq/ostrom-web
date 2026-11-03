@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { LEFT_MEMBER } from '@/mocks/fixtures/sharing';
 import { groupId } from '@/mocks/groups';
 import { setDemoRole } from '@/mocks/orgs';
@@ -390,5 +391,37 @@ describe('a group', () => {
     server.use(http.get('*/api/v1/groups/:id', refuse('groups are down')));
     visit(PLATFORM);
     expect(await screen.findByText('groups are down')).toBeInTheDocument();
+  });
+});
+
+describe('a new group in a large organization', () => {
+  it('offers twenty people at a time, and finds anyone by name or login', async () => {
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+    visit('/accounts/groups');
+    const form = await screen.findByRole('region', { name: 'New group' });
+    const people = within(form).getByRole('group', { name: 'Members' });
+    expect(within(people).getAllByRole('checkbox')).toHaveLength(20);
+    await userEvent.click(within(people).getByRole('button', { name: /^Show 20 more/ }));
+    expect(within(people).getAllByRole('checkbox')).toHaveLength(40);
+    await userEvent.type(within(people).getByRole('searchbox', { name: 'Find someone' }), 'dev-42');
+    expect(
+      within(people)
+        .getAllByRole('checkbox')
+        .map((box) => box.closest('label')?.textContent),
+    ).toEqual(Array.from({ length: 10 }, (_, n) => `Developer 42${String(n)} (dev-42${String(n)})`));
+  });
+
+  it('searches on Enter, never creating the group', async () => {
+    const org = db.organization.id;
+    db.orgMembers[org] = [...(db.orgMembers[org] ?? []), ...largeMembers()];
+    const groups = db.groups.length;
+    visit('/accounts/groups');
+    const form = await screen.findByRole('region', { name: 'New group' });
+    await userEvent.type(within(form).getByRole('textbox', { name: 'Name' }), 'Platform');
+    await userEvent.type(within(form).getByRole('searchbox', { name: 'Find someone' }), 'dev-42{Enter}');
+    expect(within(form).getAllByRole('checkbox', { checked: false }).length).toBeGreaterThanOrEqual(10);
+    expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('Platform');
+    expect(db.groups).toHaveLength(groups);
   });
 });

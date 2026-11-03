@@ -3,9 +3,10 @@ import { screen, within } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';
 import userEvent from '@testing-library/user-event';
+import { largeSessions } from '@/mocks/fixtures/large';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server } = setupMockApp();
+const { server, db } = setupMockApp();
 /** A handler that never answers, to hold a screen in its loading state. */
 const never = async (): Promise<undefined> => {
   await delay('infinite');
@@ -191,6 +192,35 @@ describe('the older ended sessions', () => {
     );
     expect(screen.getAllByText('Offline')).toHaveLength(1);
     expect(screen.getByRole('link', { name: /acme\/ses-new/ })).toBeInTheDocument();
+  });
+});
+
+describe('the sessions of a large organization', () => {
+  it('lists every open session, and reads the ended ones again once one ended', async () => {
+    db.sessions = largeSessions();
+    visit('/sessions');
+    // 60 open: two pages of the server's 50.
+    expect(await screen.findByRole('heading', { level: 2, name: '60 open' })).toBeInTheDocument();
+    const user = userEvent.setup();
+    for (let page = 0; page < 4; page += 1) {
+      await user.click(await screen.findByRole('button', { name: 'Show older sessions' }));
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('button', { name: 'Loading…' })).toBeNull();
+      });
+    }
+    expect(screen.queryByRole('button', { name: 'Show older sessions' })).toBeNull();
+    const first = db.sessions[0];
+    if (first === undefined) throw new Error('no session');
+    first.endedAt = '2026-10-30T08:00:10.000Z';
+    vi.setSystemTime(new Date('2026-10-30T08:00:20.000Z'));
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    expect(await screen.findByRole('heading', { level: 2, name: '59 open' })).toBeInTheDocument();
+    const ended = screen.getByRole('region', { name: 'Ended' });
+    await vi.waitFor(() => {
+      const links = within(ended).getAllByRole('link');
+      expect(links.some((link) => link.getAttribute('href') === `/sessions/${first.id}`)).toBe(true);
+    });
   });
 });
 

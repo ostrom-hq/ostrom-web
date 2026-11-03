@@ -2,6 +2,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeBudgets, largeSpending } from '@/mocks/fixtures/large';
 import { spendingFor } from '@/mocks/fixtures/spend';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -295,5 +296,20 @@ describe('the budgets', () => {
     visit('/spend');
     expect(await screen.findByRole('region', { name: 'Budgets' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Set a budget' })).toBeNull();
+  });
+});
+
+describe('the spending of a large organization', () => {
+  it('shows the twenty largest of each dimension and a hundred budgets, the rest on demand', async () => {
+    db.spending = largeSpending;
+    db.budgets = [...db.budgets, ...largeBudgets()];
+    visit('/spend');
+    const people = await screen.findByRole('region', { name: 'By person' });
+    expect(within(people).getAllByRole('listitem')).toHaveLength(20);
+    await userEvent.click(within(people).getByRole('button', { name: 'Show 20 more (480 left)' }));
+    expect(within(people).getAllByRole('listitem')).toHaveLength(40);
+    const budgets = screen.getByRole('region', { name: 'Budgets' });
+    expect(within(budgets).getAllByRole('listitem')).toHaveLength(100);
+    expect(within(budgets).getByRole('button', { name: /^Show 100 more/ })).toBeInTheDocument();
   });
 });

@@ -14,6 +14,11 @@ export interface MockTraffic {
 export interface HandlerFetch {
   readonly fetch: typeof fetch;
   readonly traffic: MockTraffic;
+  /**
+   * Calls off every call still waiting for its answer, as a closed page does: each is rejected as aborted, so an
+   * answer that comes after its test ended never reaches the console (and its way out) during the next test.
+   */
+  readonly abortInFlight: () => void;
 }
 
 /** Settles only when `signal` aborts, rejecting with its reason as given, as a real fetch does. */
@@ -44,16 +49,25 @@ async function aborted(signal: AbortSignal): Promise<never> {
  * What it does not do, as no handler here needs it: `passthrough()`, `bypass()`, storing `Set-Cookie`. An aborted
  * call is rejected at once, but its handler still runs to the end, as a server would. Remove it, and answer through
  * `server.listen()` again, once mswjs/interceptors#862 and #881 are fixed. A test of a pending state holds its
- * handler (`delay('infinite')`) rather than counting on how late an answer comes.
+ * handler (`delay('infinite')`) rather than counting on how late an answer comes. A call still waiting when its test
+ * ends is called off by `abortInFlight()`.
  */
 export function createHandlerFetch(server: SetupServer): HandlerFetch {
+  const inFlight = new Set<AbortController>();
   const requestListeners = new Set<(request: Request) => void>();
   const responseListeners = new Set<(request: Request, response: Response) => void>();
   const answer = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     // The client sends a ready Request: its copy is answered, so the one it keeps for its interceptors stays readable.
     const request = input instanceof Request && init === undefined ? input.clone() : new Request(input, init);
-    const { signal } = request;
-    signal.throwIfAborted();
+    request.signal.throwIfAborted();
+    // Called off by the caller, or by the end of the test (`abortInFlight`).
+    const call = new AbortController();
+    const { signal } = call;
+    const callerGaveUp = (): void => {
+      call.abort(request.signal.reason);
+    };
+    request.signal.addEventListener('abort', callerGaveUp, { once: true });
+    inFlight.add(call);
     // The listeners of the test that sent the call: one left running when a test ends never reaches the next one's.
     const hearing = [...responseListeners];
     // Each listener with its own copy: none reads the body away from the handler.
@@ -67,7 +81,13 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
       return Response.json({ name: 'Unhandled exception in a mock handler', message }, { status: 500 });
     });
     // A handler that never answers (`delay('infinite')`) still lets the caller give up, as a real fetch does.
-    const response = await Promise.race([pending, aborted(signal)]);
+    let response: Response | undefined;
+    try {
+      response = await Promise.race([pending, aborted(signal)]);
+    } finally {
+      inFlight.delete(call);
+      request.signal.removeEventListener('abort', callerGaveUp);
+    }
     if (response === undefined) {
       const missing = `no mock handler answers ${request.method} ${request.url}`;
       // Said in the test's output too: the console may show only a failure banner.
@@ -81,6 +101,10 @@ export function createHandlerFetch(server: SetupServer): HandlerFetch {
   };
   return {
     fetch: answer,
+    abortInFlight: () => {
+      for (const call of inFlight) call.abort(new DOMException('The test ended.', 'AbortError'));
+      inFlight.clear();
+    },
     traffic: {
       onRequest: (listener) => {
         requestListeners.add(listener);

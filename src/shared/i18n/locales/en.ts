@@ -7,6 +7,8 @@ export const en = {
     failure: { tag: 'Offline' },
     stepUp: { body: 'This change needs a sign-in less than five minutes old.', signIn: 'Sign in again' },
     skipToContent: 'Skip to content',
+    showMore_one: 'Show 1 more',
+    showMore_other: 'Show {{count}} more ({{left}} left)',
     copy: {
       action: 'Copy',
       named: 'Copy {{label}}',
@@ -430,6 +432,8 @@ export const en = {
     role: { owner: 'Owner', admin: 'Admin', approver: 'Approver', member: 'Member', billing: 'Billing' },
     list: {
       title: 'People',
+      search: 'Find someone',
+      noMatch: 'Nobody matches “{{search}}”.',
       you: '(you)',
       roleOf: 'Role of {{name}}',
       errorTag: 'Not saved',
@@ -1385,6 +1389,7 @@ export const en = {
         title: 'New group',
         name: 'Name',
         members: 'Members',
+        search: 'Find someone',
         accounts: 'Subscriptions it lends',
         submit: 'Create the group',
         saving: 'Creating…',
