@@ -69,7 +69,7 @@ describe('the large organization', () => {
   });
 
   it('lists its rules by group then id, as the server does', () => {
-    const ids = largeRules().map((rule) => `${rule.group ?? ''}/${rule.id}`);
+    const ids = largeRules().map((rule) => `${rule.group}/${rule.id}`);
     expect(ids).toEqual([...ids].sort());
     expect(new Set(largeRules().map((rule) => rule.output))).toEqual(new Set(['gate', 'check', 'note']));
   });
