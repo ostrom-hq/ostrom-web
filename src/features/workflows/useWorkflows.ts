@@ -11,6 +11,7 @@ import { createWorkflow, deleteWorkflow, saveWorkflow } from '@gen/api/sdk.gen';
 import type { Workflow } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
+import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -64,21 +65,23 @@ export interface WorkflowChangeViewModel {
 async function send(change: WorkflowChange): Promise<Workflow | undefined> {
   switch (change.kind) {
     case 'create':
-      return (await createWorkflow({ body: change.workflow, throwOnError: true })).data;
+      return applied((await createWorkflow({ body: change.workflow, throwOnError: true })).data);
     case 'save':
     case 'accept':
-      return (
-        await saveWorkflow({
-          path: { id: change.workflow.id },
-          body: {
-            workflow: change.workflow,
-            ...(change.expectedVersion === undefined ? {} : { expectedVersion: change.expectedVersion }),
-          },
-          throwOnError: true,
-        })
-      ).data;
+      return applied(
+        (
+          await saveWorkflow({
+            path: { id: change.workflow.id },
+            body: {
+              workflow: change.workflow,
+              ...(change.expectedVersion === undefined ? {} : { expectedVersion: change.expectedVersion }),
+            },
+            throwOnError: true,
+          })
+        ).data,
+      );
     case 'delete':
-      await deleteWorkflow({ path: { id: change.id }, throwOnError: true });
+      applied((await deleteWorkflow({ path: { id: change.id }, throwOnError: true })).data);
       return undefined;
   }
 }

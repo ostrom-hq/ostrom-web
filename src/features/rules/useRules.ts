@@ -13,6 +13,7 @@ import {
 import type { GateAction, NewRule, Rule } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
+import { appliedMutation } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
@@ -58,7 +59,7 @@ export interface RuleDecisionViewModel {
 
 export function useRuleDecision(): RuleDecisionViewModel {
   const invalidate = useInvalidate();
-  const { mutateAsync } = useMutation({ ...updateRuleMutation(), onSettled: invalidate });
+  const { mutateAsync } = useMutation({ ...appliedMutation(updateRuleMutation()), onSettled: invalidate });
   // Each save keeps its own answer, by rule: one mutation observer would only remember the last one sent.
   const [pending, setPending] = useState<readonly string[]>([]);
   const [failures, setFailures] = useState<ReadonlyMap<string, unknown>>(new Map());
@@ -94,7 +95,7 @@ export interface BulkViewModel {
 
 export function useBulkAccept(): BulkViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...bulkUpdateRulesMutation(), onSettled: invalidate });
+  const mutation = useMutation({ ...appliedMutation(bulkUpdateRulesMutation()), onSettled: invalidate });
   const { mutate } = mutation;
   const accept = useCallback(
     (ids: readonly string[]) => {
@@ -119,7 +120,7 @@ export interface CreateRuleViewModel {
 
 export function useCreateRule(): CreateRuleViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...createRuleMutation(), onSettled: invalidate });
+  const mutation = useMutation({ ...appliedMutation(createRuleMutation()), onSettled: invalidate });
   const { mutate } = mutation;
   const create = useCallback(
     (rule: NewRule, onSaved: () => void) => {
@@ -143,7 +144,7 @@ export interface DeleteRuleViewModel {
 
 export function useDeleteRule(): DeleteRuleViewModel {
   const invalidate = useInvalidate();
-  const mutation = useMutation({ ...deleteRuleMutation(), onSettled: invalidate });
+  const mutation = useMutation({ ...appliedMutation(deleteRuleMutation()), onSettled: invalidate });
   const { mutate } = mutation;
   const remove = useCallback(
     (id: string) => {

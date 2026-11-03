@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { applied } from '@/shared/api/applied';
 import {
   checkAgentPolicy,
   getInferenceSettings,
@@ -75,7 +76,7 @@ describe('the mock agent policy, as the gateway keeps it', () => {
       body: { allowed: ['claude-'], default: 'claude-opus-4-1', byMember: { [MEMBER_IDS.lena]: ['gpt-5'] } },
       throwOnError: true,
     });
-    expect(saved.data.byMember).toEqual({ [MEMBER_IDS.lena]: ['gpt-5'] });
+    expect(applied(saved.data).byMember).toEqual({ [MEMBER_IDS.lena]: ['gpt-5'] });
     expect((await setModelPolicy({ body: { allowed: [], default: 'x' }, throwOnError: true })).data).toEqual({
       allowed: [],
       default: 'x',
