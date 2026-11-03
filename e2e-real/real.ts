@@ -235,7 +235,8 @@ const DEVICE_CODE = z.object({ deviceCode: z.string(), userCode: z.string() });
 const AUTH_TOKEN = z.object({ token: z.string() });
 
 /** The governance write scopes of `ostrom login --admin` (core `DeviceLoginStart`). */
-const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
+/** The scopes `ostrom login --admin` asks for. */
+export const ADMIN_SCOPES = ['policy:write', 'harness:write', 'gates:policy'];
 
 /**
  * A CLI token, obtained as `ostrom login` does: the device flow started without a session, approved by the person

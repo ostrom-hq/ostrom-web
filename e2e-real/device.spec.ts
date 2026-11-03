@@ -4,8 +4,20 @@
 // where the server's link sends them.
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
-import { zApiError, zAuthToken, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
-import { addressOfAPerson, bodyOf, callFromPage, freshEmail, signIn } from './real';
+import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
+import {
+  accept,
+  ADMIN_SCOPES,
+  addressOfAPerson,
+  anotherPerson,
+  bodyOf,
+  callFromPage,
+  closeOthers,
+  freshEmail,
+  invitationTo,
+  ownerOfNewOrganization,
+  signIn,
+} from './real';
 
 /**
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
@@ -21,6 +33,9 @@ let cliAddress = '';
 
 test.beforeEach(() => {
   cliAddress = addressOfAPerson();
+});
+test.afterEach(async () => {
+  await closeOthers();
 });
 
 /**
@@ -54,9 +69,16 @@ async function asTheCli(
   }
 }
 
-/** `ostrom login` starts: no body, the ordinary sign-in (the contract's `DeviceLoginStart` names no client). */
-async function startLogin(): Promise<{ deviceCode: string; userCode: string; page: string }> {
-  const started = await asTheCli('POST', '/api/v1/auth/device');
+/**
+ * `ostrom login` starts: no body, the ordinary sign-in (the contract's `DeviceLoginStart` names no client); with
+ * `admin`, `ostrom login --admin`.
+ */
+async function startLogin(admin = false): Promise<{ deviceCode: string; userCode: string; page: string }> {
+  const started = await asTheCli(
+    'POST',
+    '/api/v1/auth/device',
+    admin ? { body: { scopes: ADMIN_SCOPES } } : {},
+  );
   expect(started.status).toBe(200);
   const login = zStartedLogin.parse(started.body);
   // The console the server names may not be this one's host: its path and query are what the person opens.
@@ -138,4 +160,55 @@ test('5.1 `ostrom login`: a code typed by hand on /device leads to the same pend
   await expect.poll(() => new URL(page.url()).searchParams.get('code')).toBe(login.userCode);
   await seesTheLogin(page, login.userCode);
   await expect(page.getByRole('button', { name: 'Sign in this terminal' })).toBeEnabled();
+});
+
+/** The tokens of `ostrom login --admin` an organization holds, as the console of one who manages it lists them. */
+async function adminTokensOf(page: Page, org: string): Promise<string[]> {
+  const listed = await callFromPage(page, 'GET', '/api/v1/devices', undefined, org);
+  expect(listed.status, JSON.stringify(listed.body)).toBe(200);
+  return z
+    .object({ items: z.array(zDevice.pick({ kind: true, orgId: true })) })
+    .parse(listed.body)
+    .items.filter((device) => device.kind === 'admin')
+    .map((device) => device.orgId ?? '');
+}
+
+test('5.1 `ostrom login --admin`: a person who manages two organizations approves it for the one they choose', async ({
+  page,
+  browser,
+}) => {
+  // Ines owns her organization and administers Olga's: a person makes one free organization, and joins the others.
+  const other = await anotherPerson(browser);
+  const second = await ownerOfNewOrganization(other, 'olga');
+  const first = await ownerOfNewOrganization(page, 'ines');
+  await accept(page, await invitationTo(other, second.id, 'admin'));
+
+  const orgs = await callFromPage(page, 'GET', '/api/v1/orgs');
+  const own = z
+    .object({ items: z.array(z.object({ id: z.string(), name: z.string() })) })
+    .parse(orgs.body)
+    .items.find((item) => item.id === first.id);
+  if (own === undefined) throw new Error('her own organization is not in her list');
+
+  const login = await startLogin(true);
+  await page.goto(login.page);
+  // With two organizations and none chosen yet, the console asks which one it works in, here as anywhere.
+  const picker = page.getByRole('dialog', { name: 'Which organization?' });
+  await picker.getByRole('button', { name: own.name }).click();
+  await expect(picker).toHaveCount(0);
+  await seesTheLogin(page, login.userCode);
+  await expect(page.getByText('Admin sign-in', { exact: true })).toBeVisible();
+  // The console's organization comes first; the admin sign-in is for the other one. Before the console named it, the
+  // server could only answer 409 `org_required` to this person.
+  const actsIn = page.getByLabel('Organization it acts in');
+  await expect(actsIn).toHaveValue(first.id);
+  await actsIn.selectOption(second.id);
+  await page.getByRole('button', { name: 'Approve the admin sign-in' }).click();
+  await expect(page.getByText('Terminal signed in')).toBeVisible();
+
+  const answered = await poll(login.deviceCode);
+  expect(answered.status, JSON.stringify(answered.body)).toBe(200);
+  // Bound to the organization chosen, and to that one only.
+  expect(await adminTokensOf(page, second.id)).toEqual([second.id]);
+  expect(await adminTokensOf(page, first.id)).toEqual([]);
 });
