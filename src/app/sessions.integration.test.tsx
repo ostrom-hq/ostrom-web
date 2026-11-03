@@ -110,7 +110,7 @@ describe('the older ended sessions', () => {
   /** Open sessions: none; ended ones: a first page that says there is more, and `older` for the next one. */
   const paged = (older: Parameters<typeof http.get>[1]): void => {
     server.use(
-      http.get('*/api/v1/sessions', (info) => {
+      http.get('*/api/v1/sessions', async (info) => {
         const query = new URL(info.request.url).searchParams;
         if (query.get('open') === 'true') return HttpResponse.json({ items: [] });
         if (query.get('before') === null)

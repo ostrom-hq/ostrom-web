@@ -128,7 +128,7 @@ test('6.1 the ended sessions come a page at a time, and the older ones when aske
   await page.goto('/sessions');
   const ended = page.getByRole('region', { name: 'Ended' });
   await expect(ended.getByRole('link')).toHaveCount(PAGE);
-  await expect(ended.getByRole('link').filter({ hasText: `${oldest ?? ''}` })).toHaveCount(0);
+  await expect(ended.getByRole('link').filter({ hasText: oldest ?? '' })).toHaveCount(0);
   await ended.getByRole('button', { name: 'Show older sessions' }).click();
   await expect(ended.getByRole('link')).toHaveCount(PAGE + 1);
   await expect(ended.getByRole('link').filter({ hasText: `claude · ${oldest ?? ''}` })).toHaveCount(1);
