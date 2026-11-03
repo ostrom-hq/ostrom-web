@@ -33,13 +33,21 @@ interface RulesPage {
   readonly next: string | undefined;
 }
 
-async function rules(query: {
-  readonly after?: string;
-  readonly limit?: number;
-  readonly status?: string;
-}): Promise<RulesPage> {
+/** Sends the query as written, as a caller past the generated client's bounds would. */
+async function unchecked(data: unknown): Promise<unknown> {
+  return await Promise.resolve(data);
+}
+
+async function rules(
+  query: { readonly after?: string; readonly limit?: number; readonly status?: string },
+  requestValidator?: (data: unknown) => Promise<unknown>,
+): Promise<RulesPage> {
   try {
-    const { data } = await listRules({ query, throwOnError: true });
+    const { data } = await listRules({
+      query,
+      throwOnError: true,
+      ...(requestValidator && { requestValidator }),
+    });
     return { status: 200, ids: data.items.map((rule) => rule.id), next: data.next };
   } catch (error) {
     if (isApiFailure(error)) return { status: error.status, ids: [], next: undefined };
@@ -115,10 +123,11 @@ describe('GET /rules, a page at a time', () => {
     expect(second.next).toBeUndefined();
   });
 
-  it('brings the limit into 1 to 1 000', async () => {
+  it('brings the limit into 1 to 1 000, past the client that keeps it there', async () => {
     expect((await rules({ limit: 5 })).ids).toHaveLength(5);
-    expect((await rules({ limit: 5000 })).ids).toHaveLength(1000);
-    expect((await rules({ limit: 0 })).ids).toHaveLength(1);
+    expect((await rules({ limit: 5000 })).ids).toEqual([]);
+    expect((await rules({ limit: 5000 }, unchecked)).ids).toHaveLength(1000);
+    expect((await rules({ limit: 0 }, unchecked)).ids).toHaveLength(1);
   });
 
   it('filters before the page', async () => {
