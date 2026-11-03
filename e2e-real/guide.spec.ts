@@ -78,15 +78,18 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   await add.getByLabel('Value').fill(`sk-ant-oat01-e2e-${run()}`);
   await add.getByRole('button', { name: 'Save the secret' }).click();
   await expect(page.getByRole('listitem').filter({ hasText: secret })).toBeVisible();
+  // Back to the form, as the secrets screen leaves it to the person.
   await page.goto('/accounts');
   const label = `Gus’s Claude Max ${id}`;
   const share = page.getByRole('region', { name: 'Share a subscription' });
   await share.getByLabel('Provider').selectOption('anthropic');
-  await share.getByLabel('Name').fill(label);
+  await share.getByRole('textbox', { name: 'Name', exact: true }).fill(label);
   await share.getByLabel('Credential').selectOption(secret);
   await share.getByLabel('Daily share in USD (optional)').fill('40');
   await share.getByRole('button', { name: 'Share' }).click();
-  await expect(page.getByRole('article').filter({ hasText: label })).toBeVisible();
+  // Shared as the form said, daily share included; a refusal would be an alert on the screen.
+  await expect(page.getByRole('article', { name: label })).toContainText('$40.00 a day');
+  await expect(page.getByRole('main').getByRole('alert')).toHaveCount(0);
   guide = await guideOf(page);
   await expect(guide).toContainText('4 of 6 done');
   await expect(stepOf(guide, 'Add a model account')).toContainText('(done)');
@@ -97,7 +100,7 @@ test('2.1 the setup guide counts its six steps as the owner takes them', async (
   await page.getByRole('link', { name: 'New workflow' }).click();
   const form = page.getByRole('form', { name: 'A new workflow' });
   const name = `Release train ${id}`;
-  await form.getByLabel('Name').fill(name);
+  await form.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
   await form.getByLabel('Repository').fill(`acme-${id}/api`);
   await form.getByLabel('Step 1: What it is').fill('A tag is pushed');
   await form.getByRole('button', { name: 'Create the workflow' }).click();
