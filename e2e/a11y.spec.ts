@@ -57,7 +57,7 @@ for (const scheme of ['light', 'dark'] as const) {
     test('a yes refused to the person who asked', async ({ page }) => {
       await page.goto('/yes/apr-deploy-88');
       await page.getByRole('button', { name: /^Approve/ }).click();
-      await expect(page.getByRole('alert')).toContainText('samir has to approve it');
+      await expect(page.getByRole('alert')).toContainText('You asked for this');
       expect(await violationsOn(page)).toEqual([]);
     });
 
