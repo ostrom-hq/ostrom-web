@@ -5,10 +5,10 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { useSignInNotice } from '../useYes';
 
-/** What a sign-in link did when it could not simply sign in: not a token, refused, or maybe another account. */
+/** A sign-in link: the question before it signs in (maybe another account), or why it could not (not a token, refused). */
 export function SignInNotice(): ReactElement | null {
   const { t } = useTranslation();
-  const { accept, invalid, signingIn, failure, dismiss } = useSignInNotice();
+  const { accept, signedOut, invalid, signingIn, failure, dismiss } = useSignInNotice();
   const pending = accept !== undefined;
   if (failure !== undefined)
     return (
@@ -33,11 +33,13 @@ export function SignInNotice(): ReactElement | null {
   return (
     <Banner tone="warning" tag={t('yes.signin.tag')} live>
       <span className="ys-signin">
-        <span>{pending ? t('yes.signin.switch') : t('yes.signin.invalid')}</span>
+        <span>
+          {pending ? t(signedOut ? 'yes.signin.offer' : 'yes.signin.switch') : t('yes.signin.invalid')}
+        </span>
         <span className="ys-signin__actions">
           {accept === undefined ? null : <Button onClick={accept}>{t('yes.signin.accept')}</Button>}
           <Button variant="ghost" onClick={dismiss}>
-            {pending ? t('yes.signin.keep') : t('yes.signin.dismiss')}
+            {pending && !signedOut ? t('yes.signin.keep') : t('yes.signin.dismiss')}
           </Button>
         </span>
       </span>
