@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Billing against the real server in Stripe test mode: in ostrom-server's `console-journey.yml`, Stripe is
 // stripe-mock (`OSTROM_STRIPE_API_BASE`), so no card is charged and nothing live is called. Paying with the test card
-// 4242 happens on Stripe's own page, a gesture of the demo film, not of these journeys: the browser that leaves for
-// Checkout lands on a stand-in here, then comes back the way Stripe sends it back.
+// 4242 happens on Stripe's own page, in payment.spec.ts, which runs only against Stripe's test mode: here the browser
+// that leaves for Checkout lands on a stand-in, then comes back the way Stripe sends it back.
 import { expect, type Page, test } from '@playwright/test';
 import {
   anotherPerson,
