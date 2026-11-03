@@ -44,13 +44,41 @@ function signInToken(email: string): string | undefined {
   return undefined;
 }
 
-/** Signs `email` in through the console: the form, the e-mailed link, the queue. */
-export async function signIn(page: Page, email: string): Promise<void> {
-  // The queue, asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
-  await page.goto('/signin?redirect=%2Fyes');
+// The people of this run so far: each gets the next address.
+let people = 0;
+
+/**
+ * An address of its own for one person, in 10.0.0.0/8: unique in the run and the same from one run to the next. The
+ * server limits e-mailed sign-in links per source address (10 every 15 minutes, `RequestMagicLinkUseCaseImpl`), and
+ * every journey reaches it from the same machine: each person then reads as their own network, as people do. The
+ * server believes `X-Forwarded-For` only from a trusted proxy (`OSTROM_TRUSTED_PROXIES`: the runner's loopback, from
+ * which `vite preview` proxies /api, in ostrom-server's `console-journey.yml`); elsewhere it is ignored.
+ */
+function addressOfAPerson(): string {
+  people += 1;
+  return `10.${String((people >> 16) & 255)}.${String((people >> 8) & 255)}.${String(people & 255)}`;
+}
+
+/**
+ * Signs `email` in through the console: the form, the e-mailed link, then the screen it was asked from (`back`, the
+ * queue by default), as a person signing in again from a screen that asked them to comes back to it.
+ */
+export async function signIn(page: Page, email: string, back = '/yes'): Promise<void> {
+  // Every request of this person's browser, the console's calls through the proxy and `page.request` included, comes
+  // from their own address.
+  await page.context().setExtraHTTPHeaders({ 'X-Forwarded-For': addressOfAPerson() });
+  // The screen asked for: the server sends a sign-in without a path to `/` (`safeRedirectPath`).
+  await page.goto(`/signin?redirect=${encodeURIComponent(back)}`);
   await page.getByRole('textbox', { name: 'Your e-mail address' }).fill(email);
   await page.getByRole('button', { name: 'E-mail me a link' }).click();
-  await expect(page.getByRole('alert')).toContainText(`If ${email} may sign in, a link is on its way.`);
+  const said = page.getByRole('alert');
+  await expect(said).not.toHaveText('');
+  // The server counts every journey as one source: its trusted proxies do not include this runner's loopback.
+  if ((await said.textContent())?.includes('Too many attempts') === true)
+    throw new Error(
+      'The server limits sign-ins from this runner: give its loopback to OSTROM_TRUSTED_PROXIES (console-journey.yml).',
+    );
+  await expect(said).toContainText(`If ${email} may sign in, a link is on its way.`);
   let token: string | undefined;
   await expect
     .poll(() => {
@@ -59,7 +87,12 @@ export async function signIn(page: Page, email: string): Promise<void> {
     })
     .toBeDefined();
   await page.goto(`/auth/email#token=${encodeURIComponent(token ?? '')}`);
-  await expect(page).toHaveURL(/\/yes$/);
+  // A page already signed in is asked before the link replaces its session (login CSRF): say yes.
+  const ask = page.getByRole('button', { name: 'Sign in with the link' });
+  const arrived = (): boolean => new URL(page.url()).pathname === back;
+  await expect.poll(async () => arrived() || (await ask.isVisible())).toBe(true);
+  if (!arrived()) await ask.click();
+  await expect.poll(() => new URL(page.url()).pathname).toBe(back);
 }
 
 /** Whether the server serves `path` at all: anything but 404 and 405, signed out. */
@@ -82,7 +115,7 @@ export async function callFromPage(
   const csrf = (await page.context().cookies()).find((cookie) =>
     /^(?:__Host-)?ostrom_csrf$/.test(cookie.name),
   )?.value;
-  return page.evaluate(
+  const answer = await page.evaluate(
     async ({ method, path, body, csrf, org }) => {
       const headers: Record<string, string> = { accept: 'application/json' };
       if (org !== undefined) headers['Ostrom-Org'] = org;
@@ -94,11 +127,34 @@ export async function callFromPage(
         credentials: 'include',
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       });
-      const text = await response.text();
-      return { status: response.status, body: text === '' ? undefined : (JSON.parse(text) as unknown) };
+      return { status: response.status, text: await response.text() };
     },
     { method, path, body, csrf, org },
   );
+  return { status: answer.status, body: bodyOf(`${method} ${path}`, answer.status, answer.text) };
+}
+
+/**
+ * An answer's body, read in Node. A success (2xx but 204) must be JSON: the callers read fields from it, so a page of
+ * text or an empty body fails here, at its cause. A refusal may be a proxy's page of text: it is kept, cut short, so
+ * its status and words show in the failure.
+ */
+export function bodyOf(call: string, status: number, text: string): unknown {
+  const shown = text.length > 300 ? `${text.slice(0, 300)}…` : text;
+  let parsed: { json: unknown } | undefined;
+  try {
+    parsed = text === '' ? undefined : { json: JSON.parse(text) };
+  } catch {
+    parsed = undefined;
+  }
+  const success = status >= 200 && status < 300 && status !== 204;
+  if (success && parsed === undefined) {
+    throw new Error(
+      `${call} answered ${String(status)} without a JSON body: ${shown === '' ? '(empty)' : shown}`,
+    );
+  }
+  if (parsed !== undefined) return parsed.json;
+  return shown === '' ? undefined : shown;
 }
 
 const others: BrowserContext[] = [];

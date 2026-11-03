@@ -26,6 +26,8 @@ test('the console is served with its security headers', async ({ page }) => {
   expect(csp).toContain("frame-ancestors 'none'");
   expect(csp).toContain("base-uri 'none'");
   expect(csp).toContain("object-src 'none'");
+  expect(csp).toContain("require-trusted-types-for 'script'");
+  expect(headers['cross-origin-opener-policy']).toBe('same-origin');
   expect(headers['strict-transport-security']).toBe('max-age=63072000; includeSubDomains');
   expect(headers['x-content-type-options']).toBe('nosniff');
   expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
@@ -37,7 +39,9 @@ test('the console works under its Content-Security-Policy without a single viola
   // the e2e project is typed without the DOM library.
   await page.addInitScript({
     content: `document.addEventListener('securitypolicyviolation', (event) => {
-      const what = event.effectiveDirective + ' blocked ' + event.blockedURI;
+      const where = event.sourceFile + ':' + event.lineNumber + ':' + event.columnNumber;
+      // The sample names a Trusted Types sink and the start of what was given to it.
+      const what = event.effectiveDirective + ' blocked ' + event.blockedURI + ' (' + event.sample + ') at ' + where;
       console.error('Content Security Policy violation: ' + what);
     });`,
   });

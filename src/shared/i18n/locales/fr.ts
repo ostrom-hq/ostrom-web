@@ -6,6 +6,10 @@ export const fr = {
     mocks: 'Données de démo : cette console n’est reliée à aucun serveur Ostrom.',
     loading: 'Chargement',
     failure: { tag: 'Hors ligne' },
+    stepUp: {
+      body: 'Ce changement demande une connexion de moins de cinq minutes.',
+      signIn: 'Se reconnecter',
+    },
     skipToContent: 'Aller au contenu',
     copy: {
       action: 'Copier',
@@ -25,6 +29,7 @@ export const fr = {
       rules: 'Règles',
       activity: 'Activité',
       decisions: 'Décisions',
+      audit: 'Journal d’audit',
       mcp: 'MCP',
       secrets: 'Secrets',
       spend: 'Dépenses',
@@ -68,6 +73,14 @@ export const fr = {
       signedOutTag: 'Déconnecté',
       signedOut: 'Ce navigateur n’est plus connecté. Rouvre ton lien de connexion pour voir tes demandes.',
       refusedTag: 'Refusé',
+    },
+    signout: {
+      tag: 'Déconnexion',
+      ask: 'Te déconnecter d’Ostrom sur ce navigateur ? Rien ne change tant que tu ne le dis pas.',
+      go: 'Me déconnecter',
+      going: 'Déconnexion…',
+      stay: 'Rester connecté',
+      failed: 'La déconnexion a échoué ({{reason}}). Ce navigateur est toujours connecté.',
     },
     signin: {
       tag: 'Connexion',
@@ -682,6 +695,17 @@ export const fr = {
         'Tu peux lancer {{agent}}. Aucun modèle par défaut n’est connu : le modèle qu’il nomme est vérifié au lancement.',
       refused: 'Ce lancement serait refusé.',
     },
+  },
+  audit: {
+    title: 'Journal d’audit',
+    lead: 'Chaque changement de gouvernance de l’organisation, du plus récent au plus ancien, signé par le serveur : qui a changé quoi, et par quel moyen.',
+    forbiddenTag: 'Owners et admins',
+    forbidden: 'Seul un owner ou un admin de l’organisation peut lire son journal d’audit.',
+    unavailableTag: 'Pas encore servi',
+    unavailable: 'Ce serveur ne sert pas encore le journal d’audit.',
+    empty: 'Rien n’a encore changé dans l’organisation.',
+    more: 'Voir les lignes plus anciennes',
+    loadingMore: 'Chargement…',
   },
   activity: {
     title: 'Activité',
@@ -1328,6 +1352,13 @@ export const fr = {
       failedTag: 'Pas connecté',
       missing: 'Ce lien a déjà servi ou il est incomplet.',
       again: 'Demander un nouveau lien',
+      switchTag: 'Un autre compte ?',
+      switch:
+        'Quelqu’un est peut-être déjà connecté sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',
+      switchFrom:
+        'Tu es connecté en tant que {{name}} sur ce navigateur. Ce lien le connecte au compte à qui il a été envoyé, et ce que tu fais ensuite est fait au nom de ce compte.',
+      accept: 'Me connecter avec le lien',
+      keep: 'Rester connecté comme maintenant',
     },
   },
   sharing: {

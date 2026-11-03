@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import { type Provider, PROVIDERS, providersDraftOf, type ProvidersDraft, settingsOf } from '../model';
 import type { ProvidersViewModel } from '../usePolicy';
+import { FailureText } from '@/shared/ui/FailureText';
 
 function ProvidersForm({
   settings,
@@ -99,7 +100,7 @@ export function ProvidersSection({ view, canChange }: ProvidersSectionProps): Re
         <>
           {view.change.failure === undefined ? null : (
             <Banner tone="danger" tag={t('policy.errorTag')} live>
-              {view.change.failure.message}
+              <FailureText failure={view.change.failure} />
             </Banner>
           )}
           {view.change.saved ? (

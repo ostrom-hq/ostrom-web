@@ -12,7 +12,7 @@ import { Usage } from '../components/Usage';
 import { hasSubscription } from '../model';
 import { managesBilling } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
-import { useBilling, useBillingActions } from '../useBilling';
+import { useBilling, useBillingActions, useInvoices } from '../useBilling';
 import './billing.css';
 
 /** The organization's plan, its usage and limits, the plans on sale, the subscription and its invoices. */
@@ -39,6 +39,8 @@ function BillingPage({
 }): ReactElement {
   const { t } = useTranslation();
   const { billing, failure } = useBilling(orgId);
+  // The invoices are fetched now, with the overview: the list shown below it reads the same query.
+  useInvoices(orgId, canManage);
   const actions = useBillingActions(orgId);
   return (
     <LoadState data={billing} failure={failure} rows={3}>

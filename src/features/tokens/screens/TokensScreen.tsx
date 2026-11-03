@@ -8,6 +8,7 @@ import { TokenForm } from '../components/TokenForm';
 import { TokenRow } from '../components/TokenRow';
 import { useCreateToken, useTokenActions, useTokens } from '../useTokens';
 import './tokens.css';
+import { FailureText } from '@/shared/ui/FailureText';
 
 /** The person's own tokens, for scripts and CI: they belong to no organization and never say yes. */
 export function TokensScreen(): ReactElement {
@@ -33,7 +34,7 @@ export function TokensScreen(): ReactElement {
       )}
       {actions.failure === undefined ? null : (
         <Banner tone="danger" tag={t('tokens.list.errorTag')} live>
-          {actions.failure.message}
+          <FailureText failure={actions.failure} />
         </Banner>
       )}
       <LoadState data={view.tokens} failure={view.failure}>

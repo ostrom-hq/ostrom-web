@@ -59,7 +59,7 @@ test('another organization never sees the first one’s models or keys', async (
   await ownerOfNewOrganization(page, 'bea');
   await page.goto('/policy');
   const models = page.getByRole('region', { name: 'Models' });
-  await expect(models.getByText('Every model')).toBeVisible();
+  await expect(models.getByText('Every model', { exact: true })).toBeVisible();
   await expect(models.getByText('claude-opus-4-1')).toHaveCount(0);
   for (const [method, path, body] of [
     ['GET', '/api/v1/policy/models', undefined],

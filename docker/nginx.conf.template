@@ -9,6 +9,15 @@ map $http_upgrade $ostrom_connection {
 # $ostrom_csp_connect_extra: the PostHog origin the CSP's connect-src allows, or nothing (40-ostrom-config.sh).
 include /var/run/ostrom/csp.conf;
 
+# $ostrom_from_trusted_proxy: 1 when the client is a proxy of OSTROM_TRUSTED_PROXIES (40-ostrom-config.sh). Only such a
+# proxy says which scheme the browser used, and only http or https; any other client gets nginx's own (audit B5).
+include /var/run/ostrom/proxies.conf;
+map "$ostrom_from_trusted_proxy:$http_x_forwarded_proto" $ostrom_forwarded_proto {
+    default  $scheme;
+    "1:https" https;
+    "1:http"  http;
+}
+
 server {
     listen 8080;
     listen [::]:8080;
@@ -39,7 +48,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Proto $ostrom_forwarded_proto;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $ostrom_connection;
         proxy_buffering off;
@@ -48,8 +57,14 @@ server {
         client_max_body_size 16m;
     }
 
-    # Hashed assets: cached for a year.
+    # Hashed assets: cached for a year, sent compressed to a browser that accepts it (the .gz written at build).
     location /assets/ {
+        gzip_static on;
+        gzip_vary on;
+        # Behind an ingress or a CDN too (a request with `Via`): the default would send them whole there.
+        gzip_proxied any;
+        # And from a proxy that speaks HTTP/1.0 to the pod (the default answers it whole).
+        gzip_http_version 1.0;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         include /etc/nginx/ostrom/security-headers.conf;
         try_files $uri =404;

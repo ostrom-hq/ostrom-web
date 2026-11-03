@@ -15,6 +15,7 @@ import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 export interface SaveViewModel<T> {
   /** Saves; `onSaved` runs once the server took it, so a form shows the saved value then, not before. */
@@ -32,14 +33,25 @@ function useSave<T>(send: (body: T) => Promise<T>, queryKey: readonly unknown[])
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({ body }: { body: T }) => send(body),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(queryKey, saved);
+    onMutate: sentInOrg,
+    onSuccess: (saved, _body, sent) => {
+      whenSameOrg(sent, () => {
+        queryClient.setQueryData(queryKey, saved);
+      });
     },
   });
   const { mutate, reset } = mutation;
   const save = useCallback(
     (value: T, onSaved: () => void) => {
-      mutate({ body: value }, { onSuccess: onSaved });
+      // Said saved only where it was saved: after a switch, the form on screen is another organization's.
+      mutate(
+        { body: value },
+        {
+          onSuccess: (_saved, _body, sent) => {
+            whenSameOrg(sent, onSaved);
+          },
+        },
+      );
     },
     [mutate],
   );

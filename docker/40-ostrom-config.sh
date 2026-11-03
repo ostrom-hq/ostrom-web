@@ -2,6 +2,9 @@
 # Writes /var/run/ostrom/config.js: window.__OSTROM_CONFIG__ from the public OSTROM_* settings (never secrets).
 # Writes /var/run/ostrom/csp.conf: the one origin the Content-Security-Policy adds to connect-src (audit S2-09), the
 # PostHog origin when analytics are on (a key is set), nothing otherwise.
+# Writes /var/run/ostrom/proxies.conf: the proxies whose X-Forwarded-Proto nginx passes to the server
+# (OSTROM_TRUSTED_PROXIES, comma-separated addresses or CIDRs, as the server reads it); from anyone else, nginx sends
+# its own scheme (web audit 2, B5).
 set -eu
 out=/var/run/ostrom/config.js
 json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
@@ -31,3 +34,19 @@ if [ -n "${OSTROM_POSTHOG_API_KEY:-}" ]; then
   fi
 fi
 printf 'map $host $ostrom_csp_connect_extra {\n    default "%s";\n}\n' "$connect_extra" > /var/run/ostrom/csp.conf
+
+# Each entry must be an IPv4 or IPv6 address, with or without a prefix length: anything else stops the start, so that a
+# typo never trusts the wrong clients nor writes into the nginx configuration. No globbing of the list.
+set -f
+{
+  printf 'geo $ostrom_from_trusted_proxy {\n    default 0;\n'
+  for proxy in $(printf '%s' "${OSTROM_TRUSTED_PROXIES:-}" | tr ',' ' '); do
+    if ! printf '%s\n' "$proxy" | grep -Eq '^([0-9]{1,3}(\.[0-9]{1,3}){3}|[0-9A-Fa-f:]*:[0-9A-Fa-f:.]*)(/[0-9]{1,3})?$'; then
+      echo "40-ostrom-config.sh: OSTROM_TRUSTED_PROXIES must list addresses or CIDRs, got an invalid entry" >&2
+      exit 1
+    fi
+    printf '    %s 1;\n' "$proxy"
+  done
+  printf '}\n'
+} > /var/run/ostrom/proxies.conf.tmp
+mv /var/run/ostrom/proxies.conf.tmp /var/run/ostrom/proxies.conf

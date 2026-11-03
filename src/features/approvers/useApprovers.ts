@@ -16,6 +16,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
+import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 
 export interface ApproversViewModel {
   /** The steps, as soon as the workflows come: a slow graph never holds them. */
@@ -77,8 +78,11 @@ export function useSelfApprovalPolicy(): PolicyViewModel {
   const viewer = useViewer();
   const mutation = useMutation({
     ...appliedMutation(setGatePolicyMutation()),
-    onSuccess: (data) => {
-      queryClient.setQueryData(getGatePolicyQueryKey(), data);
+    onMutate: sentInOrg,
+    onSuccess: (data, _body, sent) => {
+      whenSameOrg(sent, () => {
+        queryClient.setQueryData(getGatePolicyQueryKey(), data);
+      });
     },
   });
   const { mutate } = mutation;

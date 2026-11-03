@@ -1,0 +1,5 @@
+# Settings of pnpm (it reads them here, not from package.json).
+# js-yaml < 4.3.2 has three advisories (GHSA, high), pulled in by @hey-api/openapi-ts for the code generation only: the
+# patched release is forced (audit AUDIT-SECU-WEB-2 B9).
+overrides:
+  js-yaml@<4.3.2: ^4.3.2

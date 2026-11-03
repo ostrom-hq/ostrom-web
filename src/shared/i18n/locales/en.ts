@@ -5,6 +5,7 @@ export const en = {
     mocks: 'Demo data: this console is not connected to an Ostrom server.',
     loading: 'Loading',
     failure: { tag: 'Offline' },
+    stepUp: { body: 'This change needs a sign-in less than five minutes old.', signIn: 'Sign in again' },
     skipToContent: 'Skip to content',
     copy: {
       action: 'Copy',
@@ -24,6 +25,7 @@ export const en = {
       rules: 'Rules',
       activity: 'Activity',
       decisions: 'Decisions',
+      audit: 'Audit log',
       mcp: 'MCP',
       secrets: 'Secrets',
       spend: 'Spend',
@@ -67,6 +69,14 @@ export const en = {
       signedOutTag: 'Signed out',
       signedOut: 'This browser is no longer signed in. Open your sign-in link again to see your requests.',
       refusedTag: 'Refused',
+    },
+    signout: {
+      tag: 'Sign out',
+      ask: 'Sign out of Ostrom on this browser? Nothing changes until you say so.',
+      go: 'Sign out',
+      going: 'Signing out…',
+      stay: 'Stay signed in',
+      failed: 'Could not sign out ({{reason}}). This browser is still signed in.',
     },
     signin: {
       tag: 'Sign-in',
@@ -665,6 +675,17 @@ export const en = {
         'You may launch {{agent}}. No default model is known: the model it names is checked as it starts.',
       refused: 'This launch would be refused.',
     },
+  },
+  audit: {
+    title: 'Audit log',
+    lead: 'Every governance change in the organization, newest first, signed by the server: who changed what, and through what.',
+    forbiddenTag: 'Owners and admins',
+    forbidden: 'Only an owner or an admin of the organization reads its audit log.',
+    unavailableTag: 'Not served yet',
+    unavailable: 'This server does not serve the audit log yet.',
+    empty: 'Nothing has changed in the organization yet.',
+    more: 'Show older lines',
+    loadingMore: 'Loading…',
   },
   activity: {
     title: 'Activity',
@@ -1300,6 +1321,13 @@ export const en = {
       failedTag: 'Not signed in',
       missing: 'This link was already used or is incomplete.',
       again: 'Ask for a new link',
+      switchTag: 'Another account?',
+      switch:
+        'Someone may already be signed in on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
+      switchFrom:
+        'You are signed in as {{name}} on this browser. This link signs it in as the account it was sent to, and what you do next is done as that account.',
+      accept: 'Sign in with the link',
+      keep: 'Stay signed in as now',
     },
   },
   sharing: {

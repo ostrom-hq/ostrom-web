@@ -23,14 +23,15 @@ test('an approver opens a request from the queue, reads the proof, approves and 
   await expect(page.getByRole('heading', { name: '1 waiting for you' })).toBeVisible();
 });
 
-test('the asker cannot approve while another approver exists, but can decline with what to do instead', async ({
+test('the asker cannot approve their own request, but can decline with what to do instead', async ({
   page,
 }) => {
   await page.goto('/yes/apr-deploy-88');
   await expect(page.getByText('You asked for this yourself.')).toBeVisible();
 
   await page.getByRole('button', { name: /^Approve/ }).click();
-  await expect(page.getByRole('alert')).toContainText('samir has to approve it');
+  // The organization never lets the asker approve, the default (S2-15).
+  await expect(page.getByRole('alert')).toContainText('never lets the asker approve');
 
   await page.getByRole('button', { name: 'Decline & tell the agent…' }).click();
   await page.getByRole('textbox', { name: 'What should the agent do instead?' }).fill('Wait for samir.');
@@ -78,6 +79,8 @@ test('a yes from a sign-in more than five minutes old asks to sign in again, the
   await page.evaluate(
     "history.pushState({}, '', '/auth/email#token=ml_demo'); dispatchEvent(new PopStateEvent('popstate'))",
   );
+  // Someone is signed in (the old session): the link replaces it after a yes.
+  await page.getByRole('button', { name: 'Sign in with the link' }).click();
   await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await page.getByRole('button', { name: /^Approve/ }).click();
