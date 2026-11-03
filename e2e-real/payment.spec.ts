@@ -75,7 +75,12 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
   const subscribe = page.locator('[data-testid="hosted-payment-submit-button"]');
   const back = billingPage();
   for (let click = 1; ; click += 1) {
-    await subscribe.click({ timeout: 10_000 });
+    // Stripe may send the payer back between the idle read and this click: a click that finds no button ends the loop,
+    // and the last wait says where the payment stands.
+    const clicked = await subscribe.click({ timeout: 10_000 }).then(
+      () => true,
+      () => false,
+    );
     const returned = await page.waitForURL(back, { timeout: 30_000 }).then(
       () => true,
       () => false,
@@ -89,7 +94,7 @@ async function payOnStripeCheckout(page: Page): Promise<void> {
       ([enabled, state]) => enabled && !/processing/i.test(state ?? ''),
       () => false,
     );
-    if (!idle || click === 3) {
+    if (!clicked || !idle || click === 3) {
       await expect(page).toHaveURL(back, { timeout: 60_000 });
       return;
     }
@@ -104,7 +109,7 @@ test('an owner pays for Team with the test card 4242 on Stripe Checkout, and the
     'Stripe test mode not configured (console-journey.yml dispatched with stripe: test); stripe-mock has no Checkout',
   );
   // Checkout, the payment, Stripe's webhook and the invoice each have their own wait: the test outlasts their sum.
-  test.setTimeout(480_000);
+  test.setTimeout(600_000);
   const org = await ownerOfNewOrganization(page, 'pia');
   await page.goto('/billing');
   const plan = page.getByRole('region', { name: 'Plan', exact: true });
