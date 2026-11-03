@@ -3,7 +3,7 @@ import type { GovernanceConfirmation } from '@gen/api/types.gen';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { otherOrganization } from '@/mocks/fixtures/organization';
+import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS } from '@/mocks/handlers';
 import { DEMO_LOGIN, setDemoRole } from '@/mocks/orgs';
 import { useOrgStore } from '@/shared/org/orgStore';
@@ -238,7 +238,18 @@ describe('a governance confirmation', () => {
   });
 
   it('offers no answer to a member who is neither owner nor admin', async () => {
+    // A member everywhere the console reads the role: the organization's list and their own member (`/auth/me`).
     setDemoRole(db, 'member');
+    db.members = db.members.map((member) => (member.login === DEMO_LOGIN ? { ...member, role: 'member' } : member));
+    server.use(
+      http.get('*/api/v1/auth/me', () =>
+        HttpResponse.json({
+          dev: { login: DEMO_LOGIN, verified: true, via: 'github' },
+          member: { id: MEMBER_IDS.maya, login: DEMO_LOGIN, avatarUrl: '', role: 'member' },
+          capabilities: [],
+        }),
+      ),
+    );
     visit('/confirm/gc-self-approval');
     expect(
       await screen.findByText(
