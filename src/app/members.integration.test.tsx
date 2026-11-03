@@ -671,10 +671,7 @@ describe('the members of a large organization', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
     });
-    expect(screen.getByRole('heading', { level: 2, name: 'People' }).parentElement).toHaveAttribute(
-      'aria-busy',
-      'true',
-    );
+    expect(await people()).toHaveAttribute('aria-busy', 'true');
   });
 
   it('keeps the box of a search typed once the organization is small enough not to need one', async () => {

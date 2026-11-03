@@ -76,7 +76,7 @@ function MembersPage({
       )}
       <LoadState data={listed} failure={view.failure}>
         {(members) => (
-          <section aria-labelledby="mb-people" className="o-stack" aria-busy={view.stale}>
+          <section aria-labelledby="mb-people" className="o-stack">
             <h2 id="mb-people" className="o-label">
               {t('members.list.title')}
             </h2>
@@ -111,7 +111,8 @@ function MembersPage({
                   : t('members.list.noMatch', { search: view.search })}
               </p>
             ) : (
-              <ul className="o-card o-rows">
+              // Busy on the list only: a status beside it is still heard while the next search is read.
+              <ul className="o-card o-rows" aria-busy={view.stale}>
                 {members.map((member) => {
                   const target = orgRoleOf(member.role);
                   const editable =
