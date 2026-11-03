@@ -630,7 +630,9 @@ describe('the members of a large organization', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Show more people' }));
     await shown(200);
     expect(searched.at(-1)?.searchParams.get('q')).toBe('dev-');
-    expect(searched.at(-1)?.searchParams.get('after')).toBe(db.orgMembers[ACME][99]?.id);
+    // After the hundredth found, not the hundredth of the organization (its first five are not `dev-`).
+    const found = (db.orgMembers[ACME] ?? []).filter((member) => member.login.startsWith('dev-'));
+    expect(searched.at(-1)?.searchParams.get('after')).toBe(found[99]?.id);
     // Cleared, the list is the organization's again, from what was already read.
     await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }));
     await shown(100);
