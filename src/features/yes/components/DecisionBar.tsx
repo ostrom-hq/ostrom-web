@@ -7,18 +7,27 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { askedByViewer } from '../model';
 import type { AnswerViewModel } from '../useYes';
+import { GithubLinkAction, GithubLinkNotice } from './GithubLinkNotice';
 
 export interface DecisionBarProps {
   readonly approval: Approval;
   readonly viewer: string | undefined;
   readonly viewerName: string | undefined;
   readonly answer: AnswerViewModel;
+  /** A yes waits for the person's GitHub link: Approve is off, Decline stays open. */
+  readonly linkRequired: boolean;
 }
 
 /** Under the thumb on a phone. Approving is one click on the proof above; declining always says why. */
-export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBarProps): ReactElement {
+export function DecisionBar({
+  approval,
+  viewer,
+  viewerName,
+  answer,
+  linkRequired,
+}: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
-  const { sending, refusal, stepUp, changed, failure } = answer;
+  const { sending, refusal, stepUp, githubLink, changed, failure } = answer;
   // Back to this very page after signing in: the router's own path for the request, never one rebuilt by hand.
   const here = useRouterState({ select: (state) => `${state.location.pathname}${state.location.searchStr}` });
   const [declining, setDeclining] = useState(false);
@@ -45,8 +54,16 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
               </Link>
             </>
           ) : null}
+          {githubLink ? (
+            <>
+              {' '}
+              <GithubLinkAction />
+            </>
+          ) : null}
         </Banner>
       )}
+      {/* The refusal already says it when the server refused a yes. */}
+      {refusal === undefined && linkRequired ? <GithubLinkNotice count={1} /> : null}
       {failure === undefined ? null : (
         <Banner tone="danger" tag={t('yes.act.errorTag')} live>
           {failure.message}
@@ -112,7 +129,7 @@ export function DecisionBar({ approval, viewer, viewerName, answer }: DecisionBa
             <Button
               variant="primary"
               data-approval="approve"
-              disabled={busy}
+              disabled={busy || linkRequired}
               onClick={() => {
                 answer.answer(approval, 'approve');
               }}

@@ -16,6 +16,11 @@ const MOCK_MEMBERSHIPS_KEY = 'ostrom.mock.memberships';
 const MOCK_ROLE_KEY = 'ostrom.mock.role';
 /** Set before the demo loads: `large`, Acme has 500 members, 2 000 rules, 10 000 lines of activity (PERF-CONSOLE). */
 const MOCK_SCALE_KEY = 'ostrom.mock.scale';
+/**
+ * Set before the demo loads: `unlinked`, the demo person signed up by e-mail and linked no GitHub account, so a yes on
+ * a pull request whose author is linked to nobody waits for that link (Q-GATES-G1 a).
+ */
+const MOCK_GITHUB_KEY = 'ostrom.mock.github';
 
 /** The browser's Trusted Types factory, where it has one (Chromium). */
 interface TrustedTypesFactory {
@@ -57,6 +62,7 @@ export async function startMocks(): Promise<void> {
   const role = orgRoleOf(safeLocalStorage.getItem(MOCK_ROLE_KEY) ?? undefined);
   if (role !== undefined) setDemoRole(db, role);
   if (safeLocalStorage.getItem(MOCK_SCALE_KEY) === 'large') growLarge(db);
+  if (safeLocalStorage.getItem(MOCK_GITHUB_KEY) === 'unlinked') db.providers = ['email'];
   allowMockWorker();
   const worker = setupWorker(...createHandlers(db));
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true });

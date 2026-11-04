@@ -12,11 +12,19 @@ export interface ApprovalCardProps {
   readonly approval: Approval;
   readonly viewer: string | undefined;
   readonly fresh: boolean;
+  /** A yes waits for the person's GitHub link. */
+  readonly linkRequired: boolean;
   readonly now: Date;
 }
 
 /** A row only opens the request: nobody approves from a list. */
-export function ApprovalCard({ approval, viewer, fresh, now }: ApprovalCardProps): ReactElement {
+export function ApprovalCard({
+  approval,
+  viewer,
+  fresh,
+  linkRequired,
+  now,
+}: ApprovalCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const asker = approval.askedBy?.[0];
   const checks = checksSummary(approval.checks ?? []);
@@ -39,6 +47,8 @@ export function ApprovalCard({ approval, viewer, fresh, now }: ApprovalCardProps
         </span>
         {approvalTone(approval, viewer) === 'asked-by-you' ? (
           <Badge tone="warning">{t('yes.badge.mine')}</Badge>
+        ) : linkRequired ? (
+          <Badge tone="warning">{t('yes.githubLink.badge')}</Badge>
         ) : fresh ? (
           <Badge tone="signal">{t('yes.badge.new')}</Badge>
         ) : (

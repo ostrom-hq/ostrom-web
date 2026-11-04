@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Approval } from '@gen/api/types.gen';
 import { createMemoryHistory } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import '@/shared/i18n/i18n';
@@ -74,6 +74,15 @@ function expectInOrder(nodes: readonly HTMLElement[]): void {
   });
 }
 
+/** The link of a GitHub notice, to the GitHub section of « My account » (the menu's link has no anchor). */
+function githubSectionLink(): HTMLElement {
+  const link = screen
+    .getAllByRole('link', { name: 'My account' })
+    .find((item) => item.getAttribute('href') === '/account#github');
+  if (link === undefined) throw new Error('no link to the GitHub section of My account');
+  return link;
+}
+
 function addApproval(approval: Approval, approvers: readonly string[] = ['maya']): void {
   db.approvals.push(structuredClone(approval));
   db.approvers[approval.id] = approvers;
@@ -103,6 +112,37 @@ describe('the queue', () => {
     const decided = await screen.findByRole('link', { name: /Run migration/ });
     expect(within(decided).getByText('Approved')).toBeInTheDocument();
     expect(within(decided).getByText(/^maya · /)).toBeInTheDocument();
+  });
+
+  it('asks an approver who linked no GitHub account to link it, and marks the requests that wait for it', async () => {
+    db.providers = ['email'];
+    visit('/yes');
+    const merge = await screen.findByRole('link', { name: /Merge PR #412 into main/ });
+    expect(await within(merge).findByText('Link GitHub')).toBeInTheDocument();
+    expect(within(merge).queryByText('Waiting for you')).toBeNull();
+    expect(screen.getByText('To approve this request, link your GitHub account.')).toBeInTheDocument();
+    expect(githubSectionLink()).toBeInTheDocument();
+    // The asker's own request keeps its own badge: the link would not let them say yes.
+    expect(
+      within(screen.getByRole('link', { name: /Deploy billing-api/ })).getByText('You asked'),
+    ).toBeInTheDocument();
+  });
+
+  it('counts the requests that wait for the GitHub link', async () => {
+    db.providers = ['email'];
+    addApproval(bare);
+    db.unlinkedAuthors = ['apr-merge-412', 'apr-bare'];
+    visit('/yes');
+    expect(
+      await screen.findByText('To approve these 2 requests, link your GitHub account.', {}, SLOW),
+    ).toBeInTheDocument();
+  });
+
+  it('asks nothing of an approver whose GitHub is linked', async () => {
+    visit('/yes');
+    const merge = await screen.findByRole('link', { name: /Merge PR #412 into main/ });
+    expect(within(merge).getByText('Waiting for you')).toBeInTheDocument();
+    expect(screen.queryByText(/link your GitHub account/)).toBeNull();
   });
 
   it('marks a request that arrives while the page is open', async () => {
@@ -542,6 +582,71 @@ describe('a request', () => {
     await user.click(screen.getByRole('button', { name: 'Decline and send' }));
     expect(await screen.findByRole('button', { name: 'Declining…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('tells an approver who linked no GitHub account why a yes waits: Approve is off, Decline stays open', async () => {
+    const user = userEvent.setup();
+    db.providers = ['email'];
+    visit('/yes/apr-merge-412');
+    expect(await screen.findByText('To approve this request, link your GitHub account.')).toBeInTheDocument();
+    expect(githubSectionLink()).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Decline & tell the agent…' }));
+    await user.type(screen.getByRole('textbox', { name: 'What should the agent do instead?' }), 'Not yet.');
+    await user.click(screen.getByRole('button', { name: 'Decline and send' }));
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent('maya declined: Merge PR #412 into main');
+  });
+
+  it('says yes once the GitHub account is linked: back on the request, its rights are read afresh', async () => {
+    const user = userEvent.setup();
+    db.providers = ['email'];
+    const router = visit('/yes/apr-merge-412');
+    expect(await screen.findByText('To approve this request, link your GitHub account.')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
+    });
+
+    await user.click(githubSectionLink());
+    const github = await screen.findByRole('region', { name: 'GitHub' });
+    expect(github).toHaveAttribute('id', 'github');
+    expect(router.state.location.hash).toBe('github');
+    // GitHub's consent and the server's callback, as the link ends: the account now has its GitHub.
+    db.providers = ['email', 'github'];
+    act(() => {
+      router.history.back();
+    });
+
+    const approve = await screen.findByRole('button', { name: 'Approve merge' });
+    await waitFor(() => {
+      expect(approve).toBeEnabled();
+    });
+    expect(screen.queryByText('To approve this request, link your GitHub account.')).toBeNull();
+    await user.click(approve);
+    const decision = await screen.findByRole('region', { name: 'Decision' });
+    expect(decision).toHaveTextContent('maya approved: Merge PR #412 into main');
+  });
+
+  it('points a yes the server refused for want of a GitHub link to the account, and turns Approve off', async () => {
+    const user = userEvent.setup();
+    visit('/yes/apr-merge-412');
+    const approve = await screen.findByRole('button', { name: 'Approve merge' });
+    // Unlinked meanwhile (another tab): the page read the rights before.
+    db.providers = ['email'];
+    await user.click(approve);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('link your own GitHub account in My account to approve it.');
+    expect(within(alert).getByRole('link', { name: 'My account' })).toHaveAttribute(
+      'href',
+      '/account#github',
+    );
+    expect(within(alert).queryByRole('link', { name: 'Sign in again' })).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Approve merge' })).toBeDisabled();
+    });
+    // The refusal already says it: the notice is not shown twice.
+    expect(screen.queryByText('To approve this request, link your GitHub account.')).toBeNull();
   });
 
   it('lets the person back out of a decline', async () => {

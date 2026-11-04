@@ -182,6 +182,10 @@ export type ApprovalCallerView = {
      */
     canApprove: boolean;
     reason?: string;
+    /**
+     * The key of `reason` when the server names one, the `error.type` the answer would get: `github_link_required` when the caller must link their GitHub account before a yes (a never-self-approve policy, and a pull request whose author linked no Ostrom person; a no stays open), `self_approval_refused` when their linked GitHub account is the pull request's author. Absent for any other reason
+     */
+    reasonType?: 'github_link_required' | 'self_approval_refused';
     selfApproval?: boolean;
 };
 
