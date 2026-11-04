@@ -167,6 +167,126 @@ describe('changing the workflows', () => {
     });
   });
 
+  it('writes a check’s condition, a wait’s question and a called workflow, and refuses a bad one before sending', async () => {
+    const user = userEvent.setup();
+    visit('/workflows/new');
+    const form = await screen.findByRole('form', { name: 'A new workflow' });
+    const create = within(form).getByRole('button', { name: 'Create the workflow' });
+    await user.type(field('Name'), 'Checked release');
+    await user.type(field('Domain'), 'Mobile');
+    await user.type(field('Step 1: What it is'), 'Tests run');
+    // a check that reads the step before it
+    await user.click(within(form).getByRole('button', { name: 'Add a step' }));
+    await user.selectOptions(field('What step 2 does'), 'Check');
+    await user.type(field('Step 2: What it is'), 'Tests passed');
+    expect(within(form).getByRole('option', { name: 'Step 1 · Tests run' })).toBeInTheDocument();
+    await user.selectOptions(field('Step 2: The step it reads'), 'Step 1 · Tests run');
+    // half written: refused before sending, with what to change
+    expect(
+      within(form).getByText(
+        'A check reads outcome, output, or up to 10 keys or indexes of the output, such as output.items[0].name.',
+      ),
+    ).toBeInTheDocument();
+    // what each outcome does in a line of steps
+    expect(
+      within(form).getByText(
+        'Read true, the run goes on to the next step; read false, it fails here, with the reason.',
+      ),
+    ).toBeInTheDocument();
+    expect(create).toBeDisabled();
+    await user.type(field('Step 2: Where in its output'), '$.status');
+    expect(create).toBeDisabled();
+    await user.clear(field('Step 2: Where in its output'));
+    await user.type(field('Step 2: Where in its output'), 'output.status');
+    await user.selectOptions(field('Step 2: How it compares'), 'matches the pattern');
+    await user.type(field('Step 2: With what'), 'v{{2}');
+    expect(
+      within(form).getByText(
+        'A pattern takes no “{”, no back-reference and no look-around, in at most 200 characters.',
+      ),
+    ).toBeInTheDocument();
+    await user.clear(field('Step 2: With what'));
+    await user.type(field('Step 2: With what'), '^passed$');
+    await user.selectOptions(field('Step 2: How it compares'), 'exists');
+    expect(screen.queryByLabelText('Step 2: With what')).toBeNull();
+    // a comparison the contract does not have changes nothing
+    fireEvent.change(field('Step 2: How it compares'), { target: { value: 'contains' } });
+    expect(field('Step 2: How it compares')).toHaveValue('exists');
+    await user.selectOptions(field('Step 2: How it compares'), 'equals');
+    // a wait asks a question; none written is said
+    await user.click(within(form).getByRole('button', { name: 'Add a step' }));
+    await user.selectOptions(field('What step 3 does'), 'Waits for a person');
+    await user.type(field('Step 3: What it is'), 'QA');
+    expect(within(form).getByText('Say what each wait asks.')).toBeInTheDocument();
+    await user.type(field('Step 3: What it asks'), 'Ship it?');
+    await user.type(field('Step 3: More about the question'), 'QA looked at the build.');
+    // a workflow step runs one of the organization's workflows
+    await user.click(within(form).getByRole('button', { name: 'Add a step' }));
+    await user.selectOptions(field('What step 4 does'), 'Workflow');
+    await user.type(field('Step 4: What it is'), 'Deploy');
+    expect(within(form).getByText('Choose the workflow each workflow step runs.')).toBeInTheDocument();
+    await user.selectOptions(field('Step 4: The workflow it runs'), 'Backend changes');
+    expect(create).toBeEnabled();
+    await user.click(create);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Checked release' })).toBeInTheDocument();
+    const saved = db.workflows.find((workflow) => workflow.id === 'wf-checked-release');
+    expect(saved?.nodes.slice(1)).toEqual([
+      {
+        id: 'n-2',
+        kind: 'check',
+        label: 'Tests passed',
+        condition: { step: 'n-1', path: 'output.status', op: 'equals', value: '^passed$' },
+      },
+      { id: 'n-3', kind: 'wait', label: 'QA', wait: { title: 'Ship it?', body: 'QA looked at the build.' } },
+      { id: 'n-4', kind: 'workflow', label: 'Deploy', workflowId: 'wf-backend' },
+    ]);
+    // the check goes on when it reads true; read false, no path: the run fails there
+    expect(saved?.edges).toEqual([
+      { from: 'n-1', to: 'n-2' },
+      { from: 'n-2', to: 'n-3', on: 'true' },
+      { from: 'n-3', to: 'n-4' },
+      { from: 'n-4', to: null },
+    ]);
+  });
+
+  it('never offers a workflow that would run the one edited again, and shows one no longer listed', async () => {
+    const user = userEvent.setup();
+    const migrations = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
+    const backend = db.workflows.find((workflow) => workflow.id === 'wf-backend');
+    if (migrations === undefined || backend === undefined) throw new Error('fixtures');
+    // wf-migrations runs wf-backend, and wf-backend ran a workflow deleted since
+    db.workflows = [
+      {
+        ...migrations,
+        nodes: [
+          ...migrations.nodes,
+          { id: 'm-call', kind: 'workflow', label: 'Backend', workflowId: 'wf-backend' },
+        ],
+      },
+      {
+        ...backend,
+        nodes: [...backend.nodes, { id: 'b-call', kind: 'workflow', label: 'Gone', workflowId: 'wf-gone' }],
+      },
+    ];
+    visit('/workflows/wf-backend');
+    await user.click(await screen.findByRole('button', { name: 'Edit' }));
+    const count = backend.nodes.length + 1;
+    const gone = field(`Step ${String(count)}: The workflow it runs`);
+    expect(gone).toHaveValue('wf-gone');
+    expect(
+      within(gone)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Choose a workflow', 'wf-gone (no longer listed)']);
+    await user.selectOptions(field('What step 1 does'), 'Workflow');
+    const calls = field('Step 1: The workflow it runs');
+    expect(
+      within(calls)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['Choose a workflow']);
+  });
+
   it('gives a new workflow a name another one has its own id, and says a refusal', async () => {
     const user = userEvent.setup();
     server.use(
@@ -268,7 +388,7 @@ describe('changing the workflows', () => {
     expect(db.decisions[0]).toMatchObject({ action: 'edit' });
   });
 
-  it('turns a step into another kind with its own fields, and keeps a wait as it is', async () => {
+  it('turns a step into another kind with its own fields, and keeps a wait untouched as it is', async () => {
     const user = userEvent.setup();
     const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
     if (base === undefined) throw new Error('wf-migrations');
@@ -282,8 +402,9 @@ describe('changing the workflows', () => {
     visit('/workflows/wf-migrations');
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
     const third = screen.getByRole('listitem', { name: 'Step 3' });
-    expect(within(third).getByText('Waits for a person')).toBeInTheDocument();
-    expect(within(third).queryByRole('combobox')).toBeNull();
+    // a wait reads as its kind, with the question it asks
+    expect(field('What step 3 does')).toHaveValue('wait');
+    expect(within(third).getByLabelText('Step 3: What it asks')).toHaveValue('QA');
     await user.selectOptions(field('What step 1 does'), 'Notify');
     expect(field('Step 1: Where to tell')).toBeInTheDocument();
     expect(screen.queryByLabelText('Step 1: Who may approve')).toBeNull();
@@ -611,6 +732,7 @@ describe('changing the workflows', () => {
   });
 
   it('says a failure that is not a conflict in the server’s words alone, and ignores a kind it does not know', async () => {
+    // (a kind the contract does not have, such as `loop`, is not offered and changes nothing)
     const user = userEvent.setup();
     server.use(
       http.put('*/api/v1/workflows/:id', () =>
@@ -623,7 +745,7 @@ describe('changing the workflows', () => {
     visit('/workflows/wf-backend');
     await user.click(await screen.findByRole('button', { name: 'Edit' }));
     const kind = field('What step 1 does');
-    fireEvent.change(kind, { target: { value: 'wait' } });
+    fireEvent.change(kind, { target: { value: 'loop' } });
     expect(kind).toHaveValue('trigger');
     await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('a step has no label')).toBeInTheDocument();
