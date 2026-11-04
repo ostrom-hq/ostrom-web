@@ -913,7 +913,7 @@ export const en = {
         call: 'Choose the workflow each workflow step runs.',
         condition: {
           step: 'A check reads a step of this workflow.',
-          path: 'A check reads outcome, output, or up to 10 keys of the output, such as output.status.',
+          path: 'A check reads outcome, output, or up to 10 keys or indexes of the output, such as output.items[0].name.',
           value:
             'Say what a check compares with, in at most 200 characters, except for “exists”, which compares nothing.',
           pattern: 'A pattern takes no “{”, no back-reference and no look-around, in at most 200 characters.',

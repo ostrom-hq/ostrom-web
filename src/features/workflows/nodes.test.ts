@@ -39,8 +39,17 @@ describe('the condition of a check', () => {
   it('takes a condition on a step of the workflow, a path of its visit and what to compare', () => {
     expect(conditionProblem(condition({}), nodes)).toBeUndefined();
     expect(conditionProblem(condition({ step: 'deploy' }), nodes)).toBeUndefined();
-    for (const path of ['outcome', 'output', 'output.a-b.c_D9', `output.${key}`, `output${'.k'.repeat(10)}`])
-      expect(conditionProblem(condition({ path }), nodes), path).toBeUndefined();
+    const paths = [
+      'outcome',
+      'output',
+      'output.a-b.c_D9',
+      'output.items[0].name',
+      'output[9999]',
+      `output.${key}`,
+      `output${'.k'.repeat(10)}`,
+      `output${'[0]'.repeat(10)}`,
+    ];
+    for (const path of paths) expect(conditionProblem(condition({ path }), nodes), path).toBeUndefined();
     expect(conditionProblem(condition({ op: 'notEquals', value: '' }), nodes)).toBeUndefined();
     expect(conditionProblem(bare({ op: 'exists' }), nodes)).toBeUndefined();
     expect(conditionProblem(condition({ op: 'matches', value: '^v[0-9]+$' }), nodes)).toBeUndefined();
@@ -51,7 +60,7 @@ describe('the condition of a check', () => {
     expect(conditionProblem(condition({ step: 'gone' }), nodes)).toBe('step');
   });
 
-  it('refuses a path out of its form: outcome, output, or up to 10 keys of the output, 200 characters in all', () => {
+  it('refuses a path out of its form: outcome, output, or up to 10 keys or indexes of the output, 200 characters in all', () => {
     const paths = [
       '',
       'result.status',
@@ -59,11 +68,15 @@ describe('the condition of a check', () => {
       'outcome.a',
       'output.',
       'output..a',
-      'output.a[0]',
       'output.a b',
+      'output[]',
+      'output[-1]',
+      'output[10000]',
+      'output.a[x]',
       '$.output',
       `output.${key}k`,
       `output${'.k'.repeat(11)}`,
+      `output${'[0]'.repeat(11)}`,
       `output.${key}.${key}.${key}`,
     ];
     for (const path of paths) expect(conditionProblem(condition({ path }), nodes), path).toBe('path');

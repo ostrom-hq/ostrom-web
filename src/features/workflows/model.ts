@@ -274,9 +274,9 @@ export function conditionOf(step: StepDraft): NodeCondition | undefined {
  * A check with a condition goes on by its paths `on: "true"` and `on: "false"` (core#127): in a line, the editor draws
  * them; in a workflow that branches, the paths are the workflow's own, and each one out of the check says one of them.
  */
-function branchesSaid(step: StepDraft, base: Workflow | undefined): boolean {
+function branchesSaid(step: StepDraft, base: Workflow | undefined, some = false): boolean {
   const out = base?.edges.filter((edge) => edge.from === step.id) ?? [];
-  return out.every((edge) => edge.on === 'true' || edge.on === 'false');
+  return (!some || out.length > 0) && out.every((edge) => edge.on === 'true' || edge.on === 'false');
 }
 
 export function workflowProblem(draft: WorkflowDraft, base?: Workflow): WorkflowProblem | undefined {
@@ -286,10 +286,11 @@ export function workflowProblem(draft: WorkflowDraft, base?: Workflow): Workflow
   if (draft.steps.some((step) => step.label.trim() === '')) return 'label';
   if (draft.steps.some((step) => step.kind === 'wait' && step.question.trim() === '')) return 'question';
   if (draft.steps.some((step) => step.kind === 'workflow' && step.calls === '')) return 'call';
-  for (const [at, step] of draft.steps.entries()) {
+  // a check reads any node of the workflow, one after it included (core#127)
+  const nodes = draft.steps.map((one) => one.id);
+  for (const step of draft.steps) {
     const condition = conditionOf(step);
-    const earlier = draft.steps.slice(0, at).map((before) => before.id);
-    const problem = condition === undefined ? undefined : conditionProblem(condition, earlier);
+    const problem = condition === undefined ? undefined : conditionProblem(condition, nodes);
     if (problem !== undefined) return `condition.${problem}`;
     if (condition !== undefined && !draft.linear && !branchesSaid(step, base)) return 'condition.branches';
   }
@@ -406,26 +407,34 @@ export function nodeOf(step: StepDraft): EditedNode {
  * goes to the same step); the workflow's own paths, untouched, for one that branches.
  */
 export function edgesOf(draft: WorkflowDraft, base: Workflow | undefined): WorkflowEdge[] {
+  if (base !== undefined && !draft.linear) return base.edges;
+  const conditioned = (step: StepDraft): boolean => conditionOf(step) !== undefined;
   if (
     base !== undefined &&
-    (!draft.linear ||
-      sameValue(
-        draft.steps.map((step) => step.id),
-        readSteps(base).map((step) => step.node.id),
-      ))
+    sameValue(
+      draft.steps.map((step) => step.id),
+      readSteps(base).map((step) => step.node.id),
+    ) &&
+    draft.steps.every((step) => !conditioned(step) || branchesSaid(step, base, true))
   )
     return base.edges;
-  // The last step ends the way the workflow wrote it: by a path to nowhere, or by no path at all.
+  // The last step ends the way the workflow wrote it: by a path to nowhere, or by no path at all; a conditioned
+  // check last ends on true, since a check with a condition goes on only by a path that says its outcome.
   const endsByPath = base === undefined || base.edges.some((edge) => edge.to === null);
-  const steps = endsByPath ? draft.steps : draft.steps.slice(0, -1);
+  const last = draft.steps[draft.steps.length - 1];
+  const steps =
+    endsByPath || (last !== undefined && conditioned(last)) ? draft.steps : draft.steps.slice(0, -1);
   return steps.map((step, at) => {
     const to = draft.steps[at + 1]?.id ?? null;
     const before = base?.edges.find((edge) => edge.from === step.id && edge.to === to);
+    // read true, a conditioned check goes on (a path that already says true or false keeps it); read false with no
+    // path, the run fails there, with the reason (core#127)
+    const on = conditioned(step) ? (before?.on === 'false' ? 'false' : 'true') : before?.on;
     return {
       from: step.id,
       to,
       ...(before?.label === undefined ? {} : { label: before.label }),
-      ...(before?.on === undefined ? {} : { on: before.on }),
+      ...(on === undefined ? {} : { on }),
     };
   });
 }

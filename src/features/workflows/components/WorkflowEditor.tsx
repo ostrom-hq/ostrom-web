@@ -4,6 +4,7 @@ import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import {
+  conditionOf,
   EDITABLE_KINDS,
   moveStep,
   newStep,
@@ -33,19 +34,23 @@ type TextKey =
   | 'conditionValue';
 
 /**
- * A check's condition, typed (decision of 03/11): the step it reads among those before it, a path in its output, how
- * it compares and with what. No expression is written here; what the server would refuse is said before sending.
+ * A check's condition, typed (core#127): the step it reads among the workflow's others, what it reads of that step's
+ * visit, how it compares and with what. No expression is written here; what the server would refuse is said before
+ * sending. In a line, the editor draws its way on: read true, the next step; read false, the run fails there.
  */
 function ConditionFields({
   step,
   number,
-  earlier,
+  steps,
+  linear,
   field,
   onChange,
 }: {
   readonly step: StepDraft;
   readonly number: number;
-  readonly earlier: readonly StepDraft[];
+  /** The workflow's steps, any of which but this one a check may read. */
+  readonly steps: readonly StepDraft[];
+  readonly linear: boolean;
   readonly field: (key: TextKey, mono?: boolean) => ReactElement;
   readonly onChange: (next: Partial<StepDraft>) => void;
 }): ReactElement {
@@ -67,11 +72,13 @@ function ConditionFields({
           }}
         >
           <option value="">{t('workflows.edit.conditionStepNone')}</option>
-          {earlier.map((before, at) => (
-            <option key={before.key} value={before.id}>
-              {t('workflows.edit.conditionStepOption', { number: at + 1, label: before.label })}
-            </option>
-          ))}
+          {steps.map((other, at) =>
+            other.key === step.key ? null : (
+              <option key={other.key} value={other.id}>
+                {t('workflows.edit.conditionStepOption', { number: at + 1, label: other.label })}
+              </option>
+            ),
+          )}
         </select>
       </span>
       {field('conditionPath', true)}
@@ -97,6 +104,9 @@ function ConditionFields({
         </select>
       </span>
       {step.conditionOp === 'exists' ? null : field('conditionValue', step.conditionOp === 'matches')}
+      {linear && conditionOf(step) !== undefined ? (
+        <p className="o-screen__lead">{t('workflows.edit.conditionOutcome')}</p>
+      ) : null}
     </fieldset>
   );
 }
@@ -156,14 +166,16 @@ function CallPicker({
 function StepFields({
   step,
   number,
-  earlier,
+  steps,
+  linear,
   self,
   onChange,
 }: {
   readonly step: StepDraft;
   readonly number: number;
-  /** The steps before this one, which a check may read. */
-  readonly earlier: readonly StepDraft[];
+  /** The workflow's steps, which a check may read. */
+  readonly steps: readonly StepDraft[];
+  readonly linear: boolean;
   /** The workflow edited, which a `workflow` step never runs. */
   readonly self: string | undefined;
   readonly onChange: (next: Partial<StepDraft>) => void;
@@ -217,7 +229,14 @@ function StepFields({
       ) : null}
       {step.kind === 'agent' ? field('instructions') : null}
       {step.kind === 'check' ? (
-        <ConditionFields step={step} number={number} earlier={earlier} field={field} onChange={onChange} />
+        <ConditionFields
+          step={step}
+          number={number}
+          steps={steps}
+          linear={linear}
+          field={field}
+          onChange={onChange}
+        />
       ) : null}
       {step.kind === 'wait' ? (
         <>
@@ -237,7 +256,7 @@ function StepCard({
   number,
   count,
   linear,
-  earlier,
+  steps,
   self,
   onChange,
   onMove,
@@ -247,7 +266,7 @@ function StepCard({
   readonly number: number;
   readonly count: number;
   readonly linear: boolean;
-  readonly earlier: readonly StepDraft[];
+  readonly steps: readonly StepDraft[];
   readonly self: string | undefined;
   readonly onChange: (next: Partial<StepDraft>) => void;
   readonly onMove: (by: -1 | 1) => void;
@@ -306,7 +325,7 @@ function StepCard({
           </span>
         ) : null}
       </div>
-      <StepFields step={step} number={number} earlier={earlier} self={self} onChange={onChange} />
+      <StepFields step={step} number={number} steps={steps} linear={linear} self={self} onChange={onChange} />
     </li>
   );
 }
@@ -384,7 +403,7 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
   const { t } = useTranslation();
   const [draft, setDraft] = useState<WorkflowDraft>(() => workflowDraftOf(workflow));
   const ids = { name: useId(), domain: useId(), description: useId() };
-  const problem = workflowProblem(draft);
+  const problem = workflowProblem(draft, workflow);
   const setStep = (key: number, next: Partial<StepDraft>): void => {
     setDraft((current) => ({
       ...current,
@@ -462,7 +481,7 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
             number={at + 1}
             count={draft.steps.length}
             linear={draft.linear}
-            earlier={draft.steps.slice(0, at)}
+            steps={draft.steps}
             self={workflow?.id}
             onChange={(next) => {
               setStep(step.key, next);

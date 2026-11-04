@@ -277,6 +277,8 @@ describe('the workflow editor’s model', () => {
     expect(workflowProblem(conditioned, said)).toBeUndefined();
     // without a condition, its paths are its own
     expect(workflowProblem(draft, branching)).toBeUndefined();
+    // without the workflow it was read from, there is no path out to check
+    expect(workflowProblem(conditioned)).toBeUndefined();
   });
 
   it('sends a conditioned check on when it reads true; read false, the run fails there, with its reason', () => {
@@ -304,6 +306,23 @@ describe('the workflow editor’s model', () => {
     ]);
     // a line read untouched goes back as it was read
     expect(edgesOf(draft, line)).toBe(line.edges);
+    // a path that already says false keeps it: read false, that check goes on
+    const onFalse = {
+      ...line,
+      edges: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'c', on: 'false' },
+      ],
+    };
+    const both = {
+      ...workflowDraftOf(onFalse),
+      steps: workflowDraftOf(onFalse).steps.map((one) => (one.id === 'a' ? one : { ...one, ...reads })),
+    };
+    expect(edgesOf(both, onFalse)).toEqual([
+      { from: 'a', to: 'b' },
+      { from: 'b', to: 'c', on: 'false' },
+      { from: 'c', to: null, on: 'true' },
+    ]);
   });
 
   it('reads a check’s condition from its fields, with a value except for exists', () => {

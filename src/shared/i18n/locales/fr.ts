@@ -934,7 +934,7 @@ export const fr = {
         call: 'Choisis le workflow que lance chaque étape workflow.',
         condition: {
           step: 'Un contrôle lit une étape de ce workflow.',
-          path: 'Un contrôle lit outcome, output ou jusqu’à 10 clés de la sortie, comme output.status.',
+          path: 'Un contrôle lit outcome, output ou jusqu’à 10 clés ou index de la sortie, comme output.items[0].name.',
           value:
             'Dis avec quoi un contrôle compare, en 200 caractères au plus, sauf pour « existe », qui ne compare rien.',
           pattern:

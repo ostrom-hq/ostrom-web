@@ -184,7 +184,7 @@ describe('changing the workflows', () => {
     // half written: refused before sending, with what to change
     expect(
       within(form).getByText(
-        'A check reads outcome, output, or up to 10 keys of the output, such as output.status.',
+        'A check reads outcome, output, or up to 10 keys or indexes of the output, such as output.items[0].name.',
       ),
     ).toBeInTheDocument();
     // what each outcome does in a line of steps
