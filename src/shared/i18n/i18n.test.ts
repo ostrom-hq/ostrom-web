@@ -84,6 +84,82 @@ describe('loading only the language shown', () => {
   });
 });
 
+describe("the first screen's own wording", () => {
+  type Wordings = Parameters<typeof wordingBackend>[0];
+  type First = Parameters<typeof wordingBackend>[1];
+
+  /** An i18next started on these wordings, as the console starts, the whole language merged into it. */
+  async function started(wordings: Wordings, first: First): Promise<typeof i18next> {
+    const instance = i18next.createInstance();
+    await instance
+      .use(
+        wordingBackend(wordings, first, (language, wording) => {
+          instance.addResourceBundle(language, 'translation', wording, true, true);
+        }),
+      )
+      .init({ lng: 'en', fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
+    return instance;
+  }
+
+  it('is shown first, and the whole language merged in after it', async () => {
+    let wholeAsked = 0;
+    let arrive: (wording: typeof en) => void = () => undefined;
+    const coming = new Promise<typeof en>((resolve) => {
+      arrive = resolve;
+    });
+    const instance = await started(
+      {
+        en: async () => {
+          wholeAsked += 1;
+          return coming;
+        },
+        fr: async () => Promise.resolve(fr),
+      },
+      async () => Promise.resolve({ app: { loading: 'First' } }),
+    );
+    expect(instance.t('app.loading')).toBe('First');
+    expect(instance.exists('app.nav.home')).toBe(false);
+    expect(wholeAsked).toBe(1);
+    arrive(en);
+    await vi.waitFor(() => {
+      expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
+    });
+    expect(instance.t('app.loading')).toBe(en.app.loading);
+  });
+
+  it('keeps the first screen on its words when the whole language does not come', async () => {
+    const instance = await started(
+      { en: async () => Promise.reject(new Error('offline')), fr: async () => Promise.resolve(fr) },
+      async () => Promise.resolve({ app: { loading: 'First' } }),
+    );
+    await Promise.resolve();
+    expect(instance.t('app.loading')).toBe('First');
+  });
+
+  it("merges the whole language into the console's i18next by default", async () => {
+    const backend = wordingBackend(
+      { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
+      async () => Promise.resolve({ app: { loading: 'First' } }),
+    );
+    const [error, wording] = await read(backend, 'fr');
+    expect(error).toBeNull();
+    expect(wording).toEqual({ app: { loading: 'First' } });
+    await vi.waitFor(() => {
+      expect(i18n.getResource('fr', 'translation', 'app.nav.home')).toBe(fr.app.nav.home);
+    });
+  });
+
+  it('gives way to the whole language when it did not come, or was not fetched', async () => {
+    for (const first of [async () => Promise.resolve(undefined), () => undefined]) {
+      const instance = await started(
+        { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
+        first,
+      );
+      expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
+    }
+  });
+});
+
 /** The browser's languages, as the person sets them. */
 function browserLanguages(languages: readonly string[]): void {
   Object.defineProperty(navigator, 'languages', { configurable: true, value: languages });

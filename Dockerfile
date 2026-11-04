@@ -7,11 +7,11 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY . .
-# Scripts, styles and SVG images compressed once, at build (nginx's gzip_static serves them), never at each request:
+# Scripts, styles, SVG images and the screens' wording (JSON) compressed once, at build (nginx's gzip_static serves them), never at each request:
 # no name nor date in the .gz (-n), so one commit gives one image. A failed gzip fails the build (`-exec … +` passes
 # the shell's exit on), each .gz is tested whole, and one no smaller than its file is dropped: the file goes as it is.
 RUN pnpm build && find dist -name '*.map' -delete \
- && find dist/assets -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' \) \
+ && find dist/assets -type f \( -name '*.js' -o -name '*.css' -o -name '*.svg' -o -name '*.json' \) \
       -exec sh -c 'for f; do gzip -9 -n -c "$f" > "$f.gz" && gzip -t "$f.gz" || exit 1; [ "$(wc -c < "$f.gz")" -lt "$(wc -c < "$f")" ] || rm "$f.gz" || exit 1; done' _ {} +
 
 FROM nginxinc/nginx-unprivileged:1.29-alpine
