@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { z } from 'zod';
 import { checkRouteBudgets, type MeasuredRoute } from '../src/shared/build/routeBudget.ts';
+import { routesOf } from '../src/shared/build/routes.ts';
 
 const zManifest = z.record(
   z.string(),
@@ -47,35 +48,44 @@ function filesOf(manifest: Manifest, key: string, seen = new Set<string>()): Set
   return seen;
 }
 
-/** The routes whose screens are in the first download on purpose (src/app/router.ts says why): nothing of their own. */
-const IN_FIRST_DOWNLOAD = new Set(['/yes', '/yes/$approvalId']);
-
-/**
- * Each route of the router with the feature its screen loads from. Every route loads its screen lazily: one that does
- * not would put its screen back in the first download, so it fails here, as does a route this reading cannot follow.
- */
-function routesOf(router: string): { path: string; feature: string | undefined }[] {
-  // Each `path:` up to the next one is a route's definition, its screen's lazy import in it.
-  return router
-    .split(/(?=path: ['"`])/)
-    .slice(1)
-    .map((definition) => {
-      const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
-      const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
-      if (path !== undefined && feature === undefined && IN_FIRST_DOWNLOAD.has(path))
-        return { path, feature: undefined };
-      if (path === undefined || feature === undefined) {
-        throw new Error(`src/app/router.ts: a route without a lazy screen: ${definition.slice(0, 120)}`);
-      }
-      return { path, feature };
-    });
-}
-
 /** The manifest key of a feature's index, whatever its extension. */
 function indexOf(manifest: Manifest, feature: string): string {
   const key = Object.keys(manifest).find((name) => name.startsWith(`src/features/${feature}/index.`));
   if (key === undefined) throw new Error(`manifest: no chunk for the feature ${feature}`);
   return key;
+}
+
+const zModules = z.record(z.string(), z.array(z.object({ id: z.string(), bytes: z.number() })));
+
+/** A module's package (`npm:react-dom`) or its place in the repository (`src/features/approvals`). */
+function groupOf(id: string): string {
+  if (id.startsWith('npm:')) {
+    const [scope = '', name = ''] = id.slice(4).split('/');
+    return scope.startsWith('@') ? `npm:${scope}/${name}` : `npm:${scope}`;
+  }
+  return id.split('/').slice(0, 3).join('/');
+}
+
+/**
+ * The heaviest packages and folders of the first download, before compression, from `.vite/modules.json`
+ * (vite.config.ts, `reportModules`): what a smaller first download would have to leave out.
+ */
+function heaviestOf(dist: string, entry: ReadonlySet<string>): string[] {
+  const modules = zModules.parse(JSON.parse(readFileSync(join(dist, '.vite', 'modules.json'), 'utf8')));
+  const bytes = new Map<string, number>();
+  for (const [file, parts] of Object.entries(modules)) {
+    if (!entry.has(file)) continue;
+    for (const { id, bytes: size } of parts) bytes.set(groupOf(id), (bytes.get(groupOf(id)) ?? 0) + size);
+  }
+  const heaviest = [...bytes].toSorted((a, b) => b[1] - a[1]).slice(0, 15);
+  return [
+    '',
+    '**The first download, heaviest first** (KiB before compression):',
+    '',
+    '| Package or folder | KiB |',
+    '|---|---:|',
+    ...heaviest.map(([group, size]) => `| \`${group}\` | ${(size / 1024).toFixed(1)} |`),
+  ];
 }
 
 function main(dist: string): void {
@@ -116,7 +126,9 @@ function main(dist: string): void {
     `|---|---:|---:|---:|---:|`,
   ];
   const over: string[] = [];
-  rows.push(`| (first download) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
+  // Its files too: on a slow link each one is a request of its own, sharing the bandwidth with the others.
+  const files = `${String(entry.size)} files`;
+  rows.push(`| (first download, ${files}) | | | ${entryKiB.toFixed(1)} | ${String(budget.entryKiB)} |`);
   if (entryKiB > budget.entryKiB) over.push(`the first download: ${entryKiB.toFixed(1)} KiB`);
   const measured: MeasuredRoute[] = [];
   for (const route of routesOf(readFileSync('src/app/router.ts', 'utf8'))) {
@@ -137,7 +149,18 @@ function main(dist: string): void {
   const routes = checkRouteBudgets(measured, budget.routes);
   over.push(...routes.over);
 
-  const table = rows.join('\n');
+  // zod's configuration must stay, and in the first download: without jitless, zod's eval probe breaks the CSP
+  // (src/shared/lib/zodConfig.ts). The build takes `z.…` calls for pure (vite.config.ts), so a slip drops it.
+  if (
+    ![...entry].some(
+      (file) => file.endsWith('.js') && /jitless:\s*(?:true|!0)/.test(readFileSync(join(dist, file), 'utf8')),
+    )
+  ) {
+    console.error(`zod's configuration (jitless) is not in the first download: src/shared/lib/zodConfig.ts`);
+    process.exitCode = 1;
+  }
+
+  const table = [rows.join('\n'), ...heaviestOf(dist, entry)].join('\n');
   process.stdout.write(`${table}\n`);
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, `### Download per route\n\n${table}\n`);
