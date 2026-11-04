@@ -223,6 +223,30 @@ describe('mock members of an organization', () => {
     expect(await raw('GET', `/orgs/${org}/members?limit=1001`, '')).toBe(400);
     expect(await raw('GET', `/orgs/${org}/members?after=lena`, '')).toBe(400);
   });
+
+  it('finds the members whose login or name starts with `q`, whatever the case, a page at a time', async () => {
+    const found = async (q: string, limit?: number, after?: string) =>
+      (
+        await listOrgMembers({
+          path: { org },
+          query: { q, ...(limit === undefined ? {} : { limit }), ...(after === undefined ? {} : { after }) },
+          throwOnError: true,
+        })
+      ).data;
+    db.orgMembers[ACME] = (db.orgMembers[ACME] ?? []).map((member) =>
+      member.login === 'theo' ? { ...member, name: 'Sara Abel' } : member,
+    );
+    // samir by his login, theo by his name; `abel` starts neither.
+    expect((await found('SA')).items.map((member) => member.login)).toEqual(['samir', 'theo']);
+    expect((await found('sara')).items.map((member) => member.login)).toEqual(['theo']);
+    expect((await found('abel')).items).toEqual([]);
+    // Paged after the filter.
+    const first = await found('sa', 1);
+    expect(first.items.map((member) => member.login)).toEqual(['samir']);
+    expect(await found('sa', 1, first.next)).toEqual({ items: [expect.objectContaining({ login: 'theo' })] });
+    expect(await raw('GET', `/orgs/${org}/members?q=`, '')).toBe(400);
+    expect(await raw('GET', `/orgs/${org}/members?q=${'a'.repeat(101)}`, '')).toBe(400);
+  });
 });
 
 describe('mock invitations', () => {
