@@ -1,5 +1,6 @@
 import i18n, { type BackendModule, type i18n as I18n } from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { takeFirstWording, type Wording } from '@/shared/i18n/firstWording';
 import { type Language, LANGUAGES, type LocaleShape } from '@/shared/i18n/types';
 
 export function pickLanguage(candidates: readonly string[]): Language {
@@ -24,8 +25,30 @@ const WORDINGS: Wordings = {
   fr: async () => (await import('@/shared/i18n/locales/fr')).fr,
 };
 
-/** Hands i18next a language's wording when it needs it: at start, and when the person picks another language. */
-export function wordingBackend(wordings: Wordings = WORDINGS): BackendModule {
+/** The first screen's wording `/boot.js` fetched for a language, if any (src/shared/i18n/firstWording.ts). */
+type FirstWording = (language: Language) => Promise<Wording | undefined> | undefined;
+
+/** Adds a language's whole wording to what i18next already has of it. */
+type MergeWording = (language: Language, wording: LocaleShape) => void;
+
+/** Into the console's i18next, over the first screen's own words (react-i18next renders again on `added`). */
+const mergeIntoConsole: MergeWording = (language, wording) => {
+  i18n.addResourceBundle(language, 'translation', wording, true, true);
+};
+
+/**
+ * Hands i18next a language's wording when it needs it: at start, and when the person picks another language.
+ *
+ * At start, the first screen's own wording, if `/boot.js` fetched it: only the sections that screen shows, a few KB
+ * where the whole language is some twenty, and so the first paint comes sooner on a slow network. The whole
+ * language follows once that is handed over, merged in (react-i18next renders again on `added`), for every other
+ * screen. Without it, or if it did not come, the whole language at once, as before.
+ */
+export function wordingBackend(
+  wordings: Wordings = WORDINGS,
+  first: FirstWording = takeFirstWording,
+  merge: MergeWording = mergeIntoConsole,
+): BackendModule {
   return {
     type: 'backend',
     init: () => undefined,
@@ -35,15 +58,35 @@ export function wordingBackend(wordings: Wordings = WORDINGS): BackendModule {
         callback(new Error(`no wording for the language ${language}`), false);
         return;
       }
-      wordings[known]().then(
-        (wording) => {
-          callback(null, wording);
-        },
-        // `true`: a chunk that did not come (a network drop) is asked again, a few times, before giving up.
-        (error: unknown) => {
-          callback(new Error(`the wording of ${known} did not load`, { cause: error }), true);
-        },
-      );
+      const whole = async (): Promise<void> =>
+        wordings[known]().then(
+          (wording) => {
+            callback(null, wording);
+          },
+          // `true`: a chunk that did not come (a network drop) is asked again, a few times, before giving up.
+          (error: unknown) => {
+            callback(new Error(`the wording of ${known} did not load`, { cause: error }), true);
+          },
+        );
+      const early = first(known);
+      if (early === undefined) {
+        void whole();
+        return;
+      }
+      void early.then(async (wording) => {
+        if (wording === undefined) {
+          await whole();
+          return;
+        }
+        callback(null, wording);
+        await wordings[known]().then(
+          (all) => {
+            merge(known, all);
+          },
+          // The first screen keeps its words; another screen opened without network could not load either.
+          () => undefined,
+        );
+      });
     },
   };
 }
@@ -101,6 +144,8 @@ export const i18nReady: Promise<void> = i18n
     // A chunk that did not come is asked twice more, 350 ms then 700 ms later, before English takes over: about a
     // second, not the eleven of i18next's five tries.
     maxRetries: 2,
+    // The whole language merged in after the first screen's own wording (wordingBackend): the screens show it.
+    react: { bindI18nStore: 'added' },
   })
   .then(async () => englishIfMissing())
   .then(() => {
