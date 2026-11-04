@@ -3,13 +3,13 @@ import type { Session } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-import { formatAbsolute, formatRelative } from '@/shared/lib/time';
+import { formatAbsolute, formatDuration, formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadState, Screen } from '@/shared/ui/Screen';
 import { StateBadge } from '../components/StateBadge';
-import { formatDuration, sessionState } from '../model';
+import { sessionState } from '../model';
 import { useSessionList } from '../useSessions';
 
 export function SessionsScreen(): ReactElement {

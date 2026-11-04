@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { formatAbsolute, formatRelative } from '@/shared/lib/time';
+import { formatAbsolute, formatDuration, formatRelative } from '@/shared/lib/time';
 
 const now = new Date('2026-10-30T08:00:00.000Z');
 
@@ -35,5 +35,17 @@ describe('formatAbsolute', () => {
 
   it('rolls 59.6 s over to the next unit', () => {
     expect(formatRelative('2026-10-30T08:00:59.600Z', now, 'en')).toBe('in 1 min.');
+  });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    ['2026-10-30T08:00:00Z', '2026-10-30T08:00:30Z', '0 min'],
+    ['2026-10-30T08:00:00Z', '2026-10-30T08:45:00Z', '45 min'],
+    ['2026-10-30T08:00:00Z', '2026-10-30T10:00:00Z', '2 hr'],
+    ['2026-10-30T08:00:00Z', '2026-10-30T10:29:00Z', '2 hr 29 min'],
+    ['2026-10-30T08:00:00Z', '2026-10-30T07:00:00Z', '0 min'],
+  ])('from %s to %s is %s', (from, to, text) => {
+    expect(formatDuration(from, to, 'en')).toBe(text);
   });
 });

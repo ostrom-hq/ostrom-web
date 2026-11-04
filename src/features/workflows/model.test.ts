@@ -16,6 +16,7 @@ import {
   repoPattern,
   reposOf,
   reposText,
+  runSource,
   type StepDraft,
   toggleRepo,
   workflowDraftOf,
@@ -431,5 +432,11 @@ describe('the workflow editor’s model', () => {
     expect(repoChoices([], [])).toEqual([]);
     expect(toggleRepo(['*/api'], '*/web')).toEqual(['*/api', '*/web']);
     expect(toggleRepo(['*/api', '*/web'], '*/api')).toEqual(['*/web']);
+  });
+});
+
+describe('runSource', () => {
+  it('names the sources it knows, and keeps any other as the server wrote it', () => {
+    expect(['manual', 'automation', 'webhook'].map(runSource)).toEqual(['manual', 'automation', 'other']);
   });
 });

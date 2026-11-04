@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type {
   NodeRun,
+  RunStatus,
   Workflow,
   WorkflowEdge,
   WorkflowNode,
@@ -15,6 +16,26 @@ export const STATUS_TONES: Readonly<Record<WorkflowStatus, BadgeTone>> = {
   accepted: 'success',
   edited: 'success',
 };
+
+/** A run under way is the signal colour, one waiting for a person amber, one that failed red. */
+export const RUN_TONES: Readonly<Record<RunStatus, BadgeTone>> = {
+  queued: 'neutral',
+  running: 'signal',
+  waiting: 'warning',
+  succeeded: 'success',
+  failed: 'danger',
+  cancelled: 'neutral',
+};
+
+/**
+ * Where a run came from, as the console says it: started by hand (`manual`, the server's word for a person's start),
+ * by an automation, or the server's word for any other.
+ */
+export type RunSource = 'manual' | 'automation' | 'other';
+
+export function runSource(source: string): RunSource {
+  return source === 'manual' || source === 'automation' ? source : 'other';
+}
 
 export interface Step {
   readonly node: WorkflowNode;
