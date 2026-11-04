@@ -8,13 +8,16 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { ApprovalCard } from '../components/ApprovalCard';
 import { DecidedLine } from '../components/DecidedLine';
 import { FailureBanner } from '../components/FailureBanner';
+import { GithubLinkNotice } from '../components/GithubLinkNotice';
 import { SignInNotice } from '../components/SignInNotice';
 import { SignOutNotice } from '../components/SignOutNotice';
 import { useApprovalsQueue } from '../useYes';
 
 export function YesQueueScreen(): ReactElement {
   const { t } = useTranslation();
-  const { waiting, more, decided, failure, fresh } = useApprovalsQueue();
+  const { waiting, more, decided, failure, fresh, linkRequired } = useApprovalsQueue();
+  // Counted on the list shown, so the notice never names a request the page does not.
+  const held = (waiting ?? []).filter((approval) => linkRequired.has(approval.id)).length;
   const viewer = useViewer();
   const now = useNow();
   return (
@@ -39,6 +42,7 @@ export function YesQueueScreen(): ReactElement {
               ? t('yes.queue.waitingMore', { count: waiting.length })
               : t('yes.queue.waiting', { count: waiting.length })}
           </h2>
+          {held === 0 ? null : <GithubLinkNotice count={held} />}
           {waiting.length === 0 ? (
             <div className="o-card ys-empty">
               <p className="ys-empty__title">{t('yes.queue.emptyTitle')}</p>
@@ -52,6 +56,7 @@ export function YesQueueScreen(): ReactElement {
                     approval={approval}
                     viewer={viewer.login}
                     fresh={fresh.has(approval.id)}
+                    linkRequired={linkRequired.has(approval.id)}
                     now={now}
                   />
                 </li>

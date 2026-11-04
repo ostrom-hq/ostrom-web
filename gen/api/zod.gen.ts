@@ -120,6 +120,7 @@ export const zApprovalCallerView = z.object({
     self: z.boolean(),
     canApprove: z.boolean(),
     reason: z.string().optional(),
+    reasonType: z.enum(['github_link_required', 'self_approval_refused']).optional(),
     selfApproval: z.boolean().optional()
 });
 

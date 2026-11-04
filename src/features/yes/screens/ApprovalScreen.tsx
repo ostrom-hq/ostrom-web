@@ -17,7 +17,7 @@ import { DecisionCard } from '../components/DecisionCard';
 import { FailureBanner } from '../components/FailureBanner';
 import { SignInNotice } from '../components/SignInNotice';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
-import { type AnswerViewModel, useAnswerApproval, useShownApproval } from '../useYes';
+import { type AnswerViewModel, useAnswerApproval, useGithubLinkRequired, useShownApproval } from '../useYes';
 
 const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   'waiting-you': 'signal',
@@ -45,6 +45,7 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
   const answer = useAnswerApproval(approvalId);
   // The server refused the answer because the request changed: the page shows the new version at once.
   const { approval, failure, newer, readNewer } = useShownApproval(approvalId, answer.changed);
+  const linkRequired = useGithubLinkRequired(approvalId);
   const viewer = useViewer();
   const navigate = useNavigate();
   const shown = approval?.id;
@@ -74,7 +75,7 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
           <Skeleton rows={2} />
         ) : null
       ) : (
-        <ApprovalDetail approval={approval} viewer={viewer} answer={answer} />
+        <ApprovalDetail approval={approval} viewer={viewer} answer={answer} linkRequired={linkRequired} />
       )}
     </div>
   );
@@ -84,10 +85,11 @@ interface ApprovalDetailProps {
   readonly approval: Approval;
   readonly viewer: Viewer;
   readonly answer: AnswerViewModel;
+  readonly linkRequired: boolean;
 }
 
 /** The proof in a fixed order, before any button: action, changes, checks, who, why, technical details. */
-function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): ReactElement {
+function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const tone = approvalTone(approval, viewer.login);
   // Details when the server has them; an empty list of details still shows the bare commits.
@@ -240,7 +242,13 @@ function ApprovalDetail({ approval, viewer, answer }: ApprovalDetailProps): Reac
       </details>
 
       {approval.status === 'pending' ? (
-        <DecisionBar approval={approval} viewer={viewer.login} viewerName={viewer.name} answer={answer} />
+        <DecisionBar
+          approval={approval}
+          viewer={viewer.login}
+          viewerName={viewer.name}
+          answer={answer}
+          linkRequired={linkRequired}
+        />
       ) : (
         <DecisionCard approval={approval} receipt={answer.receipt} comment={answer.comment} />
       )}
