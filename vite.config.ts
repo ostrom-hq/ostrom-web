@@ -292,7 +292,10 @@ function preloadBoot(): Plugin {
             styles: styles.map((file) => `${base}${file}`),
             // What the first download and the screen's own chunks name: all its first paint can show.
             wordings: wordingsOf([...entry, ...own]),
-            calls: SIGNED_OUT.has(route.path) ? [] : [...FIRST_READS, ...(SCREEN_READS[route.path] ?? [])],
+            // The screen's own reads first: on a slow link the six connections are taken, and the reads asked last wait
+            // for one to come free. Who is signed in and their organizations show in the top bar, not in the screen's
+            // first paint (its organization is `/orgs`, src/shared/org/useCurrentOrg.ts): they can wait their turn.
+            calls: SIGNED_OUT.has(route.path) ? [] : [...(SCREEN_READS[route.path] ?? []), ...FIRST_READS],
           };
         },
       );
