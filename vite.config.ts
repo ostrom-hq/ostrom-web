@@ -397,7 +397,7 @@ export default defineConfig({
             // stays in its own chunk.
             {
               name: (id, graph) =>
-                id.startsWith(GENERATED_PART) ? null : bootChunkOf(id, graph, initialModules),
+                bootChunkOf(id, graph, initialModules, (module) => module.startsWith(GENERATED_PART)),
             },
           ],
         },

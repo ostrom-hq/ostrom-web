@@ -83,4 +83,26 @@ describe('bootChunkOf', () => {
     expect(bootChunkOf('/w/src/features/x.ts', graph, known)).toBe('boot');
     expect(asked).toEqual(['/w/src/features/y.ts', '/w/src/features/x.ts', MAIN]);
   });
+
+  it('puts a small part two features use in the boot chunk, and leaves one a single feature uses to it', () => {
+    const part = (name: string): string => `\0part#${name}`;
+    const graph = graphOf({
+      [MAIN]: [],
+      '/w/src/features/rules/useRules.ts': [],
+      '/w/src/features/spend/useSpend.ts': [],
+      // A part reached through another part, and a cycle between two parts on the way.
+      [part('listRules')]: ['/w/src/features/rules/useRules.ts', part('listRulesOptions')],
+      [part('listRulesOptions')]: [part('listRules'), '/w/src/features/spend/useSpend.ts'],
+      [part('getSpend')]: ['/w/src/features/spend/useSpend.ts', part('gone')],
+      '/w/node_modules/chart/index.js': [
+        '/w/src/features/rules/useRules.ts',
+        '/w/src/features/spend/useSpend.ts',
+      ],
+    });
+    const small = (id: string): boolean => id.startsWith('\0part#');
+    expect(bootChunkOf(part('listRules'), graph, new Map(), small)).toBe('boot');
+    expect(bootChunkOf(part('getSpend'), graph, new Map(), small)).toBeNull();
+    // Shared, but not small: left to the automatic splitting.
+    expect(bootChunkOf('/w/node_modules/chart/index.js', graph, new Map(), small)).toBeNull();
+  });
 });
