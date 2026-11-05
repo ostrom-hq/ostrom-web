@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
+import { parseSync, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import {
   BOOTED,
@@ -14,6 +14,7 @@ import {
 import { bootChunkOf } from './src/shared/build/bootChunk';
 import { patternOf, routesOf } from './src/shared/build/routes';
 import { screenWording, sectionsIn } from './src/shared/build/screenWording';
+import { importParts, importSources, type PartsByName, splitModule } from './src/shared/build/splitModule';
 import { languageScript } from './src/shared/i18n/languageScript';
 
 const here = fileURLToPath(new URL('./', import.meta.url));
@@ -34,6 +35,76 @@ function dropMockWorkerUnlessMocks(): Plugin {
     closeBundle() {
       if (process.env['VITE_MOCKS'] !== 'true')
         rmSync(resolve(outDir, 'mockServiceWorker.js'), { force: true });
+    },
+  };
+}
+
+/** The API client the generator writes, a module each for every call, schema and query of the contract. */
+const GENERATED = /[\\/]gen[\\/]api[\\/](?:zod\.gen|sdk\.gen|@tanstack[\\/]react-query\.gen)\.ts$/;
+/** The id of one declaration of a generated module, as its own module: `<prefix><file>#<name>`. */
+const GENERATED_PART = '\0ostrom-generated:';
+
+/**
+ * Each call, schema and query of the generated API client in a module of its own (src/shared/build/splitModule.ts):
+ * the build puts a module in one chunk, whole, and the three generated modules held every call and schema of the
+ * console, all of it in the first download, built and parsed before the first paint. Split, a screen loaded later
+ * brings the calls and schemas it uses. The build fails on a generated module it cannot split, rather than leave
+ * the client whole without a word.
+ */
+function splitGenerated(): Plugin {
+  // By generated file, the part of each name it exports.
+  const split = new Map<string, PartsByName>();
+  const parts = new Map<string, string>();
+  const fileOf = (part: string): string => part.slice(GENERATED_PART.length, part.lastIndexOf('#'));
+  return {
+    name: 'ostrom:split-generated',
+    apply: 'build',
+    enforce: 'post',
+    async resolveId(source, importer) {
+      if (source.startsWith(GENERATED_PART)) return source;
+      // A part imports as the generated module did: relative to its file.
+      if (importer?.startsWith(GENERATED_PART) === true)
+        return this.resolve(source, fileOf(importer), { skipSelf: true });
+      return null;
+    },
+    load(id) {
+      return id.startsWith(GENERATED_PART) ? (parts.get(id) ?? null) : null;
+    },
+    async transform(code, id) {
+      // The imports of a module from the generated ones, taken from their parts (`importer`: where they resolve from).
+      const fromParts = async (source: string, importer: string): Promise<string | undefined> => {
+        if (!source.includes('.gen')) return undefined;
+        const program = parseSync('module.js', source).program;
+        const bySource = new Map<string, PartsByName>();
+        for (const imported of importSources(program)) {
+          const resolved = await this.resolve(imported, importer);
+          if (resolved === null || !GENERATED.test(resolved.id)) continue;
+          // Split before its first importer is rewritten: the parts are named by the split.
+          if (!split.has(resolved.id)) await this.load({ id: resolved.id });
+          const byName = split.get(resolved.id);
+          if (byName !== undefined) bySource.set(imported, byName);
+        }
+        return importParts(source, program, bySource);
+      };
+      if (!GENERATED.test(id)) {
+        const rewritten = await fromParts(code, id);
+        return rewritten === undefined ? null : { code: rewritten, map: null };
+      }
+      const done = splitModule(
+        code,
+        parseSync('module.js', code).program,
+        (name) => `${GENERATED_PART}${id}#${name}`,
+      );
+      if (done === undefined) throw new Error(`${id}: not only imports and declarations, it cannot be split`);
+      const byName = new Map<string, string>();
+      for (const part of done.parts) {
+        const address = `${GENERATED_PART}${id}#${part.names[0] ?? ''}`;
+        // A part of the queries imports the calls, and a call its schemas: from their parts too.
+        parts.set(address, (await fromParts(part.code, id)) ?? part.code);
+        for (const name of part.names) byName.set(name, address);
+      }
+      split.set(id, byName);
+      return { code: done.facade, map: null };
     },
   };
 }
@@ -286,7 +357,7 @@ function imageSecurityHeaders(): Record<string, string> {
 }
 
 export default defineConfig({
-  plugins: [react(), dropMockWorkerUnlessMocks(), preloadBoot(), reportModules()],
+  plugins: [react(), splitGenerated(), dropMockWorkerUnlessMocks(), preloadBoot(), reportModules()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },
   preview: {
@@ -324,7 +395,10 @@ export default defineConfig({
             // the screens share (src/shared/build/bootChunk.ts): on a slow link, fifteen small files share the
             // bandwidth and each waits its turn, where one comes in a single response. What a lazy screen alone uses
             // stays in its own chunk.
-            { name: (id, graph) => bootChunkOf(id, graph, initialModules) },
+            {
+              name: (id, graph) =>
+                id.startsWith(GENERATED_PART) ? null : bootChunkOf(id, graph, initialModules),
+            },
           ],
         },
       },
