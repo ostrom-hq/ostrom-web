@@ -19,8 +19,9 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
   /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback)$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
-  // A launch's own agent token ends it (AUDIT-SECU-RUNNER-2 R2b): the token says the launch, no organization is named.
-  /^\/api\/v1\/launches\/[^/]+$/,
+  // A launch's own agent token ends it (AUDIT-SECU-RUNNER-2 R2b) and reports that no hook ran: the token says the
+  // launch, no organization is named.
+  /^\/api\/v1\/launches\/[^/]+(?:\/hooks-missing)?$/,
   /^\/api\/v1\/cloud\/runner\/terminal$/,
 ];
 
