@@ -11,6 +11,7 @@ import {
   bootScript,
   ORG_CHOICE_KEY,
 } from './src/shared/build/bootScript';
+import { bootChunkOf } from './src/shared/build/bootChunk';
 import { patternOf, routesOf } from './src/shared/build/routes';
 import { screenWording, sectionsIn } from './src/shared/build/screenWording';
 import { languageScript } from './src/shared/i18n/languageScript';
@@ -95,6 +96,9 @@ const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
     { path: '/api/v1/budgets', org: 'if-chosen' },
   ],
 };
+
+/** The boot chunk's answers, module by module (src/shared/build/bootChunk.ts): the graph of the one build. */
+const initialModules = new Map<string, boolean>();
 
 /** The screens open to someone not signed in: nothing to read for them before the entry. */
 const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
@@ -313,12 +317,14 @@ export default defineConfig({
           groups: [
             {
               name: 'zod',
+              priority: 1,
               test: /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?zod[\\/]|[\\/]src[\\/]shared[\\/]lib[\\/]zodConfig\.ts$/,
             },
-            // Everything the entry loads anyway in one chunk (react, the router, i18n, the API client, the shared
-            // screens' parts): on a slow link, fifteen small files share the bandwidth and each waits its turn,
-            // where one comes in a single response. What a lazy screen alone uses stays in its own chunk.
-            { name: 'boot', tags: ['$initial'] },
+            // Everything the entry loads anyway in one chunk (react, the router, i18n, the API client), and the parts
+            // the screens share (src/shared/build/bootChunk.ts): on a slow link, fifteen small files share the
+            // bandwidth and each waits its turn, where one comes in a single response. What a lazy screen alone uses
+            // stays in its own chunk.
+            { name: (id, graph) => bootChunkOf(id, graph, initialModules) },
           ],
         },
       },
