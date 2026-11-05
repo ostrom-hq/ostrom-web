@@ -30,8 +30,8 @@ const TONES: Readonly<Record<GovernanceConfirmation['status'], BadgeTone>> = {
   failed: 'danger',
 };
 
-/** The command each kind of CLI token comes from, as the person typed it. */
-const COMMANDS: Readonly<Record<GovernanceConfirmation['credential'], string>> = {
+/** The command each kind of CLI token comes from, as the person typed it. A personal API token has none. */
+const COMMANDS: Readonly<Record<Exclude<GovernanceConfirmation['credential'], 'api_token'>, string>> = {
   admin: 'ostrom login --admin',
   device: 'ostrom login',
 };
@@ -149,7 +149,22 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
           <div className="ys-col">
             <b>{personName(requestedBy)}</b>
             <span className="ys-meta">
-              {t('confirm.who.with')} <code className="o-mono cf-command">{COMMANDS[credential]}</code>
+              {credential === 'api_token' ? (
+                // The kind first, then the name its owner chose, quoted: a name is never an identity.
+                <>
+                  {t('confirm.who.withApiToken')}
+                  {confirmation.token === undefined ? null : (
+                    <>
+                      {' '}
+                      <q>{confirmation.token.name}</q>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {t('confirm.who.with')} <code className="o-mono cf-command">{COMMANDS[credential]}</code>
+                </>
+              )}
             </span>
           </div>
         </div>

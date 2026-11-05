@@ -73,6 +73,29 @@ describe('a governance confirmation', () => {
     expect(await screen.findByText('You answer as Maya Lind (maya).')).toBeInTheDocument();
   });
 
+  it('names a personal API token by its kind first, then by the name its owner gave it', async () => {
+    replace('gc-self-approval', (item) => ({
+      ...item,
+      credential: 'api_token',
+      token: { id: 't-inviter', name: 'ostrom login' },
+    }));
+    visit('/confirm/gc-self-approval');
+    const who = await screen.findByRole('region', { name: 'Who asks' }, SLOW);
+    expect(screen.getByText('Waiting for you')).toBeInTheDocument();
+    expect(within(who).getByText(/^with a personal API token/)).toBeInTheDocument();
+    // A token named like a command is still a personal token: its name is quoted, never shown as the command.
+    expect(within(who).getByText('ostrom login').tagName).toBe('Q');
+    expect(within(who).queryByRole('code')).toBeNull();
+  });
+
+  it('says a personal API token asked even when the server names none', async () => {
+    replace('gc-self-approval', (item) => ({ ...item, credential: 'api_token' }));
+    visit('/confirm/gc-self-approval');
+    const who = await screen.findByRole('region', { name: 'Who asks' }, SLOW);
+    expect(within(who).getByText('with a personal API token')).toBeInTheDocument();
+    expect(who.querySelector('q')).toBeNull();
+  });
+
   it('writes the change once confirmed, and shows what the write returned', async () => {
     const user = userEvent.setup();
     server.use(

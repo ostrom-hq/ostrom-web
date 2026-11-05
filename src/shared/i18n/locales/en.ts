@@ -231,6 +231,7 @@ export const en = {
         invite: 'Invite people',
         link: 'Create an invitation link',
       },
+      budgets: { set: 'Set a budget' },
     },
     expiresIn: 'expires in {{left}}',
     warning: {
@@ -269,6 +270,7 @@ export const en = {
     who: {
       title: 'Who asks',
       with: 'with the token of',
+      withApiToken: 'with a personal API token',
       when: 'Asked {{when}}',
     },
     technical: {

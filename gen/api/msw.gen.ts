@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses } from './types.gen';
+import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -629,6 +629,37 @@ export function handleEndLaunch(response?: HandleEndLaunchResponse | HttpRespons
     return http.delete<{
         launchId: string;
     }, never>(`${options?.baseUrl ?? '*'}/api/v1/launches/:launchId`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReportHooksMissingResponse = {
+    body: ReportHooksMissingResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `POST /api/v1/launches/{launchId}/hooks-missing` operation.
+ */
+export function handleReportHooksMissing(response?: HandleReportHooksMissingResponse | HttpResponseResolver<{
+    launchId: string;
+}, ReportHooksMissingData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        launchId: string;
+    }, ReportHooksMissingData['body']>(`${options?.baseUrl ?? '*'}/api/v1/launches/:launchId/hooks-missing`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -2710,6 +2741,33 @@ export function handleReportSeen(response?: HandleReportSeenResponse | HttpRespo
         const body = response?.body;
         if (body !== undefined) {
             return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReportLocalGateDenialResponse = {
+    body: ReportLocalGateDenialResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/gates/local-denials` operation.
+ */
+export function handleReportLocalGateDenial(response?: HandleReportLocalGateDenialResponse | HttpResponseResolver<never, ReportLocalGateDenialData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ReportLocalGateDenialData['body']>(`${options?.baseUrl ?? '*'}/api/v1/gates/local-denials`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 202 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -5662,7 +5720,7 @@ export type HandleSetBudgetResponse = {
 /**
  * Handler for the `PUT /api/v1/budgets` operation.
  */
-export function handleSetBudget(response?: HandleSetBudgetResponse | HttpResponseResolver<never, SetBudgetData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleSetBudget(response?: HandleSetBudgetResponse | ToResponseUnion<SetBudgetResponses> | HttpResponseResolver<never, SetBudgetData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.put<never, SetBudgetData['body']>(`${options?.baseUrl ?? '*'}/api/v1/budgets`, info => {
         if (typeof response === 'function') {
             return response(info);
@@ -8328,6 +8386,10 @@ export type MswHandlerFactories = {
      */
     endLaunch: typeof handleEndLaunch;
     /**
+     * Handler for the `POST /api/v1/launches/{launchId}/hooks-missing` operation.
+     */
+    reportHooksMissing: typeof handleReportHooksMissing;
+    /**
      * Handler for the `GET /api/v1/policy/agents` operation.
      */
     checkAgentPolicy: typeof handleCheckAgentPolicy;
@@ -8615,6 +8677,10 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/sessions/{id}/seen` operation.
      */
     reportSeen: typeof handleReportSeen;
+    /**
+     * Handler for the `POST /api/v1/gates/local-denials` operation.
+     */
+    reportLocalGateDenial: typeof handleReportLocalGateDenial;
     /**
      * Handler for the `GET /api/v1/gates` operation.
      */
@@ -9411,6 +9477,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         launcherLogin: wrap(handleLauncherLogin),
         createLaunch: wrap(handleCreateLaunch),
         endLaunch: wrap(handleEndLaunch),
+        reportHooksMissing: wrap(handleReportHooksMissing),
         checkAgentPolicy: wrap(handleCheckAgentPolicy),
         getMyAccount: wrap(handleGetMyAccount),
         listTokenScopes: wrap(handleListTokenScopes),
@@ -9483,6 +9550,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         reopenSession: wrap(handleReopenSession),
         signWorkflowReceipt: wrap(handleSignWorkflowReceipt),
         reportSeen: wrap(handleReportSeen),
+        reportLocalGateDenial: wrap(handleReportLocalGateDenial),
         listGates: wrap(handleListGates),
         askGate: wrap(handleAskGate),
         getGate: wrap(handleGetGate),
@@ -9751,6 +9819,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.startOAuthLogin, overrides.startOAuthLogin),
             invoke(pick.oauthLoginCallback, overrides.oauthLoginCallback),
             invoke(pick.linkSignInProvider, overrides.linkSignInProvider),
+            invoke(pick.reportHooksMissing, overrides.reportHooksMissing),
             invoke(pick.rotateToken, overrides.rotateToken),
             invoke(pick.transferOrg, overrides.transferOrg),
             invoke(pick.leaveOrg, overrides.leaveOrg),
@@ -9813,6 +9882,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.previewInvitation, overrides.previewInvitation),
             invoke(pick.acceptInvitation, overrides.acceptInvitation),
             invoke(pick.inviteMembers, overrides.inviteMembers),
+            invoke(pick.reportLocalGateDenial, overrides.reportLocalGateDenial),
             invoke(pick.getApproversGraph, overrides.getApproversGraph),
             invoke(pick.getGateCatalog, overrides.getGateCatalog),
             invoke(pick.getGatePolicy, overrides.getGatePolicy),

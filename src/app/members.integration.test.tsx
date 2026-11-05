@@ -398,7 +398,14 @@ describe('the members screen', () => {
       http.get('*/api/v1/orgs', () =>
         HttpResponse.json({
           items: [
-            { id: ACME, slug: 'acme', name: 'Acme', role: 'auditor', createdAt: '2026-09-01T09:00:00Z' },
+            {
+              id: ACME,
+              slug: 'acme',
+              name: 'Acme',
+              role: 'auditor',
+              createdAt: '2026-09-01T09:00:00Z',
+              timeZone: 'UTC',
+            },
           ],
         }),
       ),
