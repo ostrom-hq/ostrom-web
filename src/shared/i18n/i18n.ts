@@ -146,6 +146,9 @@ export const i18nReady: Promise<void> = i18n
     maxRetries: 2,
     // The whole language merged in after the first screen's own wording (wordingBackend): the screens show it.
     react: { bindI18nStore: 'added' },
+    // Asks the backend for the wording at once, not on a timer: the first render waits for this very read, and on a
+    // slow phone a timer set while the entry runs fires only after the tasks queued behind it.
+    initAsync: false,
   })
   .then(async () => englishIfMissing())
   .then(() => {
