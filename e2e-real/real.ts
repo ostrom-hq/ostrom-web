@@ -102,6 +102,15 @@ export async function served(page: Page, method: string, path: string): Promise<
 }
 
 /**
+ * A value as JSON, for a failure's message. What a generated zod schema parsed may hold a `bigint` (an `int64` such as
+ * `AuditEvent.sequence`), which `JSON.stringify` refuses with a TypeError that would hide the real failure: it is
+ * written as its digits.
+ */
+export function shown(value: unknown): string {
+  return JSON.stringify(value, (_key, item: unknown) => (typeof item === 'bigint' ? item.toString() : item));
+}
+
+/**
  * Calls the API from the page, as the console does: same origin, the session cookie and its CSRF token, and the
  * organization it acts in (`Ostrom-Org`) when one is named.
  */

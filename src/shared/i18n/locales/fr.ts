@@ -234,6 +234,7 @@ export const fr = {
         invite: 'Inviter des personnes',
         link: 'Créer un lien d’invitation',
       },
+      budgets: { set: 'Fixer un budget' },
     },
     expiresIn: 'expire dans {{left}}',
     warning: {
@@ -272,6 +273,7 @@ export const fr = {
     who: {
       title: 'Qui demande',
       with: 'avec le jeton de',
+      withApiToken: 'avec un jeton d’API personnel',
       when: 'Demandé le {{when}}',
     },
     technical: {

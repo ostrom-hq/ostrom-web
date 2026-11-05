@@ -159,7 +159,10 @@ test('2.6: a person’s API token invites, and an owner confirms on the console 
   // In words, not the JSON before and after.
   await expect(page.getByRole('region', { name: 'Before and after' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'What it changes' })).toContainText('Invite people');
-  await expect(page.getByRole('region', { name: 'Who asks' })).toContainText('ostrom login');
+  // Asked with a personal API token (`credential` `api_token`, server#332): its kind first, then its name, quoted.
+  const asker = page.getByRole('region', { name: 'Who asks' });
+  await expect(asker).toContainText('with a personal API token');
+  await expect(asker.locator('q')).toHaveText('journey inviter');
 
   await page.getByRole('button', { name: 'Confirm the change' }).click();
   await expect(page.getByRole('region', { name: 'Outcome' })).toContainText('Confirmed and written');

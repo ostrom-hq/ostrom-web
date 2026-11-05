@@ -143,6 +143,8 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     name: organization.name,
     role: roleOf(organization),
     createdAt: organization.createdAt ?? now().toISOString(),
+    // The server sends it always, `UTC` until an owner or an admin sets one (core#130).
+    timeZone: 'UTC',
   });
   /** `{org}` is an id or a short name; an organization the person is not in is not found. */
   const find = (key: string): Organization | undefined =>
@@ -256,7 +258,8 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (organization === undefined) return notFound();
       if (!managesMembers(roleIn(organization)))
         return refusal(403, 'forbidden', 'only an owner or an admin renames the organization');
-      const body = zOrgRename.safeParse(await readJson(request));
+      // The console always sends a name; the demo refuses a rename without one, as it did before the other settings.
+      const body = zOrgRename.required({ name: true }).safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
       if (name === '' || name.length > 100) return refusal(400, 'invalid_request', 'a name is needed');
       organization.name = name;
