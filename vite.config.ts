@@ -53,8 +53,29 @@ const FIRST_READS: readonly BootCall[] = [
 /** The person's organizations, read by the screens that show or act in one (src/shared/org/useCurrentOrg.ts). */
 const ORGS: BootCall = { path: '/api/v1/orgs', org: 'none' };
 
+/**
+ * The screens of one organization (src/shared/org/WithOrg.tsx, and the shared accounts' screens): each reads `/orgs`
+ * before anything of its own, since those reads name the organization the list says it is. Left to the console,
+ * `/orgs` would start once the entry has run, after the reads of `/boot.js` are in, and the screen's own reads one
+ * answer later still: a chain of three calls (loading.spec.ts). Started from the head, it is in with the others.
+ */
+const IN_ONE_ORG = [
+  '/members',
+  '/github',
+  '/mcp',
+  '/policy',
+  '/secrets',
+  '/import',
+  '/billing',
+  '/settings',
+  '/accounts',
+  '/accounts/groups',
+  '/accounts/groups/$groupId',
+] as const;
+
 /** The reads a screen's own first paint waits for, beyond FIRST_READS, as the console asks them at its start. */
 const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
+  ...Object.fromEntries(IN_ONE_ORG.map((path) => [path, [ORGS]])),
   '/': [ORGS],
   '/yes': [
     ORGS,
