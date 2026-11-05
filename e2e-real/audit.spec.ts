@@ -4,7 +4,7 @@
 // for owners and admins; another organization never sees the first one's lines.
 import { expect, test } from '@playwright/test';
 import { zListAuditResponse } from '../gen/api/zod.gen';
-import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
+import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization, shown } from './real';
 
 test.afterEach(closeOthers);
 
@@ -21,7 +21,7 @@ test('3.6 an owner reads the audit log as the server lists it; a member is told 
   expect(listed.status, JSON.stringify(listed.body)).toBe(200);
   const { items } = zListAuditResponse.parse(listed.body);
   const [newest] = items;
-  expect(newest, JSON.stringify(items)).toBeDefined();
+  expect(newest, shown(items)).toBeDefined();
   if (newest === undefined) return;
 
   await page.goto('/audit');
