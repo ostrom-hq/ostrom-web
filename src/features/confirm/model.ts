@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
 import { zInvitationLinkCreate, zOrgInvites, zOrgMember } from '@gen/api/zod.gen';
+import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** "Theo Martin (theo)", the login or the name alone, else the member id: never an empty requester. */
@@ -12,7 +13,7 @@ export function personName(person: GovernanceConfirmationPerson): string {
 
 // How the server shows a member in a role change or a removal (`OrgsGovernanceChange`): the membership, the login and
 // the role, never the name nor the address. The page says the login and the role; the membership is not read.
-const zShownMember = zOrgMember.pick({ login: true, role: true });
+const zShownMember = z.pick(zOrgMember, { login: true, role: true });
 // How it shows invitations: the list the write sent, not the body around it.
 const zShownInvites = zOrgInvites.shape.invites;
 

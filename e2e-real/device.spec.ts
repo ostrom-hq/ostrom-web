@@ -4,6 +4,7 @@
 // where the server's link sends them.
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
+import { extend, pick } from 'zod/mini';
 import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
 import {
   accept,
@@ -23,7 +24,7 @@ import {
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
  * contract's `DeviceCode` does not list yet: read here as the server sends it, until core adds it.
  */
-const zStartedLogin = zDeviceCode.extend({ verificationUriComplete: z.string() });
+const zStartedLogin = extend(zDeviceCode, { verificationUriComplete: z.string() });
 
 /**
  * The CLI's network, one per test (set before each): the server lets one address start ten logins per ten minutes,
@@ -167,7 +168,7 @@ async function adminTokensOf(page: Page, org: string): Promise<string[]> {
   const listed = await callFromPage(page, 'GET', '/api/v1/devices', undefined, org);
   expect(listed.status, JSON.stringify(listed.body)).toBe(200);
   return z
-    .object({ items: z.array(zDevice.pick({ kind: true, orgId: true })) })
+    .object({ items: z.array(pick(zDevice, { kind: true, orgId: true })) })
     .parse(listed.body)
     .items.filter((device) => device.kind === 'admin')
     .map((device) => device.orgId ?? '');

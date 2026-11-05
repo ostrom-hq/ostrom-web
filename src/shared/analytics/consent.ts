@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 

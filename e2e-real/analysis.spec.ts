@@ -6,6 +6,7 @@
 import { createHash } from 'node:crypto';
 import { expect, type Page, test } from '@playwright/test';
 import { z } from 'zod';
+import { pick } from 'zod/mini';
 import { zRule } from '../gen/api/zod.gen';
 import { FAKE_GITHUB_CONFIGURED, FakeGitHub } from './fakeGithub';
 import { callFromPage, ownerOfNewOrganization } from './real';
@@ -30,7 +31,7 @@ function uniqueRun(): string {
 
 /** The rules of `org` as the server keeps them, read for what this journey checks. */
 const zRules = z.object({
-  items: z.array(zRule.pick({ id: true, statement: true, status: true, confidence: true })),
+  items: z.array(pick(zRule, { id: true, statement: true, status: true, confidence: true })),
 });
 
 async function rulesOf(page: Page, org: string): Promise<z.infer<typeof zRules>['items']> {

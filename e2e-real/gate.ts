@@ -5,6 +5,7 @@
 import { expect, type Page, request, test } from '@playwright/test';
 import { zAskGateResponse, zCreateTokenResponse, zListApprovalsResponse, zMe } from '../gen/api/zod.gen';
 import { bodyOf, callFromPage, joinAs, ownerOfNewOrganization } from './real';
+import { pick } from 'zod/mini';
 
 /** The GitHub login the server knows the person signed in on `page` by: what a gate node names. */
 export async function loginOf(page: Page): Promise<string> {
@@ -69,7 +70,7 @@ export async function askingToken(page: Page, org: string): Promise<string> {
     org,
   );
   expect(token.status, JSON.stringify(token.body)).toBe(201);
-  return zCreateTokenResponse.pick({ secret: true }).parse(token.body).secret;
+  return pick(zCreateTokenResponse, { secret: true }).parse(token.body).secret;
 }
 
 /**

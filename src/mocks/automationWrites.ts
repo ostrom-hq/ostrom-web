@@ -3,7 +3,7 @@ import { handleCreateAutomation, handleSaveAutomation } from '@gen/api/msw.gen';
 import type { ApiError, Automation } from '@gen/api/types.gen';
 import { zAutomationWrite } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
-import type { z } from 'zod';
+import type { z } from 'zod/mini';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface AutomationWritesState {

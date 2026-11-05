@@ -143,7 +143,7 @@ import { createKeysAndDevicesHandlers, type KeysAndDevicesState } from '@/mocks/
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
 import { createOrgsHandlers, DEMO_LOGIN, demoRoleIn, membershipsOf, type OrgsState } from '@/mocks/orgs';
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import {
   initialInvitations,
@@ -345,8 +345,8 @@ export function createMockDb(): MockDb {
 }
 
 /** The server's own checks on top of the contract's shape: a name it can route to, an https URL. */
-const zMcpServerWrite = zMcpServer.extend({
-  name: z.string().regex(/^[a-z][a-z0-9-]{0,39}$/),
+const zMcpServerWrite = z.extend(zMcpServer, {
+  name: z.string().check(z.regex(/^[a-z][a-z0-9-]{0,39}$/)),
   url: z.url({ protocol: /^https$/ }),
   // The relay's two scopes (`McpRules`): one shared credential, or each member's own.
   scope: z.enum(['shared', 'per-member']),
@@ -370,16 +370,18 @@ const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
  * A budget names who it limits (no subject for the organization; for members, a member's id, or none for every
  * member) and at least one positive amount. As the server, no workflow budget.
  */
-const zBudgetWrite = zBudget
-  .extend({
+const zBudgetWrite = z
+  .extend(zBudget, {
     scope: z.enum(['org', 'member']),
-    usdPerMonth: z.number().positive().optional(),
-    usdPerDay: z.number().positive().optional(),
+    usdPerMonth: z.optional(z.number().check(z.positive())),
+    usdPerDay: z.optional(z.number().check(z.positive())),
   })
-  .refine((budget) => budget.scope === 'member' || budget.subject === undefined)
-  .refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined);
+  .check(
+    z.refine((budget) => budget.scope === 'member' || budget.subject === undefined),
+    z.refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined),
+  );
 // The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
-const SENT_CLOUD_SESSION = zCreateCloudSessionBody.extend({ agent: z.string() });
+const SENT_CLOUD_SESSION = z.extend(zCreateCloudSessionBody, { agent: z.string() });
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */

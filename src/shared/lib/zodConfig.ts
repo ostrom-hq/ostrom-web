@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { config } from 'zod';
+import { config } from 'zod/mini';
 
 /*
  * Imported first by main.tsx, before any schema exists. Zod compiles object parsers with `new Function` when

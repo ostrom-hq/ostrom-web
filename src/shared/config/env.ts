@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 
 function apiOrigin(value: string): string {
   return value.startsWith('/') ? '' : value.replace(/\/+$/, '').replace(/\/api$/, '');
@@ -7,11 +7,14 @@ function apiOrigin(value: string): string {
 const envSchema = z.object({
   // The contract's paths already start with /api/v1: '' is the same origin (nginx proxies /api/), or an origin URL.
   // The former default `/api` and a URL ending in `/api` keep working: the prefix is the contract's, never doubled.
-  VITE_OSTROM_API_URL: z
-    .union([z.literal(''), z.literal('/api'), z.literal('/api/'), z.url({ protocol: /^https?$/ })])
-    .default('')
-    .transform(apiOrigin),
-  VITE_MOCKS: z.enum(['true', 'false']).default('false'),
+  VITE_OSTROM_API_URL: z.pipe(
+    z._default(
+      z.union([z.literal(''), z.literal('/api'), z.literal('/api/'), z.url({ protocol: /^https?$/ })]),
+      '',
+    ),
+    z.transform(apiOrigin),
+  ),
+  VITE_MOCKS: z._default(z.enum(['true', 'false']), 'false'),
 });
 
 export interface AppEnv {

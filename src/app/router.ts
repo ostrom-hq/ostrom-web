@@ -6,7 +6,7 @@ import {
   redirect,
   type RouterHistory,
 } from '@tanstack/react-router';
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens';
 import { activitySearchSchema } from '@/features/activity/route';
@@ -43,11 +43,13 @@ const homeRoute = createRoute({
  */
 export const yesSearchSchema = z.object({
   /** A token in the query string is never used (servers log it), only wiped from the address. */
-  signin: z.unknown().optional(),
-  signout: z
-    .unknown()
-    .transform(() => true as const)
-    .optional(),
+  signin: z.optional(z.unknown()),
+  signout: z.optional(
+    z.pipe(
+      z.unknown(),
+      z.transform(() => true as const),
+    ),
+  ),
 });
 
 /** The sign-in token a link carries in its fragment (`signin=…`), if any. */
@@ -247,10 +249,12 @@ const accountsRoute = createRoute({
 });
 /** `?gone` says, above the list, that the group just asked for no longer exists. */
 export const groupsSearchSchema = z.object({
-  gone: z
-    .unknown()
-    .transform(() => true as const)
-    .optional(),
+  gone: z.optional(
+    z.pipe(
+      z.unknown(),
+      z.transform(() => true as const),
+    ),
+  ),
 });
 
 const groupsRoute = createRoute({
@@ -276,7 +280,7 @@ const receiptRoute = createRoute({
 });
 
 // A redirect that is not a single string (`?redirect=1`, repeated keys) is dropped, never an error page.
-export const signInSearchSchema = z.object({ redirect: z.string().optional().catch(undefined) });
+export const signInSearchSchema = z.object({ redirect: z.catch(z.optional(z.string()), undefined) });
 
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { create } from 'zustand';
 import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 
@@ -10,9 +10,9 @@ import { type SafeStorage, safeLocalStorage } from '@/shared/lib/safeStorage';
 export const ORG_STORAGE_KEY = 'ostrom.org.choice';
 
 /** An id goes into a request header: visible ASCII only, so a stored value can never break the request. */
-export const orgIdSchema = z.string().regex(/^[\x21-\x7E]{1,200}$/);
+export const orgIdSchema = z.string().check(z.regex(/^[\x21-\x7E]{1,200}$/));
 
-const choiceSchema = z.object({ id: orgIdSchema, login: z.string().min(1).max(200) });
+const choiceSchema = z.object({ id: orgIdSchema, login: z.string().check(z.minLength(1), z.maxLength(200)) });
 
 export interface StoredChoice {
   readonly id: string;

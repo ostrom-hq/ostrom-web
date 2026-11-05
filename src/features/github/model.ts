@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Repo } from '@gen/api/types.gen';
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { apiUrl } from '@/shared/api/apiClient';
 import { safeHref } from '@/shared/lib/safeHref';
@@ -10,13 +10,15 @@ import { safeHref } from '@/shared/lib/safeHref';
  * `/github?error=<type>`. The address never carries free text: an error is a type, put in words by the console.
  */
 export const githubSearchSchema = z.object({
-  installed: z
-    .unknown()
-    // `1` as the server sends it; `true` once read, as the router validates its own output again.
-    .transform((value) => value === 1 || value === '1' || value === true)
-    .optional(),
+  installed: z.optional(
+    z.pipe(
+      z.unknown(),
+      // `1` as the server sends it; `true` once read, as the router validates its own output again.
+      z.transform((value) => value === 1 || value === '1' || value === true),
+    ),
+  ),
   // A type the console words, or `unknown`: never the text of the address.
-  error: z.enum(['denied', 'expired', 'forbidden', 'unknown']).optional().catch('unknown'),
+  error: z.catch(z.optional(z.enum(['denied', 'expired', 'forbidden', 'unknown'])), 'unknown'),
 });
 export type GithubSearch = z.infer<typeof githubSearchSchema>;
 
