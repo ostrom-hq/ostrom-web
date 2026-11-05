@@ -24,6 +24,7 @@ import {
   zOrgMemberUpdate,
   zOrgRename,
 } from '@gen/api/zod.gen';
+import { required } from 'zod/mini';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
@@ -259,7 +260,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (!managesMembers(roleIn(organization)))
         return refusal(403, 'forbidden', 'only an owner or an admin renames the organization');
       // The console always sends a name; the demo refuses a rename without one, as it did before the other settings.
-      const body = zOrgRename.required({ name: true }).safeParse(await readJson(request));
+      const body = required(zOrgRename, { name: true }).safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
       if (name === '' || name.length > 100) return refusal(400, 'invalid_request', 'a name is needed');
       organization.name = name;
