@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { BOOTED, wordingKey } from '@/shared/build/bootScript';
 
 /** Wording as i18next keeps it: sections of keys, of sections or texts. */

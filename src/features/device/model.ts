@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { z } from 'zod';
+import { z } from 'zod/mini';
 
 /**
  * `/device?code=ABCD-EFGH`, the page `ostrom login` opens (the server's `verificationUriComplete`), or `/device` alone
  * (`verificationUri`), where the person types the code their terminal shows. Anything but one string reads as no code.
  */
 export const deviceSearchSchema = z.object({
-  code: z.string().optional().catch(undefined),
+  code: z.catch(z.optional(z.string()), undefined),
 });
 
 /** The letters of a code, as the server draws them (`USER_CODE_ALPHABET`): no vowels, no look-alikes. */

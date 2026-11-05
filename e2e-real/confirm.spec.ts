@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { expect, type Page, test } from '@playwright/test';
 import { z } from 'zod';
+import { pick } from 'zod/mini';
 import { zCreateTokenResponse } from '../gen/api/zod.gen';
 import {
   anotherPerson,
@@ -133,7 +134,7 @@ test('2.6: a person’s API token invites, and an owner confirms on the console 
     org.id,
   );
   expect(created.status, JSON.stringify(created.body)).toBe(201);
-  const token = zCreateTokenResponse.pick({ secret: true }).parse(created.body).secret;
+  const token = pick(zCreateTokenResponse, { secret: true }).parse(created.body).secret;
   // No skip: 2.6 is proved only by a write held and confirmed. A server that applies the invitation at once fails it.
   const invited = freshEmail('newcomer');
   const path = `/api/v1/orgs/${org.id}/members/invites`;

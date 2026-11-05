@@ -10,12 +10,13 @@
 // other one.
 import { expect, request, test, type Page } from '@playwright/test';
 import { z } from 'zod';
+import { extend } from 'zod/mini';
 import { zCloudSession, zRunner } from '../gen/api/zod.gen';
 import { holder, lose, machineImage, online, removeMachines, startMachine, type Machine } from './machines';
 import { anotherPerson, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
 
 // The key is in ostrom-core's `Runner` (shown once, at registration); this repository's contract is older.
-const zRegistered = zRunner.extend({ token: z.string() });
+const zRegistered = extend(zRunner, { token: z.string() });
 
 test.afterEach(async () => {
   await closeOthers();

@@ -10,6 +10,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, type Locator, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
+import { pick } from 'zod/mini';
 import { zCreateTokenResponse, zDeviceCode, zGroup, zListDecisionsResponse, zRule } from '../gen/api/zod.gen';
 import { expectNoViolations, violationsOn } from './axe';
 import {
@@ -60,7 +61,7 @@ async function detailScreens(page: Page, org: { id: string; slug: string }): Pro
   const session = randomUUID();
   const sessionRepo = `${org.slug}/api`;
   const started = await withToken(
-    zCreateTokenResponse.pick({ secret: true }).parse(token.body).secret,
+    pick(zCreateTokenResponse, { secret: true }).parse(token.body).secret,
     org.id,
     'POST',
     '/api/v1/sessions',
@@ -105,7 +106,7 @@ async function detailScreens(page: Page, org: { id: string; slug: string }): Pro
     org.id,
   );
   expect(rule.status, JSON.stringify(rule.body)).toBe(201);
-  const ruleId = zRule.pick({ id: true }).parse(rule.body).id;
+  const ruleId = pick(zRule, { id: true }).parse(rule.body).id;
   let receipt: string | undefined;
   await expect
     .poll(
@@ -133,7 +134,7 @@ async function detailScreens(page: Page, org: { id: string; slug: string }): Pro
   // A group of the shared accounts.
   const group = await callFromPage(page, 'POST', '/api/v1/groups', { name: 'Platform' }, org.id);
   expect(group.status, JSON.stringify(group.body)).toBeLessThan(300);
-  const groupId = zGroup.pick({ id: true }).parse(group.body).id;
+  const groupId = pick(zGroup, { id: true }).parse(group.body).id;
 
   // A CLI's sign-in waiting for the person's yes: the screen with the code, the organization and the two answers.
   const userCode = await startedLogin();

@@ -15,7 +15,7 @@ import type {
   zTeamCodeStdioWritable,
 } from '@gen/api/zod.gen';
 import { zTeamCodeImportRequestWritable } from '@gen/api/zod.gen';
-import type { z } from 'zod';
+import type { z } from 'zod/mini';
 
 /** The three runs, in the order they are made: the plan, the real import, then the cutover once TeamCode stops. */
 export const IMPORT_MODES = ['dryRun', 'import', 'cutover'] as const;

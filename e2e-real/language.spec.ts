@@ -31,12 +31,18 @@ const watchFirstWords = `(() => {
 
 const zFirstWords = z.object({ text: z.string(), lang: z.string() });
 
-/** The wording chunks the page fetched so far, by language (Vite names each chunk after its module). */
+/**
+ * A file of wording, and its language: the whole language's chunk (Vite names it after its module), or only what the
+ * first screen shows, which `/boot.js` fetches in its place before the first paint (vite.config.ts, `preloadBoot`).
+ */
+const WORDING_FILE = /\/assets\/(?:wording-)?(en|fr)-[\w-]+\.(?:js|json)$/;
+
+/** The languages whose wording the page fetched so far, in either file, each once. */
 async function wordingsFetched(page: Page): Promise<string[]> {
-  const scripts = await page.evaluate(() =>
+  const files = await page.evaluate(() =>
     performance.getEntriesByType('resource').map((entry) => new URL(entry.name).pathname),
   );
-  return scripts.flatMap((path) => /\/assets\/(en|fr)-[\w-]+\.js$/.exec(path)?.[1] ?? []).sort();
+  return [...new Set(files.flatMap((path) => WORDING_FILE.exec(path)?.[1] ?? []))].sort();
 }
 
 /** The browser's languages from the next page on, as the person set them (the journeys sign in in English). */
@@ -77,18 +83,22 @@ test.describe('a French browser', () => {
     expect(first.lang, 'the document says French from the first words').toBe('fr');
     for (const word of ENGLISH) expect(first.text, 'no English before French').not.toContain(word);
     expect(await wordingsFetched(page), 'only the French wording').toEqual(['fr']);
-    // `/language.js` asks for the wording while the entry still downloads: no second round trip after it.
+    // `/boot.js` asks for the wording while the entry still downloads: no second round trip after it.
     const entry = await page.locator('script[type="module"]').getAttribute('src');
     const timing = await page.evaluate(
-      (entryPath) =>
+      ([entryPath, wordingFile]) =>
         performance.getEntriesByType('resource').flatMap((one) => {
           const { pathname } = new URL(one.name);
           if (pathname === entryPath) return [{ what: 'entry', at: one.startTime + one.duration }]; // its response's end
-          return /\/assets\/fr-[\w-]+\.js$/.test(pathname) ? [{ what: 'wording', at: one.startTime }] : [];
+          return new RegExp(wordingFile).exec(pathname)?.[1] === 'fr'
+            ? [{ what: 'wording', at: one.startTime }]
+            : [];
         }),
-      entry,
+      [entry, WORDING_FILE.source] as const,
     );
-    const at = (what: string): number => timing.find((one) => one.what === what)?.at ?? Number.NaN;
+    // The first wording asked for: the first screen's own, the whole language following once it is up.
+    const at = (what: string): number =>
+      Math.min(...timing.filter((one) => one.what === what).map((one) => one.at));
     expect(at('wording'), 'the wording asked for before the entry is in').toBeLessThan(at('entry'));
     await cdp.detach();
 

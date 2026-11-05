@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { create } from 'zustand';
 import { type SafeStorage, safeLocalStorage, safeSessionStorage } from '@/shared/lib/safeStorage';
 
@@ -19,7 +19,7 @@ export function eraseLegacyTokens(storages: readonly SafeStorage[]): void {
 eraseLegacyTokens([safeLocalStorage, safeSessionStorage]);
 
 /** An approver's link token as the server hands it out (`opk_…`), before it is exchanged for the cookie. */
-export const tokenSchema = z.string().regex(/^[A-Za-z0-9_.-]{8,512}$/);
+export const tokenSchema = z.string().check(z.regex(/^[A-Za-z0-9_.-]{8,512}$/));
 
 /** What opening a sign-in link did: held for its exchange, or not a token at all. */
 export type SignInOutcome = 'held' | 'invalid';

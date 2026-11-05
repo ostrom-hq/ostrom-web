@@ -24,11 +24,12 @@ import {
   withToken,
 } from './gate';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
+import { pick, required } from 'zod/mini';
 
 test.afterEach(closeOthers);
 
 /** The answer to a yes: the contract's `ApprovalView`, which then always carries its signed receipt. */
-const zSignedAnswer = zAnswerApprovalResponse.required({ receipt: true });
+const zSignedAnswer = required(zAnswerApprovalResponse, { receipt: true });
 
 /** Opens the request from the queue, as a person does: the queue, then its line. */
 async function openFromQueue(page: Page, approval: { id: string; title: string }): Promise<void> {
@@ -174,7 +175,7 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
     org,
   );
   expect(current.status, JSON.stringify(current.body)).toBe(200);
-  const { digest } = zGetCurrentPackageResponse.pick({ digest: true }).parse(current.body);
+  const { digest } = pick(zGetCurrentPackageResponse, { digest: true }).parse(current.body);
 
   // What a workstation does: a launch, its session, the checks it ran, the end, the receipt.
   const launch = await callFromPage(page, 'POST', '/api/v1/launches', { agent: 'claude', repo }, org);

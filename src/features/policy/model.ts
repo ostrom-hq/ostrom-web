@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { InferenceSettings, Member, ModelPolicy, Secret } from '@gen/api/types.gen';
 import { zModelPolicy } from '@gen/api/zod.gen';
-import { z } from 'zod';
+import { z } from 'zod/mini';
 
 // The contract's policy, with `default` as the server may send it: left out (or null) until one is set.
-const SENT_POLICY = zModelPolicy.extend({ default: z.string().nullish() });
+const SENT_POLICY = z.extend(zModelPolicy, { default: z.nullish(z.string()) });
 
 /**
  * The policy as the server sends it. A new organization's has no `default` until one is set (the server leaves the

@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, request, test } from '@playwright/test';
 import { zCreateTokenResponse } from '../gen/api/zod.gen';
 import { anotherPerson, bodyOf, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
+import { pick } from 'zod/mini';
 
 test.afterEach(closeOthers);
 
@@ -50,7 +51,7 @@ test('an owner follows a session from live to ended, and another organization se
     org.id,
   );
   expect(created.status, JSON.stringify(created.body)).toBe(201);
-  const token = zCreateTokenResponse.pick({ secret: true }).parse(created.body).secret;
+  const token = pick(zCreateTokenResponse, { secret: true }).parse(created.body).secret;
   const id = randomUUID();
   const repo = `${org.slug}/api`;
   const started = await withToken(token, org.id, '/api/v1/sessions', {

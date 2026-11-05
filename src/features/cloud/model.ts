@@ -7,6 +7,7 @@ import type {
   CloudSession,
 } from '@gen/api/types.gen';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
+import { z } from 'zod/mini';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 /**
@@ -24,9 +25,11 @@ export function isCloudAgent(value: string): value is CloudAgent {
  * The agents that follow a prompt, the only ones this console starts (a session or an automation): the contract's but the
  * plain shell, which only an interactive terminal drives, and the console has none. `claude` is the server's default.
  */
-const PROMPT_AGENT = zCloudAgentKind.exclude(['shell']);
-export const PROMPT_AGENTS = PROMPT_AGENT.options;
-export type PromptAgent = (typeof PROMPT_AGENTS)[number];
+export type PromptAgent = Exclude<CloudAgentKind, 'shell'>;
+export const PROMPT_AGENTS: readonly PromptAgent[] = zCloudAgentKind.options.filter(
+  (agent): agent is PromptAgent => agent !== 'shell',
+);
+const PROMPT_AGENT = z.enum(PROMPT_AGENTS);
 
 export function isPromptAgent(value: string): value is PromptAgent {
   return PROMPT_AGENT.safeParse(value).success;

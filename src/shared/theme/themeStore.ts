@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/mini';
 import { create } from 'zustand';
 import { safeLocalStorage } from '@/shared/lib/safeStorage';
 

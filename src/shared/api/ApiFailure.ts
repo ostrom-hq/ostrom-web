@@ -1,5 +1,5 @@
 import { zApiError } from '@gen/api/zod.gen';
-import { ZodError } from 'zod';
+import { $ZodError } from 'zod/v4/core';
 
 export type ApiFailureKind =
   | 'network'
@@ -52,7 +52,7 @@ function kindOfStatus(status: number): ApiFailureKind {
 export function toApiFailure(error: unknown, response: Response | undefined): ApiFailure {
   if (error instanceof ApiFailure) return error;
   if (response === undefined) {
-    if (error instanceof ZodError) {
+    if (error instanceof $ZodError) {
       return new ApiFailure('invalid-request', 'The request does not match the contract.', undefined, error);
     }
     // fetch() rejects with a TypeError when the network fails; anything else is a bug before the call.
@@ -61,7 +61,7 @@ export function toApiFailure(error: unknown, response: Response | undefined): Ap
     }
     return new ApiFailure('unexpected', 'The request failed before reaching the server.', undefined, error);
   }
-  if (response.ok || error instanceof ZodError) {
+  if (response.ok || error instanceof $ZodError) {
     return new ApiFailure(
       'invalid-response',
       'The server answered outside the contract.',
