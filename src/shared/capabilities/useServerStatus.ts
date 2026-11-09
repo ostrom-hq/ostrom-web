@@ -15,10 +15,12 @@ const RETRY_MS = 30_000;
 
 /**
  * What the server speaks and serves (`GET /capabilities`), asked once the person is signed in (the route needs any
- * credential) and kept for the session. Shares `/auth/me`'s cache entry, so it adds no request before it.
+ * credential) and kept for the session. It reads `/auth/me` from the cache without asking it.
  */
 export function useServerStatus(): ServerStatus {
-  const signedIn = meOf(useQuery(ready(getMeOptions(), { staleTime: 60_000 })).data) !== undefined;
+  // Reads who is signed in from the cache, never asks: the top bar does (and not on a sign-in page, which asks nobody).
+  const signedIn =
+    meOf(useQuery(ready(getMeOptions(), { staleTime: 60_000, enabled: false })).data) !== undefined;
   const query = useQuery(
     ready(capabilitiesOptions(), {
       enabled: signedIn,

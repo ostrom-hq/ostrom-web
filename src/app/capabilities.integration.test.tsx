@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import { getMeQueryKey } from '@gen/api/@tanstack/react-query.gen';
 import { handleCapabilities, handleLogout } from '@gen/api/msw.gen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse } from 'msw';
+import { me } from '@/mocks/fixtures/approvals';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { Feature } from '@/shared/capabilities';
 import { FEATURES } from '@/shared/capabilities/model';
@@ -169,6 +171,8 @@ describe('features the server does not serve', () => {
   it('is a component too: its children where served, its fallback (or nothing) elsewhere', async () => {
     serving(['billing.v1']);
     const client = new QueryClient();
+    // Who is signed in is in the cache once the top bar has asked.
+    client.setQueryData(getMeQueryKey(), me);
     render(
       <QueryClientProvider client={client}>
         <Feature name="billing.v1">served</Feature>
