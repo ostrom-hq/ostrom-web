@@ -84,24 +84,14 @@ describe('a server that speaks another API version', () => {
 });
 
 describe('a server without the capabilities route', () => {
-  it('is refused as too old when the console requires the route', async () => {
-    vi.stubEnv('VITE_OSTROM_REQUIRE_CAPABILITIES', 'true');
+  it('is refused as too old, and can still be signed out of', async () => {
     withoutRoute();
     visit('/');
     expect(
       await screen.findByRole('heading', { name: 'This server is too old for this console' }),
     ).toBeVisible();
     expect(screen.queryByRole('navigation')).toBeNull();
-    vi.unstubAllEnvs();
-  });
-
-  it('keeps the console usable otherwise, with every screen offered and the versions unknown', async () => {
-    withoutRoute();
-    visit('/settings');
-    await home();
-    expect(screen.getByRole('link', { name: 'Billing' })).toBeVisible();
-    const about = await screen.findByRole('region', { name: 'About this server' });
-    expect(within(about).getByText('The server did not report its version.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
   });
 });
 
