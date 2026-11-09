@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import {
   handleAnswerApproval,
+  handleCapabilities,
   handleBulkUpdateRules,
   handleCreateRule,
   handleDeleteRule,
@@ -126,6 +127,7 @@ import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
 import { type AuditState, createAuditHandlers } from '@/mocks/audit';
 import { createApproversGraphHandlers } from '@/mocks/approversGraph';
 import { type BillingState, createBillingHandlers } from '@/mocks/billing';
+import { demoCapabilities } from '@/mocks/capabilities';
 import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialDeviceLogins } from '@/mocks/fixtures/device';
@@ -690,6 +692,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const organization = membershipsOf(db).find((item) => item.id === named);
       return HttpResponse.json(organization === undefined ? signedIn : { ...signedIn, member, organization });
     }),
+    // Every feature, as a server with everything configured: a test that needs less overrides this handler.
+    handleCapabilities(() =>
+      db.signedIn
+        ? HttpResponse.json(demoCapabilities())
+        : refusal(401, 'unauthorized', 'nobody is signed in'),
+    ),
     // An approver's link (`opk_…`) is exchanged once for the session cookies; the body carries no secret.
     handleExchangeSignInLink(async ({ request }) => {
       const body = zExchangeSignInLinkBody.safeParse(await readJson(request));

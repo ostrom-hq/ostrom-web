@@ -57,6 +57,19 @@ export const fr = {
       import: 'Importer',
       policy: 'Politique des agents',
     },
+    server: {
+      unsupportedTitle: 'Ce serveur parle une autre version de l’API',
+      unsupportedBody:
+        'Cette console parle l’API v{{console}} et ce serveur parle l’API v{{server}}. Mettez à jour le serveur ou la console pour qu’ils correspondent.',
+      tooOldTitle: 'Ce serveur est trop ancien pour cette console',
+      tooOldBody:
+        'Cette console parle l’API v{{console}} et ce serveur n’indique pas quelle version il parle : il est plus ancien que cette console. Mettez à jour le serveur, ou utilisez une console plus ancienne.',
+      again: 'Vérifier à nouveau',
+      signOut: 'Se déconnecter',
+      unavailableTitle: '{{name}} n’est pas disponible sur ce serveur',
+      unavailableBody:
+        'Ce serveur ne propose pas cette fonction. Demandez à qui l’administre, ou utilisez un autre écran.',
+    },
     theme: {
       switch: 'Thème : {{current}}. Passer en {{next}}',
       names: { system: 'système', light: 'clair', dark: 'sombre' },
@@ -1754,6 +1767,13 @@ export const fr = {
   settings: {
     title: 'Réglages',
     lead: 'Le nom de {{name}}, les sessions ouvertes, et sa suppression.',
+    about: {
+      title: 'À propos de ce serveur',
+      server: 'Version du serveur',
+      api: 'Version de l’API',
+      console: 'Version de la console',
+      unknown: 'Le serveur n’a pas indiqué sa version.',
+    },
     general: {
       title: 'Organisation',
       name: 'Nom',

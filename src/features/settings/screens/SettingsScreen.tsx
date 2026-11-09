@@ -2,9 +2,11 @@
 import type { OrgView } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useServerStatus } from '@/shared/capabilities';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Screen } from '@/shared/ui/Screen';
+import { AboutSection } from '../components/AboutSection';
 import { DangerZone } from '../components/DangerZone';
 import { DevicesSection } from '../components/DevicesSection';
 import { GeneralSection } from '../components/GeneralSection';
@@ -36,6 +38,7 @@ function SettingsPage({
   const sessions = useAuthSessions();
   const sessionActions = useSessionActions('/settings');
   const devices = useDevices();
+  const server = useServerStatus();
   const manages = managesMembers(role);
   const serviceKeys = useServiceKeys(manages);
   return (
@@ -44,6 +47,7 @@ function SettingsPage({
       <SecuritySection view={sessions} actions={sessionActions} back="/settings" />
       <DevicesSection view={devices} />
       <ServiceKeysSection orgName={org.name} manages={manages} view={serviceKeys} />
+      <AboutSection status={server} />
       <DangerZone org={org} isOwner={role === 'owner'} deletion={deletion} />
     </Screen>
   );

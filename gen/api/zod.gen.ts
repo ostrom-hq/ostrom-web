@@ -591,6 +591,15 @@ export const zBudgetOverride = z.object({
 });
 
 /**
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `secrets.v1`, `sessions.v1`, `sharing.v1`, `slack.v1`, `usage.v1`, `waits.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ */
+export const zCapabilities = z.object({
+    apiVersion: z.int(),
+    serverVersion: z.string(),
+    features: z.array(z.string())
+});
+
+/**
  * Remaining capacity of the shared subscriptions
  */
 export const zCapacity = z.object({
@@ -3285,10 +3294,7 @@ export const zListInstanceKeysResponse = z.object({
 /**
  * OK
  */
-export const zCapabilitiesResponse = z.object({
-    version: z.string(),
-    capabilities: z.array(z.string())
-});
+export const zCapabilitiesResponse = zCapabilities;
 
 export const zStartGithubLoginQuery = z.object({
     redirect: z.optional(z.string()),
