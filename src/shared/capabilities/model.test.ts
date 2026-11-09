@@ -33,10 +33,8 @@ describe('serverStatusOf', () => {
     expect(serverStatusOf({ ...none, error: new Error('odd') })).toEqual({ kind: 'unknown' });
   });
 
-  it('calls a server without the route too old only when the console requires it', () => {
+  it('calls a server without the route too old', () => {
     const missing = new ApiFailure('not-found', 'HTTP 404', 404, undefined);
-    expect(serverStatusOf({ ...none, error: missing })).toEqual({ kind: 'unknown' });
-    vi.stubEnv('VITE_OSTROM_REQUIRE_CAPABILITIES', 'true');
     expect(serverStatusOf({ ...none, error: missing })).toEqual({ kind: 'too-old' });
     // Any other refusal still never blocks.
     expect(serverStatusOf({ ...none, error: new ApiFailure('forbidden', 'no', 403, undefined) })).toEqual({

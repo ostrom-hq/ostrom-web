@@ -29,11 +29,6 @@ declare global {
   interface ImportMetaEnv {
     /** The console's own version (`package.json`), set by `vite.config.ts` at build time. */
     readonly VITE_OSTROM_CONSOLE_VERSION?: string;
-    /**
-     * `'true'` refuses a server that has no `GET /capabilities` (404) as too old for this console. Off until the
-     * server serves the route: the journeys against the server's current image would otherwise all stop there.
-     */
-    readonly VITE_OSTROM_REQUIRE_CAPABILITIES?: string;
   }
 }
 
@@ -61,14 +56,9 @@ export interface CapabilitiesQueryState {
   readonly pending: boolean;
 }
 
-/** Whether the console refuses a server without the capabilities route (see `VITE_OSTROM_REQUIRE_CAPABILITIES`). */
-export function requiresCapabilities(): boolean {
-  return import.meta.env.VITE_OSTROM_REQUIRE_CAPABILITIES === 'true';
-}
-
 /**
- * Reads the answer of `GET /capabilities`. Only a server that says it speaks another API version (or, when required,
- * has no such route) is refused; a network error, a 5xx or an unreadable answer never blocks the console.
+ * Reads the answer of `GET /capabilities`. Only a server that says it speaks another API version (or one with no such
+ * route) is refused; a network error, a 5xx or an unreadable answer never blocks the console.
  */
 export function serverStatusOf({ data, error, pending }: CapabilitiesQueryState): ServerStatus {
   if (data !== undefined) {
@@ -76,7 +66,7 @@ export function serverStatusOf({ data, error, pending }: CapabilitiesQueryState)
       ? { kind: 'ready', capabilities: data }
       : { kind: 'unsupported', apiVersion: data.apiVersion };
   }
-  if (isApiFailure(error) && error.kind === 'not-found' && requiresCapabilities()) return { kind: 'too-old' };
+  if (isApiFailure(error) && error.kind === 'not-found') return { kind: 'too-old' };
   return pending ? { kind: 'loading' } : { kind: 'unknown' };
 }
 
