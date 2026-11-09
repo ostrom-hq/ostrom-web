@@ -34,3 +34,17 @@ export function ErrorScreen(): ReactElement {
     </section>
   );
 }
+
+/** A direct address to a screen whose feature the server does not serve (the navigation does not list it). */
+export function FeatureUnavailableScreen({ name }: { readonly name: string }): ReactElement {
+  const { t } = useTranslation();
+  return (
+    <section className="o-page">
+      <h1>{t('app.server.unavailableTitle', { name })}</h1>
+      <p className="o-lead">{t('app.server.unavailableBody')}</p>
+      <p>
+        <Link to="/">{t('app.notFound.home')}</Link>
+      </p>
+    </section>
+  );
+}

@@ -359,7 +359,13 @@ function imageSecurityHeaders(): Record<string, string> {
   return headers;
 }
 
+/** The console's own version, shown in the settings next to the server's (`package.json`, bumped by release-please). */
+const consoleVersion = (
+  JSON.parse(readFileSync(resolve(here, 'package.json'), 'utf8')) as { version: string }
+).version;
+
 export default defineConfig({
+  define: { 'import.meta.env.VITE_OSTROM_CONSOLE_VERSION': JSON.stringify(consoleVersion) },
   plugins: [react(), splitGenerated(), dropMockWorkerUnlessMocks(), preloadBoot(), reportModules()],
   resolve: { alias: { '@': src, '@ee': ee, '@gen': gen } },
   server: { port: 5173, strictPort: true },

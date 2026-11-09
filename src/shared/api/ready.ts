@@ -9,7 +9,7 @@ export interface QueryTuning {
   /** `keepPreviousData`: the last answer stays on screen while the next one loads. */
   readonly placeholderData?: <T>(previous: T | undefined) => T | undefined;
   /** `false` for a query that only adds to a screen: a refusal is shown at once, not asked three more times. */
-  readonly retry?: boolean;
+  readonly retry?: boolean | ((failureCount: number, error: unknown) => boolean);
   /** `false` holds the query until what it needs is known. */
   readonly enabled?: boolean;
 }

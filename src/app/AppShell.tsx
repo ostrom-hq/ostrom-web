@@ -11,12 +11,16 @@ import {
   usePageViews,
 } from '@/shared/analytics';
 import { OrgControls } from '@/features/orgs';
+import { blocks, Feature, useServerStatus } from '@/shared/capabilities';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
 import { NavMenu } from '@/app/NavMenu';
-import { NAV_LINKS } from '@/app/navigation';
+import { needOf } from '@/app/navigation';
+import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
+import { FeatureUnavailableScreen } from '@/app/StatusScreens';
+import { useNavLinks } from '@/app/useNavLinks';
 
 export function AppShell(): ReactElement {
   const { t } = useTranslation();
@@ -28,6 +32,12 @@ export function AppShell(): ReactElement {
   });
   const consent = useConsentStore((state) => state.status);
   usePageViews(analytics, pathname, consent);
+  const server = useServerStatus();
+  const links = useNavLinks();
+  const need = needOf(pathname);
+  const screen = <Outlet key={organizationGeneration} />;
+  // A server the console cannot speak to: nothing of the console is offered but the explanation and the sign-out.
+  if (blocks(server)) return <ServerBlockedScreen status={server} />;
   return (
     <div className="o-shell">
       <a className="o-skip" href="#main">
@@ -40,7 +50,7 @@ export function AppShell(): ReactElement {
         </Link>
         <NavMenu />
         <nav className="o-nav" aria-label={t('app.nav.label')}>
-          {NAV_LINKS.map((link) => (
+          {links.map((link) => (
             <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
               {t(`app.nav.${link.label}`)}
             </Link>
@@ -53,7 +63,16 @@ export function AppShell(): ReactElement {
       </header>
       <main id="main" className="o-main">
         {/* A screen opened in one organization never acts in the next: a switch opens it afresh. */}
-        <Outlet key={organizationGeneration} />
+        {need === undefined ? (
+          screen
+        ) : (
+          <Feature
+            name={need.feature}
+            fallback={<FeatureUnavailableScreen name={t(`app.nav.${need.label}`)} />}
+          >
+            {screen}
+          </Feature>
+        )}
       </main>
       <footer className="o-footer">
         <PrivacyChoices analytics={analytics} configured={analyticsConfig !== null} />

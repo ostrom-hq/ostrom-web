@@ -867,6 +867,24 @@ export type BudgetOverride = {
 };
 
 /**
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `secrets.v1`, `sessions.v1`, `sharing.v1`, `slack.v1`, `usage.v1`, `waits.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ */
+export type Capabilities = {
+    /**
+     * The version of the `/api/v1` contract the server speaks (1)
+     */
+    apiVersion: number;
+    /**
+     * The server's release version (`1.4.0`, or `0.0.0-edge.<time>.<sha>` for a build of `main`)
+     */
+    serverVersion: string;
+    /**
+     * The features served and configured on this instance, by key
+     */
+    features: Array<string>;
+};
+
+/**
  * Remaining capacity of the shared subscriptions
  */
 export type Capacity = {
@@ -4039,11 +4057,7 @@ export type CapabilitiesErrors = {
     /**
      * A refusal
      */
-    400: ApiError;
-    /**
-     * A refusal
-     */
-    404: ApiError;
+    401: ApiError;
 };
 
 export type CapabilitiesError = CapabilitiesErrors[keyof CapabilitiesErrors];
@@ -4052,10 +4066,7 @@ export type CapabilitiesResponses = {
     /**
      * OK
      */
-    200: {
-        version: string;
-        capabilities: Array<string>;
-    };
+    200: Capabilities;
 };
 
 export type CapabilitiesResponse = CapabilitiesResponses[keyof CapabilitiesResponses];

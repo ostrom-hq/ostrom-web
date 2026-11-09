@@ -92,7 +92,9 @@ export const listInstanceKeys = <ThrowOnError extends boolean = false>(options?:
 });
 
 /**
- * Capabilities of this server (feature keys and versions)
+ * The API version this server speaks, its version and the features it serves
+ *
+ * Read by every client after signing in, with any credential (CLI, app, console session, device, runner or service key). A client refuses a server whose `apiVersion` it does not speak, and hides or refuses a feature whose key is absent from `features`: a key is listed only when the server serves that feature and it is configured on this instance (billing only with Stripe, push notifications only with a push sender…), never for a `planned` operation. Kept behind authentication, like TeamCode's: an anonymous call is refused with 401 `unauthorized`, which tells a client it reached an Ostrom server and should sign in next.
  */
 export const capabilities = <ThrowOnError extends boolean = false>(options?: Options<CapabilitiesData, ThrowOnError>): RequestResult<CapabilitiesResponses, CapabilitiesErrors, ThrowOnError> => (options?.client ?? client).get<CapabilitiesResponses, CapabilitiesErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -101,6 +103,11 @@ export const capabilities = <ThrowOnError extends boolean = false>(options?: Opt
         query: z.optional(z.never())
     }).parseAsync(data),
     responseValidator: async (data) => await zCapabilitiesResponse.parseAsync(data),
+    security: [{ scheme: 'bearer', type: 'http' }, {
+            in: 'cookie',
+            name: '__Host-ostrom_session',
+            type: 'apiKey'
+        }],
     url: '/api/v1/capabilities',
     ...options
 });

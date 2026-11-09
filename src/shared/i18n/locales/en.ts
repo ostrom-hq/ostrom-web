@@ -53,6 +53,18 @@ export const en = {
       import: 'Import',
       policy: 'Agent policy',
     },
+    server: {
+      unsupportedTitle: 'This server speaks another API version',
+      unsupportedBody:
+        'This console speaks API v{{console}} and this server speaks API v{{server}}. Update the server or the console so that they match.',
+      tooOldTitle: 'This server is too old for this console',
+      tooOldBody:
+        'This console speaks API v{{console}} and this server does not say which version it speaks: it is older than this console. Update the server, or use an older console.',
+      again: 'Check again',
+      signOut: 'Sign out',
+      unavailableTitle: '{{name}} is not available on this server',
+      unavailableBody: 'This server does not offer this feature. Ask whoever runs it, or use another screen.',
+    },
     theme: {
       switch: 'Theme: {{current}}. Switch to {{next}}',
       names: { system: 'system', light: 'light', dark: 'dark' },
@@ -1713,6 +1725,13 @@ export const en = {
   settings: {
     title: 'Settings',
     lead: 'How {{name}} is named, who is signed in, and deleting it.',
+    about: {
+      title: 'About this server',
+      server: 'Server version',
+      api: 'API version',
+      console: 'Console version',
+      unknown: 'The server did not report its version.',
+    },
     general: {
       title: 'Organization',
       name: 'Name',

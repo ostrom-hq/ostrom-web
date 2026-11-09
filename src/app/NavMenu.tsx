@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { useModal } from '@/shared/ui/useModal';
-import { NAV_LINKS } from '@/app/navigation';
+import { useNavLinks } from '@/app/useNavLinks';
 
 /**
  * The navigation on a phone, where the bar has no room for it: a button that opens every screen in a sheet, modal
@@ -48,6 +48,7 @@ function NavSheet({
   const overlay = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const titleId = useId();
+  const links = useNavLinks();
   useModal(overlay, panel, onClose, opener);
   return createPortal(
     <div ref={overlay} className="o-nav-menu">
@@ -69,7 +70,7 @@ function NavSheet({
         </div>
         <nav aria-label={t('app.nav.label')}>
           <ul className="o-nav-menu__list">
-            {NAV_LINKS.map((link) => (
+            {links.map((link) => (
               <li key={link.to}>
                 <Link to={link.to} activeOptions={{ exact: link.to === '/' }} onClick={onClose}>
                   {t(`app.nav.${link.label}`)}
