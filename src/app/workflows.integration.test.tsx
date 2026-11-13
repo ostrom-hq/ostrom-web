@@ -133,7 +133,16 @@ describe('the workflows', () => {
   it('shows no sources section for a workflow found nowhere', async () => {
     server.use(
       http.get('*/api/v1/workflows/:id', () =>
-        HttpResponse.json({ id: 'wf_empty', name: 'Empty', domain: 'd', nodes: [], edges: [], sources: [] }),
+        HttpResponse.json({
+          id: 'wf_empty',
+          name: 'Empty',
+          domain: 'd',
+          nodes: [],
+          edges: [],
+          sources: [],
+          status: 'proposed',
+          foundAt: '2026-10-01T00:00:00.000Z',
+        }),
       ),
     );
     visit('/workflows/wf_empty');
