@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { ReactElement, ReactNode } from 'react';
 import type { FeatureKey } from './model';
 import { useFeature } from './useServerStatus';

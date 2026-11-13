@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { getMeQueryKey } from '@gen/api/@tanstack/react-query.gen';
 import { handleCapabilities, handleLogout } from '@gen/api/msw.gen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';

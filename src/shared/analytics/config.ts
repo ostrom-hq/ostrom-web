@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { safeHref } from '@/shared/lib/safeHref';
 
 /** Where product analytics go: a PostHog project. Absent (self-hosted, local dev) means analytics are off. */

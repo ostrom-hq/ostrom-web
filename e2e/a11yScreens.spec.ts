@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Every screen of the console's navigation, checked by axe against WCAG 2.2 A and AA, in the light and the dark theme,
 // on a wide screen and a phone, filled with the demo data: the badges, tables and lists a new organization on the real
 // server does not have yet (e2e-real/a11yScreens.spec.ts checks those empty states). The table of what axe finds is

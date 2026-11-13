@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Billing against the real server in Stripe test mode: in ostrom-server's `console-journey.yml`, Stripe is
 // stripe-mock (`OSTROM_STRIPE_API_BASE`), so no card is charged and nothing live is called. Paying with the test card
 // 4242 happens on Stripe's own page, in payment.spec.ts, which runs only against Stripe's test mode: here the browser

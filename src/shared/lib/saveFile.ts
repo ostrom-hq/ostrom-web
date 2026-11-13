@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * Hands the person a file the console fetched itself (with the session cookie), as a download named `name`. A

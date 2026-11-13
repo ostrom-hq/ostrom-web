@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Lines 5.4, 5.6 and 5.7 of the journey (demo/PARCOURS.md), console side, against the real server. The gate is opened
 // through the API in the setup, as the QA bench does it (ostrom-e2e `scripts/load-setup.ts`): an accepted workflow
 // whose gate node names the approvers of pushes to main of a repository, and a personal token with `gates:ask` that

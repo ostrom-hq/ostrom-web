@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // A gate waiting for a yes, opened through the API as the QA bench does it (ostrom-e2e `scripts/load-setup.ts`): an
 // accepted workflow whose gate node names the approvers of pushes to main of a repository, and a personal token with
 // `gates:ask` that asks for such a push. Shared by the journeys that read or answer it.

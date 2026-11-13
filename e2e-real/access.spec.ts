@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 2.11 of the journey (demo/PARCOURS.md), console side, against the real server: a personal token created,
 // replaced and revoked; the person's browser sessions on their account (/account, in no organization), one signed out
 // from another; the organization's service key for its CI, created with a fresh sign-in and deleted; the CLI's

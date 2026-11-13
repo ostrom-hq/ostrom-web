@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Wait, WaitAction, WaitField, WaitRef, WaitStatus } from '@gen/api/types.gen';
 import { safeHref } from '@/shared/lib/safeHref';
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Approval, Me } from '@gen/api/types.gen';
 import { MEMBER_IDS } from './organization';
 

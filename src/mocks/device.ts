@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleAnswerDeviceLogin, handleGetDeviceLogin } from '@gen/api/msw.gen';
 import type { ApiError, Organization } from '@gen/api/types.gen';
 import { zDeviceAnswer } from '@gen/api/zod.gen';

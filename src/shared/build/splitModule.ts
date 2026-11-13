@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 
 /** One declaration of a split module, as its own module: what it exports, and its code. */

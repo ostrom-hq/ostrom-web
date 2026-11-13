@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { screen, within } from '@testing-library/react';
 import { focusManager } from '@tanstack/react-query';
 import { delay, http, HttpResponse } from 'msw';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { zGetGovernanceConfirmationResponse } from '@gen/api/zod.gen';
 
 // What ostrom-server sends since server#332 for a write a person's API token asked (`Token.kind` `personal`): the

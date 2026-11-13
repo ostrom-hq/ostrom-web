@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { bootChunkOf, type ModuleGraph, type ModuleNode } from './bootChunk';
 
 /** A build's graph from its static importers; `main` is the entry. */

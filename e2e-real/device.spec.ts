@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 5.1 of the journey (demo/PARCOURS.md), console side, against the real server: `ostrom login` (RFC 8628). The CLI
 // is played here by plain API calls with no cookie nor token, as the CLI makes them; the person answers on `/device`,
 // where the server's link sends them.

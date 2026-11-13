@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /** What a screen adds to a generated query: how long it stays fresh, how often it polls, what shows meanwhile. */
 export interface QueryTuning {

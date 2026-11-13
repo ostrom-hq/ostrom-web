@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { zListAuditResponse } from '@gen/api/zod.gen';
 import { getResponse } from 'msw';
 import { AUDIT_PAGE, type AuditState, createAuditHandlers } from '@/mocks/audit';

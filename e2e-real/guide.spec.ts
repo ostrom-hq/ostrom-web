@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 2.1 of the journey (demo/PARCOURS.md), console side, against the real server and a fake GitHub
 // (e2e-real/fakeGithub.ts): the setup guide of a new organization counts each of its six steps as the owner takes
 // them on the console, each read from what the server answers (the GitHub App installed, a person joined, a shared

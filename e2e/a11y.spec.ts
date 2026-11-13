@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The screens of the yes, checked by axe against WCAG 2.2 A and AA in each state an approver meets them in, in the
 // light and the dark theme: an approver on a phone, answering a link, must be able to read and reach everything.
 import AxeBuilder from '@axe-core/playwright';

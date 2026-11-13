@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // No import: scripts/bundle-budget.ts runs this file under Node, without the app's `@` alias.
 
 /** A route of the router, measured: its own chunks, or none when its screen is in the first download on purpose. */

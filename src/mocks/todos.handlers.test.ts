@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { getSessionTodo, listTodoStopHooks, setMemberTodoStopHook } from '@gen/api/sdk.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';

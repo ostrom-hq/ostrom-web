@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
 import { zInvitationLinkCreate, zOrgInvites, zOrgMember } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';

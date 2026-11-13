@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { DeviceAuthorization } from '@gen/api/types.gen';
 
 /** The code of the demo's waiting `ostrom login`: `/device?code=WDJB-MJHT` opens it. */

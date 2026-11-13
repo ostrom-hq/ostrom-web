@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /** Dollars as the reader's locale writes them, cents always shown: spend is read to the cent. */
 export function formatUsd(usd: number, locale: string): string {

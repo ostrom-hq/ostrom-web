@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // How soon the yes screens show on a slow phone network, against the real server: the queue of requests (`/yes`) and
 // one request (`/yes/$approvalId`), each loaded cold (no cache) on Lighthouse's slow 4G with a CPU four times slower.
 // Chromium only: the network and the CPU are slowed through the DevTools protocol.

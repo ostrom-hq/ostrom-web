@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * What a personal token may be given, by resource. The contract has no scope catalogue yet (the server takes any

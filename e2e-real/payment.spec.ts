@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Paying for a plan with Stripe's test card 4242, end to end: the console, the real server, Stripe in TEST mode (its
 // hosted Checkout, never a live key) and Stripe's signed webhook back to the server. It runs only when ostrom-server's
 // `console-journey.yml` is dispatched with `stripe: test`: the server then holds the repository's test key (refused

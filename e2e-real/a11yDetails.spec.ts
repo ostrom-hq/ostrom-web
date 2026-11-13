@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The screens the navigation does not list, reached from a line of a list or a link (a request, a session with its
 // gate, a workflow, a receipt, a group, the account, a CLI's sign-in waiting for a yes), each with a real item of a new
 // organization behind it, and its content in (no loading left, its item's own text shown) before axe runs,

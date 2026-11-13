@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 
 /** Where `/boot.js` leaves the responses for the console's `fetch` (src/shared/api/bootFetch.ts). */
@@ -61,7 +61,7 @@ export interface BootOptions {
  * is dropped: a later read always goes out.
  */
 export function bootScript(routes: readonly BootRoute[], options: BootOptions): string {
-  return `// SPDX-License-Identifier: AGPL-3.0-only
+  return `// SPDX-License-Identifier: Apache-2.0
 // Written by the build (src/shared/build/bootScript.ts): the wording, the screen's chunks and first reads, with the entry.
 (function () {
   var routes = ${JSON.stringify(routes)};

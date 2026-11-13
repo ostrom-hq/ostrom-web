@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { listActivityInfiniteOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { ActivityItem } from '@gen/api/types.gen';
 import { useInfiniteQuery } from '@tanstack/react-query';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { deleteDevice, getMyAccount, linkSignInProvider, listDevices } from '@gen/api/sdk.gen';
 import { DEMO_GITHUB_CONSENT } from '@/mocks/account';
 import { otherOrganization } from '@/mocks/fixtures/organization';

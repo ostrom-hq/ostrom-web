@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { exchangeSignInLink, getMe, logout, requestSignInEmail, verifySignInEmail } from '@gen/api/sdk.gen';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { DEMO_EMAIL_TOKEN, OTHER_BROWSER_EMAIL_TOKEN, resetMockDb } from '@/mocks/handlers';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The groups of the shared accounts on the demo data: made, opened and changed by an admin, and checked by axe
 // against WCAG 2.2 A and AA in the light and the dark theme, on a wide screen and a phone.
 import AxeBuilder from '@axe-core/playwright';

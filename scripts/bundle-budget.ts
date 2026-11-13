@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 /**
  * The console's download budget, per route: what a first visit to a route fetches, gzipped. That is the entry with
  * the chunks it imports and the wording of one language, the heaviest (the first download, shared by every route),

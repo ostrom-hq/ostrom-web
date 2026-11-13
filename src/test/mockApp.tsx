@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { createMemoryHistory } from '@tanstack/react-router';
 import { cleanup, render } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The repositories a workflow is limited to (audit of the runner 2, R6), console side, against the real server and a
 // fake GitHub (e2e-real/fakeGithub.ts): the list says which repositories a workflow covers, or all of them, and the
 // editor picks them among the organization's, with a warning while none is picked.

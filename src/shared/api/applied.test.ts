@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { QueryClient } from '@tanstack/react-query';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { applied, appliedMutation, isConfirmationPending } from '@/shared/api/applied';

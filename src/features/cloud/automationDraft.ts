@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Automation, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
 
 export const TRIGGER_KINDS = ['cron', 'webhook'] as const;

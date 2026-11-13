@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { defineConfig, devices } from '@playwright/test';
 
 // The journeys against the real server (e2e-real/, CI only): a build without mocks in dist-real, served by `vite

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // What each screen asks the server when it loads from scratch (a full page load, as from a link or a reload): how
 // many calls, whether any is asked twice, and how deep the chain of calls waiting on one another goes (a waterfall:
 // a call that starts only once another has answered).

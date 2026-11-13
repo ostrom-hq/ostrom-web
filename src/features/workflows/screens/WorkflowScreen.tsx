@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Workflow } from '@gen/api/types.gen';
 import { Link, Navigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';

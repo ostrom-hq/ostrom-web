@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * A link that came from an agent or a CI (evidence, checks, commits) is only a link when it is http(s):

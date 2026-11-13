@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { expect, test } from '@playwright/test';
 
 /** The demo's second organization (src/mocks/fixtures/organization.ts). */

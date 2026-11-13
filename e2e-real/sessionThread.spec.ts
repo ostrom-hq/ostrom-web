@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 6.1 of the journey (demo/PARCOURS.md), console side, against the real server: the sessions of an organization,
 // a page at a time, and the thread of one, with the answers to the gates it asked (ostrom-server#163). Sessions are
 // opened as a workstation opens them (a launch, then its agent's session); the gates are asked in the session with

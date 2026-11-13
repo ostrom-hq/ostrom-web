@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleListRuns, handleListWorkflowRuns, handleStartWorkflowRun } from '@gen/api/msw.gen';
 import type { Workflow, WorkflowRun } from '@gen/api/types.gen';
 import { zStartWorkflowRunBody } from '@gen/api/zod.gen';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Capabilities } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { announces, blocks, consoleVersion, hasFeature, serverStatusOf } from './model';

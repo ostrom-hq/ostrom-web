@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { answerDeviceLogin, getDeviceLogin } from '@gen/api/sdk.gen';
 import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
 import { otherOrganization } from '@/mocks/fixtures/organization';

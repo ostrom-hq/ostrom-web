@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The console's heavy screens on a large organization (src/mocks/fixtures/large.ts: 500 members in 50 groups, 2 000
 // rules, 10 000 lines of activity, 300 sessions), on a wide screen and on a phone whose processor is slowed four
 // times. For each screen: when its first lines show, how many lines and DOM nodes it holds, how many API calls it

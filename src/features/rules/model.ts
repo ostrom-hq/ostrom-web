@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { GateAction, NewRule, Rule, RuleGate, RuleStrength, UpdateRuleData } from '@gen/api/types.gen';
 
 /** What an owner looks at: what is left to decide first, then what was decided. */

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { safeSessionStorage } from '@/shared/lib/safeStorage';
 
 /** Where the invitation opened in this tab waits while its person signs in. */

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { ORG_HEADER } from '@/shared/api/orgHeader';
 import { BOOTED } from '@/shared/build/bootScript';
 

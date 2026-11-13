@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleCreateToken, handleListTokens, handleRevokeToken, handleRotateToken } from '@gen/api/msw.gen';
 import type { ApiError, CreatedToken, Token } from '@gen/api/types.gen';
 import { zTokenCreate } from '@gen/api/zod.gen';

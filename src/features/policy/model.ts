@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { InferenceSettings, Member, ModelPolicy, Secret } from '@gen/api/types.gen';
 import { zModelPolicy } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';

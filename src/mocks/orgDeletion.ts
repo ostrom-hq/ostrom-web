@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleDeleteOrg } from '@gen/api/msw.gen';
 import type { Organization } from '@gen/api/types.gen';
 import { zOrgDeleteConfirm } from '@gen/api/zod.gen';

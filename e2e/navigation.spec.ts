@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The console's navigation: the bar on a wide screen; on a phone, where the bar has no room, a menu that is a modal
 // sheet (the focus stays in it, Escape and Close shut it, the focus comes back to its button).
 import { expect, test } from '@playwright/test';

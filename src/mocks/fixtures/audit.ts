@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { AuditEvent } from '@gen/api/types.gen';
 
 /** Acme's audit log, newest first, as `GET /audit` lists it: more than a page, so the demo shows the next one. */

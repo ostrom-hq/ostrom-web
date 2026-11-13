@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Receipt } from '@gen/api/types.gen';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The navigation against the real server, signed in: the bar on a wide screen; on a phone, the menu, a modal sheet
 // that axe finds nothing wrong with, whose focus goes round inside it, that Escape closes, and that opens a screen.
 import AxeBuilder from '@axe-core/playwright';

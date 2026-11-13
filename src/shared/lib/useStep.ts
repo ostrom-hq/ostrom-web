@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { useState } from 'react';
 
 /** How many lines a long list shows at first, and how many more each "Show more" adds. */

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { expect, test } from '@playwright/test';
 
 test('the mock build says its data is a demo and answers the API from the contract', async ({ page }) => {

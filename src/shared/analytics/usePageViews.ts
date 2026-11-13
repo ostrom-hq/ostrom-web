@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { useEffect, useRef } from 'react';
 import type { Analytics } from '@/shared/analytics/analytics';
 import type { ConsentStatus } from '@/shared/analytics/consent';

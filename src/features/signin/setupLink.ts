@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { create } from 'zustand';
 
 /** How the server answered the setup link's token: it took it (a cookie now lets the sign-in create the account), or it is dead. */

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { expect, type Page, test } from '@playwright/test';
 
 /** The page never scrolls sideways: a long rule or path wraps, on a phone as on a desk. */
