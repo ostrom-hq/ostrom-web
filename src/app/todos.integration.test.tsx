@@ -4,7 +4,7 @@ import type { Todo } from '@gen/api/types.gen';
 import { focusManager } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
@@ -272,6 +272,29 @@ describe('the Todo Stop hook switch of a member', () => {
     expect(switchOf('Samir Haddad')).toHaveAccessibleDescription(
       /cannot end its turn while its todo has open items/,
     );
+  });
+
+  it('holds the switch of the member being saved until the server answers', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.put('*/api/v1/todos/stop-hook/members/:memberId', async ({ params }) => {
+        await delay(150);
+        return HttpResponse.json({ memberId: String(params['memberId']), enabled: false });
+      }),
+    );
+    visit('/members');
+    await screen.findByText('Samir Haddad');
+    await waitFor(() => {
+      expect(switchOf('Samir Haddad')).toBeChecked();
+    });
+    await user.click(switchOf('Samir Haddad'));
+    await waitFor(() => {
+      expect(switchOf('Samir Haddad')).toBeDisabled();
+    });
+    expect(switchOf('theo')).toBeEnabled();
+    await waitFor(() => {
+      expect(switchOf('Samir Haddad')).toBeEnabled();
+    });
   });
 
   it('says why it could not be saved, and keeps its state', async () => {
