@@ -82,6 +82,65 @@ describe('the workflows', () => {
     expect(screen.getByText('Last change').nextSibling).not.toHaveTextContent('·');
   });
 
+  it('shows where a proposed workflow was found and the command it suggests, without following a foreign link', async () => {
+    server.use(
+      http.get('*/api/v1/workflows/:id', () =>
+        HttpResponse.json({
+          id: 'wf_learned_1',
+          name: 'Pull request checks (api)',
+          domain: 'Processes',
+          status: 'proposed',
+          foundAt: '2026-10-01T00:00:00.000Z',
+          nodes: [
+            {
+              id: 'n1',
+              kind: 'check',
+              label: 'test',
+              suggested: {
+                command: {
+                  value: './gradlew check',
+                  evidence: ['.github/workflows/ci.yml:6'],
+                  at: '2026-10-01T00:00:00.000Z',
+                },
+              },
+            },
+          ],
+          edges: [{ from: 'n1', to: null }],
+          sources: [
+            {
+              kind: 'ci',
+              ref: '.github/workflows/ci.yml:3',
+              url: 'https://github.com/acme/api/blob/main/x#L3',
+            },
+            { kind: 'doc', ref: 'CLAUDE.md:1', url: 'javascript:alert(1)' },
+          ],
+        }),
+      ),
+    );
+    visit('/workflows/wf_learned_1');
+    const steps = await screen.findByRole('region', { name: 'Steps' });
+    expect(steps).toHaveTextContent(
+      'Suggested command: ./gradlew check (seen in .github/workflows/ci.yml:6)',
+    );
+    const sources = screen.getByRole('region', { name: 'Where it was found' });
+    expect(within(sources).getByRole('link', { name: '.github/workflows/ci.yml:3' })).toHaveAttribute(
+      'href',
+      'https://github.com/acme/api/blob/main/x#L3',
+    );
+    expect(within(sources).getByText('CLAUDE.md:1').closest('a')).toBeNull();
+  });
+
+  it('shows no sources section for a workflow found nowhere', async () => {
+    server.use(
+      http.get('*/api/v1/workflows/:id', () =>
+        HttpResponse.json({ id: 'wf_empty', name: 'Empty', domain: 'd', nodes: [], edges: [], sources: [] }),
+      ),
+    );
+    visit('/workflows/wf_empty');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Empty' })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Where it was found' })).toBeNull();
+  });
+
   it('says when there is no workflow', async () => {
     server.use(http.get('*/api/v1/workflows', () => HttpResponse.json({ items: [] })));
     visit('/workflows');

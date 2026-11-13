@@ -882,6 +882,7 @@ export const en = {
       updated: 'Last change',
       steps: 'Steps',
       noSteps: 'This workflow has no step yet.',
+      sources: 'Where it was found',
     },
     kind: {
       trigger: 'Starts',
@@ -1009,6 +1010,7 @@ export const en = {
       then: 'Then: {{target}}',
       when: '{{when}}: {{target}}',
       end: 'the workflow ends',
+      suggested: 'Suggested command: {{command}} (seen in {{evidence}})',
     },
   },
   tools: {
