@@ -24,6 +24,8 @@ export interface MemberRowProps {
 export interface StopHookSwitch {
   readonly enabled: boolean;
   readonly saving: boolean;
+  /** The id of the sentence that says what the switch does, written once for the list. */
+  readonly hintId: string;
   readonly onChange: (enabled: boolean) => void;
 }
 
@@ -38,7 +40,6 @@ export function MemberRow({
 }: MemberRowProps): ReactElement {
   const { t } = useTranslation();
   const selectId = useId();
-  const hookId = useId();
   const name = displayName(member);
   const role = orgRoleOf(member.role);
   // The login under a name; without a name, the login is the title and the address (if any) says who it is.
@@ -54,23 +55,20 @@ export function MemberRow({
         </span>
         {meta === null ? null : <span className="o-row__meta">{meta}</span>}
         {stopHook === undefined ? null : (
-          <span className="o-inline">
+          // One label around the box: a list of a hundred people stays within the page's budget of DOM nodes.
+          <label className="o-inline">
             <input
-              id={hookId}
               type="checkbox"
               checked={stopHook.enabled}
               disabled={stopHook.saving}
               aria-label={t('members.list.todoHookOf', { name })}
-              aria-describedby={`${hookId}-hint`}
+              aria-describedby={stopHook.hintId}
               onChange={(event) => {
                 stopHook.onChange(event.target.checked);
               }}
             />
-            <label htmlFor={hookId}>{t('members.list.todoHook')}</label>
-            <span id={`${hookId}-hint`} className="o-visually-hidden">
-              {t('members.list.todoHookHint')}
-            </span>
-          </span>
+            {t('members.list.todoHook')}
+          </label>
         )}
       </span>
       <span className="o-row__end o-inline">

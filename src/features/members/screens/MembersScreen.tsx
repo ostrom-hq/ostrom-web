@@ -49,6 +49,7 @@ function MembersPage({
   // The invitations that did not load, or the one that was not revoked: said in their section.
   const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
   const searchId = useId();
+  const hintId = useId();
   // A large organization is read a hundred people at a time, the next hundred when asked, and searched on the
   // server, beyond the people read (PERF-CONSOLE).
   // A search typed keeps its box, even once the organization is small enough not to need one.
@@ -136,6 +137,7 @@ function MembersPage({
                             : {
                                 enabled: stopHook.enabled(member.id),
                                 saving: stopHook.saving === member.id,
+                                hintId,
                                 onChange: (enabled) => {
                                   stopHook.set(member.id, enabled);
                                 },
@@ -157,6 +159,11 @@ function MembersPage({
                   );
                 })}
               </ul>
+            )}
+            {stopHook.enabled === undefined ? null : (
+              <p id={hintId} className="o-row__meta">
+                {t('members.list.todoHookHint')}
+              </p>
             )}
             <MorePeople people={view} />
           </section>

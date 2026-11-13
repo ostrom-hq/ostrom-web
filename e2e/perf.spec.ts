@@ -27,6 +27,8 @@ interface HeavyScreen {
   readonly rows: string;
   /** The most lines it may draw, when it holds several lists, each cut on its own: `BUDGET.rows` otherwise. */
   readonly maxRows?: number;
+  /** The most DOM elements it may hold: `BUDGET.domNodes` otherwise. */
+  readonly maxNodes?: number;
   readonly filter?: Interaction;
   /** The screen reads again on its own: count its API calls over one period once every page is on screen. */
   readonly pollMs?: number;
@@ -61,6 +63,8 @@ const SCREENS: readonly HeavyScreen[] = [
   {
     path: '/members',
     rows: 'section[aria-labelledby="mb-people"] li',
+    // A hundred people, each with the Todo Stop hook box and its label (1 617 measured by count, 2 elements a line).
+    maxNodes: 1700,
     filter: {
       label: 'search',
       run: async (page) => {
@@ -245,9 +249,11 @@ const BUDGET = {
 } as const;
 
 function checkBudget(project: 'desktop' | 'mobile', item: Measure): void {
-  const maxRows = SCREENS.find((screen) => screen.path === item.path)?.maxRows ?? BUDGET.rows;
+  const screen = SCREENS.find((candidate) => candidate.path === item.path);
+  const maxRows = screen?.maxRows ?? BUDGET.rows;
+  const maxNodes = screen?.maxNodes ?? BUDGET.domNodes;
   expect.soft(item.rows, `${item.path}: lines drawn`).toBeLessThanOrEqual(maxRows);
-  expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(BUDGET.domNodes);
+  expect.soft(item.domNodes, `${item.path}: DOM nodes`).toBeLessThanOrEqual(maxNodes);
   expect.soft(item.apiCalls, `${item.path}: API calls`).toBeLessThanOrEqual(BUDGET.apiCalls);
   if (item.filter !== undefined) {
     expect
