@@ -8,25 +8,26 @@ import type {
 } from '@gen/api/types.gen';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
+import { knownValues, type Known } from '@/shared/lib/openEnum';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 /**
  * The agents a cloud session starts, read from the contract (`CloudAgentKind`): the console never offers, and so never sends,
  * a name the server refuses. A new agent in the contract shows here at the next resync.
  */
-export const CLOUD_AGENTS: readonly CloudAgentKind[] = zCloudAgentKind.options;
-export type CloudAgent = CloudAgentKind;
+export type CloudAgent = Known<CloudAgentKind>;
+export const CLOUD_AGENTS: readonly CloudAgent[] = knownValues(zCloudAgentKind);
 
 export function isCloudAgent(value: string): value is CloudAgent {
-  return zCloudAgentKind.safeParse(value).success;
+  return CLOUD_AGENTS.some((agent) => agent === value);
 }
 
 /**
  * The agents that follow a prompt, the only ones this console starts (a session or an automation): the contract's but the
  * plain shell, which only an interactive terminal drives, and the console has none. `claude` is the server's default.
  */
-export type PromptAgent = Exclude<CloudAgentKind, 'shell'>;
-export const PROMPT_AGENTS: readonly PromptAgent[] = zCloudAgentKind.options.filter(
+export type PromptAgent = Exclude<CloudAgent, 'shell'>;
+export const PROMPT_AGENTS: readonly PromptAgent[] = CLOUD_AGENTS.filter(
   (agent): agent is PromptAgent => agent !== 'shell',
 );
 const PROMPT_AGENT = z.enum(PROMPT_AGENTS);
@@ -43,7 +44,8 @@ export type GithubAccess = (typeof GITHUB_ACCESS)[number];
 
 /** The session's access as the server says it; a server without the feature sends none, which reads as the default. */
 export function accessOf(session: CloudSession): GithubAccess {
-  return session.githubAccess ?? 'owner';
+  const access = session.githubAccess ?? 'owner';
+  return GITHUB_ACCESS.find((known) => known === access) ?? 'owner';
 }
 
 export const CLOUD_STATUSES = ['queued', 'starting', 'running', 'ended', 'stopped', 'failed'] as const;

@@ -2,6 +2,7 @@
 import type { GateAction, Rule } from '@gen/api/types.gen';
 import { type KeyboardEvent, type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Button } from '@/shared/ui/Button';
 import {
   addCheck,
@@ -227,6 +228,7 @@ function GateFields({
 /** A rule written or fixed by a person: its words, where it holds, and what it does, up to the gate it puts. */
 export function RuleForm({ rule, groups, saving, submit, onSave, onCancel }: RuleFormProps): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const [draft, setDraft] = useState<RuleDraft>(() => draftOf(rule));
   const catalog = useGateCatalog(draft.output === 'gate');
   const actions = offeredActions(catalog.actions ?? [], rule, draft);
@@ -323,7 +325,7 @@ export function RuleForm({ rule, groups, saving, submit, onSave, onCancel }: Rul
         >
           {RULE_STRENGTHS.map((option) => (
             <option key={option} value={option}>
-              {t(`rules.strength.${option}`)}
+              {enumText('rules.strength', option)}
             </option>
           ))}
         </select>

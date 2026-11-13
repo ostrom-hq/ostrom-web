@@ -3,6 +3,8 @@ import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { type Viewer, useViewer } from '@/shared/auth/useViewer';
 import '@/shared/ui/decision.css';
 import { safeHref } from '@/shared/lib/safeHref';
@@ -25,9 +27,10 @@ const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   approved: 'success',
   refused: 'danger',
   expired: 'neutral',
+  unknown: 'neutral',
 };
 
-const CHECK_TONES: Readonly<Record<CheckState, BadgeTone>> = {
+const CHECK_TONES: Readonly<Record<Known<CheckState>, BadgeTone>> = {
   success: 'success',
   failure: 'danger',
   pending: 'warning',
@@ -91,6 +94,7 @@ interface ApprovalDetailProps {
 /** The proof in a fixed order, before any button: action, changes, checks, who, why, technical details. */
 function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const tone = approvalTone(approval, viewer.login);
   // Details when the server has them; an empty list of details still shows the bare commits.
   const commits: readonly ApprovalCommit[] =
@@ -104,7 +108,7 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
     <>
       <header className="ys-head">
         <Badge tone={TONES[tone]} approval={tone === 'waiting-you' ? 'waiting' : undefined}>
-          {t(`yes.tone.${tone}`)}
+          {enumText('yes.tone', tone === 'unknown' ? approval.status : tone)}
         </Badge>
         <h1 className="ys-h1">{approval.title}</h1>
         <p className="ys-meta">
@@ -156,7 +160,9 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
             <ul className="ys-checks">
               {checks.map((check, index) => (
                 <li key={`${String(index)}-${check.name}`} className="ys-row">
-                  <Badge tone={CHECK_TONES[check.state]}>{t(`yes.check.${check.state}`)}</Badge>
+                  <Badge tone={knownOr(CHECK_TONES, check.state, 'neutral')}>
+                    {enumText('yes.check', check.state)}
+                  </Badge>
                   {safeHref(check.url) === undefined ? (
                     <span>{check.name}</span>
                   ) : (
@@ -265,6 +271,7 @@ function ActionSection({
   readonly action: ApprovalAction;
 }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const head = shortSha(action.headSha);
   return (
     <section className="o-card ys-section" aria-labelledby="ys-action">
@@ -272,7 +279,7 @@ function ActionSection({
         {t('yes.detail.action')}
       </h2>
       <p>
-        {t(`yes.detail.kind.${action.kind}`, { ref: action.ref, repo: action.repo })}{' '}
+        {enumText('yes.detail.kind', action.kind, { ref: action.ref, repo: action.repo })}{' '}
         {action.risk === 'high' ? <Badge tone="danger">{t('yes.detail.highRisk')}</Badge> : null}
       </p>
       {action.risk === 'high' ? <p className="ys-small">{t('yes.detail.highRiskHint')}</p> : null}

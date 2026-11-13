@@ -2,14 +2,23 @@
 import type { Rule } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
-import { Badge } from '@/shared/ui/Badge';
+import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { editOf, isAccepted, phaseOf, percent, type RuleChange } from '../model';
 import { RuleForm } from './RuleForm';
+
+const STATUS_TONES: Readonly<Record<Known<Rule['status']>, BadgeTone>> = {
+  proposed: 'neutral',
+  accepted: 'success',
+  edited: 'success',
+  rejected: 'danger',
+};
 
 export interface RuleCardProps {
   readonly rule: Rule;
@@ -27,6 +36,7 @@ export interface RuleCardProps {
 /** A rule with its evidence, then the decision: accept what is true, fix what is close, reject the rest. */
 export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: RuleCardProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   // The rule as it stood when its editor opened: a save sends what changed since then, never an older value.
   const [editing, setEditing] = useState<Rule | undefined>(undefined);
   // Decided elsewhere while the editor was open (accepted, rejected or reopened; a fix keeps it accepted): the editor
@@ -37,10 +47,10 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: 
     // Named by the statement itself, which the editor replaces on screen while it is open.
     <article className="o-card o-stack rl-card" aria-label={rule.statement}>
       <div className="o-inline">
-        <Badge>{t(`rules.strength.${rule.strength}`)}</Badge>
+        <Badge>{enumText('rules.strength', rule.strength)}</Badge>
         {rule.status === 'proposed' ? null : (
-          <Badge tone={rule.status === 'rejected' ? 'danger' : 'success'}>
-            {t(`rules.status.${rule.status}`)}
+          <Badge tone={knownOr(STATUS_TONES, rule.status, 'neutral')}>
+            {enumText('rules.status', rule.status)}
           </Badge>
         )}
         <span className="o-row__meta">{t('rules.card.confidence', { value: percent(rule.confidence) })}</span>

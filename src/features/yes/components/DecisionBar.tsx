@@ -3,6 +3,7 @@ import type { Approval } from '@gen/api/types.gen';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { askedByViewer } from '../model';
@@ -27,6 +28,7 @@ export function DecisionBar({
   linkRequired,
 }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const { sending, refusal, stepUp, githubLink, changed, failure } = answer;
   // Back to this very page after signing in: the router's own path for the request, never one rebuilt by hand.
   const here = useRouterState({ select: (state) => `${state.location.pathname}${state.location.searchStr}` });
@@ -138,7 +140,7 @@ export function DecisionBar({
                 ? t('yes.act.approving')
                 : approval.action === undefined
                   ? t('yes.act.approve')
-                  : t(`yes.act.approveKind.${approval.action.kind}`)}
+                  : enumText('yes.act.approveKind', approval.action.kind)}
             </Button>
           </div>
         </>

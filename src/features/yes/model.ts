@@ -2,7 +2,7 @@
 import type { Approval, ApprovalCheck } from '@gen/api/types.gen';
 
 /** Where a request stands for the person looking at it. */
-export type ApprovalTone = 'waiting-you' | 'asked-by-you' | 'approved' | 'refused' | 'expired';
+export type ApprovalTone = 'waiting-you' | 'asked-by-you' | 'approved' | 'refused' | 'expired' | 'unknown';
 
 export function askedByViewer(approval: Approval, viewer: string | undefined): boolean {
   if (viewer === undefined) return false;
@@ -20,6 +20,9 @@ export function approvalTone(approval: Approval, viewer: string | undefined): Ap
       return 'refused';
     case 'expired':
       return 'expired';
+    default:
+      // A status a newer server names: shown as the server wrote it, in a neutral tone.
+      return 'unknown';
   }
 }
 

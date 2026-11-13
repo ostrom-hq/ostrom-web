@@ -11,9 +11,19 @@ export function isAccepted(rule: Rule): boolean {
 }
 
 /** Where a rule stands: still to decide, accepted (as is or fixed), or rejected. */
-export function phaseOf(rule: Rule): 'proposed' | 'accepted' | 'rejected' {
-  if (rule.status === 'proposed' || rule.status === 'rejected') return rule.status;
-  return 'accepted';
+export function phaseOf(rule: Rule): 'proposed' | 'accepted' | 'rejected' | 'other' {
+  switch (rule.status) {
+    case 'proposed':
+      return 'proposed';
+    case 'rejected':
+      return 'rejected';
+    case 'accepted':
+    case 'edited':
+      return 'accepted';
+    default:
+      // A status a newer server names: neither decided nor to decide as far as this console knows.
+      return 'other';
+  }
 }
 
 export function matches(rule: Rule, filter: RuleFilter): boolean {

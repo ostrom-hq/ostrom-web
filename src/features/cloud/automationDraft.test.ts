@@ -103,6 +103,10 @@ describe('the automation form', () => {
       }),
       'UTC',
     );
+    // A trigger a newer server names is not one the editor offers: it reads as a schedule.
+    expect(automationDraftOf(automation({ trigger: { kind: 'on_push' } }), 'UTC')).toMatchObject({
+      kind: 'cron',
+    });
     const unbounded = automation({});
     delete unbounded.maxRunsPerDay;
     delete unbounded.overlap;

@@ -3,6 +3,8 @@ import type { WorkflowRun } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute, formatDuration } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
@@ -62,10 +64,13 @@ function RunRow({
   readonly withWorkflow: boolean;
 }): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const source = runSource(run.source);
   return (
     <div className="o-row">
-      <Badge tone={RUN_TONES[run.status]}>{t(`workflows.runs.status.${run.status}`)}</Badge>
+      <Badge tone={knownOr(RUN_TONES, run.status, 'neutral')}>
+        {enumText('workflows.runs.status', run.status)}
+      </Badge>
       <span className="o-row__main">
         <span className="o-row__title">
           {withWorkflow ? (

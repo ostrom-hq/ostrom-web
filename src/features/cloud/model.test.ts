@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Automation, CloudSession } from '@gen/api/types.gen';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
+import { knownValues } from '@/shared/lib/openEnum';
 import {
   accessOf,
   CLOUD_AGENTS,
@@ -30,14 +31,14 @@ const session = (parts: Partial<CloudSession>): CloudSession => ({
 describe('cloud sessions', () => {
   it('knows the agents it can start', () => {
     // The contract's names (CloudAgentKind), as the server reads them: claude-code was never one.
-    expect(CLOUD_AGENTS).toEqual(zCloudAgentKind.options);
+    expect(CLOUD_AGENTS).toEqual(knownValues(zCloudAgentKind));
     expect([isCloudAgent('codex'), isCloudAgent('claude-code'), isCloudAgent('shell')]).toEqual([
       true,
       false,
       true,
     ]);
     // The console starts the agents that follow a prompt: the contract's but the plain shell.
-    expect(PROMPT_AGENTS).toEqual(zCloudAgentKind.options.filter((agent) => agent !== 'shell'));
+    expect(PROMPT_AGENTS).toEqual(knownValues(zCloudAgentKind).filter((agent) => agent !== 'shell'));
     expect([isPromptAgent('gemini'), isPromptAgent('shell'), isPromptAgent('claude-code')]).toEqual([
       true,
       false,

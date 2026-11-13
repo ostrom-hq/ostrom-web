@@ -18,6 +18,7 @@ import {
   isAccepted,
   isOutput,
   isStrength,
+  phaseOf,
   listOf,
   matches,
   newRuleOf,
@@ -46,6 +47,11 @@ const rules = [
 ];
 
 describe('filters and counts', () => {
+  it('reads where a rule stands, and a status it does not know as neither decided nor to decide (CS-04)', () => {
+    expect(rules.map(phaseOf)).toEqual(['proposed', 'proposed', 'accepted', 'accepted', 'rejected']);
+    expect(phaseOf(rule('f', 'archived', 'Style', 0.5))).toBe('other');
+  });
+
   it('reads an edited rule as accepted', () => {
     expect(rules.map(isAccepted)).toEqual([false, false, true, true, false]);
   });

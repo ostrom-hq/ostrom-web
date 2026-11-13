@@ -2,6 +2,7 @@
 import type { McpArgumentCondition, McpArgumentPolicy, McpAssignment, Member } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
@@ -173,12 +174,15 @@ interface PolicyRowProps {
 
 function PolicyRow({ policy, busy, onRemove }: PolicyRowProps): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const tool = policy.tool === ANY_TOOL ? t('tools.mcp.access.anyTool') : policy.tool;
   const when =
     policy.conditions.length === 0
       ? t('tools.mcp.access.everyCall')
       : policy.conditions
-          .map((condition) => conditionText(condition, t(`tools.mcp.access.operator.${condition.operator}`)))
+          .map((condition) =>
+            conditionText(condition, enumText('tools.mcp.access.operator', condition.operator)),
+          )
           .join(t('tools.mcp.access.and'));
   return (
     <li className="o-row">
@@ -187,7 +191,7 @@ function PolicyRow({ policy, busy, onRemove }: PolicyRowProps): ReactElement {
           <span className="o-row__title o-mono">{tool}</span>
           {/* Amber holds, red refuses: garnet stays for the yes itself. */}
           <Badge tone={policy.effect === 'DENY' ? 'danger' : 'warning'}>
-            {t(`tools.mcp.access.effect.${policy.effect}`)}
+            {enumText('tools.mcp.access.effect', policy.effect)}
           </Badge>
         </span>
         <span className="o-row__meta o-mono">{when}</span>
