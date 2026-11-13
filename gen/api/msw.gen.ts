@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReconcileUsageData, ReconcileUsageResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses } from './types.gen';
+import type { AcceptInvitationData, AcceptInvitationResponses, AddGroupMemberResponses, AddTodoItemData, AddTodoItemResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignMcpServerData, AssignMcpServerResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelBillingSubscriptionResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, CompleteTodoItemData, CompleteTodoItemResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSessionTodoData, CreateSessionTodoResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteSkillResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DisableAutomationResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, FetchRunnerGithubTokenData, FetchRunnerGithubTokenResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudSessionResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppResponses, GetGithubLinkResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberGithubLinkResponses, GetMemberResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSessionTodoResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWorkflowResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, LinkTodoItemData, LinkTodoItemResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEventsResponses, ListGatesResponses, ListGithubLinksResponses, ListGroupsResponses, ListHooksResponses, ListInferenceRoutesResponses, ListInstanceKeysResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpServersResponses, ListMembersResponses, ListMyAuditResponses, ListMyOrganizationsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillsResponses, ListTasksResponses, ListTeamsResponses, ListTodoStopHooksResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MobileTokenData, MobileTokenResponses, NoteTodoItemData, NoteTodoItemResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PollDeviceLoginData, PollDeviceLoginResponses, PollGithubDeviceLinkResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishSkillData, PublishSkillResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadTodoContextResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReceiveWaitEventData, ReceiveWaitEventResponses, ReconcileUsageData, ReconcileUsageResponses, RecordTodoHookErrorData, RecordTodoHookErrorResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportSeenData, ReportSeenResponses, RequestSignInEmailData, RequestSignInEmailResponses, RequestTodoDropData, RequestTodoDropResponses, ReserveGateResponses, RestartAnalysisResponses, RestorePackageResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveAutomationData, SaveAutomationResponses, SaveMcpServerData, SaveMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessResponses, SetGatePolicyData, SetGatePolicyResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetMemberTodoStopHookData, SetMemberTodoStopHookResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartGithubDeviceLinkResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartTodoItemData, StartTodoItemResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StopTodoSessionData, StopTodoSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestAutomationData, TestAutomationResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, UnassignMcpServerResponses, UnlinkGithubResponses, UnlinkMemberGithubResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses, WakeWaitsData, WakeWaitsResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -1636,6 +1636,292 @@ export type HandleGithubAppInstallCallbackResponse = {
  */
 export function handleGithubAppInstallCallback(response?: HandleGithubAppInstallCallbackResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/app/install/callback`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleUnlinkGithubResponse = {
+    body: UnlinkGithubResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `DELETE /api/v1/github/link` operation.
+ */
+export function handleUnlinkGithub(response?: HandleUnlinkGithubResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.delete<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetGithubLinkResponse = {
+    body: GetGithubLinkResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/link` operation.
+ */
+export function handleGetGithubLink(response?: HandleGetGithubLinkResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStartGithubDeviceLinkResponse = {
+    body: StartGithubDeviceLinkResponses[201];
+    status?: 201;
+};
+
+/**
+ * Handler for the `POST /api/v1/github/link/device` operation.
+ */
+export function handleStartGithubDeviceLink(response?: HandleStartGithubDeviceLinkResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link/device`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 201 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandlePollGithubDeviceLinkResponse = {
+    body: PollGithubDeviceLinkResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/github/link/device/{id}` operation.
+ */
+export function handlePollGithubDeviceLink(response?: HandlePollGithubDeviceLinkResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link/device/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStartGithubWebLinkResponse = {
+    body: DefaultBodyType;
+    status?: number;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/link/start` operation.
+ */
+export function handleStartGithubWebLink(response?: HandleStartGithubWebLinkResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link/start`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGithubLinkCallbackResponse = {
+    body: DefaultBodyType;
+    status?: number;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/link/callback` operation.
+ */
+export function handleGithubLinkCallback(response?: HandleGithubLinkCallbackResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/link/callback`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListGithubLinksResponse = {
+    body: ListGithubLinksResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/links` operation.
+ */
+export function handleListGithubLinks(response?: HandleListGithubLinksResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/github/links`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleUnlinkMemberGithubResponse = {
+    body: UnlinkMemberGithubResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `DELETE /api/v1/github/links/{memberId}` operation.
+ */
+export function handleUnlinkMemberGithub(response?: HandleUnlinkMemberGithubResponse | HttpResponseResolver<{
+    memberId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.delete<{
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/github/links/:memberId`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetMemberGithubLinkResponse = {
+    body: GetMemberGithubLinkResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/links/{memberId}` operation.
+ */
+export function handleGetMemberGithubLink(response?: HandleGetMemberGithubLinkResponse | HttpResponseResolver<{
+    memberId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/github/links/:memberId`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStartMemberGithubWebLinkResponse = {
+    body: DefaultBodyType;
+    status?: number;
+};
+
+/**
+ * Handler for the `GET /api/v1/github/links/{memberId}/start` operation.
+ */
+export function handleStartMemberGithubWebLink(response?: HandleStartMemberGithubWebLinkResponse | HttpResponseResolver<{
+    memberId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/github/links/:memberId/start`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -4728,6 +5014,33 @@ export function handleWaitsMcp(response?: HandleWaitsMcpResponse | ToResponseUni
     }, options);
 }
 
+export type HandleWakeWaitsResponse = {
+    body: WakeWaitsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/waits/wake` operation.
+ */
+export function handleWakeWaits(response?: HandleWakeWaitsResponse | HttpResponseResolver<never, WakeWaitsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, WakeWaitsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/waits/wake`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleGetWaitResponse = {
     body: GetWaitResponses[200];
     status?: 200;
@@ -4804,6 +5117,412 @@ export function handleCancelWait(response?: HandleCancelWaitResponse | HttpRespo
     return http.post<{
         id: string;
     }, never>(`${options?.baseUrl ?? '*'}/api/v1/waits/:id/cancel`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReceiveWaitEventResponse = {
+    body: ReceiveWaitEventResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/waits/{id}/event` operation.
+ */
+export function handleReceiveWaitEvent(response?: HandleReceiveWaitEventResponse | HttpResponseResolver<{
+    id: string;
+}, ReceiveWaitEventData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, ReceiveWaitEventData['body']>(`${options?.baseUrl ?? '*'}/api/v1/waits/:id/event`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetSessionTodoResponse = {
+    body: GetSessionTodoResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/todos/session` operation.
+ */
+export function handleGetSessionTodo(response?: HandleGetSessionTodoResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/todos/session`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCreateSessionTodoResponse = {
+    body: CreateSessionTodoResponses[201];
+    status?: 201;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session` operation.
+ */
+export function handleCreateSessionTodo(response?: HandleCreateSessionTodoResponse | HttpResponseResolver<never, CreateSessionTodoData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CreateSessionTodoData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 201 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAddTodoItemResponse = {
+    body: AddTodoItemResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items` operation.
+ */
+export function handleAddTodoItem(response?: HandleAddTodoItemResponse | HttpResponseResolver<never, AddTodoItemData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, AddTodoItemData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStartTodoItemResponse = {
+    body: StartTodoItemResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items/{item}/start` operation.
+ */
+export function handleStartTodoItem(response?: HandleStartTodoItemResponse | HttpResponseResolver<{
+    item: string;
+}, StartTodoItemData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        item: string;
+    }, StartTodoItemData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items/:item/start`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleNoteTodoItemResponse = {
+    body: NoteTodoItemResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items/{item}/notes` operation.
+ */
+export function handleNoteTodoItem(response?: HandleNoteTodoItemResponse | HttpResponseResolver<{
+    item: string;
+}, NoteTodoItemData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        item: string;
+    }, NoteTodoItemData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items/:item/notes`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCompleteTodoItemResponse = {
+    body: CompleteTodoItemResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items/{item}/proof` operation.
+ */
+export function handleCompleteTodoItem(response?: HandleCompleteTodoItemResponse | HttpResponseResolver<{
+    item: string;
+}, CompleteTodoItemData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        item: string;
+    }, CompleteTodoItemData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items/:item/proof`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleLinkTodoItemResponse = {
+    body: LinkTodoItemResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items/{item}/link` operation.
+ */
+export function handleLinkTodoItem(response?: HandleLinkTodoItemResponse | HttpResponseResolver<{
+    item: string;
+}, LinkTodoItemData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        item: string;
+    }, LinkTodoItemData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items/:item/link`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleRequestTodoDropResponse = {
+    body: RequestTodoDropResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/items/{item}/drop` operation.
+ */
+export function handleRequestTodoDrop(response?: HandleRequestTodoDropResponse | HttpResponseResolver<{
+    item: string;
+}, RequestTodoDropData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        item: string;
+    }, RequestTodoDropData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/items/:item/drop`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleReadTodoContextResponse = {
+    body: ReadTodoContextResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/todos/session/context` operation.
+ */
+export function handleReadTodoContext(response?: HandleReadTodoContextResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/context`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStopTodoSessionResponse = {
+    body: StopTodoSessionResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/stop` operation.
+ */
+export function handleStopTodoSession(response?: HandleStopTodoSessionResponse | HttpResponseResolver<never, StopTodoSessionData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, StopTodoSessionData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/stop`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleRecordTodoHookErrorResponse = {
+    body: RecordTodoHookErrorResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/todos/session/hook-error` operation.
+ */
+export function handleRecordTodoHookError(response?: HandleRecordTodoHookErrorResponse | HttpResponseResolver<never, RecordTodoHookErrorData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, RecordTodoHookErrorData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/session/hook-error`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListTodoStopHooksResponse = {
+    body: ListTodoStopHooksResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/todos/stop-hook` operation.
+ */
+export function handleListTodoStopHooks(response?: HandleListTodoStopHooksResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/todos/stop-hook`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetMemberTodoStopHookResponse = {
+    body: SetMemberTodoStopHookResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/todos/stop-hook/members/{memberId}` operation.
+ */
+export function handleSetMemberTodoStopHook(response?: HandleSetMemberTodoStopHookResponse | HttpResponseResolver<{
+    memberId: string;
+}, SetMemberTodoStopHookData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        memberId: string;
+    }, SetMemberTodoStopHookData['body']>(`${options?.baseUrl ?? '*'}/api/v1/todos/stop-hook/members/:memberId`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -6402,6 +7121,37 @@ export function handleResumeCloudSession(response?: HandleResumeCloudSessionResp
     }, options);
 }
 
+export type HandleSetCloudSessionGithubAccessResponse = {
+    body: SetCloudSessionGithubAccessResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/cloud/sessions/{id}/github` operation.
+ */
+export function handleSetCloudSessionGithubAccess(response?: HandleSetCloudSessionGithubAccessResponse | HttpResponseResolver<{
+    id: string;
+}, SetCloudSessionGithubAccessData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        id: string;
+    }, SetCloudSessionGithubAccessData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/github`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleIssueCloudTerminalTicketResponse = {
     body: IssueCloudTerminalTicketResponses[200];
     status?: 200;
@@ -6561,6 +7311,33 @@ export function handleReportRunnerCheck(response?: HandleReportRunnerCheckRespon
         const body = response?.body;
         if (body !== undefined) {
             return HttpResponse.json(body, { status: response?.status ?? 201 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleFetchRunnerGithubTokenResponse = {
+    body: FetchRunnerGithubTokenResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/github` operation.
+ */
+export function handleFetchRunnerGithubToken(response?: HandleFetchRunnerGithubTokenResponse | HttpResponseResolver<never, FetchRunnerGithubTokenData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, FetchRunnerGithubTokenData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/github`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -8557,6 +9334,46 @@ export type MswHandlerFactories = {
      */
     githubAppInstallCallback: typeof handleGithubAppInstallCallback;
     /**
+     * Handler for the `DELETE /api/v1/github/link` operation.
+     */
+    unlinkGithub: typeof handleUnlinkGithub;
+    /**
+     * Handler for the `GET /api/v1/github/link` operation.
+     */
+    getGithubLink: typeof handleGetGithubLink;
+    /**
+     * Handler for the `POST /api/v1/github/link/device` operation.
+     */
+    startGithubDeviceLink: typeof handleStartGithubDeviceLink;
+    /**
+     * Handler for the `POST /api/v1/github/link/device/{id}` operation.
+     */
+    pollGithubDeviceLink: typeof handlePollGithubDeviceLink;
+    /**
+     * Handler for the `GET /api/v1/github/link/start` operation.
+     */
+    startGithubWebLink: typeof handleStartGithubWebLink;
+    /**
+     * Handler for the `GET /api/v1/github/link/callback` operation.
+     */
+    githubLinkCallback: typeof handleGithubLinkCallback;
+    /**
+     * Handler for the `GET /api/v1/github/links` operation.
+     */
+    listGithubLinks: typeof handleListGithubLinks;
+    /**
+     * Handler for the `DELETE /api/v1/github/links/{memberId}` operation.
+     */
+    unlinkMemberGithub: typeof handleUnlinkMemberGithub;
+    /**
+     * Handler for the `GET /api/v1/github/links/{memberId}` operation.
+     */
+    getMemberGithubLink: typeof handleGetMemberGithubLink;
+    /**
+     * Handler for the `GET /api/v1/github/links/{memberId}/start` operation.
+     */
+    startMemberGithubWebLink: typeof handleStartMemberGithubWebLink;
+    /**
      * Handler for the `POST /webhooks/github` operation.
      */
     githubWebhook: typeof handleGithubWebhook;
@@ -8977,6 +9794,10 @@ export type MswHandlerFactories = {
      */
     waitsMcp: typeof handleWaitsMcp;
     /**
+     * Handler for the `POST /api/v1/waits/wake` operation.
+     */
+    wakeWaits: typeof handleWakeWaits;
+    /**
      * Handler for the `GET /api/v1/waits/{id}` operation.
      */
     getWait: typeof handleGetWait;
@@ -8988,6 +9809,62 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/waits/{id}/cancel` operation.
      */
     cancelWait: typeof handleCancelWait;
+    /**
+     * Handler for the `POST /api/v1/waits/{id}/event` operation.
+     */
+    receiveWaitEvent: typeof handleReceiveWaitEvent;
+    /**
+     * Handler for the `GET /api/v1/todos/session` operation.
+     */
+    getSessionTodo: typeof handleGetSessionTodo;
+    /**
+     * Handler for the `POST /api/v1/todos/session` operation.
+     */
+    createSessionTodo: typeof handleCreateSessionTodo;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items` operation.
+     */
+    addTodoItem: typeof handleAddTodoItem;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items/{item}/start` operation.
+     */
+    startTodoItem: typeof handleStartTodoItem;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items/{item}/notes` operation.
+     */
+    noteTodoItem: typeof handleNoteTodoItem;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items/{item}/proof` operation.
+     */
+    completeTodoItem: typeof handleCompleteTodoItem;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items/{item}/link` operation.
+     */
+    linkTodoItem: typeof handleLinkTodoItem;
+    /**
+     * Handler for the `POST /api/v1/todos/session/items/{item}/drop` operation.
+     */
+    requestTodoDrop: typeof handleRequestTodoDrop;
+    /**
+     * Handler for the `GET /api/v1/todos/session/context` operation.
+     */
+    readTodoContext: typeof handleReadTodoContext;
+    /**
+     * Handler for the `POST /api/v1/todos/session/stop` operation.
+     */
+    stopTodoSession: typeof handleStopTodoSession;
+    /**
+     * Handler for the `POST /api/v1/todos/session/hook-error` operation.
+     */
+    recordTodoHookError: typeof handleRecordTodoHookError;
+    /**
+     * Handler for the `GET /api/v1/todos/stop-hook` operation.
+     */
+    listTodoStopHooks: typeof handleListTodoStopHooks;
+    /**
+     * Handler for the `PUT /api/v1/todos/stop-hook/members/{memberId}` operation.
+     */
+    setMemberTodoStopHook: typeof handleSetMemberTodoStopHook;
     /**
      * Handler for the `GET /api/v1/mcp/servers` operation.
      */
@@ -9209,6 +10086,10 @@ export type MswHandlerFactories = {
      */
     resumeCloudSession: typeof handleResumeCloudSession;
     /**
+     * Handler for the `PUT /api/v1/cloud/sessions/{id}/github` operation.
+     */
+    setCloudSessionGithubAccess: typeof handleSetCloudSessionGithubAccess;
+    /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/terminal/ticket` operation.
      */
     issueCloudTerminalTicket: typeof handleIssueCloudTerminalTicket;
@@ -9232,6 +10113,10 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/cloud/runner/checks` operation.
      */
     reportRunnerCheck: typeof handleReportRunnerCheck;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/github` operation.
+     */
+    fetchRunnerGithubToken: typeof handleFetchRunnerGithubToken;
     /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/messages` operation.
      */
@@ -9544,6 +10429,16 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         githubAppManifestCallback: wrap(handleGithubAppManifestCallback),
         startGithubAppInstall: wrap(handleStartGithubAppInstall),
         githubAppInstallCallback: wrap(handleGithubAppInstallCallback),
+        unlinkGithub: wrap(handleUnlinkGithub),
+        getGithubLink: wrap(handleGetGithubLink),
+        startGithubDeviceLink: wrap(handleStartGithubDeviceLink),
+        pollGithubDeviceLink: wrap(handlePollGithubDeviceLink),
+        startGithubWebLink: wrap(handleStartGithubWebLink),
+        githubLinkCallback: wrap(handleGithubLinkCallback),
+        listGithubLinks: wrap(handleListGithubLinks),
+        unlinkMemberGithub: wrap(handleUnlinkMemberGithub),
+        getMemberGithubLink: wrap(handleGetMemberGithubLink),
+        startMemberGithubWebLink: wrap(handleStartMemberGithubWebLink),
         githubWebhook: wrap(handleGithubWebhook),
         receiveSlackInteraction: wrap(handleReceiveSlackInteraction),
         githubCheck: wrap(handleGithubCheck),
@@ -9649,9 +10544,24 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         listWaits: wrap(handleListWaits),
         createWait: wrap(handleCreateWait),
         waitsMcp: wrap(handleWaitsMcp),
+        wakeWaits: wrap(handleWakeWaits),
         getWait: wrap(handleGetWait),
         answerWait: wrap(handleAnswerWait),
         cancelWait: wrap(handleCancelWait),
+        receiveWaitEvent: wrap(handleReceiveWaitEvent),
+        getSessionTodo: wrap(handleGetSessionTodo),
+        createSessionTodo: wrap(handleCreateSessionTodo),
+        addTodoItem: wrap(handleAddTodoItem),
+        startTodoItem: wrap(handleStartTodoItem),
+        noteTodoItem: wrap(handleNoteTodoItem),
+        completeTodoItem: wrap(handleCompleteTodoItem),
+        linkTodoItem: wrap(handleLinkTodoItem),
+        requestTodoDrop: wrap(handleRequestTodoDrop),
+        readTodoContext: wrap(handleReadTodoContext),
+        stopTodoSession: wrap(handleStopTodoSession),
+        recordTodoHookError: wrap(handleRecordTodoHookError),
+        listTodoStopHooks: wrap(handleListTodoStopHooks),
+        setMemberTodoStopHook: wrap(handleSetMemberTodoStopHook),
         listMcpServers: wrap(handleListMcpServers),
         createMcpServer: wrap(handleCreateMcpServer),
         deleteMcpServer: wrap(handleDeleteMcpServer),
@@ -9707,12 +10617,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         getCloudSession: wrap(handleGetCloudSession),
         pauseCloudSession: wrap(handlePauseCloudSession),
         resumeCloudSession: wrap(handleResumeCloudSession),
+        setCloudSessionGithubAccess: wrap(handleSetCloudSessionGithubAccess),
         issueCloudTerminalTicket: wrap(handleIssueCloudTerminalTicket),
         attachCloudTerminal: wrap(handleAttachCloudTerminal),
         attachRunnerTerminal: wrap(handleAttachRunnerTerminal),
         cloudRunnerHeartbeat: wrap(handleCloudRunnerHeartbeat),
         openRunnerLaunch: wrap(handleOpenRunnerLaunch),
         reportRunnerCheck: wrap(handleReportRunnerCheck),
+        fetchRunnerGithubToken: wrap(handleFetchRunnerGithubToken),
         sendCloudMessage: wrap(handleSendCloudMessage),
         streamCloudSession: wrap(handleStreamCloudSession),
         listArtifacts: wrap(handleListArtifacts),
@@ -9783,6 +10695,11 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         }
         const overrides = options.pick ?? {};
         return [
+            invoke(pick.startTodoItem, overrides.startTodoItem),
+            invoke(pick.noteTodoItem, overrides.noteTodoItem),
+            invoke(pick.completeTodoItem, overrides.completeTodoItem),
+            invoke(pick.linkTodoItem, overrides.linkTodoItem),
+            invoke(pick.requestTodoDrop, overrides.requestTodoDrop),
             invoke(pick.issueCloudTerminalTicket, overrides.issueCloudTerminalTicket),
             invoke(pick.unassignMcpServer, overrides.unassignMcpServer),
             invoke(pick.assignMcpServer, overrides.assignMcpServer),
@@ -9795,12 +10712,16 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.startGithubAppInstall, overrides.startGithubAppInstall),
             invoke(pick.githubAppInstallCallback, overrides.githubAppInstallCallback),
             invoke(pick.inferenceChatCompletions, overrides.inferenceChatCompletions),
+            invoke(pick.pollGithubDeviceLink, overrides.pollGithubDeviceLink),
+            invoke(pick.setMemberTodoStopHook, overrides.setMemberTodoStopHook),
+            invoke(pick.startMemberGithubWebLink, overrides.startMemberGithubWebLink),
             invoke(pick.listMcpAssignments, overrides.listMcpAssignments),
             invoke(pick.listMcpArgumentPolicies, overrides.listMcpArgumentPolicies),
             invoke(pick.createMcpArgumentPolicy, overrides.createMcpArgumentPolicy),
             invoke(pick.reconcileUsage, overrides.reconcileUsage),
             invoke(pick.pauseCloudSession, overrides.pauseCloudSession),
             invoke(pick.resumeCloudSession, overrides.resumeCloudSession),
+            invoke(pick.setCloudSessionGithubAccess, overrides.setCloudSessionGithubAccess),
             invoke(pick.attachCloudTerminal, overrides.attachCloudTerminal),
             invoke(pick.sendCloudMessage, overrides.sendCloudMessage),
             invoke(pick.streamCloudSession, overrides.streamCloudSession),
@@ -9834,7 +10755,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.listMyAudit, overrides.listMyAudit),
             invoke(pick.verifySignInEmail, overrides.verifySignInEmail),
             invoke(pick.logoutEverywhere, overrides.logoutEverywhere),
+            invoke(pick.startGithubDeviceLink, overrides.startGithubDeviceLink),
+            invoke(pick.startGithubWebLink, overrides.startGithubWebLink),
+            invoke(pick.githubLinkCallback, overrides.githubLinkCallback),
             invoke(pick.getSignedGatePolicy, overrides.getSignedGatePolicy),
+            invoke(pick.addTodoItem, overrides.addTodoItem),
+            invoke(pick.readTodoContext, overrides.readTodoContext),
+            invoke(pick.stopTodoSession, overrides.stopTodoSession),
+            invoke(pick.recordTodoHookError, overrides.recordTodoHookError),
             invoke(pick.inferenceMessages, overrides.inferenceMessages),
             invoke(pick.inferenceResponses, overrides.inferenceResponses),
             invoke(pick.inferenceModels, overrides.inferenceModels),
@@ -9842,8 +10770,11 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.cloudRunnerHeartbeat, overrides.cloudRunnerHeartbeat),
             invoke(pick.openRunnerLaunch, overrides.openRunnerLaunch),
             invoke(pick.reportRunnerCheck, overrides.reportRunnerCheck),
+            invoke(pick.fetchRunnerGithubToken, overrides.fetchRunnerGithubToken),
             invoke(pick.receiveStripeWebhookAlias, overrides.receiveStripeWebhookAlias),
             invoke(pick.revokeAuthSession, overrides.revokeAuthSession),
+            invoke(pick.unlinkMemberGithub, overrides.unlinkMemberGithub),
+            invoke(pick.getMemberGithubLink, overrides.getMemberGithubLink),
             invoke(pick.deleteMcpServer, overrides.deleteMcpServer),
             invoke(pick.saveMcpServer, overrides.saveMcpServer),
             invoke(pick.stopCloudSession, overrides.stopCloudSession),
@@ -9884,6 +10815,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.triggerAutomation, overrides.triggerAutomation),
             invoke(pick.answerWait, overrides.answerWait),
             invoke(pick.cancelWait, overrides.cancelWait),
+            invoke(pick.receiveWaitEvent, overrides.receiveWaitEvent),
             invoke(pick.listBudgetOverrides, overrides.listBudgetOverrides),
             invoke(pick.createBudgetOverride, overrides.createBudgetOverride),
             invoke(pick.runnerHeartbeat, overrides.runnerHeartbeat),
@@ -9911,6 +10843,9 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.getNotificationPreferences, overrides.getNotificationPreferences),
             invoke(pick.setNotificationPreferences, overrides.setNotificationPreferences),
             invoke(pick.getGithubApp, overrides.getGithubApp),
+            invoke(pick.unlinkGithub, overrides.unlinkGithub),
+            invoke(pick.getGithubLink, overrides.getGithubLink),
+            invoke(pick.listGithubLinks, overrides.listGithubLinks),
             invoke(pick.githubCheck, overrides.githubCheck),
             invoke(pick.previewInvitation, overrides.previewInvitation),
             invoke(pick.acceptInvitation, overrides.acceptInvitation),
@@ -9927,6 +10862,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.listPackageAudit, overrides.listPackageAudit),
             invoke(pick.bulkUpdateRules, overrides.bulkUpdateRules),
             invoke(pick.waitsMcp, overrides.waitsMcp),
+            invoke(pick.wakeWaits, overrides.wakeWaits),
+            invoke(pick.getSessionTodo, overrides.getSessionTodo),
+            invoke(pick.createSessionTodo, overrides.createSessionTodo),
+            invoke(pick.listTodoStopHooks, overrides.listTodoStopHooks),
             invoke(pick.listMcpServers, overrides.listMcpServers),
             invoke(pick.createMcpServer, overrides.createMcpServer),
             invoke(pick.getMcpSettings, overrides.getMcpSettings),

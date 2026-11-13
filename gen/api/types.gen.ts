@@ -407,6 +407,43 @@ export type ArtifactVersion = {
 };
 
 /**
+ * A device link just started: open `verificationUri`, enter `userCode`, then poll with `id` every `interval` seconds until `expiresAt`
+ */
+export type GitHubDeviceLink = {
+    id: string;
+    userCode: string;
+    verificationUri: string;
+    expiresAt: string;
+    interval: number;
+};
+
+/**
+ * One poll of a device link; `link` once linked, `interval` (seconds) while pending
+ */
+export type GitHubDeviceLinkPoll = {
+    status: 'pending' | 'linked' | 'expired' | 'denied';
+    interval?: number;
+    link?: GitHubLink;
+};
+
+/**
+ * A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens reach only the runner of the member's own sessions. `state` is `not_linked`, `linked` or `reconnect_required` (GitHub refused the refresh token, or the instance's App changed: the member links again)
+ */
+export type GitHubLink = {
+    memberId: string;
+    state: 'not_linked' | 'linked' | 'reconnect_required';
+    /**
+     * Whether the instance's GitHub App can link accounts (its OAuth client is known)
+     */
+    appConfigured: boolean;
+    login?: string;
+    userId?: number;
+    linkedAt?: string;
+    refreshedAt?: string;
+    accessExpiresAt?: string;
+};
+
+/**
  * What the CLI does when none of Ostrom's hooks runs in the agent's session
  */
 export type HooksCheck = {
@@ -871,7 +908,7 @@ export type BudgetOverride = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `usage.v1`, `waits.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -979,6 +1016,10 @@ export type CloudSession = {
     lastActivityAt?: string;
     pausedAt?: string;
     runnerId?: string;
+    /**
+     * Who may instruct the agent while it holds the owner's GitHub token (`runners.cloud.github.v1`): `owner` (the default) the owner only, `shared` everyone who may use the session, `none` no GitHub token at all. Absent from a server without the feature
+     */
+    githubAccess?: 'owner' | 'shared' | 'none';
     runId?: string;
     automationId?: string;
     createdAt: string;
@@ -2132,6 +2173,16 @@ export type OpenAiError = {
 export type OpenAiResponsesStreamEvent = {
     type: string;
     [key: string]: unknown;
+};
+
+/**
+ * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
+ */
+export type RunnerGitHubToken = {
+    status: 'linked' | 'not_linked' | 'unavailable';
+    token?: string;
+    expiresAt?: string;
+    login?: string;
 };
 
 /**
@@ -3521,6 +3572,521 @@ export type TokenList = {
 };
 
 /**
+ * The answer of a read or a change of a session's todo
+ */
+export type SessionTodo = {
+    /**
+     * The list; null while the session has none
+     */
+    todo: Todo | null;
+};
+
+/**
+ * The answer of `startTodoItem`
+ */
+export type StartTodoItemResponse = {
+    todo: Todo;
+    /**
+     * `<!-- ostrom-todo: <list8>/<item> -->`, `list8` the first 8 characters of the list's id: put it in the body of the item's pull request, which the checks find by it whatever its number
+     */
+    marker: string;
+};
+
+/**
+ * A session's todo: the plan reference and its items, each with a complete description and a typed end condition (`todos.v1`). An item is done only when its checks pass; items are added, never deleted
+ */
+export type Todo = {
+    id: string;
+    /**
+     * The session's root id: a reopened segment (`~r<n>`) keeps its list
+     */
+    sessionId: string;
+    /**
+     * One paragraph pointing to the full plan, shown to the agent at every stop
+     */
+    reference: string;
+    refs?: Array<WaitRef>;
+    status: TodoStatus;
+    /**
+     * Blocked stops in a row without progress; at 3 a wait asks the owner (0 when absent)
+     */
+    stall?: number;
+    items: Array<TodoItem>;
+    createdAt: string;
+    updatedAt: string;
+    /**
+     * The first `todo` item whose dependencies are done or dropped; absent when none
+     */
+    nextItemId?: string;
+    /**
+     * What the Stop hook recorded about itself, oldest first (the newest 20)
+     */
+    hookEvents?: Array<TodoHookEvent>;
+};
+
+/**
+ * `done`: every item is done or dropped and the final verification held
+ */
+export type TodoStatus = 'active' | 'done' | 'abandoned';
+
+/**
+ * An item of a todo, as the server keeps it
+ */
+export type TodoItem = {
+    id: string;
+    name: string;
+    description: string;
+    doneWhen: TodoDoneWhen;
+    dependsOn?: Array<string>;
+    origin: TodoItemOrigin;
+    /**
+     * Why a discovered item was added
+     */
+    originReason?: string;
+    status: TodoItemStatus;
+    proof?: TodoProof;
+    notes?: Array<TodoNote>;
+    dropReason?: string;
+    /**
+     * The wait that asks the session's owner about the drop
+     */
+    dropWaitId?: string;
+    links?: Array<TodoLink>;
+    /**
+     * Every check of the condition is `attested`: nothing verifies it (false when absent)
+     */
+    unverified?: boolean;
+};
+
+/**
+ * `plan`: written with the list; `discovered`: added on the way
+ */
+export type TodoItemOrigin = 'plan' | 'discovered';
+
+/**
+ * `drop_requested`: a wait asks the owner; `dropped`: on the owner's yes, never deleted
+ */
+export type TodoItemStatus = 'todo' | 'doing' | 'done' | 'drop_requested' | 'dropped';
+
+/**
+ * An item as the agent writes it
+ */
+export type TodoItemInput = {
+    /**
+     * A slug of at most 40 characters (`[a-z0-9][a-z0-9-]*`), unique in the list
+     */
+    id: string;
+    /**
+     * One line, at most 80 characters
+     */
+    name: string;
+    /**
+     * 80 to 4 000 characters: what, where, why, what is out of scope; enough for a new agent to do it alone
+     */
+    description: string;
+    doneWhen: TodoDoneWhen;
+    /**
+     * Ids of the items that must be done or dropped before this one starts
+     */
+    dependsOn?: Array<string>;
+};
+
+/**
+ * The end condition of an item, frozen once created
+ */
+export type TodoDoneWhen = {
+    /**
+     * What "done" means, at most 1 000 characters
+     */
+    text: string;
+    /**
+     * At least one typed check
+     */
+    checks: Array<TodoCheck>;
+};
+
+/**
+ * One typed check of an end condition, told apart by `type`. A check is read again at every stop, so it must stay true once the work moves on (never a transient state such as a PR still open); no check names a PR number or a version. `pr_merged`, `pr_closed`, `release_contains`, `ci_green` (with `gh`) and `command` (in a shell) run on the agent's machine; `artifact_published` and `wait_answered` are verified by the server through the item's links; `attested` is the agent's word, the last resort. A client shows a `type` it does not know as text
+ */
+export type TodoCheck = ({
+    type: 'pr_merged';
+} & TodoCheckPrMerged) | ({
+    type: 'pr_closed';
+} & TodoCheckPrClosed) | ({
+    type: 'release_contains';
+} & TodoCheckReleaseContains) | ({
+    type: 'ci_green';
+} & TodoCheckCiGreen) | ({
+    type: 'command';
+} & TodoCheckCommand) | ({
+    type: 'artifact_published';
+} & TodoCheckArtifactPublished) | ({
+    type: 'wait_answered';
+} & TodoCheckWaitAnswered) | ({
+    type: 'attested';
+} & TodoCheckAttested);
+
+/**
+ * The item's pull request (linked, or found by its marker among the PRs of the token's login) is merged
+ */
+export type TodoCheckPrMerged = {
+    type: 'pr_merged';
+    /**
+     * `owner/name`
+     */
+    repo: string;
+};
+
+/**
+ * The item's pull request is closed without merge, for the stated reason
+ */
+export type TodoCheckPrClosed = {
+    type: 'pr_closed';
+    repo: string;
+    /**
+     * At most 1 000 characters
+     */
+    reason: string;
+};
+
+/**
+ * The earliest published, non-draft release of `repo` whose tag is at or ahead of the merge commit of the item `of` (or of `commit`); it is linked to the item with its tag
+ */
+export type TodoCheckReleaseContains = {
+    type: 'release_contains';
+    repo: string;
+    /**
+     * The id of the item whose pull request's merge commit the release must contain
+     */
+    of?: string;
+    commit?: string;
+};
+
+/**
+ * Every workflow run of `repo` on the merge commit of the item `of` (or on `ref`) completed green; none yet, running or failed is not done
+ */
+export type TodoCheckCiGreen = {
+    type: 'ci_green';
+    repo: string;
+    of?: string;
+    ref?: string;
+    /**
+     * Only the runs of this workflow
+     */
+    workflow?: string;
+};
+
+/**
+ * A command run on the agent's machine (`sh -c`, `cmd /c` on Windows) exits with `expectExit`. `run` may cite `${pr:<item>.number}`, `${pr:<item>.mergeSha}` and `${release:<item>.tag}`, replaced from the links; a value not linked yet leaves the check unknown. Output bounded to 300 characters and masked
+ */
+export type TodoCheckCommand = {
+    type: 'command';
+    /**
+     * At most 2 000 characters
+     */
+    run: string;
+    cwd?: string;
+    /**
+     * 0 when absent
+     */
+    expectExit?: number;
+    /**
+     * 60 when absent
+     */
+    timeoutSeconds?: number;
+};
+
+/**
+ * The artifact `id` (or the one linked to the item) is published, at `minVersion` or later; verified by the server
+ */
+export type TodoCheckArtifactPublished = {
+    type: 'artifact_published';
+    id?: string;
+    minVersion?: number;
+};
+
+/**
+ * The wait linked to the item is answered, with `action` when given; verified by the server
+ */
+export type TodoCheckWaitAnswered = {
+    type: 'wait_answered';
+    action?: string;
+};
+
+/**
+ * The agent's word for `what`: nothing verifies it, the item is shown as not verified
+ */
+export type TodoCheckAttested = {
+    type: 'attested';
+    /**
+     * At most 1 000 characters
+     */
+    what: string;
+};
+
+/**
+ * What the check at `index` of the item's stored condition observed
+ */
+export type TodoCheckReport = {
+    index: number;
+    /**
+     * true passed, false failed, absent unknown (unreachable, not linked yet): only true counts
+     */
+    passed?: boolean;
+    /**
+     * At most 2 000 characters
+     */
+    observed: string;
+    /**
+     * At most 10 https addresses
+     */
+    urls?: Array<string>;
+};
+
+/**
+ * The last verification of an item, kept when it refused
+ */
+export type TodoProof = {
+    at: string;
+    /**
+     * true passed, false failed, absent unknown
+     */
+    passed?: boolean;
+    text: string;
+    urls?: Array<string>;
+};
+
+/**
+ * A dated note of an item; notes are only appended
+ */
+export type TodoNote = {
+    at: string;
+    text: string;
+};
+
+export type TodoLinkKind = 'pr' | 'release' | 'artifact' | 'wait';
+
+/**
+ * A link of an item, frozen once bound
+ */
+export type TodoLink = {
+    kind: TodoLinkKind;
+    /**
+     * The https address of a pull request or a release, or the id of an artifact or a wait
+     */
+    ref: string;
+    number?: number;
+    /**
+     * A pull request's merge commit
+     */
+    sha?: string;
+    /**
+     * A release's tag
+     */
+    tag?: string;
+    at: string;
+};
+
+/**
+ * `blocked`: the third stop without progress opened a wait; `hook_error`: the hook failed open
+ */
+export type TodoHookEventKind = 'blocked' | 'hook_error';
+
+export type TodoHookEvent = {
+    at: string;
+    kind: TodoHookEventKind;
+    text: string;
+};
+
+export type CreateTodoRequest = {
+    /**
+     * The session, named by its owner; ignored for an agent token
+     */
+    sessionId?: string;
+    /**
+     * One paragraph pointing to the full plan (an artifact link, or the person's request as is), at most 4 000 characters
+     */
+    reference: string;
+    /**
+     * At most 10 links shown with the reference
+     */
+    refs?: Array<WaitRef>;
+    /**
+     * Every step of the plan, in order, at most 500
+     */
+    items: Array<TodoItemInput>;
+};
+
+export type AddTodoItemRequest = {
+    sessionId?: string;
+    item: TodoItemInput;
+    /**
+     * Why the plan needs it, at most 1 000 characters
+     */
+    reason: string;
+};
+
+export type StartTodoItemRequest = {
+    sessionId?: string;
+    /**
+     * The item is given to a background agent; the item in progress stays in progress (false when absent)
+     */
+    background?: boolean;
+    /**
+     * The background agent's name
+     */
+    agent?: string;
+};
+
+export type NoteTodoItemRequest = {
+    sessionId?: string;
+    /**
+     * At most 2 000 characters
+     */
+    text: string;
+};
+
+export type DropTodoItemRequest = {
+    sessionId?: string;
+    /**
+     * Why the item no longer makes sense, at most 1 000 characters
+     */
+    reason: string;
+};
+
+export type LinkTodoItemRequest = {
+    sessionId?: string;
+    kind: TodoLinkKind;
+    /**
+     * The https address of a pull request or a release, or the id of an artifact or a wait
+     */
+    ref: string;
+    number?: number;
+    sha?: string;
+    tag?: string;
+    /**
+     * Replace a pull request closed without merge (false when absent)
+     */
+    replaceClosed?: boolean;
+};
+
+export type CompleteTodoItemRequest = {
+    sessionId?: string;
+    /**
+     * One report per position of the stored condition
+     */
+    checks: Array<TodoCheckReport>;
+};
+
+/**
+ * The reminder block of a session's todo
+ */
+export type TodoContext = {
+    /**
+     * The reference, the item in progress (else the next one) and the list; null without an active list
+     */
+    text: string | null;
+};
+
+export type TodoStopPhase = 'begin' | 'verify' | 'settle';
+
+/**
+ * The outcome of the checks the Stop hook ran for one item
+ */
+export type TodoStopItemReport = {
+    itemId: string;
+    /**
+     * By position in the item's stored condition
+     */
+    checks?: Array<TodoCheckReport>;
+};
+
+/**
+ * One stop of the agent, asked by the Stop hook
+ */
+export type TodoStopRequest = {
+    sessionId?: string;
+    /**
+     * `begin` when absent
+     */
+    phase?: TodoStopPhase;
+    /**
+     * A background task or a scheduled wake-up of the session still runs (false when absent)
+     */
+    background?: boolean;
+    /**
+     * `verify`: the checks of the item in progress and of the `todo` items whose checks are all cheap; `settle`: every check of the done items. Each item once, at most 500
+     */
+    items?: Array<TodoStopItemReport>;
+    /**
+     * `verify`: the https addresses of the pull requests the session opened, at most 5
+     */
+    orphans?: Array<string>;
+    /**
+     * The agent's last message, kept to 2 000 characters
+     */
+    lastMessage?: string;
+};
+
+/**
+ * `allow` the stop passes; `verify` run the cheap checks and ask again; `settle` run every check of the done items and ask again; `block` refuse the stop with `reason`
+ */
+export type TodoStopAction = 'allow' | 'verify' | 'settle' | 'block';
+
+/**
+ * The server's answer to a stop
+ */
+export type TodoStopDecision = {
+    action: TodoStopAction;
+    todo?: Todo;
+    /**
+     * `block`: the resume message for the agent, at most 8 000 characters
+     */
+    reason?: string;
+    /**
+     * `allow`: `no_list`, `hook_disabled`, `finished`, `background_task`, `wait_open`, `settled` or `escalated`
+     */
+    why?: string;
+    /**
+     * The third stop without progress opened a wait for the owner (false when absent)
+     */
+    escalated?: boolean;
+};
+
+export type TodoHookErrorRequest = {
+    sessionId?: string;
+    /**
+     * What failed, kept to 500 characters
+     */
+    text: string;
+};
+
+export type TodoStopHookRequest = {
+    /**
+     * true to hold the agent while its todo has open items
+     */
+    enabled: boolean;
+};
+
+/**
+ * The todo Stop hook setting of a member; a member without one has it on
+ */
+export type TodoStopHook = {
+    /**
+     * The member's id (`Member.id`)
+     */
+    memberId: string;
+    enabled: boolean;
+};
+
+export type TodoStopHooks = {
+    /**
+     * Every member of the organization whose hook is off
+     */
+    members: Array<TodoStopHook>;
+};
+
+/**
  * Spending over a period
  */
 export type Usage = {
@@ -3641,6 +4207,74 @@ export type Wait = {
     answer?: WaitAnswer;
     createdAt: string;
     resolvedAt?: string;
+    /**
+     * `human` (absent means `human`), `time` or `event`: who resolves it
+     */
+    resolver?: string;
+    /**
+     * `time`: when it resolves
+     */
+    dueAt?: string;
+    /**
+     * `event`: when it resolves as timed out if nothing arrived
+     */
+    timeoutAt?: string;
+    /**
+     * `event`: where the event comes from (`webhook`)
+     */
+    eventSource?: string;
+    /**
+     * `time` or `event`: the line added to the message that wakes the session
+     */
+    resumeMessage?: string;
+    /**
+     * `event` with `source: webhook`, in the answer that creates it only: the address a CI or a script calls (`POST /api/v1/waits/{id}/event?token=wev_…`). It holds the wait's secret, never shown again
+     */
+    eventUrl?: string;
+};
+
+/**
+ * What an outside caller posts to an `event` wait: data for the agent, never instructions
+ */
+export type WaitEventRequest = {
+    /**
+     * `success` or `failure` by convention; `success` by default
+     */
+    result?: string;
+    /**
+     * An https link (a CI run, a deployment)
+     */
+    url?: string;
+    note?: string;
+};
+
+/**
+ * The wait the event resolved
+ */
+export type WaitEventReceived = {
+    id: string;
+    status: WaitStatus;
+};
+
+/**
+ * How long the server may hold the answer back
+ */
+export type WaitWakeRequest = {
+    waitMillis?: number;
+};
+
+/**
+ * What the waits of a session have to say to its Stop hook
+ */
+export type WaitWake = {
+    /**
+     * A wait asked by the session is still open
+     */
+    open: boolean;
+    /**
+     * The answers that arrived, oldest first, each handed over once
+     */
+    messages: Array<string>;
 };
 
 /**
@@ -6275,6 +6909,404 @@ export type GithubAppInstallCallbackData = {
     };
     url: '/api/v1/github/app/install/callback';
 };
+
+export type UnlinkGithubData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/link';
+};
+
+export type UnlinkGithubErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnlinkGithubError = UnlinkGithubErrors[keyof UnlinkGithubErrors];
+
+export type UnlinkGithubResponses = {
+    /**
+     * Unlinked, or nothing to unlink
+     */
+    204: void;
+};
+
+export type UnlinkGithubResponse = UnlinkGithubResponses[keyof UnlinkGithubResponses];
+
+export type GetGithubLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/link';
+};
+
+export type GetGithubLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetGithubLinkError = GetGithubLinkErrors[keyof GetGithubLinkErrors];
+
+export type GetGithubLinkResponses = {
+    /**
+     * OK
+     */
+    200: GitHubLink;
+};
+
+export type GetGithubLinkResponse = GetGithubLinkResponses[keyof GetGithubLinkResponses];
+
+export type StartGithubDeviceLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/link/device';
+};
+
+export type StartGithubDeviceLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type StartGithubDeviceLinkError = StartGithubDeviceLinkErrors[keyof StartGithubDeviceLinkErrors];
+
+export type StartGithubDeviceLinkResponses = {
+    /**
+     * Started
+     */
+    201: GitHubDeviceLink;
+};
+
+export type StartGithubDeviceLinkResponse = StartGithubDeviceLinkResponses[keyof StartGithubDeviceLinkResponses];
+
+export type PollGithubDeviceLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/github/link/device/{id}';
+};
+
+export type PollGithubDeviceLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type PollGithubDeviceLinkError = PollGithubDeviceLinkErrors[keyof PollGithubDeviceLinkErrors];
+
+export type PollGithubDeviceLinkResponses = {
+    /**
+     * OK
+     */
+    200: GitHubDeviceLinkPoll;
+};
+
+export type PollGithubDeviceLinkResponse = PollGithubDeviceLinkResponses[keyof PollGithubDeviceLinkResponses];
+
+export type StartGithubWebLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/link/start';
+};
+
+export type StartGithubWebLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type StartGithubWebLinkError = StartGithubWebLinkErrors[keyof StartGithubWebLinkErrors];
+
+export type GithubLinkCallbackData = {
+    body?: never;
+    path?: never;
+    query?: {
+        code?: string;
+        state?: string;
+        error?: string;
+    };
+    url: '/api/v1/github/link/callback';
+};
+
+export type ListGithubLinksData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/github/links';
+};
+
+export type ListGithubLinksErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListGithubLinksError = ListGithubLinksErrors[keyof ListGithubLinksErrors];
+
+export type ListGithubLinksResponses = {
+    /**
+     * OK
+     */
+    200: {
+        items: Array<GitHubLink>;
+    };
+};
+
+export type ListGithubLinksResponse = ListGithubLinksResponses[keyof ListGithubLinksResponses];
+
+export type UnlinkMemberGithubData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/github/links/{memberId}';
+};
+
+export type UnlinkMemberGithubErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnlinkMemberGithubError = UnlinkMemberGithubErrors[keyof UnlinkMemberGithubErrors];
+
+export type UnlinkMemberGithubResponses = {
+    /**
+     * Unlinked, or nothing to unlink
+     */
+    204: void;
+};
+
+export type UnlinkMemberGithubResponse = UnlinkMemberGithubResponses[keyof UnlinkMemberGithubResponses];
+
+export type GetMemberGithubLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/github/links/{memberId}';
+};
+
+export type GetMemberGithubLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetMemberGithubLinkError = GetMemberGithubLinkErrors[keyof GetMemberGithubLinkErrors];
+
+export type GetMemberGithubLinkResponses = {
+    /**
+     * OK
+     */
+    200: GitHubLink;
+};
+
+export type GetMemberGithubLinkResponse = GetMemberGithubLinkResponses[keyof GetMemberGithubLinkResponses];
+
+export type StartMemberGithubWebLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/github/links/{memberId}/start';
+};
+
+export type StartMemberGithubWebLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type StartMemberGithubWebLinkError = StartMemberGithubWebLinkErrors[keyof StartMemberGithubWebLinkErrors];
 
 export type GithubWebhookData = {
     body: unknown;
@@ -11467,7 +12499,18 @@ export type ListWaitsData = {
     path?: never;
     query?: {
         status?: string;
+        /**
+         * `human` (by default: what "Waiting for you" shows), `time`, `event` or `all`; 400 otherwise. A wait for a time or an event waits for nobody, so it is listed only when asked for
+         */
+        resolver?: 'human' | 'time' | 'event' | 'all';
         mine?: boolean;
+        /**
+         * `all`, or a member id: the waits asked of them, for an administrator only (403 otherwise). Without it, the waits asked of or by the caller
+         */
+        assignee?: string;
+        /**
+         * Only that session's waits, asked of anyone: for the person who runs it only (404 otherwise, an administrator included)
+         */
         sessionId?: string;
         runId?: string;
         /**
@@ -11523,9 +12566,36 @@ export type CreateWaitData = {
     body: {
         sessionId?: string;
         runId?: string;
+        /**
+         * A member id or a username
+         */
         assignee?: string;
         kind?: string;
         question: WaitSpec;
+        /**
+         * `human` by default. `time` or `event`: a wait that resolves by itself, asked by an agent in its session (agent token) for that session only, with a title and no fields, actions or other assignee
+         */
+        resolver?: 'human' | 'time' | 'event';
+        /**
+         * `time`: the instant it resolves, ISO-8601 UTC, in the future and at most 30 days away (exactly one of `at` and `after`)
+         */
+        at?: string;
+        /**
+         * `time`: seconds from now, 30 to 30 days (exactly one of `at` and `after`)
+         */
+        after?: number;
+        /**
+         * `event`: where the event comes from, `webhook` (the only value, by default)
+         */
+        source?: 'webhook';
+        /**
+         * `event`: how long it waits before it resolves as timed out (86 400 by default)
+         */
+        timeoutSeconds?: number;
+        /**
+         * `time` or `event`: a line added to the message that wakes the session
+         */
+        resumeMessage?: string;
     };
     headers?: {
         /**
@@ -11633,6 +12703,58 @@ export type WaitsMcpResponses = {
      */
     202: unknown;
 };
+
+export type WakeWaitsData = {
+    body?: WaitWakeRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query: {
+        /**
+         * The session the agent runs in: any of its segments
+         */
+        session: string;
+    };
+    url: '/api/v1/waits/wake';
+};
+
+export type WakeWaitsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type WakeWaitsError = WakeWaitsErrors[keyof WakeWaitsErrors];
+
+export type WakeWaitsResponses = {
+    /**
+     * The answers that arrived, and whether a wait is still open
+     */
+    200: WaitWake;
+};
+
+export type WakeWaitsResponse = WakeWaitsResponses[keyof WakeWaitsResponses];
 
 export type GetWaitData = {
     body?: never;
@@ -11785,6 +12907,707 @@ export type CancelWaitResponses = {
 };
 
 export type CancelWaitResponse = CancelWaitResponses[keyof CancelWaitResponses];
+
+export type ReceiveWaitEventData = {
+    body?: WaitEventRequest;
+    headers?: {
+        /**
+         * The wait's secret, unless given in the `token` query parameter
+         */
+        'Ostrom-Wait-Token'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * The wait's secret, unless given in the `Ostrom-Wait-Token` header
+         */
+        token?: string;
+    };
+    url: '/api/v1/waits/{id}/event';
+};
+
+export type ReceiveWaitEventErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type ReceiveWaitEventError = ReceiveWaitEventErrors[keyof ReceiveWaitEventErrors];
+
+export type ReceiveWaitEventResponses = {
+    /**
+     * The wait is resolved and its session will be woken
+     */
+    202: WaitEventReceived;
+};
+
+export type ReceiveWaitEventResponse = ReceiveWaitEventResponses[keyof ReceiveWaitEventResponses];
+
+export type GetSessionTodoData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * The session (its id, or the id of one of its segments `~r<n>`); ignored for an agent token
+         */
+        sessionId?: string;
+    };
+    url: '/api/v1/todos/session';
+};
+
+export type GetSessionTodoErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetSessionTodoError = GetSessionTodoErrors[keyof GetSessionTodoErrors];
+
+export type GetSessionTodoResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type GetSessionTodoResponse = GetSessionTodoResponses[keyof GetSessionTodoResponses];
+
+export type CreateSessionTodoData = {
+    body: CreateTodoRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/session';
+};
+
+export type CreateSessionTodoErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateSessionTodoError = CreateSessionTodoErrors[keyof CreateSessionTodoErrors];
+
+export type CreateSessionTodoResponses = {
+    /**
+     * OK
+     */
+    201: SessionTodo;
+};
+
+export type CreateSessionTodoResponse = CreateSessionTodoResponses[keyof CreateSessionTodoResponses];
+
+export type AddTodoItemData = {
+    body: AddTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/session/items';
+};
+
+export type AddTodoItemErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AddTodoItemError = AddTodoItemErrors[keyof AddTodoItemErrors];
+
+export type AddTodoItemResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type AddTodoItemResponse = AddTodoItemResponses[keyof AddTodoItemResponses];
+
+export type StartTodoItemData = {
+    body: StartTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The item's id: a slug of at most 40 characters; any other value answers 404 `unknown_item`
+         */
+        item: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/session/items/{item}/start';
+};
+
+export type StartTodoItemErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type StartTodoItemError = StartTodoItemErrors[keyof StartTodoItemErrors];
+
+export type StartTodoItemResponses = {
+    /**
+     * OK
+     */
+    200: StartTodoItemResponse;
+};
+
+export type StartTodoItemResponse2 = StartTodoItemResponses[keyof StartTodoItemResponses];
+
+export type NoteTodoItemData = {
+    body: NoteTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The item's id: a slug of at most 40 characters; any other value answers 404 `unknown_item`
+         */
+        item: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/session/items/{item}/notes';
+};
+
+export type NoteTodoItemErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type NoteTodoItemError = NoteTodoItemErrors[keyof NoteTodoItemErrors];
+
+export type NoteTodoItemResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type NoteTodoItemResponse = NoteTodoItemResponses[keyof NoteTodoItemResponses];
+
+export type CompleteTodoItemData = {
+    body: CompleteTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The item's id: a slug of at most 40 characters; any other value answers 404 `unknown_item`
+         */
+        item: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/session/items/{item}/proof';
+};
+
+export type CompleteTodoItemErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CompleteTodoItemError = CompleteTodoItemErrors[keyof CompleteTodoItemErrors];
+
+export type CompleteTodoItemResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type CompleteTodoItemResponse = CompleteTodoItemResponses[keyof CompleteTodoItemResponses];
+
+export type LinkTodoItemData = {
+    body: LinkTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The item's id: a slug of at most 40 characters; any other value answers 404 `unknown_item`
+         */
+        item: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/session/items/{item}/link';
+};
+
+export type LinkTodoItemErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LinkTodoItemError = LinkTodoItemErrors[keyof LinkTodoItemErrors];
+
+export type LinkTodoItemResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type LinkTodoItemResponse = LinkTodoItemResponses[keyof LinkTodoItemResponses];
+
+export type RequestTodoDropData = {
+    body: DropTodoItemRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The item's id: a slug of at most 40 characters; any other value answers 404 `unknown_item`
+         */
+        item: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/session/items/{item}/drop';
+};
+
+export type RequestTodoDropErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RequestTodoDropError = RequestTodoDropErrors[keyof RequestTodoDropErrors];
+
+export type RequestTodoDropResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type RequestTodoDropResponse = RequestTodoDropResponses[keyof RequestTodoDropResponses];
+
+export type ReadTodoContextData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * The session (its id, or the id of one of its segments `~r<n>`); ignored for an agent token
+         */
+        sessionId?: string;
+    };
+    url: '/api/v1/todos/session/context';
+};
+
+export type ReadTodoContextErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReadTodoContextError = ReadTodoContextErrors[keyof ReadTodoContextErrors];
+
+export type ReadTodoContextResponses = {
+    /**
+     * OK
+     */
+    200: TodoContext;
+};
+
+export type ReadTodoContextResponse = ReadTodoContextResponses[keyof ReadTodoContextResponses];
+
+export type StopTodoSessionData = {
+    body: TodoStopRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/session/stop';
+};
+
+export type StopTodoSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type StopTodoSessionError = StopTodoSessionErrors[keyof StopTodoSessionErrors];
+
+export type StopTodoSessionResponses = {
+    /**
+     * OK
+     */
+    200: TodoStopDecision;
+};
+
+export type StopTodoSessionResponse = StopTodoSessionResponses[keyof StopTodoSessionResponses];
+
+export type RecordTodoHookErrorData = {
+    body: TodoHookErrorRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/session/hook-error';
+};
+
+export type RecordTodoHookErrorErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RecordTodoHookErrorError = RecordTodoHookErrorErrors[keyof RecordTodoHookErrorErrors];
+
+export type RecordTodoHookErrorResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type RecordTodoHookErrorResponse = RecordTodoHookErrorResponses[keyof RecordTodoHookErrorResponses];
+
+export type ListTodoStopHooksData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/stop-hook';
+};
+
+export type ListTodoStopHooksErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListTodoStopHooksError = ListTodoStopHooksErrors[keyof ListTodoStopHooksErrors];
+
+export type ListTodoStopHooksResponses = {
+    /**
+     * OK
+     */
+    200: TodoStopHooks;
+};
+
+export type ListTodoStopHooksResponse = ListTodoStopHooksResponses[keyof ListTodoStopHooksResponses];
+
+export type SetMemberTodoStopHookData = {
+    body: TodoStopHookRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id (`Member.id`), not a login
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/todos/stop-hook/members/{memberId}';
+};
+
+export type SetMemberTodoStopHookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetMemberTodoStopHookError = SetMemberTodoStopHookErrors[keyof SetMemberTodoStopHookErrors];
+
+export type SetMemberTodoStopHookResponses = {
+    /**
+     * OK
+     */
+    200: TodoStopHook;
+};
+
+export type SetMemberTodoStopHookResponse = SetMemberTodoStopHookResponses[keyof SetMemberTodoStopHookResponses];
 
 export type ListMcpServersData = {
     body?: never;
@@ -14697,6 +16520,57 @@ export type ResumeCloudSessionResponses = {
 
 export type ResumeCloudSessionResponse = ResumeCloudSessionResponses[keyof ResumeCloudSessionResponses];
 
+export type SetCloudSessionGithubAccessData = {
+    body: {
+        access: 'owner' | 'shared' | 'none';
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/github';
+};
+
+export type SetCloudSessionGithubAccessErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetCloudSessionGithubAccessError = SetCloudSessionGithubAccessErrors[keyof SetCloudSessionGithubAccessErrors];
+
+export type SetCloudSessionGithubAccessResponses = {
+    /**
+     * OK
+     */
+    200: CloudSession;
+};
+
+export type SetCloudSessionGithubAccessResponse = SetCloudSessionGithubAccessResponses[keyof SetCloudSessionGithubAccessResponses];
+
 export type IssueCloudTerminalTicketData = {
     body?: never;
     headers?: {
@@ -15005,6 +16879,52 @@ export type ReportRunnerCheckResponses = {
 };
 
 export type ReportRunnerCheckResponse = ReportRunnerCheckResponses[keyof ReportRunnerCheckResponses];
+
+export type FetchRunnerGithubTokenData = {
+    body: {
+        sessionId: string;
+        epoch: number;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/github';
+};
+
+export type FetchRunnerGithubTokenErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type FetchRunnerGithubTokenError = FetchRunnerGithubTokenErrors[keyof FetchRunnerGithubTokenErrors];
+
+export type FetchRunnerGithubTokenResponses = {
+    /**
+     * OK
+     */
+    200: RunnerGitHubToken;
+};
+
+export type FetchRunnerGithubTokenResponse = FetchRunnerGithubTokenResponses[keyof FetchRunnerGithubTokenResponses];
 
 export type SendCloudMessageData = {
     body: {
