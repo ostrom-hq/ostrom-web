@@ -44,7 +44,7 @@ describe('a governance confirmation', () => {
         name: 'Never let the person who asks approve their own request',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Waiting for you')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByText('Waiting for you')).toBeInTheDocument();
     expect(screen.getByText(/^expires in 1[34]:\d\d$/)).toHaveAttribute(
       'dateTime',
       confirmation('gc-self-approval').expiresAt,
@@ -81,7 +81,7 @@ describe('a governance confirmation', () => {
     }));
     visit('/confirm/gc-self-approval');
     const who = await screen.findByRole('region', { name: 'Who asks' }, SLOW);
-    expect(screen.getByText('Waiting for you')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByText('Waiting for you')).toBeInTheDocument();
     expect(within(who).getByText(/^with a personal API token/)).toBeInTheDocument();
     // A token named like a command is still a personal token: its name is quoted, never shown as the command.
     expect(within(who).getByText('ostrom login').tagName).toBe('Q');
@@ -168,7 +168,7 @@ describe('a governance confirmation', () => {
       'href',
       '/signin?redirect=%2Fconfirm%2Fgc-self-approval',
     );
-    expect(screen.getByText('Waiting for you')).toBeInTheDocument();
+    expect(within(screen.getByRole('main')).getByText('Waiting for you')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Refuse' }));
     expect(within(await outcome()).getByRole('heading', { name: 'Refused' })).toBeInTheDocument();
   });

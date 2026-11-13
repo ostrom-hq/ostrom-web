@@ -1876,7 +1876,7 @@ export const fr = {
   },
   waits: {
     you: 'toi',
-    nav: { open: '{{label}} ouvertes' },
+    nav: { open_one: '{{label}} ouverte', open_other: '{{label}} ouvertes' },
     status: { open: 'Ouverte', resolved: 'Répondue', cancelled: 'Annulée' },
     filter: { open: 'Ouvertes', resolved: 'Répondues', cancelled: 'Annulées' },
     list: {
@@ -1900,6 +1900,7 @@ export const fr = {
       back: 'On t’attend',
       lead: 'Demandée par {{who}} · {{when}}',
       unknown: 'quelqu’un',
+      teammate: 'un collègue',
       about: 'L’attente',
       status: 'État',
       assignee: 'Demandée à',

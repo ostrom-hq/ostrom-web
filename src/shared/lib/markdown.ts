@@ -18,9 +18,9 @@ export type Block =
   | { readonly kind: 'code'; readonly text: string }
   | { readonly kind: 'rule' };
 
-// Groups: 1 code, 2 strong, 3 emphasis, 4 link label, 5 link target.
+// Groups: 1 code, 2 and 3 strong, 4 emphasis, 5 link label, 6 link target.
 const INLINE =
-  /`([^`]+)`|(?:\*\*|__)(.+?)(?:\*\*|__)|(?<![\w*_])[*_](?=\S)([^*_]+?)[*_](?![\w*_])|\[([^\]]+)\]\(([^)\s]+)\)/;
+  /`([^`]+)`|\*\*(.+?)\*\*|(?<![\w_])__(.+?)__(?![\w_])|(?<![\w*_])[*_](?=\S)([^*_]+?)[*_](?![\w*_])|\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)/;
 
 export function parseInline(source: string): Inline[] {
   const out: Inline[] = [];
@@ -29,12 +29,12 @@ export function parseInline(source: string): Inline[] {
     const found = INLINE.exec(rest);
     if (found === null) break;
     if (found.index > 0) out.push({ kind: 'text', text: rest.slice(0, found.index) });
-    const [whole = '', code, strong, em, label = '', url] = found;
-    const emphasized = strong ?? em;
+    const [whole = '', code, star, score, em, label = '', url] = found;
+    const strong = star ?? score;
     if (code !== undefined) out.push({ kind: 'code', text: code });
-    else if (emphasized !== undefined) {
-      out.push({ kind: strong === undefined ? 'em' : 'strong', children: parseInline(emphasized) });
-    } else {
+    else if (strong !== undefined) out.push({ kind: 'strong', children: parseInline(strong) });
+    else if (em !== undefined) out.push({ kind: 'em', children: parseInline(em) });
+    else {
       const href = safeHref(url);
       // A link that is not http(s) keeps its words and loses its target.
       if (href === undefined) out.push(...parseInline(label));
@@ -58,11 +58,15 @@ export function parseMarkdown(source: string): Block[] {
   const pending = source.replace(/\r\n?/g, '\n').split('\n').reverse();
   const blocks: Block[] = [];
   let paragraph: string[] = [];
+  // The line before was a quote: the next `>` line continues it.
+  let quoting = false;
   const flush = (): void => {
     if (paragraph.length > 0) blocks.push({ kind: 'paragraph', children: parseInline(paragraph.join(' ')) });
     paragraph = [];
   };
   for (let line = pending.pop(); line !== undefined; line = pending.pop()) {
+    const continuing = quoting;
+    quoting = false;
     if (isFence(line)) {
       flush();
       const code: string[] = [];
@@ -95,7 +99,11 @@ export function parseMarkdown(source: string): Block[] {
     } else if (quote !== null) {
       flush();
       const [, text = ''] = quote;
-      blocks.push({ kind: 'quote', children: parseInline(text) });
+      const last = blocks.at(-1);
+      quoting = true;
+      if (continuing && last?.kind === 'quote') {
+        blocks[blocks.length - 1] = { ...last, children: [...last.children, ...parseInline(` ${text}`)] };
+      } else blocks.push({ kind: 'quote', children: parseInline(text) });
     } else paragraph.push(line.trim());
   }
   flush();

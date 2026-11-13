@@ -1830,7 +1830,7 @@ export const en = {
   },
   waits: {
     you: 'you',
-    nav: { open: '{{label}} open' },
+    nav: { open_one: '{{label}} open', open_other: '{{label}} open' },
     status: { open: 'Open', resolved: 'Answered', cancelled: 'Cancelled' },
     filter: { open: 'Open', resolved: 'Answered', cancelled: 'Cancelled' },
     list: {
@@ -1853,6 +1853,7 @@ export const en = {
       back: 'Waiting for you',
       lead: 'Asked by {{who}} · {{when}}',
       unknown: 'someone',
+      teammate: 'a teammate',
       about: 'The wait',
       status: 'Status',
       assignee: 'Asked of',

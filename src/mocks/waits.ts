@@ -3,6 +3,7 @@ import { handleAnswerWait, handleCancelWait, handleGetWait, handleListWaits } fr
 import type { Organization, Wait } from '@gen/api/types.gen';
 import { zAnswerWaitBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { answeredThroughSession, PAGE } from '@/features/waits/model';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { readJson, refusal } from './http';
 import { DEMO_LOGIN, type OrgsState } from './orgs';
@@ -12,12 +13,8 @@ export interface WaitsState extends OrgsState {
   waits: Wait[];
 }
 
-/** The server's page: 50 without a `limit`, 100 at most. */
-const PAGE = 50;
+/** The server's page is at most 100. */
 const MAX_PAGE = 100;
-
-/** Waits of the cloud sessions themselves are answered in the session (`409 answer_through_session`). */
-const THROUGH_SESSION = ['permission', 'question'];
 
 const isDemoPerson = (who: string | undefined): boolean => who === MEMBER_IDS.maya || who === DEMO_LOGIN;
 
@@ -77,7 +74,7 @@ export function createWaitsHandlers(
       if (wait === undefined) return notFound();
       if (wait.status !== 'open')
         return refusal(409, 'wait_closed', 'This wait was already answered or cancelled.');
-      if (THROUGH_SESSION.includes(wait.kind))
+      if (answeredThroughSession(wait))
         return refusal(409, 'answer_through_session', 'Answer this request in its session.');
       if (!isDemoPerson(wait.assignee) && !manages())
         return refusal(403, 'wait_assignee_only', 'Only the member asked answers.');

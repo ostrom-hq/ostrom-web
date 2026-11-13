@@ -125,7 +125,8 @@ export function valueOf(field: WaitField, draft: Draft | undefined): FieldValue 
     case 'number': {
       if (text.trim() === '') return EMPTY_VALUE;
       const parsed = Number(text);
-      return Number.isFinite(parsed)
+      // A JSON number: `0x1F`, `0b11` and `1_000` are numbers to JavaScript but not what was meant.
+      return /^\s*-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?\s*$/.test(text) && Number.isFinite(parsed)
         ? { kind: 'value', value: parsed }
         : { kind: 'invalid', problem: 'notNumber' };
     }
@@ -210,6 +211,13 @@ export function shownValue(value: unknown): string {
   if (Array.isArray(value)) return value.map(shownValue).join(', ');
   if (typeof value === 'number' || typeof value === 'boolean') return String(value);
   return JSON.stringify(value);
+}
+
+const MEMBER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Whether the server wrote a member id: a person the console cannot name should not read as a number. */
+export function isMemberId(who: string): boolean {
+  return MEMBER_ID.test(who);
 }
 
 /** Whether `who` (a member id, login or username as the server wrote it) names the viewer. */

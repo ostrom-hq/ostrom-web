@@ -25,7 +25,9 @@ function WaitsCount(): ReactElement | null {
       {' '}
       <Badge tone="signal" approval="waiting">
         <span aria-hidden="true">{badge.label}</span>
-        <span className="o-visually-hidden">{t('waits.nav.open', { label: badge.label })}</span>
+        <span className="o-visually-hidden">
+          {t('waits.nav.open', { label: badge.label, count: badge.count })}
+        </span>
       </Badge>
     </>
   );

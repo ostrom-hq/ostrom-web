@@ -8,6 +8,7 @@ import {
   draftOf,
   draftsOf,
   isCalendarDate,
+  isMemberId,
   isViewer,
   shownValue,
   styleOf,
@@ -141,6 +142,11 @@ describe('the value of a field', () => {
       kind: 'invalid',
       problem: 'notNumber',
     });
+    expect(valueOf(field({ type: 'number' }), draft('0x1F'))).toEqual({
+      kind: 'invalid',
+      problem: 'notNumber',
+    });
+    expect(valueOf(field({ type: 'number' }), draft('.5'))).toEqual({ kind: 'value', value: 0.5 });
     expect(valueOf(field({ type: 'number' }), draft('Infinity'))).toEqual({
       kind: 'invalid',
       problem: 'notNumber',
@@ -246,6 +252,11 @@ describe('small helpers', () => {
     expect(isViewer('theo', viewer)).toBe(false);
     expect(isViewer(undefined, viewer)).toBe(false);
     expect(isViewer('maya', { memberId: undefined, login: undefined })).toBe(false);
+  });
+
+  it('tells a member id from a login', () => {
+    expect(isMemberId('3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60')).toBe(true);
+    expect(isMemberId('maya')).toBe(false);
   });
 
   it('writes the badge count', () => {

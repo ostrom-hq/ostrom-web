@@ -496,6 +496,33 @@ describe('a wait', () => {
     expect(screen.queryByRole('button', { name: 'Cancel this wait' })).toBeNull();
   });
 
+  it('names a teammate it cannot find as such, never by their member id', async () => {
+    server.use(http.get('*/api/v1/orgs/:org/members', () => refused(403, 'forbidden', 'no')));
+    visit(`/waits/${SHIP}`);
+    expect(await screen.findByText(/^Asked by a teammate · /, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it('keeps a login it cannot find as the server wrote it', async () => {
+    server.use(http.get('*/api/v1/orgs/:org/members', () => refused(403, 'forbidden', 'no')));
+    replace(3, (item) => ({ ...item, createdBy: 'lena' }));
+    visit(`/waits/${id(3)}`);
+    expect(await screen.findByText(/^Asked by lena · /, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it('clears an earlier refusal when the next write goes through', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/waits/:id/answer', () => refused(400, 'invalid_answer', 'not that one')));
+    visit(`/waits/${id(2)}`);
+    await user.click(await screen.findByRole('button', { name: 'Done' }, SLOW));
+    expect(await screen.findByText('not that one', undefined, SLOW)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel this wait' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel the wait' }));
+    expect(
+      await screen.findByText('This wait was cancelled: nobody answered it.', undefined, SLOW),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('not that one')).toBeNull();
+  });
+
   it('does not submit the form to the page when Enter is pressed in a field', async () => {
     visit(`/waits/${id(2)}`);
     const form = await screen.findByRole('form', { name: 'Your answer' }, SLOW);

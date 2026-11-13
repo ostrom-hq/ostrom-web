@@ -12,14 +12,7 @@ import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { StatusBadge } from '../components/StatusBadge';
 import { WaitForm } from '../components/WaitForm';
 import { actionsOf, answeredThroughSession, isViewer, shownValue, targetOf } from '../model';
-import {
-  type PeopleViewModel,
-  type Refused,
-  useAnswerWait,
-  useCancelWait,
-  usePeople,
-  useWait,
-} from '../useWaits';
+import { type PeopleViewModel, type Refused, usePeople, useWait, useWaitWrites } from '../useWaits';
 import '../waits.css';
 
 export function WaitScreen(): ReactElement {
@@ -58,15 +51,13 @@ function WaitDetail({
   readonly people: PeopleViewModel;
 }): ReactElement {
   const { t, i18n } = useTranslation();
-  const answer = useAnswerWait(wait.id);
-  const cancel = useCancelWait(wait.id);
-  const refused = answer.refused ?? cancel.refused;
+  const writes = useWaitWrites(wait.id);
   const open = wait.status === 'open';
   const mayAnswer = isViewer(wait.assignee, people.me) || people.me.canManage;
   const refs = wait.question.refs ?? [];
   return (
     <>
-      {refused === undefined ? null : <Refusal refused={refused} />}
+      {writes.refused === undefined ? null : <Refusal refused={writes.refused} />}
       <Section label={t('waits.detail.about')}>
         <Facts
           facts={[
@@ -139,7 +130,7 @@ function WaitDetail({
               )}
             </Banner>
           ) : mayAnswer ? (
-            <WaitForm wait={wait} sending={answer.sending} onAnswer={answer.answer} />
+            <WaitForm wait={wait} sending={writes.sending} onAnswer={writes.answer} />
           ) : (
             <Banner tag={t('waits.detail.notYoursTag')}>
               {t('waits.detail.notYours', { who: people.nameOf(wait.assignee) })}
@@ -149,8 +140,8 @@ function WaitDetail({
             label={t('waits.detail.cancel')}
             confirm={t('waits.detail.cancelConfirm')}
             keep={t('waits.detail.keep')}
-            disabled={cancel.sending}
-            onConfirm={cancel.cancel}
+            disabled={writes.sending}
+            onConfirm={writes.cancel}
           />
         </Section>
       ) : (

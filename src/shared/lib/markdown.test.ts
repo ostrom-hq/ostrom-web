@@ -39,6 +39,19 @@ describe('parseInline', () => {
     ]);
   });
 
+  it('keeps a link whose target has parentheses, and leaves __init__ in a word or a URL alone', () => {
+    expect(parseInline('[doc](https://en.wikipedia.org/wiki/Foo_(bar))')).toEqual([
+      {
+        kind: 'link',
+        href: 'https://en.wikipedia.org/wiki/Foo_(bar)',
+        children: [{ kind: 'text', text: 'doc' }],
+      },
+    ]);
+    expect(parseInline('see https://x.dev/a__b__c and my__init__file')).toEqual([
+      { kind: 'text', text: 'see https://x.dev/a__b__c and my__init__file' },
+    ]);
+  });
+
   it('leaves a snake_case word and a lone star alone', () => {
     expect(parseInline('snake_case_name and 2 * 3')).toEqual([
       { kind: 'text', text: 'snake_case_name and 2 * 3' },
@@ -68,9 +81,15 @@ describe('parseMarkdown', () => {
   });
 
   it('reads quotes and fenced code, closed or not', () => {
-    expect(parseMarkdown('> one\n>two\n```sh\nmake\n\nmore\n```\nafter\n```\nopen')).toEqual([
-      { kind: 'quote', children: [{ kind: 'text', text: 'one' }] },
-      { kind: 'quote', children: [{ kind: 'text', text: 'two' }] },
+    expect(parseMarkdown('> one\n>two\n\n> apart\n```sh\nmake\n\nmore\n```\nafter\n```\nopen')).toEqual([
+      {
+        kind: 'quote',
+        children: [
+          { kind: 'text', text: 'one' },
+          { kind: 'text', text: ' two' },
+        ],
+      },
+      { kind: 'quote', children: [{ kind: 'text', text: 'apart' }] },
       { kind: 'code', text: 'make\n\nmore' },
       { kind: 'paragraph', children: [{ kind: 'text', text: 'after' }] },
       { kind: 'code', text: 'open' },

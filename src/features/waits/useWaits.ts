@@ -17,7 +17,7 @@ import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { useOrgMembers } from '@/shared/org/members';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
-import { type Answer, isViewer, PAGE, type WaitFilter, type WaitScope } from './model';
+import { type Answer, isMemberId, isViewer, PAGE, type WaitFilter, type WaitScope } from './model';
 
 /**
  * The console has no event feed for waits (the server's `cloud.wait.*` events ride the CLI's and the apps' feed): the
@@ -126,16 +126,11 @@ export function refusalOf(failure: Error): Refused {
   return { kind: 'other', message: failure.message };
 }
 
-export interface WriteViewModel {
+export interface WritesViewModel {
   readonly sending: boolean;
+  /** Why the last write was refused; a later write, of either kind, clears it. */
   readonly refused: Refused | undefined;
-}
-
-export interface AnswerViewModel extends WriteViewModel {
   readonly answer: (answer: Answer) => void;
-}
-
-export interface CancelViewModel extends WriteViewModel {
   readonly cancel: () => void;
 }
 
@@ -161,42 +156,28 @@ function useAfterWrite(id: string): {
   };
 }
 
-export function useAnswerWait(id: string): AnswerViewModel {
+/** Answering and cancelling one wait: one refusal at a time, the latest write's. */
+export function useWaitWrites(id: string): WritesViewModel {
   const { settle, refresh } = useAfterWrite(id);
-  const mutation = useMutation({
-    ...answerWaitMutation(),
-    onSuccess: settle,
-    onError: refresh,
-  });
-  const { mutate } = mutation;
-  const error = failureOf(mutation.error);
+  const answering = useMutation({ ...answerWaitMutation(), onSuccess: settle, onError: refresh });
+  const cancelling = useMutation({ ...cancelWaitMutation(), onSuccess: settle, onError: refresh });
+  const { mutate: sendAnswer, reset: resetAnswer } = answering;
+  const { mutate: sendCancel, reset: resetCancel } = cancelling;
+  const error = failureOf(answering.error ?? cancelling.error);
   return {
+    sending: answering.isPending || cancelling.isPending,
+    refused: error === undefined ? undefined : refusalOf(error),
     answer: useCallback(
       (answer: Answer) => {
-        mutate({ path: { id }, body: { action: answer.action, values: answer.values } });
+        resetCancel();
+        sendAnswer({ path: { id }, body: { action: answer.action, values: answer.values } });
       },
-      [id, mutate],
+      [id, sendAnswer, resetCancel],
     ),
-    sending: mutation.isPending,
-    refused: error === undefined ? undefined : refusalOf(error),
-  };
-}
-
-export function useCancelWait(id: string): CancelViewModel {
-  const { settle, refresh } = useAfterWrite(id);
-  const mutation = useMutation({
-    ...cancelWaitMutation(),
-    onSuccess: settle,
-    onError: refresh,
-  });
-  const { mutate } = mutation;
-  const error = failureOf(mutation.error);
-  return {
     cancel: useCallback(() => {
-      mutate({ path: { id } });
-    }, [id, mutate]),
-    sending: mutation.isPending,
-    refused: error === undefined ? undefined : refusalOf(error),
+      resetAnswer();
+      sendCancel({ path: { id } });
+    }, [id, sendCancel, resetAnswer]),
   };
 }
 
@@ -233,7 +214,8 @@ export function usePeople(): PeopleViewModel {
       const found = members?.find(
         (member) => member.id === who || member.login.toLowerCase() === who.toLowerCase(),
       );
-      return found === undefined ? who : found.name === '' ? found.login : found.name;
+      if (found === undefined) return isMemberId(who) ? t('waits.detail.teammate') : who;
+      return found.name === '' ? found.login : found.name;
     },
   };
 }
