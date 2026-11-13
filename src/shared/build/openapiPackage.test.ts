@@ -59,7 +59,7 @@ describe('fetch-openapi', () => {
       '/tmp/x',
       '--userconfig',
       '/tmp/x/.npmrc',
-      '--silent',
+      '--loglevel=error',
     ]);
   });
 
