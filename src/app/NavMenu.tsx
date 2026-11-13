@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
 import { useModal } from '@/shared/ui/useModal';
+import { NavLabel } from '@/app/NavLabel';
 import { useNavLinks } from '@/app/useNavLinks';
 
 /**
@@ -73,7 +74,7 @@ function NavSheet({
             {links.map((link) => (
               <li key={link.to}>
                 <Link to={link.to} activeOptions={{ exact: link.to === '/' }} onClick={onClose}>
-                  {t(`app.nav.${link.label}`)}
+                  <NavLabel label={link.label} />
                 </Link>
               </li>
             ))}

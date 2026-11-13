@@ -12,6 +12,7 @@ interface NavLink {
 export const NAV_LINKS = [
   { to: '/', label: 'home' },
   { to: '/yes', label: 'yes' },
+  { to: '/waits', label: 'waits', feature: 'waits.v1' },
   { to: '/sessions', label: 'sessions' },
   { to: '/receipts', label: 'receipts' },
   { to: '/members', label: 'members' },

@@ -182,6 +182,8 @@ import {
   initialSecrets,
 } from '@/mocks/fixtures/tools';
 import { createConfirmationHandlers, type ConfirmationsState } from '@/mocks/confirmations';
+import { createWaitsHandlers, type WaitsState } from '@/mocks/waits';
+import { initialWaits } from '@/mocks/fixtures/waits';
 import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
@@ -209,7 +211,8 @@ export interface MockDb
     KeysAndDevicesState,
     McpAccessState,
     PolicyState,
-    TeamCodeImportState {
+    TeamCodeImportState,
+    WaitsState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -330,6 +333,7 @@ export function createMockDb(): MockDb {
     signedInAt: opened,
     signedIn: true,
     confirmations: initialConfirmations(opened),
+    waits: initialWaits(opened),
     staleConfirmations: ['gc-models-stale'],
     refusedWrites: initialRefusedWrites(),
     usedLinks: [],
@@ -845,6 +849,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => db,
       now,
       (request) => organizationOf(db, request),
+    ),
+    ...createWaitsHandlers(
+      () => db,
+      now,
+      (request) => organizationOf(db, request),
+      () => managesMembers(demoRoleIn(db, db.organization, now)),
     ),
     ...createActivityHandlers(
       () => db,

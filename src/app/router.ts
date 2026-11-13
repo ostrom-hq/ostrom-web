@@ -113,6 +113,16 @@ const sessionRoute = createRoute({
   path: '/sessions/$sessionId',
   component: lazyRouteComponent(async () => import('@/features/sessions'), 'SessionScreen'),
 });
+const waitsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/waits',
+  component: lazyRouteComponent(async () => import('@/features/waits'), 'WaitsScreen'),
+});
+const waitRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/waits/$waitId',
+  component: lazyRouteComponent(async () => import('@/features/waits'), 'WaitScreen'),
+});
 const membersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/members',
@@ -341,6 +351,8 @@ export const routeTree = rootRoute.addChildren([
   confirmRoute,
   sessionsRoute,
   sessionRoute,
+  waitsRoute,
+  waitRoute,
   receiptsRoute,
   receiptRoute,
   membersRoute,
