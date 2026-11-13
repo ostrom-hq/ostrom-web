@@ -2,6 +2,7 @@
 import {
   deleteArtifact,
   enrollSharedAccount,
+  handOverSharedAccount,
   listArtifactMembers,
   listArtifacts,
   listArtifactVersions,
@@ -139,7 +140,7 @@ describe('mock shared subscriptions', () => {
     });
     expect(bare.data.sharedWith).toEqual([]);
     expect(bare.data).not.toHaveProperty('dailyAllocationUsd');
-    expect((await listSharedAccounts({ throwOnError: true })).data.items).toHaveLength(4);
+    expect((await listSharedAccounts({ throwOnError: true })).data.items).toHaveLength(5);
   });
 
   it('refuses a subscription without a name, a known provider or an existing secret', async () => {
@@ -243,6 +244,22 @@ describe('mock shared subscriptions', () => {
       await statusOf(async () => removeSharedAccount({ path: { id: 'acc-9' }, throwOnError: true })),
     ).toBe(404);
     await removeSharedAccount({ path: { id: 'acc-1' }, throwOnError: true });
-    expect(db.sharedAccounts.map((account) => account.id)).toEqual(['acc-2']);
+    expect(db.sharedAccounts.map((account) => account.id)).toEqual(['acc-2', 'acc-3']);
+  });
+
+  it('hands an imported subscription over for an administrator only', async () => {
+    expect(
+      await statusOf(async () => handOverSharedAccount({ path: { id: 'acc-9' }, throwOnError: true })),
+    ).toBe(404);
+    const handed = await handOverSharedAccount({ path: { id: 'acc-3' }, throwOnError: true });
+    expect(handed.data).toMatchObject({ status: 'ready', refreshOwnership: 'ostrom' });
+    const paused = await handOverSharedAccount({ path: { id: 'acc-2' }, throwOnError: true });
+    expect(paused.data).toMatchObject({ status: 'disabled', refreshOwnership: 'ostrom' });
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    expect(
+      await statusOf(async () => handOverSharedAccount({ path: { id: 'acc-3' }, throwOnError: true })),
+    ).toBe(403);
   });
 });

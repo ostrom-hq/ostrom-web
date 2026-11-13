@@ -1673,7 +1673,20 @@ export const fr = {
         active: 'Actif',
         expired: 'Connexion expirée',
         wrongAccount: 'Connecté à un autre compte : à repartager',
+        pendingHandover: 'En attente de transfert',
+        accessOnly: 'Accès seul',
       },
+      pendingHint:
+        'Importé : TeamCode peut encore renouveler ses jetons, il ne prête donc rien tant qu’un administrateur ne l’a pas transféré.',
+      accessOnlyHint: 'Prête son jeton d’accès importé, jamais renouvelé : à réimporter quand il expire.',
+      pendingTag: 'Transfert',
+      pendingBanner_one:
+        '1 abonnement importé ne prête rien tant qu’il n’est pas transféré, une fois que TeamCode ne renouvelle plus ses jetons.',
+      pendingBanner_other:
+        '{{count}} abonnements importés ne prêtent rien tant qu’ils ne sont pas transférés, une fois que TeamCode ne renouvelle plus leurs jetons.',
+      handoverConfirm: 'TeamCode, ni aucun autre outil, ne renouvelle plus ses jetons',
+      handover: 'Transférer',
+      handoverLabel: 'Transférer {{what}}',
       pool: 'réserve {{pool}}',
       daily: '{{amount}} par jour',
       noDaily: 'sans limite par jour',

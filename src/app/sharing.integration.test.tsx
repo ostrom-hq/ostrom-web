@@ -304,6 +304,76 @@ describe('the shared subscriptions', () => {
     expect(within(moved).queryByRole('button', { name: 'Pause' })).toBeNull();
   });
 
+  it('hands an imported subscription over once its box is checked, and says the waiting ones', async () => {
+    const user = userEvent.setup();
+    db.sharedAccounts.push({
+      id: 'acc-trial',
+      provider: 'claude',
+      label: 'Trial Max',
+      owner: 'maya',
+      status: 'access_only',
+      refreshOwnership: 'access_only',
+      sharedWith: [],
+      paused: false,
+    });
+    visit('/accounts');
+    expect(
+      await screen.findByText(/1 imported subscription lends nothing until it is handed over/),
+    ).toBeInTheDocument();
+    const trial = await findCard('Trial Max');
+    expect(trial).toHaveTextContent('Access only');
+    expect(trial).toHaveTextContent('never renewed');
+    expect(within(trial).queryByRole('button', { name: /Hand over/ })).toBeNull();
+    const imported = await findCard('Team Max (TeamCode)');
+    expect(imported).toHaveTextContent('Waiting for its handover');
+    const handover = within(imported).getByRole('button', { name: 'Hand over Team Max (TeamCode)' });
+    expect(handover).toBeDisabled();
+    const box = within(imported).getByRole('checkbox', {
+      name: 'TeamCode, or any other tool, no longer renews its tokens',
+    });
+    await user.click(box);
+    await user.click(box);
+    expect(handover).toBeDisabled();
+    await user.click(box);
+    await user.click(handover);
+    await vi.waitFor(() => {
+      expect(imported).toHaveTextContent('Active');
+    });
+    expect(screen.queryByText(/imported subscription lends nothing/)).toBeNull();
+  });
+
+  it('holds the buttons while a handover is sent, and says when it is refused', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/accounts/:id/handover', async () => delay('infinite')));
+    visit('/accounts');
+    const imported = await findCard('Team Max (TeamCode)');
+    await user.click(within(imported).getByRole('checkbox'));
+    await user.click(within(imported).getByRole('button', { name: 'Hand over Team Max (TeamCode)' }));
+    expect(within(imported).getByRole('button', { name: 'Hand over Team Max (TeamCode)' })).toBeDisabled();
+    expect(within(imported).getByRole('button', { name: 'Pause' })).toBeDisabled();
+  });
+
+  it('says why a handover is refused', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/accounts/:id/handover', refuse('A refresh is in flight.')));
+    visit('/accounts');
+    const imported = await findCard('Team Max (TeamCode)');
+    await user.click(within(imported).getByRole('checkbox'));
+    await user.click(within(imported).getByRole('button', { name: 'Hand over Team Max (TeamCode)' }));
+    expect(await screen.findByText('A refresh is in flight.')).toBeInTheDocument();
+  });
+
+  it('offers no handover to a member who does not administer the organization', async () => {
+    const acme = db.organization.id;
+    db.orgMembers[acme] = (db.orgMembers[acme] ?? []).map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    visit('/accounts');
+    const imported = await findCard('Team Max (TeamCode)');
+    expect(imported).toHaveTextContent('Waiting for its handover');
+    expect(within(imported).queryByRole('button', { name: /Hand over/ })).toBeNull();
+  });
+
   it('says why the form to share a subscription is missing', async () => {
     server.use(http.get('*/api/v1/secrets', refuse('secrets are locked')));
     visit('/accounts');

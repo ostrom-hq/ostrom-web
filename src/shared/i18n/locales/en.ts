@@ -1638,7 +1638,20 @@ export const en = {
         active: 'Active',
         expired: 'Sign-in expired',
         wrongAccount: 'Signed in to another account: share it again',
+        pendingHandover: 'Waiting for its handover',
+        accessOnly: 'Access only',
       },
+      pendingHint:
+        'Imported: TeamCode may still renew its tokens, so it lends nothing until an administrator hands it over.',
+      accessOnlyHint: 'Lends its imported access token, never renewed: import it again once it expires.',
+      pendingTag: 'Handover',
+      pendingBanner_one:
+        '1 imported subscription lends nothing until it is handed over, once TeamCode no longer renews its tokens.',
+      pendingBanner_other:
+        '{{count}} imported subscriptions lend nothing until they are handed over, once TeamCode no longer renews their tokens.',
+      handoverConfirm: 'TeamCode, or any other tool, no longer renews its tokens',
+      handover: 'Hand over',
+      handoverLabel: 'Hand over {{what}}',
       pool: 'pool {{pool}}',
       daily: '{{amount}} a day',
       noDaily: 'no daily limit',

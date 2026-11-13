@@ -639,7 +639,7 @@ export const zBudgetOverride = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1195,7 +1195,8 @@ export const zImportItem = z.object({
         'skipped',
         'revive_at_cutover'
     ]),
-    reason: z.optional(z.string())
+    reason: z.optional(z.string()),
+    refreshOwnership: z.optional(z.enum(['pending_handover', 'access_only']))
 });
 
 /**
@@ -1207,7 +1208,9 @@ export const zImportReport = z.object({
     updated: z.int(),
     unchanged: z.int(),
     skipped: z.int(),
-    reviveAtCutover: z.int()
+    reviveAtCutover: z.int(),
+    pendingHandover: z.optional(z.int()),
+    accessOnly: z.optional(z.int())
 });
 
 /**
@@ -2349,6 +2352,11 @@ export const zSharedAccount = z.object({
     label: z.string(),
     owner: z.string(),
     status: z.string(),
+    refreshOwnership: z.optional(z.enum([
+        'ostrom',
+        'pending_handover',
+        'access_only'
+    ])),
     sharedWith: z.array(z.string()),
     pool: z.optional(z.string()),
     dailyAllocationUsd: z.optional(z.number()),
@@ -6361,7 +6369,8 @@ export const zImportTeamCodeHeaders = z.object({
 
 export const zImportTeamCodeQuery = z.object({
     dryRun: z.optional(z.boolean()),
-    cutover: z.optional(z.boolean())
+    cutover: z.optional(z.boolean()),
+    accessOnly: z.optional(z.boolean())
 });
 
 /**
@@ -7291,6 +7300,32 @@ export const zUpdateSharedAccountPath = z.object({
  * OK
  */
 export const zUpdateSharedAccountResponse = zSharedAccount;
+
+export const zHandOverSharedAccountHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zHandOverSharedAccountPath = z.object({
+    id: z.string()
+});
+
+/**
+ * The account after the change
+ */
+export const zHandOverSharedAccountResponse = zSharedAccount;
+
+export const zMakeSharedAccountAccessOnlyHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zMakeSharedAccountAccessOnlyPath = z.object({
+    id: z.string()
+});
+
+/**
+ * The account after the change
+ */
+export const zMakeSharedAccountAccessOnlyResponse = zSharedAccount;
 
 export const zGetCapacityHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())

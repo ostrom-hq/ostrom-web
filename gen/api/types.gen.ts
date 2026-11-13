@@ -908,7 +908,7 @@ export type BudgetOverride = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -1661,6 +1661,10 @@ export type ImportItem = {
      * Why it was skipped, or why a `revive_at_cutover` line waits for the cutover run
      */
     reason?: string;
+    /**
+     * For a shared account the run left waiting for its handover, or serving access-only (`sharing.handover.v1`); absent when Ostrom renews it
+     */
+    refreshOwnership?: 'pending_handover' | 'access_only';
 };
 
 /**
@@ -1676,6 +1680,14 @@ export type ImportReport = {
      * Shared accounts left waiting for a reconnection until the cutover run (`revive_at_cutover` lines)
      */
     reviveAtCutover: number;
+    /**
+     * Shared accounts left waiting for a refresh-ownership handover (`sharing.handover.v1`)
+     */
+    pendingHandover?: number;
+    /**
+     * Shared accounts serving access-only (`sharing.handover.v1`)
+     */
+    accessOnly?: number;
 };
 
 /**
@@ -3156,7 +3168,14 @@ export type SharedAccount = {
     provider: string;
     label: string;
     owner: string;
+    /**
+     * `ready`, `disabled`, `reconnect_required`, `wrong_account`, and, with `sharing.handover.v1`, `pending_handover` (imported, waiting for a refresh-ownership handover: serves nothing) and `access_only` (serves with its access token, never renewed) for an account that would otherwise be `ready`. Clients treat an unknown value as not serving.
+     */
     status: string;
+    /**
+     * Who renews the account's tokens (`sharing.handover.v1`): `ostrom`, `pending_handover` (an import whose source may still renew them; waits for `POST /api/v1/accounts/{id}/handover`) or `access_only` (nobody here: served with its access token until it expires). Independent of `paused`. Shown to admins and the account's owner only.
+     */
+    refreshOwnership?: 'ostrom' | 'pending_handover' | 'access_only';
     /**
      * Whom it is lent to, sorted together: the logins of its members and `group:<id>` for each group it is lent to. Empty for the whole organization, and for a member who is neither an admin nor its owner.
      */
@@ -14595,6 +14614,10 @@ export type ImportTeamCodeData = {
          * The final run, once TeamCode is stopped: owners only (403 `cutover_owner_required` otherwise), recorded in the audit log in the name of the person who runs it, before anything is written (503 `cutover_audit_unavailable` on a server without an audit log, 503 `cutover_sharing_unavailable` on a server without shared accounts; the key is `error.type`). It also revives the shared accounts waiting for a reconnection, testing TeamCode's tokens first (renewing rotates them, so a normal run never does).
          */
         cutover?: boolean;
+        /**
+         * TeamCode's `--access-only` trial (`sharing.handover.v1`): the accounts the import creates, and those still waiting for their handover, serve with TeamCode's access tokens and are never renewed by Ostrom (`refreshOwnership` `access_only`), so TeamCode keeps renewing its own copy; run the import again when they expire. Accounts Ostrom already renews are left alone. Not with `cutover` (400). Without it, a normal run leaves the accounts it creates waiting for a handover (`pending_handover`), refreshes the tokens of the accounts still waiting with TeamCode's current ones, and the cutover run hands every waiting account over to Ostrom with TeamCode's tokens.
+         */
+        accessOnly?: boolean;
     };
     url: '/api/v1/import/teamcode';
 };
@@ -17984,6 +18007,104 @@ export type UpdateSharedAccountResponses = {
 };
 
 export type UpdateSharedAccountResponse = UpdateSharedAccountResponses[keyof UpdateSharedAccountResponses];
+
+export type HandOverSharedAccountData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/accounts/{id}/handover';
+};
+
+export type HandOverSharedAccountErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type HandOverSharedAccountError = HandOverSharedAccountErrors[keyof HandOverSharedAccountErrors];
+
+export type HandOverSharedAccountResponses = {
+    /**
+     * The account after the change
+     */
+    200: SharedAccount;
+};
+
+export type HandOverSharedAccountResponse = HandOverSharedAccountResponses[keyof HandOverSharedAccountResponses];
+
+export type MakeSharedAccountAccessOnlyData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/accounts/{id}/access-only';
+};
+
+export type MakeSharedAccountAccessOnlyErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type MakeSharedAccountAccessOnlyError = MakeSharedAccountAccessOnlyErrors[keyof MakeSharedAccountAccessOnlyErrors];
+
+export type MakeSharedAccountAccessOnlyResponses = {
+    /**
+     * The account after the change
+     */
+    200: SharedAccount;
+};
+
+export type MakeSharedAccountAccessOnlyResponse = MakeSharedAccountAccessOnlyResponses[keyof MakeSharedAccountAccessOnlyResponses];
 
 export type GetCapacityData = {
     body?: never;

@@ -23,6 +23,7 @@ export const FEATURES = [
   'runners.cloud.github.v1',
   'runners.cloud.v1',
   'servicekeys.scopes.v1',
+  'sharing.handover.v1',
   'slack.v1',
   'todos.v1',
   'waits.v1',

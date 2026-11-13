@@ -22,3 +22,19 @@ test('an owner shares an artifact with a member, then lends a subscription', asy
   await expect(lent).toContainText('$25.00 a day');
   await expect(lent).toContainText('Lent to theo');
 });
+
+test('an admin hands an imported subscription over once TeamCode no longer renews it', async ({ page }) => {
+  await page.goto('/');
+  await openScreen(page, 'Shared subscriptions');
+  await expect(page.getByText('1 imported subscription lends nothing until it is handed over')).toBeVisible();
+  const imported = page.locator('article').filter({ hasText: 'Team Max (TeamCode)' });
+  await expect(imported).toContainText('Waiting for its handover');
+  const handover = imported.getByRole('button', { name: 'Hand over Team Max (TeamCode)' });
+  await expect(handover).toBeDisabled();
+  await imported
+    .getByRole('checkbox', { name: 'TeamCode, or any other tool, no longer renews its tokens' })
+    .check();
+  await handover.click();
+  await expect(imported).toContainText('Active');
+  await expect(page.getByText('imported subscription lends nothing')).toHaveCount(0);
+});

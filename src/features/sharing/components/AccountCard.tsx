@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { SharedAccount } from '@gen/api/types.gen';
-import { type ReactElement, useId } from 'react';
+import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatUsd } from '@/shared/lib/money';
 import { Badge } from '@/shared/ui/Badge';
@@ -18,10 +18,12 @@ export interface AccountCardProps {
         readonly remove: () => void;
       }
     | undefined;
+  /** Present when the viewer may hand this waiting account's refresh over to Ostrom (an administrator). */
+  readonly handover?: (() => void) | undefined;
 }
 
 /** Whose subscription, who it is lent to, and how much of it a day; the credential itself is never shown. */
-export function AccountCard({ account, busy, actions }: AccountCardProps): ReactElement {
+export function AccountCard({ account, busy, actions, handover }: AccountCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const headingId = useId();
   const state = accountState(account);
@@ -53,6 +55,13 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
           ? t('sharing.accounts.sharedWithNobody')
           : t('sharing.accounts.sharedWith', { list: account.sharedWith.join(', ') })}
       </p>
+      {state === 'pendingHandover' ? (
+        <p className="o-row__meta">{t('sharing.accounts.pendingHint')}</p>
+      ) : null}
+      {state === 'accessOnly' ? <p className="o-row__meta">{t('sharing.accounts.accessOnlyHint')}</p> : null}
+      {handover === undefined || state !== 'pendingHandover' ? null : (
+        <HandoverForm label={account.label} busy={busy} onHandover={handover} />
+      )}
       {actions === undefined ? null : (
         <div className="o-inline">
           {/* An account waiting for a sign-in leaves that state only when shared again: the server ignores a pause. */}
@@ -76,5 +85,43 @@ export function AccountCard({ account, busy, actions }: AccountCardProps): React
         </div>
       )}
     </article>
+  );
+}
+
+/**
+ * TeamCode's Handover button: its in-page checkbox stands for `--confirm`, that the account's source (TeamCode, or any
+ * other tool) no longer renews its tokens. Two renewers of one refresh token disconnect the account.
+ */
+function HandoverForm({
+  label,
+  busy,
+  onHandover,
+}: {
+  readonly label: string;
+  readonly busy: boolean;
+  readonly onHandover: () => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const [confirmed, setConfirmed] = useState(false);
+  return (
+    <div className="o-inline">
+      <label className="o-inline">
+        <input
+          type="checkbox"
+          checked={confirmed}
+          onChange={(event) => {
+            setConfirmed(event.target.checked);
+          }}
+        />
+        {t('sharing.accounts.handoverConfirm')}
+      </label>
+      <Button
+        disabled={busy || !confirmed}
+        aria-label={t('sharing.accounts.handoverLabel', { what: label })}
+        onClick={onHandover}
+      >
+        {t('sharing.accounts.handover')}
+      </Button>
+    </div>
   );
 }

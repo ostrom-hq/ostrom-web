@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeature } from '@/shared/capabilities';
+import { managesMembers } from '@/shared/org/roles';
+import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { AccountCard } from '../components/AccountCard';
 import { EnrollForm } from '../components/EnrollForm';
 import { SharingTabs } from '../components/SharingTabs';
+import { waitsForHandover } from '../model';
 import { useAccountChange, useAccounts } from '../useSharing';
 import './sharing.css';
 
@@ -14,11 +18,21 @@ export function AccountsScreen(): ReactElement {
   const { t } = useTranslation();
   const view = useAccounts();
   const change = useAccountChange();
+  // TeamCode's « Refresh ownership »: only an administrator hands an imported account over, where the server can.
+  const handoverServed = useFeature('sharing.handover.v1');
+  const { role } = useCurrentOrg();
+  const handsOver = handoverServed && managesMembers(role);
+  const waiting = view.accounts?.filter(waitsForHandover).length ?? 0;
   return (
     <Screen top={<SharingTabs />} title={t('sharing.accounts.title')} lead={t('sharing.accounts.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('sharing.errorTag')} live>
           {change.failure.message}
+        </Banner>
+      )}
+      {waiting === 0 ? null : (
+        <Banner tone="warning" tag={t('sharing.accounts.pendingTag')}>
+          {t('sharing.accounts.pendingBanner', { count: waiting })}
         </Banner>
       )}
       {view.secrets === undefined || view.members === undefined ? null : (
@@ -40,6 +54,13 @@ export function AccountsScreen(): ReactElement {
                   key={account.id}
                   account={account}
                   busy={change.pending !== undefined}
+                  handover={
+                    handsOver
+                      ? () => {
+                          change.handover(account.id);
+                        }
+                      : undefined
+                  }
                   actions={
                     account.owner === view.login
                       ? {
