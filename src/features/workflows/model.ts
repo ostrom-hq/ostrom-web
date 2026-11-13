@@ -19,11 +19,12 @@ import {
   type NodeCondition,
 } from './nodes';
 
-/** A proposed workflow waits for an owner: amber until someone accepts it. */
+/** A proposed workflow waits for an owner: amber until someone accepts it; a rejected proposal is grey. */
 export const STATUS_TONES: Readonly<Record<Known<WorkflowStatus>, BadgeTone>> = {
   proposed: 'warning',
   accepted: 'success',
   edited: 'success',
+  rejected: 'neutral',
 };
 
 /** A run under way is the signal colour, one waiting for a person amber, one that failed red. */

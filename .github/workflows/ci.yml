@@ -14,7 +14,7 @@ concurrency:
 
 permissions:
   contents: read
-  # The real server's image, ghcr.io/ostrom-hq/ostrom-server (private).
+  # The real server's image, ghcr.io/ostrom-hq/ostrom-server (private), and @ostrom-hq/openapi.
   packages: read
 
 jobs:
@@ -52,7 +52,11 @@ jobs:
       # job (audit AUDIT-SECU-WEB-2 B9). Build tools are kept patched by pnpm-workspace.yaml overrides.
       - name: No known vulnerability in the runtime dependencies (pnpm audit --prod)
         run: pnpm audit --prod --audit-level=moderate
-      - name: Generated API client matches the contract
+      # gen/api comes from the server's OpenAPI document, @ostrom-hq/openapi at the version package.json pins
+      # (`ostrom.openapi`), read from GitHub Packages (ostrom-core docs/decisions/0001).
+      - name: Generated API client matches the pinned API document
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm gen:check
       - run: pnpm typecheck
       - run: pnpm lint

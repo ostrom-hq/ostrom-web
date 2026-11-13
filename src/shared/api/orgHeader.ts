@@ -11,7 +11,11 @@ export const ORG_REQUIRED = 'org_required';
  * (`orgHeader.test.ts` checks this list against the vendored contract).
  */
 const ORG_FREE: readonly RegExp[] = [
-  /^\/api\/v1\/auth\//,
+  // device/answer approves a login in the named organization; every other auth route acts in none. auth/me takes the
+  // header as an option the console never uses: /me without one checks a stale choice.
+  /^\/api\/v1\/auth\/(?!device\/answer$)/,
+  // The instance's own administration acts in no organization.
+  /^\/api\/v1\/admin\//,
   /^\/api\/v1\/orgs(?:\/|$)/,
   /^\/api\/v1\/invitations\/(?:preview|accept)$/,
   /^\/api\/v1\/tokens(?:\/|$)/,
@@ -21,7 +25,7 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/github\/link\/callback$/,
   /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback)$/,
-  /^\/api\/v1\/automations\/[^/]+\/trigger$/,
+  /^\/api\/v1\/automations\/[^/]+(?:\/v\/[^/]+)?\/trigger$/,
   // An event wait's webhook: the secret is the proof (no sign-in); GitHub's link callback names the person's own link.
   /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/link\/callback$/,
