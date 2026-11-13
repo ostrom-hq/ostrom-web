@@ -313,7 +313,8 @@ describe('mock invitations', () => {
     expect(db.grants).toEqual([DEMO_SETUP_TOKEN, DEMO_INVITATION_TOKEN]);
     expect(await raw('POST', '/auth/signup-grant', '{"token":"nope"}')).toBe(404);
     expect(await raw('POST', '/auth/signup-grant', '{}')).toBe(400);
-    db.setupUsed = true;
+    // The setup link is used once.
+    expect(db.setupUsed).toBe(true);
     expect(await raw('POST', '/auth/signup-grant', `{"token":"${DEMO_SETUP_TOKEN}"}`)).toBe(404);
   });
 

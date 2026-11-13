@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { useSetupLinkStore } from '@/features/signin';
 import { DEMO_SETUP_TOKEN } from '@/mocks/fixtures/organization';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
@@ -9,7 +9,7 @@ import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 const { server, db } = setupMockApp();
 
 afterEach(() => {
-  useSetupLinkStore.setState({ token: undefined });
+  useSetupLinkStore.setState({ token: undefined, outcome: undefined });
 });
 
 describe('the setup link page', () => {
@@ -48,13 +48,46 @@ describe('the setup link page', () => {
     expect(db.grants).toEqual([]);
   });
 
-  it('forgets a link left unpresented when the page is left', async () => {
-    useSetupLinkStore.getState().hold('osb_left');
-    server.use(http.post('*/api/v1/auth/signup-grant', async () => delay('infinite')));
-    const router = visit('/setup');
-    expect(await screen.findByText('Checking your setup link…')).toBeInTheDocument();
+  it('does not take a link already presented for a missing one when the page is opened again', async () => {
+    db.signedIn = false;
+    const router = visit(`/setup#token=${DEMO_SETUP_TOKEN}`);
+    expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toBeInTheDocument();
     await router.navigate({ to: '/signin' });
-    expect(useSetupLinkStore.getState().token).toBeUndefined();
+    await router.navigate({ to: '/setup' });
+    expect(await screen.findByRole('heading', { name: 'Set up your Ostrom instance' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toBeInTheDocument();
+    expect(screen.queryByText('No setup link here')).toBeNull();
+    expect(db.grants).toEqual([DEMO_SETUP_TOKEN]);
+  });
+
+  it('keeps a link that failed for a reason that may pass, and presents it again when the page is opened again', async () => {
+    let calls = 0;
+    server.use(
+      http.post('*/api/v1/auth/signup-grant', () => {
+        calls += 1;
+        return calls === 1
+          ? HttpResponse.json(
+              { error: { type: 'too_many_attempts', message: 'Slow down.' } },
+              { status: 429 },
+            )
+          : new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const router = visit(`/setup#token=${DEMO_SETUP_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Slow down.');
+    await router.navigate({ to: '/signin' });
+    await router.navigate({ to: '/setup' });
+    expect(await screen.findByRole('link', { name: 'Continue with GitHub' })).toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
+
+  it('takes a new link opened after an expired one', async () => {
+    db.setupUsed = true;
+    const router = visit(`/setup#token=${DEMO_SETUP_TOKEN}`);
+    expect(await screen.findByText('This setup link is used or has expired')).toBeInTheDocument();
+    await router.navigate({ to: '/signin' });
+    await router.navigate({ to: '/setup' });
+    expect(await screen.findByText('This setup link is used or has expired')).toBeInTheDocument();
   });
 
   it('keeps the link after a failure that may pass, and presents it again on a click', async () => {

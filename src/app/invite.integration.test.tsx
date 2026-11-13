@@ -75,17 +75,50 @@ describe('the invitation page', () => {
       }),
     );
     open(DEMO_INVITATION_TOKEN);
-    expect(await screen.findByRole('button', { name: 'Sign in to join' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Checking your invitation…' })).toBeDisabled();
     release();
     expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
   });
 
-  it('lets the person sign in even when the server refused the grant', async () => {
+  it('lets the person sign in when the server found the invitation dead (404) at the grant', async () => {
     db.signedIn = false;
-    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(429, 'too_many_attempts', 'Slow down.')));
+    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(404, 'not_found', 'gone')));
     open(DEMO_INVITATION_TOKEN);
     expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('presents the invitation again on the click after a failure that may pass, and signs in only then', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    let calls = 0;
+    server.use(
+      http.post('*/api/v1/auth/signup-grant', () => {
+        calls += 1;
+        if (calls === 1) return refuse(429, 'too_many_attempts', 'Slow down.');
+        if (calls === 2) return refuse(404, 'not_found', 'gone');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const router = open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be checked');
+    expect(screen.queryByRole('link', { name: 'Sign in to join' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Sign in to join' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/signin');
+    });
+    expect(router.state.location.search).toEqual({ redirect: '/invite' });
+    expect(calls).toBe(2);
+  });
+
+  it('stays on the invitation when the second try fails too', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(429, 'too_many_attempts', 'Slow down.')));
+    const router = open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Sign in to join' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be checked');
+    expect(router.state.location.pathname).toBe('/invite');
   });
 
   it('presents nothing for a dead invitation, nor for someone already signed in', async () => {

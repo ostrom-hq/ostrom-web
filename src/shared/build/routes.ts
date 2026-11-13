@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // No import: vite.config.ts and scripts/bundle-budget.ts read this file too, without the app's `@` alias.
 
-/** The routes whose screens are in the first download on purpose (src/app/router.ts says why): nothing of their own. */
-export const IN_FIRST_DOWNLOAD: ReadonlySet<string> = new Set(['/yes', '/yes/$approvalId']);
+/**
+ * The routes whose screens are in the first download on purpose (src/app/router.ts says why), and `/login`, which has
+ * no screen (it redirects to `/signin`): nothing of their own.
+ */
+export const IN_FIRST_DOWNLOAD: ReadonlySet<string> = new Set(['/yes', '/yes/$approvalId', '/login']);
 
 /** A route of the router, and the feature its screen loads from lazily (`undefined`: in the first download). */
 export interface RouteOfRouter {

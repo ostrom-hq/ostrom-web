@@ -8,7 +8,7 @@ import {
 } from '@gen/api/@tanstack/react-query.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -152,37 +152,32 @@ export interface SetupLinkViewModel {
 }
 
 /**
- * Presents the setup link's token once (`POST /auth/signup-grant`): the server answers with a cookie that the
- * sign-in the person chooses next uses to create the first account. The token is forgotten as soon as the server
- * took it or said it is dead; after a failure that may pass it stays for a new try.
+ * Presents the setup link's token (`POST /auth/signup-grant`): the server answers with a cookie that the sign-in the
+ * person chooses next uses to create the first account. What came of it is kept in the store, so a screen mounted
+ * again does not take a spent link for a missing one. A token that failed for a reason that may pass stays held:
+ * the screen asks again when it is opened again, or on a click.
  */
 export function useSetupLink(): SetupLinkViewModel {
   const token = useSetupLinkStore((store) => store.token);
-  const drop = useSetupLinkStore((store) => store.drop);
+  const outcome = useSetupLinkStore((store) => store.outcome);
   const mutation = useMutation({
     ...grantSignUpMutation(),
-    onSuccess: drop,
+    onSuccess: () => {
+      useSetupLinkStore.getState().grant();
+    },
     onError: (error) => {
-      if (isApiFailure(error) && error.kind === 'not-found') drop();
+      if (isApiFailure(error) && error.kind === 'not-found') useSetupLinkStore.getState().expire();
     },
   });
-  const { mutate } = mutation;
-  // One presentation per attempt, even when a screen mounts twice.
-  const [attempt, setAttempt] = useState(0);
-  const presented = useRef(-1);
+  const { mutate, reset, isIdle } = mutation;
+  // A held token, nothing asked yet: present it. A failure is not asked again until `retry` (or a new mount) resets.
   useEffect(() => {
-    if (token === undefined || presented.current === attempt) return;
-    presented.current = attempt;
-    mutate({ body: { token } });
-  }, [token, attempt, mutate]);
-  const retry = useCallback(() => {
-    setAttempt((count) => count + 1);
-  }, []);
+    if (token !== undefined && isIdle) mutate({ body: { token } });
+  }, [token, isIdle, mutate]);
   const failure = failureOf(mutation.error);
   let state: SetupLinkState = 'missing';
-  if (mutation.isSuccess) state = 'granted';
-  else if (mutation.isError)
-    state = isApiFailure(failure) && failure.kind === 'not-found' ? 'expired' : 'failed';
+  if (outcome !== undefined) state = outcome;
+  else if (mutation.isError) state = 'failed';
   else if (token !== undefined) state = 'granting';
-  return { state, failure, retry };
+  return { state, failure, retry: reset };
 }

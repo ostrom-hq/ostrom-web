@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Screen } from '@/shared/ui/Screen';
 import { SignInChoices } from '../components/SignInChoices';
+import { signInErrorOf } from '../model';
 import { useSignInMethods } from '../useSignIn';
 
 /**
@@ -14,15 +15,16 @@ import { useSignInMethods } from '../useSignIn';
 export function SignInScreen(): ReactElement {
   const { t } = useTranslation();
   const { redirect, error } = useSearch({ from: '/signin' });
+  const refusal = signInErrorOf(error);
   const { inviteOnly } = useSignInMethods();
   return (
     <Screen title={t('signin.title')} lead={t('signin.lead')}>
-      {error === 'signup_closed' ? (
-        <Banner tone="warning" tag={t('signin.closed.tag')} live>
-          {t('signin.closed.refused')}
+      {refusal === undefined ? null : (
+        <Banner tone="warning" tag={t('signin.link.failedTag')} live>
+          {t(`signin.error.${refusal}`)}
         </Banner>
-      ) : null}
-      {inviteOnly ? <p className="o-row__meta">{t('signin.closed.byInvitation')}</p> : null}
+      )}
+      {inviteOnly ? <p className="o-row__meta">{t('signin.byInvitation')}</p> : null}
       <SignInChoices redirect={redirect} />
     </Screen>
   );

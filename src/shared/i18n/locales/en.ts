@@ -1442,11 +1442,19 @@ export const en = {
   signin: {
     title: 'Sign in to Ostrom',
     lead: 'With GitHub, or with a link sent to your e-mail. Nothing to remember.',
-    closed: {
-      tag: 'Invitation only',
-      refused:
+    byInvitation: 'Accounts on this Ostrom instance are by invitation.',
+    error: {
+      unavailable: 'This sign-in method is not available on this instance. Try another one.',
+      rate_limited: 'Too many attempts. Wait a few minutes, then try again.',
+      access_denied: 'The sign-in was cancelled at the provider. Try again when you are ready.',
+      expired: 'The sign-in took too long and expired. Start again.',
+      refused: 'The provider refused the sign-in. Try again, or use another method.',
+      link_required:
+        'This account is not linked to this sign-in method yet. Sign in the way you did before, then link it in My account.',
+      identity_taken: 'This provider account is already linked to another Ostrom account.',
+      signup_closed:
         'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
-      byInvitation: 'Accounts on this Ostrom instance are by invitation.',
+      other: 'The sign-in did not work. Try again, or use another method.',
     },
     github: { label: 'GitHub', go: 'Continue with GitHub' },
     email: {
@@ -2190,6 +2198,10 @@ export const en = {
     for: 'For',
     expires: 'Expires',
     signIn: 'Sign in to join',
+    checking: 'Checking your invitation…',
+    checkFailedTag: 'Not checked',
+    checkFailed:
+      'Your invitation could not be checked just now. Try again: signing in without it may be refused.',
     join: 'Join {{org}}',
     joining: 'Joining…',
     open: 'Open {{org}}',

@@ -306,7 +306,7 @@ const signInRoute = createRoute({
 
 /**
  * `/login?error=…` is where the server's OAuth callbacks send a refused sign-in (`/login?error=signup_closed`): the
- * console's sign-in page is `/signin`, so the address goes there with its error, as it was.
+ * console's sign-in page is `/signin`, so the address goes there with its error, whatever it is. No screen of its own.
  */
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -316,7 +316,6 @@ const loginRoute = createRoute({
   beforeLoad: ({ search }) => {
     throw redirect({ to: '/signin', search, replace: true });
   },
-  component: lazyRouteComponent(async () => import('@/features/signin'), 'SignInScreen'),
 });
 
 /**
@@ -375,10 +374,6 @@ const setupRoute = createRoute({
     dropFragment();
     useSetupLinkStore.getState().hold(token);
     throw redirect({ to: '/setup', hash: '', replace: true });
-  },
-  // A link left behind is not presented later, when nobody would be there to sign in.
-  onLeave: () => {
-    useSetupLinkStore.getState().drop();
   },
   component: lazyRouteComponent(async () => import('@/features/signin'), 'SetupScreen'),
 });

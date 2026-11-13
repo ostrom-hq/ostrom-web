@@ -414,6 +414,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const setup = token === DEMO_SETUP_TOKEN && !s.setupUsed;
       if (!setup && liveInvitation(token) === undefined)
         return refusal(404, 'not_found', 'This link no longer works.');
+      if (setup) s.setupUsed = true;
       s.grants = [...s.grants, token];
       return new HttpResponse(null, {
         status: 204,

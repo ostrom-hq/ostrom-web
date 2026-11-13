@@ -18,6 +18,25 @@ export function safeRedirect(path: string | undefined): string {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+/** What the server's OAuth callbacks put in `/login?error=` when they refuse a sign-in. */
+export const SIGN_IN_ERRORS = [
+  'unavailable',
+  'rate_limited',
+  'access_denied',
+  'expired',
+  'refused',
+  'link_required',
+  'identity_taken',
+  'signup_closed',
+] as const;
+export type SignInError = (typeof SIGN_IN_ERRORS)[number];
+
+/** The refusal the address carries, in the console's words: one it knows, `other` for any other text, none without. */
+export function signInErrorOf(error: string | undefined): SignInError | 'other' | undefined {
+  if (error === undefined || error === '') return undefined;
+  return SIGN_IN_ERRORS.find((known) => known === error) ?? 'other';
+}
+
 /** A value an e-mailed or approver link carries in its fragment (`#token=…`), which no server ever receives. */
 export function fragmentValue(hash: string, name: string): string | undefined {
   const value = new URLSearchParams(hash.replace(/^#/, '')).get(name);

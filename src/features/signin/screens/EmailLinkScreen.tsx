@@ -49,7 +49,7 @@ export function EmailLinkScreen(): ReactElement {
           {otherBrowser
             ? t('signin.link.otherBrowser')
             : closed
-              ? t('signin.closed.refused')
+              ? t('signin.error.signup_closed')
               : failure === undefined
                 ? t('signin.link.missing')
                 : failure.message}

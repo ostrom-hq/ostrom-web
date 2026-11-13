@@ -82,6 +82,11 @@ export function InviteScreen(): ReactElement {
             {t('invite.refused')}
           </Banner>
         ) : null}
+        {invitation.grantFailed ? (
+          <Banner tone="warning" tag={t('invite.checkFailedTag')} live>
+            {t('invite.checkFailed')}
+          </Banner>
+        ) : null}
         {invitation.failure === undefined ? null : (
           <Banner tone="danger" tag={t('invite.failedTag')} live>
             {invitation.failure.message}
@@ -91,6 +96,10 @@ export function InviteScreen(): ReactElement {
           {invitation.signedIn === false ? (
             invitation.granting ? (
               <Button variant="secondary" disabled>
+                {t('invite.checking')}
+              </Button>
+            ) : invitation.grantFailed ? (
+              <Button variant="secondary" onClick={invitation.signIn}>
                 {t('invite.signIn')}
               </Button>
             ) : (

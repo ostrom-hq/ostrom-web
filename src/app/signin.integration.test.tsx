@@ -22,21 +22,32 @@ describe('the sign-in page', () => {
     );
   });
 
-  it('says the instance is invite-only when a sign-in was refused for it, here and on /login', async () => {
-    visit('/signin?error=signup_closed');
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+  it.each([
+    [
+      'signup_closed',
       'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
-    );
+    ],
+    ['unavailable', 'This sign-in method is not available on this instance.'],
+    ['rate_limited', 'Too many attempts.'],
+    ['access_denied', 'The sign-in was cancelled at the provider.'],
+    ['expired', 'The sign-in took too long and expired.'],
+    ['refused', 'The provider refused the sign-in.'],
+    ['link_required', 'This account is not linked to this sign-in method yet.'],
+    ['identity_taken', 'already linked to another Ostrom account.'],
+    ['whatever', 'The sign-in did not work.'],
+  ])('says in words why a sign-in was refused (?error=%s)', async (error, words) => {
+    visit(`/signin?error=${error}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(words);
   });
 
-  it('takes the address the server redirects a refused sign-in to (/login) to the sign-in page, error kept', async () => {
-    const router = visit('/login?error=signup_closed');
-    expect(await screen.findByRole('alert')).toHaveTextContent('This Ostrom instance is invite-only');
+  it('takes any address the server redirects a refused sign-in to (/login) to the sign-in page, error kept', async () => {
+    const router = visit('/login?error=rate_limited');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts.');
     expect(router.state.location.pathname).toBe('/signin');
-    expect(router.state.location.search).toEqual({ error: 'signup_closed' });
+    expect(router.state.location.search).toEqual({ error: 'rate_limited' });
   });
 
-  it('says nothing of an error it does not know, nor of an error that is not a single text', async () => {
+  it('says nothing for an error that is not a single text', async () => {
     visit('/signin?error=other&error=again');
     await screen.findByRole('link', { name: 'Continue with GitHub' });
     expect(screen.queryByRole('alert')).toBeNull();

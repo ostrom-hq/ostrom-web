@@ -45,6 +45,10 @@ export interface InvitationViewModel {
    * on an invite-only instance. The way to sign in waits for it.
    */
   readonly granting: boolean;
+  /** The server could not take the invitation (not a dead one): signing in now may be refused. */
+  readonly grantFailed: boolean;
+  /** Presents the invitation again, then goes to sign in once the server answered (took it, or said it is dead). */
+  readonly signIn: (() => void) | undefined;
   readonly accepting: boolean;
   /** The person is already in the organization (the server answers 409). */
   readonly already: boolean;
@@ -110,6 +114,10 @@ export function useInvitation(): InvitationViewModel {
   const { mutate: allow } = grant;
   const signedOut = !me.isPending && viewer === undefined;
   const presented = useRef(false);
+  const toSignIn = useCallback(
+    async () => navigate({ to: '/signin', search: { redirect: '/invite' } }),
+    [navigate],
+  );
   const alive = preview.isSuccess;
   // Once, for a live invitation, before the person is sent to sign in: the server then lets that sign-in create the
   // account (an instance that is invite-only refuses a sign-in with no account, `signup_closed`).
@@ -118,6 +126,26 @@ export function useInvitation(): InvitationViewModel {
     presented.current = true;
     allow({ body: { token } });
   }, [token, signedOut, alive, allow]);
+  // A dead invitation (404) needs no grant, and the preview says so; any other failure may pass: asked again here.
+  const grantFailure = failureOf(grant.error);
+  const grantFailed = !(isApiFailure(grantFailure) && grantFailure.kind === 'not-found') && grant.isError;
+  const signIn =
+    token === undefined
+      ? undefined
+      : () => {
+          const go = (): void => {
+            void toSignIn();
+          };
+          allow(
+            { body: { token } },
+            {
+              onSuccess: go,
+              onError: (error) => {
+                if (isApiFailure(error) && error.kind === 'not-found') go();
+              },
+            },
+          );
+        };
   const acceptFailure = failureOf(accept.error);
   const already = isApiFailure(acceptFailure) && acceptFailure.kind === 'conflict';
   const turnedAway = isApiFailure(acceptFailure) && acceptFailure.kind === 'not-found';
@@ -174,7 +202,9 @@ export function useInvitation(): InvitationViewModel {
     state,
     open,
     signedIn: me.isPending ? undefined : viewer !== undefined,
-    granting: signedOut && alive && !grant.isError && !grant.isSuccess,
+    granting: signedOut && alive && (grant.isIdle || grant.isPending),
+    grantFailed: signedOut && grantFailed,
+    signIn,
     accepting: accept.isPending || accept.isSuccess,
     already,
     entering,
