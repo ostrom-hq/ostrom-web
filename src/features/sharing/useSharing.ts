@@ -2,6 +2,7 @@
 import {
   deleteArtifactMutation,
   enrollSharedAccountMutation,
+  handOverSharedAccountMutation,
   listArtifactMembersOptions,
   listArtifactMembersQueryKey,
   listArtifactsOptions,
@@ -208,6 +209,8 @@ export interface AccountChangeViewModel {
   readonly enroll: (body: EnrollBody, onDone: () => void) => void;
   readonly update: (id: string, body: AccountUpdate) => void;
   readonly remove: (id: string) => void;
+  /** Ostrom renews the account's tokens from now on (an administrator, once its source no longer does). */
+  readonly handover: (id: string) => void;
   /** The subscription being changed, or `true` while one is enrolled. */
   readonly pending: string | true | undefined;
   readonly failure: Error | undefined;
@@ -221,44 +224,61 @@ export function useAccountChange(): AccountChangeViewModel {
   const enrolled = useMutation({ ...enrollSharedAccountMutation(), onSuccess: refresh });
   const updated = useMutation({ ...updateSharedAccountMutation(), onSettled: refresh });
   const dropped = useMutation({ ...removeSharedAccountMutation(), onSettled: refresh });
+  const handed = useMutation({ ...handOverSharedAccountMutation(), onSettled: refresh });
   const { mutate: enrollMutate, reset: resetEnroll } = enrolled;
   const { mutate: updateMutate, reset: resetUpdate } = updated;
   const { mutate: dropMutate, reset: resetDrop } = dropped;
+  const { mutate: handMutate, reset: resetHand } = handed;
   const enroll = useCallback(
     (body: EnrollBody, onDone: () => void) => {
       resetUpdate();
       resetDrop();
+      resetHand();
       enrollMutate({ body }, { onSuccess: onDone });
     },
-    [enrollMutate, resetUpdate, resetDrop],
+    [enrollMutate, resetUpdate, resetDrop, resetHand],
   );
   const update = useCallback(
     (id: string, body: AccountUpdate) => {
       resetEnroll();
       resetDrop();
+      resetHand();
       updateMutate({ path: { id }, body });
     },
-    [updateMutate, resetEnroll, resetDrop],
+    [updateMutate, resetEnroll, resetDrop, resetHand],
   );
   const remove = useCallback(
     (id: string) => {
       resetEnroll();
       resetUpdate();
+      resetHand();
       dropMutate({ path: { id } });
     },
-    [dropMutate, resetEnroll, resetUpdate],
+    [dropMutate, resetEnroll, resetUpdate, resetHand],
+  );
+  const handover = useCallback(
+    (id: string) => {
+      resetEnroll();
+      resetUpdate();
+      resetDrop();
+      handMutate({ path: { id } });
+    },
+    [handMutate, resetEnroll, resetUpdate, resetDrop],
   );
   return {
     enroll,
     update,
     remove,
+    handover,
     pending: enrolled.isPending
       ? true
       : updated.isPending
         ? updated.variables.path.id
-        : dropped.isPending
-          ? dropped.variables.path.id
-          : undefined,
-    failure: failureOf(enrolled.error ?? updated.error ?? dropped.error),
+        : handed.isPending
+          ? handed.variables.path.id
+          : dropped.isPending
+            ? dropped.variables.path.id
+            : undefined,
+    failure: failureOf(enrolled.error ?? updated.error ?? dropped.error ?? handed.error),
   };
 }

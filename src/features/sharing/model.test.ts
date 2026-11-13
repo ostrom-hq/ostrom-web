@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Artifact, SharedAccount } from '@gen/api/types.gen';
-import { accountState, isArtifactAccess, isProvider, ownsArtifact, providerOf } from './model';
+import {
+  accountState,
+  isArtifactAccess,
+  isProvider,
+  ownsArtifact,
+  providerOf,
+  waitsForHandover,
+} from './model';
 
 const account: SharedAccount = {
   id: 'acc-1',
@@ -39,6 +46,15 @@ describe('sharing model', () => {
   it('reads the server’s statuses', () => {
     expect(accountState({ ...account, status: 'wrong_account' })).toBe('wrongAccount');
     expect(accountState({ ...account, status: 'disabled' })).toBe('paused');
+  });
+
+  it('reads TeamCode’s refresh ownership: an imported account waits for its handover, a trial is access only', () => {
+    const waiting = { ...account, status: 'pending_handover' };
+    expect(accountState(waiting)).toBe('pendingHandover');
+    expect(accountState({ ...account, status: 'access_only' })).toBe('accessOnly');
+    expect(waitsForHandover(waiting)).toBe(true);
+    expect(waitsForHandover({ ...waiting, paused: true })).toBe(false);
+    expect(waitsForHandover(account)).toBe(false);
   });
 });
 

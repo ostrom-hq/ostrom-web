@@ -47,13 +47,18 @@ export function providerOf(value: string): Provider | undefined {
 
 /**
  * A paused subscription lends nothing whatever the provider says; an expired one needs its owner to sign in again; one
- * signed in to another account than the one shared needs its owner to share it again.
+ * signed in to another account than the one shared needs its owner to share it again. An imported one waits for its
+ * handover (TeamCode may still renew its tokens: it lends nothing); an access-only one lends its access token, never
+ * renewed (TeamCode's « Refresh ownership »).
  */
-export type AccountState = 'paused' | 'active' | 'expired' | 'wrongAccount' | 'unknown';
+export type AccountState =
+  'paused' | 'active' | 'pendingHandover' | 'accessOnly' | 'expired' | 'wrongAccount' | 'unknown';
 
 /** The server's statuses (ostrom-server `AccountStatus`); `disabled` is what a pause writes. */
 const STATES: ReadonlyMap<string, AccountState> = new Map([
   ['ready', 'active'],
+  ['pending_handover', 'pendingHandover'],
+  ['access_only', 'accessOnly'],
   ['reconnect_required', 'expired'],
   ['wrong_account', 'wrongAccount'],
   ['disabled', 'paused'],
@@ -67,7 +72,14 @@ export function accountState(account: SharedAccount): AccountState {
 export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {
   paused: 'neutral',
   active: 'success',
+  pendingHandover: 'warning',
+  accessOnly: 'signal',
   expired: 'danger',
   wrongAccount: 'danger',
   unknown: 'warning',
 };
+
+/** Whether an account waits for an administrator to hand its refresh over to Ostrom. */
+export function waitsForHandover(account: SharedAccount): boolean {
+  return !account.paused && account.status === 'pending_handover';
+}

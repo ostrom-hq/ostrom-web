@@ -89,6 +89,17 @@ const accounts: SharedAccount[] = [
     sharedWith: ['maya'],
     paused: true,
   },
+  // Brought in by the TeamCode import: TeamCode may still renew its tokens, so it waits for its handover.
+  {
+    id: 'acc-3',
+    provider: 'claude',
+    label: 'Team Max (TeamCode)',
+    owner: 'maya',
+    status: 'pending_handover',
+    refreshOwnership: 'pending_handover',
+    sharedWith: ['theo'],
+    paused: false,
+  },
 ];
 
 export function initialArtifacts(): Artifact[] {

@@ -46,6 +46,7 @@ import {
   handleListRules,
   handleListRunners,
   handleListSecrets,
+  handleHandOverSharedAccount,
   handleListSharedAccounts,
   handleRemoveSharedAccount,
   handleLogout,
@@ -1343,6 +1344,21 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);
+    }),
+    // TeamCode's « Refresh ownership »: an administrator hands an imported account over, and Ostrom renews it.
+    handleHandOverSharedAccount(({ params }) => {
+      const index = db.sharedAccounts.findIndex((item) => item.id === params.id);
+      const account = db.sharedAccounts[index];
+      if (account === undefined) return refusal(404, 'not_found', 'shared account not found');
+      if (!canManage(db))
+        return refusal(403, 'account_handover_forbidden', 'only an administrator hands it over');
+      const handed: SharedAccount = {
+        ...account,
+        refreshOwnership: 'ostrom',
+        status: account.status === 'pending_handover' ? 'ready' : account.status,
+      };
+      db.sharedAccounts[index] = handed;
+      return HttpResponse.json(handed);
     }),
     handleRemoveSharedAccount(({ params }) => {
       const account = db.sharedAccounts.find((item) => item.id === params.id);
