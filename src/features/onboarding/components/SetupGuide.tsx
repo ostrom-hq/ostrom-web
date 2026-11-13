@@ -116,7 +116,7 @@ export function SetupGuide({ setup }: { readonly setup: SetupViewModel }): React
                     value={`ostrom login --server ${setup.server}`}
                   />
                   <CopyField label={t('onboarding.cli.init')} value="ostrom init" />
-                  <CopyField label={t('onboarding.cli.run')} value="ostrom claude" />
+                  <CopyField label={t('onboarding.cli.run')} value="ostrom run claude" />
                   <a
                     className="o-row__meta"
                     href="https://ostrom.run/docs/install"

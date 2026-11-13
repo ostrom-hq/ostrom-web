@@ -266,7 +266,7 @@ describe('the setup guide', () => {
     );
     await user.click(within(section).getByRole('button', { name: 'Copy Agent command' }));
     expect(await within(section).findByText('Copied')).toBeInTheDocument();
-    expect(await navigator.clipboard.readText()).toBe('ostrom claude');
+    expect(await navigator.clipboard.readText()).toBe('ostrom run claude');
     expect(within(section).getByRole('link', { name: 'How to install the ostrom command' })).toHaveAttribute(
       'href',
       'https://ostrom.run/docs/install',
