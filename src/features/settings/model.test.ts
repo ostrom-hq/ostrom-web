@@ -3,6 +3,7 @@ import type { AuthSession, Device } from '@gen/api/types.gen';
 import {
   browserTimeZone,
   deletionConfirmed,
+  isCiServiceKeyScope,
   personalDevices,
   renameProblem,
   serviceKeyDraftProblem,
@@ -84,6 +85,33 @@ describe('serviceKeyLifetimeOf', () => {
     expect(serviceKeyLifetimeOf('366')).toBe(366);
     expect(serviceKeyLifetimeOf('null')).toBeNull();
     expect(serviceKeyLifetimeOf('12')).toBe(90);
+  });
+});
+
+describe('toggleServiceKeyScope', () => {
+  it('keeps the catalogue order, and never puts a CI scope and another on one key', () => {
+    expect(toggleServiceKeyScope([], 'usage:read', true)).toEqual(['usage:read']);
+    expect(toggleServiceKeyScope(['team:read'], 'inference:use', true)).toEqual([
+      'inference:use',
+      'team:read',
+    ]);
+    expect(toggleServiceKeyScope(['inference:use', 'team:read'], 'team:read', false)).toEqual([
+      'inference:use',
+    ]);
+    expect(toggleServiceKeyScope(['rules:read'], 'sessions:write', true)).toEqual([
+      'sessions:write',
+      'rules:read',
+    ]);
+    // The other kind replaces what was ticked.
+    expect(toggleServiceKeyScope(['rules:read'], 'cloud:admin', true)).toEqual(['cloud:admin']);
+    expect(toggleServiceKeyScope(['mcp:use', 'usage:read'], 'sessions:write', true)).toEqual([
+      'sessions:write',
+    ]);
+  });
+
+  it('knows a CI scope', () => {
+    expect(isCiServiceKeyScope('rules:read')).toBe(true);
+    expect(isCiServiceKeyScope('team:read')).toBe(false);
   });
 });
 
