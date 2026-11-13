@@ -602,6 +602,14 @@ describe('a wait', () => {
     expect(screen.queryByRole('form')).toBeNull();
   });
 
+  it('shows no form for a wait that resolves by itself, but lets it be cancelled', async () => {
+    replace(2, (item) => ({ ...item, resolver: 'time' }));
+    visit(`/waits/${id(2)}`);
+    expect(await screen.findByText(/This wait resolves by itself/, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Cancel this wait' })).toBeInTheDocument();
+  });
+
   it('shows the answer of a resolved wait: the action chosen, who, and each value', async () => {
     visit(`/waits/${id(5)}`);
     const outcome = await screen.findByRole('region', { name: 'Answer' }, SLOW);

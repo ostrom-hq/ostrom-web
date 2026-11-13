@@ -1892,6 +1892,8 @@ export const en = {
       cancelled: 'This wait was cancelled: nobody answered it.',
       noAnswer: 'This wait ended without an answer.',
       answeredWith: '{{action}}, by {{who}}, {{when}}',
+      byItselfTag: 'Automatic',
+      byItself: 'This wait resolves by itself, at its time or on its event: nobody answers it.',
       throughSessionTag: 'In the session',
       throughSession: 'This is a request of a cloud session: it is answered in the session.',
       openSession: 'Open the session',

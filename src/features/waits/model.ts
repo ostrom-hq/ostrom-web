@@ -21,6 +21,11 @@ export function answeredThroughSession(wait: Wait): boolean {
   return THROUGH_SESSION.includes(wait.kind);
 }
 
+/** A wait that resolves by itself (`resolver` `time` or `event`): nobody answers it (`409 resolves_by_itself`). */
+export function resolvesByItself(wait: Wait): boolean {
+  return wait.resolver !== undefined && wait.resolver !== 'human';
+}
+
 /** The text of the longest a `text` field may be when the wait does not say (the server's default). */
 export const TEXT_LIMIT = 8_000;
 /** What a free "other" answer of a choice may be. */

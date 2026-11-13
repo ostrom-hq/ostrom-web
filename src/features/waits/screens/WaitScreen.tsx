@@ -11,7 +11,14 @@ import { Markdown } from '@/shared/ui/Markdown';
 import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { StatusBadge } from '../components/StatusBadge';
 import { WaitForm } from '../components/WaitForm';
-import { actionsOf, answeredThroughSession, isViewer, shownValue, targetOf } from '../model';
+import {
+  actionsOf,
+  answeredThroughSession,
+  resolvesByItself,
+  isViewer,
+  shownValue,
+  targetOf,
+} from '../model';
 import { type PeopleViewModel, type Refused, usePeople, useWait, useWaitWrites } from '../useWaits';
 import '../waits.css';
 
@@ -129,6 +136,8 @@ function WaitDetail({
                 </Link>
               )}
             </Banner>
+          ) : resolvesByItself(wait) ? (
+            <Banner tag={t('waits.detail.byItselfTag')}>{t('waits.detail.byItself')}</Banner>
           ) : mayAnswer ? (
             <WaitForm wait={wait} sending={writes.sending} onAnswer={writes.answer} />
           ) : (

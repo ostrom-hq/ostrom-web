@@ -1936,6 +1936,9 @@ export const fr = {
       cancelled: 'Cette attente a été annulée : personne n’y a répondu.',
       noAnswer: 'Cette attente s’est terminée sans réponse.',
       answeredWith: '{{action}}, par {{who}}, {{when}}',
+      byItselfTag: 'Automatique',
+      byItself:
+        'Cette attente se résout toute seule, à son heure ou sur son événement : personne n’y répond.',
       throughSessionTag: 'Dans la session',
       throughSession: 'C’est une demande d’une session cloud : on y répond dans la session.',
       openSession: 'Ouvrir la session',
