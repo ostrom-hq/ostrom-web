@@ -41,3 +41,11 @@
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--border);
 }
+/* Under a session's row: who may instruct its agent while it holds the owner's GitHub. */
+.cl-access {
+  padding: 0 var(--space-4) var(--space-3);
+  max-width: 32rem;
+}
+.cl-access__failure {
+  color: var(--danger-text);
+}

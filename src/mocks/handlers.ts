@@ -60,6 +60,7 @@ import {
   handleSaveMcpServer,
   handleSetBudget,
   handleShareArtifact,
+  handleSetCloudSessionGithubAccess,
   handleStopCloudSession,
   handleTestAutomation,
   handleUnshareArtifact,
@@ -108,6 +109,7 @@ import {
   zBulkUpdateRulesBody,
   zCloudAgentKind,
   zCreateCloudSessionBody,
+  zSetCloudSessionGithubAccessBody,
   zCreateRuleBody,
   zCreateWorkflowBody,
   zEnrollSharedAccountBody,
@@ -131,7 +133,7 @@ import { demoCapabilities } from '@/mocks/capabilities';
 import { createDeviceHandlers, type DeviceState } from '@/mocks/device';
 import { createGithubHandlers, type GithubState } from '@/mocks/github';
 import { initialDeviceLogins } from '@/mocks/fixtures/device';
-import { initialRepos } from '@/mocks/fixtures/github';
+import { initialGithubLinks, initialRepos } from '@/mocks/fixtures/github';
 import {
   initialAuthSessions,
   initialDevices,
@@ -311,6 +313,7 @@ export function createMockDb(): MockDb {
     nextInvitation: 1,
     githubInstalled: { [initialOrganization().id]: true },
     repos: { [initialOrganization().id]: initialRepos() },
+    githubLinks: { [initialOrganization().id]: initialGithubLinks() },
     analyses: {},
     members: initialMembers(),
     teams: initialTeams(),
@@ -1222,6 +1225,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!LIVE.has(session.status)) return refusal(409, 'conflict', 'the session has already ended');
       db.cloudSessions[index] = { ...session, status: 'stopped', endedAt: now().toISOString() };
       return new HttpResponse(null, { status: 204 });
+    }),
+    handleSetCloudSessionGithubAccess(async ({ params, request }) => {
+      const index = db.cloudSessions.findIndex((session) => session.id === params.id);
+      const session = db.cloudSessions[index];
+      // Anyone but the owner (an owner or an admin included) does not see the session as theirs: 404.
+      if (session?.owner !== me.dev.login) return refusal(404, 'not_found', 'cloud session not found');
+      const body = zSetCloudSessionGithubAccessBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'access is owner, shared or none');
+      // Turning access off waits for a pause: a running agent keeps the token it already received.
+      if (body.data.access === 'none' && session.status !== 'paused')
+        return refusal(409, 'session_not_paused', 'Pause the session before turning its GitHub access off.');
+      const changed: CloudSession = { ...session, githubAccess: body.data.access };
+      db.cloudSessions[index] = changed;
+      return HttpResponse.json(changed);
     }),
     handleListRunners(() => HttpResponse.json({ items: db.runners })),
     handleListAutomations(() => HttpResponse.json({ items: db.automations })),

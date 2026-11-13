@@ -1077,6 +1077,26 @@ describe('mock cloud agents and automations', () => {
     );
   });
 
+  it('changes the GitHub access of the owner’s session; off only once paused, never for another’s', async () => {
+    const set = async (id: string, access: string): Promise<number> =>
+      (
+        await fetch(`http://ostrom.test/api/v1/cloud/sessions/${id}/github`, {
+          method: 'PUT',
+          body: JSON.stringify({ access }),
+        })
+      ).status;
+    expect(await set('cs-31', 'shared')).toBe(200);
+    expect(db.cloudSessions.find((session) => session.id === 'cs-31')?.githubAccess).toBe('shared');
+    expect(await set('cs-31', 'none')).toBe(409);
+    expect(await set('cs-31', 'everyone')).toBe(400);
+    expect(await set('cs-30', 'shared')).toBe(404);
+    expect(await set('nope', 'shared')).toBe(404);
+    db.cloudSessions = db.cloudSessions.map((session) =>
+      session.id === 'cs-31' ? { ...session, status: 'paused' } : session,
+    );
+    expect(await set('cs-31', 'none')).toBe(200);
+  });
+
   it('lists the runners and the automations, and an automation’s runs', async () => {
     expect((await listRunners({ throwOnError: true })).data.items).toHaveLength(2);
     expect((await listAutomations({ throwOnError: true })).data.items).toHaveLength(2);

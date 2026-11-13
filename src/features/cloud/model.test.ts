@@ -2,6 +2,7 @@
 import type { Automation, CloudSession } from '@gen/api/types.gen';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
 import {
+  accessOf,
   CLOUD_AGENTS,
   idempotencyKey,
   isCloudAgent,
@@ -104,5 +105,13 @@ describe('runs', () => {
     const first = idempotencyKey();
     expect(first).toMatch(/^[0-9a-f]{32}$/);
     expect(idempotencyKey()).not.toBe(first);
+  });
+});
+
+describe('the GitHub access of a session', () => {
+  it('reads the server’s word, and the default, the owner only, when it sent none', () => {
+    expect(accessOf(session({ githubAccess: 'shared' }))).toBe('shared');
+    expect(accessOf(session({ githubAccess: 'none' }))).toBe('none');
+    expect(accessOf(session({}))).toBe('owner');
   });
 });

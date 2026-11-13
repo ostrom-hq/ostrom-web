@@ -1,15 +1,32 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Repo } from '@gen/api/types.gen';
+import type { GitHubLink, OrgMember, Repo } from '@gen/api/types.gen';
 import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { apiUrl } from '@/shared/api/apiClient';
 import { safeHref } from '@/shared/lib/safeHref';
 
+/** The error types of GitHub's web link callback (`githubLinkCallback`), which the console puts in words. */
+export const LINK_ERRORS = [
+  'github_link_not_found',
+  'github_link_browser_mismatch',
+  'github_link_denied',
+  'github_account_in_use',
+  'github_app_not_configured',
+  'github_unreachable',
+] as const;
+
 /**
- * What GitHub's install brings back, through the server's callback: `/github?installed=1`, or
- * `/github?error=<type>`. The address never carries free text: an error is a type, put in words by the console.
+ * What GitHub's install and web link bring back, through the server's callbacks: `/github?installed=1`,
+ * `/github?linked=1`, or `/github?error=<type>`. The address never carries free text: an error is a type, put in
+ * words by the console.
  */
 export const githubSearchSchema = z.object({
+  linked: z.optional(
+    z.pipe(
+      z.unknown(),
+      z.transform((value) => value === 1 || value === '1' || value === true),
+    ),
+  ),
   installed: z.optional(
     z.pipe(
       z.unknown(),
@@ -18,13 +35,18 @@ export const githubSearchSchema = z.object({
     ),
   ),
   // A type the console words, or `unknown`: never the text of the address.
-  error: z.catch(z.optional(z.enum(['denied', 'expired', 'forbidden', 'unknown'])), 'unknown'),
+  error: z.catch(
+    z.optional(z.enum(['denied', 'expired', 'forbidden', ...LINK_ERRORS, 'unknown'])),
+    'unknown',
+  ),
 });
 export type GithubSearch = z.infer<typeof githubSearchSchema>;
 
 /** What the install brought back, kept for the page's life once the address is cleaned. */
 export interface InstallOutcome {
   readonly installed: boolean;
+  /** A GitHub account was linked, for the person or for a member they linked. */
+  readonly linked: boolean;
   readonly error: InstallError | undefined;
 }
 
@@ -122,4 +144,38 @@ export function readableDate(iso: string, language: string): string | undefined 
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** Where the browser goes to link the caller's own GitHub account: a navigation, so the organization rides in the query. */
+export function linkUrl(org: string): string {
+  return `${apiUrl('/api/v1/github/link/start')}?${new URLSearchParams({ org }).toString()}`;
+}
+
+/** Where an owner or an admin starts the link of another member (a service account), in the administrator's browser. */
+export function memberLinkUrl(org: string, memberId: string): string {
+  return `${apiUrl(`/api/v1/github/links/${encodeURIComponent(memberId)}/start`)}?${new URLSearchParams({ org }).toString()}`;
+}
+
+export type LinkState = GitHubLink['state'];
+
+/** One line of the members' links table: a member and what is known of their link. */
+export interface MemberLinkRow {
+  readonly member: OrgMember;
+  readonly state: LinkState;
+  readonly login: string | undefined;
+  readonly linkedAt: string | undefined;
+}
+
+/** Every member with their link, in the order read (a next page comes under the rows shown); no link is `not_linked`. */
+export function linkRows(members: readonly OrgMember[], links: readonly GitHubLink[]): MemberLinkRow[] {
+  const byMember = new Map(links.map((link) => [link.memberId, link]));
+  return members.map((member) => {
+    const link = byMember.get(member.id);
+    return {
+      member,
+      state: link?.state ?? 'not_linked',
+      login: link?.login,
+      linkedAt: link?.linkedAt,
+    } satisfies MemberLinkRow;
+  });
 }

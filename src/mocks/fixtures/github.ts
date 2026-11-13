@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Repo } from '@gen/api/types.gen';
+import type { GitHubLink, Repo } from '@gen/api/types.gen';
+import { MEMBER_IDS } from './organization';
 
 /** The repositories Acme gave the GitHub App. */
 export function initialRepos(): Repo[] {
@@ -54,5 +55,22 @@ export function initialRepos(): Repo[] {
       archived: true,
       pushedAt: '2025-03-02T09:00:00Z',
     },
+  ];
+}
+
+/** The GitHub links of Acme's members: Theo's works, Lena's needs reconnecting, nobody else linked. */
+export function initialGithubLinks(): GitHubLink[] {
+  return [
+    {
+      memberId: MEMBER_IDS.theo,
+      state: 'linked',
+      appConfigured: true,
+      login: 'theo-dev',
+      userId: 4242,
+      linkedAt: '2026-10-20T09:00:00Z',
+      refreshedAt: '2026-10-30T07:00:00Z',
+      accessExpiresAt: '2026-10-30T15:00:00Z',
+    },
+    { memberId: MEMBER_IDS.lena, state: 'reconnect_required', appConfigured: true, login: 'lena-o' },
   ];
 }

@@ -3,13 +3,15 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
+import { Feature } from '@/shared/capabilities';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
+import { GithubAccessControl } from '../components/GithubAccessControl';
 import { SessionRow } from '../components/SessionRow';
 import { StartSessionForm } from '../components/StartSessionForm';
 import { isLive, mayChange } from '../model';
-import { useCloud, useSessionChange } from '../useCloud';
+import { useCloud, useGithubAccess, useSessionChange } from '../useCloud';
 import './cloud.css';
 
 /** Agents that run on the organization's runners, not on a laptop: start one, follow it, stop it. */
@@ -17,6 +19,7 @@ export function CloudScreen(): ReactElement {
   const { t, i18n } = useTranslation();
   const view = useCloud();
   const change = useSessionChange();
+  const github = useGithubAccess();
   const now = useNow();
   return (
     <Screen title={t('cloud.title')} lead={t('cloud.lead')}>
@@ -47,6 +50,19 @@ export function CloudScreen(): ReactElement {
                           : undefined
                       }
                     />
+                    {session.endedAt === undefined ? (
+                      <Feature name="runners.cloud.github.v1">
+                        <GithubAccessControl
+                          session={session}
+                          mine={session.owner === view.viewer}
+                          busy={github.changing === session.id}
+                          failure={github.failure(session.id)}
+                          onChange={(access) => {
+                            github.change(session.id, access);
+                          }}
+                        />
+                      </Feature>
+                    ) : null}
                   </li>
                 ))}
               </ul>

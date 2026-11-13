@@ -1,5 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { getAnalysisState, listRepos, restartAnalysis, startAnalysis } from '@gen/api/sdk.gen';
+import {
+  getAnalysisState,
+  getGithubLink,
+  listGithubLinks,
+  listRepos,
+  restartAnalysis,
+  startAnalysis,
+  unlinkGithub,
+  unlinkMemberGithub,
+} from '@gen/api/sdk.gen';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { setDemoRole } from '@/mocks/orgs';
@@ -76,5 +86,49 @@ describe('mock GitHub', () => {
     expect(await start()).toBe(403);
     db.githubInstalled[ACME] = false;
     expect(await start()).toBe(409);
+  });
+
+  it('answers the caller’s link, not linked when none, and removes it', async () => {
+    expect((await getGithubLink({ throwOnError: true })).data).toMatchObject({
+      memberId: MEMBER_IDS.maya,
+      state: 'not_linked',
+    });
+    db.githubLinks[ACME] = [
+      { memberId: MEMBER_IDS.maya, state: 'linked', appConfigured: true, login: 'maya-gh' },
+    ];
+    expect((await getGithubLink({ throwOnError: true })).data.login).toBe('maya-gh');
+    await unlinkGithub({ throwOnError: true });
+    expect(db.githubLinks[ACME]).toEqual([]);
+    // Nothing to unlink answers the same, and an organization with no link row reads as none.
+    await unlinkGithub({ throwOnError: true });
+    db.githubLinks = {};
+    await unlinkGithub({ throwOnError: true });
+    expect((await getGithubLink({ throwOnError: true })).data.state).toBe('not_linked');
+    db.githubLinks = {};
+    expect((await listGithubLinks({ throwOnError: true })).data.items).toEqual([]);
+  });
+
+  it('reads the link of a person the organization lists in no role as no member’s', async () => {
+    db.orgMembers = {};
+    expect((await getGithubLink({ throwOnError: true })).data.memberId).toBe('');
+    await unlinkGithub({ throwOnError: true });
+  });
+
+  it('lists and removes the members’ links for owners and admins only', async () => {
+    expect((await listGithubLinks({ throwOnError: true })).data.items).toHaveLength(2);
+    expect(
+      await statusOf(async () => unlinkMemberGithub({ path: { memberId: 'nobody' }, throwOnError: true })),
+    ).toBe(404);
+    await unlinkMemberGithub({ path: { memberId: MEMBER_IDS.theo }, throwOnError: true });
+    expect(db.githubLinks[ACME]?.map((link) => link.memberId)).toEqual([MEMBER_IDS.lena]);
+    db.githubLinks = {};
+    await unlinkMemberGithub({ path: { memberId: MEMBER_IDS.theo }, throwOnError: true });
+    setDemoRole(db, 'member');
+    expect(await statusOf(async () => listGithubLinks({ throwOnError: true }))).toBe(403);
+    expect(
+      await statusOf(async () =>
+        unlinkMemberGithub({ path: { memberId: MEMBER_IDS.theo }, throwOnError: true }),
+      ),
+    ).toBe(403);
   });
 });

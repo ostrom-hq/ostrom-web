@@ -2,11 +2,15 @@
 import {
   handleGetAnalysisState,
   handleGetGithubApp,
+  handleGetGithubLink,
+  handleListGithubLinks,
   handleListRepos,
   handleRestartAnalysis,
   handleStartAnalysis,
+  handleUnlinkGithub,
+  handleUnlinkMemberGithub,
 } from '@gen/api/msw.gen';
-import type { ApiError, Organization, Repo, Rule, Workflow } from '@gen/api/types.gen';
+import type { ApiError, GitHubLink, Organization, Repo, Rule, Workflow } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { DEMO_LOGIN, type OrgsState } from './orgs';
@@ -26,6 +30,8 @@ export interface GithubState extends OrgsState {
   analyses: Record<string, MockAnalysis>;
   rules: Rule[];
   workflows: Workflow[];
+  /** The members' GitHub links by organization id; a member with none is not linked. */
+  githubLinks: Record<string, GitHubLink[]>;
 }
 
 /** The phases a run passes, with how far along each is. */
@@ -62,7 +68,46 @@ export function createGithubHandlers(
     s.analyses[organization.id] = { phase: 'connect', progress: 0.05, fails: false };
     return HttpResponse.json<{ runId: string }>({ runId: `run-${organization.id}` }, { status: 202 });
   };
+  /** The demo person's member id in the organization; none, when the demo lists them in none. */
+  const demoMember = (organization: Organization): string =>
+    state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.id ?? '';
+  const isMember = (organization: Organization, memberId: string): boolean =>
+    state().orgMembers[organization.id]?.some((member) => member.id === memberId) === true;
+  const linkOf = (organization: Organization, memberId: string): GitHubLink =>
+    state().githubLinks[organization.id]?.find((link) => link.memberId === memberId) ?? {
+      memberId,
+      state: 'not_linked',
+      appConfigured: true,
+    };
+  const unlink = (organization: Organization, memberId: string): HttpResponse<null> => {
+    const s = state();
+    s.githubLinks[organization.id] = (s.githubLinks[organization.id] ?? []).filter(
+      (link) => link.memberId !== memberId,
+    );
+    return new HttpResponse(null, { status: 204 });
+  };
   return [
+    handleGetGithubLink(({ request }) => {
+      const organization = organizationOf(request);
+      return HttpResponse.json(linkOf(organization, demoMember(organization)));
+    }),
+    handleUnlinkGithub(({ request }) => {
+      const organization = organizationOf(request);
+      return unlink(organization, demoMember(organization));
+    }),
+    handleListGithubLinks(({ request }) => {
+      const organization = organizationOf(request);
+      if (!manages(organization))
+        return refusal(403, 'forbidden', 'Only an owner or an admin reads the members’ links.');
+      return HttpResponse.json({ items: state().githubLinks[organization.id] ?? [] });
+    }),
+    handleUnlinkMemberGithub(({ request, params }) => {
+      const organization = organizationOf(request);
+      if (!manages(organization))
+        return refusal(403, 'forbidden', 'Only an owner or an admin unlinks a member.');
+      if (!isMember(organization, params.memberId)) return refusal(404, 'not_found', 'member not found');
+      return unlink(organization, params.memberId);
+    }),
     handleGetGithubApp(({ request }) => {
       const organization = organizationOf(request);
       return HttpResponse.json(

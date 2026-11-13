@@ -12,6 +12,7 @@ import {
   listCloudSessionsQueryKey,
   listRunnersOptions,
   rotateAutomationSecretMutation,
+  setCloudSessionGithubAccessMutation,
   saveAutomationMutation,
   stopCloudSessionMutation,
   testAutomationMutation,
@@ -30,7 +31,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
-import { type CloudAgent, idempotencyKey } from './model';
+import { type CloudAgent, type GithubAccess, idempotencyKey } from './model';
 
 const POLL_MS = 10_000;
 
@@ -309,4 +310,38 @@ export function useAutomationRuns(id: string): {
 } {
   const runs = useQuery(ready(listAutomationRunsOptions({ path: { id } })));
   return { runs: runs.data?.items, failure: failureOf(runs.error) };
+}
+
+export interface GithubAccessViewModel {
+  /** Sends the owner's choice; the list is read again once the server answered, whatever it said. */
+  readonly change: (id: string, access: GithubAccess) => void;
+  /** The session being changed. */
+  readonly changing: string | undefined;
+  /** What the server refused for this session, as its stable key (`session_not_paused`, `github_owner_only`…) or a plain failure. */
+  readonly failure: (id: string) => Error | undefined;
+}
+
+/** `PUT /cloud/sessions/{id}/github`: who may instruct the agent while it holds the owner's GitHub token. */
+export function useGithubAccess(): GithubAccessViewModel {
+  const queryClient = useQueryClient();
+  const set = useMutation({
+    ...setCloudSessionGithubAccessMutation(),
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: listCloudSessionsQueryKey() });
+    },
+  });
+  const { mutate, reset } = set;
+  const change = useCallback(
+    (id: string, access: GithubAccess) => {
+      reset();
+      mutate({ path: { id }, body: { access } });
+    },
+    [mutate, reset],
+  );
+  const refused = set.isError ? set.variables.path.id : undefined;
+  const failure = useCallback(
+    (id: string) => (id === refused ? failureOf(set.error) : undefined),
+    [refused, set.error],
+  );
+  return { change, changing: set.isPending ? set.variables.path.id : undefined, failure };
 }
