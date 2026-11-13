@@ -110,6 +110,24 @@ describe('creating an organization', () => {
     expect(step(section, 'Invite your team')).not.toHaveAttribute('aria-current');
   });
 
+  it('says in words that an invite-only instance does not let this person create an organization', async () => {
+    const user = userEvent.setup();
+    freshAccount(db);
+    server.use(
+      http.post('*/api/v1/orgs', () =>
+        HttpResponse.json({ error: { type: 'org_creation_closed', message: 'closed' } }, { status: 403 }),
+      ),
+    );
+    visit('/');
+    const name = await screen.findByRole('textbox', { name: 'Organization name' });
+    await user.type(name, 'Wayne Enterprises');
+    await user.click(screen.getByRole('button', { name: 'Create the organization' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This Ostrom instance is invite-only: only an owner or an admin of an organization creates one.',
+    );
+    expect(screen.queryByText('closed')).toBeNull();
+  });
+
   it('checks the name before sending it', async () => {
     const user = userEvent.setup();
     freshAccount(db);

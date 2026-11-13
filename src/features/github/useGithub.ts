@@ -152,7 +152,7 @@ function unserved(status: number | undefined): boolean {
  * a reload or a shared link says nothing again.
  */
 export function useInstallOutcome(): InstallOutcome {
-  const search = useSearch({ strict: false });
+  const search = useSearch({ from: '/github' });
   const navigate = useNavigate();
   const [outcome] = useState<InstallOutcome>(() => ({
     installed: search.installed === true,

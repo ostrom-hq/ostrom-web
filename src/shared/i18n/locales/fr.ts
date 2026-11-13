@@ -1476,6 +1476,12 @@ export const fr = {
   signin: {
     title: 'Se connecter à Ostrom',
     lead: 'Avec GitHub, ou avec un lien envoyé par e-mail. Rien à retenir.',
+    closed: {
+      tag: 'Sur invitation',
+      refused:
+        'Cette instance d’Ostrom est sur invitation : demande une invitation à un propriétaire ou à un admin de ton organisation.',
+      byInvitation: 'Les comptes de cette instance d’Ostrom se créent sur invitation.',
+    },
     github: { label: 'GitHub', go: 'Continuer avec GitHub' },
     email: {
       label: 'E-mail',
@@ -2081,6 +2087,8 @@ export const fr = {
         reserved: 'Ce nom court est réservé aux pages d’Ostrom.',
       },
       slugTaken: 'Ce nom court est pris. Choisis-en un autre.',
+      closed:
+        'Cette instance d’Ostrom est sur invitation : seul un propriétaire ou un admin d’une organisation en crée une. Demande-leur de t’inviter.',
       failedTag: 'Non créée',
       go: 'Créer l’organisation',
       creating: 'Création…',
@@ -2202,6 +2210,21 @@ export const fr = {
         ready: 'Analyser à nouveau',
         failed: 'Relancer',
       },
+    },
+  },
+  setup: {
+    title: 'Installer ton instance Ostrom',
+    lead: 'Ce lien est le tien : connecte-toi pour créer le premier compte, puis ton organisation.',
+    granting: 'Vérification de ton lien d’installation…',
+    failedTag: 'Non vérifié',
+    retry: 'Réessayer',
+    missing: {
+      title: 'Aucun lien d’installation ici',
+      body: 'Ouvre le lien qu’ostrom-server bootstrap a affiché, avec sa partie #token=osb_….',
+    },
+    expired: {
+      title: 'Ce lien d’installation est utilisé ou a expiré',
+      body: 'Un lien d’installation ne sert qu’une fois, pendant une heure. Relance ostrom-server bootstrap pour en obtenir un nouveau.',
     },
   },
   invite: {

@@ -1442,6 +1442,12 @@ export const en = {
   signin: {
     title: 'Sign in to Ostrom',
     lead: 'With GitHub, or with a link sent to your e-mail. Nothing to remember.',
+    closed: {
+      tag: 'Invitation only',
+      refused:
+        'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
+      byInvitation: 'Accounts on this Ostrom instance are by invitation.',
+    },
     github: { label: 'GitHub', go: 'Continue with GitHub' },
     email: {
       label: 'E-mail',
@@ -2035,6 +2041,8 @@ export const en = {
         reserved: 'This short name is kept for Ostrom’s own pages.',
       },
       slugTaken: 'This short name is taken. Choose another.',
+      closed:
+        'This Ostrom instance is invite-only: only an owner or an admin of an organization creates one. Ask one of them for an invitation.',
       failedTag: 'Not created',
       go: 'Create the organization',
       creating: 'Creating…',
@@ -2156,6 +2164,21 @@ export const en = {
         ready: 'Analyse again',
         failed: 'Start again',
       },
+    },
+  },
+  setup: {
+    title: 'Set up your Ostrom instance',
+    lead: 'This link is yours: sign in to create the first account, then your organization.',
+    granting: 'Checking your setup link…',
+    failedTag: 'Not checked',
+    retry: 'Try again',
+    missing: {
+      title: 'No setup link here',
+      body: 'Open the link that ostrom-server bootstrap printed, with its #token=osb_… part.',
+    },
+    expired: {
+      title: 'This setup link is used or has expired',
+      body: 'A setup link works once, for one hour. Run ostrom-server bootstrap again to get a new one.',
     },
   },
   invite: {

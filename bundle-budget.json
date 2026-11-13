@@ -38,6 +38,8 @@
     "/receipts": 3.0,
     "/receipts/$receiptId": 3.0,
     "/signin": 2.5,
+    "/login": 2.5,
+    "/setup": 3.0,
     "/auth/email": 2.5,
     "/invite": 8.0
   }

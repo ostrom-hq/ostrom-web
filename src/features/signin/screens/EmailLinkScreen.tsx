@@ -15,7 +15,7 @@ import { useEmailLink } from '../useSignIn';
  */
 export function EmailLinkScreen(): ReactElement {
   const { t } = useTranslation();
-  const { state, failure, otherBrowser, signedInAs, accept, keep } = useEmailLink();
+  const { state, failure, otherBrowser, closed, signedInAs, accept, keep } = useEmailLink();
   return (
     <Screen title={t('signin.link.title')}>
       {state === 'verifying' ? (
@@ -48,9 +48,11 @@ export function EmailLinkScreen(): ReactElement {
         <Banner tone="warning" tag={t('signin.link.failedTag')} live>
           {otherBrowser
             ? t('signin.link.otherBrowser')
-            : failure === undefined
-              ? t('signin.link.missing')
-              : failure.message}
+            : closed
+              ? t('signin.closed.refused')
+              : failure === undefined
+                ? t('signin.link.missing')
+                : failure.message}
         </Banner>
       )}
       {state === 'verifying' || state === 'asking' ? null : (

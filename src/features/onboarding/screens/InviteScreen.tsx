@@ -89,9 +89,19 @@ export function InviteScreen(): ReactElement {
         )}
         <div>
           {invitation.signedIn === false ? (
-            <Link to="/signin" search={{ redirect: '/invite' }} className="o-btn o-btn--secondary o-btn--md">
-              {t('invite.signIn')}
-            </Link>
+            invitation.granting ? (
+              <Button variant="secondary" disabled>
+                {t('invite.signIn')}
+              </Button>
+            ) : (
+              <Link
+                to="/signin"
+                search={{ redirect: '/invite' }}
+                className="o-btn o-btn--secondary o-btn--md"
+              >
+                {t('invite.signIn')}
+              </Link>
+            )
           ) : invitation.already ? (
             <Button onClick={open.enter} disabled={invitation.entering}>
               {t('invite.open', { org: preview.orgName })}

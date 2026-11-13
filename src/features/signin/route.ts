@@ -3,3 +3,4 @@
 // nothing here may import a screen or a component, or the screens ship in the first download again.
 export { useEmailLinkStore } from './emailLink';
 export { fragmentValue } from './model';
+export { useSetupLinkStore } from './setupLink';

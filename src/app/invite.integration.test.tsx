@@ -52,6 +52,55 @@ describe('the invitation page', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Initech' })).toBeInTheDocument();
   });
 
+  it('presents the invitation to the server before sending a signed-out person to sign in', async () => {
+    db.signedIn = false;
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/signin'),
+    );
+    expect(db.grants).toEqual([DEMO_INVITATION_TOKEN]);
+  });
+
+  it('holds the way to sign in while the invitation is being presented', async () => {
+    db.signedIn = false;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post('*/api/v1/auth/signup-grant', async () => {
+        await held;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('button', { name: 'Sign in to join' })).toBeDisabled();
+    release();
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
+  });
+
+  it('lets the person sign in even when the server refused the grant', async () => {
+    db.signedIn = false;
+    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(429, 'too_many_attempts', 'Slow down.')));
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('presents nothing for a dead invitation, nor for someone already signed in', async () => {
+    db.signedIn = false;
+    open('inv_gone');
+    expect(await screen.findByText('This invitation no longer works')).toBeInTheDocument();
+    expect(db.grants).toEqual([]);
+  });
+
+  it('presents nothing when someone is signed in', async () => {
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('button', { name: 'Join Initech' })).toBeInTheDocument();
+    expect(db.grants).toEqual([]);
+  });
+
   it('says when no invitation was opened in this tab', async () => {
     visit('/invite');
     expect(await screen.findByText('No invitation here')).toBeInTheDocument();

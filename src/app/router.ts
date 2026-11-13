@@ -13,7 +13,7 @@ import { activitySearchSchema } from '@/features/activity/route';
 import { deviceSearchSchema } from '@/features/device/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
-import { fragmentValue, useEmailLinkStore } from '@/features/signin/route';
+import { fragmentValue, useEmailLinkStore, useSetupLinkStore } from '@/features/signin/route';
 // The yes screens are in the first download: an approver opens a link to one on a phone, and a screen fetched after the
 // entry costs a round trip more on a slow network (first paint 1.9 s with it, 2.2 s split; e2e-real/firstPaint.spec.ts).
 import { ApprovalScreen, YesQueueScreen } from '@/features/yes';
@@ -289,14 +289,33 @@ const receiptRoute = createRoute({
   component: lazyRouteComponent(async () => import('@/features/receipts'), 'ReceiptScreen'),
 });
 
-// A redirect that is not a single string (`?redirect=1`, repeated keys) is dropped, never an error page.
-export const signInSearchSchema = z.object({ redirect: z.catch(z.optional(z.string()), undefined) });
+// A redirect or an error that is not a single string (`?redirect=1`, repeated keys) is dropped, never an error page.
+// `error` is what the server's sign-in callbacks add when they refuse a person (`signup_closed`).
+export const signInSearchSchema = z.object({
+  redirect: z.catch(z.optional(z.string()), undefined),
+  error: z.catch(z.optional(z.string()), undefined),
+});
 
 const signInRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/signin',
   staticData: { anonymous: true },
   validateSearch: signInSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/signin'), 'SignInScreen'),
+});
+
+/**
+ * `/login?error=…` is where the server's OAuth callbacks send a refused sign-in (`/login?error=signup_closed`): the
+ * console's sign-in page is `/signin`, so the address goes there with its error, as it was.
+ */
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  staticData: { anonymous: true },
+  validateSearch: signInSearchSchema,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/signin', search, replace: true });
+  },
   component: lazyRouteComponent(async () => import('@/features/signin'), 'SignInScreen'),
 });
 
@@ -341,10 +360,35 @@ const inviteRoute = createRoute({
   component: lazyRouteComponent(async () => import('@/features/onboarding'), 'InviteScreen'),
 });
 
+/**
+ * `/setup#token=osb_…` is the link `ostrom-server bootstrap` prints for the first owner of an invite-only instance.
+ * As for an invitation, the token leaves the address bar before the page renders; it stays in memory only, and the
+ * screen presents it to the server before offering the sign-in.
+ */
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/setup',
+  staticData: { anonymous: true },
+  beforeLoad: ({ location }) => {
+    const token = fragmentValue(location.hash, 'token');
+    if (token === undefined) return;
+    dropFragment();
+    useSetupLinkStore.getState().hold(token);
+    throw redirect({ to: '/setup', hash: '', replace: true });
+  },
+  // A link left behind is not presented later, when nobody would be there to sign in.
+  onLeave: () => {
+    useSetupLinkStore.getState().drop();
+  },
+  component: lazyRouteComponent(async () => import('@/features/signin'), 'SetupScreen'),
+});
+
 export const routeTree = rootRoute.addChildren([
   homeRoute,
   inviteRoute,
+  setupRoute,
   signInRoute,
+  loginRoute,
   emailLinkRoute,
   yesRoute,
   approvalRoute,

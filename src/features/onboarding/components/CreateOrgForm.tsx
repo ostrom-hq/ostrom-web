@@ -94,6 +94,11 @@ export function CreateOrgForm({ org }: { readonly org: CreateOrgViewModel }): Re
           {t('onboarding.create.slugTaken')}
         </Banner>
       ) : null}
+      {org.closed ? (
+        <Banner tone="danger" tag={t('onboarding.create.failedTag')} live>
+          {t('onboarding.create.closed')}
+        </Banner>
+      ) : null}
       {org.failure === undefined ? null : (
         <Banner tone="danger" tag={t('onboarding.create.failedTag')} live>
           {org.failure.message}

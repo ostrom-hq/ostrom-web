@@ -172,7 +172,7 @@ const SCREEN_READS: Readonly<Record<string, readonly BootCall[]>> = {
 const initialModules = new Map<string, boolean>();
 
 /** The screens open to someone not signed in: nothing to read for them before the entry. */
-const SIGNED_OUT = new Set(['/signin', '/auth/email', '/invite']);
+const SIGNED_OUT = new Set(['/signin', '/login', '/auth/email', '/invite', '/setup']);
 
 /** An object read as a record of its keys: a module's namespace, a wording. */
 function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
