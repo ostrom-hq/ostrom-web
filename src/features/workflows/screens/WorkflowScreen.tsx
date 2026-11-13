@@ -3,6 +3,7 @@ import type { Workflow } from '@gen/api/types.gen';
 import { Link, Navigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { safeHref } from '@/shared/lib/safeHref';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -178,6 +179,27 @@ function WorkflowDetail({ workflow }: { readonly workflow: Workflow }): ReactEle
           </ol>
         )}
       </Section>
+      {workflow.sources === undefined || workflow.sources.length === 0 ? null : (
+        <Section label={t('workflows.detail.sources')}>
+          <ul className="o-card o-rows">
+            {workflow.sources.map((source) => {
+              // A source read from a repository is untrusted: only an http(s) link is followed.
+              const href = safeHref(source.url);
+              return (
+                <li key={`${source.kind}:${source.ref}`} className="o-row o-mono">
+                  {href === undefined ? (
+                    source.ref
+                  ) : (
+                    <a href={href} target="_blank" rel="noreferrer noopener">
+                      {source.ref}
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
     </>
   );
 }
@@ -199,6 +221,13 @@ function StepRow({ step }: { readonly step: Step }): ReactElement {
     node.ruleIds === undefined || node.ruleIds.length === 0
       ? undefined
       : t('workflows.step.rules', { list: node.ruleIds.join(', ') }),
+    // What the analysis suggests is only shown: nothing runs it until a person takes it into the step.
+    node.suggested?.command === undefined
+      ? undefined
+      : t('workflows.step.suggested', {
+          command: node.suggested.command.value,
+          evidence: node.suggested.command.evidence.join(', '),
+        }),
     ...step.next.map(({ to, edge }) => {
       const when = edge.label ?? edge.on;
       const target = to === undefined ? t('workflows.step.end') : to.label;

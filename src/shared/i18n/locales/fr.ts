@@ -904,6 +904,7 @@ export const fr = {
       updated: 'Dernier changement',
       steps: 'Étapes',
       noSteps: 'Ce workflow n’a pas encore d’étape.',
+      sources: 'Où il a été trouvé',
     },
     kind: {
       trigger: 'Départ',
@@ -1035,6 +1036,7 @@ export const fr = {
       then: 'Ensuite : {{target}}',
       when: '{{when}} : {{target}}',
       end: 'le workflow se termine',
+      suggested: 'Commande suggérée : {{command}} (vue dans {{evidence}})',
     },
   },
   tools: {
