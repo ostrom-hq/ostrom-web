@@ -17,6 +17,9 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/tokens(?:\/|$)/,
   /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
+  // A link a person follows from GitHub or from a wait's message: the secret in it says the organization.
+  /^\/api\/v1\/github\/link\/callback$/,
+  /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback)$/,
   /^\/api\/v1\/automations\/[^/]+\/trigger$/,
   // An event wait's webhook: the secret is the proof (no sign-in); GitHub's link callback names the person's own link.

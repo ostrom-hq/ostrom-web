@@ -5,7 +5,7 @@ import { isApiFailure } from '@/shared/api/ApiFailure';
 import { ready } from '@/shared/api/ready';
 import { retryOnce } from '@/shared/api/retry';
 import { meOf } from '@/shared/auth/me';
-import { type FeatureKey, hasFeature, type ServerStatus, serverStatusOf } from './model';
+import { announces, type FeatureKey, hasFeature, type ServerStatus, serverStatusOf } from './model';
 
 /** Fresh for five minutes, read again on focus once stale, and every ten minutes in a tab left open. */
 const STALE_MS = 5 * 60_000;
@@ -42,4 +42,9 @@ export function useServerStatus(): ServerStatus {
  */
 export function useFeature(key: FeatureKey): boolean {
   return hasFeature(useServerStatus(), key);
+}
+
+/** Whether the server has said it serves a feature: false while it is being asked, so nothing is asked of it before. */
+export function useAnnounced(key: FeatureKey): boolean {
+  return announces(useServerStatus(), key);
 }

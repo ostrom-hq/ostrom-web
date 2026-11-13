@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Capabilities } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { blocks, consoleVersion, hasFeature, serverStatusOf } from './model';
+import { announces, blocks, consoleVersion, hasFeature, serverStatusOf } from './model';
 
 function demoCapabilities(features: readonly string[] = ['billing.v1']): Capabilities {
   return { apiVersion: 1, serverVersion: '1.4.0', features: [...features] };
@@ -51,6 +51,17 @@ describe('hasFeature', () => {
     const ready = { kind: 'ready', capabilities: demoCapabilities(['github.v1']) } as const;
     expect(hasFeature(ready, 'github.v1')).toBe(true);
     expect(hasFeature(ready, 'billing.v1')).toBe(false);
+  });
+});
+
+describe('announces', () => {
+  it('is true only once the server has said it serves the feature', () => {
+    expect(announces({ kind: 'loading' }, 'billing.v1')).toBe(false);
+    expect(announces({ kind: 'unknown' }, 'billing.v1')).toBe(false);
+    expect(announces({ kind: 'too-old' }, 'billing.v1')).toBe(false);
+    const ready = { kind: 'ready', capabilities: demoCapabilities(['github.v1']) } as const;
+    expect(announces(ready, 'github.v1')).toBe(true);
+    expect(announces(ready, 'billing.v1')).toBe(false);
   });
 });
 

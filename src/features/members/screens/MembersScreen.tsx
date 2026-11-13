@@ -12,6 +12,7 @@ import { InvitationRow } from '../components/InvitationRow';
 import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
 import { MemberRow } from '../components/MemberRow';
+import { useTodoStopHook } from '../useTodoStopHook';
 import { useInvite, useInviteLink, useMembers, useRevokeInvitation, useRoleChange } from '../useMembers';
 import { FailureText } from '@/shared/ui/FailureText';
 import { HeldNotice } from '@/shared/ui/HeldNotice';
@@ -41,12 +42,14 @@ function MembersPage({
   const invite = useInvite(org.id);
   const link = useInviteLink(org.id);
   const revoke = useRevokeInvitation(org.id);
+  const stopHook = useTodoStopHook(role);
   const roles = givableRoles(role);
   const manager = managesMembers(role);
   const invitations = view.invitations ?? [];
   // The invitations that did not load, or the one that was not revoked: said in their section.
   const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
   const searchId = useId();
+  const hintId = useId();
   // A large organization is read a hundred people at a time, the next hundred when asked, and searched on the
   // server, beyond the people read (PERF-CONSOLE).
   // A search typed keeps its box, even once the organization is small enough not to need one.
@@ -72,6 +75,11 @@ function MembersPage({
       {changes.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.list.errorTag')} live>
           <FailureText failure={changes.failure} />
+        </Banner>
+      )}
+      {stopHook.failure === undefined ? null : (
+        <Banner tone="danger" tag={t('members.list.errorTag')} live>
+          <FailureText failure={stopHook.failure} />
         </Banner>
       )}
       <LoadState data={listed} failure={view.failure}>
@@ -123,6 +131,18 @@ function MembersPage({
                         member={member}
                         isViewer={member.login === view.viewer}
                         saving={changes.saving === member.login}
+                        stopHook={
+                          stopHook.enabled === undefined
+                            ? undefined
+                            : {
+                                enabled: stopHook.enabled(member.id),
+                                saving: stopHook.saving === member.id,
+                                hintId,
+                                onChange: (enabled) => {
+                                  stopHook.set(member.id, enabled);
+                                },
+                              }
+                        }
                         roles={editable ? roles : []}
                         onRole={(next) => {
                           changes.change(member.login, next);
@@ -139,6 +159,11 @@ function MembersPage({
                   );
                 })}
               </ul>
+            )}
+            {stopHook.enabled === undefined ? null : (
+              <p id={hintId} className="o-row__meta">
+                {t('members.list.todoHookHint')}
+              </p>
             )}
             <MorePeople people={view} />
           </section>

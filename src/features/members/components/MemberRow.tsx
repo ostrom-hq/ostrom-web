@@ -17,6 +17,16 @@ export interface MemberRowProps {
   readonly onRemove: (() => void) | undefined;
   readonly saving: boolean;
   readonly isViewer: boolean;
+  /** The member's todo Stop hook switch, for an administrator where the server has todos. */
+  readonly stopHook?: StopHookSwitch | undefined;
+}
+
+export interface StopHookSwitch {
+  readonly enabled: boolean;
+  readonly saving: boolean;
+  /** The id of the sentence that says what the switch does, written once for the list. */
+  readonly hintId: string;
+  readonly onChange: (enabled: boolean) => void;
 }
 
 export function MemberRow({
@@ -26,6 +36,7 @@ export function MemberRow({
   onRemove,
   saving,
   isViewer,
+  stopHook,
 }: MemberRowProps): ReactElement {
   const { t } = useTranslation();
   const selectId = useId();
@@ -43,6 +54,22 @@ export function MemberRow({
           {isViewer ? <span className="o-row__meta"> {t('members.list.you')}</span> : null}
         </span>
         {meta === null ? null : <span className="o-row__meta">{meta}</span>}
+        {stopHook === undefined ? null : (
+          // One label around the box: a list of a hundred people stays within the page's budget of DOM nodes.
+          <label className="o-inline">
+            <input
+              type="checkbox"
+              checked={stopHook.enabled}
+              disabled={stopHook.saving}
+              aria-label={t('members.list.todoHookOf', { name })}
+              aria-describedby={stopHook.hintId}
+              onChange={(event) => {
+                stopHook.onChange(event.target.checked);
+              }}
+            />
+            {t('members.list.todoHook')}
+          </label>
+        )}
       </span>
       <span className="o-row__end o-inline">
         {roles.length === 0 || role === undefined ? (
