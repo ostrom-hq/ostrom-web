@@ -12,6 +12,7 @@ import type { ApiError, BillingInvoice, BillingOverview, BillingRedirect } from 
 import { zBillingPlanRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { PLAN_LIMITS } from '@/mocks/fixtures/billing';
+import { knownValues } from '@/shared/lib/openEnum';
 
 export interface BillingState {
   billing: BillingOverview;
@@ -28,6 +29,17 @@ const ENDED = new Set(['canceled', 'incomplete_expired']);
 
 function refusal(status: number, type: string, message: string): HttpResponse<ApiError> {
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
+}
+
+/** A plan request as the server reads it: only a plan on sale and an interval it bills (the contract's enums are open). */
+function soldPlan(json: unknown) {
+  const body = zBillingPlanRequest.safeParse(json);
+  if (!body.success) return undefined;
+  const plan = knownValues(zBillingPlanRequest.shape.plan).find((known) => known === body.data.plan);
+  const interval = knownValues(zBillingPlanRequest.shape.interval).find(
+    (known) => known === body.data.interval,
+  );
+  return plan === undefined || interval === undefined ? undefined : { plan, interval };
 }
 
 async function readJson(request: Request): Promise<unknown> {
@@ -66,12 +78,13 @@ export function createBillingHandlers(
     handleStartBillingCheckout(async ({ params, request }) => {
       const refused = guard(params.orgId, true);
       if (refused !== undefined) return refused;
-      const body = zBillingPlanRequest.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'a plan (team, business) and an interval');
+      const body = soldPlan(await readJson(request));
+      if (body === undefined)
+        return refusal(400, 'invalid_request', 'a plan (team, business) and an interval');
       if (!state().billing.purchasable) return refusal(409, 'not_purchasable', 'plans are not sold here');
       if (subscribed())
         return refusal(409, 'already_subscribed', 'change the plan of the subscription instead');
-      const redirect: BillingRedirect = { url: `${STRIPE_CHECKOUT}_${body.data.plan}_${body.data.interval}` };
+      const redirect: BillingRedirect = { url: `${STRIPE_CHECKOUT}_${body.plan}_${body.interval}` };
       return HttpResponse.json(redirect);
     }),
     handleOpenBillingPortal(({ params }) => {
@@ -84,18 +97,19 @@ export function createBillingHandlers(
     handleChangeBillingPlan(async ({ params, request }) => {
       const refused = guard(params.orgId, true);
       if (refused !== undefined) return refused;
-      const body = zBillingPlanRequest.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'a plan (team, business) and an interval');
+      const body = soldPlan(await readJson(request));
+      if (body === undefined)
+        return refusal(400, 'invalid_request', 'a plan (team, business) and an interval');
       if (!subscribed()) return refusal(409, 'no_subscription', 'buy a plan first');
       const { billing } = state();
       // Stripe changes no plan before the first payment of a subscription is made.
       if (billing.status === 'incomplete') return refusal(409, 'payment_due', 'pay the first invoice first');
       return save({
         ...billing,
-        plan: body.data.plan,
-        effectivePlan: body.data.plan,
-        interval: body.data.interval,
-        limits: PLAN_LIMITS[body.data.plan],
+        plan: body.plan,
+        effectivePlan: body.plan,
+        interval: body.interval,
+        limits: PLAN_LIMITS[body.plan],
       });
     }),
     handleCancelBillingSubscription(({ params }) => {

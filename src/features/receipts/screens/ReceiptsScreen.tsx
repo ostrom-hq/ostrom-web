@@ -3,6 +3,7 @@ import type { Receipt } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute, formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
 import { Badge } from '@/shared/ui/Badge';
@@ -35,10 +36,11 @@ export function ReceiptsScreen(): ReactElement {
 
 function ReceiptRow({ receipt }: { readonly receipt: Receipt }): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const now = useNow();
   return (
     <Link to="/receipts/$receiptId" params={{ receiptId: receipt.id }} className="o-row">
-      <Badge>{t(`receipts.kind.${receipt.subject.kind}`)}</Badge>
+      <Badge>{enumText('receipts.kind', receipt.subject.kind)}</Badge>
       <span className="o-row__main">
         <span className="o-row__title">{receipt.subject.id}</span>
         <span className="o-row__meta">

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import type { OrgRole } from '@/shared/org/roles';
 import { managesMembers } from '@/shared/org/roles';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
@@ -12,7 +14,7 @@ import { Facts, LoadState } from '@/shared/ui/Screen';
 import { type LinkState, readableDate } from '../model';
 import { useMemberLinks, useOwnLink } from '../useGithubLinks';
 
-const TONES: Record<LinkState, BadgeTone> = {
+const TONES: Record<Known<LinkState>, BadgeTone> = {
   linked: 'success',
   reconnect_required: 'warning',
   not_linked: 'neutral',
@@ -39,6 +41,7 @@ export function GithubLinks({
 
 function OwnLink({ own }: { readonly own: ReturnType<typeof useOwnLink> }): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   return (
     <section aria-labelledby="gh-link" className="o-card o-section o-stack">
       <h2 id="gh-link" className="o-label">
@@ -50,9 +53,11 @@ function OwnLink({ own }: { readonly own: ReturnType<typeof useOwnLink> }): Reac
           return (
             <>
               <div className="o-gh__head">
-                <Badge tone={TONES[link.state]}>{t(`github.link.state.${link.state}`)}</Badge>
+                <Badge tone={knownOr(TONES, link.state, 'neutral')}>
+                  {enumText('github.link.state', link.state)}
+                </Badge>
               </div>
-              <p className="o-gh__wrap">{t(`github.link.body.${link.state}`)}</p>
+              <p className="o-gh__wrap">{enumText('github.link.body', link.state)}</p>
               {link.login === undefined ? null : (
                 <Facts
                   facts={[
@@ -102,6 +107,7 @@ function MemberLinks({
   readonly appConfigured: boolean;
 }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const view = useMemberLinks(org, role, appConfigured);
   return (
     <section aria-labelledby="gh-links" className="o-card o-section o-stack">
@@ -131,7 +137,9 @@ function MemberLinks({
                     </span>
                   </span>
                   <span className="o-inline">
-                    <Badge tone={TONES[row.state]}>{t(`github.link.state.${row.state}`)}</Badge>
+                    <Badge tone={knownOr(TONES, row.state, 'neutral')}>
+                      {enumText('github.link.state', row.state)}
+                    </Badge>
                     {view.appConfigured ? (
                       <a
                         className="o-btn o-btn--secondary o-btn--md"

@@ -2,6 +2,7 @@
 import type { Workflow } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Button } from '@/shared/ui/Button';
 import {
   conditionOf,
@@ -273,6 +274,7 @@ function StepCard({
   readonly onRemove: () => void;
 }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const kindId = useId();
   const { kind } = step;
   return (
@@ -293,7 +295,7 @@ function StepCard({
         >
           {EDITABLE_KINDS.map((editable) => (
             <option key={editable} value={editable}>
-              {t(`workflows.kind.${editable}`)}
+              {enumText('workflows.kind', editable)}
             </option>
           ))}
         </select>

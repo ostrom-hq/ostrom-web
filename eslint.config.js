@@ -79,6 +79,12 @@ export default defineConfig(
     ...tseslint.configs.disableTypeChecked,
   },
   {
+    // hey-api types the Zod symbol of a plugin as `any` (`plugin.imports.z`), and its deprecated typed twin
+    // (`symbols.z`) is refused by no-deprecated: the enum resolver of the generator config reads it once.
+    files: ['openapi-ts.config.ts'],
+    rules: { '@typescript-eslint/no-unsafe-assignment': 'off' },
+  },
+  {
     files: ['src/**/*.{ts,tsx}', 'ee/**/*.{ts,tsx}'],
     languageOptions: { globals: globals.browser },
     plugins: { 'react-hooks': reactHooks },

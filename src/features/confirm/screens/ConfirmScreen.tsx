@@ -3,6 +3,8 @@ import type { GovernanceConfirmation } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { useViewer } from '@/shared/auth/useViewer';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
@@ -22,7 +24,7 @@ import { Countdown } from '../components/Countdown';
 import { memberChangeOf, personName } from '../model';
 import { type AnswerViewModel, useAnswerConfirmation, useConfirmation } from '../useConfirmation';
 
-const TONES: Readonly<Record<GovernanceConfirmation['status'], BadgeTone>> = {
+const TONES: Readonly<Record<Known<GovernanceConfirmation['status']>, BadgeTone>> = {
   pending: 'signal',
   confirmed: 'success',
   refused: 'danger',
@@ -89,6 +91,7 @@ interface DetailProps {
 /** What is asked, by whom, the exact change, then the answer: nothing to press before the proof. */
 function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const viewer = useViewer();
   const { requestedBy, credential, status } = confirmation;
   // A change of the organization's people reads in words; any other change as its JSON before and after.
@@ -96,12 +99,15 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
   return (
     <>
       <header className="ys-head">
-        <Badge tone={TONES[status]} approval={status === 'pending' ? 'waiting' : undefined}>
-          {t(`confirm.status.${status}`)}
+        <Badge
+          tone={knownOr(TONES, status, 'neutral')}
+          approval={status === 'pending' ? 'waiting' : undefined}
+        >
+          {enumText('confirm.status', status)}
         </Badge>
         <h1 className="ys-h1">{confirmation.summary}</h1>
         <p className="ys-meta">
-          {t(`confirm.kind.${confirmation.kind}`)}
+          {enumText('confirm.kind', confirmation.kind)}
           {status === 'pending' ? (
             <>
               {' · '}
@@ -123,7 +129,7 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
         </h2>
         <Facts
           facts={[
-            { label: t('confirm.what.kind'), value: t(`confirm.kind.${confirmation.kind}`) },
+            { label: t('confirm.what.kind'), value: enumText('confirm.kind', confirmation.kind) },
             {
               label: t('confirm.what.request'),
               value: `${confirmation.method} ${confirmation.path}`,

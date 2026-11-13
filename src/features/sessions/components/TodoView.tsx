@@ -2,6 +2,8 @@
 import type { Todo, TodoItem, TodoItemStatus } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
@@ -9,7 +11,7 @@ import { Section } from '@/shared/ui/Screen';
 import { checkText, currentItem, hookErrors, mostlyAttested, todoCount } from '../todo';
 import './todo.css';
 
-const TONES: Readonly<Record<TodoItemStatus, BadgeTone>> = {
+const TONES: Readonly<Record<Known<TodoItemStatus>, BadgeTone>> = {
   todo: 'neutral',
   doing: 'signal',
   done: 'success',
@@ -28,6 +30,7 @@ export interface TodoViewProps {
  */
 export function TodoView({ id, todo }: TodoViewProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const { done, total } = todoCount(todo);
   const current = currentItem(todo);
   const errors = hookErrors(todo);
@@ -44,7 +47,7 @@ export function TodoView({ id, todo }: TodoViewProps): ReactElement {
           >{`${String(done)} / ${String(total)}`}</span>{' '}
           {todo.status === 'active' ? null : (
             <Badge tone={todo.status === 'done' ? 'success' : 'warning'}>
-              {t(`sessions.todo.status.${todo.status}`)}
+              {enumText('sessions.todo.status', todo.status)}
             </Badge>
           )}
         </p>
@@ -88,9 +91,12 @@ export function TodoView({ id, todo }: TodoViewProps): ReactElement {
 
 function TodoRow({ item, locale }: { readonly item: TodoItem; readonly locale: string }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   return (
     <div className={item.status === 'doing' ? 'o-row st-todo-current' : 'o-row'}>
-      <Badge tone={TONES[item.status]}>{t(`sessions.todo.state.${item.status}`)}</Badge>
+      <Badge tone={knownOr(TONES, item.status, 'neutral')}>
+        {enumText('sessions.todo.state', item.status)}
+      </Badge>
       <span className="o-row__main o-stack">
         <span className="o-row__title">{item.name}</span>
         <span className="o-row__meta st-todo-text">{item.description}</span>

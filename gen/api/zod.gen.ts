@@ -53,14 +53,14 @@ export const zActivityItem = z.object({
     sessionId: z.optional(z.string())
 });
 
-export const zAgentEvent = z.enum([
-    'SessionStart',
-    'UserPromptSubmit',
-    'PreToolUse',
-    'PostToolUse',
-    'Stop',
-    'SessionEnd'
-]);
+export const zAgentEvent = z.union([z.enum([
+        'SessionStart',
+        'UserPromptSubmit',
+        'PreToolUse',
+        'PostToolUse',
+        'Stop',
+        'SessionEnd'
+    ]), z.string()]);
 
 /**
  * An error in Anthropic's shape, as the Messages endpoint of the gateway answers it
@@ -77,33 +77,33 @@ export const zAnthropicError = z.object({
  * One `data:` of a Messages stream, as Anthropic sends it and the gateway relays it
  */
 export const zAnthropicStreamEvent = z.object({
-    type: z.enum([
-        'message_start',
-        'content_block_start',
-        'content_block_delta',
-        'content_block_stop',
-        'message_delta',
-        'message_stop',
-        'ping',
-        'error'
-    ])
+    type: z.union([z.enum([
+            'message_start',
+            'content_block_start',
+            'content_block_delta',
+            'content_block_stop',
+            'message_delta',
+            'message_stop',
+            'ping',
+            'error'
+        ]), z.string()])
 });
 
 /**
  * The kind of action (clients keep an unknown kind as UNKNOWN)
  */
-export const zApprovalActionKind = z.enum([
-    'push',
-    'merge',
-    'deploy',
-    'tool',
-    'other'
-]);
+export const zApprovalActionKind = z.union([z.enum([
+        'push',
+        'merge',
+        'deploy',
+        'tool',
+        'other'
+    ]), z.string()]);
 
 /**
  * A high risk needs biometrics for a mobile yes
  */
-export const zApprovalActionRisk = z.enum(['low', 'high']);
+export const zApprovalActionRisk = z.union([z.enum(['low', 'high']), z.string()]);
 
 /**
  * The action a yes lets through. With `commitDetails`, `checks`, `diffStats` and `diffTruncated`, it is the proof an approver is shown (decision of 30/10 04:10)
@@ -117,7 +117,7 @@ export const zApprovalAction = z.object({
     risk: zApprovalActionRisk
 });
 
-export const zApprovalAnswer = z.enum(['approve', 'reject']);
+export const zApprovalAnswer = z.union([z.enum(['approve', 'reject']), z.string()]);
 
 /**
  * Answers an approval. The answer is refused (409) when [shownDigest] is not the digest of what the approval shows now:
@@ -136,7 +136,7 @@ export const zApprovalCallerView = z.object({
     self: z.boolean(),
     canApprove: z.boolean(),
     reason: z.optional(z.string()),
-    reasonType: z.optional(z.enum(['github_link_required', 'self_approval_refused'])),
+    reasonType: z.optional(z.union([z.enum(['github_link_required', 'self_approval_refused']), z.string()])),
     selfApproval: z.optional(z.boolean())
 });
 
@@ -150,12 +150,12 @@ export const zApprovalCommit = z.object({
     url: z.optional(z.string())
 });
 
-export const zApprovalStatus = z.enum([
-    'pending',
-    'approved',
-    'rejected',
-    'expired'
-]);
+export const zApprovalStatus = z.union([z.enum([
+        'pending',
+        'approved',
+        'rejected',
+        'expired'
+    ]), z.string()]);
 
 /**
  * Who is looking at the yes queue
@@ -203,11 +203,11 @@ export const zArtifact = z.object({
     title: z.string(),
     owner: z.string(),
     access: z.string(),
-    relation: z.optional(z.enum([
-        'owner',
-        'viewer',
-        'team'
-    ])),
+    relation: z.optional(z.union([z.enum([
+            'owner',
+            'viewer',
+            'team'
+        ]), z.string()])),
     latestVersion: z.int(),
     url: z.string(),
     publicUrl: z.optional(z.string()),
@@ -218,11 +218,11 @@ export const zArtifact = z.object({
 /**
  * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
  */
-export const zArtifactAccess = z.enum([
-    'personal',
-    'team',
-    'link'
-]);
+export const zArtifactAccess = z.union([z.enum([
+        'personal',
+        'team',
+        'link'
+    ]), z.string()]);
 
 /**
  * A file sent for publication
@@ -230,7 +230,7 @@ export const zArtifactAccess = z.enum([
 export const zArtifactFile = z.object({
     path: z.string(),
     content: z.string(),
-    encoding: z.optional(z.enum(['utf8', 'base64']))
+    encoding: z.optional(z.union([z.enum(['utf8', 'base64']), z.string()]))
 });
 
 /**
@@ -244,17 +244,17 @@ export const zArtifactTicket = z.object({
     expiresAt: z.string()
 });
 
-export const zArtifactType = z.enum([
-    'skill',
-    'context',
-    'hook',
-    'script',
-    'mcp',
-    'approval',
-    'notify',
-    'subagent',
-    'receipt'
-]);
+export const zArtifactType = z.union([z.enum([
+        'skill',
+        'context',
+        'hook',
+        'script',
+        'mcp',
+        'approval',
+        'notify',
+        'subagent',
+        'receipt'
+    ]), z.string()]);
 
 /**
  * A version of an artifact
@@ -283,11 +283,11 @@ export const zGitHubDeviceLink = z.object({
  */
 export const zGitHubLink = z.object({
     memberId: z.string(),
-    state: z.enum([
-        'not_linked',
-        'linked',
-        'reconnect_required'
-    ]),
+    state: z.union([z.enum([
+            'not_linked',
+            'linked',
+            'reconnect_required'
+        ]), z.string()]),
     appConfigured: z.boolean(),
     login: z.optional(z.string()),
     userId: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
@@ -300,12 +300,12 @@ export const zGitHubLink = z.object({
  * One poll of a device link; `link` once linked, `interval` (seconds) while pending
  */
 export const zGitHubDeviceLinkPoll = z.object({
-    status: z.enum([
-        'pending',
-        'linked',
-        'expired',
-        'denied'
-    ]),
+    status: z.union([z.enum([
+            'pending',
+            'linked',
+            'expired',
+            'denied'
+        ]), z.string()]),
     interval: z.optional(z.int()),
     link: z.optional(zGitHubLink)
 });
@@ -342,11 +342,11 @@ export const zAuditEvent = z.object({
     hash: z.optional(z.string()),
     signature: z.optional(z.string()),
     keyId: z.optional(z.string()),
-    integrity: z.optional(z.enum([
-        'verified',
-        'altered',
-        'unlinked'
-    ]))
+    integrity: z.optional(z.union([z.enum([
+            'verified',
+            'altered',
+            'unlinked'
+        ]), z.string()]))
 });
 
 /**
@@ -431,7 +431,7 @@ export const zAutomationDryRun = z.object({
     nextRuns: z.array(z.string())
 });
 
-export const zAutomationTriggerKind = z.enum(['cron', 'webhook']);
+export const zAutomationTriggerKind = z.union([z.enum(['cron', 'webhook']), z.string()]);
 
 /**
  * The trigger of an automation
@@ -520,7 +520,7 @@ export const zBillingInvoiceList = z.object({
  * A payment waiting for the customer; the console shows a banner linking to Stripe's invoice page
  */
 export const zBillingPaymentIssue = z.object({
-    kind: z.enum(['payment_failed', 'action_required']),
+    kind: z.union([z.enum(['payment_failed', 'action_required']), z.string()]),
     hostedInvoiceUrl: z.nullable(z.string()),
     at: z.iso.datetime({ offset: true })
 });
@@ -541,16 +541,16 @@ export const zBillingPlanLimits = z.object({
  * A plan to buy or switch to
  */
 export const zBillingPlanRequest = z.object({
-    plan: z.enum(['team', 'business']),
-    interval: z.enum(['month', 'year'])
+    plan: z.union([z.enum(['team', 'business']), z.string()]),
+    interval: z.union([z.enum(['month', 'year']), z.string()])
 });
 
 /**
  * A price of the catalog: per active person per month (monthly), per person per year (yearly, 20 % off)
  */
 export const zBillingPrice = z.object({
-    plan: z.enum(['team', 'business']),
-    interval: z.enum(['month', 'year']),
+    plan: z.union([z.enum(['team', 'business']), z.string()]),
+    interval: z.union([z.enum(['month', 'year']), z.string()]),
     unitAmount: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
     currency: z.string()
 });
@@ -577,19 +577,19 @@ export const zBillingUsage = z.object({
  */
 export const zBillingOverview = z.object({
     orgId: z.uuid(),
-    plan: z.enum([
-        'free',
-        'team',
-        'business',
-        'enterprise'
-    ]),
-    effectivePlan: z.enum([
-        'free',
-        'team',
-        'business',
-        'enterprise'
-    ]),
-    interval: z.nullable(z.enum(['month', 'year'])),
+    plan: z.union([z.enum([
+            'free',
+            'team',
+            'business',
+            'enterprise'
+        ]), z.string()]),
+    effectivePlan: z.union([z.enum([
+            'free',
+            'team',
+            'business',
+            'enterprise'
+        ]), z.string()]),
+    interval: z.nullable(z.union([z.enum(['month', 'year']), z.string()])),
     status: z.nullable(z.string()),
     cancelAtPeriodEnd: z.boolean(),
     periodStart: z.iso.datetime({ offset: true }),
@@ -606,12 +606,12 @@ export const zBillingOverview = z.object({
 
 export const zBillingWebhookAck = z.object({
     received: z.boolean(),
-    outcome: z.enum([
-        'processed',
-        'duplicate',
-        'ignored',
-        'ignored_unknown_org'
-    ])
+    outcome: z.union([z.enum([
+            'processed',
+            'duplicate',
+            'ignored',
+            'ignored_unknown_org'
+        ]), z.string()])
 });
 
 /**
@@ -656,28 +656,28 @@ export const zCapacity = z.object({
     computedAt: z.string()
 });
 
-export const zCheckOutcome = z.enum([
-    'passed',
-    'failed',
-    'timeout',
-    'skipped'
-]);
+export const zCheckOutcome = z.union([z.enum([
+        'passed',
+        'failed',
+        'timeout',
+        'skipped'
+    ]), z.string()]);
 
 /**
  * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: the runner of an Ostrom cloud session ran it and reported it with its own token, which the agent cannot read (reportRunnerCheck); it proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
  */
-export const zCheckAttestation = z.enum([
-    'workstation_declared',
-    'isolated_runner',
-    'ci'
-]);
+export const zCheckAttestation = z.union([z.enum([
+        'workstation_declared',
+        'isolated_runner',
+        'ci'
+    ]), z.string()]);
 
-export const zCheckState = z.enum([
-    'success',
-    'failure',
-    'pending',
-    'skipped'
-]);
+export const zCheckState = z.union([z.enum([
+        'success',
+        'failure',
+        'pending',
+        'skipped'
+    ]), z.string()]);
 
 /**
  * A CI check shown with an approval
@@ -691,13 +691,13 @@ export const zApprovalCheck = z.object({
 /**
  * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
  */
-export const zCloudAgentKind = z.enum([
-    'claude',
-    'codex',
-    'opencode',
-    'gemini',
-    'shell'
-]);
+export const zCloudAgentKind = z.union([z.enum([
+        'claude',
+        'codex',
+        'opencode',
+        'gemini',
+        'shell'
+    ]), z.string()]);
 
 /**
  * Why a cloud session failed or paused on its own
@@ -738,11 +738,11 @@ export const zCloudSession = z.object({
     lastActivityAt: z.optional(z.string()),
     pausedAt: z.optional(z.string()),
     runnerId: z.optional(z.string()),
-    githubAccess: z.optional(z.enum([
-        'owner',
-        'shared',
-        'none'
-    ])),
+    githubAccess: z.optional(z.union([z.enum([
+            'owner',
+            'shared',
+            'none'
+        ]), z.string()])),
     runId: z.optional(z.string()),
     automationId: z.optional(z.string()),
     createdAt: z.string(),
@@ -811,7 +811,7 @@ export const zDevice = z.object({
     platform: z.optional(z.string()),
     cliVersion: z.optional(z.string()),
     lastSeenAt: z.optional(z.string()),
-    kind: z.optional(z.enum(['cli', 'admin'])),
+    kind: z.optional(z.union([z.enum(['cli', 'admin']), z.string()])),
     orgId: z.optional(z.string()),
     scopes: z.optional(z.array(z.string())),
     expiresAt: z.optional(z.string())
@@ -829,12 +829,12 @@ export const zDeviceAnswer = z.object({
  * What `ostrom login` asks for: nothing for the ordinary sign-in, the governance write scopes for `ostrom login --admin`
  */
 export const zDeviceLoginStart = z.object({
-    scopes: z.optional(z.array(z.enum([
-        'policy:write',
-        'harness:write',
-        'gates:policy',
-        'budgets:write'
-    ])))
+    scopes: z.optional(z.array(z.union([z.enum([
+            'policy:write',
+            'harness:write',
+            'gates:policy',
+            'budgets:write'
+        ]), z.string()])))
 });
 
 /**
@@ -946,17 +946,17 @@ export const zApproval = z.object({
  */
 export const zForbidden = z.object({
     error: z.object({
-        type: z.enum([
-            'forbidden',
-            'email_link_other_browser',
-            'installation_not_yours',
-            'probe_not_yours',
-            'cutover_owner_required',
-            'self_approval_refused',
-            'github_link_required',
-            'signup_closed',
-            'org_creation_closed'
-        ]),
+        type: z.union([z.enum([
+                'forbidden',
+                'email_link_other_browser',
+                'installation_not_yours',
+                'probe_not_yours',
+                'cutover_owner_required',
+                'self_approval_refused',
+                'github_link_required',
+                'signup_closed',
+                'org_creation_closed'
+            ]), z.string()]),
         message: z.string()
     })
 });
@@ -967,15 +967,15 @@ export const zForbidden = z.object({
 export const zGateLocalDenial = z.object({
     sessionId: z.string(),
     class: z.string(),
-    reason: z.enum([
-        'redirected',
-        'unreadable',
-        'unknown_landing',
-        'dynamic_command',
-        'git_setting',
-        'foreign_repository',
-        'policy_held'
-    ]),
+    reason: z.union([z.enum([
+            'redirected',
+            'unreadable',
+            'unknown_landing',
+            'dynamic_command',
+            'git_setting',
+            'foreign_repository',
+            'policy_held'
+        ]), z.string()]),
     command: z.string().check(z.maxLength(4096)),
     repo: z.optional(z.string())
 });
@@ -988,11 +988,11 @@ export const zGateCi = z.object({
     pr: z.optional(z.string())
 });
 
-export const zGateMode = z.enum([
-    'enforced',
-    'shadow',
-    'ungated'
-]);
+export const zGateMode = z.union([z.enum([
+        'enforced',
+        'shadow',
+        'ungated'
+    ]), z.string()]);
 
 /**
  * A pull request merge, whichever path asked (the `gh pr merge` hook, the GitHub check): one request per pull request
@@ -1039,38 +1039,38 @@ export const zGateAskRequest = z.object({
     pr: z.optional(zGatePullRequest)
 });
 
-export const zGateStatus = z.enum([
-    'pending',
-    'approved',
-    'rejected',
-    'shadow',
-    'ungated',
-    'consumed'
-]);
+export const zGateStatus = z.union([z.enum([
+        'pending',
+        'approved',
+        'rejected',
+        'shadow',
+        'ungated',
+        'consumed'
+    ]), z.string()]);
 
-export const zGitHubConnection = z.enum(['github-app', 'gh-token']);
+export const zGitHubConnection = z.union([z.enum(['github-app', 'gh-token']), z.string()]);
 
 /**
  * The governance write a confirmation holds: the operation that opened it
  */
-export const zGovernanceChangeKind = z.enum([
-    'rules.create',
-    'rules.update',
-    'rules.delete',
-    'rules.bulk',
-    'gates.policy',
-    'models.policy',
-    'workflows.create',
-    'workflows.save',
-    'workflows.delete',
-    'members.role',
-    'members.remove',
-    'members.invite',
-    'members.link',
-    'budgets.set'
-]);
+export const zGovernanceChangeKind = z.union([z.enum([
+        'rules.create',
+        'rules.update',
+        'rules.delete',
+        'rules.bulk',
+        'gates.policy',
+        'models.policy',
+        'workflows.create',
+        'workflows.save',
+        'workflows.delete',
+        'members.role',
+        'members.remove',
+        'members.invite',
+        'members.link',
+        'budgets.set'
+    ]), z.string()]);
 
-export const zGovernanceConfirmationAnswer = z.enum(['confirm', 'refuse']);
+export const zGovernanceConfirmationAnswer = z.union([z.enum(['confirm', 'refuse']), z.string()]);
 
 export const zGovernanceConfirmationAnswerRequest = z.object({
     answer: zGovernanceConfirmationAnswer
@@ -1105,13 +1105,13 @@ export const zGovernanceConfirmationToken = z.object({
 /**
  * pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a server stopped between the two leaves it confirmed without the write, and the change is then asked again
  */
-export const zGovernanceConfirmationStatus = z.enum([
-    'pending',
-    'confirmed',
-    'refused',
-    'expired',
-    'failed'
-]);
+export const zGovernanceConfirmationStatus = z.union([z.enum([
+        'pending',
+        'confirmed',
+        'refused',
+        'expired',
+        'failed'
+    ]), z.string()]);
 
 /**
  * A governance write made with a person's API token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
@@ -1127,11 +1127,11 @@ export const zGovernanceConfirmation = z.object({
     before: z.unknown(),
     after: z.unknown(),
     requestedBy: zGovernanceConfirmationPerson,
-    credential: z.enum([
-        'admin',
-        'device',
-        'api_token'
-    ]),
+    credential: z.union([z.enum([
+            'admin',
+            'device',
+            'api_token'
+        ]), z.string()]),
     token: z.optional(zGovernanceConfirmationToken),
     createdAt: z.iso.datetime({ offset: true }),
     expiresAt: z.iso.datetime({ offset: true }),
@@ -1178,25 +1178,25 @@ export const zHook = z.object({
  * One line of an import report
  */
 export const zImportItem = z.object({
-    kind: z.enum([
-        'setting',
-        'secret',
-        'server',
-        'policy',
-        'assignment',
-        'account'
-    ]),
+    kind: z.union([z.enum([
+            'setting',
+            'secret',
+            'server',
+            'policy',
+            'assignment',
+            'account'
+        ]), z.string()]),
     name: z.string(),
-    action: z.enum([
-        'planned',
-        'created',
-        'updated',
-        'unchanged',
-        'skipped',
-        'revive_at_cutover'
-    ]),
+    action: z.union([z.enum([
+            'planned',
+            'created',
+            'updated',
+            'unchanged',
+            'skipped',
+            'revive_at_cutover'
+        ]), z.string()]),
     reason: z.optional(z.string()),
-    refreshOwnership: z.optional(z.enum(['pending_handover', 'access_only']))
+    refreshOwnership: z.optional(z.union([z.enum(['pending_handover', 'access_only']), z.string()]))
 });
 
 /**
@@ -1325,15 +1325,15 @@ export const zLinkStarted = z.object({
  */
 export const zMcpArgumentCondition = z.object({
     path: z.string().check(z.maxLength(256)),
-    operator: z.enum([
-        'EQUALS',
-        'NOT_EQUALS',
-        'MATCHES',
-        'PREFIX',
-        'CONTAINS',
-        'EXISTS',
-        'ABSENT'
-    ]),
+    operator: z.union([z.enum([
+            'EQUALS',
+            'NOT_EQUALS',
+            'MATCHES',
+            'PREFIX',
+            'CONTAINS',
+            'EXISTS',
+            'ABSENT'
+        ]), z.string()]),
     value: z.optional(z.string().check(z.maxLength(1024)))
 });
 
@@ -1344,7 +1344,7 @@ export const zMcpArgumentPolicy = z.object({
     id: z.string(),
     tool: z.string(),
     conditions: z.array(zMcpArgumentCondition),
-    effect: z.enum(['DENY', 'REQUIRE_APPROVAL']),
+    effect: z.union([z.enum(['DENY', 'REQUIRE_APPROVAL']), z.string()]),
     message: z.string(),
     createdAt: z.iso.datetime({ offset: true })
 });
@@ -1363,7 +1363,7 @@ export const zMcpArgumentPolicies = z.object({
 export const zMcpArgumentPolicyRequest = z.object({
     tool: z.string(),
     conditions: z.optional(z.array(zMcpArgumentCondition)),
-    effect: z.enum(['DENY', 'REQUIRE_APPROVAL']),
+    effect: z.union([z.enum(['DENY', 'REQUIRE_APPROVAL']), z.string()]),
     message: z.string()
 });
 
@@ -1433,7 +1433,7 @@ export const zMcpSettings = z.object({
  * A server run by the MCP host from a pinned package
  */
 export const zMcpStdioSpec = z.object({
-    launcher: z.enum(['npm', 'pypi']),
+    launcher: z.union([z.enum(['npm', 'pypi']), z.string()]),
     packageName: z.string(),
     args: z.optional(z.array(z.string())),
     env: z.optional(z.record(z.string(), z.string())),
@@ -1509,11 +1509,11 @@ export const zOpenAiResponsesStreamEvent = z.object({
  * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
  */
 export const zRunnerGitHubToken = z.object({
-    status: z.enum([
-        'linked',
-        'not_linked',
-        'unavailable'
-    ]),
+    status: z.union([z.enum([
+            'linked',
+            'not_linked',
+            'unavailable'
+        ]), z.string()]),
     token: z.optional(z.string()),
     expiresAt: z.optional(z.string()),
     login: z.optional(z.string())
@@ -1528,14 +1528,14 @@ export const zTokenScopes = z.object({
     scopes: z.array(zTokenScope)
 });
 
-export const zMemberRole = z.enum([
-    'owner',
-    'admin',
-    'member',
-    'approver',
-    'invited',
-    'billing'
-]);
+export const zMemberRole = z.union([z.enum([
+        'owner',
+        'admin',
+        'member',
+        'approver',
+        'invited',
+        'billing'
+    ]), z.string()]);
 
 /**
  * A member of an organization
@@ -1590,19 +1590,19 @@ export const zMyBudget = z.object({
     remainingMicros: z.optional(z.int()),
     resetsAt: z.string(),
     exhausted: z.boolean(),
-    exhaustedScope: z.optional(z.enum(['org', 'member'])),
-    period: z.optional(z.enum(['day', 'month']))
+    exhaustedScope: z.optional(z.union([z.enum(['org', 'member']), z.string()])),
+    period: z.optional(z.union([z.enum(['day', 'month']), z.string()]))
 });
 
 /**
  * `equals` and `notEquals` compare the value with `value`; `exists` is true when the value is there; `matches` is true when the pattern `value` matches a part of it (anchors to match it whole)
  */
-export const zNodeConditionOp = z.enum([
-    'equals',
-    'notEquals',
-    'exists',
-    'matches'
-]);
+export const zNodeConditionOp = z.union([z.enum([
+        'equals',
+        'notEquals',
+        'exists',
+        'matches'
+    ]), z.string()]);
 
 /**
  * What a `check` node decides in a server's run (planned: the server does not play check nodes yet). It reads one value of a step the run visited before, never an expression: no language, no evaluation of code. Only a `check` node has a condition; a `check` node without one is a session's check (its `run`), which a server's run does not play: the run fails. The visit ends with the outcome `true` or `false` (no output), and the run follows the edge whose `on` is that outcome; every edge out of a check node with a condition says `on: "true"` or `on: "false"` (none defaults to `next`), and an outcome without its edge fails the run. Values are compared as texts, exactly: a JSON string without its quotes, a number or a boolean as written in the output (`1.0` is not `1`; the string `"true"` and the boolean `true` both read `true`), an object or an array as its compact JSON text. No value: a step not visited, a visit without output, an output that is not JSON or not of the segment's kind (an object for `.<key>`, an array for `[<index>]`), a missing key or index, a JSON `null`. `exists` is false on no value; `equals`, `notEquals` and `matches` do not evaluate on no value, nor on a text over 10 000 characters: the run fails, with the reason, and never takes a branch by default. Checked when the workflow is saved: 400 `invalid_request` for a condition on a node that is not a `check`, a `step` that is not a node of the workflow, a `path` out of its form, an unknown `op`, a `value` missing for `equals`, `notEquals` or `matches` or present for `exists`, a `matches` pattern out of its syntax, or an edge out of the node whose `on` is not `true` or `false`
@@ -1630,12 +1630,12 @@ export const zNodeRunOn = z.object({
     patterns: z.optional(z.array(z.string()))
 });
 
-export const zNotificationStatus = z.enum([
-    'queued',
-    'sent',
-    'logged-only',
-    'not-sent'
-]);
+export const zNotificationStatus = z.union([z.enum([
+        'queued',
+        'sent',
+        'logged-only',
+        'not-sent'
+    ]), z.string()]);
 
 /**
  * A new organization
@@ -1774,7 +1774,7 @@ export const zPackageEnvelope = z.object({
     revoked: z.boolean()
 });
 
-export const zPackageFileMode = z.enum(['file', 'executable']);
+export const zPackageFileMode = z.union([z.enum(['file', 'executable']), z.string()]);
 
 /**
  * A file of a package
@@ -1820,7 +1820,7 @@ export const zPackageMcp = z.object({
     tools: z.array(zPackageMcpTool)
 });
 
-export const zPackageMode = z.enum(['enforce', 'shadow']);
+export const zPackageMode = z.union([z.enum(['enforce', 'shadow']), z.string()]);
 
 /**
  * A run of a check script, reported by the launcher. A failed enforced check blocks the action it guards
@@ -1994,16 +1994,16 @@ export const zReceiptRule = z.object({
     digest: z.string()
 });
 
-export const zReceiptSubjectKind = z.enum([
-    'task',
-    'workflow',
-    'rule-change',
-    'owner-change',
-    'harness',
-    'gate',
-    'session',
-    'policy'
-]);
+export const zReceiptSubjectKind = z.union([z.enum([
+        'task',
+        'workflow',
+        'rule-change',
+        'owner-change',
+        'harness',
+        'gate',
+        'session',
+        'policy'
+    ]), z.string()]);
 
 /**
  * The subject of a receipt
@@ -2095,11 +2095,11 @@ export const zReportCheckRequest = z.object({
     outputTail: z.optional(z.string())
 });
 
-export const zRiskLevel = z.enum([
-    'low',
-    'medium',
-    'high'
-]);
+export const zRiskLevel = z.union([z.enum([
+        'low',
+        'medium',
+        'high'
+    ]), z.string()]);
 
 /**
  * When to disturb people for a node
@@ -2127,16 +2127,16 @@ export const zRuleSource = z.object({
     url: z.optional(z.string())
 });
 
-export const zRuleStatus = z.enum([
-    'proposed',
-    'accepted',
-    'edited',
-    'rejected'
-]);
+export const zRuleStatus = z.union([z.enum([
+        'proposed',
+        'accepted',
+        'edited',
+        'rejected'
+    ]), z.string()]);
 
-export const zRuleStrength = z.enum(['required', 'recommended']);
+export const zRuleStrength = z.union([z.enum(['required', 'recommended']), z.string()]);
 
-export const zRunLocation = z.enum(['workstation', 'ostrom']);
+export const zRunLocation = z.union([z.enum(['workstation', 'ostrom']), z.string()]);
 
 /**
  * What a node executes. Always a human setting: the analysis only suggests
@@ -2167,14 +2167,14 @@ export const zProduced = z.object({
     note: z.optional(z.string())
 });
 
-export const zRunStatus = z.enum([
-    'queued',
-    'running',
-    'waiting',
-    'succeeded',
-    'failed',
-    'cancelled'
-]);
+export const zRunStatus = z.union([z.enum([
+        'queued',
+        'running',
+        'waiting',
+        'succeeded',
+        'failed',
+        'cancelled'
+    ]), z.string()]);
 
 /**
  * A machine that runs cloud agent sessions and workflow steps
@@ -2278,7 +2278,7 @@ export const zServiceKey = z.object({
 export const zSessionGateAnswer = z.object({
     gateId: z.string(),
     actionClass: z.string(),
-    outcome: z.enum(['approved', 'refused']),
+    outcome: z.union([z.enum(['approved', 'refused']), z.string()]),
     by: z.string(),
     at: z.iso.datetime({ offset: true }),
     receiptId: z.optional(z.string())
@@ -2352,11 +2352,11 @@ export const zSharedAccount = z.object({
     label: z.string(),
     owner: z.string(),
     status: z.string(),
-    refreshOwnership: z.optional(z.enum([
-        'ostrom',
-        'pending_handover',
-        'access_only'
-    ])),
+    refreshOwnership: z.optional(z.union([z.enum([
+            'ostrom',
+            'pending_handover',
+            'access_only'
+        ]), z.string()])),
     sharedWith: z.array(z.string()),
     pool: z.optional(z.string()),
     dailyAllocationUsd: z.optional(z.number()),
@@ -2396,7 +2396,7 @@ export const zSignUpGrantRequest = z.object({
  */
 export const zSignInMethods = z.object({
     methods: z.array(z.string()),
-    signUp: z.optional(z.enum(['open', 'invite']))
+    signUp: z.optional(z.union([z.enum(['open', 'invite']), z.string()]))
 });
 
 /**
@@ -2445,7 +2445,7 @@ export const zExceededBudget = z.object({
     scope: z.string(),
     subject: z.optional(z.string()),
     label: z.optional(z.string()),
-    period: z.enum(['day', 'month']),
+    period: z.union([z.enum(['day', 'month']), z.string()]),
     usd: z.number(),
     hardStop: z.boolean(),
     since: z.iso.datetime({ offset: true })
@@ -2607,7 +2607,7 @@ export const zTeam = z.object({
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export const zTeamCodeAccount = z.object({
-    provider: z.enum(['claude', 'codex']),
+    provider: z.union([z.enum(['claude', 'codex']), z.string()]),
     providerAccountId: z.string(),
     label: z.string(),
     email: z.optional(z.string()),
@@ -2632,7 +2632,7 @@ export const zTeamCodeMember = z.object({
  * A command of TeamCode run by the MCP host
  */
 export const zTeamCodeStdio = z.object({
-    launcher: z.enum(['npm', 'pypi']),
+    launcher: z.union([z.enum(['npm', 'pypi']), z.string()]),
     packageName: z.string(),
     args: z.optional(z.array(z.string()))
 });
@@ -2648,7 +2648,7 @@ export const zTeamCodeMcpServer = z.object({
     url: z.optional(z.string()),
     credentialHeader: z.optional(z.string()),
     stdio: z.optional(zTeamCodeStdio),
-    toolMode: z.optional(z.enum(['allow', 'deny'])),
+    toolMode: z.optional(z.union([z.enum(['allow', 'deny']), z.string()])),
     tools: z.optional(z.array(z.string()))
 });
 
@@ -2704,27 +2704,27 @@ export const zTokenList = z.object({
 /**
  * `done`: every item is done or dropped and the final verification held
  */
-export const zTodoStatus = z.enum([
-    'active',
-    'done',
-    'abandoned'
-]);
+export const zTodoStatus = z.union([z.enum([
+        'active',
+        'done',
+        'abandoned'
+    ]), z.string()]);
 
 /**
  * `plan`: written with the list; `discovered`: added on the way
  */
-export const zTodoItemOrigin = z.enum(['plan', 'discovered']);
+export const zTodoItemOrigin = z.union([z.enum(['plan', 'discovered']), z.string()]);
 
 /**
  * `drop_requested`: a wait asks the owner; `dropped`: on the owner's yes, never deleted
  */
-export const zTodoItemStatus = z.enum([
-    'todo',
-    'doing',
-    'done',
-    'drop_requested',
-    'dropped'
-]);
+export const zTodoItemStatus = z.union([z.enum([
+        'todo',
+        'doing',
+        'done',
+        'drop_requested',
+        'dropped'
+    ]), z.string()]);
 
 /**
  * The item's pull request (linked, or found by its marker among the PRs of the token's login) is merged
@@ -2861,12 +2861,12 @@ export const zTodoNote = z.object({
     text: z.string()
 });
 
-export const zTodoLinkKind = z.enum([
-    'pr',
-    'release',
-    'artifact',
-    'wait'
-]);
+export const zTodoLinkKind = z.union([z.enum([
+        'pr',
+        'release',
+        'artifact',
+        'wait'
+    ]), z.string()]);
 
 /**
  * A link of an item, frozen once bound
@@ -2903,7 +2903,7 @@ export const zTodoItem = z.object({
 /**
  * `blocked`: the third stop without progress opened a wait; `hook_error`: the hook failed open
  */
-export const zTodoHookEventKind = z.enum(['blocked', 'hook_error']);
+export const zTodoHookEventKind = z.union([z.enum(['blocked', 'hook_error']), z.string()]);
 
 export const zTodoHookEvent = z.object({
     at: z.iso.datetime({ offset: true }),
@@ -2955,11 +2955,11 @@ export const zTodoContext = z.object({
     text: z.nullable(z.string())
 });
 
-export const zTodoStopPhase = z.enum([
-    'begin',
-    'verify',
-    'settle'
-]);
+export const zTodoStopPhase = z.union([z.enum([
+        'begin',
+        'verify',
+        'settle'
+    ]), z.string()]);
 
 /**
  * The outcome of the checks the Stop hook ran for one item
@@ -2984,12 +2984,12 @@ export const zTodoStopRequest = z.object({
 /**
  * `allow` the stop passes; `verify` run the cheap checks and ask again; `settle` run every check of the done items and ask again; `block` refuse the stop with `reason`
  */
-export const zTodoStopAction = z.enum([
-    'allow',
-    'verify',
-    'settle',
-    'block'
-]);
+export const zTodoStopAction = z.union([z.enum([
+        'allow',
+        'verify',
+        'settle',
+        'block'
+    ]), z.string()]);
 
 export const zTodoHookErrorRequest = z.object({
     sessionId: z.optional(z.string()),
@@ -3054,12 +3054,12 @@ export const zUsageEvent = z.object({
  * An event a client declares
  */
 export const zUsageEventInput = z.object({
-    kind: z.enum([
-        'skill',
-        'hook',
-        'session',
-        'mcp'
-    ]),
+    kind: z.union([z.enum([
+            'skill',
+            'hook',
+            'session',
+            'mcp'
+        ]), z.string()]),
     name: z.string(),
     sessionId: z.optional(z.string()),
     durationMillis: z._default(z.optional(z.int()), 0),
@@ -3232,11 +3232,11 @@ export const zWaitSpec = z.object({
     refs: z.optional(z.array(zWaitRef))
 });
 
-export const zWaitStatus = z.enum([
-    'open',
-    'resolved',
-    'cancelled'
-]);
+export const zWaitStatus = z.union([z.enum([
+        'open',
+        'resolved',
+        'cancelled'
+    ]), z.string()]);
 
 /**
  * A wait: a question to a person, asked by an agent (`ask_human`) or by a wait node of a run. First answer wins
@@ -3301,16 +3301,16 @@ export const zWorkflowInput = z.object({
     maxLength: z.optional(z.int())
 });
 
-export const zWorkflowNodeKind = z.enum([
-    'trigger',
-    'step',
-    'check',
-    'gate',
-    'notify',
-    'agent',
-    'wait',
-    'workflow'
-]);
+export const zWorkflowNodeKind = z.union([z.enum([
+        'trigger',
+        'step',
+        'check',
+        'gate',
+        'notify',
+        'agent',
+        'wait',
+        'workflow'
+    ]), z.string()]);
 
 /**
  * A hook rule: when the agent event fires on a matching tool call, run the check, ask the gate or send the notification
@@ -3389,11 +3389,11 @@ export const zWorkflowRun = z.object({
     endedAt: z.optional(z.string())
 });
 
-export const zWorkflowStatus = z.enum([
-    'proposed',
-    'accepted',
-    'edited'
-]);
+export const zWorkflowStatus = z.union([z.enum([
+        'proposed',
+        'accepted',
+        'edited'
+    ]), z.string()]);
 
 /**
  * The gate of a workflow that covers an action, as the catalog resolves it. Its canonical form is part of the gate
@@ -3687,7 +3687,7 @@ export const zMcpServerWritable = z.object({
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export const zTeamCodeAccountWritable = z.object({
-    provider: z.enum(['claude', 'codex']),
+    provider: z.union([z.enum(['claude', 'codex']), z.string()]),
     providerAccountId: z.string(),
     label: z.string(),
     email: z.optional(z.string()),
@@ -3710,7 +3710,7 @@ export const zTeamCodeAssignmentWritable = z.object({
  * A command of TeamCode run by the MCP host
  */
 export const zTeamCodeStdioWritable = z.object({
-    launcher: z.enum(['npm', 'pypi']),
+    launcher: z.union([z.enum(['npm', 'pypi']), z.string()]),
     packageName: z.string(),
     args: z.optional(z.array(z.string())),
     secretEnv: z.optional(z.record(z.string(), z.string()))
@@ -3728,7 +3728,7 @@ export const zTeamCodeMcpServerWritable = z.object({
     credentialHeader: z.optional(z.string()),
     sharedSecret: z.optional(z.string()),
     stdio: z.optional(zTeamCodeStdioWritable),
-    toolMode: z.optional(z.enum(['allow', 'deny'])),
+    toolMode: z.optional(z.union([z.enum(['allow', 'deny']), z.string()])),
     tools: z.optional(z.array(z.string()))
 });
 
@@ -5793,12 +5793,12 @@ export const zListWaitsHeaders = z.object({
 
 export const zListWaitsQuery = z.object({
     status: z.optional(z.string()),
-    resolver: z.optional(z.enum([
-        'human',
-        'time',
-        'event',
-        'all'
-    ])),
+    resolver: z.optional(z.union([z.enum([
+            'human',
+            'time',
+            'event',
+            'all'
+        ]), z.string()])),
     mine: z.optional(z.boolean()),
     assignee: z.optional(z.string()),
     sessionId: z.optional(z.string()),
@@ -5821,11 +5821,11 @@ export const zCreateWaitBody = z.object({
     assignee: z.optional(z.string()),
     kind: z.optional(z.string()),
     question: zWaitSpec,
-    resolver: z.optional(z.enum([
-        'human',
-        'time',
-        'event'
-    ])),
+    resolver: z.optional(z.union([z.enum([
+            'human',
+            'time',
+            'event'
+        ]), z.string()])),
     at: z.optional(z.iso.datetime({ offset: true })),
     after: z.optional(z.coerce.bigint().check(z.gte(BigInt(30)), z.lte(BigInt(2592000)))),
     source: z.optional(z.enum(['webhook'])),
@@ -6540,13 +6540,13 @@ export const zGetUsageSummaryHeaders = z.object({
 
 export const zGetUsageSummaryQuery = z.object({
     days: z._default(z.optional(z.int().check(z.gte(1), z.lte(90))), 7),
-    groupBy: z._default(z.optional(z.enum([
-        'member',
-        'kind',
-        'model',
-        'provider',
-        'account'
-    ])), 'member')
+    groupBy: z._default(z.optional(z.union([z.enum([
+            'member',
+            'kind',
+            'model',
+            'provider',
+            'account'
+        ]), z.string()])), 'member')
 });
 
 /**
@@ -6740,11 +6740,11 @@ export const zRunnerHeartbeatBody = z.object({
     executions: z.optional(z.array(z.object({
         sessionId: z.uuid(),
         epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
-        state: z.enum([
-            'pending',
-            'running',
-            'ended'
-        ])
+        state: z.union([z.enum([
+                'pending',
+                'running',
+                'ended'
+            ]), z.string()])
     }))),
     workspaces: z.optional(z.array(z.uuid())),
     capacity: z.optional(z.int().check(z.gte(0), z.lte(256)))
@@ -6873,11 +6873,11 @@ export const zResumeCloudSessionPath = z.object({
 export const zResumeCloudSessionResponse = zCloudSession;
 
 export const zSetCloudSessionGithubAccessBody = z.object({
-    access: z.enum([
-        'owner',
-        'shared',
-        'none'
-    ])
+    access: z.union([z.enum([
+            'owner',
+            'shared',
+            'none'
+        ]), z.string()])
 });
 
 export const zSetCloudSessionGithubAccessHeaders = z.object({

@@ -110,6 +110,8 @@ import {
   zBulkUpdateRulesBody,
   zCloudAgentKind,
   zCreateCloudSessionBody,
+  zRuleStatus,
+  zRuleStrength,
   zSetCloudSessionGithubAccessBody,
   zCreateRuleBody,
   zCreateWorkflowBody,
@@ -125,6 +127,7 @@ import {
   zVerifySignInEmailBody,
 } from '@gen/api/zod.gen';
 import { http, HttpResponse, type HttpHandler } from 'msw';
+import { isKnown, knownValues } from '@/shared/lib/openEnum';
 import { type AccountState, createAccountHandlers } from '@/mocks/account';
 import { type ActivityState, createActivityHandlers } from '@/mocks/activity';
 import { type AuditState, createAuditHandlers } from '@/mocks/audit';
@@ -914,7 +917,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (rule === undefined) return refusal(404, 'not_found', 'rule not found');
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
       const body = zUpdateRuleBody.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'not a rule change');
+      // The server refuses a status or a strength it does not know, though the contract keeps both open for readers.
+      if (
+        !body.success ||
+        (body.data.status !== undefined && !isKnown(knownValues(zRuleStatus), body.data.status)) ||
+        (body.data.strength !== undefined && !isKnown(knownValues(zRuleStrength), body.data.strength))
+      )
+        return refusal(400, 'invalid_request', 'not a rule change');
       const at = now().toISOString();
       // The mock applies what the console sends; a gate sent as null is taken off, as on the server.
       const { statement, strength, group, why, output, scope, gate } = body.data;
@@ -1196,17 +1205,17 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = SENT_CLOUD_SESSION.safeParse(await readJson(request));
       // Without a prompt the session is an interactive agent (contract): only the agent is required.
       if (!body.success) return refusal(400, 'invalid_request', 'an agent is needed');
-      const agent = zCloudAgentKind.safeParse(body.data.agent);
-      if (!agent.success)
+      const agent = knownValues(zCloudAgentKind).find((known) => known === body.data.agent);
+      if (agent === undefined)
         return refusal(
           400,
           'invalid_request',
-          `Unknown agent ${body.data.agent}: use ${zCloudAgentKind.options.join(', ')}.`,
+          `Unknown agent ${body.data.agent}: use ${knownValues(zCloudAgentKind).join(', ')}.`,
         );
       const session: CloudSession = {
         id: `cs-${String(db.cloudSessions.length + 100)}`,
         owner: me.dev.login,
-        agent: agent.data,
+        agent,
         status: 'queued',
         createdAt: now().toISOString(),
         ...(body.data.name === undefined || body.data.name.trim() === ''
@@ -1233,7 +1242,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       // Anyone but the owner (an owner or an admin included) does not see the session as theirs: 404.
       if (session?.owner !== me.dev.login) return refusal(404, 'not_found', 'cloud session not found');
       const body = zSetCloudSessionGithubAccessBody.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'access is owner, shared or none');
+      if (
+        !body.success ||
+        !isKnown(knownValues(zSetCloudSessionGithubAccessBody.shape.access), body.data.access)
+      )
+        return refusal(400, 'invalid_request', 'access is owner, shared or none');
       // Turning access off waits for a pause: a running agent keeps the token it already received.
       if (body.data.access === 'none' && session.status !== 'paused')
         return refusal(409, 'session_not_paused', 'Pause the session before turning its GitHub access off.');

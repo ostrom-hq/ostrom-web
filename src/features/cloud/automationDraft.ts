@@ -96,7 +96,8 @@ export function automationDraftOf(automation: Automation | undefined, timezone: 
   const { trigger, action } = automation;
   return {
     name: automation.name,
-    kind: trigger.kind,
+    // A trigger a newer server names is not one the editor offers: it reads as a schedule until the person picks.
+    kind: TRIGGER_KINDS.find((kind) => kind === trigger.kind) ?? 'cron',
     // A webhook switched to a schedule starts from the same weekday schedule as a new one.
     cron: trigger.cron ?? NEW_CRON,
     timezone: trigger.timezone ?? timezone,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Wait } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge } from '@/shared/ui/Badge';
 import { isViewer } from '../model';
 import type { PeopleViewModel } from '../useWaits';
@@ -14,8 +14,8 @@ export function StatusBadge({
   readonly wait: Wait;
   readonly people: PeopleViewModel;
 }): ReactElement {
-  const { t } = useTranslation();
-  const label = t(`waits.status.${wait.status}`);
+  const enumText = useEnumLabel();
+  const label = enumText('waits.status', wait.status);
   if (wait.status === 'open') {
     return isViewer(wait.assignee, people.me) ? (
       <Badge tone="signal" approval="waiting">

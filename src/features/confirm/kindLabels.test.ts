@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { zGovernanceChangeKind } from '@gen/api/zod.gen';
+import { knownValues } from '@/shared/lib/openEnum';
 import { en } from '@/shared/i18n/locales/en';
 import { fr } from '@/shared/i18n/locales/fr';
 
@@ -14,7 +15,7 @@ function at(tree: unknown, path: readonly string[]): unknown {
 
 // The confirmation page names its change with `confirm.kind.<kind>`: a kind the contract adds needs its words first.
 describe('the name of every kind of governance change', () => {
-  it.each(zGovernanceChangeKind.options)('%s is said in English and in French', (kind) => {
+  it.each(knownValues(zGovernanceChangeKind))('%s is said in English and in French', (kind) => {
     const path = ['confirm', 'kind', ...kind.split('.')];
     for (const wording of [en, fr]) {
       const label = at(wording, path);

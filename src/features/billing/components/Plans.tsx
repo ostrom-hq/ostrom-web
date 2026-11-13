@@ -5,7 +5,16 @@ import { useTranslation } from 'react-i18next';
 import { formatMinor } from '@/shared/lib/money';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { type Interval, INTERVALS, offerFor, PLANS, plansState, priceOf, yearlySaving } from '../model';
+import {
+  type Interval,
+  INTERVALS,
+  isInterval,
+  offerFor,
+  PLANS,
+  plansState,
+  priceOf,
+  yearlySaving,
+} from '../model';
 import type { BillingActionsViewModel } from '../useBilling';
 
 export interface PlansProps {
@@ -19,7 +28,9 @@ export interface PlansProps {
  */
 export function Plans({ billing, actions }: PlansProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const [interval, setInterval] = useState<Interval>(billing.interval ?? 'month');
+  const [interval, setInterval] = useState<Interval>(
+    typeof billing.interval === 'string' && isInterval(billing.interval) ? billing.interval : 'month',
+  );
   const state = plansState(billing);
   if (!billing.purchasable)
     return (

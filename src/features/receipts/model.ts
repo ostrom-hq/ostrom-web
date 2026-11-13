@@ -19,5 +19,8 @@ export function attestationTone(attestation: CheckAttestation): BadgeTone {
       return 'success';
     case 'workstation_declared':
       return 'warning';
+    default:
+      // An attestation a newer server names: nothing this console knows proves it, nothing warns either.
+      return 'neutral';
   }
 }

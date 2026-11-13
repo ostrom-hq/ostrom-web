@@ -4,6 +4,8 @@ import { Link, Navigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { safeHref } from '@/shared/lib/safeHref';
+import { knownOr } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -24,6 +26,7 @@ export function WorkflowScreen(): ReactElement {
 
 function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const { workflow, failure, canChange } = useWorkflow(workflowId);
   const changes = useWorkflowChange();
   // The workflow the editor started from: its draft is drawn from it, a save is built on it and checked against its
@@ -40,7 +43,9 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
               <Link to="/workflows" className="o-back">
                 {t('workflows.detail.back')}
               </Link>
-              <Badge tone={STATUS_TONES[workflow.status]}>{t(`workflows.status.${workflow.status}`)}</Badge>
+              <Badge tone={knownOr(STATUS_TONES, workflow.status, 'neutral')}>
+                {enumText('workflows.status', workflow.status)}
+              </Badge>
             </>
           }
           title={workflow.name}
@@ -206,6 +211,7 @@ function WorkflowDetail({ workflow }: { readonly workflow: Workflow }): ReactEle
 
 function StepRow({ step }: { readonly step: Step }): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const { node } = step;
   const approvers = node.approvers ?? [];
   const lines = [
@@ -247,7 +253,7 @@ function StepRow({ step }: { readonly step: Step }): ReactElement {
         ))}
       </span>
       <Badge tone={node.kind === 'gate' && approvers.length === 0 ? 'danger' : 'neutral'}>
-        {t(`workflows.kind.${node.kind}`)}
+        {enumText('workflows.kind', node.kind)}
       </Badge>
     </div>
   );

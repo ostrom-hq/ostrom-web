@@ -2,6 +2,8 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { approvalSteps, reposText, STATUS_TONES } from '../model';
@@ -9,6 +11,7 @@ import { useWorkflows } from '../useWorkflows';
 
 export function WorkflowsScreen(): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const { workflows, failure, canChange } = useWorkflows();
   return (
     <Screen title={t('workflows.title')} lead={t('workflows.lead')}>
@@ -37,8 +40,8 @@ export function WorkflowsScreen(): ReactElement {
                         ].join(' · ')}
                       </span>
                     </span>
-                    <Badge tone={STATUS_TONES[workflow.status]}>
-                      {t(`workflows.status.${workflow.status}`)}
+                    <Badge tone={knownOr(STATUS_TONES, workflow.status, 'neutral')}>
+                      {enumText('workflows.status', workflow.status)}
                     </Badge>
                   </Link>
                 </li>

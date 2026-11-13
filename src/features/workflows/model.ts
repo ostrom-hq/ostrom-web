@@ -9,18 +9,25 @@ import type {
   WorkflowNodeKind,
   WorkflowStatus,
 } from '@gen/api/types.gen';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
 import type { BadgeTone } from '@/shared/ui/Badge';
-import { type ConditionOp, type ConditionProblem, conditionProblem, type NodeCondition } from './nodes';
+import {
+  CONDITION_OPS,
+  type ConditionOp,
+  type ConditionProblem,
+  conditionProblem,
+  type NodeCondition,
+} from './nodes';
 
 /** A proposed workflow waits for an owner: amber until someone accepts it. */
-export const STATUS_TONES: Readonly<Record<WorkflowStatus, BadgeTone>> = {
+export const STATUS_TONES: Readonly<Record<Known<WorkflowStatus>, BadgeTone>> = {
   proposed: 'warning',
   accepted: 'success',
   edited: 'success',
 };
 
 /** A run under way is the signal colour, one waiting for a person amber, one that failed red. */
-export const RUN_TONES: Readonly<Record<RunStatus, BadgeTone>> = {
+export const RUN_TONES: Readonly<Record<Known<RunStatus>, BadgeTone>> = {
   queued: 'neutral',
   running: 'signal',
   waiting: 'warning',
@@ -121,8 +128,8 @@ export interface StepDraft {
   readonly base: WorkflowNode | undefined;
 }
 
-/** A node as the console reads and writes it: with the typed condition of a check (core, decision of 03/11). */
-export type EditedNode = WorkflowNode & { readonly condition?: NodeCondition };
+/** A node as the console reads and writes it: the contract's, with the typed condition of a check. */
+export type EditedNode = WorkflowNode;
 
 export interface WorkflowDraft {
   readonly name: string;
@@ -168,7 +175,8 @@ function stepDraftOf(node: EditedNode, key: number): StepDraft {
     instructions: node.run?.instructions ?? '',
     conditionStep: condition?.step ?? '',
     conditionPath: condition?.path ?? '',
-    conditionOp: condition?.op ?? 'equals',
+    // An operator a newer server names is not one the editor offers: it reads as the default until the person picks.
+    conditionOp: CONDITION_OPS.find((op) => op === condition?.op) ?? 'equals',
     conditionValue: condition?.value ?? '',
     calls: node.workflowId ?? '',
     question: node.wait?.title ?? '',
@@ -309,7 +317,7 @@ function textOf(value: string): string | undefined {
 
 /** The fields of `run` the editor shows for each kind (a wait, a check's condition and a call have their own). */
 const SHOWN: Readonly<
-  Record<WorkflowNodeKind, readonly ('command' | 'channel' | 'message' | 'instructions')[]>
+  Record<Known<WorkflowNodeKind>, readonly ('command' | 'channel' | 'message' | 'instructions')[]>
 > = {
   trigger: [],
   step: ['command'],
@@ -329,7 +337,7 @@ function runOf(step: StepDraft): NodeRun | undefined {
   const base = step.base?.run ?? {};
   const kind = step.kind;
   const field = (name: 'command' | 'channel' | 'message' | 'instructions'): string | undefined =>
-    SHOWN[kind].includes(name) ? textOf(step[name]) : undefined;
+    knownOr(SHOWN, kind, []).includes(name) ? textOf(step[name]) : undefined;
   const command = field('command');
   const channel = field('channel');
   const message = field('message');

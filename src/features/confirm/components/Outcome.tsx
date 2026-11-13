@@ -2,6 +2,7 @@
 import type { GovernanceConfirmation } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute } from '@/shared/lib/time';
 import { personName } from '../model';
 
@@ -14,6 +15,7 @@ export interface OutcomeProps {
 /** How it ended: who answered and when, what the write returned, or why nothing was written. */
 export function Outcome({ confirmation, status }: OutcomeProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const { answeredBy, answeredAt, result, error } = confirmation;
   const who = answeredBy === undefined ? t('confirm.outcome.someone') : personName(answeredBy);
   const when =
@@ -25,11 +27,11 @@ export function Outcome({ confirmation, status }: OutcomeProps): ReactElement {
       className={`o-card ys-receipt cf-outcome cf-outcome--${status}`}
       aria-label={t('confirm.outcome.label')}
     >
-      <h2 className="ys-receipt__h">{t(`confirm.outcome.title.${status}`)}</h2>
+      <h2 className="ys-receipt__h">{enumText('confirm.outcome.title', status)}</h2>
       {status === 'expired' ? (
         <p className="ys-small">{t('confirm.outcome.expired')}</p>
       ) : (
-        <p className="ys-small">{t(`confirm.outcome.by.${status}`, { who, when })}</p>
+        <p className="ys-small">{enumText('confirm.outcome.by', status, { who, when })}</p>
       )}
       {status === 'failed' ? (
         <p className="ys-small">

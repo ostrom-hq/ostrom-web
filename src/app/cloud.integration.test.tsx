@@ -3,6 +3,7 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { zCloudAgentKind, zCreateCloudSessionBody } from '@gen/api/zod.gen';
+import { knownValues } from '@/shared/lib/openEnum';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
@@ -109,7 +110,7 @@ describe('the cloud agents', () => {
     const offered = within(agent)
       .getAllByRole<HTMLOptionElement>('option')
       .map((option) => option.value);
-    expect(offered).toEqual(zCloudAgentKind.options.filter((name) => name !== 'shell'));
+    expect(offered).toEqual(knownValues(zCloudAgentKind).filter((name) => name !== 'shell'));
     expect(offered.every((name) => zCloudAgentKind.safeParse(name).success)).toBe(true);
     expect(agent).toHaveValue('claude');
     await user.selectOptions(agent, 'Gemini CLI');

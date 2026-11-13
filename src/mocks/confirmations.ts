@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleAnswerGovernanceConfirmation, handleGetGovernanceConfirmation } from '@gen/api/msw.gen';
 import type { ErrorDetail, GovernanceConfirmation, Organization } from '@gen/api/types.gen';
-import { zGovernanceConfirmationAnswerRequest } from '@gen/api/zod.gen';
+import { zGovernanceConfirmationAnswer, zGovernanceConfirmationAnswerRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import { isKnown, knownValues } from '@/shared/lib/openEnum';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { MAYA } from './fixtures/confirmations';
 import { FRESH_SIGN_IN_MS, readJson, refusal } from './http';
@@ -48,7 +49,8 @@ export function createConfirmationHandlers(
       const confirmation = find(request, params.id);
       if (confirmation === undefined) return notFound();
       const body = zGovernanceConfirmationAnswerRequest.safeParse(await readJson(request));
-      if (!body.success) return refusal(400, 'invalid_request', 'answer must be confirm or refuse');
+      if (!body.success || !isKnown(knownValues(zGovernanceConfirmationAnswer), body.data.answer))
+        return refusal(400, 'invalid_request', 'answer must be confirm or refuse');
       const role = orgRoleOf(
         db.orgMembers[db.organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role,
       );

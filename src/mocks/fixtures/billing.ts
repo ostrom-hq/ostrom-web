@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { BillingInvoice, BillingOverview, BillingPlanLimits } from '@gen/api/types.gen';
+import type { Known } from '@/shared/lib/openEnum';
 
 /** What each plan allows, as the server's catalog says; null is unlimited. */
-export const PLAN_LIMITS: Readonly<Record<BillingOverview['plan'], BillingPlanLimits>> = {
+export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, BillingPlanLimits>> = {
   free: {
     maxPeople: 3,
     maxConcurrentCloudAgents: 1,

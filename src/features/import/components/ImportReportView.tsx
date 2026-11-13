@@ -2,11 +2,13 @@
 import type { ImportItem, ImportReport } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { knownOr, type Known } from '@/shared/lib/openEnum';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { countsOf, type ImportMode, REPORT_ACTIONS } from '../model';
 
 /** Green for what was written, amber for what waits or was left out; garnet stays for the yes. */
-const ACTION_TONE: Readonly<Record<ImportItem['action'], BadgeTone>> = {
+const ACTION_TONE: Readonly<Record<Known<ImportItem['action']>, BadgeTone>> = {
   planned: 'neutral',
   created: 'success',
   updated: 'success',
@@ -23,6 +25,7 @@ export interface ImportReportViewProps {
 /** A run's report: how many lines of each action, then each line, in the order the server applied them. */
 export function ImportReportView({ mode, report }: ImportReportViewProps): ReactElement {
   const { t } = useTranslation();
+  const enumText = useEnumLabel();
   const counts = countsOf(report);
   const shown = REPORT_ACTIONS.filter((action) => counts[action] > 0);
   return (
@@ -49,12 +52,14 @@ export function ImportReportView({ mode, report }: ImportReportViewProps): React
                 <span className="o-row__title o-mono">{item.name}</span>
                 <span className="o-row__meta">
                   {item.reason === undefined
-                    ? t(`imports.kind.${item.kind}`)
-                    : `${t(`imports.kind.${item.kind}`)} · ${item.reason}`}
+                    ? enumText('imports.kind', item.kind)
+                    : `${enumText('imports.kind', item.kind)} · ${item.reason}`}
                 </span>
               </span>
               <span className="o-row__end">
-                <Badge tone={ACTION_TONE[item.action]}>{t(`imports.action.${item.action}`)}</Badge>
+                <Badge tone={knownOr(ACTION_TONE, item.action, 'neutral')}>
+                  {enumText('imports.action', item.action)}
+                </Badge>
               </span>
             </li>
           ))}

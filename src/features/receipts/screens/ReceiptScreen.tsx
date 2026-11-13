@@ -3,6 +3,7 @@ import type { Receipt, Verification } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { keyIdOf } from '@/shared/lib/signature';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
@@ -15,6 +16,7 @@ import { type ReceiptViewModel, useReceipt } from '../useReceipts';
 
 export function ReceiptScreen(): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const { receiptId } = useParams({ from: '/receipts/$receiptId' });
   const view = useReceipt(receiptId);
   return (
@@ -27,7 +29,7 @@ export function ReceiptScreen(): ReactElement {
             </Link>
           }
           title={t('receipts.detail.title', {
-            kind: t(`receipts.kind.${receipt.subject.kind}`),
+            kind: enumText('receipts.kind', receipt.subject.kind),
             id: receipt.subject.id,
           })}
           lead={t('receipts.detail.signed', { when: formatAbsolute(receipt.createdAt, i18n.language) })}
@@ -46,6 +48,7 @@ interface ReceiptDetailProps {
 
 function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
+  const enumText = useEnumLabel();
   const money = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD' });
   return (
     <>
@@ -142,7 +145,7 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
                   <span className="o-row__end o-inline">
                     {attestation === undefined ? null : (
                       <Badge tone={attestationTone(attestation)}>
-                        {t(`receipts.attestation.${attestation}`)}
+                        {enumText('receipts.attestation', attestation)}
                       </Badge>
                     )}
                     {node.outcome}

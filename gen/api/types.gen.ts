@@ -69,7 +69,7 @@ export type ActivityItem = {
     sessionId?: string;
 };
 
-export type AgentEvent = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'Stop' | 'SessionEnd';
+export type AgentEvent = 'SessionStart' | 'UserPromptSubmit' | 'PreToolUse' | 'PostToolUse' | 'Stop' | 'SessionEnd' | (string & {});
 
 /**
  * Snapshot of the organization analysis
@@ -112,7 +112,7 @@ export type AnthropicError = {
  * One `data:` of a Messages stream, as Anthropic sends it and the gateway relays it
  */
 export type AnthropicStreamEvent = {
-    type: 'message_start' | 'content_block_start' | 'content_block_delta' | 'content_block_stop' | 'message_delta' | 'message_stop' | 'ping' | 'error';
+    type: 'message_start' | 'content_block_start' | 'content_block_delta' | 'content_block_stop' | 'message_delta' | 'message_stop' | 'ping' | 'error' | (string & {});
     [key: string]: unknown;
 };
 
@@ -170,14 +170,14 @@ export type ApprovalAction = {
 /**
  * The kind of action (clients keep an unknown kind as UNKNOWN)
  */
-export type ApprovalActionKind = 'push' | 'merge' | 'deploy' | 'tool' | 'other';
+export type ApprovalActionKind = 'push' | 'merge' | 'deploy' | 'tool' | 'other' | (string & {});
 
 /**
  * A high risk needs biometrics for a mobile yes
  */
-export type ApprovalActionRisk = 'low' | 'high';
+export type ApprovalActionRisk = 'low' | 'high' | (string & {});
 
-export type ApprovalAnswer = 'approve' | 'reject';
+export type ApprovalAnswer = 'approve' | 'reject' | (string & {});
 
 /**
  * What the caller may do with an approval
@@ -193,7 +193,7 @@ export type ApprovalCallerView = {
     /**
      * The key of `reason` when the server names one, the `error.type` the answer would get: `github_link_required` when the caller must link their GitHub account before a yes (a never-self-approve policy, and a pull request whose author linked no Ostrom person; a no stays open), `self_approval_refused` when their linked GitHub account is the pull request's author. Absent for any other reason. Planned: the server does not send it yet
      */
-    reasonType?: 'github_link_required' | 'self_approval_refused';
+    reasonType?: 'github_link_required' | 'self_approval_refused' | (string & {});
     selfApproval?: boolean;
 };
 
@@ -229,7 +229,7 @@ export type ApprovalQueue = {
     recent: Array<ApprovalView>;
 };
 
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | (string & {});
 
 /**
  * An approval as the console and the app show it: the request, the gate, the rules, the commits and checks (in `approval`), the receipt once answered
@@ -339,7 +339,7 @@ export type Artifact = {
     /**
      * What the caller is to it: `owner`, `viewer` (shared with them) or `team` (a `team` or `link` artifact of their organization). Only the owner changes it, shares it or deletes it
      */
-    relation?: 'owner' | 'viewer' | 'team';
+    relation?: 'owner' | 'viewer' | 'team' | (string & {});
     latestVersion: number;
     /**
      * The console's page for it
@@ -356,7 +356,7 @@ export type Artifact = {
 /**
  * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
  */
-export type ArtifactAccess = 'personal' | 'team' | 'link';
+export type ArtifactAccess = 'personal' | 'team' | 'link' | (string & {});
 
 /**
  * A file sent for publication
@@ -370,7 +370,7 @@ export type ArtifactFile = {
     /**
      * `utf8` when absent
      */
-    encoding?: 'utf8' | 'base64';
+    encoding?: 'utf8' | 'base64' | (string & {});
 };
 
 /**
@@ -390,7 +390,7 @@ export type ArtifactTicket = {
     expiresAt: string;
 };
 
-export type ArtifactType = 'skill' | 'context' | 'hook' | 'script' | 'mcp' | 'approval' | 'notify' | 'subagent' | 'receipt';
+export type ArtifactType = 'skill' | 'context' | 'hook' | 'script' | 'mcp' | 'approval' | 'notify' | 'subagent' | 'receipt' | (string & {});
 
 /**
  * A version of an artifact
@@ -421,7 +421,7 @@ export type GitHubDeviceLink = {
  * One poll of a device link; `link` once linked, `interval` (seconds) while pending
  */
 export type GitHubDeviceLinkPoll = {
-    status: 'pending' | 'linked' | 'expired' | 'denied';
+    status: 'pending' | 'linked' | 'expired' | 'denied' | (string & {});
     interval?: number;
     link?: GitHubLink;
 };
@@ -431,7 +431,7 @@ export type GitHubDeviceLinkPoll = {
  */
 export type GitHubLink = {
     memberId: string;
-    state: 'not_linked' | 'linked' | 'reconnect_required';
+    state: 'not_linked' | 'linked' | 'reconnect_required' | (string & {});
     /**
      * Whether the instance's GitHub App can link accounts (its OAuth client is known)
      */
@@ -513,7 +513,7 @@ export type AuditEvent = {
     /**
      * What the server found when it read the line (`listAudit` only): `verified` (hash, signature and link to the previous line hold), `altered` (the line no longer matches its hash, or its signature does not verify with the instance key it names, past keys included, or it names a key the instance never had), `unlinked` (the previous line of the chain is missing or is not the one this line was signed after: a line was erased or rewritten before it).
      */
-    integrity?: 'verified' | 'altered' | 'unlinked';
+    integrity?: 'verified' | 'altered' | 'unlinked' | (string & {});
 };
 
 /**
@@ -668,7 +668,7 @@ export type AutomationTrigger = {
     catchupGraceMinutes?: number;
 };
 
-export type AutomationTriggerKind = 'cron' | 'webhook';
+export type AutomationTriggerKind = 'cron' | 'webhook' | (string & {});
 
 /**
  * A variable read from a webhook payload
@@ -757,12 +757,12 @@ export type BillingOverview = {
     /**
      * The plan of the subscription (free without one)
      */
-    plan: 'free' | 'team' | 'business' | 'enterprise';
+    plan: 'free' | 'team' | 'business' | 'enterprise' | (string & {});
     /**
      * The plan whose limits apply now (free once a subscription has ended or is unpaid past retries)
      */
-    effectivePlan: 'free' | 'team' | 'business' | 'enterprise';
-    interval: 'month' | 'year' | null;
+    effectivePlan: 'free' | 'team' | 'business' | 'enterprise' | (string & {});
+    interval: 'month' | 'year' | null | (string & {});
     /**
      * Stripe's subscription status (active, trialing, past_due, incomplete, canceled…), null without one
      */
@@ -802,7 +802,7 @@ export type BillingPaymentIssue = {
     /**
      * payment_failed (card declined, Stripe retries) or action_required (3-D Secure)
      */
-    kind: 'payment_failed' | 'action_required';
+    kind: 'payment_failed' | 'action_required' | (string & {});
     hostedInvoiceUrl: string | null;
     at: string;
 };
@@ -823,16 +823,16 @@ export type BillingPlanLimits = {
  * A plan to buy or switch to
  */
 export type BillingPlanRequest = {
-    plan: 'team' | 'business';
-    interval: 'month' | 'year';
+    plan: 'team' | 'business' | (string & {});
+    interval: 'month' | 'year' | (string & {});
 };
 
 /**
  * A price of the catalog: per active person per month (monthly), per person per year (yearly, 20 % off)
  */
 export type BillingPrice = {
-    plan: 'team' | 'business';
-    interval: 'month' | 'year';
+    plan: 'team' | 'business' | (string & {});
+    interval: 'month' | 'year' | (string & {});
     /**
      * In cents, before tax
      */
@@ -865,7 +865,7 @@ export type BillingUsage = {
 
 export type BillingWebhookAck = {
     received: boolean;
-    outcome: 'processed' | 'duplicate' | 'ignored' | 'ignored_unknown_org';
+    outcome: 'processed' | 'duplicate' | 'ignored' | 'ignored_unknown_org' | (string & {});
 };
 
 /**
@@ -938,12 +938,12 @@ export type Capacity = {
     computedAt: string;
 };
 
-export type CheckOutcome = 'passed' | 'failed' | 'timeout' | 'skipped';
+export type CheckOutcome = 'passed' | 'failed' | 'timeout' | 'skipped' | (string & {});
 
 /**
  * Where a check run comes from. `workstation_declared`: the developer's machine ran it and reported the result, nothing proves it ran. `isolated_runner`: the runner of an Ostrom cloud session ran it and reported it with its own token, which the agent cannot read (reportRunnerCheck); it proves that Ostrom ran the script and read its exit code, not that the agent's workspace it ran on was untouched. `ci`: the GitHub check run of the Ostrom App, read and verified by the server. Shown on every check of a receipt; a rule gate can refuse a declared run (RuleGateCheck).
  */
-export type CheckAttestation = 'workstation_declared' | 'isolated_runner' | 'ci';
+export type CheckAttestation = 'workstation_declared' | 'isolated_runner' | 'ci' | (string & {});
 
 /**
  * A run of a check script, reported by the launcher. A failed enforced check blocks the action it guards
@@ -969,12 +969,12 @@ export type CheckRun = {
     repo?: string;
 };
 
-export type CheckState = 'success' | 'failure' | 'pending' | 'skipped';
+export type CheckState = 'success' | 'failure' | 'pending' | 'skipped' | (string & {});
 
 /**
  * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
  */
-export type CloudAgentKind = 'claude' | 'codex' | 'opencode' | 'gemini' | 'shell';
+export type CloudAgentKind = 'claude' | 'codex' | 'opencode' | 'gemini' | 'shell' | (string & {});
 
 /**
  * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
@@ -1019,7 +1019,7 @@ export type CloudSession = {
     /**
      * Who may instruct the agent while it holds the owner's GitHub token (`runners.cloud.github.v1`): `owner` (the default) the owner only, `shared` everyone who may use the session, `none` no GitHub token at all. Absent from a server without the feature
      */
-    githubAccess?: 'owner' | 'shared' | 'none';
+    githubAccess?: 'owner' | 'shared' | 'none' | (string & {});
     runId?: string;
     automationId?: string;
     createdAt: string;
@@ -1195,7 +1195,7 @@ export type Device = {
     /**
      * `admin` for the elevated token of `ostrom login --admin`; absent means `cli`
      */
-    kind?: 'cli' | 'admin';
+    kind?: 'cli' | 'admin' | (string & {});
     /**
      * The organization an elevated token is bound to
      */
@@ -1219,7 +1219,7 @@ export type DeviceLoginStart = {
     /**
      * Exactly `policy:write`, `harness:write` and `gates:policy`, or those three and `budgets:write` (planned, Q-CLI-BUDGETS); any other set is malformed (400). Absent or empty: the ordinary sign-in. The three alone stay accepted from an older CLI, whose token then writes no budget; a server that does not take `budgets:write` yet answers 400 to the four, and the CLI asks again with the three
      */
-    scopes?: Array<'policy:write' | 'harness:write' | 'gates:policy' | 'budgets:write'>;
+    scopes?: Array<'policy:write' | 'harness:write' | 'gates:policy' | 'budgets:write' | (string & {})>;
 };
 
 /**
@@ -1310,7 +1310,7 @@ export type Forbidden = {
      * `ErrorDetail`, its `type` any 403 key but `step_up_required`
      */
     error: {
-        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required' | 'signup_closed' | 'org_creation_closed';
+        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required' | 'signup_closed' | 'org_creation_closed' | (string & {});
         message: string;
     };
 };
@@ -1352,7 +1352,7 @@ export type GateLocalDenial = {
     /**
      * Why the hook refused without asking: `redirected`, the push redirects git away from the repository the gate covers (`--git-dir`, another checkout); `unreadable`, the push cannot be read; `unknown_landing`, the branches it lands on cannot be told; `dynamic_command`, a program named by a variable or a substitution; `git_setting`, the command changes a setting that decides where a push goes; `foreign_repository`, the command acts in another repository than the session's; `policy_held`, the session's gate policy could not be verified, so every action is held
      */
-    reason: 'redirected' | 'unreadable' | 'unknown_landing' | 'dynamic_command' | 'git_setting' | 'foreign_repository' | 'policy_held';
+    reason: 'redirected' | 'unreadable' | 'unknown_landing' | 'dynamic_command' | 'git_setting' | 'foreign_repository' | 'policy_held' | (string & {});
     /**
      * The command as the hook normalized it, secrets removed (the server removes them again)
      */
@@ -1406,7 +1406,7 @@ export type GateCi = {
     pr?: string;
 };
 
-export type GateMode = 'enforced' | 'shadow' | 'ungated';
+export type GateMode = 'enforced' | 'shadow' | 'ungated' | (string & {});
 
 /**
  * A pull request merge, whichever path asked (the `gh pr merge` hook, the GitHub check): one request per pull request
@@ -1491,14 +1491,14 @@ export type GateResponse = {
     waitingFor?: Array<string>;
 };
 
-export type GateStatus = 'pending' | 'approved' | 'rejected' | 'shadow' | 'ungated' | 'consumed';
+export type GateStatus = 'pending' | 'approved' | 'rejected' | 'shadow' | 'ungated' | 'consumed' | (string & {});
 
-export type GitHubConnection = 'github-app' | 'gh-token';
+export type GitHubConnection = 'github-app' | 'gh-token' | (string & {});
 
 /**
  * The governance write a confirmation holds: the operation that opened it
  */
-export type GovernanceChangeKind = 'rules.create' | 'rules.update' | 'rules.delete' | 'rules.bulk' | 'gates.policy' | 'models.policy' | 'workflows.create' | 'workflows.save' | 'workflows.delete' | 'members.role' | 'members.remove' | 'members.invite' | 'members.link' | 'budgets.set';
+export type GovernanceChangeKind = 'rules.create' | 'rules.update' | 'rules.delete' | 'rules.bulk' | 'gates.policy' | 'models.policy' | 'workflows.create' | 'workflows.save' | 'workflows.delete' | 'members.role' | 'members.remove' | 'members.invite' | 'members.link' | 'budgets.set' | (string & {});
 
 /**
  * A governance write made with a person's API token, held until an owner or an admin confirms it on the console. `before` and `after` are what the change replaces and what it writes, as the read routes show them (JSON null for nothing: a creation has no `before`, a deletion no `after`)
@@ -1535,7 +1535,7 @@ export type GovernanceConfirmation = {
     /**
      * The kind of the person's token that asked, by its `Token.kind`: `api_token` for a `personal` token, whatever its scopes, always with `token`; otherwise `admin` for the token of `ostrom login --admin` (it holds a governance scope) and `device` for the CLI's token (`ostrom login`, kind `cli`). The phone app's token, an agent, a runner or a service key never opens one. A client shows this kind first, from this field, before any name
      */
-    credential: 'admin' | 'device' | 'api_token';
+    credential: 'admin' | 'device' | 'api_token' | (string & {});
     /**
      * The personal token that asked, always present when `credential` is `api_token` and absent otherwise. Its name is a copy taken when it asked, chosen by the token's owner; the token may have been renamed, revoked or have expired since. Its owner revokes it in Tokens (`revokeToken`)
      */
@@ -1557,7 +1557,7 @@ export type GovernanceConfirmation = {
     error?: ErrorDetail;
 };
 
-export type GovernanceConfirmationAnswer = 'confirm' | 'refuse';
+export type GovernanceConfirmationAnswer = 'confirm' | 'refuse' | (string & {});
 
 export type GovernanceConfirmationAnswerRequest = {
     answer: GovernanceConfirmationAnswer;
@@ -1604,7 +1604,7 @@ export type GovernanceConfirmationToken = {
 /**
  * pending until answered; confirmed, refused, expired (15 minutes without an answer), or failed (confirmed, but the write was refused: see `error`). The confirmation is closed before the write is made: a server stopped between the two leaves it confirmed without the write, and the change is then asked again
  */
-export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed';
+export type GovernanceConfirmationStatus = 'pending' | 'confirmed' | 'refused' | 'expired' | 'failed' | (string & {});
 
 /**
  * A group of members sharing subscriptions
@@ -1651,12 +1651,12 @@ export type ImportItem = {
     /**
      * Clients keep an unknown kind as UNKNOWN
      */
-    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account';
+    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account' | (string & {});
     name: string;
     /**
      * `revive_at_cutover`: a shared account waiting for a reconnection, left so while TeamCode runs; the cutover run revives it.
      */
-    action: 'planned' | 'created' | 'updated' | 'unchanged' | 'skipped' | 'revive_at_cutover';
+    action: 'planned' | 'created' | 'updated' | 'unchanged' | 'skipped' | 'revive_at_cutover' | (string & {});
     /**
      * Why it was skipped, or why a `revive_at_cutover` line waits for the cutover run
      */
@@ -1664,7 +1664,7 @@ export type ImportItem = {
     /**
      * For a shared account the run left waiting for its handover, or serving access-only (`sharing.handover.v1`); absent when Ostrom renews it
      */
-    refreshOwnership?: 'pending_handover' | 'access_only';
+    refreshOwnership?: 'pending_handover' | 'access_only' | (string & {});
 };
 
 /**
@@ -1832,7 +1832,7 @@ export type McpArgumentCondition = {
     /**
      * Answers carry these values; requests may use any case. MATCHES is a case-insensitive regular expression that may not repeat a repeated group (`(a+)+`) nor refer back to a group, and an argument longer than 8192 characters counts as matching (fail closed)
      */
-    operator: 'EQUALS' | 'NOT_EQUALS' | 'MATCHES' | 'PREFIX' | 'CONTAINS' | 'EXISTS' | 'ABSENT';
+    operator: 'EQUALS' | 'NOT_EQUALS' | 'MATCHES' | 'PREFIX' | 'CONTAINS' | 'EXISTS' | 'ABSENT' | (string & {});
     /**
      * The operand, unused for EXISTS and ABSENT
      */
@@ -1860,7 +1860,7 @@ export type McpArgumentPolicy = {
     /**
      * DENY refuses the call; REQUIRE_APPROVAL holds it until a human approves it
      */
-    effect: 'DENY' | 'REQUIRE_APPROVAL';
+    effect: 'DENY' | 'REQUIRE_APPROVAL' | (string & {});
     /**
      * What the agent is told
      */
@@ -1877,7 +1877,7 @@ export type McpArgumentPolicyRequest = {
     /**
      * Any case is accepted; answers carry the upper-case value
      */
-    effect: 'DENY' | 'REQUIRE_APPROVAL';
+    effect: 'DENY' | 'REQUIRE_APPROVAL' | (string & {});
     message: string;
 };
 
@@ -2035,7 +2035,7 @@ export type McpSettings = {
  * A server run by the MCP host from a pinned package
  */
 export type McpStdioSpec = {
-    launcher: 'npm' | 'pypi';
+    launcher: 'npm' | 'pypi' | (string & {});
     /**
      * name@1.2.3 (npm) or name==1.2.3 (PyPI)
      */
@@ -2191,7 +2191,7 @@ export type OpenAiResponsesStreamEvent = {
  * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
  */
 export type RunnerGitHubToken = {
-    status: 'linked' | 'not_linked' | 'unavailable';
+    status: 'linked' | 'not_linked' | 'unavailable' | (string & {});
     token?: string;
     expiresAt?: string;
     login?: string;
@@ -2214,7 +2214,7 @@ export type TokenScopes = {
     scopes: Array<TokenScope>;
 };
 
-export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited' | 'billing';
+export type MemberRole = 'owner' | 'admin' | 'member' | 'approver' | 'invited' | 'billing' | (string & {});
 
 /**
  * Models allowed, and the default
@@ -2248,11 +2248,11 @@ export type MyBudget = {
      * Model calls are refused now
      */
     exhausted: boolean;
-    exhaustedScope?: 'org' | 'member';
+    exhaustedScope?: 'org' | 'member' | (string & {});
     /**
      * The period `limitMicros`, `spentMicros`, `remainingMicros` and `resetsAt` count: `day` when the caller's own limit that stops is daily and the nearest to be spent, `month` otherwise. Absent, read `month`. Planned: the server does not send it yet
      */
-    period?: 'day' | 'month';
+    period?: 'day' | 'month' | (string & {});
 };
 
 /**
@@ -2277,7 +2277,7 @@ export type NodeCondition = {
 /**
  * `equals` and `notEquals` compare the value with `value`; `exists` is true when the value is there; `matches` is true when the pattern `value` matches a part of it (anchors to match it whole)
  */
-export type NodeConditionOp = 'equals' | 'notEquals' | 'exists' | 'matches';
+export type NodeConditionOp = 'equals' | 'notEquals' | 'exists' | 'matches' | (string & {});
 
 /**
  * Position of a node in the editor
@@ -2386,7 +2386,7 @@ export type NotificationPreferences = {
     quietHours?: QuietHours;
 };
 
-export type NotificationStatus = 'queued' | 'sent' | 'logged-only' | 'not-sent';
+export type NotificationStatus = 'queued' | 'sent' | 'logged-only' | 'not-sent' | (string & {});
 
 /**
  * A new organization
@@ -2572,7 +2572,7 @@ export type PackageFile = {
     content: string;
 };
 
-export type PackageFileMode = 'file' | 'executable';
+export type PackageFileMode = 'file' | 'executable' | (string & {});
 
 /**
  * The harness of rules included in a package
@@ -2608,7 +2608,7 @@ export type PackageMcpTool = {
     server: string;
 };
 
-export type PackageMode = 'enforce' | 'shadow';
+export type PackageMode = 'enforce' | 'shadow' | (string & {});
 
 /**
  * A stored package version
@@ -2832,7 +2832,7 @@ export type ReceiptSubject = {
     digest: string;
 };
 
-export type ReceiptSubjectKind = 'task' | 'workflow' | 'rule-change' | 'owner-change' | 'harness' | 'gate' | 'session' | 'policy';
+export type ReceiptSubjectKind = 'task' | 'workflow' | 'rule-change' | 'owner-change' | 'harness' | 'gate' | 'session' | 'policy' | (string & {});
 
 /**
  * A repository of the organization
@@ -2865,7 +2865,7 @@ export type ReportCheckRequest = {
     outputTail?: string;
 };
 
-export type RiskLevel = 'low' | 'medium' | 'high';
+export type RiskLevel = 'low' | 'medium' | 'high' | (string & {});
 
 /**
  * A rule of the organization, learned by the analysis or written by the team
@@ -2947,13 +2947,13 @@ export type RuleSource = {
     url?: string;
 };
 
-export type RuleStatus = 'proposed' | 'accepted' | 'edited' | 'rejected';
+export type RuleStatus = 'proposed' | 'accepted' | 'edited' | 'rejected' | (string & {});
 
-export type RuleStrength = 'required' | 'recommended';
+export type RuleStrength = 'required' | 'recommended' | (string & {});
 
-export type RunLocation = 'workstation' | 'ostrom';
+export type RunLocation = 'workstation' | 'ostrom' | (string & {});
 
-export type RunStatus = 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled';
+export type RunStatus = 'queued' | 'running' | 'waiting' | 'succeeded' | 'failed' | 'cancelled' | (string & {});
 
 /**
  * A machine that runs cloud agent sessions and workflow steps
@@ -3097,7 +3097,7 @@ export type SessionGateAnswer = {
     /**
      * `approved` stays once the session reserved or used the yes.
      */
-    outcome: 'approved' | 'refused';
+    outcome: 'approved' | 'refused' | (string & {});
     /**
      * Who answered, the approver whose yes or no decided the gate.
      */
@@ -3175,7 +3175,7 @@ export type SharedAccount = {
     /**
      * Who renews the account's tokens (`sharing.handover.v1`): `ostrom`, `pending_handover` (an import whose source may still renew them; waits for `POST /api/v1/accounts/{id}/handover`) or `access_only` (nobody here: served with its access token until it expires). Independent of `paused`. Shown to admins and the account's owner only.
      */
-    refreshOwnership?: 'ostrom' | 'pending_handover' | 'access_only';
+    refreshOwnership?: 'ostrom' | 'pending_handover' | 'access_only' | (string & {});
     /**
      * Whom it is lent to, sorted together: the logins of its members and `group:<id>` for each group it is lent to. Empty for the whole organization, and for a member who is neither an admin nor its owner.
      */
@@ -3233,7 +3233,7 @@ export type SignInMethods = {
     /**
      * Who may get a new account (`OSTROM_SIGNUP`). `open`: anyone who signs in. `invite` (the default of a self-hosted instance): a sign-in creates an account only with a pending invitation for the address it proves, an invitation link (`grantSignUp`), the instance's one-time setup link (`ostrom-server bootstrap`) or the organization's SSO; anyone else is refused with `signup_closed`, and only owners and admins of an organization, or the person who used the setup link, create organizations (`org_creation_closed`). Absent from a server older than this field: treat as `open`
      */
-    signUp?: 'open' | 'invite';
+    signUp?: 'open' | 'invite' | (string & {});
 };
 
 /**
@@ -3342,7 +3342,7 @@ export type ExceededBudget = {
      * For `member`: the member's login, as `SpendingLine.label` of `byPerson` names them; a member with no spending in the period read has no line there. Planned: the server does not send it yet
      */
     label?: string;
-    period: 'day' | 'month';
+    period: 'day' | 'month' | (string & {});
     /**
      * The limit in US dollars
      */
@@ -3469,7 +3469,7 @@ export type Team = {
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export type TeamCodeAccount = {
-    provider: 'claude' | 'codex';
+    provider: 'claude' | 'codex' | (string & {});
     providerAccountId: string;
     label: string;
     email?: string;
@@ -3524,7 +3524,7 @@ export type TeamCodeMcpServer = {
     /**
      * Absent for every tool
      */
-    toolMode?: 'allow' | 'deny';
+    toolMode?: 'allow' | 'deny' | (string & {});
     tools?: Array<string>;
 };
 
@@ -3537,7 +3537,7 @@ export type TeamCodeMember = {
  * A command of TeamCode run by the MCP host
  */
 export type TeamCodeStdio = {
-    launcher: 'npm' | 'pypi';
+    launcher: 'npm' | 'pypi' | (string & {});
     packageName: string;
     args?: Array<string>;
 };
@@ -3646,7 +3646,7 @@ export type Todo = {
 /**
  * `done`: every item is done or dropped and the final verification held
  */
-export type TodoStatus = 'active' | 'done' | 'abandoned';
+export type TodoStatus = 'active' | 'done' | 'abandoned' | (string & {});
 
 /**
  * An item of a todo, as the server keeps it
@@ -3680,12 +3680,12 @@ export type TodoItem = {
 /**
  * `plan`: written with the list; `discovered`: added on the way
  */
-export type TodoItemOrigin = 'plan' | 'discovered';
+export type TodoItemOrigin = 'plan' | 'discovered' | (string & {});
 
 /**
  * `drop_requested`: a wait asks the owner; `dropped`: on the owner's yes, never deleted
  */
-export type TodoItemStatus = 'todo' | 'doing' | 'done' | 'drop_requested' | 'dropped';
+export type TodoItemStatus = 'todo' | 'doing' | 'done' | 'drop_requested' | 'dropped' | (string & {});
 
 /**
  * An item as the agent writes it
@@ -3883,7 +3883,7 @@ export type TodoNote = {
     text: string;
 };
 
-export type TodoLinkKind = 'pr' | 'release' | 'artifact' | 'wait';
+export type TodoLinkKind = 'pr' | 'release' | 'artifact' | 'wait' | (string & {});
 
 /**
  * A link of an item, frozen once bound
@@ -3909,7 +3909,7 @@ export type TodoLink = {
 /**
  * `blocked`: the third stop without progress opened a wait; `hook_error`: the hook failed open
  */
-export type TodoHookEventKind = 'blocked' | 'hook_error';
+export type TodoHookEventKind = 'blocked' | 'hook_error' | (string & {});
 
 export type TodoHookEvent = {
     at: string;
@@ -4007,7 +4007,7 @@ export type TodoContext = {
     text: string | null;
 };
 
-export type TodoStopPhase = 'begin' | 'verify' | 'settle';
+export type TodoStopPhase = 'begin' | 'verify' | 'settle' | (string & {});
 
 /**
  * The outcome of the checks the Stop hook ran for one item
@@ -4050,7 +4050,7 @@ export type TodoStopRequest = {
 /**
  * `allow` the stop passes; `verify` run the cheap checks and ask again; `settle` run every check of the done items and ask again; `block` refuse the stop with `reason`
  */
-export type TodoStopAction = 'allow' | 'verify' | 'settle' | 'block';
+export type TodoStopAction = 'allow' | 'verify' | 'settle' | 'block' | (string & {});
 
 /**
  * The server's answer to a stop
@@ -4157,7 +4157,7 @@ export type UsageEvent = {
  * An event a client declares
  */
 export type UsageEventInput = {
-    kind: 'skill' | 'hook' | 'session' | 'mcp';
+    kind: 'skill' | 'hook' | 'session' | 'mcp' | (string & {});
     /**
      * The skill, the hook event, the session id or `server/tool`
      */
@@ -4355,7 +4355,7 @@ export type WaitSpec = {
     refs?: Array<WaitRef>;
 };
 
-export type WaitStatus = 'open' | 'resolved' | 'cancelled';
+export type WaitStatus = 'open' | 'resolved' | 'cancelled' | (string & {});
 
 /**
  * An outgoing webhook
@@ -4444,7 +4444,7 @@ export type WorkflowNode = {
     condition?: NodeCondition;
 };
 
-export type WorkflowNodeKind = 'trigger' | 'step' | 'check' | 'gate' | 'notify' | 'agent' | 'wait' | 'workflow';
+export type WorkflowNodeKind = 'trigger' | 'step' | 'check' | 'gate' | 'notify' | 'agent' | 'wait' | 'workflow' | (string & {});
 
 /**
  * A workflow run
@@ -4472,7 +4472,7 @@ export type WorkflowRun = {
     endedAt?: string;
 };
 
-export type WorkflowStatus = 'proposed' | 'accepted' | 'edited';
+export type WorkflowStatus = 'proposed' | 'accepted' | 'edited' | (string & {});
 
 /**
  * An MCP server relayed by Ostrom; its credentials stay on the server
@@ -4508,7 +4508,7 @@ export type McpServerWritable = {
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export type TeamCodeAccountWritable = {
-    provider: 'claude' | 'codex';
+    provider: 'claude' | 'codex' | (string & {});
     providerAccountId: string;
     label: string;
     email?: string;
@@ -4573,7 +4573,7 @@ export type TeamCodeMcpServerWritable = {
     /**
      * Absent for every tool
      */
-    toolMode?: 'allow' | 'deny';
+    toolMode?: 'allow' | 'deny' | (string & {});
     tools?: Array<string>;
 };
 
@@ -4581,7 +4581,7 @@ export type TeamCodeMcpServerWritable = {
  * A command of TeamCode run by the MCP host
  */
 export type TeamCodeStdioWritable = {
-    launcher: 'npm' | 'pypi';
+    launcher: 'npm' | 'pypi' | (string & {});
     packageName: string;
     args?: Array<string>;
     /**
@@ -12521,7 +12521,7 @@ export type ListWaitsData = {
         /**
          * `human` (by default: what "Waiting for you" shows), `time`, `event` or `all`; 400 otherwise. A wait for a time or an event waits for nobody, so it is listed only when asked for
          */
-        resolver?: 'human' | 'time' | 'event' | 'all';
+        resolver?: 'human' | 'time' | 'event' | 'all' | (string & {});
         mine?: boolean;
         /**
          * `all`, or a member id: the waits asked of them, for an administrator only (403 otherwise). Without it, the waits asked of or by the caller
@@ -12594,7 +12594,7 @@ export type CreateWaitData = {
         /**
          * `human` by default. `time` or `event`: a wait that resolves by itself, asked by an agent in its session (agent token) for that session only, with a title and no fields, actions or other assignee
          */
-        resolver?: 'human' | 'time' | 'event';
+        resolver?: 'human' | 'time' | 'event' | (string & {});
         /**
          * `time`: the instant it resolves, ISO-8601 UTC, in the future and at most 30 days away (exactly one of `at` and `after`)
          */
@@ -15457,7 +15457,7 @@ export type GetUsageSummaryData = {
     path?: never;
     query?: {
         days?: number;
-        groupBy?: 'member' | 'kind' | 'model' | 'provider' | 'account';
+        groupBy?: 'member' | 'kind' | 'model' | 'provider' | 'account' | (string & {});
     };
     url: '/api/v1/usage/summary';
 };
@@ -16133,7 +16133,7 @@ export type RunnerHeartbeatData = {
         executions?: Array<{
             sessionId: string;
             epoch: number;
-            state: 'pending' | 'running' | 'ended';
+            state: 'pending' | 'running' | 'ended' | (string & {});
         }>;
         /**
          * The sessions whose workspace volumes the machine holds.
@@ -16545,7 +16545,7 @@ export type ResumeCloudSessionResponse = ResumeCloudSessionResponses[keyof Resum
 
 export type SetCloudSessionGithubAccessData = {
     body: {
-        access: 'owner' | 'shared' | 'none';
+        access: 'owner' | 'shared' | 'none' | (string & {});
     };
     headers?: {
         /**
