@@ -6,7 +6,7 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Section } from '@/shared/ui/Screen';
-import { checkDetail, currentItem, hookErrors, mostlyAttested, todoCount } from '../todo';
+import { checkText, currentItem, hookErrors, mostlyAttested, todoCount } from '../todo';
 import './todo.css';
 
 const TONES: Readonly<Record<TodoItemStatus, BadgeTone>> = {
@@ -71,8 +71,8 @@ export function TodoView({ id, todo }: TodoViewProps): ReactElement {
         <div className="o-stack">
           <h3 className="o-label">{t('sessions.todo.hookErrors')}</h3>
           <ul className="o-rows">
-            {errors.map((event) => (
-              <li key={`${event.at}-${event.text}`} className="o-row">
+            {errors.map((event, index) => (
+              <li key={`${event.at}-${String(index)}`} className="o-row">
                 <span className="o-row__main">
                   <span className="o-row__meta">{formatAbsolute(event.at, i18n.language)}</span>
                   <span className="st-todo-text">{event.text}</span>
@@ -100,9 +100,12 @@ function TodoRow({ item, locale }: { readonly item: TodoItem; readonly locale: s
         <ul className="o-row__meta st-todo-checks">
           {item.doneWhen.checks.map((check, index) => (
             // The checks are frozen once the list is made: their place is their identity.
-            <li key={index}>{t(`sessions.todo.check.${check.type}`, { detail: checkDetail(check) })}</li>
+            <li key={index}>{checkText(check, t)}</li>
           ))}
         </ul>
+        {item.dropReason === undefined ? null : (
+          <span className="st-todo-text">{t('sessions.todo.dropReason', { reason: item.dropReason })}</span>
+        )}
         {item.proof === undefined ? null : (
           <span className="st-todo-text">
             {t('sessions.todo.lastProof', {

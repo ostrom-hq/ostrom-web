@@ -2,6 +2,7 @@
 import { getSessionTodoOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { Todo } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { ready } from '@/shared/api/ready';
 import { useAnnounced } from '@/shared/capabilities';
 
@@ -26,5 +27,12 @@ export function useSessionTodo(sessionId: string, running: boolean): SessionTodo
       refetchInterval: () => (running ? TODO_POLL_MS : false),
     }),
   );
+  // The session ended since the last read: its list may have changed in the meantime, read it once more.
+  const wasRunning = useRef(running);
+  const { refetch } = query;
+  useEffect(() => {
+    if (wasRunning.current && !running && served) void refetch();
+    wasRunning.current = running;
+  }, [running, served, refetch]);
   return { todo: served ? (query.data?.todo ?? undefined) : undefined };
 }

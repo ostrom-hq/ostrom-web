@@ -50,7 +50,7 @@ export function useTodoStopHook(role: OrgRole | undefined): TodoStopHookViewMode
     [mutate],
   );
   return {
-    enabled: offered && off !== undefined ? (memberId) => !off.has(memberId) : undefined,
+    enabled: off === undefined ? undefined : (memberId) => !off.has(memberId),
     set,
     saving: mutation.isPending ? mutation.variables.path.memberId : undefined,
     failure: failureOf(mutation.error),

@@ -6,7 +6,7 @@
 }
 .st-todo-count {
   margin: 0;
-  font-size: var(--fs-24, 1.5rem);
+  font-size: var(--fs-20);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -37,5 +37,5 @@
 }
 .st-todo-checks {
   margin: 0;
-  padding-left: var(--space-4, 1rem);
+  padding-left: var(--space-4);
 }

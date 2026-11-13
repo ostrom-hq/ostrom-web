@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Todo, TodoCheck, TodoItem } from '@gen/api/types.gen';
+import { i18n } from '@/shared/i18n/i18n';
 import {
   checkDetail,
+  checkText,
   countedItems,
   currentItem,
   hookErrors,
@@ -120,7 +122,7 @@ describe('the Stop hook errors', () => {
 describe('what a check looks at', () => {
   it.each<[TodoCheck, string]>([
     [{ type: 'pr_merged', repo: 'acme/web' }, 'acme/web'],
-    [{ type: 'pr_closed', repo: 'acme/api', reason: 'superseded' }, 'acme/api'],
+    [{ type: 'pr_closed', repo: 'acme/api', reason: 'superseded' }, 'acme/api (superseded)'],
     [{ type: 'release_contains', repo: 'acme/cli' }, 'acme/cli'],
     [{ type: 'ci_green', repo: 'acme/app' }, 'acme/app'],
     [{ type: 'command', run: 'make test' }, 'make test'],
@@ -129,5 +131,15 @@ describe('what a check looks at', () => {
     [{ type: 'wait_answered' }, ''],
   ])('%j reads %j', (check, detail) => {
     expect(checkDetail(check)).toBe(detail);
+  });
+});
+
+describe('a check in words', () => {
+  const t = i18n.getFixedT('en');
+  it('uses the wording of a type it knows', () => {
+    expect(checkText({ type: 'command', run: 'make' }, t)).toBe('Command: make');
+  });
+  it('shows a type a newer server added as its name', () => {
+    expect(checkText({ type: 'review_approved' }, t)).toBe('review_approved');
   });
 });

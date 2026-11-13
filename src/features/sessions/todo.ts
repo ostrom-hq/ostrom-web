@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+import type { TFunction } from 'i18next';
 import type { Todo, TodoCheck, TodoHookEvent, TodoItem } from '@gen/api/types.gen';
 
 /** The Stop hook errors the view lists: the newest three, as TeamCode's companion does. */
@@ -43,14 +44,31 @@ export function isFinished(todo: Todo): boolean {
   return todo.status === 'done' || (total > 0 && done === total);
 }
 
+const KNOWN_CHECKS: ReadonlySet<string> = new Set([
+  'pr_merged',
+  'pr_closed',
+  'release_contains',
+  'ci_green',
+  'command',
+  'artifact_published',
+  'wait_answered',
+  'attested',
+]);
+
+/** The check is of a type this console knows: a newer server may send another one. */
+function isKnown(check: { readonly type: string }): check is TodoCheck {
+  return KNOWN_CHECKS.has(check.type);
+}
+
 /** What a check looks at, the one field a person needs to read it. */
 export function checkDetail(check: TodoCheck): string {
   switch (check.type) {
     case 'pr_merged':
-    case 'pr_closed':
     case 'release_contains':
     case 'ci_green':
       return check.repo;
+    case 'pr_closed':
+      return `${check.repo} (${check.reason})`;
     case 'command':
       return check.run;
     case 'attested':
@@ -59,4 +77,9 @@ export function checkDetail(check: TodoCheck): string {
     case 'wait_answered':
       return '';
   }
+}
+
+/** A check in words; a type this console does not know (a newer server) is shown as its name, never hidden. */
+export function checkText(check: TodoCheck | { readonly type: string }, t: TFunction): string {
+  return isKnown(check) ? t(`sessions.todo.check.${check.type}`, { detail: checkDetail(check) }) : check.type;
 }

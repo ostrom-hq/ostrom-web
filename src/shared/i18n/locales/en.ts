@@ -392,6 +392,7 @@ export const en = {
       notVerified: 'Not verified',
       warningTag: 'Check',
       mostlyAttested: 'More than a third of the points rest on the agent’s word alone.',
+      dropReason: 'Reason to drop it: {{reason}}',
       hookErrors: 'Stop hook errors',
       status: { done: 'Finished', abandoned: 'Abandoned' },
       state: {

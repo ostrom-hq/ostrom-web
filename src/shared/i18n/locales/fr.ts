@@ -397,6 +397,7 @@ export const fr = {
       notVerified: 'Non vérifié',
       warningTag: 'À vérifier',
       mostlyAttested: 'Plus d’un tiers des points reposent sur la seule parole de l’agent.',
+      dropReason: 'Raison de l’abandon : {{reason}}',
       hookErrors: 'Erreurs du hook d’arrêt',
       status: { done: 'Terminée', abandoned: 'Abandonnée' },
       state: {

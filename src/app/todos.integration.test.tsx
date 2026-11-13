@@ -94,6 +94,9 @@ describe('the Todo view of a session', () => {
     expect(along).toHaveTextContent('On the agent’s word: the agent saw both tables fill');
     expect(rows[2]).toHaveTextContent(/Last proof, .*: the pull request is not merged yet/);
     expect(rows[3]).not.toHaveTextContent('Last proof');
+    expect(rows[4]).toHaveTextContent('Reason to drop it: The owner keeps it for audits');
+    expect(rows[5]).toHaveTextContent('Reason to drop it: Waiting for the freeze to end');
+    expect(rows[0]).not.toHaveTextContent('Reason to drop it');
 
     // Only what the Stop hook failed at is listed; a blocked stop is a wait of its own.
     expect(within(view).getByRole('heading', { name: 'Stop hook errors' })).toBeInTheDocument();
@@ -168,6 +171,26 @@ describe('the Todo view of a session', () => {
     focusManager.setFocused(true);
     expect(await screen.findByText('Wire the alerts')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Todo: 2 of 6 done. Show the list.' })).toBeInTheDocument();
+  });
+
+  it('is read once more when the session ends, to show the last state', async () => {
+    const user = userEvent.setup();
+    visit('/sessions/ses-7f3a');
+    await user.click(await screen.findByRole('button', { name: /^Todo: 2 of 5 done/ }));
+    const todo = demoTodo();
+    db.todos['ses-7f3a'] = {
+      ...todo,
+      status: 'done',
+      items: todo.items.map((item) => ({ ...item, status: 'done' })),
+    };
+    const session = db.sessions.find((item) => item.id === 'ses-7f3a');
+    if (session === undefined) throw new Error('no session');
+    session.endedAt = '2026-10-30T08:00:10.000Z';
+    vi.setSystemTime(new Date('2026-10-30T08:00:20.000Z'));
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    expect(await screen.findByRole('button', { name: 'Todo: 6 of 6 done. Show the list.' })).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Todo' })).getByText('Finished')).toBeVisible();
   });
 
   it('shows nothing for a session without a todo', async () => {
