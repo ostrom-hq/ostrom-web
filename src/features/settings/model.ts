@@ -52,13 +52,50 @@ export function personalDevices(devices: readonly Device[]): Device[] {
 export const GITHUB = 'github';
 
 /**
- * What a service key may carry: what a CI calls, nothing else (contract `createServiceKey`). The server refuses any
- * other scope, and a key on any other operation.
+ * What a key calls for a CI (contract `createServiceKey`): it acts for the organization, each use audited, and holds
+ * only these. The server refuses them mixed with the member scopes.
  */
-export const SERVICE_KEY_SCOPES = [
+export const SERVICE_KEY_CI_SCOPES = [
   { scope: 'sessions:write', label: 'sessionsWrite' },
   { scope: 'rules:read', label: 'rulesRead' },
 ] as const;
+
+/**
+ * What a key does as the person who created it, within the scope (the server serves them when it lists
+ * `servicekeys.scopes.v1`): never an administrator's rights, and the key stops when its creator leaves.
+ */
+export const SERVICE_KEY_MEMBER_SCOPES = [
+  { scope: 'inference:use', label: 'inferenceUse' },
+  { scope: 'mcp:use', label: 'mcpUse' },
+  { scope: 'usage:read', label: 'usageRead' },
+  { scope: 'cloud:read', label: 'cloudRead' },
+  { scope: 'cloud:write', label: 'cloudWrite' },
+  { scope: 'artifacts:read', label: 'artifactsRead' },
+  { scope: 'artifacts:write', label: 'artifactsWrite' },
+] as const;
+
+/**
+ * The scopes reserved to an owner or an admin: the key works only while its creator still is one. `team:read` is a
+ * read-only view of the organization, `cloud:admin` an administrator's rights over every cloud session.
+ */
+export const SERVICE_KEY_RESERVED_SCOPES = [
+  { scope: 'team:read', label: 'teamRead' },
+  { scope: 'cloud:admin', label: 'cloudAdmin' },
+] as const;
+
+/** Every scope a key may carry, in the catalogue's order. */
+export const SERVICE_KEY_SCOPES = [
+  ...SERVICE_KEY_CI_SCOPES,
+  ...SERVICE_KEY_MEMBER_SCOPES,
+  ...SERVICE_KEY_RESERVED_SCOPES,
+] as const;
+
+export type ServiceKeyScopeItem = (typeof SERVICE_KEY_SCOPES)[number];
+
+/** Whether a scope is one a CI calls: the CI scopes and the others are never on one key. */
+export function isCiServiceKeyScope(scope: string): boolean {
+  return SERVICE_KEY_CI_SCOPES.some((item) => item.scope === scope);
+}
 
 export const SERVICE_KEY_NAME_MAX = 100;
 
@@ -87,9 +124,15 @@ export function serviceKeyDraftProblem(
   return scopes.length === 0 ? 'scopes' : undefined;
 }
 
-/** Adds or takes away a scope, kept in the catalogue's order. */
+/**
+ * Adds or takes away a scope, kept in the catalogue's order. A CI scope and a member scope are never on one key:
+ * adding one of the other kind replaces what was ticked.
+ */
 export function toggleServiceKeyScope(scopes: readonly string[], scope: string, on: boolean): string[] {
-  const next = new Set(scopes);
+  const kept = on
+    ? scopes.filter((item) => isCiServiceKeyScope(item) === isCiServiceKeyScope(scope))
+    : scopes;
+  const next = new Set(kept);
   if (on) next.add(scope);
   else next.delete(scope);
   return SERVICE_KEY_SCOPES.map((item) => item.scope).filter((item) => next.has(item));

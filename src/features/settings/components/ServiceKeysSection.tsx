@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeature } from '@/shared/capabilities';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
@@ -10,9 +11,14 @@ import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   DEFAULT_SERVICE_KEY_LIFETIME,
   SERVICE_KEY_LIFETIMES,
+  isCiServiceKeyScope,
+  SERVICE_KEY_CI_SCOPES,
+  SERVICE_KEY_MEMBER_SCOPES,
   SERVICE_KEY_NAME_MAX,
+  SERVICE_KEY_RESERVED_SCOPES,
   SERVICE_KEY_SCOPES,
   type ServiceKeyLifetime,
+  type ServiceKeyScopeItem,
   serviceKeyDraftProblem,
   serviceKeyLifetimeOf,
   toggleServiceKeyScope,
@@ -26,13 +32,17 @@ export interface ServiceKeysSectionProps {
   readonly view: ServiceKeysViewModel;
 }
 
-/** The organization's keys for its CI: acting for the organization, not a person, each use audited. */
+/**
+ * The organization's keys: for its CI (acting for the organization, each use audited) or, when the server serves the
+ * wide catalogue, as the person who created them, within the scopes they carry.
+ */
 export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectionProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [name, setName] = useState('');
   // Nothing ticked: a key acts for the whole organization, so it carries only what someone chose for it.
   const [scopes, setScopes] = useState<readonly string[]>([]);
   const [days, setDays] = useState<ServiceKeyLifetime>(DEFAULT_SERVICE_KEY_LIFETIME);
+  const wide = useFeature('servicekeys.scopes.v1');
   const nameId = useId();
   const daysId = useId();
   if (!manages)
@@ -52,9 +62,24 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
     view.created?.secret === undefined ? undefined : { ...view.created, secret: view.created.secret };
   const locked = view.creating || created !== undefined || view.removing;
   const problem = serviceKeyDraftProblem(name, scopes);
+  const groups: readonly {
+    readonly id: 'ci' | 'member' | 'reserved';
+    readonly items: readonly ServiceKeyScopeItem[];
+  }[] = wide
+    ? [
+        { id: 'ci', items: SERVICE_KEY_CI_SCOPES },
+        { id: 'member', items: SERVICE_KEY_MEMBER_SCOPES },
+        { id: 'reserved', items: SERVICE_KEY_RESERVED_SCOPES },
+      ]
+    : [{ id: 'ci', items: SERVICE_KEY_CI_SCOPES }];
+  // A CI scope and the others are never on one key: once one kind is ticked, the other waits until it is cleared.
+  const other = (scope: string): boolean =>
+    scopes.length > 0 && scopes.some((ticked) => isCiServiceKeyScope(ticked) !== isCiServiceKeyScope(scope));
   return (
     <Section label={t('settings.serviceKeys.title')}>
-      <p className="o-row__meta">{t('settings.serviceKeys.lead', { name: orgName })}</p>
+      <p className="o-row__meta">
+        {t(wide ? 'settings.serviceKeys.leadWide' : 'settings.serviceKeys.lead', { name: orgName })}
+      </p>
       <form
         className="o-stack"
         onSubmit={(event) => {
@@ -79,17 +104,23 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
         />
         <fieldset className="o-stack">
           <legend className="o-field-label">{t('settings.serviceKeys.scopes')}</legend>
-          {SERVICE_KEY_SCOPES.map(({ scope, label }) => (
-            <label key={scope} className="o-inline">
-              <input
-                type="checkbox"
-                checked={scopes.includes(scope)}
-                onChange={(event) => {
-                  setScopes(toggleServiceKeyScope(scopes, scope, event.target.checked));
-                }}
-              />
-              <span>{t(`settings.serviceKeys.scope.${label}`)}</span>
-            </label>
+          {groups.map(({ id, items }) => (
+            <div key={id} className="o-stack">
+              {wide ? <p className="o-row__meta">{t(`settings.serviceKeys.group.${id}`)}</p> : null}
+              {items.map(({ scope, label }) => (
+                <label key={scope} className="o-inline">
+                  <input
+                    type="checkbox"
+                    checked={scopes.includes(scope)}
+                    disabled={other(scope)}
+                    onChange={(event) => {
+                      setScopes(toggleServiceKeyScope(scopes, scope, event.target.checked));
+                    }}
+                  />
+                  <span>{t(`settings.serviceKeys.scope.${label}`)}</span>
+                </label>
+              ))}
+            </div>
           ))}
         </fieldset>
         {problem === 'scopes' ? <p className="o-row__meta">{t('settings.serviceKeys.pickScope')}</p> : null}

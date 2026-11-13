@@ -20,6 +20,7 @@ export const FEATURES = [
   'import.teamcode.v1',
   'notifications.push.v1',
   'runners.cloud.v1',
+  'servicekeys.scopes.v1',
   'slack.v1',
   'waits.v1',
 ] as const;

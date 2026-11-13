@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { handleRenameOrg, handleRevokeAuthSession } from '@gen/api/msw.gen';
+import { handleCapabilities, handleRenameOrg, handleRevokeAuthSession } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
+import { demoCapabilities } from '@/mocks/capabilities';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -453,7 +454,7 @@ describe('the service keys', () => {
     visit('/settings');
     await settings();
     const keys = region('Service keys');
-    expect(within(keys).getByText(/For the CI of Acme/)).toBeInTheDocument();
+    expect(within(keys).getByText(/Keys for Acme/)).toBeInTheDocument();
     const first = await within(keys).findByRole('listitem');
     expect(first).toHaveTextContent('GitHub Actions');
     expect(first).toHaveTextContent('Read the rules · Report checks and sign workflow receipts');
@@ -479,6 +480,38 @@ describe('the service keys', () => {
     const rows = await within(keys).findAllByRole('listitem');
     expect(rows[0]).toHaveTextContent('never used');
     expect(rows[0]).not.toHaveTextContent('never expires');
+  });
+
+  it('offers the wide catalogue, and never mixes a CI scope with the others', async () => {
+    const user = userEvent.setup();
+    visit('/settings');
+    await settings();
+    const keys = region('Service keys');
+    expect(within(keys).getByText(/any other key acts as you/)).toBeInTheDocument();
+    expect(within(keys).getByText(/Owners and admins only/)).toBeInTheDocument();
+    const inference = within(keys).getByRole('checkbox', { name: 'Call the inference gateway' });
+    const rules = within(keys).getByRole('checkbox', { name: 'Read the rules' });
+    await user.click(inference);
+    expect(rules).toBeDisabled();
+    await user.click(within(keys).getByRole('checkbox', { name: /^Read the organization/ }));
+    await user.type(within(keys).getByRole('textbox', { name: 'Name' }), 'Monitor');
+    await user.click(within(keys).getByRole('button', { name: 'Create the key' }));
+    expect(await within(keys).findByText(/The secret of Monitor is shown once/)).toBeInTheDocument();
+    expect(db.serviceKeys[0]).toMatchObject({ name: 'Monitor', scopes: ['inference:use', 'team:read'] });
+    await user.click(within(keys).getByRole('button', { name: 'I copied it' }));
+    await user.click(inference);
+    await user.click(within(keys).getByRole('checkbox', { name: /^Read the organization/ }));
+    expect(rules).toBeEnabled();
+  });
+
+  it('offers only the CI scopes on a server that predates the wide catalogue', async () => {
+    server.use(handleCapabilities(() => HttpResponse.json(demoCapabilities(['audit.v1']))));
+    visit('/settings');
+    await settings();
+    const keys = region('Service keys');
+    expect(await within(keys).findByRole('checkbox', { name: 'Read the rules' })).toBeInTheDocument();
+    expect(within(keys).queryByRole('checkbox', { name: 'Call the inference gateway' })).toBeNull();
+    expect(within(keys).getByText(/For the CI of Acme/)).toBeInTheDocument();
   });
 
   it('creates a key that never expires when asked to', async () => {
