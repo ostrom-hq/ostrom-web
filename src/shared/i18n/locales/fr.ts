@@ -1378,6 +1378,19 @@ export const fr = {
       confirmStop: 'Arrêter {{what}}',
       keep: 'Laisser tourner',
     },
+    github: {
+      label: 'Accès GitHub',
+      readOnly: 'Accès GitHub : {{access}}',
+      option: { owner: 'Propriétaire seul', shared: 'Partagé', none: 'Aucun' },
+      hint: {
+        owner:
+          'L’agent détient l’accès GitHub du propriétaire, et seul le propriétaire peut lui donner des instructions.',
+        shared:
+          'L’agent détient l’accès GitHub du propriétaire et le prête à quiconque lui donne des instructions : ce qu’on lui demande de faire sur GitHub est fait en tant que propriétaire.',
+        none: 'L’agent ne détient aucun accès GitHub.',
+      },
+      notPaused: 'Mets d’abord la session en pause : un agent qui tourne garde l’accès qu’il a déjà reçu.',
+    },
     runners: {
       title: 'Runners',
       empty:
@@ -2193,6 +2206,8 @@ export const fr = {
     title: 'GitHub',
     lead: 'L’app GitHub Ostrom lit les dépôts que tu lui donnes et signale les changements des agents sur leurs pull requests.',
     back: {
+      linkedTag: 'Liée',
+      linked: 'Le compte GitHub est lié.',
       installedTag: 'Installée',
       installed: 'L’app GitHub est installée. Ses dépôts s’affichent plus bas.',
       errorTag: 'Pas terminée',
@@ -2200,8 +2215,48 @@ export const fr = {
         denied: 'L’installation a été annulée sur GitHub.',
         expired: 'L’installation a pris trop de temps. Relance-la.',
         forbidden: 'Seul un propriétaire ou un admin de l’organisation installe l’app.',
+        github_link_not_found: 'Cette tentative de lien est inconnue ou a expiré. Recommence.',
+        github_link_browser_mismatch:
+          'Rien n’a été lié : le lien n’a pas été ouvert dans le navigateur qui l’a lancé. Recommence depuis ce navigateur.',
+        github_link_denied: 'Le lien a été annulé sur GitHub.',
+        github_account_in_use: 'Ce compte GitHub est déjà lié à un autre membre.',
+        github_app_not_configured: 'L’app GitHub de ce serveur ne peut pas encore lier de comptes.',
+        github_unreachable: 'GitHub est injoignable. Réessaie dans un instant.',
         unknown: 'GitHub n’a pas terminé l’installation. Relance-la.',
       },
+    },
+    link: {
+      title: 'Ton compte GitHub',
+      state: { linked: 'Lié', reconnect_required: 'Reconnexion nécessaire', not_linked: 'Non lié' },
+      body: {
+        linked:
+          'Tes sessions cloud utilisent ce compte GitHub pour Git et gh. Ostrom n’affiche jamais le jeton.',
+        reconnect_required:
+          'GitHub a refusé l’accès enregistré, ou l’app a changé. Lie à nouveau : d’ici là tes sessions cloud n’ont pas d’accès GitHub.',
+        not_linked: 'Lie ton compte GitHub pour que tes sessions cloud utilisent Git et gh comme toi.',
+      },
+      account: 'Compte GitHub',
+      since: 'Lié',
+      link: 'Lier GitHub',
+      again: 'Lier à nouveau',
+      notConfigured:
+        'L’app GitHub de ce serveur ne peut pas encore lier de comptes. Un propriétaire ou un admin la configure.',
+      unlink: 'Délier',
+      unlinkConfirm: 'Délier mon GitHub',
+      keep: 'Garder',
+      notDoneTag: 'Pas fait',
+    },
+    members: {
+      title: 'Liens GitHub des membres',
+      lead: 'Le compte GitHub qu’utilisent les sessions cloud de chaque membre. Un propriétaire ou un admin peut lier un membre qui ne se connecte nulle part, comme un compte de service.',
+      link: 'Lier',
+      relink: 'Lier à nouveau',
+      linkFor: 'Lier pour {{login}}',
+      relinkFor: 'Lier à nouveau pour {{login}}',
+      unlinkConfirm: 'Délier {{login}}',
+      more: 'Afficher plus de membres',
+      robotNote:
+        'GitHub autorise le compte connecté à github.com dans ce navigateur : pour lier un compte de service, connecte-toi d’abord à GitHub avec ce compte, puis choisis Lier.',
     },
     app: {
       title: 'App GitHub',

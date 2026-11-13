@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { Repo } from '@gen/api/types.gen';
+import type { OrgMember, Repo } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   ANALYSIS_POLL_MS,
   ANALYSIS_RETRY_MS,
   analysisPollDelay,
   githubSearchSchema,
+  linkRows,
+  linkUrl,
+  memberLinkUrl,
   readableDate,
   reposShown,
   safeAppPage,
@@ -123,5 +126,47 @@ describe('the poll of a run', () => {
       new ApiFailure('bad-request', 'unprocessable', 422, undefined),
     ])
       expect(analysisPollDelay(running, failure)).toBe(false);
+  });
+});
+
+describe('the web link', () => {
+  it('reads linked=1 as a link and the link error types as themselves', () => {
+    expect(githubSearchSchema.parse({ linked: '1' }).linked).toBe(true);
+    expect(githubSearchSchema.parse({ linked: '0' }).linked).toBe(false);
+    expect(githubSearchSchema.parse({ error: 'github_account_in_use' }).error).toBe('github_account_in_use');
+    expect(githubSearchSchema.parse({ error: 'anything else' }).error).toBe('unknown');
+  });
+
+  it('names the organization in the address of each start, which a navigation cannot header', () => {
+    expect(linkUrl('org-1')).toMatch(/\/api\/v1\/github\/link\/start\?org=org-1$/);
+    expect(memberLinkUrl('org-1', 'a/b')).toMatch(/\/api\/v1\/github\/links\/a%2Fb\/start\?org=org-1$/);
+  });
+
+  it('joins members and links in the order the members were read, a member with no link being not linked', () => {
+    const member = (id: string, login: string): OrgMember => ({
+      id,
+      login,
+      name: login,
+      avatarUrl: '',
+      email: null,
+      role: 'member',
+      joinedAt: '2026-10-01T00:00:00Z',
+    });
+    const rows = linkRows(
+      [member('2', 'zoe'), member('1', 'ann')],
+      [
+        {
+          memberId: '2',
+          state: 'linked',
+          appConfigured: true,
+          login: 'zoe-gh',
+          linkedAt: '2026-10-02T00:00:00Z',
+        },
+      ],
+    );
+    expect(rows.map((row) => [row.member.login, row.state, row.login])).toEqual([
+      ['zoe', 'linked', 'zoe-gh'],
+      ['ann', 'not_linked', undefined],
+    ]);
   });
 });

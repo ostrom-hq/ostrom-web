@@ -1346,6 +1346,18 @@ export const en = {
       confirmStop: 'Stop {{what}}',
       keep: 'Keep it running',
     },
+    github: {
+      label: 'GitHub access',
+      readOnly: 'GitHub access: {{access}}',
+      option: { owner: 'Owner only', shared: 'Shared', none: 'None' },
+      hint: {
+        owner: 'The agent holds the owner’s GitHub access, and only the owner may instruct it.',
+        shared:
+          'The agent holds the owner’s GitHub access, and lends it to anyone who instructs it: what they ask it to do on GitHub is done as the owner.',
+        none: 'The agent holds no GitHub access.',
+      },
+      notPaused: 'Pause the session first: an agent that is running keeps the access it already received.',
+    },
     runners: {
       title: 'Runners',
       empty: 'No runner yet: register one with the CLI to run agents in the cloud.',
@@ -2147,6 +2159,8 @@ export const en = {
     title: 'GitHub',
     lead: 'The Ostrom GitHub App reads the repositories you give it and reports agent changes on their pull requests.',
     back: {
+      linkedTag: 'Linked',
+      linked: 'The GitHub account is linked.',
       installedTag: 'Installed',
       installed: 'The GitHub App is installed. Its repositories show below.',
       errorTag: 'Not finished',
@@ -2154,8 +2168,46 @@ export const en = {
         denied: 'The installation was cancelled on GitHub.',
         expired: 'The installation took too long. Start it again.',
         forbidden: 'Only an owner or an admin of the organization installs the app.',
+        github_link_not_found: 'This link attempt is unknown or has expired. Start again.',
+        github_link_browser_mismatch:
+          'Nothing was linked: the link was not opened in the browser that started it. Start again from this browser.',
+        github_link_denied: 'The link was cancelled on GitHub.',
+        github_account_in_use: 'This GitHub account is already linked to another member.',
+        github_app_not_configured: 'The GitHub App of this server cannot link accounts yet.',
+        github_unreachable: 'GitHub could not be reached. Try again in a moment.',
         unknown: 'GitHub did not finish the installation. Start it again.',
       },
+    },
+    link: {
+      title: 'Your GitHub account',
+      state: { linked: 'Linked', reconnect_required: 'Reconnect needed', not_linked: 'Not linked' },
+      body: {
+        linked: 'Your cloud sessions use this GitHub account for Git and gh. Ostrom never shows the token.',
+        reconnect_required:
+          'GitHub refused the saved access, or the app changed. Link again: until then your cloud sessions have no GitHub access.',
+        not_linked: 'Link your GitHub account so your cloud sessions can use Git and gh as you.',
+      },
+      account: 'GitHub account',
+      since: 'Linked',
+      link: 'Link GitHub',
+      again: 'Link again',
+      notConfigured: 'This server’s GitHub App cannot link accounts yet. An owner or an admin sets it up.',
+      unlink: 'Unlink',
+      unlinkConfirm: 'Unlink my GitHub',
+      keep: 'Keep',
+      notDoneTag: 'Not done',
+    },
+    members: {
+      title: 'Members’ GitHub links',
+      lead: 'Which GitHub account each member’s cloud sessions use. An owner or an admin can link a member who signs in nowhere, such as a service account.',
+      link: 'Link',
+      relink: 'Link again',
+      linkFor: 'Link for {{login}}',
+      relinkFor: 'Link again for {{login}}',
+      unlinkConfirm: 'Unlink {{login}}',
+      more: 'Show more members',
+      robotNote:
+        'GitHub authorizes whichever account is signed in to github.com in this browser: to link a service account, sign in to GitHub as that account first, then choose Link.',
     },
     app: {
       title: 'GitHub App',

@@ -35,6 +35,17 @@ export function isPromptAgent(value: string): value is PromptAgent {
   return PROMPT_AGENT.safeParse(value).success;
 }
 
+/** What a session's `githubAccess` may be: the owner only (the default), everyone who may use the session, or no token. */
+export const GITHUB_ACCESS = ['owner', 'shared', 'none'] as const satisfies readonly NonNullable<
+  CloudSession['githubAccess']
+>[];
+export type GithubAccess = (typeof GITHUB_ACCESS)[number];
+
+/** The session's access as the server says it; a server without the feature sends none, which reads as the default. */
+export function accessOf(session: CloudSession): GithubAccess {
+  return session.githubAccess ?? 'owner';
+}
+
 export const CLOUD_STATUSES = ['queued', 'starting', 'running', 'ended', 'stopped', 'failed'] as const;
 export type CloudStatus = (typeof CLOUD_STATUSES)[number];
 

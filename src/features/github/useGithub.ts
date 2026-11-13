@@ -156,9 +156,10 @@ export function useInstallOutcome(): InstallOutcome {
   const navigate = useNavigate();
   const [outcome] = useState<InstallOutcome>(() => ({
     installed: search.installed === true,
+    linked: search.linked === true,
     error: search.error,
   }));
-  const back = search.installed !== undefined || search.error !== undefined;
+  const back = search.installed !== undefined || search.linked !== undefined || search.error !== undefined;
   useEffect(() => {
     if (back) void navigate({ to: '/github', search: {}, replace: true });
   }, [back, navigate]);

@@ -4,11 +4,13 @@ import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { OrgRole } from '@/shared/org/roles';
+import { Feature } from '@/shared/capabilities';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, Facts, LoadState, Screen } from '@/shared/ui/Screen';
+import { GithubLinks } from '../components/GithubLinks';
 import { readableDate } from '../model';
 import { type Analysis, type GithubViewModel, useGithub, useInstallOutcome } from '../useGithub';
 import './github.css';
@@ -45,11 +47,19 @@ function GithubPage({
           {t('github.back.installed')}
         </Banner>
       ) : null}
+      {outcome.linked ? (
+        <Banner tone="info" tag={t('github.back.linkedTag')} live>
+          {t('github.back.linked')}
+        </Banner>
+      ) : null}
       {outcome.error === undefined ? null : (
         <Banner tone="warning" tag={t('github.back.errorTag')} live>
           {t(`github.back.error.${outcome.error}`)}
         </Banner>
       )}
+      <Feature name="github.link.v1">
+        <GithubLinks org={org.id} role={role} />
+      </Feature>
       <LoadState data={view.app} failure={view.appFailure} rows={2}>
         {(app) => (
           <>
