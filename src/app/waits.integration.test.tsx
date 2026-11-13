@@ -127,6 +127,35 @@ describe('the waiting list', () => {
     expect(await screen.findByRole('link', { name: /Does the billing team own/ })).toBeInTheDocument();
   });
 
+  it('lets an administrator list everyone’s waits (assignee=all), and no one else', async () => {
+    const user = userEvent.setup();
+    replace(3, (item) => ({ ...item, assignee: MEMBER_IDS.theo, createdBy: MEMBER_IDS.samir }));
+    const asked: string[] = [];
+    traffic.onRequest((request) => {
+      const url = new URL(request.url);
+      if (url.pathname === '/api/v1/waits') asked.push(url.search);
+    });
+    visit('/waits');
+    expect(screen.queryByRole('link', { name: /Does the billing team own/ })).toBeNull();
+    const everyone = await screen.findByRole('checkbox', { name: 'Everyone’s waits' }, SLOW);
+    await user.click(everyone);
+    expect(await screen.findByRole('link', { name: /Does the billing team own/ }, SLOW)).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Only what is asked of me' })).toBeDisabled();
+    expect(asked.some((search) => search.includes('assignee=all'))).toBe(true);
+    await user.click(everyone);
+    await waitFor(() => {
+      expect(screen.queryByRole('link', { name: /Does the billing team own/ })).toBeNull();
+    });
+  });
+
+  it('does not offer everyone’s waits to a plain member, whom the server refuses', async () => {
+    asMember();
+    visit('/waits');
+    await screen.findByRole('link', { name: /Ship the ledger/ }, SLOW);
+    expect(screen.queryByRole('checkbox', { name: 'Everyone’s waits' })).toBeNull();
+    expect((await fetch('http://ostrom.test/api/v1/waits?assignee=all')).status).toBe(403);
+  });
+
   it('reads older pages by keyset (before = next) when asked, and keeps what it read when a page fails', async () => {
     const user = userEvent.setup();
     db.waits = Array.from({ length: 60 }, (_, at) => ({

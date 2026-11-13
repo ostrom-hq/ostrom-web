@@ -1899,6 +1899,7 @@ export const fr = {
       title: 'On t’attend',
       lead: 'Ce que tes agents, et tes collègues, demandent à une personne. Les plus récentes d’abord.',
       filter: 'Afficher',
+      everyone: 'Les attentes de tout le monde',
       mine: 'Seulement ce qui m’est demandé',
       empty: {
         open: 'Rien n’attend',

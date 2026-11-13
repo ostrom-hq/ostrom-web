@@ -1856,6 +1856,7 @@ export const en = {
       title: 'Waiting for you',
       lead: 'What your agents, and your teammates, ask a person to answer. Newest first.',
       filter: 'Show',
+      everyone: 'Everyone’s waits',
       mine: 'Only what is asked of me',
       empty: {
         open: 'Nothing is waiting',

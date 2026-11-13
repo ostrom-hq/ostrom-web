@@ -36,9 +36,22 @@ export function WaitsScreen(): ReactElement {
             </Button>
           ))}
         </div>
+        {people.me.canManage ? (
+          <label className="wt-check">
+            <input
+              type="checkbox"
+              checked={scope === 'all'}
+              onChange={(event) => {
+                setScope(event.target.checked ? 'all' : 'involved');
+              }}
+            />
+            {t('waits.list.everyone')}
+          </label>
+        ) : null}
         <label className="wt-check">
           <input
             type="checkbox"
+            disabled={scope === 'all'}
             checked={scope === 'mine'}
             onChange={(event) => {
               setScope(event.target.checked ? 'mine' : 'involved');

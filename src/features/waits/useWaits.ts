@@ -6,7 +6,7 @@ import {
   getWaitQueryKey,
   listWaitsInfiniteOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Wait } from '@gen/api/types.gen';
+import type { ListWaitsData, Wait } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,12 +54,18 @@ export interface WaitListViewModel {
   readonly loadMore: () => void;
 }
 
+/** The list's query: what is asked of or by the person, only of them, or (an administrator) everyone's. */
+export function queryOf(filter: WaitFilter, scope: WaitScope): NonNullable<ListWaitsData['query']> {
+  const base = { status: filter, limit: PAGE };
+  if (scope === 'mine') return { ...base, mine: true };
+  return scope === 'all' ? { ...base, assignee: 'all' } : base;
+}
+
 export function useWaitList(filter: WaitFilter, scope: WaitScope): WaitListViewModel {
   const query = useInfiniteQuery({
     ...ready(
       listWaitsInfiniteOptions({
-        query:
-          scope === 'mine' ? { status: filter, mine: true, limit: PAGE } : { status: filter, limit: PAGE },
+        query: queryOf(filter, scope),
       }),
       { refetchInterval: firstPagePoll },
     ),
