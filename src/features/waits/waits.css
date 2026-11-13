@@ -1,0 +1,81 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+.wt-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.wt-filters__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.wt-filters__group [aria-pressed='true'] {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+  font-weight: 700;
+}
+
+.wt-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+}
+
+.wt-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.wt-field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.wt-field legend {
+  padding: 0;
+}
+
+.wt-help {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-14);
+}
+
+.wt-problem {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: var(--fs-14);
+}
+
+.wt-options {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.wt-refs {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wt-answer {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.wt-answer dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

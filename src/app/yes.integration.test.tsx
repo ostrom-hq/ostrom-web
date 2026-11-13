@@ -480,7 +480,10 @@ describe('a request', () => {
     const approve = screen.getByRole('button', { name: /^Approve/ });
     expectInOrder([title, ...sections, approve]);
     expect(approve).toHaveAttribute('data-approval', 'approve');
-    expect(screen.getByText('Waiting for you')).toHaveAttribute('data-approval', 'waiting');
+    expect(within(screen.getByRole('main')).getByText('Waiting for you')).toHaveAttribute(
+      'data-approval',
+      'waiting',
+    );
     expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute(
       'dateTime',
       '2026-10-30T18:00:00.000Z',

@@ -21,6 +21,7 @@ export const FEATURES = [
   'notifications.push.v1',
   'runners.cloud.v1',
   'slack.v1',
+  'waits.v1',
 ] as const;
 
 export type FeatureKey = (typeof FEATURES)[number];

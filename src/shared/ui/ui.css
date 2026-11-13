@@ -423,3 +423,37 @@ textarea.o-input {
   width: 6rem;
   flex: 0 0 auto;
 }
+
+/* Markdown written by an agent or a person (shared/ui/Markdown.tsx): the screen's own scale, never larger. */
+.o-md {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.o-md > :is(p, ul, ol, blockquote, pre, hr, h3, h4, h5, h6) {
+  margin: 0;
+}
+.o-md :is(h3, h4, h5, h6) {
+  font-size: var(--fs-16);
+  font-weight: 600;
+}
+.o-md :is(ul, ol) {
+  padding-inline-start: var(--space-5);
+}
+.o-md blockquote {
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--border-strong);
+  color: var(--text-muted);
+}
+.o-md__code {
+  white-space: pre-wrap;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  font-size: var(--fs-14);
+}
+.o-md a {
+  text-decoration: underline;
+}
