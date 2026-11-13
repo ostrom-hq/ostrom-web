@@ -4854,6 +4854,8 @@ export const streamCloudSession = <ThrowOnError extends boolean = false>(options
 
 /**
  * Artifacts the caller can read, newest first
+ *
+ * Theirs, those shared with them, and every `team` or `link` artifact of the organization. A role opens nobody's `personal` artifact: an owner or an administrator lists another member's only when it is shared with them, as any member (TeamCode #238)
  */
 export const listArtifacts = <ThrowOnError extends boolean = false>(options?: Options<ListArtifactsData, ThrowOnError>): RequestResult<ListArtifactsResponses, ListArtifactsErrors, ThrowOnError> => (options?.client ?? client).get<ListArtifactsResponses, ListArtifactsErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -4874,6 +4876,8 @@ export const listArtifacts = <ThrowOnError extends boolean = false>(options?: Op
 
 /**
  * Publish an artifact
+ *
+ * `link` (public) only from a person: a browser session (or the unlocked app), never a token a program can present, so an agent never makes an artifact public (403 `forbidden`); `personal` and `team` from any credential with `artifacts:write`
  */
 export const publishArtifact = <ThrowOnError extends boolean = false>(options: Options<PublishArtifactData, ThrowOnError>): RequestResult<PublishArtifactResponses, PublishArtifactErrors, ThrowOnError> => (options.client ?? client).post<PublishArtifactResponses, PublishArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -4949,6 +4953,8 @@ export const getArtifactLinkContent = <ThrowOnError extends boolean = false>(opt
 
 /**
  * Delete an artifact
+ *
+ * The owner only (403 for any other reader, an administrator included), and only from a person, a browser session or the unlocked app, never a token a program can present (403 `forbidden`), so an agent never deletes an artifact
  */
 export const deleteArtifact = <ThrowOnError extends boolean = false>(options: Options<DeleteArtifactData, ThrowOnError>): RequestResult<DeleteArtifactResponses, DeleteArtifactErrors, ThrowOnError> => (options.client ?? client).delete<DeleteArtifactResponses, DeleteArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -4969,6 +4975,8 @@ export const deleteArtifact = <ThrowOnError extends boolean = false>(options: Op
 
 /**
  * An artifact
+ *
+ * 404 for a `personal` artifact the caller neither owns nor is shared with, whatever their role
  */
 export const getArtifact = <ThrowOnError extends boolean = false>(options: Options<GetArtifactData, ThrowOnError>): RequestResult<GetArtifactResponses, GetArtifactErrors, ThrowOnError> => (options.client ?? client).get<GetArtifactResponses, GetArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -4989,6 +4997,8 @@ export const getArtifact = <ThrowOnError extends boolean = false>(options: Optio
 
 /**
  * Change an artifact's title or access; absent fields stay as they are
+ *
+ * The owner only (403 for any other reader, an administrator included). Changing `access` needs a person, a browser session or the unlocked app, never a token a program can present (403 `forbidden`), so an agent never makes an artifact public; a title alone may come from a token with `artifacts:write`
  */
 export const updateArtifact = <ThrowOnError extends boolean = false>(options: Options<UpdateArtifactData, ThrowOnError>): RequestResult<UpdateArtifactResponses, UpdateArtifactErrors, ThrowOnError> => (options.client ?? client).patch<UpdateArtifactResponses, UpdateArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -5097,6 +5107,8 @@ export const listArtifactMembers = <ThrowOnError extends boolean = false>(option
 
 /**
  * Stop sharing with a member
+ *
+ * The owner only (403 for any other reader, an administrator included)
  */
 export const unshareArtifact = <ThrowOnError extends boolean = false>(options: Options<UnshareArtifactData, ThrowOnError>): RequestResult<UnshareArtifactResponses, UnshareArtifactErrors, ThrowOnError> => (options.client ?? client).delete<UnshareArtifactResponses, UnshareArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -5118,7 +5130,7 @@ export const unshareArtifact = <ThrowOnError extends boolean = false>(options: O
 /**
  * Share with a member
  *
- * Works on every access, `personal` included. A `personal` artifact stays `personal`, which already means its owner, the members it is shared with and the organization's administrators; sharing never changes `access` (`ArtifactAccess` has no `members` value). A `team` or `link` artifact is already readable by every member, so sharing it only adds the member to the list. The console shows a `personal` artifact shared with members as "shared with N members", N being the length of `listArtifactMembers`
+ * The owner only (403 for any other reader, an administrator included). Works on every access, `personal` included. A `personal` artifact stays `personal`, which already means its owner and the members it is shared with (never an administrator for their role alone); sharing never changes `access` (`ArtifactAccess` has no `members` value). A `team` or `link` artifact is already readable by every member, so sharing it only adds the member to the list. The console shows a `personal` artifact shared with members as "shared with N members", N being the length of `listArtifactMembers`
  */
 export const shareArtifact = <ThrowOnError extends boolean = false>(options: Options<ShareArtifactData, ThrowOnError>): RequestResult<ShareArtifactResponses, ShareArtifactErrors, ThrowOnError> => (options.client ?? client).put<ShareArtifactResponses, ShareArtifactErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -5138,7 +5150,9 @@ export const shareArtifact = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * A reading ticket: a signed address of the entry page on the content origin, valid one hour (rounded to 10 minutes). It stays valid until it expires, even after the artifact stops being shared
+ * A reading ticket: a sealed address of the entry page on the content origin, for the caller only
+ *
+ * For a person only, a browser session or the unlocked app (403 `forbidden` for a token a program can present). The ticket is sealed (encrypted and authenticated, so the page learns nothing of its reader) and names the member and the credential that asked: it lasts 8 hours (rounded down to 10 minutes, so reloading reuses the same address), and the server checks again at most every 30 seconds that the credential is still live, the member still in the organization and the artifact still readable by them, so signing out, leaving the organization or losing access stops it within 30 seconds. At most 60 tickets a minute per credential (429 `rate_limited` with `Retry-After`)
  */
 export const createArtifactTicket = <ThrowOnError extends boolean = false>(options: Options<CreateArtifactTicketData, ThrowOnError>): RequestResult<CreateArtifactTicketResponses, CreateArtifactTicketErrors, ThrowOnError> => (options.client ?? client).post<CreateArtifactTicketResponses, CreateArtifactTicketErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({

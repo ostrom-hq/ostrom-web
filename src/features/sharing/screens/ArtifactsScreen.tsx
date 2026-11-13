@@ -5,10 +5,14 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { ArtifactCard } from '../components/ArtifactCard';
+import { ownsArtifact } from '../model';
 import { useArtifactChange, useArtifacts } from '../useSharing';
 import './sharing.css';
 
-/** Pages and files the agents published, behind the sign-in: who reads each one, and its versions. */
+/**
+ * Pages and files the agents published, behind the sign-in: who reads each one, and its versions. Only the owner
+ * changes, shares or deletes one; a role gives nobody those controls on someone else's artifact.
+ */
 export function ArtifactsScreen(): ReactElement {
   const { t } = useTranslation();
   const view = useArtifacts();
@@ -32,7 +36,7 @@ export function ArtifactsScreen(): ReactElement {
                   key={artifact.id}
                   artifact={artifact}
                   now={now}
-                  change={artifact.owner === view.login ? change : undefined}
+                  change={ownsArtifact(artifact, view.login) ? change : undefined}
                 />
               ))}
             </div>

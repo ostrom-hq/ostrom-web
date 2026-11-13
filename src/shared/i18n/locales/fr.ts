@@ -1585,7 +1585,7 @@ export const fr = {
       noVersion: 'Aucune version pour l’instant.',
       versionLine: 'Version {{number}} · {{who}} · {{when}}',
       readers: 'Lecteurs',
-      readersPersonal: '{{owner}}, les administrateurs et les personnes ci-dessous le lisent.',
+      readersPersonal: '{{owner}} et les personnes ci-dessous le lisent.',
       readersTeam: 'Toute l’organisation le lit, et les personnes ci-dessous.',
       readersLink: 'Toute personne qui a son lien le lit.',
       readersNone: 'Personne d’autre sur la liste.',
