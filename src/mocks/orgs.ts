@@ -114,7 +114,7 @@ function owner(at: string): OrgMember {
 }
 
 /** The members of an organization; one the demo knows nothing about is the person's own, and is kept so. */
-function membersIn(state: OrgsState, organization: Organization, now: () => Date): OrgMember[] {
+export function membersIn(state: OrgsState, organization: Organization, now: () => Date): OrgMember[] {
   const known = state.orgMembers[organization.id];
   if (known !== undefined) return known;
   const created = [owner(organization.createdAt ?? now().toISOString())];

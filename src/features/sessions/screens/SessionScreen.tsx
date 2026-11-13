@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import type { Receipt, Session, SessionGateAnswer } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId, useState } from 'react';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { formatAbsolute, formatDuration } from '@/shared/lib/time';
@@ -9,7 +9,10 @@ import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';
 import { type Fact, Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { StateBadge } from '../components/StateBadge';
+import { TodoPill } from '../components/TodoPill';
+import { TodoView } from '../components/TodoView';
 import { sessionState } from '../model';
+import { useSessionTodo } from '../useSessionTodo';
 import { useSession } from '../useSessions';
 
 export function SessionScreen(): ReactElement {
@@ -17,6 +20,9 @@ export function SessionScreen(): ReactElement {
   const { sessionId } = useParams({ from: '/sessions/$sessionId' });
   const { session, receipt, failure } = useSession(sessionId);
   const now = useNow();
+  const { todo } = useSessionTodo(sessionId, session !== undefined && session.endedAt === undefined);
+  const [open, setOpen] = useState(false);
+  const todoId = useId();
   return (
     <LoadState data={session} failure={failure} rows={2}>
       {(found) => (
@@ -27,11 +33,22 @@ export function SessionScreen(): ReactElement {
                 {t('sessions.detail.back')}
               </Link>
               <StateBadge state={sessionState(found, now)} />
+              {todo === undefined ? null : (
+                <TodoPill
+                  todo={todo}
+                  open={open}
+                  controls={todoId}
+                  onToggle={() => {
+                    setOpen((was) => !was);
+                  }}
+                />
+              )}
             </>
           }
           title={[found.agent, found.repo].filter((part) => part !== undefined).join(' · ')}
           lead={t('sessions.detail.by', { dev: found.dev })}
         >
+          {todo !== undefined && open ? <TodoView id={todoId} todo={todo} /> : null}
           <SessionDetail session={found} receipt={receipt} />
         </Screen>
       )}

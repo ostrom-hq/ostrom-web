@@ -141,10 +141,19 @@ import {
 import { initialActivity } from '@/mocks/fixtures/activity';
 import { initialAudit } from '@/mocks/fixtures/audit';
 import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
+import { createTodosHandlers, type TodosState } from '@/mocks/todos';
+import { initialTodos } from '@/mocks/fixtures/todos';
 import { createKeysAndDevicesHandlers, type KeysAndDevicesState } from '@/mocks/keysAndDevices';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
-import { createOrgsHandlers, DEMO_LOGIN, demoRoleIn, membershipsOf, type OrgsState } from '@/mocks/orgs';
+import {
+  createOrgsHandlers,
+  DEMO_LOGIN,
+  demoRoleIn,
+  membersIn,
+  membershipsOf,
+  type OrgsState,
+} from '@/mocks/orgs';
 import { z } from 'zod/mini';
 import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import {
@@ -212,6 +221,7 @@ export interface MockDb
     McpAccessState,
     PolicyState,
     TeamCodeImportState,
+    TodosState,
     WaitsState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
@@ -285,6 +295,8 @@ export function createMockDb(): MockDb {
     approvers: initialApprovers(),
     unlinkedAuthors: ['apr-merge-412'],
     sessions: initialSessions(),
+    todos: initialTodos(),
+    stopHookOff: [],
     receipts: initialReceipts(),
     organization: initialOrganization(),
     otherOrganizations: [],
@@ -836,6 +848,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createKeysAndDevicesHandlers(() => db, now, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
+    }),
+    ...createTodosHandlers(() => db, {
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+      knows: (request, memberId) =>
+        membersIn(db, organizationOf(db, request), now).some((member) => member.id === memberId),
     }),
     ...createAccountHandlers(() => db, now),
     ...createDeviceHandlers(() => db, now, {

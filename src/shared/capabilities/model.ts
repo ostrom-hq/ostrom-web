@@ -22,6 +22,7 @@ export const FEATURES = [
   'runners.cloud.v1',
   'servicekeys.scopes.v1',
   'slack.v1',
+  'todos.v1',
   'waits.v1',
 ] as const;
 
@@ -75,6 +76,14 @@ export function serverStatusOf({ data, error, pending }: CapabilitiesQueryState)
 /** Whether a screen that needs `key` is shown: unless the server answered without it, it is. */
 export function hasFeature(status: ServerStatus, key: FeatureKey): boolean {
   return status.kind !== 'ready' || status.capabilities.features.includes(key);
+}
+
+/**
+ * Whether the server said it serves a feature. False until it has answered, and when it cannot be asked: for a part of
+ * a screen that is shown only where it works (a todo, a switch), not asked of a server that may not know the route.
+ */
+export function announces(status: ServerStatus, key: FeatureKey): boolean {
+  return status.kind === 'ready' && status.capabilities.features.includes(key);
 }
 
 /** The server blocks the whole console. */
