@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // A local stand-in for GitHub, so that the console's journeys never reach the real one (and never need a real
 // account). After ostrom-e2e's `src/fake-github.ts`, trimmed to what a browser does on the console. ostrom-server's
 // `console-journey.yml` points the server at two fixed ports, which the journeys that need GitHub start here:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 3.6 of the journey (demo/PARCOURS.md), the audit log side, against the real server (`GET /audit`,
 // ostrom-server#131): an owner reads the organization's signed log as the server lists it; a member is told it is
 // for owners and admins; another organization never sees the first one's lines.

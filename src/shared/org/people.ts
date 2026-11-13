@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { OrgMember } from '@gen/api/types.gen';
 
 /** Whether a person is found by what was typed: their login, name or email, whatever the case. */

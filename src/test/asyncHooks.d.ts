@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Node's AsyncLocalStorage, the one Node API of the test helpers (handlerFetch.ts): the console is typed without Node.
 declare module 'node:async_hooks' {
   export class AsyncLocalStorage<T> {

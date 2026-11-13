@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Every screen of the console's navigation, checked by axe against WCAG 2.2 A and AA, in the light and the dark theme,
 // on a wide screen and a phone, against the real server, signed in as the owner of a new organization. The table of
 // what axe finds is attached to the run, and printed in its log; every screen must have nothing.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { useServerStatus } from '@/shared/capabilities';
 import { hasFeature } from '@/shared/capabilities/model';
 import { NAV_LINKS } from './navigation';

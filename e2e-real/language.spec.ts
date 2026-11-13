@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The console downloads the wording of the language it shows, and only that one (src/shared/i18n/i18n.ts): a French
 // browser reads French from the first words on the screen, without the English chunk, and a change of the browser's
 // language brings the other wording then, before the screen shows it.

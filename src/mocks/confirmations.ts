@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleAnswerGovernanceConfirmation, handleGetGovernanceConfirmation } from '@gen/api/msw.gen';
 import type { ErrorDetail, GovernanceConfirmation, Organization } from '@gen/api/types.gen';
 import { zGovernanceConfirmationAnswerRequest } from '@gen/api/zod.gen';

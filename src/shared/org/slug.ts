@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 
 /** The rules of an organization's short name, as ostrom-server's `orgs/domain/Rules.kt` writes them. */
 export const MAX_SLUG = 39;

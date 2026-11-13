@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { act, screen } from '@testing-library/react';
 import { ACCOUNT_CHANGED_KEY } from '@/app/App';
 import { useAuthStore } from '@/shared/auth/authStore';

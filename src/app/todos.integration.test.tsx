@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { handleCapabilities } from '@gen/api/msw.gen';
 import type { Todo } from '@gen/api/types.gen';
 import { focusManager } from '@tanstack/react-query';

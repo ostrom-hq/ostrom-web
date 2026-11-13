@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { getSessionTodoOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { Todo } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';

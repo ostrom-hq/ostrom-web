@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { FeatureKey } from '@/shared/capabilities/model';
 
 /** The console's screens, in the order the navigation shows them: the bar on a wide screen, the menu on a phone. */

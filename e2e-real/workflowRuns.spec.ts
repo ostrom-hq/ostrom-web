@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 4.1 (workflow runs) of the journey (demo/PARCOURS.md), console side, against the real server: an owner starts a
 // run from the console and reads it on the workflow and among the organization's runs, a member reads it without the
 // button, and another organization sees none of it (CONVENTIONS §16).

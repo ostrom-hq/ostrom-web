@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { BillingOverview, BillingPrice } from '@gen/api/types.gen';
 
 /** The plans the console sells; Free has nothing to buy and Enterprise is sold by talking to us. */

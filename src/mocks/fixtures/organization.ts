@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Member, Organization, OrgMember, Team } from '@gen/api/types.gen';
 import type { MockInvitation } from '@/mocks/orgs';
 

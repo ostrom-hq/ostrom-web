@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 3.1 of the journey (demo/PARCOURS.md), console side, against the real server and a fake GitHub
 // (e2e-real/fakeGithub.ts): an owner installs the GitHub App, starts the analysis from /github, the server reads the
 // repository through the installation (its files, CODEOWNERS, the protection of main), and the owner reviews what it

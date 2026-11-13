@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { capabilitiesOptions, getMeOptions } from '@gen/api/@tanstack/react-query.gen';
 import { useQuery } from '@tanstack/react-query';
 import { isApiFailure } from '@/shared/api/ApiFailure';

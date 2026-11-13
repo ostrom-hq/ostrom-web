@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { answerGovernanceConfirmation, getGovernanceConfirmation } from '@gen/api/sdk.gen';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS, resetMockDb } from '@/mocks/handlers';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // « Mon compte » (/account), against the real server and a fake GitHub (e2e-real/fakeGithub.ts): a person who signed
 // up by e-mail, in no organization, reads their account and links their GitHub from it (decision Q-GATES-G1: a gate
 // knows a pull request is theirs only through that link). Nothing reaches GitHub.

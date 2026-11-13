@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { AuthSession, Device, ServiceKey, Token } from '@gen/api/types.gen';
 
 /** Maya's sessions: this browser, her phone and a laptop left signed in. */

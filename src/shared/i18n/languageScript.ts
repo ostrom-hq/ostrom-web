@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 /**
  * `/boot.js` of a build with the mock API (vite.config.ts, `preloadBoot`; src/shared/build/bootScript.ts otherwise,
@@ -13,7 +13,7 @@ export function languageScript(
 ): string {
   const missing = languages.filter((language) => chunks[language] === undefined);
   if (missing.length > 0) throw new Error(`no wording chunk for ${missing.join(', ')}`);
-  return `// SPDX-License-Identifier: AGPL-3.0-only
+  return `// SPDX-License-Identifier: Apache-2.0
 // Written by the build (src/shared/i18n/languageScript.ts): fetches the wording of the person's language with the entry.
 (function () {
   var chunks = ${JSON.stringify(chunks)};

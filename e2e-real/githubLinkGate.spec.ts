@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Q-GATES-G1 (a), console side, against the real server and a fake GitHub (e2e-real/fakeGithub.ts): under the `never`
 // policy (the default), a pull request whose author is linked to no Ostrom person waits for an approver who linked a
 // GitHub account. The approver signed up by e-mail and linked none: the request says why a yes waits and where to link

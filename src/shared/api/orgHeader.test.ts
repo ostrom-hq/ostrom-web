@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The vendored contract, from the project root (Vite resolves a path that starts with a slash there).
 import contract from '/contract/openapi.yaml?raw';
 import { actsInOrganization, namesOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 export { NewWorkflowScreen } from './screens/NewWorkflowScreen';
 export { RunsScreen } from './screens/RunsScreen';
 export { WorkflowScreen } from './screens/WorkflowScreen';

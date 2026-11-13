@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { listAuditInfiniteOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { AuditEvent } from '@gen/api/types.gen';
 import { useInfiniteQuery } from '@tanstack/react-query';

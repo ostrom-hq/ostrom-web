@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 6.2 of the journey (demo/PARCOURS.md), console side, against the real server. First, an owner starts an agent from
 // the Cloud screen; the server runs it on the job's Docker (console-journey.yml, ostrom-server#200), the screen shows it
 // running, the owner stops it and it ends. Then an owner registers a runner (the

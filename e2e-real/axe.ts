@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // axe against WCAG 2.2 A and AA, and the table of what it finds, shared by the journeys that check screens with it.
 import AxeBuilder from '@axe-core/playwright';
 import { appendFileSync } from 'node:fs';

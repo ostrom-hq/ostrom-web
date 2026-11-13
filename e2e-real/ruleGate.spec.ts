@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 3.2 of the journey (demo/PARCOURS.md), console side, against the real server: an owner writes a rule by hand on
 // /rules and puts a gate on it, an action of their own (its label and commands) that waits for their yes. Once the rule
 // is accepted, the action is in the organization's gate catalogue, and asking for it opens a gate that waits in the

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { listDecisionsOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { Decision } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';

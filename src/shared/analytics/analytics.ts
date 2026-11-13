@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { AnalyticsConfig } from '@/shared/analytics/config';
 import type { ConsentStatus } from '@/shared/analytics/consent';
 import type { SafeStorage } from '@/shared/lib/safeStorage';

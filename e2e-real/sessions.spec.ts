@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Line 6.1 (sessions) of the journey (demo/PARCOURS.md), console side, against the real
 // server. A session is reported as the CLI does, with a personal token holding `sessions:write`; no agent runs.
 import { randomUUID } from 'node:crypto';

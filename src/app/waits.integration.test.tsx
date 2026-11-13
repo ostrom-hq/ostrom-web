@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Wait } from '@gen/api/types.gen';
 import { handleCapabilities, handleGetMe, handleListWaits } from '@gen/api/msw.gen';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';

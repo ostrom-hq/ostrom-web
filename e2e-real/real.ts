@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Journeys against the REAL Ostrom server (CI job `ci`, after the mock journeys): the console is served by `vite
 // preview`, which proxies /api to the server, so the session cookie and its CSRF token are first-party, as behind the
 // console image. Sign-in links are read from the directory the server writes its mails to (OSTROM_MAIL_DIR).

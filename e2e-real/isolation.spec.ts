@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // CONVENTIONS §16 on the console's screens, against the real server: what one organization holds never shows on
 // another's. Sessions, activity, spend, decisions and the audit log have their own journey (sessions.spec,
 // activity.spec, spend.spec, decisions.spec, audit.spec). This one covers the rules and the gate queue; the server side

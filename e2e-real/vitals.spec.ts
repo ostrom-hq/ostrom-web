@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The console's web vitals on a slow phone, against the real server: the largest contentful paint (LCP) of five
 // screens loaded cold, and the delay before the next paint after a real interaction on each (INP), on DevTools' Fast 3G
 // with a CPU four times slower. Within Google's "good": LCP under 2.5 s, INP under 200 ms. Chromium only: the network

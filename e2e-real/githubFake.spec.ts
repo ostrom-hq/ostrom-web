@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Lines 1.2 and 2.5 of the journey (demo/PARCOURS.md), console side, against the real server and a fake GitHub
 // (e2e-real/fakeGithub.ts) on the ports ostrom-server's `console-journey.yml` points the server at: a person signs in
 // with GitHub, and an owner installs the GitHub App and reads the repositories given to it. Nothing reaches GitHub.

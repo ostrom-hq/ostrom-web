@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** A 4xx that asking again later can change: a timeout, or a rate limit that lifts. */

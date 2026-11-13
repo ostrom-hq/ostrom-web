@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { firstPagePoll, isWaitList, refusalOf, WAITS_POLL_MS } from './useWaits';
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // The console's key journeys with the keyboard alone, against the real server: signing in, saying yes and no to a
 // request, writing a rule, setting a budget, and leaving for Stripe's Checkout. Each control is reached with Tab and
 // used with Enter, Space or typing, never a click; every stop on the way shows where the focus is (an outline or a

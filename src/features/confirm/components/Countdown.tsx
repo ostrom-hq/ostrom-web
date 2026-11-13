@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatCountdown, remainingMs } from '../model';

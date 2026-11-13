@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { expect, test } from '@playwright/test';
 
 test('an admin renames the agents’ prefix, gives a server to everyone and adds an argument policy', async ({

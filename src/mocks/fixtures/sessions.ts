@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Receipt, Session } from '@gen/api/types.gen';
 
 const SIGNATURE = 'ed25519;kid=4f2a9c1b;sha256=';

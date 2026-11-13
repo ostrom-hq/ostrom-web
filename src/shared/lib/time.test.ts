@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { formatAbsolute, formatDuration, formatRelative } from '@/shared/lib/time';
 
 const now = new Date('2026-10-30T08:00:00.000Z');

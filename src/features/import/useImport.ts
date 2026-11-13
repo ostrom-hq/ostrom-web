@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { importTeamCodeMutation } from '@gen/api/@tanstack/react-query.gen';
 import type { ImportReport, TeamCodeImportRequestWritable } from '@gen/api/types.gen';
 import { useMutation, useQueryClient } from '@tanstack/react-query';

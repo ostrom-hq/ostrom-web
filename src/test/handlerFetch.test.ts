@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { createHandlerFetch, held } from '@/test/handlerFetch';

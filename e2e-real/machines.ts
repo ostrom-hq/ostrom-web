@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 // Registered runners on the job's Docker, for line 6.2 against a server whose cloud sessions run on registered runners
 // (`OSTROM_RUNNERS_DRIVER=registered`, ostrom-server console-journey.yml). Each machine is `ostrom-runner machine`, in
 // its own container on the host network, with the Engine API of the job's socket proxy: it takes the sessions the

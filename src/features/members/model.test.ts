@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { Invitation, OrgMember } from '@gen/api/types.gen';
 import { displayName, parseInvites, sortInvitations, sortMembers } from './model';
 
