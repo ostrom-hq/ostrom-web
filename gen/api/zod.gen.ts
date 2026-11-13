@@ -203,6 +203,11 @@ export const zArtifact = z.object({
     title: z.string(),
     owner: z.string(),
     access: z.string(),
+    relation: z.optional(z.enum([
+        'owner',
+        'viewer',
+        'team'
+    ])),
     latestVersion: z.int(),
     url: z.string(),
     publicUrl: z.optional(z.string()),
@@ -211,7 +216,7 @@ export const zArtifact = z.object({
 });
 
 /**
- * Who reads it; `personal` when absent at publication
+ * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
  */
 export const zArtifactAccess = z.enum([
     'personal',

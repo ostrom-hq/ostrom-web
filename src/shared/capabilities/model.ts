@@ -22,6 +22,7 @@ export const FEATURES = [
   'runners.cloud.v1',
   'servicekeys.scopes.v1',
   'slack.v1',
+  'waits.v1',
 ] as const;
 
 export type FeatureKey = (typeof FEATURES)[number];

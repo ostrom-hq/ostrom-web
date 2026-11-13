@@ -4819,6 +4819,8 @@ export const listArtifactsQueryKey = (options?: Options<ListArtifactsData>) => c
 
 /**
  * Artifacts the caller can read, newest first
+ *
+ * Theirs, those shared with them, and every `team` or `link` artifact of the organization. A role opens nobody's `personal` artifact: an owner or an administrator lists another member's only when it is shared with them, as any member (TeamCode #238)
  */
 export const listArtifactsOptions = (options?: Options<ListArtifactsData>) => queryOptions<ListArtifactsResponse, ListArtifactsError, ListArtifactsResponse, ReturnType<typeof listArtifactsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -4837,6 +4839,8 @@ export const listArtifactsInfiniteQueryKey = (options?: Options<ListArtifactsDat
 
 /**
  * Artifacts the caller can read, newest first
+ *
+ * Theirs, those shared with them, and every `team` or `link` artifact of the organization. A role opens nobody's `personal` artifact: an owner or an administrator lists another member's only when it is shared with them, as any member (TeamCode #238)
  */
 export const listArtifactsInfiniteOptions = (options?: Options<ListArtifactsData>) => {
     const opts = infiniteQueryOptions<ListArtifactsResponse, ListArtifactsError, InfiniteData<ListArtifactsResponse>, QueryKey<Options<ListArtifactsData>>, string | Pick<QueryKey<Options<ListArtifactsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
@@ -4865,6 +4869,8 @@ export const listArtifactsInfiniteOptions = (options?: Options<ListArtifactsData
 
 /**
  * Publish an artifact
+ *
+ * `link` (public) only from a person: a browser session (or the unlocked app), never a token a program can present, so an agent never makes an artifact public (403 `forbidden`); `personal` and `team` from any credential with `artifacts:write`
  */
 export const publishArtifactMutation = (options?: Partial<Options<PublishArtifactData>>): UseMutationOptions<PublishArtifactResponse, PublishArtifactError, Options<PublishArtifactData>> => {
     const mutationOptions: UseMutationOptions<PublishArtifactResponse, PublishArtifactError, Options<PublishArtifactData>> = {
@@ -4935,6 +4941,8 @@ export const getArtifactLinkContentOptions = (options: Options<GetArtifactLinkCo
 
 /**
  * Delete an artifact
+ *
+ * The owner only (403 for any other reader, an administrator included), and only from a person, a browser session or the unlocked app, never a token a program can present (403 `forbidden`), so an agent never deletes an artifact
  */
 export const deleteArtifactMutation = (options?: Partial<Options<DeleteArtifactData>>): UseMutationOptions<DeleteArtifactResponse, DeleteArtifactError, Options<DeleteArtifactData>> => {
     const mutationOptions: UseMutationOptions<DeleteArtifactResponse, DeleteArtifactError, Options<DeleteArtifactData>> = {
@@ -4954,6 +4962,8 @@ export const getArtifactQueryKey = (options: Options<GetArtifactData>) => create
 
 /**
  * An artifact
+ *
+ * 404 for a `personal` artifact the caller neither owns nor is shared with, whatever their role
  */
 export const getArtifactOptions = (options: Options<GetArtifactData>) => queryOptions<GetArtifactResponse, GetArtifactError, GetArtifactResponse, ReturnType<typeof getArtifactQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -4970,6 +4980,8 @@ export const getArtifactOptions = (options: Options<GetArtifactData>) => queryOp
 
 /**
  * Change an artifact's title or access; absent fields stay as they are
+ *
+ * The owner only (403 for any other reader, an administrator included). Changing `access` needs a person, a browser session or the unlocked app, never a token a program can present (403 `forbidden`), so an agent never makes an artifact public; a title alone may come from a token with `artifacts:write`
  */
 export const updateArtifactMutation = (options?: Partial<Options<UpdateArtifactData>>): UseMutationOptions<UpdateArtifactResponse, UpdateArtifactError, Options<UpdateArtifactData>> => {
     const mutationOptions: UseMutationOptions<UpdateArtifactResponse, UpdateArtifactError, Options<UpdateArtifactData>> = {
@@ -5058,6 +5070,8 @@ export const listArtifactMembersOptions = (options: Options<ListArtifactMembersD
 
 /**
  * Stop sharing with a member
+ *
+ * The owner only (403 for any other reader, an administrator included)
  */
 export const unshareArtifactMutation = (options?: Partial<Options<UnshareArtifactData>>): UseMutationOptions<UnshareArtifactResponse, UnshareArtifactError, Options<UnshareArtifactData>> => {
     const mutationOptions: UseMutationOptions<UnshareArtifactResponse, UnshareArtifactError, Options<UnshareArtifactData>> = {
@@ -5076,7 +5090,7 @@ export const unshareArtifactMutation = (options?: Partial<Options<UnshareArtifac
 /**
  * Share with a member
  *
- * Works on every access, `personal` included. A `personal` artifact stays `personal`, which already means its owner, the members it is shared with and the organization's administrators; sharing never changes `access` (`ArtifactAccess` has no `members` value). A `team` or `link` artifact is already readable by every member, so sharing it only adds the member to the list. The console shows a `personal` artifact shared with members as "shared with N members", N being the length of `listArtifactMembers`
+ * The owner only (403 for any other reader, an administrator included). Works on every access, `personal` included. A `personal` artifact stays `personal`, which already means its owner and the members it is shared with (never an administrator for their role alone); sharing never changes `access` (`ArtifactAccess` has no `members` value). A `team` or `link` artifact is already readable by every member, so sharing it only adds the member to the list. The console shows a `personal` artifact shared with members as "shared with N members", N being the length of `listArtifactMembers`
  */
 export const shareArtifactMutation = (options?: Partial<Options<ShareArtifactData>>): UseMutationOptions<ShareArtifactResponse, ShareArtifactError, Options<ShareArtifactData>> => {
     const mutationOptions: UseMutationOptions<ShareArtifactResponse, ShareArtifactError, Options<ShareArtifactData>> = {
@@ -5093,7 +5107,9 @@ export const shareArtifactMutation = (options?: Partial<Options<ShareArtifactDat
 };
 
 /**
- * A reading ticket: a signed address of the entry page on the content origin, valid one hour (rounded to 10 minutes). It stays valid until it expires, even after the artifact stops being shared
+ * A reading ticket: a sealed address of the entry page on the content origin, for the caller only
+ *
+ * For a person only, a browser session or the unlocked app (403 `forbidden` for a token a program can present). The ticket is sealed (encrypted and authenticated, so the page learns nothing of its reader) and names the member and the credential that asked: it lasts 8 hours (rounded down to 10 minutes, so reloading reuses the same address), and the server checks again at most every 30 seconds that the credential is still live, the member still in the organization and the artifact still readable by them, so signing out, leaving the organization or losing access stops it within 30 seconds. At most 60 tickets a minute per credential (429 `rate_limited` with `Retry-After`)
  */
 export const createArtifactTicketMutation = (options?: Partial<Options<CreateArtifactTicketData>>): UseMutationOptions<CreateArtifactTicketResponse, CreateArtifactTicketError, Options<CreateArtifactTicketData>> => {
     const mutationOptions: UseMutationOptions<CreateArtifactTicketResponse, CreateArtifactTicketError, Options<CreateArtifactTicketData>> = {

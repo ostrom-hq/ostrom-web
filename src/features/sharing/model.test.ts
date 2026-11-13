@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { SharedAccount } from '@gen/api/types.gen';
-import { accountState, isArtifactAccess, isProvider, providerOf } from './model';
+import type { Artifact, SharedAccount } from '@gen/api/types.gen';
+import { accountState, isArtifactAccess, isProvider, ownsArtifact, providerOf } from './model';
 
 const account: SharedAccount = {
   id: 'acc-1',
@@ -39,5 +39,30 @@ describe('sharing model', () => {
   it('reads the server’s statuses', () => {
     expect(accountState({ ...account, status: 'wrong_account' })).toBe('wrongAccount');
     expect(accountState({ ...account, status: 'disabled' })).toBe('paused');
+  });
+});
+
+describe('ownsArtifact', () => {
+  const artifact: Artifact = {
+    id: 'a',
+    title: 'Plan',
+    owner: 'maya',
+    access: 'team',
+    latestVersion: 1,
+    url: '/artifacts/a',
+    createdAt: '2026-11-13T10:00:00.000Z',
+    updatedAt: '2026-11-13T10:00:00.000Z',
+  };
+
+  it('trusts the relation the server gives, whatever the names', () => {
+    expect(ownsArtifact({ ...artifact, relation: 'owner' }, 'samir')).toBe(true);
+    expect(ownsArtifact({ ...artifact, relation: 'team' }, 'maya')).toBe(false);
+    expect(ownsArtifact({ ...artifact, relation: 'viewer' }, 'maya')).toBe(false);
+  });
+
+  it('reads the owner by name from a server older than the relation', () => {
+    expect(ownsArtifact(artifact, 'maya')).toBe(true);
+    expect(ownsArtifact(artifact, 'samir')).toBe(false);
+    expect(ownsArtifact(artifact, undefined)).toBe(false);
   });
 });

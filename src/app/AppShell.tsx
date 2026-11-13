@@ -16,6 +16,7 @@ import { useOrgStore } from '@/shared/org/orgStore';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
+import { NavLabel } from '@/app/NavLabel';
 import { NavMenu } from '@/app/NavMenu';
 import { needOf } from '@/app/navigation';
 import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
@@ -52,7 +53,7 @@ export function AppShell(): ReactElement {
         <nav className="o-nav" aria-label={t('app.nav.label')}>
           {links.map((link) => (
             <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
-              {t(`app.nav.${link.label}`)}
+              <NavLabel label={link.label} />
             </Link>
           ))}
         </nav>

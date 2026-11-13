@@ -13,6 +13,8 @@ const WCAG = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const SCREENS = [
   '/',
   '/yes',
+  '/waits',
+  '/waits/0b9d3a52-7c41-4e0a-9d63-5a1f0c7e8a01',
   '/sessions',
   '/receipts',
   '/members',

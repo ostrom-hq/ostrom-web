@@ -336,6 +336,10 @@ export type Artifact = {
     title: string;
     owner: string;
     access: string;
+    /**
+     * What the caller is to it: `owner`, `viewer` (shared with them) or `team` (a `team` or `link` artifact of their organization). Only the owner changes it, shares it or deletes it
+     */
+    relation?: 'owner' | 'viewer' | 'team';
     latestVersion: number;
     /**
      * The console's page for it
@@ -350,7 +354,7 @@ export type Artifact = {
 };
 
 /**
- * Who reads it; `personal` when absent at publication
+ * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
  */
 export type ArtifactAccess = 'personal' | 'team' | 'link';
 
@@ -15785,6 +15789,10 @@ export type CreateArtifactTicketErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
 };
 
 export type CreateArtifactTicketError = CreateArtifactTicketErrors[keyof CreateArtifactTicketErrors];
