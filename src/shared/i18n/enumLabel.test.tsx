@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import { renderHook } from '@testing-library/react';
 import '@/shared/i18n/i18n';
 import { i18n } from '@/shared/i18n/i18n';
