@@ -49,11 +49,17 @@ export function createWaitsHandlers(
       const limit = Number(params.get('limit') ?? PAGE);
       if (!Number.isInteger(limit) || limit < 1 || limit > MAX_PAGE)
         return refusal(400, 'invalid_request', 'limit must be from 1 to 100');
+      const everyone = params.get('assignee');
+      if (everyone !== null && !manages())
+        return refusal(403, 'forbidden', 'Only an administrator lists others’ waits.');
       const mine = params.get('mine') === 'true';
       const matching = state().waits.filter(
         (wait) =>
           (status === 'all' || wait.status === status) &&
-          (mine ? isDemoPerson(wait.assignee) : isDemoPerson(wait.assignee) || isDemoPerson(wait.createdBy)),
+          (everyone === 'all' ||
+            (mine
+              ? isDemoPerson(wait.assignee)
+              : isDemoPerson(wait.assignee) || isDemoPerson(wait.createdBy))),
       );
       const before = params.get('before');
       const from = before === null ? 0 : matching.findIndex((wait) => wait.id === before) + 1;

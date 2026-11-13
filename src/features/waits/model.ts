@@ -6,8 +6,8 @@ import { safeHref } from '@/shared/lib/safeHref';
 export const FILTERS = ['open', 'resolved', 'cancelled'] as const satisfies readonly WaitStatus[];
 export type WaitFilter = (typeof FILTERS)[number];
 
-/** Whose waits: what I asked or was asked (the server's default), or only what is asked of me (`mine=true`). */
-export const SCOPES = ['involved', 'mine'] as const;
+/** Whose waits: what I asked or was asked (the server's default), only what is asked of me (`mine=true`), or, for an administrator, everyone's (`assignee=all`). */
+export const SCOPES = ['involved', 'mine', 'all'] as const;
 export type WaitScope = (typeof SCOPES)[number];
 
 /** The page size the console asks for (the server's default); the badge in the navigation reads the largest page. */
@@ -19,6 +19,11 @@ const THROUGH_SESSION: readonly string[] = ['permission', 'question'];
 
 export function answeredThroughSession(wait: Wait): boolean {
   return THROUGH_SESSION.includes(wait.kind);
+}
+
+/** A wait that resolves by itself (`resolver` `time` or `event`): nobody answers it (`409 resolves_by_itself`). */
+export function resolvesByItself(wait: Wait): boolean {
+  return wait.resolver !== undefined && wait.resolver !== 'human';
 }
 
 /** The text of the longest a `text` field may be when the wait does not say (the server's default). */

@@ -268,6 +268,49 @@ export const zArtifactVersion = z.object({
 });
 
 /**
+ * A device link just started: open `verificationUri`, enter `userCode`, then poll with `id` every `interval` seconds until `expiresAt`
+ */
+export const zGitHubDeviceLink = z.object({
+    id: z.string(),
+    userCode: z.string(),
+    verificationUri: z.string(),
+    expiresAt: z.string(),
+    interval: z.int()
+});
+
+/**
+ * A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens reach only the runner of the member's own sessions. `state` is `not_linked`, `linked` or `reconnect_required` (GitHub refused the refresh token, or the instance's App changed: the member links again)
+ */
+export const zGitHubLink = z.object({
+    memberId: z.string(),
+    state: z.enum([
+        'not_linked',
+        'linked',
+        'reconnect_required'
+    ]),
+    appConfigured: z.boolean(),
+    login: z.optional(z.string()),
+    userId: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    linkedAt: z.optional(z.string()),
+    refreshedAt: z.optional(z.string()),
+    accessExpiresAt: z.optional(z.string())
+});
+
+/**
+ * One poll of a device link; `link` once linked, `interval` (seconds) while pending
+ */
+export const zGitHubDeviceLinkPoll = z.object({
+    status: z.enum([
+        'pending',
+        'linked',
+        'expired',
+        'denied'
+    ]),
+    interval: z.optional(z.int()),
+    link: z.optional(zGitHubLink)
+});
+
+/**
  * What the CLI does when none of Ostrom's hooks runs in the agent's session
  */
 export const zHooksCheck = z.object({
@@ -596,7 +639,7 @@ export const zBudgetOverride = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `usage.v1`, `waits.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -695,6 +738,11 @@ export const zCloudSession = z.object({
     lastActivityAt: z.optional(z.string()),
     pausedAt: z.optional(z.string()),
     runnerId: z.optional(z.string()),
+    githubAccess: z.optional(z.enum([
+        'owner',
+        'shared',
+        'none'
+    ])),
     runId: z.optional(z.string()),
     automationId: z.optional(z.string()),
     createdAt: z.string(),
@@ -894,7 +942,7 @@ export const zApproval = z.object({
 });
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `signup_closed`: no account for this person on an invite-only instance, `org_creation_closed`: creating an organization there is for its owners and admins, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
  */
 export const zForbidden = z.object({
     error: z.object({
@@ -905,7 +953,9 @@ export const zForbidden = z.object({
             'probe_not_yours',
             'cutover_owner_required',
             'self_approval_refused',
-            'github_link_required'
+            'github_link_required',
+            'signup_closed',
+            'org_creation_closed'
         ]),
         message: z.string()
     })
@@ -1450,6 +1500,20 @@ export const zOpenAiError = z.object({
  */
 export const zOpenAiResponsesStreamEvent = z.object({
     type: z.string()
+});
+
+/**
+ * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
+ */
+export const zRunnerGitHubToken = z.object({
+    status: z.enum([
+        'linked',
+        'not_linked',
+        'unavailable'
+    ]),
+    token: z.optional(z.string()),
+    expiresAt: z.optional(z.string()),
+    login: z.optional(z.string())
 });
 
 export const zTokenScope = z.object({
@@ -2313,10 +2377,18 @@ export const zSharedAccount = z.object({
 });
 
 /**
+ * The token of the instance's setup link or of an invitation (at most 256 characters)
+ */
+export const zSignUpGrantRequest = z.object({
+    token: z.string()
+});
+
+/**
  * The sign-in methods this instance offers
  */
 export const zSignInMethods = z.object({
-    methods: z.array(z.string())
+    methods: z.array(z.string()),
+    signUp: z.optional(z.enum(['open', 'invite']))
 });
 
 /**
@@ -2622,6 +2694,317 @@ export const zTokenList = z.object({
 });
 
 /**
+ * `done`: every item is done or dropped and the final verification held
+ */
+export const zTodoStatus = z.enum([
+    'active',
+    'done',
+    'abandoned'
+]);
+
+/**
+ * `plan`: written with the list; `discovered`: added on the way
+ */
+export const zTodoItemOrigin = z.enum(['plan', 'discovered']);
+
+/**
+ * `drop_requested`: a wait asks the owner; `dropped`: on the owner's yes, never deleted
+ */
+export const zTodoItemStatus = z.enum([
+    'todo',
+    'doing',
+    'done',
+    'drop_requested',
+    'dropped'
+]);
+
+/**
+ * The item's pull request (linked, or found by its marker among the PRs of the token's login) is merged
+ */
+export const zTodoCheckPrMerged = z.object({
+    type: z.literal('pr_merged'),
+    repo: z.string()
+});
+
+/**
+ * The item's pull request is closed without merge, for the stated reason
+ */
+export const zTodoCheckPrClosed = z.object({
+    type: z.literal('pr_closed'),
+    repo: z.string(),
+    reason: z.string()
+});
+
+/**
+ * The earliest published, non-draft release of `repo` whose tag is at or ahead of the merge commit of the item `of` (or of `commit`); it is linked to the item with its tag
+ */
+export const zTodoCheckReleaseContains = z.object({
+    type: z.literal('release_contains'),
+    repo: z.string(),
+    of: z.optional(z.string()),
+    commit: z.optional(z.string())
+});
+
+/**
+ * Every workflow run of `repo` on the merge commit of the item `of` (or on `ref`) completed green; none yet, running or failed is not done
+ */
+export const zTodoCheckCiGreen = z.object({
+    type: z.literal('ci_green'),
+    repo: z.string(),
+    of: z.optional(z.string()),
+    ref: z.optional(z.string()),
+    workflow: z.optional(z.string())
+});
+
+/**
+ * A command run on the agent's machine (`sh -c`, `cmd /c` on Windows) exits with `expectExit`. `run` may cite `${pr:<item>.number}`, `${pr:<item>.mergeSha}` and `${release:<item>.tag}`, replaced from the links; a value not linked yet leaves the check unknown. Output bounded to 300 characters and masked
+ */
+export const zTodoCheckCommand = z.object({
+    type: z.literal('command'),
+    run: z.string(),
+    cwd: z.optional(z.string()),
+    expectExit: z.optional(z.int()),
+    timeoutSeconds: z.optional(z.int().check(z.gte(1), z.lte(120)))
+});
+
+/**
+ * The artifact `id` (or the one linked to the item) is published, at `minVersion` or later; verified by the server
+ */
+export const zTodoCheckArtifactPublished = z.object({
+    type: z.literal('artifact_published'),
+    id: z.optional(z.string()),
+    minVersion: z.optional(z.int())
+});
+
+/**
+ * The wait linked to the item is answered, with `action` when given; verified by the server
+ */
+export const zTodoCheckWaitAnswered = z.object({
+    type: z.literal('wait_answered'),
+    action: z.optional(z.string())
+});
+
+/**
+ * The agent's word for `what`: nothing verifies it, the item is shown as not verified
+ */
+export const zTodoCheckAttested = z.object({
+    type: z.literal('attested'),
+    what: z.string()
+});
+
+/**
+ * One typed check of an end condition, told apart by `type`. A check is read again at every stop, so it must stay true once the work moves on (never a transient state such as a PR still open); no check names a PR number or a version. `pr_merged`, `pr_closed`, `release_contains`, `ci_green` (with `gh`) and `command` (in a shell) run on the agent's machine; `artifact_published` and `wait_answered` are verified by the server through the item's links; `attested` is the agent's word, the last resort. A client shows a `type` it does not know as text
+ */
+export const zTodoCheck = z.discriminatedUnion('type', [
+    zTodoCheckPrMerged,
+    zTodoCheckPrClosed,
+    zTodoCheckReleaseContains,
+    zTodoCheckCiGreen,
+    zTodoCheckCommand,
+    zTodoCheckArtifactPublished,
+    zTodoCheckWaitAnswered,
+    zTodoCheckAttested
+]);
+
+/**
+ * The end condition of an item, frozen once created
+ */
+export const zTodoDoneWhen = z.object({
+    text: z.string(),
+    checks: z.array(zTodoCheck)
+});
+
+/**
+ * An item as the agent writes it
+ */
+export const zTodoItemInput = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    doneWhen: zTodoDoneWhen,
+    dependsOn: z.optional(z.array(z.string()))
+});
+
+/**
+ * What the check at `index` of the item's stored condition observed
+ */
+export const zTodoCheckReport = z.object({
+    index: z.int(),
+    passed: z.optional(z.boolean()),
+    observed: z.string(),
+    urls: z.optional(z.array(z.string()))
+});
+
+/**
+ * The last verification of an item, kept when it refused
+ */
+export const zTodoProof = z.object({
+    at: z.iso.datetime({ offset: true }),
+    passed: z.optional(z.boolean()),
+    text: z.string(),
+    urls: z.optional(z.array(z.string()))
+});
+
+/**
+ * A dated note of an item; notes are only appended
+ */
+export const zTodoNote = z.object({
+    at: z.iso.datetime({ offset: true }),
+    text: z.string()
+});
+
+export const zTodoLinkKind = z.enum([
+    'pr',
+    'release',
+    'artifact',
+    'wait'
+]);
+
+/**
+ * A link of an item, frozen once bound
+ */
+export const zTodoLink = z.object({
+    kind: zTodoLinkKind,
+    ref: z.string(),
+    number: z.optional(z.int()),
+    sha: z.optional(z.string()),
+    tag: z.optional(z.string()),
+    at: z.iso.datetime({ offset: true })
+});
+
+/**
+ * An item of a todo, as the server keeps it
+ */
+export const zTodoItem = z.object({
+    id: z.string(),
+    name: z.string(),
+    description: z.string(),
+    doneWhen: zTodoDoneWhen,
+    dependsOn: z.optional(z.array(z.string())),
+    origin: zTodoItemOrigin,
+    originReason: z.optional(z.string()),
+    status: zTodoItemStatus,
+    proof: z.optional(zTodoProof),
+    notes: z.optional(z.array(zTodoNote)),
+    dropReason: z.optional(z.string()),
+    dropWaitId: z.optional(z.string()),
+    links: z.optional(z.array(zTodoLink)),
+    unverified: z.optional(z.boolean())
+});
+
+/**
+ * `blocked`: the third stop without progress opened a wait; `hook_error`: the hook failed open
+ */
+export const zTodoHookEventKind = z.enum(['blocked', 'hook_error']);
+
+export const zTodoHookEvent = z.object({
+    at: z.iso.datetime({ offset: true }),
+    kind: zTodoHookEventKind,
+    text: z.string()
+});
+
+export const zAddTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    item: zTodoItemInput,
+    reason: z.string()
+});
+
+export const zStartTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    background: z.optional(z.boolean()),
+    agent: z.optional(z.string())
+});
+
+export const zNoteTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    text: z.string()
+});
+
+export const zDropTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    reason: z.string()
+});
+
+export const zLinkTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    kind: zTodoLinkKind,
+    ref: z.string(),
+    number: z.optional(z.int()),
+    sha: z.optional(z.string()),
+    tag: z.optional(z.string()),
+    replaceClosed: z.optional(z.boolean())
+});
+
+export const zCompleteTodoItemRequest = z.object({
+    sessionId: z.optional(z.string()),
+    checks: z.array(zTodoCheckReport)
+});
+
+/**
+ * The reminder block of a session's todo
+ */
+export const zTodoContext = z.object({
+    text: z.nullable(z.string())
+});
+
+export const zTodoStopPhase = z.enum([
+    'begin',
+    'verify',
+    'settle'
+]);
+
+/**
+ * The outcome of the checks the Stop hook ran for one item
+ */
+export const zTodoStopItemReport = z.object({
+    itemId: z.string(),
+    checks: z.optional(z.array(zTodoCheckReport))
+});
+
+/**
+ * One stop of the agent, asked by the Stop hook
+ */
+export const zTodoStopRequest = z.object({
+    sessionId: z.optional(z.string()),
+    phase: z.optional(zTodoStopPhase),
+    background: z.optional(z.boolean()),
+    items: z.optional(z.array(zTodoStopItemReport)),
+    orphans: z.optional(z.array(z.string())),
+    lastMessage: z.optional(z.string())
+});
+
+/**
+ * `allow` the stop passes; `verify` run the cheap checks and ask again; `settle` run every check of the done items and ask again; `block` refuse the stop with `reason`
+ */
+export const zTodoStopAction = z.enum([
+    'allow',
+    'verify',
+    'settle',
+    'block'
+]);
+
+export const zTodoHookErrorRequest = z.object({
+    sessionId: z.optional(z.string()),
+    text: z.string()
+});
+
+export const zTodoStopHookRequest = z.object({
+    enabled: z.boolean()
+});
+
+/**
+ * The todo Stop hook setting of a member; a member without one has it on
+ */
+export const zTodoStopHook = z.object({
+    memberId: z.string(),
+    enabled: z.boolean()
+});
+
+export const zTodoStopHooks = z.object({
+    members: z.array(zTodoStopHook)
+});
+
+/**
  * Spending over a period
  */
 export const zUsage = z.object({
@@ -2711,6 +3094,30 @@ export const zVerification = z.object({
 });
 
 /**
+ * What an outside caller posts to an `event` wait: data for the agent, never instructions
+ */
+export const zWaitEventRequest = z.object({
+    result: z.optional(z.string().check(z.minLength(1), z.maxLength(64))),
+    url: z.optional(z.string()),
+    note: z.optional(z.string().check(z.maxLength(2000)))
+});
+
+/**
+ * How long the server may hold the answer back
+ */
+export const zWaitWakeRequest = z.object({
+    waitMillis: z.optional(z.int().check(z.gte(0), z.lte(30000)))
+});
+
+/**
+ * What the waits of a session have to say to its Stop hook
+ */
+export const zWaitWake = z.object({
+    open: z.boolean(),
+    messages: z.array(z.string())
+});
+
+/**
  * A button of a wait
  */
 export const zWaitAction = z.object({
@@ -2757,6 +3164,56 @@ export const zWaitRef = z.object({
 });
 
 /**
+ * A session's todo: the plan reference and its items, each with a complete description and a typed end condition (`todos.v1`). An item is done only when its checks pass; items are added, never deleted
+ */
+export const zTodo = z.object({
+    id: z.string(),
+    sessionId: z.string(),
+    reference: z.string(),
+    refs: z.optional(z.array(zWaitRef)),
+    status: zTodoStatus,
+    stall: z.optional(z.int()),
+    items: z.array(zTodoItem),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
+    nextItemId: z.optional(z.string()),
+    hookEvents: z.optional(z.array(zTodoHookEvent))
+});
+
+/**
+ * The answer of a read or a change of a session's todo
+ */
+export const zSessionTodo = z.object({
+    todo: z.nullable(zTodo)
+});
+
+/**
+ * The answer of `startTodoItem`
+ */
+export const zStartTodoItemResponse = z.object({
+    todo: zTodo,
+    marker: z.string()
+});
+
+export const zCreateTodoRequest = z.object({
+    sessionId: z.optional(z.string()),
+    reference: z.string(),
+    refs: z.optional(z.array(zWaitRef)),
+    items: z.array(zTodoItemInput)
+});
+
+/**
+ * The server's answer to a stop
+ */
+export const zTodoStopDecision = z.object({
+    action: zTodoStopAction,
+    todo: z.optional(zTodo),
+    reason: z.optional(z.string()),
+    why: z.optional(z.string()),
+    escalated: z.optional(z.boolean())
+});
+
+/**
  * The question of a wait node, or of a wait asked by an agent (TeamCode `ask_human`)
  */
 export const zWaitSpec = z.object({
@@ -2787,7 +3244,21 @@ export const zWait = z.object({
     question: zWaitSpec,
     answer: z.optional(zWaitAnswer),
     createdAt: z.string(),
-    resolvedAt: z.optional(z.string())
+    resolvedAt: z.optional(z.string()),
+    resolver: z.optional(z.string()),
+    dueAt: z.optional(z.string()),
+    timeoutAt: z.optional(z.string()),
+    eventSource: z.optional(z.string()),
+    resumeMessage: z.optional(z.string()),
+    eventUrl: z.optional(z.string())
+});
+
+/**
+ * The wait the event resolved
+ */
+export const zWaitEventReceived = z.object({
+    id: z.string(),
+    status: zWaitStatus
 });
 
 /**
@@ -3347,6 +3818,13 @@ export const zGithubLoginCallbackQuery = z.object({
  */
 export const zListSignInMethodsResponse = zSignInMethods;
 
+export const zGrantSignUpBody = zSignUpGrantRequest;
+
+/**
+ * The token is valid: the cookie is set
+ */
+export const zGrantSignUpResponse = z.void();
+
 export const zStartOAuthLoginPath = z.object({
     provider: z.string()
 });
@@ -3811,6 +4289,101 @@ export const zGithubAppInstallCallbackQuery = z.object({
     installation_id: z.optional(z.string()),
     code: z.optional(z.string()),
     state: z.optional(z.string())
+});
+
+export const zUnlinkGithubHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Unlinked, or nothing to unlink
+ */
+export const zUnlinkGithubResponse = z.void();
+
+export const zGetGithubLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetGithubLinkResponse = zGitHubLink;
+
+export const zStartGithubDeviceLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Started
+ */
+export const zStartGithubDeviceLinkResponse = zGitHubDeviceLink;
+
+export const zPollGithubDeviceLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPollGithubDeviceLinkPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPollGithubDeviceLinkResponse = zGitHubDeviceLinkPoll;
+
+export const zStartGithubWebLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGithubLinkCallbackQuery = z.object({
+    code: z.optional(z.string()),
+    state: z.optional(z.string()),
+    error: z.optional(z.string())
+});
+
+export const zListGithubLinksHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListGithubLinksResponse = z.object({
+    items: z.array(zGitHubLink)
+});
+
+export const zUnlinkMemberGithubHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUnlinkMemberGithubPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * Unlinked, or nothing to unlink
+ */
+export const zUnlinkMemberGithubResponse = z.void();
+
+export const zGetMemberGithubLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetMemberGithubLinkPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetMemberGithubLinkResponse = zGitHubLink;
+
+export const zStartMemberGithubWebLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zStartMemberGithubWebLinkPath = z.object({
+    memberId: z.string()
 });
 
 export const zGithubWebhookBody = z.unknown();
@@ -5212,7 +5785,14 @@ export const zListWaitsHeaders = z.object({
 
 export const zListWaitsQuery = z.object({
     status: z.optional(z.string()),
+    resolver: z.optional(z.enum([
+        'human',
+        'time',
+        'event',
+        'all'
+    ])),
     mine: z.optional(z.boolean()),
+    assignee: z.optional(z.string()),
     sessionId: z.optional(z.string()),
     runId: z.optional(z.string()),
     before: z.optional(z.uuid()),
@@ -5232,7 +5812,17 @@ export const zCreateWaitBody = z.object({
     runId: z.optional(z.string()),
     assignee: z.optional(z.string()),
     kind: z.optional(z.string()),
-    question: zWaitSpec
+    question: zWaitSpec,
+    resolver: z.optional(z.enum([
+        'human',
+        'time',
+        'event'
+    ])),
+    at: z.optional(z.iso.datetime({ offset: true })),
+    after: z.optional(z.coerce.bigint().check(z.gte(BigInt(30)), z.lte(BigInt(2592000)))),
+    source: z.optional(z.enum(['webhook'])),
+    timeoutSeconds: z.optional(z.coerce.bigint().check(z.gte(BigInt(30)), z.lte(BigInt(604800)))),
+    resumeMessage: z.optional(z.string().check(z.maxLength(2000)))
 });
 
 export const zCreateWaitHeaders = z.object({
@@ -5254,6 +5844,21 @@ export const zWaitsMcpQuery = z.object({
     session: z.optional(z.string()),
     run: z.optional(z.string())
 });
+
+export const zWakeWaitsBody = zWaitWakeRequest;
+
+export const zWakeWaitsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zWakeWaitsQuery = z.object({
+    session: z.string()
+});
+
+/**
+ * The answers that arrived, and whether a wait is still open
+ */
+export const zWakeWaitsResponse = zWaitWake;
 
 export const zGetWaitHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5298,6 +5903,194 @@ export const zCancelWaitPath = z.object({
  * OK
  */
 export const zCancelWaitResponse = zWait;
+
+export const zReceiveWaitEventBody = zWaitEventRequest;
+
+export const zReceiveWaitEventHeaders = z.object({
+    'Ostrom-Wait-Token': z.optional(z.string())
+});
+
+export const zReceiveWaitEventPath = z.object({
+    id: z.string()
+});
+
+export const zReceiveWaitEventQuery = z.object({
+    token: z.optional(z.string())
+});
+
+/**
+ * The wait is resolved and its session will be woken
+ */
+export const zReceiveWaitEventResponse = zWaitEventReceived;
+
+export const zGetSessionTodoHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetSessionTodoQuery = z.object({
+    sessionId: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetSessionTodoResponse = zSessionTodo;
+
+export const zCreateSessionTodoBody = zCreateTodoRequest;
+
+export const zCreateSessionTodoHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCreateSessionTodoResponse = zSessionTodo;
+
+export const zAddTodoItemBody = zAddTodoItemRequest;
+
+export const zAddTodoItemHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zAddTodoItemResponse = zSessionTodo;
+
+export const zStartTodoItemBody = zStartTodoItemRequest;
+
+export const zStartTodoItemHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zStartTodoItemPath = z.object({
+    item: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zStartTodoItemResponse2 = zStartTodoItemResponse;
+
+export const zNoteTodoItemBody = zNoteTodoItemRequest;
+
+export const zNoteTodoItemHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zNoteTodoItemPath = z.object({
+    item: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zNoteTodoItemResponse = zSessionTodo;
+
+export const zCompleteTodoItemBody = zCompleteTodoItemRequest;
+
+export const zCompleteTodoItemHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCompleteTodoItemPath = z.object({
+    item: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zCompleteTodoItemResponse = zSessionTodo;
+
+export const zLinkTodoItemBody = zLinkTodoItemRequest;
+
+export const zLinkTodoItemHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zLinkTodoItemPath = z.object({
+    item: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zLinkTodoItemResponse = zSessionTodo;
+
+export const zRequestTodoDropBody = zDropTodoItemRequest;
+
+export const zRequestTodoDropHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRequestTodoDropPath = z.object({
+    item: z.string().check(z.regex(/^[a-z0-9][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zRequestTodoDropResponse = zSessionTodo;
+
+export const zReadTodoContextHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zReadTodoContextQuery = z.object({
+    sessionId: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zReadTodoContextResponse = zTodoContext;
+
+export const zStopTodoSessionBody = zTodoStopRequest;
+
+export const zStopTodoSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zStopTodoSessionResponse = zTodoStopDecision;
+
+export const zRecordTodoHookErrorBody = zTodoHookErrorRequest;
+
+export const zRecordTodoHookErrorHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zRecordTodoHookErrorResponse = zSessionTodo;
+
+export const zListTodoStopHooksHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListTodoStopHooksResponse = zTodoStopHooks;
+
+export const zSetMemberTodoStopHookBody = zTodoStopHookRequest;
+
+export const zSetMemberTodoStopHookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetMemberTodoStopHookPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetMemberTodoStopHookResponse = zTodoStopHook;
 
 export const zListMcpServersHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -6070,6 +6863,27 @@ export const zResumeCloudSessionPath = z.object({
  */
 export const zResumeCloudSessionResponse = zCloudSession;
 
+export const zSetCloudSessionGithubAccessBody = z.object({
+    access: z.enum([
+        'owner',
+        'shared',
+        'none'
+    ])
+});
+
+export const zSetCloudSessionGithubAccessHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetCloudSessionGithubAccessPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetCloudSessionGithubAccessResponse = zCloudSession;
+
 export const zIssueCloudTerminalTicketHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -6156,6 +6970,20 @@ export const zReportRunnerCheckHeaders = z.object({
  * OK
  */
 export const zReportRunnerCheckResponse = zCheckRun;
+
+export const zFetchRunnerGithubTokenBody = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+export const zFetchRunnerGithubTokenHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zFetchRunnerGithubTokenResponse = zRunnerGitHubToken;
 
 export const zSendCloudMessageBody = z.object({
     text: z.string()

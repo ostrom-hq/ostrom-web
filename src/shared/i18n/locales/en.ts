@@ -1856,6 +1856,7 @@ export const en = {
       title: 'Waiting for you',
       lead: 'What your agents, and your teammates, ask a person to answer. Newest first.',
       filter: 'Show',
+      everyone: 'Everyone’s waits',
       mine: 'Only what is asked of me',
       empty: {
         open: 'Nothing is waiting',
@@ -1891,6 +1892,8 @@ export const en = {
       cancelled: 'This wait was cancelled: nobody answered it.',
       noAnswer: 'This wait ended without an answer.',
       answeredWith: '{{action}}, by {{who}}, {{when}}',
+      byItselfTag: 'Automatic',
+      byItself: 'This wait resolves by itself, at its time or on its event: nobody answers it.',
       throughSessionTag: 'In the session',
       throughSession: 'This is a request of a cloud session: it is answered in the session.',
       openSession: 'Open the session',

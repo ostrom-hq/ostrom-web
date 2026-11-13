@@ -10,6 +10,7 @@ import {
   isCalendarDate,
   isMemberId,
   isViewer,
+  resolvesByItself,
   shownValue,
   styleOf,
   targetOf,
@@ -52,6 +53,12 @@ describe('actions', () => {
       { id: 'done', label: 'Fait', style: 'primary' },
     ]);
     expect(actionsOf(waitWith({}), 'Done')).toHaveLength(1);
+  });
+
+  it('resolves by itself unless a person is the resolver', () => {
+    expect(resolvesByItself({ ...waitWith({}), resolver: 'event' })).toBe(true);
+    expect(resolvesByItself({ ...waitWith({}), resolver: 'human' })).toBe(false);
+    expect(resolvesByItself(waitWith({}))).toBe(false);
   });
 
   it('answers through the session for a cloud session’s own requests only', () => {

@@ -3,8 +3,8 @@
 import { type DefaultError, type InfiniteData, infiniteQueryOptions, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { acceptInvitation, addGroupMember, answerApproval, answerDeviceLogin, answerGovernanceConfirmation, answerWait, artifactsMcp, askGate, assignMcpServer, attachCloudTerminal, attachRunnerTerminal, bulkUpdateRules, cancelBillingSubscription, cancelRun, cancelWait, capabilities, changeBillingPlan, checkAgentPolicy, cloudRunnerHeartbeat, consumeGate, createArtifactTicket, createAutomation, createBudgetOverride, createCloudSession, createGroup, createInferenceRoute, createInvitationLink, createLaunch, createMcpArgumentPolicy, createMcpServer, createOrg, createRule, createSecret, createServiceKey, createSignInLink, createToken, createWait, createWebhook, createWorkflow, deleteArtifact, deleteAutomation, deleteDevice, deleteGroup, deleteInferenceRoute, deleteMcpArgumentPolicy, deleteMcpServer, deleteOrg, deletePushDevice, deleteRule, deleteRunner, deleteSecret, deleteServiceKey, deleteSkill, deleteWebhook, deleteWorkflow, disableAutomation, enableAutomation, endLaunch, endSession, enrollSharedAccount, exchangeSignInLink, getAnalysisState, getApproval, getApprovalQueue, getApprovalView, getApproversGraph, getArtifact, getArtifactContent, getArtifactFile, getArtifactLinkContent, getAutomation, getBilling, getCapacity, getCloudSession, getCurrentPackage, getDeviceLogin, getGate, getGateCatalog, getGatePolicy, getGithubApp, getGovernanceConfirmation, getGroup, getHookDelivery, getInferenceSettings, getInstance, getLauncherConfig, getMcpSettings, getMcpUsage, getMe, getMember, getModelPolicy, getMyAccount, getMyBudget, getNotificationPreferences, getOrg, getOrganization, getOrgMember, getPackage, getPackageStatus, getReceipt, getReceiptBundle, getReplay, getRule, getRun, getSession, getSettings, getSignedGatePolicy, getSkillDelivery, getSpending, getUsage, getUsageSummary, getWait, getWorkflow, githubAppInstallCallback, githubAppManifestCallback, githubCheck, githubLoginCallback, githubWebhook, health, healthRoot, importTeamCode, inferenceChatCompletions, inferenceMessages, inferenceModels, inferenceResponses, inviteMembers, inviteOrgMembers, issueCloudTerminalTicket, launcherLogin, leaveOrg, linkSignInProvider, listActivity, listApprovals, listArtifactMembers, listArtifacts, listArtifactVersions, listAudit, listAuthSessions, listAutomationRuns, listAutomations, listBillingInvoices, listBudgetOverrides, listBudgets, listChecks, listCloudSessions, listDecisions, listDevices, listEvents, listGates, listGroups, listHooks, listInferenceRoutes, listInstanceKeys, listInvitations, listMcpArgumentPolicies, listMcpAssignments, listMcpCalls, listMcpServers, listMembers, listMyAudit, listMyOrganizations, listNotifications, listOrgMembers, listOrgs, listPackageAudit, listPackages, listPendingUsage, listReceiptKeys, listReceipts, listRepos, listRules, listRunners, listRuns, listSecrets, listServiceKeys, listSessions, listSharedAccounts, listSignInMethods, listSkills, listTasks, listTeams, listTokens, listTokenScopes, listUsageEvents, listUsageReconciliations, listWaits, listWebhookDeliveries, listWebhooks, listWorkflowRuns, listWorkflows, logout, logoutEverywhere, mobileToken, oauthLoginCallback, openBillingPortal, openRunnerLaunch, type Options, pauseCloudSession, pauseGroupMember, pollDeviceLogin, previewInvitation, previewPackage, publishArtifact, publishArtifactVersion, publishSkill, putMcpSettings, ready, receiveSlackInteraction, receiveStripeWebhook, receiveStripeWebhookAlias, reconcileUsage, recordUsageEvents, refreshToken, registerPushDevice, registerRunner, relayMcp, releaseGate, removeGroupMember, removeMember, removeOrgMember, removeSharedAccount, renameOrg, reopenSession, reportCheck, reportHooksMissing, reportLocalGateDenial, reportRunnerCheck, reportSeen, requestSignInEmail, reserveGate, restartAnalysis, restorePackage, resumeBillingSubscription, resumeCloudSession, revokeAuthSession, revokeBudgetOverride, revokeInvitation, revokePackage, revokeToken, rotateAutomationSecret, rotateSecret, rotateToken, runnerHeartbeat, runTask, saveAutomation, saveMcpServer, saveWorkflow, sendCloudMessage, sendNotification, sessionAlive, setBudget, setGatePolicy, setInferenceSettings, setModelPolicy, setNotificationPreferences, shareArtifact, signWorkflowReceipt, startAnalysis, startBillingCheckout, startDeviceLogin, startGithubAppInstall, startGithubAppManifest, startGithubLogin, startOAuthLogin, startReplay, startSession, startWorkflowRun, stopCloudSession, testAutomation, transferOrg, triggerAutomation, unassignMcpServer, unlockMobileApp, unshareArtifact, updateArtifact, updateGroup, updateMember, updateOrgMember, updateRule, updateSettings, updateSharedAccount, verifyReceipt, verifySignInEmail, waitsMcp } from '../sdk.gen';
-import type { AcceptInvitationData, AcceptInvitationError, AcceptInvitationResponse, AddGroupMemberData, AddGroupMemberError, AddGroupMemberResponse, AnswerApprovalData, AnswerApprovalError, AnswerApprovalResponse, AnswerDeviceLoginData, AnswerDeviceLoginError, AnswerDeviceLoginResponse, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationError, AnswerGovernanceConfirmationResponse, AnswerWaitData, AnswerWaitError, AnswerWaitResponse, ArtifactsMcpData, ArtifactsMcpError, AskGateData, AskGateError, AskGateResponse, AssignMcpServerData, AssignMcpServerError, AssignMcpServerResponse, AttachCloudTerminalData, AttachCloudTerminalError, AttachRunnerTerminalData, AttachRunnerTerminalError, BulkUpdateRulesData, BulkUpdateRulesError, BulkUpdateRulesResponse, CancelBillingSubscriptionData, CancelBillingSubscriptionError, CancelBillingSubscriptionResponse, CancelRunData, CancelRunError, CancelRunResponse, CancelWaitData, CancelWaitError, CancelWaitResponse, CapabilitiesData, CapabilitiesError, CapabilitiesResponse, ChangeBillingPlanData, ChangeBillingPlanError, ChangeBillingPlanResponse, CheckAgentPolicyData, CheckAgentPolicyError, CheckAgentPolicyResponse, CloudRunnerHeartbeatData, CloudRunnerHeartbeatError, CloudRunnerHeartbeatResponse, ConsumeGateData, ConsumeGateError, ConsumeGateResponse, CreateArtifactTicketData, CreateArtifactTicketError, CreateArtifactTicketResponse, CreateAutomationData, CreateAutomationError, CreateAutomationResponse, CreateBudgetOverrideData, CreateBudgetOverrideError, CreateBudgetOverrideResponse, CreateCloudSessionData, CreateCloudSessionError, CreateCloudSessionResponse, CreateGroupData, CreateGroupError, CreateGroupResponse, CreateInferenceRouteData, CreateInferenceRouteError, CreateInferenceRouteResponse, CreateInvitationLinkData, CreateInvitationLinkError, CreateInvitationLinkResponse, CreateLaunchData, CreateLaunchError, CreateLaunchResponse, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyError, CreateMcpArgumentPolicyResponse, CreateMcpServerData, CreateMcpServerError, CreateMcpServerResponse, CreateOrgData, CreateOrgError, CreateOrgResponse, CreateRuleData, CreateRuleError, CreateRuleResponse, CreateSecretData, CreateSecretError, CreateSecretResponse, CreateServiceKeyData, CreateServiceKeyError, CreateServiceKeyResponse, CreateSignInLinkData, CreateSignInLinkError, CreateSignInLinkResponse, CreateTokenData, CreateTokenError, CreateTokenResponse, CreateWaitData, CreateWaitError, CreateWaitResponse, CreateWebhookData, CreateWebhookError, CreateWebhookResponse, CreateWorkflowData, CreateWorkflowError, CreateWorkflowResponse, DeleteArtifactData, DeleteArtifactError, DeleteArtifactResponse, DeleteAutomationData, DeleteAutomationError, DeleteAutomationResponse, DeleteDeviceData, DeleteDeviceError, DeleteDeviceResponse, DeleteGroupData, DeleteGroupError, DeleteGroupResponse, DeleteInferenceRouteData, DeleteInferenceRouteError, DeleteInferenceRouteResponse, DeleteMcpArgumentPolicyData, DeleteMcpArgumentPolicyError, DeleteMcpArgumentPolicyResponse, DeleteMcpServerData, DeleteMcpServerError, DeleteMcpServerResponse, DeleteOrgData, DeleteOrgError, DeleteOrgResponse, DeletePushDeviceData, DeletePushDeviceError, DeletePushDeviceResponse, DeleteRuleData, DeleteRuleError, DeleteRuleResponse, DeleteRunnerData, DeleteRunnerError, DeleteRunnerResponse, DeleteSecretData, DeleteSecretError, DeleteSecretResponse, DeleteServiceKeyData, DeleteServiceKeyError, DeleteServiceKeyResponse, DeleteSkillData, DeleteSkillError, DeleteSkillResponse, DeleteWebhookData, DeleteWebhookError, DeleteWebhookResponse, DeleteWorkflowData, DeleteWorkflowError, DeleteWorkflowResponse, DisableAutomationData, DisableAutomationError, DisableAutomationResponse, EnableAutomationData, EnableAutomationError, EnableAutomationResponse, EndLaunchData, EndLaunchError, EndLaunchResponse, EndSessionData, EndSessionError, EndSessionResponse, EnrollSharedAccountData, EnrollSharedAccountError, EnrollSharedAccountResponse, ExchangeSignInLinkData, ExchangeSignInLinkError, ExchangeSignInLinkResponse, GetAnalysisStateData, GetAnalysisStateError, GetAnalysisStateResponse, GetApprovalData, GetApprovalError, GetApprovalQueueData, GetApprovalQueueError, GetApprovalQueueResponse, GetApprovalResponse, GetApprovalViewData, GetApprovalViewError, GetApprovalViewResponse, GetApproversGraphData, GetApproversGraphError, GetApproversGraphResponse, GetArtifactContentData, GetArtifactContentError, GetArtifactContentResponse, GetArtifactData, GetArtifactError, GetArtifactFileData, GetArtifactFileError, GetArtifactFileResponse, GetArtifactLinkContentData, GetArtifactLinkContentError, GetArtifactLinkContentResponse, GetArtifactResponse, GetAutomationData, GetAutomationError, GetAutomationResponse, GetBillingData, GetBillingError, GetBillingResponse, GetCapacityData, GetCapacityError, GetCapacityResponse, GetCloudSessionData, GetCloudSessionError, GetCloudSessionResponse, GetCurrentPackageData, GetCurrentPackageError, GetCurrentPackageResponse, GetDeviceLoginData, GetDeviceLoginError, GetDeviceLoginResponse, GetGateCatalogData, GetGateCatalogError, GetGateCatalogResponse, GetGateData, GetGateError, GetGatePolicyData, GetGatePolicyError, GetGatePolicyResponse, GetGateResponse, GetGithubAppData, GetGithubAppError, GetGithubAppResponse, GetGovernanceConfirmationData, GetGovernanceConfirmationError, GetGovernanceConfirmationResponse, GetGroupData, GetGroupError, GetGroupResponse, GetHookDeliveryData, GetHookDeliveryError, GetHookDeliveryResponse, GetInferenceSettingsData, GetInferenceSettingsError, GetInferenceSettingsResponse, GetInstanceData, GetInstanceResponse, GetLauncherConfigData, GetLauncherConfigError, GetLauncherConfigResponse, GetMcpSettingsData, GetMcpSettingsError, GetMcpSettingsResponse, GetMcpUsageData, GetMcpUsageError, GetMcpUsageResponse, GetMeData, GetMeError, GetMemberData, GetMemberError, GetMemberResponse, GetMeResponse, GetModelPolicyData, GetModelPolicyError, GetModelPolicyResponse, GetMyAccountData, GetMyAccountError, GetMyAccountResponse, GetMyBudgetData, GetMyBudgetError, GetMyBudgetResponse, GetNotificationPreferencesData, GetNotificationPreferencesError, GetNotificationPreferencesResponse, GetOrganizationData, GetOrganizationError, GetOrganizationResponse, GetOrgData, GetOrgError, GetOrgMemberData, GetOrgMemberError, GetOrgMemberResponse, GetOrgResponse, GetPackageData, GetPackageError, GetPackageResponse, GetPackageStatusData, GetPackageStatusError, GetPackageStatusResponse, GetReceiptBundleData, GetReceiptBundleError, GetReceiptBundleResponse, GetReceiptData, GetReceiptError, GetReceiptResponse, GetReplayData, GetReplayError, GetReplayResponse, GetRuleData, GetRuleError, GetRuleResponse, GetRunData, GetRunError, GetRunResponse, GetSessionData, GetSessionError, GetSessionResponse, GetSettingsData, GetSettingsError, GetSettingsResponse, GetSignedGatePolicyData, GetSignedGatePolicyError, GetSignedGatePolicyResponse, GetSkillDeliveryData, GetSkillDeliveryError, GetSkillDeliveryResponse, GetSpendingData, GetSpendingError, GetSpendingResponse, GetUsageData, GetUsageError, GetUsageResponse, GetUsageSummaryData, GetUsageSummaryError, GetUsageSummaryResponse, GetWaitData, GetWaitError, GetWaitResponse, GetWorkflowData, GetWorkflowError, GetWorkflowResponse, GithubAppInstallCallbackData, GithubAppManifestCallbackData, GithubAppManifestCallbackError, GithubCheckData, GithubCheckError, GithubCheckResponse, GithubLoginCallbackData, GithubLoginCallbackError, GithubWebhookData, GithubWebhookError, GithubWebhookResponse, HealthData, HealthError, HealthResponse, HealthRootData, HealthRootError, HealthRootResponse, ImportTeamCodeData, ImportTeamCodeError, ImportTeamCodeResponse, InferenceChatCompletionsData, InferenceChatCompletionsError, InferenceMessagesData, InferenceMessagesError, InferenceModelsData, InferenceModelsError, InferenceModelsResponse, InferenceResponsesData, InferenceResponsesError, InviteMembersData, InviteMembersError, InviteMembersResponse, InviteOrgMembersData, InviteOrgMembersError, InviteOrgMembersResponse, IssueCloudTerminalTicketData, IssueCloudTerminalTicketError, IssueCloudTerminalTicketResponse, LauncherLoginData, LauncherLoginError, LauncherLoginResponse, LeaveOrgData, LeaveOrgError, LeaveOrgResponse, LinkSignInProviderData, LinkSignInProviderError, LinkSignInProviderResponse, ListActivityData, ListActivityError, ListActivityResponse, ListApprovalsData, ListApprovalsError, ListApprovalsResponse, ListArtifactMembersData, ListArtifactMembersError, ListArtifactMembersResponse, ListArtifactsData, ListArtifactsError, ListArtifactsResponse, ListArtifactVersionsData, ListArtifactVersionsError, ListArtifactVersionsResponse, ListAuditData, ListAuditError, ListAuditResponse, ListAuthSessionsData, ListAuthSessionsError, ListAuthSessionsResponse, ListAutomationRunsData, ListAutomationRunsError, ListAutomationRunsResponse, ListAutomationsData, ListAutomationsError, ListAutomationsResponse, ListBillingInvoicesData, ListBillingInvoicesError, ListBillingInvoicesResponse, ListBudgetOverridesData, ListBudgetOverridesError, ListBudgetOverridesResponse, ListBudgetsData, ListBudgetsError, ListBudgetsResponse, ListChecksData, ListChecksError, ListChecksResponse, ListCloudSessionsData, ListCloudSessionsError, ListCloudSessionsResponse, ListDecisionsData, ListDecisionsError, ListDecisionsResponse, ListDevicesData, ListDevicesError, ListDevicesResponse, ListEventsData, ListEventsError, ListEventsResponse, ListGatesData, ListGatesError, ListGatesResponse, ListGroupsData, ListGroupsError, ListGroupsResponse, ListHooksData, ListHooksError, ListHooksResponse, ListInferenceRoutesData, ListInferenceRoutesError, ListInferenceRoutesResponse, ListInstanceKeysData, ListInstanceKeysResponse, ListInvitationsData, ListInvitationsError, ListInvitationsResponse, ListMcpArgumentPoliciesData, ListMcpArgumentPoliciesError, ListMcpArgumentPoliciesResponse, ListMcpAssignmentsData, ListMcpAssignmentsError, ListMcpAssignmentsResponse, ListMcpCallsData, ListMcpCallsError, ListMcpCallsResponse, ListMcpServersData, ListMcpServersError, ListMcpServersResponse, ListMembersData, ListMembersError, ListMembersResponse, ListMyAuditData, ListMyAuditError, ListMyAuditResponse, ListMyOrganizationsData, ListMyOrganizationsError, ListMyOrganizationsResponse, ListNotificationsData, ListNotificationsError, ListNotificationsResponse, ListOrgMembersData, ListOrgMembersError, ListOrgMembersResponse, ListOrgsData, ListOrgsError, ListOrgsResponse, ListPackageAuditData, ListPackageAuditError, ListPackageAuditResponse, ListPackagesData, ListPackagesError, ListPackagesResponse, ListPendingUsageData, ListPendingUsageError, ListPendingUsageResponse, ListReceiptKeysData, ListReceiptKeysError, ListReceiptKeysResponse, ListReceiptsData, ListReceiptsError, ListReceiptsResponse, ListReposData, ListReposError, ListReposResponse, ListRulesData, ListRulesError, ListRulesResponse, ListRunnersData, ListRunnersError, ListRunnersResponse, ListRunsData, ListRunsError, ListRunsResponse, ListSecretsData, ListSecretsError, ListSecretsResponse, ListServiceKeysData, ListServiceKeysError, ListServiceKeysResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListSharedAccountsData, ListSharedAccountsError, ListSharedAccountsResponse, ListSignInMethodsData, ListSignInMethodsResponse, ListSkillsData, ListSkillsError, ListSkillsResponse, ListTasksData, ListTasksError, ListTasksResponse, ListTeamsData, ListTeamsError, ListTeamsResponse, ListTokenScopesData, ListTokenScopesError, ListTokenScopesResponse, ListTokensData, ListTokensError, ListTokensResponse, ListUsageEventsData, ListUsageEventsError, ListUsageEventsResponse, ListUsageReconciliationsData, ListUsageReconciliationsError, ListUsageReconciliationsResponse, ListWaitsData, ListWaitsError, ListWaitsResponse, ListWebhookDeliveriesData, ListWebhookDeliveriesError, ListWebhookDeliveriesResponse, ListWebhooksData, ListWebhooksError, ListWebhooksResponse, ListWorkflowRunsData, ListWorkflowRunsError, ListWorkflowRunsResponse, ListWorkflowsData, ListWorkflowsError, ListWorkflowsResponse, LogoutData, LogoutError, LogoutEverywhereData, LogoutEverywhereError, LogoutEverywhereResponse, LogoutResponse, MobileTokenData, MobileTokenError, MobileTokenResponse, OauthLoginCallbackData, OauthLoginCallbackResponse, OpenBillingPortalData, OpenBillingPortalError, OpenBillingPortalResponse, OpenRunnerLaunchData, OpenRunnerLaunchError, OpenRunnerLaunchResponse, PauseCloudSessionData, PauseCloudSessionError, PauseCloudSessionResponse, PauseGroupMemberData, PauseGroupMemberError, PauseGroupMemberResponse, PollDeviceLoginData, PollDeviceLoginError, PollDeviceLoginResponse, PreviewInvitationData, PreviewInvitationError, PreviewInvitationResponse, PreviewPackageData, PreviewPackageError, PreviewPackageResponse, PublishArtifactData, PublishArtifactError, PublishArtifactResponse, PublishArtifactVersionData, PublishArtifactVersionError, PublishArtifactVersionResponse, PublishSkillData, PublishSkillError, PublishSkillResponse, PutMcpSettingsData, PutMcpSettingsError, PutMcpSettingsResponse, ReadyData, ReadyError, ReadyResponse, ReceiveSlackInteractionData, ReceiveSlackInteractionError, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasError, ReceiveStripeWebhookAliasResponse, ReceiveStripeWebhookData, ReceiveStripeWebhookError, ReceiveStripeWebhookResponse, ReconcileUsageData, ReconcileUsageError, ReconcileUsageResponse, RecordUsageEventsData, RecordUsageEventsError, RecordUsageEventsResponse, RefreshTokenData, RefreshTokenError, RefreshTokenResponse, RegisterPushDeviceData, RegisterPushDeviceError, RegisterPushDeviceResponse, RegisterRunnerData, RegisterRunnerError, RegisterRunnerResponse, RelayMcpData, RelayMcpError, ReleaseGateData, ReleaseGateError, ReleaseGateResponse, RemoveGroupMemberData, RemoveGroupMemberError, RemoveGroupMemberResponse, RemoveMemberData, RemoveMemberError, RemoveMemberResponse, RemoveOrgMemberData, RemoveOrgMemberError, RemoveOrgMemberResponse, RemoveSharedAccountData, RemoveSharedAccountError, RemoveSharedAccountResponse, RenameOrgData, RenameOrgError, RenameOrgResponse, ReopenSessionData, ReopenSessionError, ReopenSessionResponse, ReportCheckData, ReportCheckError, ReportCheckResponse, ReportHooksMissingData, ReportHooksMissingError, ReportHooksMissingResponse, ReportLocalGateDenialData, ReportLocalGateDenialError, ReportRunnerCheckData, ReportRunnerCheckError, ReportRunnerCheckResponse, ReportSeenData, ReportSeenError, ReportSeenResponse, RequestSignInEmailData, RequestSignInEmailError, ReserveGateData, ReserveGateError, ReserveGateResponse, RestartAnalysisData, RestartAnalysisError, RestartAnalysisResponse, RestorePackageData, RestorePackageError, RestorePackageResponse, ResumeBillingSubscriptionData, ResumeBillingSubscriptionError, ResumeBillingSubscriptionResponse, ResumeCloudSessionData, ResumeCloudSessionError, ResumeCloudSessionResponse, RevokeAuthSessionData, RevokeAuthSessionError, RevokeAuthSessionResponse, RevokeBudgetOverrideData, RevokeBudgetOverrideError, RevokeBudgetOverrideResponse, RevokeInvitationData, RevokeInvitationError, RevokeInvitationResponse, RevokePackageData, RevokePackageError, RevokePackageResponse, RevokeTokenData, RevokeTokenError, RevokeTokenResponse, RotateAutomationSecretData, RotateAutomationSecretError, RotateAutomationSecretResponse, RotateSecretData, RotateSecretError, RotateSecretResponse, RotateTokenData, RotateTokenError, RotateTokenResponse, RunnerHeartbeatData, RunnerHeartbeatError, RunnerHeartbeatResponse, RunTaskData, RunTaskError, RunTaskResponse, SaveAutomationData, SaveAutomationError, SaveAutomationResponse, SaveMcpServerData, SaveMcpServerError, SaveMcpServerResponse, SaveWorkflowData, SaveWorkflowError, SaveWorkflowResponse, SendCloudMessageData, SendCloudMessageError, SendCloudMessageResponse, SendNotificationData, SendNotificationError, SendNotificationResponse, SessionAliveData, SessionAliveError, SessionAliveResponse, SetBudgetData, SetBudgetError, SetBudgetResponse, SetGatePolicyData, SetGatePolicyError, SetGatePolicyResponse, SetInferenceSettingsData, SetInferenceSettingsError, SetInferenceSettingsResponse, SetModelPolicyData, SetModelPolicyError, SetModelPolicyResponse, SetNotificationPreferencesData, SetNotificationPreferencesError, SetNotificationPreferencesResponse, ShareArtifactData, ShareArtifactError, ShareArtifactResponse, SignWorkflowReceiptData, SignWorkflowReceiptError, SignWorkflowReceiptResponse, StartAnalysisData, StartAnalysisError, StartAnalysisResponse, StartBillingCheckoutData, StartBillingCheckoutError, StartBillingCheckoutResponse, StartDeviceLoginData, StartDeviceLoginError, StartDeviceLoginResponse, StartGithubAppInstallData, StartGithubAppInstallError, StartGithubAppManifestData, StartGithubAppManifestError, StartGithubAppManifestResponse, StartGithubLoginData, StartGithubLoginError, StartOAuthLoginData, StartOAuthLoginError, StartReplayData, StartReplayError, StartReplayResponse, StartSessionData, StartSessionError, StartSessionResponse, StartWorkflowRunData, StartWorkflowRunError, StartWorkflowRunResponse, StopCloudSessionData, StopCloudSessionError, StopCloudSessionResponse, TestAutomationData, TestAutomationError, TestAutomationResponse, TransferOrgData, TransferOrgError, TransferOrgResponse, TriggerAutomationData, TriggerAutomationError, TriggerAutomationResponse, UnassignMcpServerData, UnassignMcpServerError, UnassignMcpServerResponse, UnlockMobileAppData, UnlockMobileAppError, UnlockMobileAppResponse, UnshareArtifactData, UnshareArtifactError, UnshareArtifactResponse, UpdateArtifactData, UpdateArtifactError, UpdateArtifactResponse, UpdateGroupData, UpdateGroupError, UpdateGroupResponse, UpdateMemberData, UpdateMemberError, UpdateMemberResponse, UpdateOrgMemberData, UpdateOrgMemberError, UpdateOrgMemberResponse, UpdateRuleData, UpdateRuleError, UpdateRuleResponse, UpdateSettingsData, UpdateSettingsError, UpdateSettingsResponse, UpdateSharedAccountData, UpdateSharedAccountError, UpdateSharedAccountResponse, VerifyReceiptData, VerifyReceiptError, VerifyReceiptResponse, VerifySignInEmailData, VerifySignInEmailError, VerifySignInEmailResponse, WaitsMcpData, WaitsMcpError } from '../types.gen';
+import { acceptInvitation, addGroupMember, addTodoItem, answerApproval, answerDeviceLogin, answerGovernanceConfirmation, answerWait, artifactsMcp, askGate, assignMcpServer, attachCloudTerminal, attachRunnerTerminal, bulkUpdateRules, cancelBillingSubscription, cancelRun, cancelWait, capabilities, changeBillingPlan, checkAgentPolicy, cloudRunnerHeartbeat, completeTodoItem, consumeGate, createArtifactTicket, createAutomation, createBudgetOverride, createCloudSession, createGroup, createInferenceRoute, createInvitationLink, createLaunch, createMcpArgumentPolicy, createMcpServer, createOrg, createRule, createSecret, createServiceKey, createSessionTodo, createSignInLink, createToken, createWait, createWebhook, createWorkflow, deleteArtifact, deleteAutomation, deleteDevice, deleteGroup, deleteInferenceRoute, deleteMcpArgumentPolicy, deleteMcpServer, deleteOrg, deletePushDevice, deleteRule, deleteRunner, deleteSecret, deleteServiceKey, deleteSkill, deleteWebhook, deleteWorkflow, disableAutomation, enableAutomation, endLaunch, endSession, enrollSharedAccount, exchangeSignInLink, fetchRunnerGithubToken, getAnalysisState, getApproval, getApprovalQueue, getApprovalView, getApproversGraph, getArtifact, getArtifactContent, getArtifactFile, getArtifactLinkContent, getAutomation, getBilling, getCapacity, getCloudSession, getCurrentPackage, getDeviceLogin, getGate, getGateCatalog, getGatePolicy, getGithubApp, getGithubLink, getGovernanceConfirmation, getGroup, getHookDelivery, getInferenceSettings, getInstance, getLauncherConfig, getMcpSettings, getMcpUsage, getMe, getMember, getMemberGithubLink, getModelPolicy, getMyAccount, getMyBudget, getNotificationPreferences, getOrg, getOrganization, getOrgMember, getPackage, getPackageStatus, getReceipt, getReceiptBundle, getReplay, getRule, getRun, getSession, getSessionTodo, getSettings, getSignedGatePolicy, getSkillDelivery, getSpending, getUsage, getUsageSummary, getWait, getWorkflow, githubAppInstallCallback, githubAppManifestCallback, githubCheck, githubLinkCallback, githubLoginCallback, githubWebhook, grantSignUp, health, healthRoot, importTeamCode, inferenceChatCompletions, inferenceMessages, inferenceModels, inferenceResponses, inviteMembers, inviteOrgMembers, issueCloudTerminalTicket, launcherLogin, leaveOrg, linkSignInProvider, linkTodoItem, listActivity, listApprovals, listArtifactMembers, listArtifacts, listArtifactVersions, listAudit, listAuthSessions, listAutomationRuns, listAutomations, listBillingInvoices, listBudgetOverrides, listBudgets, listChecks, listCloudSessions, listDecisions, listDevices, listEvents, listGates, listGithubLinks, listGroups, listHooks, listInferenceRoutes, listInstanceKeys, listInvitations, listMcpArgumentPolicies, listMcpAssignments, listMcpCalls, listMcpServers, listMembers, listMyAudit, listMyOrganizations, listNotifications, listOrgMembers, listOrgs, listPackageAudit, listPackages, listPendingUsage, listReceiptKeys, listReceipts, listRepos, listRules, listRunners, listRuns, listSecrets, listServiceKeys, listSessions, listSharedAccounts, listSignInMethods, listSkills, listTasks, listTeams, listTodoStopHooks, listTokens, listTokenScopes, listUsageEvents, listUsageReconciliations, listWaits, listWebhookDeliveries, listWebhooks, listWorkflowRuns, listWorkflows, logout, logoutEverywhere, mobileToken, noteTodoItem, oauthLoginCallback, openBillingPortal, openRunnerLaunch, type Options, pauseCloudSession, pauseGroupMember, pollDeviceLogin, pollGithubDeviceLink, previewInvitation, previewPackage, publishArtifact, publishArtifactVersion, publishSkill, putMcpSettings, readTodoContext, ready, receiveSlackInteraction, receiveStripeWebhook, receiveStripeWebhookAlias, receiveWaitEvent, reconcileUsage, recordTodoHookError, recordUsageEvents, refreshToken, registerPushDevice, registerRunner, relayMcp, releaseGate, removeGroupMember, removeMember, removeOrgMember, removeSharedAccount, renameOrg, reopenSession, reportCheck, reportHooksMissing, reportLocalGateDenial, reportRunnerCheck, reportSeen, requestSignInEmail, requestTodoDrop, reserveGate, restartAnalysis, restorePackage, resumeBillingSubscription, resumeCloudSession, revokeAuthSession, revokeBudgetOverride, revokeInvitation, revokePackage, revokeToken, rotateAutomationSecret, rotateSecret, rotateToken, runnerHeartbeat, runTask, saveAutomation, saveMcpServer, saveWorkflow, sendCloudMessage, sendNotification, sessionAlive, setBudget, setCloudSessionGithubAccess, setGatePolicy, setInferenceSettings, setMemberTodoStopHook, setModelPolicy, setNotificationPreferences, shareArtifact, signWorkflowReceipt, startAnalysis, startBillingCheckout, startDeviceLogin, startGithubAppInstall, startGithubAppManifest, startGithubDeviceLink, startGithubLogin, startGithubWebLink, startMemberGithubWebLink, startOAuthLogin, startReplay, startSession, startTodoItem, startWorkflowRun, stopCloudSession, stopTodoSession, testAutomation, transferOrg, triggerAutomation, unassignMcpServer, unlinkGithub, unlinkMemberGithub, unlockMobileApp, unshareArtifact, updateArtifact, updateGroup, updateMember, updateOrgMember, updateRule, updateSettings, updateSharedAccount, verifyReceipt, verifySignInEmail, waitsMcp, wakeWaits } from '../sdk.gen';
+import type { AcceptInvitationData, AcceptInvitationError, AcceptInvitationResponse, AddGroupMemberData, AddGroupMemberError, AddGroupMemberResponse, AddTodoItemData, AddTodoItemError, AddTodoItemResponse, AnswerApprovalData, AnswerApprovalError, AnswerApprovalResponse, AnswerDeviceLoginData, AnswerDeviceLoginError, AnswerDeviceLoginResponse, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationError, AnswerGovernanceConfirmationResponse, AnswerWaitData, AnswerWaitError, AnswerWaitResponse, ArtifactsMcpData, ArtifactsMcpError, AskGateData, AskGateError, AskGateResponse, AssignMcpServerData, AssignMcpServerError, AssignMcpServerResponse, AttachCloudTerminalData, AttachCloudTerminalError, AttachRunnerTerminalData, AttachRunnerTerminalError, BulkUpdateRulesData, BulkUpdateRulesError, BulkUpdateRulesResponse, CancelBillingSubscriptionData, CancelBillingSubscriptionError, CancelBillingSubscriptionResponse, CancelRunData, CancelRunError, CancelRunResponse, CancelWaitData, CancelWaitError, CancelWaitResponse, CapabilitiesData, CapabilitiesError, CapabilitiesResponse, ChangeBillingPlanData, ChangeBillingPlanError, ChangeBillingPlanResponse, CheckAgentPolicyData, CheckAgentPolicyError, CheckAgentPolicyResponse, CloudRunnerHeartbeatData, CloudRunnerHeartbeatError, CloudRunnerHeartbeatResponse, CompleteTodoItemData, CompleteTodoItemError, CompleteTodoItemResponse, ConsumeGateData, ConsumeGateError, ConsumeGateResponse, CreateArtifactTicketData, CreateArtifactTicketError, CreateArtifactTicketResponse, CreateAutomationData, CreateAutomationError, CreateAutomationResponse, CreateBudgetOverrideData, CreateBudgetOverrideError, CreateBudgetOverrideResponse, CreateCloudSessionData, CreateCloudSessionError, CreateCloudSessionResponse, CreateGroupData, CreateGroupError, CreateGroupResponse, CreateInferenceRouteData, CreateInferenceRouteError, CreateInferenceRouteResponse, CreateInvitationLinkData, CreateInvitationLinkError, CreateInvitationLinkResponse, CreateLaunchData, CreateLaunchError, CreateLaunchResponse, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyError, CreateMcpArgumentPolicyResponse, CreateMcpServerData, CreateMcpServerError, CreateMcpServerResponse, CreateOrgData, CreateOrgError, CreateOrgResponse, CreateRuleData, CreateRuleError, CreateRuleResponse, CreateSecretData, CreateSecretError, CreateSecretResponse, CreateServiceKeyData, CreateServiceKeyError, CreateServiceKeyResponse, CreateSessionTodoData, CreateSessionTodoError, CreateSessionTodoResponse, CreateSignInLinkData, CreateSignInLinkError, CreateSignInLinkResponse, CreateTokenData, CreateTokenError, CreateTokenResponse, CreateWaitData, CreateWaitError, CreateWaitResponse, CreateWebhookData, CreateWebhookError, CreateWebhookResponse, CreateWorkflowData, CreateWorkflowError, CreateWorkflowResponse, DeleteArtifactData, DeleteArtifactError, DeleteArtifactResponse, DeleteAutomationData, DeleteAutomationError, DeleteAutomationResponse, DeleteDeviceData, DeleteDeviceError, DeleteDeviceResponse, DeleteGroupData, DeleteGroupError, DeleteGroupResponse, DeleteInferenceRouteData, DeleteInferenceRouteError, DeleteInferenceRouteResponse, DeleteMcpArgumentPolicyData, DeleteMcpArgumentPolicyError, DeleteMcpArgumentPolicyResponse, DeleteMcpServerData, DeleteMcpServerError, DeleteMcpServerResponse, DeleteOrgData, DeleteOrgError, DeleteOrgResponse, DeletePushDeviceData, DeletePushDeviceError, DeletePushDeviceResponse, DeleteRuleData, DeleteRuleError, DeleteRuleResponse, DeleteRunnerData, DeleteRunnerError, DeleteRunnerResponse, DeleteSecretData, DeleteSecretError, DeleteSecretResponse, DeleteServiceKeyData, DeleteServiceKeyError, DeleteServiceKeyResponse, DeleteSkillData, DeleteSkillError, DeleteSkillResponse, DeleteWebhookData, DeleteWebhookError, DeleteWebhookResponse, DeleteWorkflowData, DeleteWorkflowError, DeleteWorkflowResponse, DisableAutomationData, DisableAutomationError, DisableAutomationResponse, EnableAutomationData, EnableAutomationError, EnableAutomationResponse, EndLaunchData, EndLaunchError, EndLaunchResponse, EndSessionData, EndSessionError, EndSessionResponse, EnrollSharedAccountData, EnrollSharedAccountError, EnrollSharedAccountResponse, ExchangeSignInLinkData, ExchangeSignInLinkError, ExchangeSignInLinkResponse, FetchRunnerGithubTokenData, FetchRunnerGithubTokenError, FetchRunnerGithubTokenResponse, GetAnalysisStateData, GetAnalysisStateError, GetAnalysisStateResponse, GetApprovalData, GetApprovalError, GetApprovalQueueData, GetApprovalQueueError, GetApprovalQueueResponse, GetApprovalResponse, GetApprovalViewData, GetApprovalViewError, GetApprovalViewResponse, GetApproversGraphData, GetApproversGraphError, GetApproversGraphResponse, GetArtifactContentData, GetArtifactContentError, GetArtifactContentResponse, GetArtifactData, GetArtifactError, GetArtifactFileData, GetArtifactFileError, GetArtifactFileResponse, GetArtifactLinkContentData, GetArtifactLinkContentError, GetArtifactLinkContentResponse, GetArtifactResponse, GetAutomationData, GetAutomationError, GetAutomationResponse, GetBillingData, GetBillingError, GetBillingResponse, GetCapacityData, GetCapacityError, GetCapacityResponse, GetCloudSessionData, GetCloudSessionError, GetCloudSessionResponse, GetCurrentPackageData, GetCurrentPackageError, GetCurrentPackageResponse, GetDeviceLoginData, GetDeviceLoginError, GetDeviceLoginResponse, GetGateCatalogData, GetGateCatalogError, GetGateCatalogResponse, GetGateData, GetGateError, GetGatePolicyData, GetGatePolicyError, GetGatePolicyResponse, GetGateResponse, GetGithubAppData, GetGithubAppError, GetGithubAppResponse, GetGithubLinkData, GetGithubLinkError, GetGithubLinkResponse, GetGovernanceConfirmationData, GetGovernanceConfirmationError, GetGovernanceConfirmationResponse, GetGroupData, GetGroupError, GetGroupResponse, GetHookDeliveryData, GetHookDeliveryError, GetHookDeliveryResponse, GetInferenceSettingsData, GetInferenceSettingsError, GetInferenceSettingsResponse, GetInstanceData, GetInstanceResponse, GetLauncherConfigData, GetLauncherConfigError, GetLauncherConfigResponse, GetMcpSettingsData, GetMcpSettingsError, GetMcpSettingsResponse, GetMcpUsageData, GetMcpUsageError, GetMcpUsageResponse, GetMeData, GetMeError, GetMemberData, GetMemberError, GetMemberGithubLinkData, GetMemberGithubLinkError, GetMemberGithubLinkResponse, GetMemberResponse, GetMeResponse, GetModelPolicyData, GetModelPolicyError, GetModelPolicyResponse, GetMyAccountData, GetMyAccountError, GetMyAccountResponse, GetMyBudgetData, GetMyBudgetError, GetMyBudgetResponse, GetNotificationPreferencesData, GetNotificationPreferencesError, GetNotificationPreferencesResponse, GetOrganizationData, GetOrganizationError, GetOrganizationResponse, GetOrgData, GetOrgError, GetOrgMemberData, GetOrgMemberError, GetOrgMemberResponse, GetOrgResponse, GetPackageData, GetPackageError, GetPackageResponse, GetPackageStatusData, GetPackageStatusError, GetPackageStatusResponse, GetReceiptBundleData, GetReceiptBundleError, GetReceiptBundleResponse, GetReceiptData, GetReceiptError, GetReceiptResponse, GetReplayData, GetReplayError, GetReplayResponse, GetRuleData, GetRuleError, GetRuleResponse, GetRunData, GetRunError, GetRunResponse, GetSessionData, GetSessionError, GetSessionResponse, GetSessionTodoData, GetSessionTodoError, GetSessionTodoResponse, GetSettingsData, GetSettingsError, GetSettingsResponse, GetSignedGatePolicyData, GetSignedGatePolicyError, GetSignedGatePolicyResponse, GetSkillDeliveryData, GetSkillDeliveryError, GetSkillDeliveryResponse, GetSpendingData, GetSpendingError, GetSpendingResponse, GetUsageData, GetUsageError, GetUsageResponse, GetUsageSummaryData, GetUsageSummaryError, GetUsageSummaryResponse, GetWaitData, GetWaitError, GetWaitResponse, GetWorkflowData, GetWorkflowError, GetWorkflowResponse, GithubAppInstallCallbackData, GithubAppManifestCallbackData, GithubAppManifestCallbackError, GithubCheckData, GithubCheckError, GithubCheckResponse, GithubLinkCallbackData, GithubLoginCallbackData, GithubLoginCallbackError, GithubWebhookData, GithubWebhookError, GithubWebhookResponse, GrantSignUpData, GrantSignUpError, GrantSignUpResponse, HealthData, HealthError, HealthResponse, HealthRootData, HealthRootError, HealthRootResponse, ImportTeamCodeData, ImportTeamCodeError, ImportTeamCodeResponse, InferenceChatCompletionsData, InferenceChatCompletionsError, InferenceMessagesData, InferenceMessagesError, InferenceModelsData, InferenceModelsError, InferenceModelsResponse, InferenceResponsesData, InferenceResponsesError, InviteMembersData, InviteMembersError, InviteMembersResponse, InviteOrgMembersData, InviteOrgMembersError, InviteOrgMembersResponse, IssueCloudTerminalTicketData, IssueCloudTerminalTicketError, IssueCloudTerminalTicketResponse, LauncherLoginData, LauncherLoginError, LauncherLoginResponse, LeaveOrgData, LeaveOrgError, LeaveOrgResponse, LinkSignInProviderData, LinkSignInProviderError, LinkSignInProviderResponse, LinkTodoItemData, LinkTodoItemError, LinkTodoItemResponse, ListActivityData, ListActivityError, ListActivityResponse, ListApprovalsData, ListApprovalsError, ListApprovalsResponse, ListArtifactMembersData, ListArtifactMembersError, ListArtifactMembersResponse, ListArtifactsData, ListArtifactsError, ListArtifactsResponse, ListArtifactVersionsData, ListArtifactVersionsError, ListArtifactVersionsResponse, ListAuditData, ListAuditError, ListAuditResponse, ListAuthSessionsData, ListAuthSessionsError, ListAuthSessionsResponse, ListAutomationRunsData, ListAutomationRunsError, ListAutomationRunsResponse, ListAutomationsData, ListAutomationsError, ListAutomationsResponse, ListBillingInvoicesData, ListBillingInvoicesError, ListBillingInvoicesResponse, ListBudgetOverridesData, ListBudgetOverridesError, ListBudgetOverridesResponse, ListBudgetsData, ListBudgetsError, ListBudgetsResponse, ListChecksData, ListChecksError, ListChecksResponse, ListCloudSessionsData, ListCloudSessionsError, ListCloudSessionsResponse, ListDecisionsData, ListDecisionsError, ListDecisionsResponse, ListDevicesData, ListDevicesError, ListDevicesResponse, ListEventsData, ListEventsError, ListEventsResponse, ListGatesData, ListGatesError, ListGatesResponse, ListGithubLinksData, ListGithubLinksError, ListGithubLinksResponse, ListGroupsData, ListGroupsError, ListGroupsResponse, ListHooksData, ListHooksError, ListHooksResponse, ListInferenceRoutesData, ListInferenceRoutesError, ListInferenceRoutesResponse, ListInstanceKeysData, ListInstanceKeysResponse, ListInvitationsData, ListInvitationsError, ListInvitationsResponse, ListMcpArgumentPoliciesData, ListMcpArgumentPoliciesError, ListMcpArgumentPoliciesResponse, ListMcpAssignmentsData, ListMcpAssignmentsError, ListMcpAssignmentsResponse, ListMcpCallsData, ListMcpCallsError, ListMcpCallsResponse, ListMcpServersData, ListMcpServersError, ListMcpServersResponse, ListMembersData, ListMembersError, ListMembersResponse, ListMyAuditData, ListMyAuditError, ListMyAuditResponse, ListMyOrganizationsData, ListMyOrganizationsError, ListMyOrganizationsResponse, ListNotificationsData, ListNotificationsError, ListNotificationsResponse, ListOrgMembersData, ListOrgMembersError, ListOrgMembersResponse, ListOrgsData, ListOrgsError, ListOrgsResponse, ListPackageAuditData, ListPackageAuditError, ListPackageAuditResponse, ListPackagesData, ListPackagesError, ListPackagesResponse, ListPendingUsageData, ListPendingUsageError, ListPendingUsageResponse, ListReceiptKeysData, ListReceiptKeysError, ListReceiptKeysResponse, ListReceiptsData, ListReceiptsError, ListReceiptsResponse, ListReposData, ListReposError, ListReposResponse, ListRulesData, ListRulesError, ListRulesResponse, ListRunnersData, ListRunnersError, ListRunnersResponse, ListRunsData, ListRunsError, ListRunsResponse, ListSecretsData, ListSecretsError, ListSecretsResponse, ListServiceKeysData, ListServiceKeysError, ListServiceKeysResponse, ListSessionsData, ListSessionsError, ListSessionsResponse, ListSharedAccountsData, ListSharedAccountsError, ListSharedAccountsResponse, ListSignInMethodsData, ListSignInMethodsResponse, ListSkillsData, ListSkillsError, ListSkillsResponse, ListTasksData, ListTasksError, ListTasksResponse, ListTeamsData, ListTeamsError, ListTeamsResponse, ListTodoStopHooksData, ListTodoStopHooksError, ListTodoStopHooksResponse, ListTokenScopesData, ListTokenScopesError, ListTokenScopesResponse, ListTokensData, ListTokensError, ListTokensResponse, ListUsageEventsData, ListUsageEventsError, ListUsageEventsResponse, ListUsageReconciliationsData, ListUsageReconciliationsError, ListUsageReconciliationsResponse, ListWaitsData, ListWaitsError, ListWaitsResponse, ListWebhookDeliveriesData, ListWebhookDeliveriesError, ListWebhookDeliveriesResponse, ListWebhooksData, ListWebhooksError, ListWebhooksResponse, ListWorkflowRunsData, ListWorkflowRunsError, ListWorkflowRunsResponse, ListWorkflowsData, ListWorkflowsError, ListWorkflowsResponse, LogoutData, LogoutError, LogoutEverywhereData, LogoutEverywhereError, LogoutEverywhereResponse, LogoutResponse, MobileTokenData, MobileTokenError, MobileTokenResponse, NoteTodoItemData, NoteTodoItemError, NoteTodoItemResponse, OauthLoginCallbackData, OauthLoginCallbackResponse, OpenBillingPortalData, OpenBillingPortalError, OpenBillingPortalResponse, OpenRunnerLaunchData, OpenRunnerLaunchError, OpenRunnerLaunchResponse, PauseCloudSessionData, PauseCloudSessionError, PauseCloudSessionResponse, PauseGroupMemberData, PauseGroupMemberError, PauseGroupMemberResponse, PollDeviceLoginData, PollDeviceLoginError, PollDeviceLoginResponse, PollGithubDeviceLinkData, PollGithubDeviceLinkError, PollGithubDeviceLinkResponse, PreviewInvitationData, PreviewInvitationError, PreviewInvitationResponse, PreviewPackageData, PreviewPackageError, PreviewPackageResponse, PublishArtifactData, PublishArtifactError, PublishArtifactResponse, PublishArtifactVersionData, PublishArtifactVersionError, PublishArtifactVersionResponse, PublishSkillData, PublishSkillError, PublishSkillResponse, PutMcpSettingsData, PutMcpSettingsError, PutMcpSettingsResponse, ReadTodoContextData, ReadTodoContextError, ReadTodoContextResponse, ReadyData, ReadyError, ReadyResponse, ReceiveSlackInteractionData, ReceiveSlackInteractionError, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasError, ReceiveStripeWebhookAliasResponse, ReceiveStripeWebhookData, ReceiveStripeWebhookError, ReceiveStripeWebhookResponse, ReceiveWaitEventData, ReceiveWaitEventError, ReceiveWaitEventResponse, ReconcileUsageData, ReconcileUsageError, ReconcileUsageResponse, RecordTodoHookErrorData, RecordTodoHookErrorError, RecordTodoHookErrorResponse, RecordUsageEventsData, RecordUsageEventsError, RecordUsageEventsResponse, RefreshTokenData, RefreshTokenError, RefreshTokenResponse, RegisterPushDeviceData, RegisterPushDeviceError, RegisterPushDeviceResponse, RegisterRunnerData, RegisterRunnerError, RegisterRunnerResponse, RelayMcpData, RelayMcpError, ReleaseGateData, ReleaseGateError, ReleaseGateResponse, RemoveGroupMemberData, RemoveGroupMemberError, RemoveGroupMemberResponse, RemoveMemberData, RemoveMemberError, RemoveMemberResponse, RemoveOrgMemberData, RemoveOrgMemberError, RemoveOrgMemberResponse, RemoveSharedAccountData, RemoveSharedAccountError, RemoveSharedAccountResponse, RenameOrgData, RenameOrgError, RenameOrgResponse, ReopenSessionData, ReopenSessionError, ReopenSessionResponse, ReportCheckData, ReportCheckError, ReportCheckResponse, ReportHooksMissingData, ReportHooksMissingError, ReportHooksMissingResponse, ReportLocalGateDenialData, ReportLocalGateDenialError, ReportRunnerCheckData, ReportRunnerCheckError, ReportRunnerCheckResponse, ReportSeenData, ReportSeenError, ReportSeenResponse, RequestSignInEmailData, RequestSignInEmailError, RequestTodoDropData, RequestTodoDropError, RequestTodoDropResponse, ReserveGateData, ReserveGateError, ReserveGateResponse, RestartAnalysisData, RestartAnalysisError, RestartAnalysisResponse, RestorePackageData, RestorePackageError, RestorePackageResponse, ResumeBillingSubscriptionData, ResumeBillingSubscriptionError, ResumeBillingSubscriptionResponse, ResumeCloudSessionData, ResumeCloudSessionError, ResumeCloudSessionResponse, RevokeAuthSessionData, RevokeAuthSessionError, RevokeAuthSessionResponse, RevokeBudgetOverrideData, RevokeBudgetOverrideError, RevokeBudgetOverrideResponse, RevokeInvitationData, RevokeInvitationError, RevokeInvitationResponse, RevokePackageData, RevokePackageError, RevokePackageResponse, RevokeTokenData, RevokeTokenError, RevokeTokenResponse, RotateAutomationSecretData, RotateAutomationSecretError, RotateAutomationSecretResponse, RotateSecretData, RotateSecretError, RotateSecretResponse, RotateTokenData, RotateTokenError, RotateTokenResponse, RunnerHeartbeatData, RunnerHeartbeatError, RunnerHeartbeatResponse, RunTaskData, RunTaskError, RunTaskResponse, SaveAutomationData, SaveAutomationError, SaveAutomationResponse, SaveMcpServerData, SaveMcpServerError, SaveMcpServerResponse, SaveWorkflowData, SaveWorkflowError, SaveWorkflowResponse, SendCloudMessageData, SendCloudMessageError, SendCloudMessageResponse, SendNotificationData, SendNotificationError, SendNotificationResponse, SessionAliveData, SessionAliveError, SessionAliveResponse, SetBudgetData, SetBudgetError, SetBudgetResponse, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessError, SetCloudSessionGithubAccessResponse, SetGatePolicyData, SetGatePolicyError, SetGatePolicyResponse, SetInferenceSettingsData, SetInferenceSettingsError, SetInferenceSettingsResponse, SetMemberTodoStopHookData, SetMemberTodoStopHookError, SetMemberTodoStopHookResponse, SetModelPolicyData, SetModelPolicyError, SetModelPolicyResponse, SetNotificationPreferencesData, SetNotificationPreferencesError, SetNotificationPreferencesResponse, ShareArtifactData, ShareArtifactError, ShareArtifactResponse, SignWorkflowReceiptData, SignWorkflowReceiptError, SignWorkflowReceiptResponse, StartAnalysisData, StartAnalysisError, StartAnalysisResponse, StartBillingCheckoutData, StartBillingCheckoutError, StartBillingCheckoutResponse, StartDeviceLoginData, StartDeviceLoginError, StartDeviceLoginResponse, StartGithubAppInstallData, StartGithubAppInstallError, StartGithubAppManifestData, StartGithubAppManifestError, StartGithubAppManifestResponse, StartGithubDeviceLinkData, StartGithubDeviceLinkError, StartGithubDeviceLinkResponse, StartGithubLoginData, StartGithubLoginError, StartGithubWebLinkData, StartGithubWebLinkError, StartMemberGithubWebLinkData, StartMemberGithubWebLinkError, StartOAuthLoginData, StartOAuthLoginError, StartReplayData, StartReplayError, StartReplayResponse, StartSessionData, StartSessionError, StartSessionResponse, StartTodoItemData, StartTodoItemError, StartTodoItemResponse2, StartWorkflowRunData, StartWorkflowRunError, StartWorkflowRunResponse, StopCloudSessionData, StopCloudSessionError, StopCloudSessionResponse, StopTodoSessionData, StopTodoSessionError, StopTodoSessionResponse, TestAutomationData, TestAutomationError, TestAutomationResponse, TransferOrgData, TransferOrgError, TransferOrgResponse, TriggerAutomationData, TriggerAutomationError, TriggerAutomationResponse, UnassignMcpServerData, UnassignMcpServerError, UnassignMcpServerResponse, UnlinkGithubData, UnlinkGithubError, UnlinkGithubResponse, UnlinkMemberGithubData, UnlinkMemberGithubError, UnlinkMemberGithubResponse, UnlockMobileAppData, UnlockMobileAppError, UnlockMobileAppResponse, UnshareArtifactData, UnshareArtifactError, UnshareArtifactResponse, UpdateArtifactData, UpdateArtifactError, UpdateArtifactResponse, UpdateGroupData, UpdateGroupError, UpdateGroupResponse, UpdateMemberData, UpdateMemberError, UpdateMemberResponse, UpdateOrgMemberData, UpdateOrgMemberError, UpdateOrgMemberResponse, UpdateRuleData, UpdateRuleError, UpdateRuleResponse, UpdateSettingsData, UpdateSettingsError, UpdateSettingsResponse, UpdateSharedAccountData, UpdateSharedAccountError, UpdateSharedAccountResponse, VerifyReceiptData, VerifyReceiptError, VerifyReceiptResponse, VerifySignInEmailData, VerifySignInEmailError, VerifySignInEmailResponse, WaitsMcpData, WaitsMcpError, WakeWaitsData, WakeWaitsError, WakeWaitsResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -245,10 +245,27 @@ export const listSignInMethodsOptions = (options?: Options<ListSignInMethodsData
     queryKey: listSignInMethodsQueryKey(options)
 });
 
+/**
+ * Before signing in on an invite-only instance, the console presents the token of the instance's setup link (`/setup#token=osb_…`, printed by `ostrom-server bootstrap`) or of an invitation (`/invite#token=…`): the server checks it and sets the `ostrom_signup` cookie (HttpOnly, `Path=/api/v1/auth`, 1 hour), which lets the sign-in that follows in this browser create the person's account. The setup link is used once, by that account, which may then create the instance's organizations. The `Origin` header must be the console's
+ */
+export const grantSignUpMutation = (options?: Partial<Options<GrantSignUpData>>): UseMutationOptions<GrantSignUpResponse, GrantSignUpError, Options<GrantSignUpData>> => {
+    const mutationOptions: UseMutationOptions<GrantSignUpResponse, GrantSignUpError, Options<GrantSignUpData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await grantSignUp({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
 export const startOAuthLoginQueryKey = (options: Options<StartOAuthLoginData>) => createQueryKey('startOAuthLogin', options);
 
 /**
- * Send the browser to the provider's consent page (sets the state cookie). On a refusal, a redirect to the console's `/login?error=` (`unavailable`, `rate_limited`, `expired`, `refused`, `link_required`, `identity_taken`)
+ * Send the browser to the provider's consent page (sets the state cookie). On a refusal, a redirect to the console's `/login?error=` (`unavailable`, `rate_limited`, `expired`, `refused`, `link_required`, `identity_taken`, `signup_closed`)
  */
 export const startOAuthLoginOptions = (options: Options<StartOAuthLoginData>) => queryOptions<unknown, StartOAuthLoginError, unknown, ReturnType<typeof startOAuthLoginQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -266,7 +283,7 @@ export const startOAuthLoginOptions = (options: Options<StartOAuthLoginData>) =>
 export const oauthLoginCallbackQueryKey = (options: Options<OauthLoginCallbackData>) => createQueryKey('oauthLoginCallback', options);
 
 /**
- * Where the provider sends the browser back: sets the session cookies and redirects to the console (or to `/login?error=`). For a sign-in the phone app started, an error redirects to the app's deep link; a code is answered as a page whose link to the deep link the person taps
+ * Where the provider sends the browser back: sets the session cookies and redirects to the console (or to `/login?error=`, `signup_closed` when the instance creates no account for this person: see `SignInMethods.signUp`). For a sign-in the phone app started, an error redirects to the app's deep link; a code is answered as a page whose link to the deep link the person taps
  */
 export const oauthLoginCallbackOptions = (options: Options<OauthLoginCallbackData>) => queryOptions<OauthLoginCallbackResponse, DefaultError, OauthLoginCallbackResponse, ReturnType<typeof oauthLoginCallbackQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -1182,6 +1199,182 @@ export const githubAppInstallCallbackOptions = (options?: Options<GithubAppInsta
 });
 
 /**
+ * Removes the caller's own GitHub link and their pending link attempts in one transaction, then revokes the access token at GitHub (best effort, with the App that issued it). 204 also when not linked. The member's authorization of the App stays on GitHub, where only they manage it. Journaled `github.link.removed`
+ */
+export const unlinkGithubMutation = (options?: Partial<Options<UnlinkGithubData>>): UseMutationOptions<UnlinkGithubResponse, UnlinkGithubError, Options<UnlinkGithubData>> => {
+    const mutationOptions: UseMutationOptions<UnlinkGithubResponse, UnlinkGithubError, Options<UnlinkGithubData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await unlinkGithub({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getGithubLinkQueryKey = (options?: Options<GetGithubLinkData>) => createQueryKey('getGithubLink', options);
+
+/**
+ * The caller's own GitHub link in the organization (`github.link.v1`): which GitHub account their cloud sessions use for Git and `gh`, never a token. A person only: the console, the app or the CLI's login (a service key, an agent or a device token, 403). Works while cloud sessions are off, so a member can still see and remove a link
+ */
+export const getGithubLinkOptions = (options?: Options<GetGithubLinkData>) => queryOptions<GetGithubLinkResponse, GetGithubLinkError, GetGithubLinkResponse, ReturnType<typeof getGithubLinkQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getGithubLink({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getGithubLinkQueryKey(options)
+});
+
+/**
+ * Starts GitHub's device flow for the caller's own link (`ostrom github link`, the app): the answer gives the code to enter on GitHub; the client then polls `pollGithubDeviceLink`. The token exchange happens on the server: no client ever sees a GitHub token. GitHub's device code is kept sealed; the attempt is single-use and ends with GitHub's code (15 minutes at most); a new start replaces the member's previous attempt. 404 while cloud sessions are off on the instance (`runners.cloud.v1` absent); 409 `github_app_not_configured` (the instance's App has no OAuth client), 409 `github_device_flow_disabled` (Device Flow is off in the App's settings: link from the console), 503 `github_unreachable`
+ */
+export const startGithubDeviceLinkMutation = (options?: Partial<Options<StartGithubDeviceLinkData>>): UseMutationOptions<StartGithubDeviceLinkResponse, StartGithubDeviceLinkError, Options<StartGithubDeviceLinkData>> => {
+    const mutationOptions: UseMutationOptions<StartGithubDeviceLinkResponse, StartGithubDeviceLinkError, Options<StartGithubDeviceLinkData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await startGithubDeviceLink({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * One poll of a device link, by the member who started it (anyone else, or an unknown, used or malformed id: 404 `github_link_not_found`). The server asks GitHub at most once per interval whatever the client's pace (the next poll time is moved by compare-and-set before GitHub is called) and honors `slow_down`. A poll still completes a link started before cloud sessions were turned off. Linking an account already linked to another member of the organization is refused, 409 `github_account_in_use` (the fresh token is revoked); linking again replaces the member's link
+ */
+export const pollGithubDeviceLinkMutation = (options?: Partial<Options<PollGithubDeviceLinkData>>): UseMutationOptions<PollGithubDeviceLinkResponse, PollGithubDeviceLinkError, Options<PollGithubDeviceLinkData>> => {
+    const mutationOptions: UseMutationOptions<PollGithubDeviceLinkResponse, PollGithubDeviceLinkError, Options<PollGithubDeviceLinkData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await pollGithubDeviceLink({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const startGithubWebLinkQueryKey = (options?: Options<StartGithubWebLinkData>) => createQueryKey('startGithubWebLink', options);
+
+/**
+ * Starts GitHub's web flow for the caller's own link, from the console (a browser session only, 403 otherwise; a navigation started by another site, 403): a redirect to GitHub's authorization with a single-use `state` and PKCE (S256), whose hash is bound to the browser session that started it, for 10 minutes. GitHub then returns to `githubLinkCallback`. 404 while cloud sessions are off; 409 `github_app_not_configured`
+ */
+export const startGithubWebLinkOptions = (options?: Options<StartGithubWebLinkData>) => queryOptions<unknown, StartGithubWebLinkError, unknown, ReturnType<typeof startGithubWebLinkQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await startGithubWebLink({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: startGithubWebLinkQueryKey(options)
+});
+
+export const githubLinkCallbackQueryKey = (options?: Options<GithubLinkCallbackData>) => createQueryKey('githubLinkCallback', options);
+
+/**
+ * GitHub's return from a web link (the App's callback URL, `<OSTROM_PUBLIC_URL>/api/v1/github/link/callback`). The single-use state identifies the attempt and its member, and must come back with the browser session that started it: a link opened in another browser binds nothing (`github_link_browser_mismatch`). The browser is always sent back to the console's `/github` page with `linked=1` or `error=<error.type>` (`github_link_not_found`, `github_link_browser_mismatch`, `github_link_denied`, `github_account_in_use`, `github_app_not_configured`, `github_unreachable`): this route never answers with an error body
+ */
+export const githubLinkCallbackOptions = (options?: Options<GithubLinkCallbackData>) => queryOptions<unknown, DefaultError, unknown, ReturnType<typeof githubLinkCallbackQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await githubLinkCallback({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: githubLinkCallbackQueryKey(options)
+});
+
+export const listGithubLinksQueryKey = (options?: Options<ListGithubLinksData>) => createQueryKey('listGithubLinks', options);
+
+/**
+ * Every member's GitHub link in the organization (an owner or an admin, a person only: 403 otherwise), by GitHub login; never a token
+ */
+export const listGithubLinksOptions = (options?: Options<ListGithubLinksData>) => queryOptions<ListGithubLinksResponse, ListGithubLinksError, ListGithubLinksResponse, ReturnType<typeof listGithubLinksQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listGithubLinks({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listGithubLinksQueryKey(options)
+});
+
+/**
+ * Removes a member's GitHub link, as `unlinkGithub` does for one's own (an owner or an admin's browser session: 403 otherwise; 404 for a member of another organization). Journaled `github.link.removed` with the administrator as actor and the member as subject
+ */
+export const unlinkMemberGithubMutation = (options?: Partial<Options<UnlinkMemberGithubData>>): UseMutationOptions<UnlinkMemberGithubResponse, UnlinkMemberGithubError, Options<UnlinkMemberGithubData>> => {
+    const mutationOptions: UseMutationOptions<UnlinkMemberGithubResponse, UnlinkMemberGithubError, Options<UnlinkMemberGithubData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await unlinkMemberGithub({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getMemberGithubLinkQueryKey = (options: Options<GetMemberGithubLinkData>) => createQueryKey('getMemberGithubLink', options);
+
+/**
+ * Another member's GitHub link (an owner or an admin, a person only: 403 otherwise; a member of another organization, unknown or malformed, 404)
+ */
+export const getMemberGithubLinkOptions = (options: Options<GetMemberGithubLinkData>) => queryOptions<GetMemberGithubLinkResponse, GetMemberGithubLinkError, GetMemberGithubLinkResponse, ReturnType<typeof getMemberGithubLinkQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getMemberGithubLink({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getMemberGithubLinkQueryKey(options)
+});
+
+export const startMemberGithubWebLinkQueryKey = (options: Options<StartMemberGithubWebLinkData>) => createQueryKey('startMemberGithubWebLink', options);
+
+/**
+ * An owner or an admin links a GitHub account to another member, typically an account nobody signs in to (a robot): the web flow of `startGithubWebLink`, with the attempt, and so the link, bound to that member and the state to the administrator's browser session. GitHub authorizes whichever account is signed in to github.com in that browser, so the administrator signs in there as the account the member should use. Another role, or a credential that is not a browser session, 403; a member of another organization, 404. Journaled `github.link.started` (the administrator as actor, the member as subject) before `github.link.created`; linking a member already linked replaces the link; the administrator never sees a token
+ */
+export const startMemberGithubWebLinkOptions = (options: Options<StartMemberGithubWebLinkData>) => queryOptions<unknown, StartMemberGithubWebLinkError, unknown, ReturnType<typeof startMemberGithubWebLinkQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await startMemberGithubWebLink({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: startMemberGithubWebLinkQueryKey(options)
+});
+
+/**
  * GitHub webhook (X-Hub-Signature-256)
  */
 export const githubWebhookMutation = (options?: Partial<Options<GithubWebhookData>>): UseMutationOptions<GithubWebhookResponse, GithubWebhookError, Options<GithubWebhookData>> => {
@@ -1251,7 +1444,7 @@ export const listOrgsOptions = (options?: Options<ListOrgsData>) => queryOptions
 });
 
 /**
- * Create an organization; the caller owns it (scope `orgs:write`)
+ * Create an organization; the caller owns it (scope `orgs:write`). On an invite-only instance (`SignInMethods.signUp` `invite`), only an owner or an admin of an organization, or the person who used the instance's setup link, creates one: anyone else gets 403 `org_creation_closed`
  */
 export const createOrgMutation = (options?: Partial<Options<CreateOrgData>>): UseMutationOptions<CreateOrgResponse, CreateOrgError, Options<CreateOrgData>> => {
     const mutationOptions: UseMutationOptions<CreateOrgResponse, CreateOrgError, Options<CreateOrgData>> = {
@@ -3505,6 +3698,8 @@ export const listWaitsInfiniteOptions = (options?: Options<ListWaitsData>) => {
 
 /**
  * Ask a person (agent ask_human); Idempotency-Key header
+ *
+ * `assignee` is a member id or a username (at most 64 characters; an id wins over a username that spells it), the caller by default; an unknown one is 400. A member asks in a session only when they run it (403 `wait_session_owner_only`, an administrator included) and while it runs (409 `session_not_running`). A `time` or `event` wait (`resolver`) is asked by an agent in its session only, and resolves by itself: at `dueAt`, or when its `eventUrl` is called, or at `timeoutAt`; the session's Stop hook wakes the agent with it (`POST /api/v1/waits/wake`). Nobody answers it (409 `resolves_by_itself`); its asker cancels it.
  */
 export const createWaitMutation = (options?: Partial<Options<CreateWaitData>>): UseMutationOptions<CreateWaitResponse, CreateWaitError, Options<CreateWaitData>> => {
     const mutationOptions: UseMutationOptions<CreateWaitResponse, CreateWaitError, Options<CreateWaitData>> = {
@@ -3527,6 +3722,25 @@ export const waitsMcpMutation = (options?: Partial<Options<WaitsMcpData>>): UseM
     const mutationOptions: UseMutationOptions<unknown, WaitsMcpError, Options<WaitsMcpData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await waitsMcp({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * What the waits of an agent's session have to say, for the Stop hook of its launch
+ *
+ * An agent token only, through its launch's local relay (the hooks' capability), in one of its launch's sessions (`?session=`, any segment). Holds the call up to `waitMillis` (0 to 30 000, 25 000 by default) and answers as soon as a wait of the session is answered: each answer is handed over once (`messages`, oldest first, each starting with `[Ostrom wait answered]`). `open` says a wait asked by the session is still open, so the hook keeps holding the agent; a session with no open wait answers at once.
+ */
+export const wakeWaitsMutation = (options?: Partial<Options<WakeWaitsData>>): UseMutationOptions<WakeWaitsResponse, WakeWaitsError, Options<WakeWaitsData>> => {
+    const mutationOptions: UseMutationOptions<WakeWaitsResponse, WakeWaitsError, Options<WakeWaitsData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await wakeWaits({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -3579,6 +3793,275 @@ export const cancelWaitMutation = (options?: Partial<Options<CancelWaitData>>): 
     const mutationOptions: UseMutationOptions<CancelWaitResponse, CancelWaitError, Options<CancelWaitData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await cancelWait({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * The event an `event` wait waits for, from a CI or a script
+ *
+ * No sign-in: the wait's secret (`wev_…`, in its `eventUrl` once, at creation) is the proof, in the `token` query parameter or the `Ostrom-Wait-Token` header. The server keeps only its SHA-256 and compares it in constant time. An unknown wait, a wrong secret and a wait no longer open all answer 404. A JSON body of at most 16 KiB (413 beyond); an empty body is `{"result": "success"}`. At most 30 calls a minute per wait (429 `wait_event_rate_limit`). What it carries reaches the agent as data from an outside caller, never as instructions. Call the server directly: an agent's relay never carries this address.
+ */
+export const receiveWaitEventMutation = (options?: Partial<Options<ReceiveWaitEventData>>): UseMutationOptions<ReceiveWaitEventResponse, ReceiveWaitEventError, Options<ReceiveWaitEventData>> => {
+    const mutationOptions: UseMutationOptions<ReceiveWaitEventResponse, ReceiveWaitEventError, Options<ReceiveWaitEventData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await receiveWaitEvent({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const getSessionTodoQueryKey = (options?: Options<GetSessionTodoData>) => createQueryKey('getSessionTodo', options);
+
+/**
+ * Read a session's todo
+ *
+ * The list with its items in order, the last proof of each, its hook events and `nextItemId`; `todo` is null while the session has none. Answers to drop requests are applied on this read (one read of the waits for every open drop request): yes drops the item, no or a cancelled wait puts it back to `todo`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const getSessionTodoOptions = (options?: Options<GetSessionTodoData>) => queryOptions<GetSessionTodoResponse, GetSessionTodoError, GetSessionTodoResponse, ReturnType<typeof getSessionTodoQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await getSessionTodo({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: getSessionTodoQueryKey(options)
+});
+
+/**
+ * Create a session's todo, once per session
+ *
+ * The plan `reference`, optional `refs` and every item in order, each with a complete description and at least one typed check (`TodoCheck`). No check names a PR number or a version: the PR is found by the marker `startTodoItem` returns. 400 for an invalid list: `invalid_todo` (a text too long, a bad slug, more than 10 refs), `description_too_short` (a description outside 80 to 4 000 characters), `check_required` (an item without a typed check), `invalid_check` (a check missing a field of its type, a type this server does not know, a command timeout outside 1 to 120 seconds), `guessed_number` (a check naming a PR number or a version), `too_many_items` (more than 500), `duplicate_item`, `unknown_dependency`, `dependency_cycle`. 409 `todo_exists` when the session already has one. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const createSessionTodoMutation = (options?: Partial<Options<CreateSessionTodoData>>): UseMutationOptions<CreateSessionTodoResponse, CreateSessionTodoError, Options<CreateSessionTodoData>> => {
+    const mutationOptions: UseMutationOptions<CreateSessionTodoResponse, CreateSessionTodoError, Options<CreateSessionTodoData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await createSessionTodo({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Add an item found on the way
+ *
+ * Marked `discovered` with its `reason`, placed after the item in progress and after its own dependencies. The same 400 keys as the creation; 404 `todo_not_found` without a list; 409 `todo_closed` when the list is done or abandoned. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const addTodoItemMutation = (options?: Partial<Options<AddTodoItemData>>): UseMutationOptions<AddTodoItemResponse, AddTodoItemError, Options<AddTodoItemData>> => {
+    const mutationOptions: UseMutationOptions<AddTodoItemResponse, AddTodoItemError, Options<AddTodoItemData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await addTodoItem({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Start an item, and get the marker for its pull request
+ *
+ * Puts the item in progress; another item in progress goes back to `todo`, unless this one is given to a background agent (`background`). `marker` (`<!-- ostrom-todo: <list8>/<item> -->`, `list8` the first 8 characters of the list's id) goes in the body of the item's pull request, which the checks find by it. 404 `todo_not_found`, `unknown_item`; 409 `todo_closed`, `dependency_open` (a dependency is neither done nor dropped), `item_closed` (done or dropped), `drop_pending` (a drop waits for the owner). Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const startTodoItemMutation = (options?: Partial<Options<StartTodoItemData>>): UseMutationOptions<StartTodoItemResponse2, StartTodoItemError, Options<StartTodoItemData>> => {
+    const mutationOptions: UseMutationOptions<StartTodoItemResponse2, StartTodoItemError, Options<StartTodoItemData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await startTodoItem({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Append a dated note to an item
+ *
+ * Notes are only appended, never rewritten: at most 2 000 characters each (400 `invalid_todo`) and 100 per item (400 `too_many_notes`). 404 `todo_not_found`, `unknown_item`; 409 `todo_closed`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const noteTodoItemMutation = (options?: Partial<Options<NoteTodoItemData>>): UseMutationOptions<NoteTodoItemResponse, NoteTodoItemError, Options<NoteTodoItemData>> => {
+    const mutationOptions: UseMutationOptions<NoteTodoItemResponse, NoteTodoItemError, Options<NoteTodoItemData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await noteTodoItem({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Report what an item's checks observed; done only if every check passed
+ *
+ * `checks` gives, by position in the item's stored condition, whether each check passed, what was observed and https URLs. The condition is the stored one: the caller neither chooses nor changes the checks. `artifact_published` and `wait_answered` are verified by the server through the item's links, whatever the report says. A failed, unknown or unreported check refuses with 409 `not_done` (the message says what is missing) and the proof is kept on the item. 400 `invalid_proof` (a position outside the condition or given twice, `observed` over 2 000 characters, more than 10 URLs or one not https); 404 `todo_not_found`, `unknown_item`; 409 `item_closed` (drop requested or dropped), `todo_closed`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const completeTodoItemMutation = (options?: Partial<Options<CompleteTodoItemData>>): UseMutationOptions<CompleteTodoItemResponse, CompleteTodoItemError, Options<CompleteTodoItemData>> => {
+    const mutationOptions: UseMutationOptions<CompleteTodoItemResponse, CompleteTodoItemError, Options<CompleteTodoItemData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await completeTodoItem({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Bind a pull request, a release, an artifact or a wait to an item
+ *
+ * `kind` `pr` or `release` (their https address in `ref`), `artifact` or `wait` (their id). A link is frozen: the same `ref` may be completed with `number`, `sha` (a PR's merge commit) or `tag`; another one of the same kind is refused with 409 `already_linked`, except to replace a pull request closed without merge (`replaceClosed`), which a note records. 400 `invalid_link`; 404 `todo_not_found`, `unknown_item`; 409 `todo_closed`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const linkTodoItemMutation = (options?: Partial<Options<LinkTodoItemData>>): UseMutationOptions<LinkTodoItemResponse, LinkTodoItemError, Options<LinkTodoItemData>> => {
+    const mutationOptions: UseMutationOptions<LinkTodoItemResponse, LinkTodoItemError, Options<LinkTodoItemData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await linkTodoItem({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Ask the session's owner to drop an item
+ *
+ * Opens an ordinary wait for the session's owner (actions `yes` and `no`) and puts the item in `drop_requested`; it is dropped only on the owner's yes, applied on the next read or change. Nothing is ever deleted. 404 `todo_not_found`, `unknown_item`; 409 `item_closed` (done or dropped), `drop_pending` (a drop already waits), `todo_closed`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const requestTodoDropMutation = (options?: Partial<Options<RequestTodoDropData>>): UseMutationOptions<RequestTodoDropResponse, RequestTodoDropError, Options<RequestTodoDropData>> => {
+    const mutationOptions: UseMutationOptions<RequestTodoDropResponse, RequestTodoDropError, Options<RequestTodoDropData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await requestTodoDrop({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const readTodoContextQueryKey = (options?: Options<ReadTodoContextData>) => createQueryKey('readTodoContext', options);
+
+/**
+ * The reminder block of the session's todo
+ *
+ * The plan reference, the item in progress (else the next one) in full with its last check, then the list one line per item, with no instruction to go on. Read by the `SessionStart` hook (`ostrom hook todo-context`, matcher `compact|resume`) after a compaction and on resume; `text` is null without an active list. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const readTodoContextOptions = (options?: Options<ReadTodoContextData>) => queryOptions<ReadTodoContextResponse, ReadTodoContextError, ReadTodoContextResponse, ReturnType<typeof readTodoContextQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await readTodoContext({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: readTodoContextQueryKey(options)
+});
+
+/**
+ * Decide what a stop of the agent leads to (the Stop hook)
+ *
+ * Asked by the Stop hook (`ostrom hook todo-stop`) up to three times per stop. `begin` answers `allow` (`why`: `no_list`; `hook_disabled` when an administrator turned the hook off for the session's owner, before anything is run or written; `finished`; `background_task`; `wait_open` when any wait of the session is open) or `verify`. On `verify` the hook runs the checks of the item in progress (a `command` too, at most 120 s) and of every `todo` item whose checks are all cheap (`pr_merged`, `release_contains`, `artifact_published`, `wait_answered`), reads the transcript for the pull requests the session opened (`orphans`), and sends their outcome: the server ticks what passed, verifies `artifact_published` and `wait_answered` itself, adds each orphan PR no item covers as a `discovered` item "Finish PR #n" ending on `pr_merged`, counts the stop and answers `settle` (every item is done or dropped), `block` (`reason`: the resume message for the agent, at most 8 000 characters) or `allow`. On `settle` the hook re-runs every check of the done items: all hold, the list is `done` and the answer `allow` (`settled`); else a regressed item is reopened and the stop blocked; an `attested` check never reopens an item. The third blocked stop in a row with no item finished, added or noted opens a wait for the owner ("Blocked: …", Resume / Drop this item / Stop here), resets the counter and answers `allow` (`escalated`). The hook fails open and reports its failures with `recordTodoHookError`. 400 `invalid_stop` (an unknown phase, an item reported twice, more than 500 items or 5 orphans), `invalid_proof`. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const stopTodoSessionMutation = (options?: Partial<Options<StopTodoSessionData>>): UseMutationOptions<StopTodoSessionResponse, StopTodoSessionError, Options<StopTodoSessionData>> => {
+    const mutationOptions: UseMutationOptions<StopTodoSessionResponse, StopTodoSessionError, Options<StopTodoSessionData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await stopTodoSession({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Record a failure of the Stop hook on the list
+ *
+ * The hook fails open (a broken hook never holds the agent) and says so here: the event `hook_error`, its text kept to 500 characters, joins `hookEvents` (the newest 20). 404 `todo_not_found` without a list. Callers: the session's agent token (the token of its launch), confined to that session whatever `sessionId` names; the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404 `not_found`.
+ */
+export const recordTodoHookErrorMutation = (options?: Partial<Options<RecordTodoHookErrorData>>): UseMutationOptions<RecordTodoHookErrorResponse, RecordTodoHookErrorError, Options<RecordTodoHookErrorData>> => {
+    const mutationOptions: UseMutationOptions<RecordTodoHookErrorResponse, RecordTodoHookErrorError, Options<RecordTodoHookErrorData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await recordTodoHookError({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+export const listTodoStopHooksQueryKey = (options?: Options<ListTodoStopHooksData>) => createQueryKey('listTodoStopHooks', options);
+
+/**
+ * The members whose todo Stop hook is off
+ *
+ * A member has the hook on until an administrator turns it off. An owner or an administrator of the organization, with a browser session only: any token (a personal or agent token, a service key) gets 403 `forbidden`, a member 403 `forbidden`.
+ */
+export const listTodoStopHooksOptions = (options?: Options<ListTodoStopHooksData>) => queryOptions<ListTodoStopHooksResponse, ListTodoStopHooksError, ListTodoStopHooksResponse, ReturnType<typeof listTodoStopHooksQueryKey>>({
+    queryFn: async ({ queryKey, signal }) => {
+        const { data } = await listTodoStopHooks({
+            ...options,
+            ...queryKey[0],
+            signal,
+            throwOnError: true
+        });
+        return data;
+    },
+    queryKey: listTodoStopHooksQueryKey(options)
+});
+
+/**
+ * Turn the todo Stop hook on or off for a member
+ *
+ * When off, every `begin` of a stop of the sessions this member owns answers `allow` (`hook_disabled`) before anything is run, counted or written; their lists are still kept, verified by `completeTodoItem` and shown. An owner or an administrator of the organization, with a browser session only: any token gets 403 `forbidden`. 404 `not_found` for a member of another organization or an unknown one.
+ */
+export const setMemberTodoStopHookMutation = (options?: Partial<Options<SetMemberTodoStopHookData>>): UseMutationOptions<SetMemberTodoStopHookResponse, SetMemberTodoStopHookError, Options<SetMemberTodoStopHookData>> => {
+    const mutationOptions: UseMutationOptions<SetMemberTodoStopHookResponse, SetMemberTodoStopHookError, Options<SetMemberTodoStopHookData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await setMemberTodoStopHook({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -4695,6 +5178,23 @@ export const resumeCloudSessionMutation = (options?: Partial<Options<ResumeCloud
 };
 
 /**
+ * Changes the session's GitHub access (`runners.cloud.github.v1`): `owner`, `shared` or `none`. Only the owner, signed in (console, app) or with the CLI's login, never a service key acting for them (403 `github_owner_only`); anyone else, 404. Turning access off waits for a pause (409 `session_not_paused`), because a running agent keeps a token it already received until it expires; turning it on or sharing applies from the runner's next token renewal. Journaled `cloud.session.github_access_changed`
+ */
+export const setCloudSessionGithubAccessMutation = (options?: Partial<Options<SetCloudSessionGithubAccessData>>): UseMutationOptions<SetCloudSessionGithubAccessResponse, SetCloudSessionGithubAccessError, Options<SetCloudSessionGithubAccessData>> => {
+    const mutationOptions: UseMutationOptions<SetCloudSessionGithubAccessResponse, SetCloudSessionGithubAccessError, Options<SetCloudSessionGithubAccessData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await setCloudSessionGithubAccess({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
  * A single-use ticket to attach a browser to the session's terminal
  */
 export const issueCloudTerminalTicketMutation = (options?: Partial<Options<IssueCloudTerminalTicketData>>): UseMutationOptions<IssueCloudTerminalTicketResponse, IssueCloudTerminalTicketError, Options<IssueCloudTerminalTicketData>> => {
@@ -4788,6 +5288,23 @@ export const reportRunnerCheckMutation = (options?: Partial<Options<ReportRunner
     const mutationOptions: UseMutationOptions<ReportRunnerCheckResponse, ReportRunnerCheckError, Options<ReportRunnerCheckData>> = {
         mutationFn: async (fnOptions) => {
             const { data } = await reportRunnerCheck({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * The runner of a cloud session asks for the GitHub token its agent's `git` and `gh` use (`runners.cloud.github.v1`), with the execution's runner token (checked before the body is read): the user-to-server token of the member the session runs for, refreshed on the server when it expires within an hour, scoped to what both the App's installation and that member can reach. `not_linked` when the owner has no usable link, the session's `githubAccess` is `none`, or the owner left the organization; `unavailable` when GitHub could not refresh it and no token stays valid for 5 more minutes. Only the runner of the current execution of a running session gets it (409 `execution_fenced` otherwise); `Cache-Control: no-store`. The token is never logged, journaled or written to the session
+ */
+export const fetchRunnerGithubTokenMutation = (options?: Partial<Options<FetchRunnerGithubTokenData>>): UseMutationOptions<FetchRunnerGithubTokenResponse, FetchRunnerGithubTokenError, Options<FetchRunnerGithubTokenData>> => {
+    const mutationOptions: UseMutationOptions<FetchRunnerGithubTokenResponse, FetchRunnerGithubTokenError, Options<FetchRunnerGithubTokenData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await fetchRunnerGithubToken({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
