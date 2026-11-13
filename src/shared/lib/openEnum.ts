@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: Apache-2.0
 import type { ZodMiniEnum, ZodMiniString, ZodMiniUnion } from 'zod/mini';
 
 /** The known values of a generated open enum (`zRunStatus`), for a list of choices or a membership test. */
