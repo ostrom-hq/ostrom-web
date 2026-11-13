@@ -1,8 +1,8 @@
 import { defineConfig } from '@hey-api/openapi-ts';
 
-// The contract is ostrom-core's `api/openapi.yaml`. Until core publishes it, `contract/openapi.yaml` mirrors
-// the slice the console needs; OSTROM_CONTRACT points the generator at another copy (core's checkout).
-const input = process.env['OSTROM_CONTRACT'] ?? './contract/openapi.yaml';
+// The server's OpenAPI document, from the npm package @ostrom-hq/openapi at the version package.json pins
+// (`ostrom.openapi`), written by `pnpm openapi:fetch` (ostrom-core docs/decisions/0001). Never committed.
+const input = './.ostrom/openapi.json';
 
 // Enums are open (CS-04): a newer server may send a value this console does not know yet (the contract only grows,
 // AGENTS rule 8). The type is the known values or any other string, and the Zod schema accepts any string, so one new
@@ -12,6 +12,9 @@ const OPEN_ENUM_MIN_VALUES = 2;
 
 export default defineConfig({
   input,
+  // The organization's event feed is a server-sent event stream the console does not read; hey-api's query
+  // options cannot type a stream.
+  parser: { filters: { operations: { exclude: ['GET /api/v1/events'] }, orphans: true } },
   output: { path: 'gen/api' },
   plugins: [
     '@hey-api/client-fetch',

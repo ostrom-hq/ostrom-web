@@ -888,7 +888,12 @@ export const fr = {
     title: 'Workflows',
     lead: 'Comment le travail va d’une branche à la production dans chaque dépôt, et où une personne décide.',
     empty: 'Pas encore de workflow : ils sont tirés de tes dépôts après la première lecture.',
-    status: { proposed: 'Proposé', accepted: 'Accepté', edited: 'Accepté avec des changements' },
+    status: {
+      proposed: 'Proposé',
+      accepted: 'Accepté',
+      edited: 'Accepté avec des changements',
+      rejected: 'Refusé',
+    },
     list: {
       steps_one: '{{count}} étape',
       steps_other: '{{count}} étapes',

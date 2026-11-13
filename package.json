@@ -5,6 +5,9 @@
   "license": "Apache-2.0",
   "type": "module",
   "packageManager": "pnpm@12.14.0",
+  "ostrom": {
+    "openapi": "0.1.2542"
+  },
   "engines": {
     "node": ">=24"
   },
@@ -21,9 +24,9 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "gen:api": "openapi-ts",
-    "gen:check": "openapi-ts && git diff --exit-code -- gen && test -z \"$(git status --porcelain -- gen)\"",
-    "contract:sync": "cp \"${OSTROM_CORE_DIR:-../ostrom-core}/api/openapi.yaml\" contract/openapi.yaml && git -C \"${OSTROM_CORE_DIR:-../ostrom-core}\" rev-parse HEAD > contract/SOURCE && pnpm gen:api"
+    "openapi:fetch": "node scripts/fetch-openapi.ts",
+    "gen:api": "node scripts/fetch-openapi.ts && openapi-ts",
+    "gen:check": "pnpm gen:api && git diff --exit-code -- gen && test -z \"$(git status --porcelain -- gen)\""
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.3.0",

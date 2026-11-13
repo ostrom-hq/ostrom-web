@@ -83,9 +83,12 @@ Nothing in `src/` writes a route by hand. `pnpm gen:api` generates `gen/api/` fr
 hey-api: types, zod schemas (every request and response is validated at runtime), the fetch SDK, TanStack Query
 options and typed MSW handlers. CI fails when `gen/` is stale (`pnpm gen:check`).
 
-The contract belongs to `ostrom-core` (`api/openapi.yaml`, package `@ostrom-hq/api-types`). Until it is
-published, `contract/openapi.yaml` mirrors the slice the console uses; `OSTROM_CONTRACT=<path> pnpm gen:api`
-generates from another copy.
+The contract is the server's OpenAPI document, published by ostrom-server's CI as the npm package
+`@ostrom-hq/openapi` on GitHub Packages (ostrom-core `docs/decisions/0001-generated-openapi.md`). `package.json` pins
+its version in `ostrom.openapi`; `pnpm gen:api` fetches that version into `.ostrom/openapi.json` (never committed;
+`NODE_AUTH_TOKEN`, or `gh auth token` with the `read:packages` scope) and generates from it. A workflow opens a pull
+request when a newer version is published. To generate from a local document:
+`node scripts/fetch-openapi.ts --from <openapi.json> && pnpm exec openapi-ts`.
 
 `VITE_MOCKS=true pnpm dev` serves the API from MSW (`src/mocks/`, an in-memory server that applies the same
 rules as the prototype), so every screen works without a server.
@@ -99,7 +102,6 @@ src/
   shared/     api client, ui kit, theme, i18n: never imports features/ or app/
   mocks/      MSW handlers and fixtures, wired by app/ in mock mode and by tests
 gen/api/      generated from the contract, never edited
-contract/     mirror of the OpenAPI contract until ostrom-core publishes it
 ee/           enterprise screens, loaded lazily, never imported statically by src/
 ```
 

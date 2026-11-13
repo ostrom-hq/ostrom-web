@@ -866,7 +866,12 @@ export const en = {
     title: 'Workflows',
     lead: 'How work goes from a branch to production in each repository, and where a person decides.',
     empty: 'No workflow yet: they are drawn from your repositories after the first pass.',
-    status: { proposed: 'Proposed', accepted: 'Accepted', edited: 'Accepted with changes' },
+    status: {
+      proposed: 'Proposed',
+      accepted: 'Accepted',
+      edited: 'Accepted with changes',
+      rejected: 'Rejected',
+    },
     list: {
       steps_one: '{{count}} step',
       steps_other: '{{count}} steps',
