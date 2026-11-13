@@ -135,9 +135,7 @@ describe('the artifacts', () => {
     ).toBeInTheDocument();
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
-    expect(
-      await within(study).findByText('maya, the administrators and the people below read it.'),
-    ).toBeInTheDocument();
+    expect(await within(study).findByText('maya and the people below read it.')).toBeInTheDocument();
     const draft = await findCard('Draft: pricing page');
     expect(draft).toHaveTextContent('Anyone with the link');
     await user.click(within(draft).getByRole('button', { name: 'Versions and readers' }));

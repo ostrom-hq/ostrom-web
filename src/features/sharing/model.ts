@@ -1,16 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import type { SharedAccount } from '@gen/api/types.gen';
+import type { Artifact, SharedAccount } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 /**
- * Who reads an artifact, as the contract names it: `personal` is its owner, the administrators and the members it is
- * shared with; `team` every member; `link` anyone with its link. Sharing adds a reader and never changes the access.
+ * Who reads an artifact, as the contract names it: `personal` is its owner and the members it is shared with (never an
+ * administrator for their role alone); `team` every member; `link` anyone with its link. Sharing adds a reader and never
+ * changes the access.
  */
 export const ARTIFACT_ACCESSES = ['personal', 'team', 'link'] as const;
 export type ArtifactAccess = (typeof ARTIFACT_ACCESSES)[number];
 
 export function isArtifactAccess(value: string): value is ArtifactAccess {
   return (ARTIFACT_ACCESSES as readonly string[]).includes(value);
+}
+
+/**
+ * Whether the viewer owns an artifact: the server says so in `relation`; a server older than the field is read by the
+ * owner's name.
+ */
+export function ownsArtifact(artifact: Artifact, login: string | undefined): boolean {
+  return artifact.relation === undefined
+    ? login !== undefined && artifact.owner === login
+    : artifact.relation === 'owner';
 }
 
 /** The subscriptions a member can lend to the organization's agents. */

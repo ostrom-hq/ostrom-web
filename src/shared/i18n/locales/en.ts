@@ -1551,7 +1551,7 @@ export const en = {
       noVersion: 'No version yet.',
       versionLine: 'Version {{number}} · {{who}} · {{when}}',
       readers: 'Readers',
-      readersPersonal: '{{owner}}, the administrators and the people below read it.',
+      readersPersonal: '{{owner}} and the people below read it.',
       readersTeam: 'Everyone in the organization reads it, and the people below.',
       readersLink: 'Anyone with its link reads it.',
       readersNone: 'Nobody else is on the list.',
