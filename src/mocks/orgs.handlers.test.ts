@@ -14,7 +14,7 @@ import {
   revokeInvitation,
   updateOrgMember,
 } from '@gen/api/sdk.gen';
-import { DEMO_INVITATION_TOKEN, otherOrganization } from '@/mocks/fixtures/organization';
+import { DEMO_INVITATION_TOKEN, DEMO_SETUP_TOKEN, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { freeSlug, setDemoRole } from '@/mocks/orgs';
@@ -305,6 +305,25 @@ describe('mock invitations', () => {
     expect(await raw('POST', `/orgs/${org}/invitations/links`, '{"role":"king"}')).toBe(400);
     expect(await raw('POST', `/orgs/${org}/invitations/links`, 'nope')).toBe(400);
     expect(await raw('POST', `/orgs/${org}/invitations/links`, '{"role":"admin"}')).toBe(403);
+  });
+
+  it('takes the setup link once and a live invitation, and nothing else, for a sign-up grant', async () => {
+    expect(await raw('POST', '/auth/signup-grant', `{"token":"${DEMO_SETUP_TOKEN}"}`)).toBe(204);
+    expect(await raw('POST', '/auth/signup-grant', `{"token":"${DEMO_INVITATION_TOKEN}"}`)).toBe(204);
+    expect(db.grants).toEqual([DEMO_SETUP_TOKEN, DEMO_INVITATION_TOKEN]);
+    expect(await raw('POST', '/auth/signup-grant', '{"token":"nope"}')).toBe(404);
+    expect(await raw('POST', '/auth/signup-grant', '{}')).toBe(400);
+    // The setup link is used once.
+    expect(db.setupUsed).toBe(true);
+    expect(await raw('POST', '/auth/signup-grant', `{"token":"${DEMO_SETUP_TOKEN}"}`)).toBe(404);
+  });
+
+  it('says who may sign up', async () => {
+    const open = await fetch(`${API}/api/v1/auth/providers`);
+    expect(await open.json()).toEqual({ methods: ['github', 'email'], signUp: 'open' });
+    db.signUp = 'invite';
+    const closed = await fetch(`${API}/api/v1/auth/providers`);
+    expect(await closed.json()).toMatchObject({ signUp: 'invite' });
   });
 
   it('revokes an invitation of the organization, never one of another', async () => {

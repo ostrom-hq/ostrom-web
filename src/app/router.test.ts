@@ -10,13 +10,14 @@ describe('the routes', () => {
     const routes = Object.values(router.routesById).filter((route) => !route.isRoot);
     // Every screen the console has (31 today), each one lazy but the yes screens, in the first download (router.ts).
     expect(routes.length).toBeGreaterThanOrEqual(31);
-    const inFirstDownload = new Set(['/yes', '/yes/$approvalId']);
+    const inFirstDownload = new Set(['/yes', '/yes/$approvalId', '/login']);
     for (const route of routes)
       expect(typeof route.options.component?.preload, route.id).toBe(
         inFirstDownload.has(route.id) ? 'undefined' : 'function',
       );
     await Promise.all(routes.map(async (route) => router.loadRouteChunk(route)));
-    for (const route of routes) {
+    // `/login` has no screen: it redirects to `/signin` before any would render.
+    for (const route of routes.filter((item) => item.id !== '/login')) {
       expect(route.options.component, route.id).toBeDefined();
       expect(route.options.component?.preload, route.id).toBeUndefined();
     }

@@ -136,6 +136,9 @@ export function invitedOrganization(): Organization {
 /** The token of the demo invitation link: `/invite#token=inv_demo` joins Initech. */
 export const DEMO_INVITATION_TOKEN = 'inv_demo';
 
+/** The token of the demo setup link: `/setup#token=osb_demo` is the first owner's link (used once, then 404). */
+export const DEMO_SETUP_TOKEN = 'osb_demo';
+
 /** Acme's waiting invitation to jo, and the link to Initech, valid for a year of demos. */
 export function initialInvitations(): MockInvitation[] {
   return [

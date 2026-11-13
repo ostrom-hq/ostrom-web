@@ -82,6 +82,11 @@ export function InviteScreen(): ReactElement {
             {t('invite.refused')}
           </Banner>
         ) : null}
+        {invitation.grantFailed ? (
+          <Banner tone="warning" tag={t('invite.checkFailedTag')} live>
+            {t('invite.checkFailed')}
+          </Banner>
+        ) : null}
         {invitation.failure === undefined ? null : (
           <Banner tone="danger" tag={t('invite.failedTag')} live>
             {invitation.failure.message}
@@ -89,9 +94,23 @@ export function InviteScreen(): ReactElement {
         )}
         <div>
           {invitation.signedIn === false ? (
-            <Link to="/signin" search={{ redirect: '/invite' }} className="o-btn o-btn--secondary o-btn--md">
-              {t('invite.signIn')}
-            </Link>
+            invitation.granting ? (
+              <Button variant="secondary" disabled>
+                {t('invite.checking')}
+              </Button>
+            ) : invitation.grantFailed ? (
+              <Button variant="secondary" onClick={invitation.signIn}>
+                {t('invite.signIn')}
+              </Button>
+            ) : (
+              <Link
+                to="/signin"
+                search={{ redirect: '/invite' }}
+                className="o-btn o-btn--secondary o-btn--md"
+              >
+                {t('invite.signIn')}
+              </Link>
+            )
           ) : invitation.already ? (
             <Button onClick={open.enter} disabled={invitation.entering}>
               {t('invite.open', { org: preview.orgName })}

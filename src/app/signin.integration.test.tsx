@@ -7,7 +7,7 @@ import { useEmailLinkStore } from '@/features/signin';
 import { DEMO_EMAIL_TOKEN, OTHER_BROWSER_EMAIL_TOKEN } from '@/mocks/handlers';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
-const { server } = setupMockApp();
+const { server, db } = setupMockApp();
 
 afterEach(() => {
   useEmailLinkStore.setState({ token: undefined });
@@ -20,6 +20,51 @@ describe('the sign-in page', () => {
       'href',
       `${TEST_API}/api/v1/auth/github/start?redirect=%2Fyes%2Fapr-merge-412`,
     );
+  });
+
+  it.each([
+    [
+      'signup_closed',
+      'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
+    ],
+    ['unavailable', 'This sign-in method is not available on this instance.'],
+    ['rate_limited', 'Too many attempts.'],
+    ['access_denied', 'The sign-in was cancelled at the provider.'],
+    ['expired', 'The sign-in took too long and expired.'],
+    ['refused', 'The provider refused the sign-in.'],
+    ['link_required', 'This account is not linked to this sign-in method yet.'],
+    ['identity_taken', 'already linked to another Ostrom account.'],
+    ['whatever', 'The sign-in did not work.'],
+  ])('says in words why a sign-in was refused (?error=%s)', async (error, words) => {
+    visit(`/signin?error=${error}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(words);
+  });
+
+  it('takes any address the server redirects a refused sign-in to (/login) to the sign-in page, error kept', async () => {
+    const router = visit('/login?error=rate_limited');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts.');
+    expect(router.state.location.pathname).toBe('/signin');
+    expect(router.state.location.search).toEqual({ error: 'rate_limited' });
+  });
+
+  it('says nothing for an error that is not a single text', async () => {
+    visit('/signin?error=other&error=again');
+    await screen.findByRole('link', { name: 'Continue with GitHub' });
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('says accounts are by invitation when the instance is invite-only, and nothing when it is open', async () => {
+    db.signUp = 'invite';
+    visit('/signin');
+    expect(
+      await screen.findByText('Accounts on this Ostrom instance are by invitation.'),
+    ).toBeInTheDocument();
+  });
+
+  it('says nothing of invitations on an open instance', async () => {
+    visit('/signin');
+    await screen.findByRole('link', { name: 'Continue with GitHub' });
+    expect(screen.queryByText(/by invitation/)).toBeNull();
   });
 
   it('comes back home when the page to come back to is another site', async () => {
@@ -141,6 +186,19 @@ describe('the e-mailed link', () => {
     expect(await screen.findByRole('heading', { name: 'Requests' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/yes');
     expect(router.state.location.href).not.toContain(DEMO_EMAIL_TOKEN);
+  });
+
+  it('says the instance is invite-only when the link is good but no account may be created', async () => {
+    signedOut();
+    server.use(
+      http.post('*/api/v1/auth/email/verify', () =>
+        HttpResponse.json({ error: { type: 'signup_closed', message: 'closed' } }, { status: 403 }),
+      ),
+    );
+    visit(`/auth/email#token=${DEMO_EMAIL_TOKEN}`);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
+    );
   });
 
   it('takes a 204 with no body as nobody signed in, and spends the link at once', async () => {

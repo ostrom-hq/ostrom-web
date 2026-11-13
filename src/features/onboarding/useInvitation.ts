@@ -2,6 +2,7 @@
 import {
   acceptInvitationMutation,
   getMeOptions,
+  grantSignUpMutation,
   listMyOrganizationsQueryKey,
   listOrgsOptions,
   listOrgsQueryKey,
@@ -10,7 +11,7 @@ import {
 import type { InvitationPreview, OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -39,6 +40,15 @@ export interface InvitationViewModel {
   readonly open: OpenInvitation | undefined;
   /** Undefined while `/me` is read; then whether someone is signed in to accept. */
   readonly signedIn: boolean | undefined;
+  /**
+   * Signed out: the invitation is being presented to the server, so that the sign-in to come can create the account
+   * on an invite-only instance. The way to sign in waits for it.
+   */
+  readonly granting: boolean;
+  /** The server could not take the invitation (not a dead one): signing in now may be refused. */
+  readonly grantFailed: boolean;
+  /** Presents the invitation again, then goes to sign in once the server answered (took it, or said it is dead). */
+  readonly signIn: (() => void) | undefined;
   readonly accepting: boolean;
   /** The person is already in the organization (the server answers 409). */
   readonly already: boolean;
@@ -72,6 +82,8 @@ export function useInvitation(): InvitationViewModel {
     },
   });
   const accept = useMutation(acceptInvitationMutation());
+  // A refusal is of no use to the person: the preview already says when the invitation is dead.
+  const grant = useMutation(grantSignUpMutation());
   const [entering, setEntering] = useState(false);
   /** Once joined: the organization is the person's choice, kept with their login, and the console opens. */
   const joined = useCallback(
@@ -99,6 +111,41 @@ export function useInvitation(): InvitationViewModel {
     if (token !== undefined) read({ body: { token } });
   }, [token, read]);
   const { mutate: join } = accept;
+  const { mutate: allow } = grant;
+  const signedOut = !me.isPending && viewer === undefined;
+  const presented = useRef(false);
+  const toSignIn = useCallback(
+    async () => navigate({ to: '/signin', search: { redirect: '/invite' } }),
+    [navigate],
+  );
+  const alive = preview.isSuccess;
+  // Once, for a live invitation, before the person is sent to sign in: the server then lets that sign-in create the
+  // account (an instance that is invite-only refuses a sign-in with no account, `signup_closed`).
+  useEffect(() => {
+    if (token === undefined || !signedOut || !alive || presented.current) return;
+    presented.current = true;
+    allow({ body: { token } });
+  }, [token, signedOut, alive, allow]);
+  // A dead invitation (404) needs no grant, and the preview says so; any other failure may pass: asked again here.
+  const grantFailure = failureOf(grant.error);
+  const grantFailed = !(isApiFailure(grantFailure) && grantFailure.kind === 'not-found') && grant.isError;
+  const signIn =
+    token === undefined
+      ? undefined
+      : () => {
+          const go = (): void => {
+            void toSignIn();
+          };
+          allow(
+            { body: { token } },
+            {
+              onSuccess: go,
+              onError: (error) => {
+                if (isApiFailure(error) && error.kind === 'not-found') go();
+              },
+            },
+          );
+        };
   const acceptFailure = failureOf(accept.error);
   const already = isApiFailure(acceptFailure) && acceptFailure.kind === 'conflict';
   const turnedAway = isApiFailure(acceptFailure) && acceptFailure.kind === 'not-found';
@@ -155,6 +202,9 @@ export function useInvitation(): InvitationViewModel {
     state,
     open,
     signedIn: me.isPending ? undefined : viewer !== undefined,
+    granting: signedOut && alive && (grant.isIdle || grant.isPending),
+    grantFailed: signedOut && grantFailed,
+    signIn,
     accepting: accept.isPending || accept.isSuccess,
     already,
     entering,

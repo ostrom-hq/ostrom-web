@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-only
-import { fragmentValue, looksLikeEmail, safeRedirect } from './model';
+import { signInErrorOf, fragmentValue, looksLikeEmail, safeRedirect } from './model';
 
 describe('safeRedirect', () => {
   it('keeps a path of this site', () => {
@@ -44,5 +44,15 @@ describe('looksLikeEmail', () => {
       false,
       false,
     ]);
+  });
+});
+
+describe('signInErrorOf', () => {
+  it('knows the refusals of the server’s callbacks, calls any other text other, and none nothing', () => {
+    expect(signInErrorOf('signup_closed')).toBe('signup_closed');
+    expect(signInErrorOf('rate_limited')).toBe('rate_limited');
+    expect(signInErrorOf('<b>x</b>')).toBe('other');
+    expect(signInErrorOf('')).toBeUndefined();
+    expect(signInErrorOf(undefined)).toBeUndefined();
   });
 });

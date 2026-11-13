@@ -1442,6 +1442,20 @@ export const en = {
   signin: {
     title: 'Sign in to Ostrom',
     lead: 'With GitHub, or with a link sent to your e-mail. Nothing to remember.',
+    byInvitation: 'Accounts on this Ostrom instance are by invitation.',
+    error: {
+      unavailable: 'This sign-in method is not available on this instance. Try another one.',
+      rate_limited: 'Too many attempts. Wait a few minutes, then try again.',
+      access_denied: 'The sign-in was cancelled at the provider. Try again when you are ready.',
+      expired: 'The sign-in took too long and expired. Start again.',
+      refused: 'The provider refused the sign-in. Try again, or use another method.',
+      link_required:
+        'This account is not linked to this sign-in method yet. Sign in the way you did before, then link it in My account.',
+      identity_taken: 'This provider account is already linked to another Ostrom account.',
+      signup_closed:
+        'This Ostrom instance is invite-only: ask an owner or an admin of your organization for an invitation.',
+      other: 'The sign-in did not work. Try again, or use another method.',
+    },
     github: { label: 'GitHub', go: 'Continue with GitHub' },
     email: {
       label: 'E-mail',
@@ -2035,6 +2049,8 @@ export const en = {
         reserved: 'This short name is kept for Ostrom’s own pages.',
       },
       slugTaken: 'This short name is taken. Choose another.',
+      closed:
+        'This Ostrom instance is invite-only: only an owner or an admin of an organization creates one. Ask one of them for an invitation.',
       failedTag: 'Not created',
       go: 'Create the organization',
       creating: 'Creating…',
@@ -2158,6 +2174,21 @@ export const en = {
       },
     },
   },
+  setup: {
+    title: 'Set up your Ostrom instance',
+    lead: 'This link is yours: sign in to create the first account, then your organization.',
+    granting: 'Checking your setup link…',
+    failedTag: 'Not checked',
+    retry: 'Try again',
+    missing: {
+      title: 'No setup link here',
+      body: 'Open the link that ostrom-server bootstrap printed, with its #token=osb_… part.',
+    },
+    expired: {
+      title: 'This setup link is used or has expired',
+      body: 'A setup link works once, for one hour. Run ostrom-server bootstrap again to get a new one.',
+    },
+  },
   invite: {
     title: 'Invitation',
     joinTitle: 'Join {{org}}',
@@ -2167,6 +2198,10 @@ export const en = {
     for: 'For',
     expires: 'Expires',
     signIn: 'Sign in to join',
+    checking: 'Checking your invitation…',
+    checkFailedTag: 'Not checked',
+    checkFailed:
+      'Your invitation could not be checked just now. Try again: signing in without it may be refused.',
     join: 'Join {{org}}',
     joining: 'Joining…',
     open: 'Open {{org}}',

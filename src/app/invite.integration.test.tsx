@@ -52,6 +52,88 @@ describe('the invitation page', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Initech' })).toBeInTheDocument();
   });
 
+  it('presents the invitation to the server before sending a signed-out person to sign in', async () => {
+    db.signedIn = false;
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/signin'),
+    );
+    expect(db.grants).toEqual([DEMO_INVITATION_TOKEN]);
+  });
+
+  it('holds the way to sign in while the invitation is being presented', async () => {
+    db.signedIn = false;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.post('*/api/v1/auth/signup-grant', async () => {
+        await held;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('button', { name: 'Checking your invitation…' })).toBeDisabled();
+    release();
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
+  });
+
+  it('lets the person sign in when the server found the invitation dead (404) at the grant', async () => {
+    db.signedIn = false;
+    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(404, 'not_found', 'gone')));
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('link', { name: 'Sign in to join' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('presents the invitation again on the click after a failure that may pass, and signs in only then', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    let calls = 0;
+    server.use(
+      http.post('*/api/v1/auth/signup-grant', () => {
+        calls += 1;
+        if (calls === 1) return refuse(429, 'too_many_attempts', 'Slow down.');
+        if (calls === 2) return refuse(404, 'not_found', 'gone');
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const router = open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be checked');
+    expect(screen.queryByRole('link', { name: 'Sign in to join' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Sign in to join' }));
+    await vi.waitFor(() => {
+      expect(router.state.location.pathname).toBe('/signin');
+    });
+    expect(router.state.location.search).toEqual({ redirect: '/invite' });
+    expect(calls).toBe(2);
+  });
+
+  it('stays on the invitation when the second try fails too', async () => {
+    const user = userEvent.setup();
+    db.signedIn = false;
+    server.use(http.post('*/api/v1/auth/signup-grant', () => refuse(429, 'too_many_attempts', 'Slow down.')));
+    const router = open(DEMO_INVITATION_TOKEN);
+    await user.click(await screen.findByRole('button', { name: 'Sign in to join' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be checked');
+    expect(router.state.location.pathname).toBe('/invite');
+  });
+
+  it('presents nothing for a dead invitation, nor for someone already signed in', async () => {
+    db.signedIn = false;
+    open('inv_gone');
+    expect(await screen.findByText('This invitation no longer works')).toBeInTheDocument();
+    expect(db.grants).toEqual([]);
+  });
+
+  it('presents nothing when someone is signed in', async () => {
+    open(DEMO_INVITATION_TOKEN);
+    expect(await screen.findByRole('button', { name: 'Join Initech' })).toBeInTheDocument();
+    expect(db.grants).toEqual([]);
+  });
+
   it('says when no invitation was opened in this tab', async () => {
     visit('/invite');
     expect(await screen.findByText('No invitation here')).toBeInTheDocument();

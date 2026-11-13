@@ -1476,6 +1476,20 @@ export const fr = {
   signin: {
     title: 'Se connecter à Ostrom',
     lead: 'Avec GitHub, ou avec un lien envoyé par e-mail. Rien à retenir.',
+    byInvitation: 'Les comptes de cette instance d’Ostrom se créent sur invitation.',
+    error: {
+      unavailable: 'Cette méthode de connexion n’est pas disponible sur cette instance. Essaie-en une autre.',
+      rate_limited: 'Trop de tentatives. Attends quelques minutes, puis réessaie.',
+      access_denied: 'La connexion a été annulée chez le fournisseur. Réessaie quand tu veux.',
+      expired: 'La connexion a pris trop de temps et a expiré. Recommence.',
+      refused: 'Le fournisseur a refusé la connexion. Réessaie, ou utilise une autre méthode.',
+      link_required:
+        'Ce compte n’est pas encore lié à cette méthode de connexion. Connecte-toi comme avant, puis lie-le dans Mon compte.',
+      identity_taken: 'Ce compte du fournisseur est déjà lié à un autre compte Ostrom.',
+      signup_closed:
+        'Cette instance d’Ostrom est sur invitation : demande une invitation à un propriétaire ou à un admin de ton organisation.',
+      other: 'La connexion n’a pas abouti. Réessaie, ou utilise une autre méthode.',
+    },
     github: { label: 'GitHub', go: 'Continuer avec GitHub' },
     email: {
       label: 'E-mail',
@@ -2081,6 +2095,8 @@ export const fr = {
         reserved: 'Ce nom court est réservé aux pages d’Ostrom.',
       },
       slugTaken: 'Ce nom court est pris. Choisis-en un autre.',
+      closed:
+        'Cette instance d’Ostrom est sur invitation : seul un propriétaire ou un admin d’une organisation en crée une. Demande-leur de t’inviter.',
       failedTag: 'Non créée',
       go: 'Créer l’organisation',
       creating: 'Création…',
@@ -2204,6 +2220,21 @@ export const fr = {
       },
     },
   },
+  setup: {
+    title: 'Installer ton instance Ostrom',
+    lead: 'Ce lien est le tien : connecte-toi pour créer le premier compte, puis ton organisation.',
+    granting: 'Vérification de ton lien d’installation…',
+    failedTag: 'Non vérifié',
+    retry: 'Réessayer',
+    missing: {
+      title: 'Aucun lien d’installation ici',
+      body: 'Ouvre le lien qu’ostrom-server bootstrap a affiché, avec sa partie #token=osb_….',
+    },
+    expired: {
+      title: 'Ce lien d’installation est utilisé ou a expiré',
+      body: 'Un lien d’installation ne sert qu’une fois, pendant une heure. Relance ostrom-server bootstrap pour en obtenir un nouveau.',
+    },
+  },
   invite: {
     title: 'Invitation',
     joinTitle: 'Rejoindre {{org}}',
@@ -2213,6 +2244,10 @@ export const fr = {
     for: 'Pour',
     expires: 'Expire le',
     signIn: 'Se connecter pour rejoindre',
+    checking: 'Vérification de ton invitation…',
+    checkFailedTag: 'Non vérifiée',
+    checkFailed:
+      'Ton invitation n’a pas pu être vérifiée à l’instant. Réessaie : te connecter sans elle risque d’être refusé.',
     join: 'Rejoindre {{org}}',
     joining: 'On t’ajoute…',
     open: 'Ouvrir {{org}}',

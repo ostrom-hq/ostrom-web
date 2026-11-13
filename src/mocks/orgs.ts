@@ -4,6 +4,8 @@ import {
   handleCreateInvitationLink,
   handleCreateOrg,
   handleGetOrg,
+  handleGrantSignUp,
+  handleListSignInMethods,
   handleInviteOrgMembers,
   handleListInvitations,
   handleListMyOrganizations,
@@ -18,6 +20,7 @@ import {
 import type { ApiError, Invitation, Organization, OrgMember, OrgView } from '@gen/api/types.gen';
 import {
   zInvitationLinkCreate,
+  zSignUpGrantRequest,
   zInvitationToken,
   zOrgCreate,
   zOrgInvites,
@@ -26,7 +29,7 @@ import {
 } from '@gen/api/zod.gen';
 import { required } from 'zod/mini';
 import { type HttpHandler, HttpResponse } from 'msw';
-import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { DEMO_SETUP_TOKEN, MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
@@ -64,6 +67,12 @@ export interface OrgsState {
   nextInvitation: number;
   /** Whether the GitHub App is installed, by organization id: a new organization has it not. */
   githubInstalled: Record<string, boolean>;
+  /** Who may get an account (`OSTROM_SIGNUP`): the demo is open, a test sets `invite`. */
+  signUp: 'open' | 'invite';
+  /** The tokens the console presented to `POST /auth/signup-grant` and the server took, in order. */
+  grants: string[];
+  /** The setup link was used already: it answers 404 from then on. */
+  setupUsed: boolean;
 }
 
 /** The person's organizations: the demo's own first; none for a fresh account. */
@@ -392,6 +401,25 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (!found) return refusal(404, 'not_found', 'invitation not found');
       s.invitations = s.invitations.filter((invitation) => invitation.id !== params.id);
       return new HttpResponse(null, { status: 204 });
+    }),
+    handleListSignInMethods(() =>
+      HttpResponse.json({ methods: ['github', 'email'], signUp: state().signUp }),
+    ),
+    // The setup link's token or a live invitation's: a cookie lets the next sign-in create the account.
+    handleGrantSignUp(async ({ request }) => {
+      const body = zSignUpGrantRequest.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a token is needed');
+      const { token } = body.data;
+      const s = state();
+      const setup = token === DEMO_SETUP_TOKEN && !s.setupUsed;
+      if (!setup && liveInvitation(token) === undefined)
+        return refusal(404, 'not_found', 'This link no longer works.');
+      if (setup) s.setupUsed = true;
+      s.grants = [...s.grants, token];
+      return new HttpResponse(null, {
+        status: 204,
+        headers: { 'Set-Cookie': 'ostrom_signup=granted; Path=/api/v1/auth; HttpOnly; SameSite=Lax' },
+      });
     }),
     handlePreviewInvitation(async ({ request }) => {
       const body = zInvitationToken.safeParse(await readJson(request));

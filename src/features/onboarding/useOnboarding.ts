@@ -43,6 +43,8 @@ export interface CreateOrgViewModel {
   readonly creating: boolean;
   /** The short name asked for is someone else's. */
   readonly slugTaken: boolean;
+  /** An invite-only instance: this person may not create organizations (`org_creation_closed`). */
+  readonly closed: boolean;
   readonly failure: Error | undefined;
   /**
    * Forgets the last refusal once what was refused changes: any field for a failure, only the short name for a taken
@@ -82,11 +84,13 @@ export function useCreateOrg(): CreateOrgViewModel {
   );
   const failure = failureOf(mutation.error);
   const slugTaken = isApiFailure(failure) && failure.kind === 'conflict';
+  const closed = isApiFailure(failure) && failure.code === 'org_creation_closed';
   return {
     create,
     creating: mutation.isPending || mutation.isSuccess,
     slugTaken,
-    failure: slugTaken ? undefined : failure,
+    closed,
+    failure: slugTaken || closed ? undefined : failure,
     edited: (field) => {
       if (mutation.isError && (field === 'slug' || !slugTaken)) reset();
     },
