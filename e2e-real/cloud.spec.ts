@@ -250,11 +250,14 @@ test('6.2 an owner starts an agent with a preparation recipe; the server keeps i
   const row = page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').filter({ hasText: name });
   await expect(row).toBeVisible();
 
-  // Stored as asked, never edited: a resume prepares what the first execution did.
+  // Stored as asked, never edited: a resume prepares what the first execution did. The server answers the whole recipe,
+  // what the form left empty included (no repository, no create command, no GitHub link required).
   const session = await sessionNamed(page, org, name);
   expect(session?.environment).toEqual({
-    setup: { start: ['true'] },
+    repositories: [],
+    setup: { create: [], start: ['true'] },
     requiredVariables: ['E2E_RECIPE_TOKEN'],
+    requireGitHub: false,
     gitEmailDomain: 'e2e.ostrom.invalid',
   });
   const id = session?.id ?? '';
