@@ -378,7 +378,7 @@ export type Artifact = {
     createdAt: string;
     updatedAt: string;
     /**
-     * Where it was created, when an agent created it: taken from the agent token, never from the call. Absent for a person's publication. Planned: the server does not send it yet
+     * Where it was created, when an agent created it: taken from the agent token, never from the call. Absent for a person's publication
      */
     origin?: ArtifactOrigin;
 };
@@ -462,6 +462,297 @@ export type ArtifactStorage = {
     version: number;
     updatedAt?: string;
     inUse: boolean;
+};
+
+/**
+ * The capacity controller's advice (`capacity.pacing.v1`). Pacing never caps parallelism: it only spaces the admission of new calls, and the server enforces it whatever the agent does
+ */
+export type Directive = {
+    /**
+     * Changes whenever the advice or its context changes
+     */
+    id: string;
+    /**
+     * `normal`; `slow_down` when, at the team's current rate, every usable account is projected to run out before one resets (admissions spaced by 2, 5 or 10 seconds as the gap is lighter or more severe); `pause` when no usable account is left (30 seconds); `can_increase` when no gap appears even at twice the rate and every usable window is under half used; `unknown` when observations are missing. Clients treat an unknown value as `unknown`
+     */
+    pace: 'unknown' | 'normal' | 'slow_down' | 'can_increase' | 'pause' | (string & {});
+    /**
+     * The member's, group's or run's concurrency limit that applies, 0 for none
+     */
+    maxConcurrent: number;
+    /**
+     * The spacing between two admissions of the caller's calls, in milliseconds
+     */
+    minIntervalMillis: number;
+    /**
+     * The advice in words, for the agent
+     */
+    message: string;
+    createdAt: string;
+    expiresAt: string;
+};
+
+/**
+ * A claimed delivery; both absent when nothing new is to be delivered
+ */
+export type DirectiveClaim = {
+    directive?: Directive;
+    claimId?: string;
+};
+
+export type DirectiveClaimRequest = {
+    sessionId: string;
+    stage: 'received_by_cli' | 'emitted_to_hook' | (string & {});
+};
+
+export type DirectiveReceipt = {
+    /**
+     * The advice's id
+     */
+    id: string;
+    stage: 'received_by_cli' | 'emitted_to_hook' | (string & {});
+    sessionId?: string;
+    claimId?: string;
+};
+
+export type DirectiveResponse = {
+    directive?: Directive;
+};
+
+export type DirectiveScope = {
+    sessionId: string;
+};
+
+/**
+ * A shared account as the Forecasts page lists it, never its credentials nor its provider account id
+ */
+export type ForecastAccount = {
+    id: string;
+    provider: string;
+    label: string;
+    /**
+     * As `SharedAccount.status`
+     */
+    status: string;
+    paused: boolean;
+    email?: string;
+};
+
+/**
+ * One real reading; a missing reading is never written as 0
+ */
+export type ForecastSample = {
+    /**
+     * Used share, 0 to 1
+     */
+    utilization: number;
+    observedAt: string;
+    resetsAt?: string;
+};
+
+/**
+ * One current provider window of the account and what the controller learned of it
+ */
+export type ForecastWindow = {
+    /**
+     * `five_hour`, `seven_day` or `model:<family>`
+     */
+    window: string;
+    /**
+     * Used share, 0 to 1
+     */
+    utilization: number;
+    observedAt: string;
+    resetsAt?: string;
+    /**
+     * Clients treat an unknown value as `unknown`
+     */
+    state: 'unknown' | 'stale' | 'exhausted' | 'idle' | 'reset_first' | 'exhausts_first' | (string & {});
+    /**
+     * The learned rate in percentage points per hour (0 to 100 scale, where `utilization` is 0 to 1); absent while unknown (0 is a known idle rate)
+     */
+    pointsPerHour?: number;
+    /**
+     * When the window reaches `pressureThreshold` at that rate, if known
+     */
+    reachesThresholdAt?: string;
+    /**
+     * The last hour's readings, oldest first, cut at every reset, drop or gap of more than five minutes
+     */
+    segments: Array<Array<ForecastSample>>;
+    /**
+     * Readings in the latest segment (the rate needs three)
+     */
+    learningSamples: number;
+    /**
+     * Time between the first and last readings of the latest segment
+     */
+    learningSpanMillis: number;
+};
+
+/**
+ * A bounded point-in-time view of one account's windows, never a sum of percentages of different plans
+ */
+export type ForecastSnapshot = {
+    generatedAt: string;
+    accounts: Array<ForecastAccount>;
+    account?: ForecastAccount;
+    windows: Array<ForecastWindow>;
+    truncated: boolean;
+    /**
+     * The account's `utilizationCeiling`, at which it stops taking requests (0.95 by default)
+     */
+    pressureThreshold: number;
+};
+
+/**
+ * Informational advice, never sent to an agent by itself
+ */
+export type PacingPreview = {
+    settings: PacingSettings;
+    directive?: Directive;
+};
+
+/**
+ * The capacity controller's settings for the organization (`capacity.pacing.v1`). A provider window counts as exhausted at its account's `utilizationCeiling`, as admission does
+ */
+export type PacingSettings = {
+    /**
+     * False by default. The controller keeps forecasting but neither spaces admissions nor sends advice to agents. Budgets, concurrency limits and accounts' ceilings stay enforced; advice already sent cannot be recalled
+     */
+    observationOnly?: boolean;
+    /**
+     * False by default. Size the organization's daily budget from its shared accounts (`capacity.poolsize.v1`, `GET /api/v1/pools/size`) instead of the typed one
+     */
+    autoPoolSize?: boolean;
+};
+
+/**
+ * The automatic daily budget and the estimate behind it, in USD millionths at the gateway's prices (API-equivalent)
+ */
+export type PoolSize = {
+    /**
+     * `autoPoolSize`
+     */
+    enabled: boolean;
+    /**
+     * The organization's typed daily budget, absent when it has none
+     */
+    manualDailyMicros?: number;
+    /**
+     * The value the job stored last, absent before its first estimate
+     */
+    automaticDailyMicros?: number;
+    automaticComputedAt?: string;
+    /**
+     * The daily budget admission applies now, absent when there is none
+     */
+    effectiveDailyMicros?: number;
+    source: 'automatic' | 'manual' | (string & {});
+    /**
+     * What is left of the accounts' capacity today, computed now
+     */
+    estimatedDailyMicros: number;
+    /**
+     * Why there is no automatic value; then the typed budget applies
+     */
+    reason?: 'no_accounts' | 'no_estimate' | (string & {});
+    /**
+     * Models used over seven days without a price, left out of the samples
+     */
+    unpricedModels: Array<string>;
+    accounts: Array<PoolSizeAccount>;
+    /**
+     * The full daily capacity of the accounts that can serve, whatever they used; a floor when `capacityUnknownAccounts` is above 0
+     */
+    capacityDailyMicros: number;
+    capacityUnknownAccounts: number;
+    /**
+     * `capacityDailyMicros` in tokens at the organization's seven-day model mix, absent without priced traffic
+     */
+    capacityDailyTokens?: number;
+    tokensPerMicro?: number;
+    /**
+     * What the accounts' current weekly windows used outside Ostrom, absent while unknown; a floor when `outsideUnknownAccounts` is above 0
+     */
+    outsideWeeklyMicros?: number;
+    outsideUnknownAccounts: number;
+    /**
+     * The organization's seven days of tokens by model, priced by token type
+     */
+    models: Array<PoolSizeModel>;
+};
+
+export type PoolSizeAccount = {
+    accountId: string;
+    /**
+     * Clients treat an unknown value as not counted
+     */
+    status: 'counted' | 'unavailable' | 'no_fresh_observation' | 'no_estimate' | (string & {});
+    /**
+     * What is left of the account's capacity today
+     */
+    dailyMicros: number;
+    /**
+     * The window that gives the smaller daily figure
+     */
+    binding?: string;
+    /**
+     * The account's full daily capacity, absent while unknown
+     */
+    capacityDailyMicros?: number;
+    windows: Array<PoolSizeWindowCapacity>;
+    usage: Array<PoolSizeWindowUsage>;
+};
+
+/**
+ * Seven days of one model's tokens and their API-equivalent by token type; costs absent without a price
+ */
+export type PoolSizeModel = {
+    provider: string;
+    model: string;
+    inputTokens: number;
+    cacheWriteTokens: number;
+    cacheReadTokens: number;
+    outputTokens: number;
+    inputMicros?: number;
+    cacheWriteMicros?: number;
+    cacheReadMicros?: number;
+    outputMicros?: number;
+    totalMicros?: number;
+    unpricedTokens: number;
+};
+
+/**
+ * The learned full capacity of one shared window (0 to 100 %); absent below three samples
+ */
+export type PoolSizeWindowCapacity = {
+    window: string;
+    /**
+     * The median of the samples, which the budget uses
+     */
+    fullWindowMicros?: number;
+    /**
+     * Their upper quartile, the reported capacity
+     */
+    capacityMicros?: number;
+    samples: number;
+};
+
+/**
+ * One current window split between Ostrom's traffic and use of the subscription outside Ostrom since it opened; the split is absent without a learned capacity
+ */
+export type PoolSizeWindowUsage = {
+    window: string;
+    since: string;
+    observedAt: string;
+    resetsAt: string;
+    observedUtilization: number;
+    ostromMicros?: number;
+    ostromUtilization?: number;
+    outsideUtilization?: number;
+    outsideMicros?: number;
+    remainingMicros?: number;
 };
 
 /**
@@ -666,7 +957,7 @@ export type ArtifactVersion = {
      */
     replayed?: boolean;
     /**
-     * Where it was committed, when an agent committed it: taken from the agent token, never from the call. Absent for a person's publication. Planned: the server does not send it yet
+     * Where it was committed, when an agent committed it: taken from the agent token, never from the call. Absent for a person's publication
      */
     origin?: ArtifactOrigin;
 };
@@ -1140,6 +1431,10 @@ export type AutomationAction = {
     model?: string;
     effort?: string;
     maxRuntimeMinutes?: number;
+    /**
+     * The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has (400 `invalid_automation` naming `action.profileId`). Absent: the owner's only usable profile, as `createCloudSession` chooses it (`profile_required` when they may use none or several). A run whose session the profile refuses fails with the refusal's key as its `reason`: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`. Ignored by a server whose sessions run on Docker or on registered runners
+     */
+    profileId?: string;
 };
 
 /**
@@ -1166,7 +1461,7 @@ export type AutomationRun = {
      */
     workflowRunId?: string | null;
     /**
-     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
+     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled, and the cloud profile's refusals cloud_profile_not_found, profile_unassigned, profile_required, image_not_allowed, cluster_unavailable, namespace_not_allowed…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
      */
     reason?: string | null;
     problems: Array<AutomationPayloadProblem>;
@@ -1367,7 +1662,7 @@ export type BillingPaymentIssue = {
 };
 
 /**
- * The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
+ * The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster's `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
  */
 export type BillingPlanLimits = {
     maxPeople: number | null;
@@ -1454,20 +1749,131 @@ export type Budget = {
 };
 
 /**
- * A dated exception to a daily allocation
+ * A temporary daily budget granted to a member (`capacity.budgetoverrides.v1`), kept after it ends or is revoked
  */
 export type BudgetOverride = {
     id: string;
+    /**
+     * The member's `login`
+     */
     member: string;
-    usd: number;
+    /**
+     * The member's total daily allowance while it lasts, USD millionths
+     */
+    micros: number;
+    createdAt: string;
+    /**
+     * The earlier of the requested duration and the next midnight UTC
+     */
     expiresAt: string;
     reason: string;
     createdBy: string;
+    /**
+     * The override this one replaced
+     */
+    replacesId?: string;
     revokedAt?: string;
+    revokedBy?: string;
+    revocationReason?: string;
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * The override in force, as its member sees it (`getMyBudget`): no reason, no grantor
+ */
+export type BudgetOverrideSummary = {
+    id: string;
+    micros: number;
+    expiresAt: string;
+};
+
+/**
+ * A model call whose final usage is unknown: the hold it was admitted with stays charged (`capacity.usagereconciliation.v1`)
+ */
+export type PendingUsage = {
+    /**
+     * The call's id, the id of the hold
+     */
+    id: string;
+    /**
+     * The member's `login`
+     */
+    member: string;
+    /**
+     * The charge kept, USD millionths
+     */
+    micros: number;
+    heldAt: string;
+    leaseExpiredAt: string;
+    workflowId?: string;
+    launchId?: string;
+    /**
+     * The provider's request id when the gateway captured one before streaming, bounded and unambiguous
+     */
+    providerRequestId?: string;
+};
+
+/**
+ * A final correction of an unknown charge, attested by an administrator, with the attribution the call had when it was held
+ */
+export type UsageReconciliation = {
+    /**
+     * The id of the hold that was corrected, as `PendingUsage.id` was
+     */
+    id: string;
+    member: string;
+    workflowId?: string;
+    launchId?: string;
+    providerRequestId?: string;
+    heldAt: string;
+    previousMicros: number;
+    micros: number;
+    source: 'PROVIDER_RECORD' | 'PROVIDER_CONFIRMATION' | (string & {});
+    reference: string;
+    reason: string;
+    reconciledBy: string;
+    reconciledAt: string;
+};
+
+/**
+ * `pending` while the hold is unknown, `reconciliation` once corrected: exactly one is present
+ */
+export type UsageReview = {
+    pending?: PendingUsage;
+    reconciliation?: UsageReconciliation;
+};
+
+/**
+ * One row of the price table: micro-dollars (USD millionths) per million tokens, so `3000000` is $3 a million tokens
+ */
+export type ApiPrice = {
+    /**
+     * `anthropic` or `openai`
+     */
+    provider: string;
+    /**
+     * A lowercase model, or a family prefix (`claude-sonnet-4`)
+     */
+    model: string;
+    /**
+     * The UTC date (`YYYY-MM-DD`) from which it applies, until a later row of the same model
+     */
+    effectiveFrom: string;
+    inputMicros: number;
+    cacheWriteMicros: number;
+    cacheReadMicros: number;
+    outputMicros: number;
+};
+
+export type ApiPriceTable = {
+    prices: Array<ApiPrice>;
+    /**
+     * On a read: true when the table has no row and the gateway's built-in prices apply (`prices` then lists them); ignored on a write
+     */
+    defaults?: boolean;
+};
+
+/**
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -1567,6 +1973,18 @@ export type CloudRuntime = {
      */
     transcriptRetentionDays?: number;
     /**
+     * How long a permission request of a conversation session waits before the runner denies it; 0 (the default) waits for an answer, an interrupt or a pause (`runners.cloud.permissions.v1`)
+     */
+    permissionDeadlineMinutes?: number;
+    /**
+     * The largest file sent to a session, 20 by default (`runners.cloud.files.v1`)
+     */
+    fileMaxMebibytes?: number;
+    /**
+     * The files of one message together, 25 by default (`runners.cloud.files.v1`)
+     */
+    messageFileMebibytes?: number;
+    /**
      * Whether an owner who is not an administrator may offer a session to another member
      */
     memberTransfers: 'offer' | 'disabled' | (string & {});
@@ -1590,6 +2008,9 @@ export type SaveCloudRuntimeRequest = {
     maxRunningSessionsPerMember: number;
     maxRetainedSessionsPerMember: number;
     transcriptRetentionDays?: number;
+    permissionDeadlineMinutes?: number;
+    fileMaxMebibytes?: number;
+    messageFileMebibytes?: number;
     memberTransfers: 'offer' | 'disabled' | (string & {});
     /**
      * The `updatedAt` of the runtime edited; absent only while nothing is stored (absent when a runtime is stored, or not the stored one, is a 409 `cloud_runtime_conflict`)
@@ -1611,7 +2032,15 @@ export type CloudCluster = {
     caCertificate: InstanceSecretState;
     serviceAccountToken: InstanceSecretState;
     /**
-     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false. Planned
+     * PersistentVolumes of this cluster's session workspaces whose claim is gone and that their provisioner will not delete (reclaimPolicy other than Delete, or phase Failed), counted by the last garbage collection: an administrator deletes the provider volumes (`runners.cloud.retention.v1`). Absent before the first collection
+     */
+    orphanedVolumes?: number;
+    /**
+     * When the last garbage collection of the cluster ran: every 10 minutes, it deletes the session pods and workspace claims no session accounts for (`runners.cloud.retention.v1`). Absent before the first collection
+     */
+    lastGarbageCollectionAt?: string;
+    /**
+     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false
      */
     inCluster?: boolean;
     createdAt: string;
@@ -1834,7 +2263,7 @@ export type SaveGitHubAppConfigurationRequest = {
      */
     privateKey?: string | null;
     /**
-     * The secret GitHub signs the webhooks with; null or absent keeps the stored one. Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
+     * The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same `appId` (another App signs with its own, so none is kept); an empty string clears it (for a first App or another `appId` it leaves none, as null does). Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
      */
     webhookSecret?: string | null;
     /**
@@ -1957,17 +2386,39 @@ export type CloudSession = {
     readyAt?: string;
     lastActivityAt?: string;
     pausedAt?: string;
+    /**
+     * When a paused session is terminated with its workspace (`terminatedReason` `expired`), from the instance's `pausedRetentionDays` in force when it paused: a later change of the setting applies to sessions paused afterwards, so shortening it never deletes existing work by surprise. Resuming clears it. Absent while the session is not paused, or when paused sessions are kept indefinitely (`runners.cloud.retention.v1`, TeamCode's `expiresAt`). A session paused before the server announced the feature gets its `expiresAt` from the setting at its next reconciliation
+     */
+    expiresAt?: string;
+    /**
+     * Why a terminated session ended: `deleted` (its owner or an administrator) or `expired` (its paused retention ran out). Absent from a session that is not terminated (`runners.cloud.retention.v1`)
+     */
+    terminatedReason?: string;
+    workspaceDeletion?: CloudWorkspaceDeletion;
     runnerId?: string;
     environment?: CloudEnvironment;
     profile?: CloudSessionProfile;
     /**
-     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile. Planned
+     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile
      */
     image?: string;
     /**
      * Who may instruct the agent while it holds the owner's GitHub token (`runners.cloud.github.v1`): `owner` (the default) the owner only, `shared` everyone who may use the session, `none` no GitHub token at all. Absent from a server without the feature
      */
     githubAccess?: 'owner' | 'shared' | 'none' | (string & {});
+    /**
+     * `terminal` (absent: a PTY relayed over the terminal WebSocket) or `conversation` (`runners.cloud.conversation.v1`, claude and codex only): the agent runs headless, talked to through the transcript, messages and permission routes, and the session has no terminal
+     */
+    mode?: string;
+    /**
+     * The effort (reasoning level) the agent runs with, if chosen (`runners.cloud.effort.v1`)
+     */
+    effort?: string;
+    /**
+     * The owner's standing approval of tool uses is on (`runners.cloud.permissions.bypass.v1`); absent from a server without it
+     */
+    permissionBypass?: boolean;
+    waiting?: CloudSessionWaiting;
     runId?: string;
     automationId?: string;
     createdAt: string;
@@ -1975,7 +2426,27 @@ export type CloudSession = {
 };
 
 /**
- * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ * The proof that a Kubernetes session's workspace is gone, provider volume included (`runners.cloud.retention.v1`, TeamCode's `workspaceDeletion`). When the session ends, the reconciler records the PersistentVolume bound to its claim and the provider's volume handle, deletes the claim, waits until it is gone, then until the PersistentVolume is gone: with `reclaimPolicy: Delete`, the provisioner removes it only once the provider deleted the volume. A volume with another policy, in phase `Failed`, or still there an hour after its claim was deleted blocks the deletion (`volume_retained`, `volume_deletion_stalled`), checked again every 10 minutes until an administrator deletes it. Absent from a session on Docker or a registered runner
+ */
+export type CloudWorkspaceDeletion = {
+    /**
+     * `none` (the session holds its workspace), `pending`, `proven` or `blocked`
+     */
+    state: string;
+    claimDeletedAt?: string;
+    volumeDeletedAt?: string;
+    /**
+     * The provider's volume handle (CSI `volumeHandle`), kept as evidence
+     */
+    volumeHandle?: string;
+    /**
+     * Why the deletion is blocked: `volume_retained` (the volume's reclaimPolicy is not Delete; `retryable` false) or `volume_deletion_stalled` (phase Failed, or still there an hour after its claim was deleted; `retryable` true). Absent unless `state` is `blocked`
+     */
+    problem?: CloudSessionFailure;
+};
+
+/**
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile
  */
 export type CloudSessionProfile = {
     id: string;
@@ -1983,11 +2454,268 @@ export type CloudSessionProfile = {
 };
 
 /**
+ * One transcript event of a conversation session (`runners.cloud.conversation.v1`, TeamCode's `CloudEventView`). `type` is open: `message.user`, `message.agent`, `message.agent.delta`, `tool.call`, `tool.result`, `turn`, `status`, `error`, `input`, `permission.request`, `permission.expired`, `tasks`; clients tolerate unknown types and unknown `data` fields
+ */
+export type CloudEvent = {
+    /**
+     * From 1, increased by one per session
+     */
+    seq: number;
+    type: string;
+    at: string;
+    /**
+     * The execution that produced it; 0 for an event the server wrote
+     */
+    epoch: number;
+    /**
+     * The event's object, bounded (16 levels, 200 entries, strings of 16,000 characters) and secret-masked; an event above 60,000 bytes becomes `{truncated, originalBytes}` with its identity fields
+     */
+    data: unknown;
+    /**
+     * `runners.cloud.transcript.feeds.v1`: the id of the `tool.call` that started the subagent the event belongs to; absent for the main agent
+     */
+    feed?: string;
+};
+
+/**
+ * A page of transcript events in ascending order. `firstSeq` is the oldest retained event, `lastSeq` the session's newest when the page was read; a null cursor means nothing more in that direction
+ */
+export type CloudEventPage = {
+    events: Array<CloudEvent>;
+    firstSeq?: number;
+    lastSeq?: number;
+    nextAfter?: number;
+    nextBefore?: number;
+};
+
+/**
+ * A message to the agent (`sendCloudMessage`). `clientMessageId` is an alias of the `Idempotency-Key` header (one or the other). `wake` false leaves a paused session paused: the message waits for the next resume. `fileIds` (`runners.cloud.files.v1`, at most 5, distinct) names files the caller uploaded to this session and did not send yet; with files the text may be empty
+ */
+export type SendCloudMessageRequest = {
+    text: string;
+    wake?: boolean;
+    clientMessageId?: string;
+    expectedLastEventSeq?: number;
+    fileIds?: Array<string>;
+};
+
+/**
+ * A message, an interrupt, a permission answer, a task stop or a model or effort change, and its acknowledgement (TeamCode's `CloudInputView`)
+ */
+export type CloudInput = {
+    id: string;
+    /**
+     * message, interrupt, permission, stop_task, set_model or set_effort
+     */
+    kind: string;
+    /**
+     * queued, delivered, consumed, cancelled or rejected
+     */
+    status: string;
+    authorId: string;
+    text?: string;
+    wake?: boolean;
+    /**
+     * Accepting it resumed a paused session
+     */
+    woke?: boolean;
+    clientMessageId?: string;
+    createdAt: string;
+    deliveredAt?: string;
+    deliveredEpoch?: number;
+    consumedAt?: string;
+    finishedAt?: string;
+    /**
+     * Why it was cancelled or rejected: a stable code (delivery_failed, session_terminated, files_unsupported, task_stop_unsupported, unknown_permission_request, execution_ended...)
+     */
+    reason?: string;
+    /**
+     * The `message.user` event recording a consumed message
+     */
+    eventSeq?: number;
+    fileIds?: Array<string>;
+};
+
+/**
+ * The session's inputs, newest first; `nextBefore` is the cursor of the following page
+ */
+export type CloudInputPage = {
+    inputs: Array<CloudInput>;
+    nextBefore?: string;
+};
+
+/**
+ * The answer to the `permission.request` event `requestId` (`answerCloudPermission`). `deny` passes `message` to the agent. `allow` with `answers` answers a question (`AskUserQuestion`): one entry per question, by index, at most 16
+ */
+export type AnswerCloudPermissionRequest = {
+    requestId: string;
+    /**
+     * allow or deny
+     */
+    behavior: string;
+    message?: string;
+    answers?: Array<CloudQuestionAnswer>;
+};
+
+/**
+ * The answer to the question at index `question` (from 0, in the request's `input.questions`): the chosen `options` by index (several only for a `multiSelect` question), or a free `text`; one or the other
+ */
+export type CloudQuestionAnswer = {
+    question: number;
+    options?: Array<number>;
+    text?: string;
+};
+
+/**
+ * A subagent of a session (`runners.cloud.transcript.feeds.v1`). `id` is the `tool.call` that started it and the `feed` of its events; `parentId` the feed it was started from (absent: the main agent); `taskId` the id to stop it with while it is a live background task
+ */
+export type CloudSubagent = {
+    id: string;
+    type?: string;
+    description?: string;
+    /**
+     * running, completed or failed
+     */
+    state: string;
+    startedAt: string;
+    endedAt?: string;
+    steps?: number;
+    parentId?: string;
+    taskId?: string;
+};
+
+/**
+ * The session's subagents, oldest first, the newest 200
+ */
+export type CloudSubagentList = {
+    agents: Array<CloudSubagent>;
+};
+
+/**
+ * The background task of the session's agent to stop (`stopCloudTask`)
+ */
+export type StopCloudTaskRequest = {
+    taskId: string;
+};
+
+/**
+ * The owner's standing approval of tool uses (`setCloudPermissionBypass`)
+ */
+export type SetCloudPermissionBypassRequest = {
+    enabled: boolean;
+};
+
+/**
+ * The model of the session's agent (`setCloudSessionModel`)
+ */
+export type SetCloudModelRequest = {
+    model: string;
+};
+
+/**
+ * The effort of the session's agent (`setCloudSessionEffort`)
+ */
+export type SetCloudEffortRequest = {
+    effort: string;
+};
+
+/**
+ * Why the session's agent waits for a person (`runners.cloud.permissions.v1`, TeamCode's `waiting`): set when a `permission.request` is stored, gone when it stops being answerable
+ */
+export type CloudSessionWaiting = {
+    /**
+     * permission (a tool use to approve) or question (a question to answer)
+     */
+    reason: string;
+    /**
+     * What `answerCloudPermission` takes
+     */
+    requestId?: string;
+    since?: string;
+    /**
+     * The `permission.request` event
+     */
+    eventSeq?: number;
+};
+
+/**
+ * A file uploaded to a session (`runners.cloud.files.v1`). `name` is the cleaned name the host writes it under, `contentType` the type recognized from its bytes. Name its `id` in a message's `fileIds` before `expiresAt`
+ */
+export type CloudFile = {
+    id: string;
+    sessionId: string;
+    name: string;
+    size: number;
+    contentType: string;
+    sha256: string;
+    createdAt: string;
+    expiresAt: string;
+};
+
+/**
+ * Whether the caller's organization can send files now (`available`; `reason` `file_storage_not_configured` without a tested artifact bucket), and its limits
+ */
+export type CloudFilePolicy = {
+    available: boolean;
+    reason?: string;
+    maxFileBytes: number;
+    maxMessageBytes: number;
+    maxFilesPerMessage: number;
+    types: Array<string>;
+};
+
+/**
+ * A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page
+ */
+export type CloudSessionPage = {
+    items: Array<CloudSession>;
+    next?: string;
+};
+
+/**
+ * The cloud session to start (`createCloudSession`)
+ */
+export type CreateCloudSessionRequest = {
+    agent: CloudAgentKind;
+    model?: string;
+    /**
+     * https://github.com/<owner>/<name>, cloned through the organization's GitHub App
+     */
+    repo?: string;
+    /**
+     * Branch, tag or commit; the default branch when absent
+     */
+    ref?: string;
+    /**
+     * The agent's first message, up to 20,000 characters; an interactive agent when absent
+     */
+    prompt?: string;
+    name?: string;
+    environment?: CloudEnvironment;
+    /**
+     * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners
+     */
+    profileId?: string;
+    /**
+     * `terminal` (absent) or `conversation` (`runners.cloud.conversation.v1`): 400 `invalid_mode` for another value or for an agent other than claude and codex. In conversation mode `prompt` is the first message of the transcript
+     */
+    mode?: string;
+    /**
+     * The agent's effort (reasoning level), 1 to 120 letters, digits and `. _ : / -`
+     */
+    effort?: string;
+    /**
+     * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image
+     */
+    image?: string;
+};
+
+/**
  * Why a cloud session failed or paused on its own
  */
 export type CloudSessionFailure = {
     /**
-     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable or namespace_not_allowed (the profile's cluster or namespace at a start, planned)
+     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable, namespace_not_allowed, server_url_missing, storage_class_missing or storage_class_retains_volumes (a session on a cloud profile whose cluster stopped opening, whose namespace is no longer allowed, whose runner has no server URL, or whose workspace storage class is gone or keeps provider volumes after their claim is deleted)
      */
     code: string;
     message: string;
@@ -2153,6 +2881,9 @@ export type Dev = {
 export type Device = {
     id: string;
     name: string;
+    /**
+     * `macos`, `windows`, `linux`, `ios` or `android`, as reported at the latest sign-in; absent until one did
+     */
     platform?: string;
     cliVersion?: string;
     lastSeenAt?: string;
@@ -2166,6 +2897,41 @@ export type Device = {
     orgId?: string;
     scopes?: Array<string>;
     expiresAt?: string;
+    /**
+     * With `devices.v1`: the system's version reported with `platform`
+     */
+    osVersion?: string;
+    /**
+     * With `devices.v1`: when the installation was registered
+     */
+    createdAt?: string;
+    /**
+     * With `devices.v1`: its latest sign-in
+     */
+    lastLoginAt?: string;
+    /**
+     * With `devices.v1`: how many live sign-ins the device holds
+     */
+    activeSessions?: number;
+    /**
+     * With `devices.v1`: the call came from this device
+     */
+    current?: boolean;
+};
+
+/**
+ * A page of devices
+ */
+export type DevicePage = {
+    items: Array<Device>;
+    next?: string;
+};
+
+/**
+ * A device's new name
+ */
+export type RenameDeviceRequest = {
+    name: string;
 };
 
 /**
@@ -2184,6 +2950,22 @@ export type DeviceLoginStart = {
      * Exactly `policy:write`, `harness:write` and `gates:policy`, or those three and `budgets:write` (planned, Q-CLI-BUDGETS); any other set is malformed (400). Absent or empty: the ordinary sign-in. The three alone stay accepted from an older CLI, whose token then writes no budget; a server that does not take `budgets:write` yet answers 400 to the four, and the CLI asks again with the three
      */
     scopes?: Array<'policy:write' | 'harness:write' | 'gates:policy' | 'budgets:write' | (string & {})>;
+    /**
+     * With `devices.v1`: the CLI's installation, a random lowercase UUID kept in its configuration directory, which survives a sign-out and a change of server (otherwise 400 `invalid_installation`). Ignored with `scopes`: a token of `ostrom login --admin` never registers nor joins a device. When the sign-in is approved, the server registers the installation as a device of the approving member, keyed by member and installation, or signs it in again on the device it already is: repeated sign-ins are independent sessions of one device, which keeps its id and its name. A member holds at most 50 devices (409 `device_limit` when the approval would register a 51st). Never returned. Absent: the token is listed on its own, as before
+     */
+    installationId?: string;
+    /**
+     * With `installationId`: the name of a device this sign-in registers (1 to 120 characters, no control character, otherwise 400 `invalid_device_name`); a device already registered keeps its name. The client's name when absent
+     */
+    deviceName?: string;
+    /**
+     * With `installationId`: the system, recorded on the device (400 `invalid_platform` otherwise). A sign-in without it keeps what was recorded before
+     */
+    platform?: 'macos' | 'windows' | 'linux' | 'ios' | 'android' | (string & {});
+    /**
+     * With `platform` only: the system's version, 1 to 64 printable characters (400 `invalid_os_version` otherwise)
+     */
+    osVersion?: string;
 };
 
 /**
@@ -2347,6 +3129,16 @@ export type EnvironmentValues = {
      * Assigned variables withheld because their value cannot be read now, by name only
      */
     unavailable: Array<string>;
+    /**
+     * `fetchRunnerVariables` only (`waits.secrets.v1`): the secrets of the session's answered waits, by variable name (`OSTROM_WAIT_<NAME>`), for the member the execution runs for; never in any other answer
+     */
+    secrets?: {
+        [key: string]: string;
+    };
+    /**
+     * The names in `secrets` the server deleted by serving them, which the runner keeps for the rest of the turn only
+     */
+    oneTime?: Array<string>;
 };
 
 /**
@@ -3627,6 +4419,13 @@ export type McpSettings = {
 };
 
 /**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export type McpServerList = {
+    items: Array<McpServer>;
+};
+
+/**
  * A server run by the MCP host from a pinned package
  */
 export type McpStdioSpec = {
@@ -4338,7 +5137,7 @@ export type ModelPolicy = {
 };
 
 /**
- * The caller's budget this month, in millionths of a US dollar
+ * The caller's budget this month, in millionths of a US dollar. Planned (`capacity.budgetoverrides.v1`): `override`, the temporary daily budget in force, and `baseLimitMicros`; the server does not send them yet
  */
 export type MyBudget = {
     /**
@@ -4356,6 +5155,11 @@ export type MyBudget = {
      */
     exhausted: boolean;
     exhaustedScope?: 'org' | 'member' | (string & {});
+    override?: BudgetOverrideSummary;
+    /**
+     * Planned (`capacity.budgetoverrides.v1`, with `override`, the temporary daily budget in force: while it lasts the caller's own daily limit that stops is its `usd`): the daily limit in force without it, absent when the caller had none
+     */
+    baseLimitMicros?: number;
     /**
      * The period `limitMicros`, `spentMicros`, `remainingMicros` and `resetsAt` count: `day` when the caller's own limit that stops is daily and the nearest to be spent, `month` otherwise. Absent, read `month`. Planned: the server does not send it yet
      */
@@ -4413,6 +5217,10 @@ export type NodeRun = {
      * Agent: the repository (`owner/name`) its session works in, else the run's
      */
     repository?: string;
+    /**
+     * Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`, TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the server runs refuses an id none of the organization's profiles has (400 `invalid_workflow`, naming the node). Ignored by a server whose sessions run on Docker or on registered runners. A session the profile refuses fails the visit, and the run's `failureCode` is the refusal's key: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`
+     */
+    profileId?: string;
 };
 
 /**
@@ -4928,6 +5736,13 @@ export type PushDevice = {
 };
 
 /**
+ * The caller's phones registered for push notifications, the most recently seen first
+ */
+export type PushDeviceList = {
+    items: Array<PushDevice>;
+};
+
+/**
  * Ostrom Push relay (`push.v1`), `POST /v1/instances`: an instance introduces its Ed25519 public key. The same key gets the same id. This and the other `PushRelay` schemas are the wire format between a server and the relay that holds the Firebase project of the published apps; the relay sees an instance, a token and an encrypted blob, never a member, a session or the text. Every request but this one carries `Ostrom-Instance`, `Ostrom-Timestamp` (Unix seconds, at most 300 s off) and `Ostrom-Signature`, Ed25519 over `<METHOD>\n<path>\n<timestamp>\n<sha256 of the body, lowercase hex>`, base64url without padding.
  */
 export type PushRelayRegisterRequest = {
@@ -5398,13 +6213,41 @@ export type Session = {
      */
     lost?: boolean;
     /**
-     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer. Planned: the server does not send it yet
+     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer.
      */
     activity?: 'working' | 'waiting_for_human' | (string & {});
     /**
-     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only. Planned: the server does not send it yet
+     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only.
      */
     activitySince?: string;
+    /**
+     * The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them on a run; absent when the launch has none. Planned: the server does not send them yet
+     */
+    labels?: {
+        [key: string]: string;
+    };
+};
+
+/**
+ * The limits of one launch (`launches.limits.v1`), TeamCode's run policy `{budgetUnits, maxConcurrent, paused}` with the budget in USD millionths as every limit of Ostrom. Each is an additional cap for the model calls the launch's agent token makes, never a substitute for the member's own limits
+ */
+export type LaunchLimits = {
+    /**
+     * What the launch may spend over its life, USD millionths; 0, the default, adds no cap
+     */
+    budgetMicros: number;
+    /**
+     * The most calls the launch runs at once; 0, the default, adds no cap. Past it a call waits
+     */
+    maxConcurrent: number;
+    /**
+     * True refuses the launch's next calls (`launch_paused`); the streams in flight finish
+     */
+    paused: boolean;
+    /**
+     * On a read only, what the launch spent so far, USD millionths; ignored on a write
+     */
+    spentMicros?: number;
 };
 
 /**
@@ -6717,10 +7560,13 @@ export type WaitAnswer = {
 };
 
 /**
- * A field of a wait
+ * A field of a wait. `file` takes the name of an uploaded file, a string of at most 255 characters without `/`, `\` or control characters. `secret` asks a person for a value the agent needs and nobody else should read (a password, a token): a string of at most 4 096 bytes without NUL, only in a wait an agent asks in its session (never in a workflow's wait node), without `default`. The value is sealed with the server's credential cipher, bound to the wait's session and kept at most 24 hours; it is never returned, so the stored answer, every view, the wake message, the audit and the feed carry `provided` or `not provided` for the field. It reaches the agent only as the environment variable `OSTROM_WAIT_<FIELD ID UPPER-CASED>` of its commands (Claude Code only, `waits.secrets.v1`): two secret fields of a wait must not give the same name
  */
 export type WaitField = {
     id: string;
+    /**
+     * `text`, `choice`, `confirm`, `number`, `date`, `secret`, `file` or `info`; a client shows a type it does not know as text
+     */
     type: string;
     label: string;
     help?: string;
@@ -6730,6 +7576,10 @@ export type WaitField = {
     multiple?: boolean;
     allowOther?: boolean;
     maxLength?: number;
+    /**
+     * `secret` only: the server deletes the value when it serves it to the session's runner, which holds it for the turn (false when absent)
+     */
+    oneTime?: boolean;
 };
 
 /**
@@ -6856,6 +7706,34 @@ export type WebhookDelivery = {
 
 export type WebhookDeliveryList = {
     items: Array<WebhookDelivery>;
+};
+
+/**
+ * The body of `saveWorkflow`: the workflow, and the version the editor read
+ */
+export type SaveWorkflowRequest = {
+    workflow: Workflow;
+    /**
+     * A newer stored version answers 409 `workflow_conflict`
+     */
+    expectedVersion?: number;
+};
+
+/**
+ * The body of `startWorkflowRun`
+ */
+export type StartWorkflowRunRequest = {
+    inputs?: {
+        [key: string]: string;
+    };
+    /**
+     * `owner/name`, for the agent nodes that name none (planned)
+     */
+    repository?: string;
+    /**
+     * The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each such node's session runs on the starter's only usable profile
+     */
+    profileId?: string;
 };
 
 /**
@@ -7011,10 +7889,14 @@ export type WorkflowRun = {
      * The repository of the agent nodes that name none
      */
     repository?: string;
+    /**
+     * The cloud profile of the agent nodes that name none: the one given at a manual start, or, for a run an automation started, its workflow action's. Absent when none was named (the profile is then chosen at each session's creation, never written back here)
+     */
+    profileId?: string;
     visits?: Array<NodeVisit>;
     failure?: string;
     /**
-     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried
+     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, the cloud profile's refusal of an agent node's session (`cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable`, `namespace_not_allowed`), or the code of a refusal that cannot be retried
      */
     failureCode?: string;
     output?: string;
@@ -7077,6 +7959,13 @@ export type McpServerWritable = {
      */
     credentialHeader?: string;
     stdio?: McpStdioSpec;
+};
+
+/**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export type McpServerListWritable = {
+    items: Array<McpServerWritable>;
 };
 
 /**
@@ -8125,6 +9014,12 @@ export type CreateLaunchData = {
         agent: string;
         model?: string;
         /**
+         * Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label. Planned: the server does not read it yet
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
          * The workflow this launch plays (`Workflow.id` of the organization; 404 otherwise): every model call of its sessions counts under it, for the budgets of scope `workflow` and `Spending.byWorkflow`. Absent, the calls count under no workflow. Planned: the server does not read it yet
          */
         workflowId?: string;
@@ -8251,6 +9146,96 @@ export type ReportHooksMissingResponses = {
 };
 
 export type ReportHooksMissingResponse = ReportHooksMissingResponses[keyof ReportHooksMissingResponses];
+
+export type GetLaunchLimitsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}/limits';
+};
+
+export type GetLaunchLimitsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetLaunchLimitsError = GetLaunchLimitsErrors[keyof GetLaunchLimitsErrors];
+
+export type GetLaunchLimitsResponses = {
+    /**
+     * OK
+     */
+    200: LaunchLimits;
+};
+
+export type GetLaunchLimitsResponse = GetLaunchLimitsResponses[keyof GetLaunchLimitsResponses];
+
+export type SetLaunchLimitsData = {
+    body: LaunchLimits;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}/limits';
+};
+
+export type SetLaunchLimitsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetLaunchLimitsError = SetLaunchLimitsErrors[keyof SetLaunchLimitsErrors];
+
+export type SetLaunchLimitsResponses = {
+    /**
+     * OK
+     */
+    200: LaunchLimits;
+};
+
+export type SetLaunchLimitsResponse = SetLaunchLimitsResponses[keyof SetLaunchLimitsResponses];
 
 export type CheckAgentPolicyData = {
     body?: never;
@@ -8997,7 +9982,7 @@ export type CreateServiceKeyData = {
     body: {
         name: string;
         /**
-         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read), `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and `hooks.v1`), `memory:use` (the organization's memory and the creator's personal entries, `memory.v1`). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and `hooks:publish` (publish hook versions, which only an administrator pins). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
+         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read), `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and `hooks.v1`), `memory:use` (the organization's memory and the creator's personal entries, `memory.v1`), `guidance` (the capacity advice for the creator's sessions, `capacity.pacing.v1`). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts and the automatic pool size, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and `hooks:publish` (publish hook versions, which only an administrator pins). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
          */
         scopes: Array<string>;
         /**
@@ -9141,10 +10126,7 @@ export type ListDevicesResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Device>;
-        next?: string;
-    };
+    200: DevicePage;
 };
 
 export type ListDevicesResponse = ListDevicesResponses[keyof ListDevicesResponses];
@@ -9197,6 +10179,139 @@ export type DeleteDeviceResponses = {
 };
 
 export type DeleteDeviceResponse = DeleteDeviceResponses[keyof DeleteDeviceResponses];
+
+export type RenameDeviceData = {
+    body: RenameDeviceRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/devices/{id}';
+};
+
+export type RenameDeviceErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type RenameDeviceError = RenameDeviceErrors[keyof RenameDeviceErrors];
+
+export type RenameDeviceResponses = {
+    /**
+     * OK
+     */
+    200: Device;
+};
+
+export type RenameDeviceResponse = RenameDeviceResponses[keyof RenameDeviceResponses];
+
+export type ListMemberDevicesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{memberId}/devices';
+};
+
+export type ListMemberDevicesErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type ListMemberDevicesError = ListMemberDevicesErrors[keyof ListMemberDevicesErrors];
+
+export type ListMemberDevicesResponses = {
+    /**
+     * OK
+     */
+    200: DevicePage;
+};
+
+export type ListMemberDevicesResponse = ListMemberDevicesResponses[keyof ListMemberDevicesResponses];
+
+export type ListPushDevicesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/push-devices';
+};
+
+export type ListPushDevicesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListPushDevicesError = ListPushDevicesErrors[keyof ListPushDevicesErrors];
+
+export type ListPushDevicesResponses = {
+    /**
+     * OK
+     */
+    200: PushDeviceList;
+};
+
+export type ListPushDevicesResponse = ListPushDevicesResponses[keyof ListPushDevicesResponses];
 
 export type RegisterPushDeviceData = {
     body: RegisterPushDeviceRequest;
@@ -11603,6 +12718,10 @@ export type ListSessionsData = {
         dev?: string;
         open?: boolean;
         before?: string;
+        /**
+         * `key=value`, repeatable (at most 16): only the sessions whose launch carries every label given (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed one. Planned: the server does not read it yet
+         */
+        label?: Array<string>;
         /**
          * The page size, 1 to 100 (50 by default); a value outside is brought into it
          */
@@ -14756,10 +15875,7 @@ export type GetWorkflowResponses = {
 export type GetWorkflowResponse = GetWorkflowResponses[keyof GetWorkflowResponses];
 
 export type SaveWorkflowData = {
-    body: {
-        workflow: Workflow;
-        expectedVersion?: number;
-    };
+    body: SaveWorkflowRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -14871,15 +15987,7 @@ export type ListWorkflowRunsResponses = {
 export type ListWorkflowRunsResponse = ListWorkflowRunsResponses[keyof ListWorkflowRunsResponses];
 
 export type StartWorkflowRunData = {
-    body: {
-        inputs?: {
-            [key: string]: string;
-        };
-        /**
-         * `owner/name`, for the agent nodes that name none (planned)
-         */
-        repository?: string;
-    };
+    body: StartWorkflowRunRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -16156,6 +17264,10 @@ export type CreateWaitErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type CreateWaitError = CreateWaitErrors[keyof CreateWaitErrors];
@@ -16184,7 +17296,7 @@ export type WaitsMcpData = {
     path?: never;
     query?: {
         /**
-         * The session the agent runs in; a cloud session's agent token is confined to its cloud session whatever it names, and needs none (planned)
+         * The session the agent runs in; a cloud session's agent token is confined to its cloud session whatever it names, and needs none
          */
         session?: string;
         /**
@@ -16240,11 +17352,11 @@ export type WakeWaitsData = {
         'Ostrom-Org'?: string;
     };
     path?: never;
-    query: {
+    query?: {
         /**
-         * The session the agent runs in: any of its segments (planned: a cloud session's agent token needs none)
+         * The session the agent runs in: any of its segments; a cloud session's agent token needs none
          */
-        session: string;
+        session?: string;
     };
     url: '/api/v1/waits/wake';
 };
@@ -16368,6 +17480,10 @@ export type AnswerWaitErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type AnswerWaitError = AnswerWaitErrors[keyof AnswerWaitErrors];
@@ -16473,7 +17589,7 @@ export type ReceiveWaitEventError = ReceiveWaitEventErrors[keyof ReceiveWaitEven
 
 export type ReceiveWaitEventResponses = {
     /**
-     * The wait is resolved and its session will be woken
+     * The wait is resolved and its session will be woken (a paused cloud session resumes, as with `answerWait`)
      */
     202: WaitEventReceived;
 };
@@ -16491,7 +17607,7 @@ export type GetSessionTodoData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it; a cloud session's agent token needs none
          */
         sessionId?: string;
     };
@@ -16897,7 +18013,7 @@ export type ReadTodoContextData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it; a cloud session's agent token needs none
          */
         sessionId?: string;
     };
@@ -18566,9 +19682,7 @@ export type ListMyMcpServersResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<McpServer>;
-    };
+    200: McpServerList;
 };
 
 export type ListMyMcpServersResponse = ListMyMcpServersResponses[keyof ListMyMcpServersResponses];
@@ -21343,7 +22457,13 @@ export type ListPendingUsageData = {
     };
     path?: never;
     query?: {
+        /**
+         * Only this member's (`OrgMember.id`)
+         */
         member?: string;
+        /**
+         * The `id` of the last item of the previous page
+         */
         before?: string;
     };
     url: '/api/v1/usage/pending';
@@ -21379,9 +22499,8 @@ export type ListPendingUsageResponses = {
      * OK
      */
     200: {
-        items: Array<{
-            [key: string]: unknown;
-        }>;
+        items: Array<PendingUsage>;
+        next?: string;
     };
 };
 
@@ -21433,17 +22552,85 @@ export type ListUsageReconciliationsResponses = {
      * OK
      */
     200: {
-        items: Array<{
-            [key: string]: unknown;
-        }>;
+        items: Array<UsageReconciliation>;
+        next?: string;
     };
 };
 
 export type ListUsageReconciliationsResponse = ListUsageReconciliationsResponses[keyof ListUsageReconciliationsResponses];
 
+export type GetUsageReviewData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/usage/reservations/{id}';
+};
+
+export type GetUsageReviewErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetUsageReviewError = GetUsageReviewErrors[keyof GetUsageReviewErrors];
+
+export type GetUsageReviewResponses = {
+    /**
+     * OK
+     */
+    200: UsageReview;
+};
+
+export type GetUsageReviewResponse = GetUsageReviewResponses[keyof GetUsageReviewResponses];
+
 export type ReconcileUsageData = {
     body: {
-        usd: number;
+        /**
+         * The charge as the reviewer saw it, USD millionths
+         */
+        expectedMicros: number;
+        /**
+         * The provider request id as the reviewer saw it; absent when it showed none
+         */
+        expectedProviderRequestId?: string;
+        /**
+         * The verified total, USD millionths (0 to $100 000 000)
+         */
+        micros: number;
+        source: 'PROVIDER_RECORD' | 'PROVIDER_CONFIRMATION' | (string & {});
+        /**
+         * A non-secret pointer to the evidence, one line
+         */
+        reference: string;
+        /**
+         * One line
+         */
+        reason: string;
     };
     headers?: {
         /**
@@ -21468,9 +22655,9 @@ export type ReconcileUsageErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -21487,10 +22674,7 @@ export type ReconcileUsageResponses = {
     /**
      * OK
      */
-    200: {
-        id: string;
-        usd: number;
-    };
+    200: UsageReconciliation;
 };
 
 export type ReconcileUsageResponse = ReconcileUsageResponses[keyof ReconcileUsageResponses];
@@ -21506,7 +22690,12 @@ export type ListBudgetOverridesData = {
     path: {
         login: string;
     };
-    query?: never;
+    query?: {
+        /**
+         * The `id` of the last item of the previous page
+         */
+        before?: string;
+    };
     url: '/api/v1/members/{login}/budget-overrides';
 };
 
@@ -21542,6 +22731,10 @@ export type ListBudgetOverridesResponses = {
     200: {
         items: Array<BudgetOverride>;
         next?: string;
+        /**
+         * The override in force now, absent without one
+         */
+        activeId?: string;
     };
 };
 
@@ -21549,9 +22742,19 @@ export type ListBudgetOverridesResponse = ListBudgetOverridesResponses[keyof Lis
 
 export type CreateBudgetOverrideData = {
     body: {
-        usd: number;
-        expiresAt: string;
+        /**
+         * The member's total daily allowance, USD millionths (0 to $100 000 000)
+         */
+        micros: number;
+        durationMinutes: number;
+        /**
+         * One line, without secrets
+         */
         reason: string;
+        /**
+         * The override in force, to replace it
+         */
+        replacesId?: string;
     };
     headers?: {
         /**
@@ -21576,9 +22779,9 @@ export type CreateBudgetOverrideErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -21601,7 +22804,12 @@ export type CreateBudgetOverrideResponses = {
 export type CreateBudgetOverrideResponse = CreateBudgetOverrideResponses[keyof CreateBudgetOverrideResponses];
 
 export type RevokeBudgetOverrideData = {
-    body?: never;
+    body: {
+        /**
+         * One line
+         */
+        reason: string;
+    };
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -21626,9 +22834,9 @@ export type RevokeBudgetOverrideErrors = {
      */
     401: ApiError;
     /**
-     * A refusal
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
      */
-    403: ApiError;
+    403: StepUpOrForbidden;
     /**
      * A refusal
      */
@@ -21649,6 +22857,147 @@ export type RevokeBudgetOverrideResponses = {
 };
 
 export type RevokeBudgetOverrideResponse = RevokeBudgetOverrideResponses[keyof RevokeBudgetOverrideResponses];
+
+export type GetApiPricesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy/api-prices';
+};
+
+export type GetApiPricesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetApiPricesError = GetApiPricesErrors[keyof GetApiPricesErrors];
+
+export type GetApiPricesResponses = {
+    /**
+     * OK
+     */
+    200: ApiPriceTable;
+};
+
+export type GetApiPricesResponse = GetApiPricesResponses[keyof GetApiPricesResponses];
+
+export type SetApiPricesData = {
+    body: ApiPriceTable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy/api-prices';
+};
+
+export type SetApiPricesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetApiPricesError = SetApiPricesErrors[keyof SetApiPricesErrors];
+
+export type SetApiPricesResponses = {
+    /**
+     * OK
+     */
+    200: ApiPriceTable;
+};
+
+export type SetApiPricesResponse = SetApiPricesResponses[keyof SetApiPricesResponses];
+
+export type LoadApiPriceDefaultsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy/api-prices/load-defaults';
+};
+
+export type LoadApiPriceDefaultsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LoadApiPriceDefaultsError = LoadApiPriceDefaultsErrors[keyof LoadApiPriceDefaultsErrors];
+
+export type LoadApiPriceDefaultsResponses = {
+    /**
+     * OK
+     */
+    200: ApiPriceTable;
+};
+
+export type LoadApiPriceDefaultsResponse = LoadApiPriceDefaultsResponses[keyof LoadApiPriceDefaultsResponses];
 
 export type ListRunnersData = {
     body?: never;
@@ -22148,6 +23497,10 @@ export type CreateCloudProfileErrors = {
      * A refusal
      */
     404: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type CreateCloudProfileError = CreateCloudProfileErrors[keyof CreateCloudProfileErrors];
@@ -22200,6 +23553,10 @@ export type UpdateCloudProfileErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type UpdateCloudProfileError = UpdateCloudProfileErrors[keyof UpdateCloudProfileErrors];
@@ -22345,41 +23702,13 @@ export type ListCloudSessionsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<CloudSession>;
-        next?: string;
-    };
+    200: CloudSessionPage;
 };
 
 export type ListCloudSessionsResponse = ListCloudSessionsResponses[keyof ListCloudSessionsResponses];
 
 export type CreateCloudSessionData = {
-    body: {
-        agent: CloudAgentKind;
-        model?: string;
-        /**
-         * https://github.com/<owner>/<name>, cloned through the organization's GitHub App
-         */
-        repo?: string;
-        /**
-         * Branch, tag or commit; the default branch when absent
-         */
-        ref?: string;
-        /**
-         * The agent's first message, up to 20,000 characters; an interactive agent when absent
-         */
-        prompt?: string;
-        name?: string;
-        environment?: CloudEnvironment;
-        /**
-         * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners. Planned: the server does not read it yet
-         */
-        profileId?: string;
-        /**
-         * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image. Planned: the server does not read it yet
-         */
-        image?: string;
-    };
+    body: CreateCloudSessionRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -23376,10 +24705,8 @@ export type DownloadRunnerHookResponses = {
 
 export type DownloadRunnerHookResponse = DownloadRunnerHookResponses[keyof DownloadRunnerHookResponses];
 
-export type SendCloudMessageData = {
-    body: {
-        text: string;
-    };
+export type ListCloudEventsData = {
+    body?: never;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -23389,11 +24716,16 @@ export type SendCloudMessageData = {
     path: {
         id: string;
     };
-    query?: never;
-    url: '/api/v1/cloud/sessions/{id}/messages';
+    query?: {
+        after?: number;
+        before?: number;
+        limit?: number;
+        feed?: string;
+    };
+    url: '/api/v1/cloud/sessions/{id}/events';
 };
 
-export type SendCloudMessageErrors = {
+export type ListCloudEventsErrors = {
     /**
      * A refusal
      */
@@ -23416,18 +24748,16 @@ export type SendCloudMessageErrors = {
     409: ApiError;
 };
 
-export type SendCloudMessageError = SendCloudMessageErrors[keyof SendCloudMessageErrors];
+export type ListCloudEventsError = ListCloudEventsErrors[keyof ListCloudEventsErrors];
 
-export type SendCloudMessageResponses = {
+export type ListCloudEventsResponses = {
     /**
      * OK
      */
-    202: {
-        id: string;
-    };
+    200: CloudEventPage;
 };
 
-export type SendCloudMessageResponse = SendCloudMessageResponses[keyof SendCloudMessageResponses];
+export type ListCloudEventsResponse = ListCloudEventsResponses[keyof ListCloudEventsResponses];
 
 export type StreamCloudSessionData = {
     body?: never;
@@ -23436,12 +24766,15 @@ export type StreamCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        'Last-Event-ID'?: string;
     };
     path: {
         id: string;
     };
-    query?: never;
-    url: '/api/v1/cloud/sessions/{id}/events';
+    query?: {
+        after?: number;
+    };
+    url: '/api/v1/cloud/sessions/{id}/events/stream';
 };
 
 export type StreamCloudSessionErrors = {
@@ -23477,6 +24810,973 @@ export type StreamCloudSessionResponses = {
 };
 
 export type StreamCloudSessionResponse = StreamCloudSessionResponses[keyof StreamCloudSessionResponses];
+
+export type ListCloudSubagentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/agents';
+};
+
+export type ListCloudSubagentsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListCloudSubagentsError = ListCloudSubagentsErrors[keyof ListCloudSubagentsErrors];
+
+export type ListCloudSubagentsResponses = {
+    /**
+     * OK
+     */
+    200: CloudSubagentList;
+};
+
+export type ListCloudSubagentsResponse = ListCloudSubagentsResponses[keyof ListCloudSubagentsResponses];
+
+export type ListCloudInputsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * The `nextBefore` of the previous page
+         */
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/v1/cloud/sessions/{id}/messages';
+};
+
+export type ListCloudInputsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListCloudInputsError = ListCloudInputsErrors[keyof ListCloudInputsErrors];
+
+export type ListCloudInputsResponses = {
+    /**
+     * OK
+     */
+    200: CloudInputPage;
+};
+
+export type ListCloudInputsResponse = ListCloudInputsResponses[keyof ListCloudInputsResponses];
+
+export type SendCloudMessageData = {
+    body: SendCloudMessageRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/messages';
+};
+
+export type SendCloudMessageErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type SendCloudMessageError = SendCloudMessageErrors[keyof SendCloudMessageErrors];
+
+export type SendCloudMessageResponses = {
+    /**
+     * Accepted; the first acknowledgement on a replay
+     */
+    202: CloudInput;
+};
+
+export type SendCloudMessageResponse = SendCloudMessageResponses[keyof SendCloudMessageResponses];
+
+export type GetCloudInputData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+        input: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/messages/{input}';
+};
+
+export type GetCloudInputErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetCloudInputError = GetCloudInputErrors[keyof GetCloudInputErrors];
+
+export type GetCloudInputResponses = {
+    /**
+     * OK
+     */
+    200: CloudInput;
+};
+
+export type GetCloudInputResponse = GetCloudInputResponses[keyof GetCloudInputResponses];
+
+export type InterruptCloudSessionData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/interrupt';
+};
+
+export type InterruptCloudSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type InterruptCloudSessionError = InterruptCloudSessionErrors[keyof InterruptCloudSessionErrors];
+
+export type InterruptCloudSessionResponses = {
+    /**
+     * Accepted
+     */
+    202: CloudInput;
+};
+
+export type InterruptCloudSessionResponse = InterruptCloudSessionResponses[keyof InterruptCloudSessionResponses];
+
+export type AnswerCloudPermissionData = {
+    body: AnswerCloudPermissionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/permissions';
+};
+
+export type AnswerCloudPermissionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type AnswerCloudPermissionError = AnswerCloudPermissionErrors[keyof AnswerCloudPermissionErrors];
+
+export type AnswerCloudPermissionResponses = {
+    /**
+     * Accepted (kind `permission`)
+     */
+    202: CloudInput;
+};
+
+export type AnswerCloudPermissionResponse = AnswerCloudPermissionResponses[keyof AnswerCloudPermissionResponses];
+
+export type SetCloudPermissionBypassData = {
+    body: SetCloudPermissionBypassRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/permission-bypass';
+};
+
+export type SetCloudPermissionBypassErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetCloudPermissionBypassError = SetCloudPermissionBypassErrors[keyof SetCloudPermissionBypassErrors];
+
+export type SetCloudPermissionBypassResponses = {
+    /**
+     * OK
+     */
+    200: CloudSession;
+};
+
+export type SetCloudPermissionBypassResponse = SetCloudPermissionBypassResponses[keyof SetCloudPermissionBypassResponses];
+
+export type SetCloudSessionModelData = {
+    body: SetCloudModelRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/model';
+};
+
+export type SetCloudSessionModelErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetCloudSessionModelError = SetCloudSessionModelErrors[keyof SetCloudSessionModelErrors];
+
+export type SetCloudSessionModelResponses = {
+    /**
+     * OK
+     */
+    200: CloudSession;
+};
+
+export type SetCloudSessionModelResponse = SetCloudSessionModelResponses[keyof SetCloudSessionModelResponses];
+
+export type SetCloudSessionEffortData = {
+    body: SetCloudEffortRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/effort';
+};
+
+export type SetCloudSessionEffortErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetCloudSessionEffortError = SetCloudSessionEffortErrors[keyof SetCloudSessionEffortErrors];
+
+export type SetCloudSessionEffortResponses = {
+    /**
+     * OK
+     */
+    200: CloudSession;
+};
+
+export type SetCloudSessionEffortResponse = SetCloudSessionEffortResponses[keyof SetCloudSessionEffortResponses];
+
+export type StopCloudTaskData = {
+    body: StopCloudTaskRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/tasks/stop';
+};
+
+export type StopCloudTaskErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type StopCloudTaskError = StopCloudTaskErrors[keyof StopCloudTaskErrors];
+
+export type StopCloudTaskResponses = {
+    /**
+     * Accepted
+     */
+    202: CloudInput;
+};
+
+export type StopCloudTaskResponse = StopCloudTaskResponses[keyof StopCloudTaskResponses];
+
+export type UploadCloudFileData = {
+    body: Blob | File;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+        'Idempotency-Key'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query: {
+        name: string;
+    };
+    url: '/api/v1/cloud/sessions/{id}/files';
+};
+
+export type UploadCloudFileErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    415: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type UploadCloudFileError = UploadCloudFileErrors[keyof UploadCloudFileErrors];
+
+export type UploadCloudFileResponses = {
+    /**
+     * The first file of this `Idempotency-Key`
+     */
+    200: CloudFile;
+    /**
+     * Created
+     */
+    201: CloudFile;
+};
+
+export type UploadCloudFileResponse = UploadCloudFileResponses[keyof UploadCloudFileResponses];
+
+export type GetCloudFilePolicyData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/files/policy';
+};
+
+export type GetCloudFilePolicyErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetCloudFilePolicyError = GetCloudFilePolicyErrors[keyof GetCloudFilePolicyErrors];
+
+export type GetCloudFilePolicyResponses = {
+    /**
+     * OK
+     */
+    200: CloudFilePolicy;
+};
+
+export type GetCloudFilePolicyResponse = GetCloudFilePolicyResponses[keyof GetCloudFilePolicyResponses];
+
+export type CloudRunnerAgentData = {
+    body: {
+        sessionId: string;
+        epoch: number;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/agent';
+};
+
+export type CloudRunnerAgentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CloudRunnerAgentError = CloudRunnerAgentErrors[keyof CloudRunnerAgentErrors];
+
+export type CloudRunnerAgentResponses = {
+    /**
+     * OK
+     */
+    200: {
+        /**
+         * claude or codex
+         */
+        kind: string;
+        version?: string;
+        model?: string;
+        effort?: string;
+        conversation: string;
+        permissionRelay?: boolean;
+        /**
+         * How long a request waits before the runner denies it; 0 waits without a deadline
+         */
+        permissionDeadlineMinutes?: number;
+        liveText?: boolean;
+        backgroundTasks?: boolean;
+        /**
+         * The member the execution runs for, as the agent is told; never an email
+         */
+        owner?: {
+            username: string;
+            githubLogin?: string;
+        };
+    };
+};
+
+export type CloudRunnerAgentResponse = CloudRunnerAgentResponses[keyof CloudRunnerAgentResponses];
+
+export type CloudRunnerEventsData = {
+    body: {
+        sessionId: string;
+        epoch: number;
+        events: Array<{
+            sequence: number;
+            type: string;
+            data: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/events';
+};
+
+export type CloudRunnerEventsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+};
+
+export type CloudRunnerEventsError = CloudRunnerEventsErrors[keyof CloudRunnerEventsErrors];
+
+export type CloudRunnerEventsResponses = {
+    /**
+     * OK
+     */
+    200: {
+        acceptedThrough: number;
+        lastSeq: number;
+    };
+};
+
+export type CloudRunnerEventsResponse = CloudRunnerEventsResponses[keyof CloudRunnerEventsResponses];
+
+export type CloudRunnerInputsData = {
+    body: {
+        sessionId: string;
+        epoch: number;
+        waitMillis?: number;
+        desiredStatus?: string;
+        acceptsFiles?: boolean;
+        acceptsTaskStops?: boolean;
+        acceptsModelChanges?: boolean;
+        acceptsEffortChanges?: boolean;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/inputs';
+};
+
+export type CloudRunnerInputsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CloudRunnerInputsError = CloudRunnerInputsErrors[keyof CloudRunnerInputsErrors];
+
+export type CloudRunnerInputsResponses = {
+    /**
+     * OK
+     */
+    200: {
+        inputs: Array<{
+            id: string;
+            /**
+             * message, interrupt, permission, stop_task, set_model or set_effort
+             */
+            kind: string;
+            /**
+             * A message's text; a permission answer's JSON; a task's id; a model or effort
+             */
+            text?: string;
+            attempt?: number;
+            files?: Array<{
+                id: string;
+                name: string;
+                size: number;
+                contentType: string;
+                sha256: string;
+            }>;
+        }>;
+        desiredStatus?: string;
+    };
+};
+
+export type CloudRunnerInputsResponse = CloudRunnerInputsResponses[keyof CloudRunnerInputsResponses];
+
+export type CloudRunnerInputsAckData = {
+    body: {
+        sessionId: string;
+        epoch: number;
+        acks: Array<{
+            id: string;
+            status: 'consumed' | 'rejected' | (string & {});
+            reason?: string;
+        }>;
+    };
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/inputs/ack';
+};
+
+export type CloudRunnerInputsAckErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CloudRunnerInputsAckError = CloudRunnerInputsAckErrors[keyof CloudRunnerInputsAckErrors];
+
+export type CloudRunnerInputsAckResponses = {
+    /**
+     * Recorded
+     */
+    204: void;
+};
+
+export type CloudRunnerInputsAckResponse = CloudRunnerInputsAckResponses[keyof CloudRunnerInputsAckResponses];
+
+export type CloudRunnerFileData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query: {
+        sessionId: string;
+        epoch: number;
+    };
+    url: '/api/v1/cloud/runner/files/{id}';
+};
+
+export type CloudRunnerFileErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CloudRunnerFileError = CloudRunnerFileErrors[keyof CloudRunnerFileErrors];
+
+export type CloudRunnerFileResponses = {
+    /**
+     * The bytes
+     */
+    200: Blob | File;
+};
+
+export type CloudRunnerFileResponse = CloudRunnerFileResponses[keyof CloudRunnerFileResponses];
 
 export type ListArtifactsData = {
     body?: never;
@@ -25049,6 +27349,431 @@ export type GetCapacityResponses = {
 };
 
 export type GetCapacityResponse = GetCapacityResponses[keyof GetCapacityResponses];
+
+export type GetForecastsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        account?: string;
+    };
+    url: '/api/v1/forecasts';
+};
+
+export type GetForecastsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetForecastsError = GetForecastsErrors[keyof GetForecastsErrors];
+
+export type GetForecastsResponses = {
+    /**
+     * OK
+     */
+    200: ForecastSnapshot;
+};
+
+export type GetForecastsResponse = GetForecastsResponses[keyof GetForecastsResponses];
+
+export type GetPoolSizeData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/pools/size';
+};
+
+export type GetPoolSizeErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetPoolSizeError = GetPoolSizeErrors[keyof GetPoolSizeErrors];
+
+export type GetPoolSizeResponses = {
+    /**
+     * OK
+     */
+    200: PoolSize;
+};
+
+export type GetPoolSizeResponse = GetPoolSizeResponses[keyof GetPoolSizeResponses];
+
+export type GetPacingSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy/pacing';
+};
+
+export type GetPacingSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetPacingSettingsError = GetPacingSettingsErrors[keyof GetPacingSettingsErrors];
+
+export type GetPacingSettingsResponses = {
+    /**
+     * OK
+     */
+    200: PacingSettings;
+};
+
+export type GetPacingSettingsResponse = GetPacingSettingsResponses[keyof GetPacingSettingsResponses];
+
+export type SetPacingSettingsData = {
+    body: PacingSettings;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/policy/pacing';
+};
+
+export type SetPacingSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetPacingSettingsError = SetPacingSettingsErrors[keyof SetPacingSettingsErrors];
+
+export type SetPacingSettingsResponses = {
+    /**
+     * OK
+     */
+    200: PacingSettings;
+};
+
+export type SetPacingSettingsResponse = SetPacingSettingsResponses[keyof SetPacingSettingsResponses];
+
+export type PreviewDirectiveData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/directives/preview';
+};
+
+export type PreviewDirectiveErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PreviewDirectiveError = PreviewDirectiveErrors[keyof PreviewDirectiveErrors];
+
+export type PreviewDirectiveResponses = {
+    /**
+     * OK
+     */
+    200: PacingPreview;
+};
+
+export type PreviewDirectiveResponse = PreviewDirectiveResponses[keyof PreviewDirectiveResponses];
+
+export type GetCurrentDirectiveData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/directives/current';
+};
+
+export type GetCurrentDirectiveErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetCurrentDirectiveError = GetCurrentDirectiveErrors[keyof GetCurrentDirectiveErrors];
+
+export type GetCurrentDirectiveResponses = {
+    /**
+     * OK
+     */
+    200: DirectiveResponse;
+};
+
+export type GetCurrentDirectiveResponse = GetCurrentDirectiveResponses[keyof GetCurrentDirectiveResponses];
+
+export type GetSessionDirectiveData = {
+    body: DirectiveScope;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/directives/current';
+};
+
+export type GetSessionDirectiveErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetSessionDirectiveError = GetSessionDirectiveErrors[keyof GetSessionDirectiveErrors];
+
+export type GetSessionDirectiveResponses = {
+    /**
+     * OK
+     */
+    200: DirectiveResponse;
+};
+
+export type GetSessionDirectiveResponse = GetSessionDirectiveResponses[keyof GetSessionDirectiveResponses];
+
+export type ClaimDirectiveData = {
+    body: DirectiveClaimRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/directives/claim';
+};
+
+export type ClaimDirectiveErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ClaimDirectiveError = ClaimDirectiveErrors[keyof ClaimDirectiveErrors];
+
+export type ClaimDirectiveResponses = {
+    /**
+     * OK
+     */
+    200: DirectiveClaim;
+};
+
+export type ClaimDirectiveResponse = ClaimDirectiveResponses[keyof ClaimDirectiveResponses];
+
+export type AcknowledgeDirectiveData = {
+    body: DirectiveReceipt;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/directives/receipt';
+};
+
+export type AcknowledgeDirectiveErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AcknowledgeDirectiveError = AcknowledgeDirectiveErrors[keyof AcknowledgeDirectiveErrors];
+
+export type AcknowledgeDirectiveResponses = {
+    /**
+     * Recorded
+     */
+    204: void;
+};
+
+export type AcknowledgeDirectiveResponse = AcknowledgeDirectiveResponses[keyof AcknowledgeDirectiveResponses];
 
 export type ListGroupsData = {
     body?: never;

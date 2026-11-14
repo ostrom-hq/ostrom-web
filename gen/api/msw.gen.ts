@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AcceptInvitationData, AcceptInvitationResponses, AcceptMemoryProposalResponses, AddGroupMemberResponses, AddInstanceAdminData, AddInstanceAdminResponses, AddTodoItemData, AddTodoItemResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ApplyMemoryReviewResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignEnvironmentVariantData, AssignEnvironmentVariantResponses, AssignMcpServerData, AssignMcpServerResponses, BulkAssignEnvironmentVariantResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelAutomationRunResponses, CancelBillingSubscriptionResponses, CancelInferenceRequestResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClearHookAssignmentResponses, ClearSkillAssignmentResponses, ClientOptions, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, CompleteTodoItemData, CompleteTodoItemResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateArtifactUploadData, CreateArtifactUploadResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudClusterData, CreateCloudClusterResponses, CreateCloudProfileData, CreateCloudProfileResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateEnvironmentVariantData, CreateEnvironmentVariantResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateMemoryData, CreateMemoryResponses, CreateMyEnvironmentVariantData, CreateMyEnvironmentVariantResponses, CreateMyMcpServerData, CreateMyMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSessionTodoData, CreateSessionTodoResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteArtifactStorageResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteEnvironmentVariantResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteMyEnvironmentVariantResponses, DeleteMyMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DeliverRunData, DeliverRunResponses, DeliverWorkflowSessionData, DeliverWorkflowSessionResponses, DisableAutomationResponses, DismissMemoryReviewResponses, DownloadHookResponses, DownloadRunnerHookData, DownloadRunnerHookResponses, DownloadRunnerSkillData, DownloadRunnerSkillResponses, DownloadSkillResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, ExcludeEnvironmentVariableResponses, FetchRunnerEnvironmentData, FetchRunnerEnvironmentResponses, FetchRunnerGithubTokenData, FetchRunnerGithubTokenResponses, FetchRunnerHooksData, FetchRunnerHooksResponses, FetchRunnerSkillsData, FetchRunnerSkillsResponses, FetchRunnerVariablesData, FetchRunnerVariablesResponses, ForgetMemoryResponses, GetAnalysisStateResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactPolicyResponses, GetArtifactResponses, GetArtifactSettingsResponses, GetArtifactStorageResponses, GetArtifactUsageResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudRuntimeResponses, GetCloudSessionResponses, GetCloudSettingsResponses, GetCompilerSettingsResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetEnvironmentResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppConfigurationResponses, GetGithubAppResponses, GetGithubLinkResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceQueueResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetInstanceSettingsResponses, GetLauncherConfigResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberGithubLinkResponses, GetMemberHookDeliveryResponses, GetMemberResponses, GetMemberSkillDeliveryResponses, GetMemoryCurationResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetNotificationSettingsResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPackageResponses, GetPackageStatusResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionResponses, GetSessionTodoResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageSummaryResponses, GetWaitResponses, GetWebhookResponses, GetWorkflowResponses, GetWorkflowSettingsResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HandOverSharedAccountResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, IncludeEnvironmentVariableResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, LinkTodoItemData, LinkTodoItemResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudClustersResponses, ListCloudProfilesResponses, ListCloudSessionsResponses, ListDecisionsResponses, ListDevicesResponses, ListEnvironmentAssignmentsResponses, ListEnvironmentVariantsResponses, ListGatesResponses, ListGithubLinksResponses, ListGroupsResponses, ListHookAssignmentsResponses, ListHooksResponses, ListHookVersionsResponses, ListInferenceRoutesResponses, ListInstanceAdminsResponses, ListInstanceKeysResponses, ListInstanceSettingsResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpHostedProcessesResponses, ListMcpServersResponses, ListMemberSkillInstallationsResponses, ListMembersResponses, ListMemoryProposalsResponses, ListMemoryResponses, ListMemoryReviewsResponses, ListMyAuditResponses, ListMyEnvironmentVariantsResponses, ListMyMcpServersResponses, ListMyOrganizationsResponses, ListMySkillInstallationsResponses, ListMySkillsResponses, ListMySkillVersionsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListPersonalEnvironmentVariantsResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillAssignmentsResponses, ListSkillsResponses, ListSkillVersionsResponses, ListSupersededMemoryResponses, ListTasksResponses, ListTeamsResponses, ListTodoStopHooksResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LogoutEverywhereResponses, LogoutResponses, MakeSharedAccountAccessOnlyResponses, MobileTokenData, MobileTokenResponses, NoteTodoItemData, NoteTodoItemResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PendingWorkflowSessionResponses, PinHookData, PinHookResponses, PinMySkillData, PinMySkillResponses, PinSkillData, PinSkillResponses, PollDeviceLoginData, PollDeviceLoginResponses, PollGithubDeviceLinkResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PromoteEnvironmentVariantResponses, PromoteMcpServerResponses, PromoteSkillResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishHookVersionData, PublishHookVersionResponses, PublishMySkillVersionData, PublishMySkillVersionResponses, PublishSkillVersionData, PublishSkillVersionResponses, PutArtifactUploadChunkData, PutArtifactUploadChunkResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadHookVersionResponses, ReadMemoryResponses, ReadTodoContextResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReceiveWaitEventData, ReceiveWaitEventResponses, ReconcileUsageData, ReconcileUsageResponses, RecordTodoHookErrorData, RecordTodoHookErrorResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RejectMemoryProposalResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveInstanceAdminResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportRunnerPreparationData, ReportRunnerPreparationResponses, ReportSeenData, ReportSeenResponses, ReportSessionActivityData, ReportSessionActivityResponses, ReportSkillInstallationsData, ReportSkillInstallationsResponses, RequestSignInEmailData, RequestSignInEmailResponses, RequestTodoDropData, RequestTodoDropResponses, ReserveGateResponses, ResetTodoData, ResetTodoResponses, RestartAnalysisResponses, RestartMcpHostedProcessData, RestartMcpHostedProcessResponses, RestoreMemoryResponses, RestoreMySkillResponses, RestorePackageResponses, RestoreSkillResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RetireMySkillResponses, RetireSkillResponses, RetireSkillVersionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RotateWebhookSecretResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveArtifactSettingsData, SaveArtifactSettingsResponses, SaveArtifactStorageData, SaveArtifactStorageResponses, SaveAutomationData, SaveAutomationResponses, SaveCloudRuntimeData, SaveCloudRuntimeResponses, SaveCloudSettingsData, SaveCloudSettingsResponses, SaveCompilerSettingsData, SaveCompilerSettingsResponses, SaveGithubAppConfigurationData, SaveGithubAppConfigurationResponses, SaveInstanceSettingsData, SaveInstanceSettingsResponses, SaveMcpServerData, SaveMcpServerResponses, SaveMyMcpServerData, SaveMyMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SaveWorkflowSettingsData, SaveWorkflowSettingsResponses, SearchMemoryResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SendTestPushResponses, SessionAliveData, SessionAliveResponses, SetBudgetData, SetBudgetResponses, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessResponses, SetGatePolicyData, SetGatePolicyResponses, SetHookAssignmentData, SetHookAssignmentResponses, SetHookAudienceData, SetHookAudienceResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetMemberTodoStopHookData, SetMemberTodoStopHookResponses, SetMemoryCurationData, SetMemoryCurationResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, SetNotificationSettingData, SetNotificationSettingResponses, SetSkillAssignmentData, SetSkillAssignmentResponses, SetSkillAudienceData, SetSkillAudienceResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartGithubDeviceLinkResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartTodoItemData, StartTodoItemResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StopTodoSessionData, StopTodoSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestArtifactStorageResponses, TestAutomationData, TestAutomationResponses, TestWebhookResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, TriggerAutomationVersionResponses, UnassignEnvironmentVariantResponses, UnassignMcpServerResponses, UnlinkGithubResponses, UnlinkMemberGithubResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnpinHookResponses, UnpinMySkillResponses, UnpinSkillResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateCloudClusterData, UpdateCloudClusterResponses, UpdateCloudProfileData, UpdateCloudProfileResponses, UpdateEnvironmentVariantData, UpdateEnvironmentVariantResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateMemoryData, UpdateMemoryResponses, UpdateMyEnvironmentVariantData, UpdateMyEnvironmentVariantResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, UpdateWebhookData, UpdateWebhookResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses, WakeWaitsData, WakeWaitsResponses, WorkflowsMcpResponses } from './types.gen';
+import type { AcceptInvitationData, AcceptInvitationResponses, AcceptMemoryProposalResponses, AcknowledgeDirectiveData, AcknowledgeDirectiveResponses, AddGroupMemberResponses, AddInstanceAdminData, AddInstanceAdminResponses, AddTodoItemData, AddTodoItemResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerCloudPermissionData, AnswerCloudPermissionResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ApplyMemoryReviewResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignEnvironmentVariantData, AssignEnvironmentVariantResponses, AssignMcpServerData, AssignMcpServerResponses, BulkAssignEnvironmentVariantResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelAutomationRunResponses, CancelBillingSubscriptionResponses, CancelInferenceRequestResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClaimDirectiveData, ClaimDirectiveResponses, ClearHookAssignmentResponses, ClearSkillAssignmentResponses, ClientOptions, CloudRunnerAgentData, CloudRunnerAgentResponses, CloudRunnerEventsData, CloudRunnerEventsResponses, CloudRunnerFileResponses, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, CloudRunnerInputsAckData, CloudRunnerInputsAckResponses, CloudRunnerInputsData, CloudRunnerInputsResponses, CompleteTodoItemData, CompleteTodoItemResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateArtifactUploadData, CreateArtifactUploadResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudClusterData, CreateCloudClusterResponses, CreateCloudProfileData, CreateCloudProfileResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateEnvironmentVariantData, CreateEnvironmentVariantResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateMemoryData, CreateMemoryResponses, CreateMyEnvironmentVariantData, CreateMyEnvironmentVariantResponses, CreateMyMcpServerData, CreateMyMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSessionTodoData, CreateSessionTodoResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteArtifactStorageResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteEnvironmentVariantResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteMyEnvironmentVariantResponses, DeleteMyMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DeliverRunData, DeliverRunResponses, DeliverWorkflowSessionData, DeliverWorkflowSessionResponses, DisableAutomationResponses, DismissMemoryReviewResponses, DownloadHookResponses, DownloadRunnerHookData, DownloadRunnerHookResponses, DownloadRunnerSkillData, DownloadRunnerSkillResponses, DownloadSkillResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, ExcludeEnvironmentVariableResponses, FetchRunnerEnvironmentData, FetchRunnerEnvironmentResponses, FetchRunnerGithubTokenData, FetchRunnerGithubTokenResponses, FetchRunnerHooksData, FetchRunnerHooksResponses, FetchRunnerSkillsData, FetchRunnerSkillsResponses, FetchRunnerVariablesData, FetchRunnerVariablesResponses, ForgetMemoryResponses, GetAnalysisStateResponses, GetApiPricesResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactPolicyResponses, GetArtifactResponses, GetArtifactSettingsResponses, GetArtifactStorageResponses, GetArtifactUsageResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudFilePolicyResponses, GetCloudInputResponses, GetCloudRuntimeResponses, GetCloudSessionResponses, GetCloudSettingsResponses, GetCompilerSettingsResponses, GetCurrentDirectiveResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetEnvironmentResponses, GetForecastsResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppConfigurationResponses, GetGithubAppResponses, GetGithubLinkResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceQueueResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetInstanceSettingsResponses, GetLauncherConfigResponses, GetLaunchLimitsResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberGithubLinkResponses, GetMemberHookDeliveryResponses, GetMemberResponses, GetMemberSkillDeliveryResponses, GetMemoryCurationResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetNotificationSettingsResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPacingSettingsResponses, GetPackageResponses, GetPackageStatusResponses, GetPoolSizeResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionDirectiveData, GetSessionDirectiveResponses, GetSessionResponses, GetSessionTodoResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageReviewResponses, GetUsageSummaryResponses, GetWaitResponses, GetWebhookResponses, GetWorkflowResponses, GetWorkflowSettingsResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HandOverSharedAccountResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, IncludeEnvironmentVariableResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InterruptCloudSessionResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, LinkTodoItemData, LinkTodoItemResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudClustersResponses, ListCloudEventsResponses, ListCloudInputsResponses, ListCloudProfilesResponses, ListCloudSessionsResponses, ListCloudSubagentsResponses, ListDecisionsResponses, ListDevicesResponses, ListEnvironmentAssignmentsResponses, ListEnvironmentVariantsResponses, ListGatesResponses, ListGithubLinksResponses, ListGroupsResponses, ListHookAssignmentsResponses, ListHooksResponses, ListHookVersionsResponses, ListInferenceRoutesResponses, ListInstanceAdminsResponses, ListInstanceKeysResponses, ListInstanceSettingsResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpHostedProcessesResponses, ListMcpServersResponses, ListMemberDevicesResponses, ListMemberSkillInstallationsResponses, ListMembersResponses, ListMemoryProposalsResponses, ListMemoryResponses, ListMemoryReviewsResponses, ListMyAuditResponses, ListMyEnvironmentVariantsResponses, ListMyMcpServersResponses, ListMyOrganizationsResponses, ListMySkillInstallationsResponses, ListMySkillsResponses, ListMySkillVersionsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListPersonalEnvironmentVariantsResponses, ListPushDevicesResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillAssignmentsResponses, ListSkillsResponses, ListSkillVersionsResponses, ListSupersededMemoryResponses, ListTasksResponses, ListTeamsResponses, ListTodoStopHooksResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LoadApiPriceDefaultsResponses, LogoutEverywhereResponses, LogoutResponses, MakeSharedAccountAccessOnlyResponses, MobileTokenData, MobileTokenResponses, NoteTodoItemData, NoteTodoItemResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PendingWorkflowSessionResponses, PinHookData, PinHookResponses, PinMySkillData, PinMySkillResponses, PinSkillData, PinSkillResponses, PollDeviceLoginData, PollDeviceLoginResponses, PollGithubDeviceLinkResponses, PreviewDirectiveResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PromoteEnvironmentVariantResponses, PromoteMcpServerResponses, PromoteSkillResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishHookVersionData, PublishHookVersionResponses, PublishMySkillVersionData, PublishMySkillVersionResponses, PublishSkillVersionData, PublishSkillVersionResponses, PutArtifactUploadChunkData, PutArtifactUploadChunkResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadHookVersionResponses, ReadMemoryResponses, ReadTodoContextResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReceiveWaitEventData, ReceiveWaitEventResponses, ReconcileUsageData, ReconcileUsageResponses, RecordTodoHookErrorData, RecordTodoHookErrorResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RejectMemoryProposalResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveInstanceAdminResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameDeviceData, RenameDeviceResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportRunnerPreparationData, ReportRunnerPreparationResponses, ReportSeenData, ReportSeenResponses, ReportSessionActivityData, ReportSessionActivityResponses, ReportSkillInstallationsData, ReportSkillInstallationsResponses, RequestSignInEmailData, RequestSignInEmailResponses, RequestTodoDropData, RequestTodoDropResponses, ReserveGateResponses, ResetTodoData, ResetTodoResponses, RestartAnalysisResponses, RestartMcpHostedProcessData, RestartMcpHostedProcessResponses, RestoreMemoryResponses, RestoreMySkillResponses, RestorePackageResponses, RestoreSkillResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RetireMySkillResponses, RetireSkillResponses, RetireSkillVersionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideData, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RotateWebhookSecretResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveArtifactSettingsData, SaveArtifactSettingsResponses, SaveArtifactStorageData, SaveArtifactStorageResponses, SaveAutomationData, SaveAutomationResponses, SaveCloudRuntimeData, SaveCloudRuntimeResponses, SaveCloudSettingsData, SaveCloudSettingsResponses, SaveCompilerSettingsData, SaveCompilerSettingsResponses, SaveGithubAppConfigurationData, SaveGithubAppConfigurationResponses, SaveInstanceSettingsData, SaveInstanceSettingsResponses, SaveMcpServerData, SaveMcpServerResponses, SaveMyMcpServerData, SaveMyMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SaveWorkflowSettingsData, SaveWorkflowSettingsResponses, SearchMemoryResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SendTestPushResponses, SessionAliveData, SessionAliveResponses, SetApiPricesData, SetApiPricesResponses, SetBudgetData, SetBudgetResponses, SetCloudPermissionBypassData, SetCloudPermissionBypassResponses, SetCloudSessionEffortData, SetCloudSessionEffortResponses, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessResponses, SetCloudSessionModelData, SetCloudSessionModelResponses, SetGatePolicyData, SetGatePolicyResponses, SetHookAssignmentData, SetHookAssignmentResponses, SetHookAudienceData, SetHookAudienceResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetLaunchLimitsData, SetLaunchLimitsResponses, SetMemberTodoStopHookData, SetMemberTodoStopHookResponses, SetMemoryCurationData, SetMemoryCurationResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, SetNotificationSettingData, SetNotificationSettingResponses, SetPacingSettingsData, SetPacingSettingsResponses, SetSkillAssignmentData, SetSkillAssignmentResponses, SetSkillAudienceData, SetSkillAudienceResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartGithubDeviceLinkResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartTodoItemData, StartTodoItemResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StopCloudTaskData, StopCloudTaskResponses, StopTodoSessionData, StopTodoSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestArtifactStorageResponses, TestAutomationData, TestAutomationResponses, TestWebhookResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, TriggerAutomationVersionResponses, UnassignEnvironmentVariantResponses, UnassignMcpServerResponses, UnlinkGithubResponses, UnlinkMemberGithubResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnpinHookResponses, UnpinMySkillResponses, UnpinSkillResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateCloudClusterData, UpdateCloudClusterResponses, UpdateCloudProfileData, UpdateCloudProfileResponses, UpdateEnvironmentVariantData, UpdateEnvironmentVariantResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateMemoryData, UpdateMemoryResponses, UpdateMyEnvironmentVariantData, UpdateMyEnvironmentVariantResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, UpdateWebhookData, UpdateWebhookResponses, UploadCloudFileData, UploadCloudFileResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses, WakeWaitsData, WakeWaitsResponses, WorkflowsMcpResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -878,6 +878,68 @@ export function handleReportHooksMissing(response?: HandleReportHooksMissingResp
     }, options);
 }
 
+export type HandleGetLaunchLimitsResponse = {
+    body: GetLaunchLimitsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/launches/{launchId}/limits` operation.
+ */
+export function handleGetLaunchLimits(response?: HandleGetLaunchLimitsResponse | HttpResponseResolver<{
+    launchId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        launchId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/launches/:launchId/limits`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetLaunchLimitsResponse = {
+    body: SetLaunchLimitsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/launches/{launchId}/limits` operation.
+ */
+export function handleSetLaunchLimits(response?: HandleSetLaunchLimitsResponse | HttpResponseResolver<{
+    launchId: string;
+}, SetLaunchLimitsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        launchId: string;
+    }, SetLaunchLimitsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/launches/:launchId/limits`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleCheckAgentPolicyResponse = {
     body: CheckAgentPolicyResponses[200];
     status?: 200;
@@ -1488,6 +1550,95 @@ export function handleDeleteDevice(response?: HandleDeleteDeviceResponse | HttpR
         const body = response?.body;
         if (body !== undefined) {
             return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleRenameDeviceResponse = {
+    body: RenameDeviceResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PATCH /api/v1/devices/{id}` operation.
+ */
+export function handleRenameDevice(response?: HandleRenameDeviceResponse | HttpResponseResolver<{
+    id: string;
+}, RenameDeviceData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.patch<{
+        id: string;
+    }, RenameDeviceData['body']>(`${options?.baseUrl ?? '*'}/api/v1/devices/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListMemberDevicesResponse = {
+    body: ListMemberDevicesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/members/{memberId}/devices` operation.
+ */
+export function handleListMemberDevices(response?: HandleListMemberDevicesResponse | HttpResponseResolver<{
+    memberId: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        memberId: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/members/:memberId/devices`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListPushDevicesResponse = {
+    body: ListPushDevicesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/push-devices` operation.
+ */
+export function handleListPushDevices(response?: HandleListPushDevicesResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/push-devices`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -8584,6 +8735,37 @@ export function handleListUsageReconciliations(response?: HandleListUsageReconci
     }, options);
 }
 
+export type HandleGetUsageReviewResponse = {
+    body: GetUsageReviewResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/usage/reservations/{id}` operation.
+ */
+export function handleGetUsageReview(response?: HandleGetUsageReviewResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/usage/reservations/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleReconcileUsageResponse = {
     body: ReconcileUsageResponses[200];
     status?: 200;
@@ -8688,11 +8870,92 @@ export type HandleRevokeBudgetOverrideResponse = {
 export function handleRevokeBudgetOverride(response?: HandleRevokeBudgetOverrideResponse | HttpResponseResolver<{
     login: string;
     id: string;
-}, never>, options?: RequestHandlerOptions): HttpHandler {
+}, RevokeBudgetOverrideData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<{
         login: string;
         id: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/members/:login/budget-overrides/:id/revoke`, info => {
+    }, RevokeBudgetOverrideData['body']>(`${options?.baseUrl ?? '*'}/api/v1/members/:login/budget-overrides/:id/revoke`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetApiPricesResponse = {
+    body: GetApiPricesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/policy/api-prices` operation.
+ */
+export function handleGetApiPrices(response?: HandleGetApiPricesResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/policy/api-prices`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetApiPricesResponse = {
+    body: SetApiPricesResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/policy/api-prices` operation.
+ */
+export function handleSetApiPrices(response?: HandleSetApiPricesResponse | HttpResponseResolver<never, SetApiPricesData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<never, SetApiPricesData['body']>(`${options?.baseUrl ?? '*'}/api/v1/policy/api-prices`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleLoadApiPriceDefaultsResponse = {
+    body: LoadApiPriceDefaultsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/policy/api-prices/load-defaults` operation.
+ */
+export function handleLoadApiPriceDefaults(response?: HandleLoadApiPriceDefaultsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, never>(`${options?.baseUrl ?? '*'}/api/v1/policy/api-prices/load-defaults`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
@@ -9699,6 +9962,130 @@ export function handleDownloadRunnerHook(response?: HandleDownloadRunnerHookResp
     }, options);
 }
 
+export type HandleListCloudEventsResponse = {
+    body: ListCloudEventsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/events` operation.
+ */
+export function handleListCloudEvents(response?: HandleListCloudEventsResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/events`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStreamCloudSessionResponse = {
+    body: StreamCloudSessionResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/events/stream` operation.
+ */
+export function handleStreamCloudSession(response?: HandleStreamCloudSessionResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/events/stream`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.text(typeof body === 'string' ? body : JSON.stringify(body), { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListCloudSubagentsResponse = {
+    body: ListCloudSubagentsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/agents` operation.
+ */
+export function handleListCloudSubagents(response?: HandleListCloudSubagentsResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/agents`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListCloudInputsResponse = {
+    body: ListCloudInputsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/messages` operation.
+ */
+export function handleListCloudInputs(response?: HandleListCloudInputsResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/messages`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandleSendCloudMessageResponse = {
     body: SendCloudMessageResponses[202];
     status?: 202;
@@ -9730,26 +10117,411 @@ export function handleSendCloudMessage(response?: HandleSendCloudMessageResponse
     }, options);
 }
 
-export type HandleStreamCloudSessionResponse = {
-    body: StreamCloudSessionResponses[200];
+export type HandleGetCloudInputResponse = {
+    body: GetCloudInputResponses[200];
     status?: 200;
 };
 
 /**
- * Handler for the `GET /api/v1/cloud/sessions/{id}/events` operation.
+ * Handler for the `GET /api/v1/cloud/sessions/{id}/messages/{input}` operation.
  */
-export function handleStreamCloudSession(response?: HandleStreamCloudSessionResponse | HttpResponseResolver<{
+export function handleGetCloudInput(response?: HandleGetCloudInputResponse | HttpResponseResolver<{
     id: string;
+    input: string;
 }, never>, options?: RequestHandlerOptions): HttpHandler {
     return http.get<{
         id: string;
-    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/events`, info => {
+        input: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/messages/:input`, info => {
         if (typeof response === 'function') {
             return response(info);
         }
         const body = response?.body;
         if (body !== undefined) {
-            return HttpResponse.text(typeof body === 'string' ? body : JSON.stringify(body), { status: response?.status ?? 200 });
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleInterruptCloudSessionResponse = {
+    body: InterruptCloudSessionResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/interrupt` operation.
+ */
+export function handleInterruptCloudSession(response?: HandleInterruptCloudSessionResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/interrupt`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAnswerCloudPermissionResponse = {
+    body: AnswerCloudPermissionResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/permissions` operation.
+ */
+export function handleAnswerCloudPermission(response?: HandleAnswerCloudPermissionResponse | HttpResponseResolver<{
+    id: string;
+}, AnswerCloudPermissionData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, AnswerCloudPermissionData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/permissions`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetCloudPermissionBypassResponse = {
+    body: SetCloudPermissionBypassResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/cloud/sessions/{id}/permission-bypass` operation.
+ */
+export function handleSetCloudPermissionBypass(response?: HandleSetCloudPermissionBypassResponse | HttpResponseResolver<{
+    id: string;
+}, SetCloudPermissionBypassData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        id: string;
+    }, SetCloudPermissionBypassData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/permission-bypass`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetCloudSessionModelResponse = {
+    body: SetCloudSessionModelResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/cloud/sessions/{id}/model` operation.
+ */
+export function handleSetCloudSessionModel(response?: HandleSetCloudSessionModelResponse | HttpResponseResolver<{
+    id: string;
+}, SetCloudSessionModelData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        id: string;
+    }, SetCloudSessionModelData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/model`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetCloudSessionEffortResponse = {
+    body: SetCloudSessionEffortResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/cloud/sessions/{id}/effort` operation.
+ */
+export function handleSetCloudSessionEffort(response?: HandleSetCloudSessionEffortResponse | HttpResponseResolver<{
+    id: string;
+}, SetCloudSessionEffortData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<{
+        id: string;
+    }, SetCloudSessionEffortData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/effort`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleStopCloudTaskResponse = {
+    body: StopCloudTaskResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/tasks/stop` operation.
+ */
+export function handleStopCloudTask(response?: HandleStopCloudTaskResponse | HttpResponseResolver<{
+    id: string;
+}, StopCloudTaskData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, StopCloudTaskData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/tasks/stop`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleUploadCloudFileResponse = {
+    body: UploadCloudFileResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/files` operation.
+ */
+export function handleUploadCloudFile(response?: HandleUploadCloudFileResponse | ToResponseUnion<UploadCloudFileResponses> | HttpResponseResolver<{
+    id: string;
+}, UploadCloudFileData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, UploadCloudFileData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/files`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetCloudFilePolicyResponse = {
+    body: GetCloudFilePolicyResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/files/policy` operation.
+ */
+export function handleGetCloudFilePolicy(response?: HandleGetCloudFilePolicyResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/files/policy`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerAgentResponse = {
+    body: CloudRunnerAgentResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/agent` operation.
+ */
+export function handleCloudRunnerAgent(response?: HandleCloudRunnerAgentResponse | HttpResponseResolver<never, CloudRunnerAgentData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CloudRunnerAgentData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/agent`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerEventsResponse = {
+    body: CloudRunnerEventsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/events` operation.
+ */
+export function handleCloudRunnerEvents(response?: HandleCloudRunnerEventsResponse | HttpResponseResolver<never, CloudRunnerEventsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CloudRunnerEventsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/events`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerInputsResponse = {
+    body: CloudRunnerInputsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/inputs` operation.
+ */
+export function handleCloudRunnerInputs(response?: HandleCloudRunnerInputsResponse | HttpResponseResolver<never, CloudRunnerInputsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CloudRunnerInputsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/inputs`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerInputsAckResponse = {
+    body: CloudRunnerInputsAckResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/runner/inputs/ack` operation.
+ */
+export function handleCloudRunnerInputsAck(response?: HandleCloudRunnerInputsAckResponse | HttpResponseResolver<never, CloudRunnerInputsAckData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, CloudRunnerInputsAckData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/inputs/ack`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCloudRunnerFileResponse = {
+    body: CloudRunnerFileResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/runner/files/{id}` operation.
+ */
+export function handleCloudRunnerFile(response?: HandleCloudRunnerFileResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/runner/files/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 200 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -10698,6 +11470,249 @@ export function handleGetCapacity(response?: HandleGetCapacityResponse | HttpRes
         const body = response?.body;
         if (body !== undefined) {
             return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetForecastsResponse = {
+    body: GetForecastsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/forecasts` operation.
+ */
+export function handleGetForecasts(response?: HandleGetForecastsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/forecasts`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetPoolSizeResponse = {
+    body: GetPoolSizeResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/pools/size` operation.
+ */
+export function handleGetPoolSize(response?: HandleGetPoolSizeResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/pools/size`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetPacingSettingsResponse = {
+    body: GetPacingSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/policy/pacing` operation.
+ */
+export function handleGetPacingSettings(response?: HandleGetPacingSettingsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/policy/pacing`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleSetPacingSettingsResponse = {
+    body: SetPacingSettingsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `PUT /api/v1/policy/pacing` operation.
+ */
+export function handleSetPacingSettings(response?: HandleSetPacingSettingsResponse | HttpResponseResolver<never, SetPacingSettingsData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.put<never, SetPacingSettingsData['body']>(`${options?.baseUrl ?? '*'}/api/v1/policy/pacing`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandlePreviewDirectiveResponse = {
+    body: PreviewDirectiveResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/directives/preview` operation.
+ */
+export function handlePreviewDirective(response?: HandlePreviewDirectiveResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/directives/preview`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetCurrentDirectiveResponse = {
+    body: GetCurrentDirectiveResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/directives/current` operation.
+ */
+export function handleGetCurrentDirective(response?: HandleGetCurrentDirectiveResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/directives/current`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetSessionDirectiveResponse = {
+    body: GetSessionDirectiveResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/directives/current` operation.
+ */
+export function handleGetSessionDirective(response?: HandleGetSessionDirectiveResponse | HttpResponseResolver<never, GetSessionDirectiveData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, GetSessionDirectiveData['body']>(`${options?.baseUrl ?? '*'}/api/v1/directives/current`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleClaimDirectiveResponse = {
+    body: ClaimDirectiveResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/directives/claim` operation.
+ */
+export function handleClaimDirective(response?: HandleClaimDirectiveResponse | HttpResponseResolver<never, ClaimDirectiveData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, ClaimDirectiveData['body']>(`${options?.baseUrl ?? '*'}/api/v1/directives/claim`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAcknowledgeDirectiveResponse = {
+    body: AcknowledgeDirectiveResponses[204];
+    status?: 204;
+};
+
+/**
+ * Handler for the `POST /api/v1/directives/receipt` operation.
+ */
+export function handleAcknowledgeDirective(response?: HandleAcknowledgeDirectiveResponse | HttpResponseResolver<never, AcknowledgeDirectiveData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<never, AcknowledgeDirectiveData['body']>(`${options?.baseUrl ?? '*'}/api/v1/directives/receipt`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return new HttpResponse(body, { status: response?.status ?? 204 });
         }
         if (options?.responseFallback === 'passthrough') {
             return;
@@ -13036,6 +14051,14 @@ export type MswHandlerFactories = {
      */
     reportHooksMissing: typeof handleReportHooksMissing;
     /**
+     * Handler for the `GET /api/v1/launches/{launchId}/limits` operation.
+     */
+    getLaunchLimits: typeof handleGetLaunchLimits;
+    /**
+     * Handler for the `PUT /api/v1/launches/{launchId}/limits` operation.
+     */
+    setLaunchLimits: typeof handleSetLaunchLimits;
+    /**
      * Handler for the `GET /api/v1/policy/agents` operation.
      */
     checkAgentPolicy: typeof handleCheckAgentPolicy;
@@ -13123,6 +14146,18 @@ export type MswHandlerFactories = {
      * Handler for the `DELETE /api/v1/devices/{id}` operation.
      */
     deleteDevice: typeof handleDeleteDevice;
+    /**
+     * Handler for the `PATCH /api/v1/devices/{id}` operation.
+     */
+    renameDevice: typeof handleRenameDevice;
+    /**
+     * Handler for the `GET /api/v1/members/{memberId}/devices` operation.
+     */
+    listMemberDevices: typeof handleListMemberDevices;
+    /**
+     * Handler for the `GET /api/v1/push-devices` operation.
+     */
+    listPushDevices: typeof handleListPushDevices;
     /**
      * Handler for the `POST /api/v1/push-devices` operation.
      */
@@ -14104,6 +15139,10 @@ export type MswHandlerFactories = {
      */
     listUsageReconciliations: typeof handleListUsageReconciliations;
     /**
+     * Handler for the `GET /api/v1/usage/reservations/{id}` operation.
+     */
+    getUsageReview: typeof handleGetUsageReview;
+    /**
      * Handler for the `POST /api/v1/usage/reservations/{id}/reconcile` operation.
      */
     reconcileUsage: typeof handleReconcileUsage;
@@ -14119,6 +15158,18 @@ export type MswHandlerFactories = {
      * Handler for the `POST /api/v1/members/{login}/budget-overrides/{id}/revoke` operation.
      */
     revokeBudgetOverride: typeof handleRevokeBudgetOverride;
+    /**
+     * Handler for the `GET /api/v1/policy/api-prices` operation.
+     */
+    getApiPrices: typeof handleGetApiPrices;
+    /**
+     * Handler for the `PUT /api/v1/policy/api-prices` operation.
+     */
+    setApiPrices: typeof handleSetApiPrices;
+    /**
+     * Handler for the `POST /api/v1/policy/api-prices/load-defaults` operation.
+     */
+    loadApiPriceDefaults: typeof handleLoadApiPriceDefaults;
     /**
      * Handler for the `GET /api/v1/runners` operation.
      */
@@ -14260,13 +15311,81 @@ export type MswHandlerFactories = {
      */
     downloadRunnerHook: typeof handleDownloadRunnerHook;
     /**
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/events` operation.
+     */
+    listCloudEvents: typeof handleListCloudEvents;
+    /**
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/events/stream` operation.
+     */
+    streamCloudSession: typeof handleStreamCloudSession;
+    /**
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/agents` operation.
+     */
+    listCloudSubagents: typeof handleListCloudSubagents;
+    /**
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/messages` operation.
+     */
+    listCloudInputs: typeof handleListCloudInputs;
+    /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/messages` operation.
      */
     sendCloudMessage: typeof handleSendCloudMessage;
     /**
-     * Handler for the `GET /api/v1/cloud/sessions/{id}/events` operation.
+     * Handler for the `GET /api/v1/cloud/sessions/{id}/messages/{input}` operation.
      */
-    streamCloudSession: typeof handleStreamCloudSession;
+    getCloudInput: typeof handleGetCloudInput;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/interrupt` operation.
+     */
+    interruptCloudSession: typeof handleInterruptCloudSession;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/permissions` operation.
+     */
+    answerCloudPermission: typeof handleAnswerCloudPermission;
+    /**
+     * Handler for the `PUT /api/v1/cloud/sessions/{id}/permission-bypass` operation.
+     */
+    setCloudPermissionBypass: typeof handleSetCloudPermissionBypass;
+    /**
+     * Handler for the `PUT /api/v1/cloud/sessions/{id}/model` operation.
+     */
+    setCloudSessionModel: typeof handleSetCloudSessionModel;
+    /**
+     * Handler for the `PUT /api/v1/cloud/sessions/{id}/effort` operation.
+     */
+    setCloudSessionEffort: typeof handleSetCloudSessionEffort;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/tasks/stop` operation.
+     */
+    stopCloudTask: typeof handleStopCloudTask;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/files` operation.
+     */
+    uploadCloudFile: typeof handleUploadCloudFile;
+    /**
+     * Handler for the `GET /api/v1/cloud/files/policy` operation.
+     */
+    getCloudFilePolicy: typeof handleGetCloudFilePolicy;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/agent` operation.
+     */
+    cloudRunnerAgent: typeof handleCloudRunnerAgent;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/events` operation.
+     */
+    cloudRunnerEvents: typeof handleCloudRunnerEvents;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/inputs` operation.
+     */
+    cloudRunnerInputs: typeof handleCloudRunnerInputs;
+    /**
+     * Handler for the `POST /api/v1/cloud/runner/inputs/ack` operation.
+     */
+    cloudRunnerInputsAck: typeof handleCloudRunnerInputsAck;
+    /**
+     * Handler for the `GET /api/v1/cloud/runner/files/{id}` operation.
+     */
+    cloudRunnerFile: typeof handleCloudRunnerFile;
     /**
      * Handler for the `GET /api/v1/artifacts` operation.
      */
@@ -14395,6 +15514,42 @@ export type MswHandlerFactories = {
      * Handler for the `GET /api/v1/capacity` operation.
      */
     getCapacity: typeof handleGetCapacity;
+    /**
+     * Handler for the `GET /api/v1/forecasts` operation.
+     */
+    getForecasts: typeof handleGetForecasts;
+    /**
+     * Handler for the `GET /api/v1/pools/size` operation.
+     */
+    getPoolSize: typeof handleGetPoolSize;
+    /**
+     * Handler for the `GET /api/v1/policy/pacing` operation.
+     */
+    getPacingSettings: typeof handleGetPacingSettings;
+    /**
+     * Handler for the `PUT /api/v1/policy/pacing` operation.
+     */
+    setPacingSettings: typeof handleSetPacingSettings;
+    /**
+     * Handler for the `GET /api/v1/directives/preview` operation.
+     */
+    previewDirective: typeof handlePreviewDirective;
+    /**
+     * Handler for the `GET /api/v1/directives/current` operation.
+     */
+    getCurrentDirective: typeof handleGetCurrentDirective;
+    /**
+     * Handler for the `POST /api/v1/directives/current` operation.
+     */
+    getSessionDirective: typeof handleGetSessionDirective;
+    /**
+     * Handler for the `POST /api/v1/directives/claim` operation.
+     */
+    claimDirective: typeof handleClaimDirective;
+    /**
+     * Handler for the `POST /api/v1/directives/receipt` operation.
+     */
+    acknowledgeDirective: typeof handleAcknowledgeDirective;
     /**
      * Handler for the `GET /api/v1/groups` operation.
      */
@@ -14735,6 +15890,8 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createLaunch: wrap(handleCreateLaunch),
         endLaunch: wrap(handleEndLaunch),
         reportHooksMissing: wrap(handleReportHooksMissing),
+        getLaunchLimits: wrap(handleGetLaunchLimits),
+        setLaunchLimits: wrap(handleSetLaunchLimits),
         checkAgentPolicy: wrap(handleCheckAgentPolicy),
         getMyAccount: wrap(handleGetMyAccount),
         listTokenScopes: wrap(handleListTokenScopes),
@@ -14757,6 +15914,9 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         deleteServiceKey: wrap(handleDeleteServiceKey),
         listDevices: wrap(handleListDevices),
         deleteDevice: wrap(handleDeleteDevice),
+        renameDevice: wrap(handleRenameDevice),
+        listMemberDevices: wrap(handleListMemberDevices),
+        listPushDevices: wrap(handleListPushDevices),
         registerPushDevice: wrap(handleRegisterPushDevice),
         deletePushDevice: wrap(handleDeletePushDevice),
         listMyOrganizations: wrap(handleListMyOrganizations),
@@ -15002,10 +16162,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         streamUsage: wrap(handleStreamUsage),
         listPendingUsage: wrap(handleListPendingUsage),
         listUsageReconciliations: wrap(handleListUsageReconciliations),
+        getUsageReview: wrap(handleGetUsageReview),
         reconcileUsage: wrap(handleReconcileUsage),
         listBudgetOverrides: wrap(handleListBudgetOverrides),
         createBudgetOverride: wrap(handleCreateBudgetOverride),
         revokeBudgetOverride: wrap(handleRevokeBudgetOverride),
+        getApiPrices: wrap(handleGetApiPrices),
+        setApiPrices: wrap(handleSetApiPrices),
+        loadApiPriceDefaults: wrap(handleLoadApiPriceDefaults),
         listRunners: wrap(handleListRunners),
         registerRunner: wrap(handleRegisterRunner),
         deleteRunner: wrap(handleDeleteRunner),
@@ -15041,8 +16205,25 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         downloadRunnerSkill: wrap(handleDownloadRunnerSkill),
         fetchRunnerHooks: wrap(handleFetchRunnerHooks),
         downloadRunnerHook: wrap(handleDownloadRunnerHook),
-        sendCloudMessage: wrap(handleSendCloudMessage),
+        listCloudEvents: wrap(handleListCloudEvents),
         streamCloudSession: wrap(handleStreamCloudSession),
+        listCloudSubagents: wrap(handleListCloudSubagents),
+        listCloudInputs: wrap(handleListCloudInputs),
+        sendCloudMessage: wrap(handleSendCloudMessage),
+        getCloudInput: wrap(handleGetCloudInput),
+        interruptCloudSession: wrap(handleInterruptCloudSession),
+        answerCloudPermission: wrap(handleAnswerCloudPermission),
+        setCloudPermissionBypass: wrap(handleSetCloudPermissionBypass),
+        setCloudSessionModel: wrap(handleSetCloudSessionModel),
+        setCloudSessionEffort: wrap(handleSetCloudSessionEffort),
+        stopCloudTask: wrap(handleStopCloudTask),
+        uploadCloudFile: wrap(handleUploadCloudFile),
+        getCloudFilePolicy: wrap(handleGetCloudFilePolicy),
+        cloudRunnerAgent: wrap(handleCloudRunnerAgent),
+        cloudRunnerEvents: wrap(handleCloudRunnerEvents),
+        cloudRunnerInputs: wrap(handleCloudRunnerInputs),
+        cloudRunnerInputsAck: wrap(handleCloudRunnerInputsAck),
+        cloudRunnerFile: wrap(handleCloudRunnerFile),
         listArtifacts: wrap(handleListArtifacts),
         publishArtifact: wrap(handlePublishArtifact),
         artifactsMcp: wrap(handleArtifactsMcp),
@@ -15075,6 +16256,15 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         handOverSharedAccount: wrap(handleHandOverSharedAccount),
         makeSharedAccountAccessOnly: wrap(handleMakeSharedAccountAccessOnly),
         getCapacity: wrap(handleGetCapacity),
+        getForecasts: wrap(handleGetForecasts),
+        getPoolSize: wrap(handleGetPoolSize),
+        getPacingSettings: wrap(handleGetPacingSettings),
+        setPacingSettings: wrap(handleSetPacingSettings),
+        previewDirective: wrap(handlePreviewDirective),
+        getCurrentDirective: wrap(handleGetCurrentDirective),
+        getSessionDirective: wrap(handleGetSessionDirective),
+        claimDirective: wrap(handleClaimDirective),
+        acknowledgeDirective: wrap(handleAcknowledgeDirective),
         listGroups: wrap(handleListGroups),
         createGroup: wrap(handleCreateGroup),
         deleteGroup: wrap(handleDeleteGroup),
@@ -15166,9 +16356,12 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.linkTodoItem, overrides.linkTodoItem),
             invoke(pick.requestTodoDrop, overrides.requestTodoDrop),
             invoke(pick.issueCloudTerminalTicket, overrides.issueCloudTerminalTicket),
+            invoke(pick.streamCloudSession, overrides.streamCloudSession),
+            invoke(pick.stopCloudTask, overrides.stopCloudTask),
             invoke(pick.unassignMcpServer, overrides.unassignMcpServer),
             invoke(pick.assignMcpServer, overrides.assignMcpServer),
             invoke(pick.deleteMcpArgumentPolicy, overrides.deleteMcpArgumentPolicy),
+            invoke(pick.getCloudInput, overrides.getCloudInput),
             invoke(pick.cancelAutomationRun, overrides.cancelAutomationRun),
             invoke(pick.triggerAutomationVersion, overrides.triggerAutomationVersion),
             invoke(pick.revokeBudgetOverride, overrides.revokeBudgetOverride),
@@ -15181,12 +16374,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.inferenceChatCompletions, overrides.inferenceChatCompletions),
             invoke(pick.downloadRunnerSkill, overrides.downloadRunnerSkill),
             invoke(pick.downloadRunnerHook, overrides.downloadRunnerHook),
+            invoke(pick.cloudRunnerInputsAck, overrides.cloudRunnerInputsAck),
             invoke(pick.pollGithubDeviceLink, overrides.pollGithubDeviceLink),
             invoke(pick.setMemberTodoStopHook, overrides.setMemberTodoStopHook),
             invoke(pick.deleteMyMcpServer, overrides.deleteMyMcpServer),
             invoke(pick.saveMyMcpServer, overrides.saveMyMcpServer),
             invoke(pick.deleteMyEnvironmentVariant, overrides.deleteMyEnvironmentVariant),
             invoke(pick.updateMyEnvironmentVariant, overrides.updateMyEnvironmentVariant),
+            invoke(pick.cloudRunnerFile, overrides.cloudRunnerFile),
             invoke(pick.startMemberGithubWebLink, overrides.startMemberGithubWebLink),
             invoke(pick.acceptMemoryProposal, overrides.acceptMemoryProposal),
             invoke(pick.rejectMemoryProposal, overrides.rejectMemoryProposal),
@@ -15204,8 +16399,16 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.resumeCloudSession, overrides.resumeCloudSession),
             invoke(pick.setCloudSessionGithubAccess, overrides.setCloudSessionGithubAccess),
             invoke(pick.attachCloudTerminal, overrides.attachCloudTerminal),
+            invoke(pick.listCloudEvents, overrides.listCloudEvents),
+            invoke(pick.listCloudSubagents, overrides.listCloudSubagents),
+            invoke(pick.listCloudInputs, overrides.listCloudInputs),
             invoke(pick.sendCloudMessage, overrides.sendCloudMessage),
-            invoke(pick.streamCloudSession, overrides.streamCloudSession),
+            invoke(pick.interruptCloudSession, overrides.interruptCloudSession),
+            invoke(pick.answerCloudPermission, overrides.answerCloudPermission),
+            invoke(pick.setCloudPermissionBypass, overrides.setCloudPermissionBypass),
+            invoke(pick.setCloudSessionModel, overrides.setCloudSessionModel),
+            invoke(pick.setCloudSessionEffort, overrides.setCloudSessionEffort),
+            invoke(pick.uploadCloudFile, overrides.uploadCloudFile),
             invoke(pick.restoreMySkill, overrides.restoreMySkill),
             invoke(pick.listMySkillVersions, overrides.listMySkillVersions),
             invoke(pick.publishMySkillVersion, overrides.publishMySkillVersion),
@@ -15274,6 +16477,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.inferenceMessages, overrides.inferenceMessages),
             invoke(pick.inferenceResponses, overrides.inferenceResponses),
             invoke(pick.inferenceModels, overrides.inferenceModels),
+            invoke(pick.loadApiPriceDefaults, overrides.loadApiPriceDefaults),
             invoke(pick.attachRunnerTerminal, overrides.attachRunnerTerminal),
             invoke(pick.cloudRunnerHeartbeat, overrides.cloudRunnerHeartbeat),
             invoke(pick.openRunnerLaunch, overrides.openRunnerLaunch),
@@ -15284,6 +16488,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.fetchRunnerVariables, overrides.fetchRunnerVariables),
             invoke(pick.fetchRunnerSkills, overrides.fetchRunnerSkills),
             invoke(pick.fetchRunnerHooks, overrides.fetchRunnerHooks),
+            invoke(pick.getCloudFilePolicy, overrides.getCloudFilePolicy),
+            invoke(pick.cloudRunnerAgent, overrides.cloudRunnerAgent),
+            invoke(pick.cloudRunnerEvents, overrides.cloudRunnerEvents),
+            invoke(pick.cloudRunnerInputs, overrides.cloudRunnerInputs),
             invoke(pick.testArtifactStorage, overrides.testArtifactStorage),
             invoke(pick.receiveStripeWebhookAlias, overrides.receiveStripeWebhookAlias),
             invoke(pick.removeInstanceAdmin, overrides.removeInstanceAdmin),
@@ -15296,6 +16504,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.saveMcpServer, overrides.saveMcpServer),
             invoke(pick.deleteEnvironmentVariant, overrides.deleteEnvironmentVariant),
             invoke(pick.updateEnvironmentVariant, overrides.updateEnvironmentVariant),
+            invoke(pick.getUsageReview, overrides.getUsageReview),
             invoke(pick.updateCloudCluster, overrides.updateCloudCluster),
             invoke(pick.updateCloudProfile, overrides.updateCloudProfile),
             invoke(pick.stopCloudSession, overrides.stopCloudSession),
@@ -15305,7 +16514,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.oauthLoginCallback, overrides.oauthLoginCallback),
             invoke(pick.linkSignInProvider, overrides.linkSignInProvider),
             invoke(pick.reportHooksMissing, overrides.reportHooksMissing),
+            invoke(pick.getLaunchLimits, overrides.getLaunchLimits),
+            invoke(pick.setLaunchLimits, overrides.setLaunchLimits),
             invoke(pick.rotateToken, overrides.rotateToken),
+            invoke(pick.listMemberDevices, overrides.listMemberDevices),
             invoke(pick.transferOrg, overrides.transferOrg),
             invoke(pick.leaveOrg, overrides.leaveOrg),
             invoke(pick.listOrgMembers, overrides.listOrgMembers),
@@ -15454,6 +16666,8 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.streamUsage, overrides.streamUsage),
             invoke(pick.listPendingUsage, overrides.listPendingUsage),
             invoke(pick.listUsageReconciliations, overrides.listUsageReconciliations),
+            invoke(pick.getApiPrices, overrides.getApiPrices),
+            invoke(pick.setApiPrices, overrides.setApiPrices),
             invoke(pick.getCloudRuntime, overrides.getCloudRuntime),
             invoke(pick.saveCloudRuntime, overrides.saveCloudRuntime),
             invoke(pick.listCloudClusters, overrides.listCloudClusters),
@@ -15473,6 +16687,14 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.getArtifactUsage, overrides.getArtifactUsage),
             invoke(pick.getArtifactPolicy, overrides.getArtifactPolicy),
             invoke(pick.createArtifactUpload, overrides.createArtifactUpload),
+            invoke(pick.getPoolSize, overrides.getPoolSize),
+            invoke(pick.getPacingSettings, overrides.getPacingSettings),
+            invoke(pick.setPacingSettings, overrides.setPacingSettings),
+            invoke(pick.previewDirective, overrides.previewDirective),
+            invoke(pick.getCurrentDirective, overrides.getCurrentDirective),
+            invoke(pick.getSessionDirective, overrides.getSessionDirective),
+            invoke(pick.claimDirective, overrides.claimDirective),
+            invoke(pick.acknowledgeDirective, overrides.acknowledgeDirective),
             invoke(pick.listMySkills, overrides.listMySkills),
             invoke(pick.listMySkillInstallations, overrides.listMySkillInstallations),
             invoke(pick.reportSkillInstallations, overrides.reportSkillInstallations),
@@ -15485,6 +16707,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.revokeToken, overrides.revokeToken),
             invoke(pick.deleteServiceKey, overrides.deleteServiceKey),
             invoke(pick.deleteDevice, overrides.deleteDevice),
+            invoke(pick.renameDevice, overrides.renameDevice),
             invoke(pick.deletePushDevice, overrides.deletePushDevice),
             invoke(pick.deleteOrg, overrides.deleteOrg),
             invoke(pick.getOrg, overrides.getOrg),
@@ -15539,6 +16762,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.listServiceKeys, overrides.listServiceKeys),
             invoke(pick.createServiceKey, overrides.createServiceKey),
             invoke(pick.listDevices, overrides.listDevices),
+            invoke(pick.listPushDevices, overrides.listPushDevices),
             invoke(pick.registerPushDevice, overrides.registerPushDevice),
             invoke(pick.listActivity, overrides.listActivity),
             invoke(pick.getSpending, overrides.getSpending),
@@ -15586,6 +16810,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.listSharedAccounts, overrides.listSharedAccounts),
             invoke(pick.enrollSharedAccount, overrides.enrollSharedAccount),
             invoke(pick.getCapacity, overrides.getCapacity),
+            invoke(pick.getForecasts, overrides.getForecasts),
             invoke(pick.listGroups, overrides.listGroups),
             invoke(pick.createGroup, overrides.createGroup),
             invoke(pick.listSkills, overrides.listSkills),
