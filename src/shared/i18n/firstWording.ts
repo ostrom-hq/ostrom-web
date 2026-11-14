@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { z } from 'zod/mini';
 import { BOOTED, wordingKey } from '@/shared/build/bootScript';
+import type { Wording } from '@/shared/i18n/instance';
 
-/** Wording as i18next keeps it: sections of keys, of sections or texts. */
+/** Wording as the console keeps it: sections of keys, of sections or texts. */
 const zWording = z.record(z.string(), z.unknown());
-export type Wording = z.infer<typeof zWording>;
 
 /**
  * The wording of `language` that `/boot.js` fetched for the first screen (only the sections it shows), taken out of

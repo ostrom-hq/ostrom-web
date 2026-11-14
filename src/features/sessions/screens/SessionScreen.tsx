@@ -2,8 +2,8 @@
 import type { Receipt, Session, SessionGateAnswer } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
-import type { TFunction } from 'i18next';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from '@/shared/i18n/instance';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute, formatDuration } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';

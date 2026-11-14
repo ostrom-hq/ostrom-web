@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Artifact } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { safeHref } from '@/shared/lib/safeHref';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { hostedStateOf, hostedTone } from '../model';
 
@@ -13,6 +14,7 @@ export function HostedState({
   readonly failure?: string | undefined;
 }): ReactElement {
   const { t } = useTranslation();
+  const label = useEnumLabel();
   const known = hostedStateOf(state);
   return (
     <>
@@ -20,7 +22,7 @@ export function HostedState({
       {failure === undefined ? null : (
         <span className="o-row__meta">
           {t('tools.hosted.failure', {
-            failure: t(`tools.hosted.failureCode.${failure}`, { defaultValue: failure }),
+            failure: label('tools.hosted.failureCode', failure),
           })}
         </span>
       )}

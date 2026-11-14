@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Skeleton } from '@/shared/ui/Skeleton';
 
 export function NotFoundScreen(): ReactElement {

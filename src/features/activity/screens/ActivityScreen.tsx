@@ -2,7 +2,7 @@
 import type { ActivityItem } from '@gen/api/types.gen';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';

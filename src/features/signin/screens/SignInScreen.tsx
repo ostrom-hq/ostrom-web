@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { useSearch } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
 import { Screen } from '@/shared/ui/Screen';
 import { SignInChoices } from '../components/SignInChoices';
