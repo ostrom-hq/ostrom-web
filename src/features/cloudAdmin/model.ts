@@ -42,6 +42,15 @@ export function minutesOf(text: string): number | undefined {
   return wholeNumber(text, 0, BACKGROUND_MAX);
 }
 
+export const AUTOMATIONS_MAX = 100;
+/** What the server holds while nothing is stored. */
+export const DEFAULT_AUTOMATIONS = 2;
+
+/** The cap of running automation sessions per member typed, when it is a number the server reads. */
+export function automationsOf(text: string): number | undefined {
+  return wholeNumber(text, 1, AUTOMATIONS_MAX);
+}
+
 // ---- The instance's runtime ---------------------------------------------------------------------------------------
 
 export const WORKSPACE_MODES = ['ReadWriteOncePod', 'ReadWriteOnce'] as const;
@@ -93,7 +102,26 @@ const RUNTIME_OPTIONAL_NUMBERS = [
 ] as const;
 
 /** The first field the form cannot send, by name: what the server would refuse, said before anything is sent. */
-export function runtimeProblem(draft: RuntimeDraft): string | undefined {
+export type RuntimeField =
+  | (typeof RUNTIME_NUMBERS)[number][0]
+  | (typeof RUNTIME_OPTIONAL_NUMBERS)[number][0]
+  | 'runnerBinary'
+  | 'workspaceAccessMode'
+  | 'memberTransfers'
+  | 'serverUrl';
+export type ClusterField =
+  'name' | 'apiUrl' | 'allowedNamespaces' | 'maxRunningPods' | 'caCertificate' | 'serviceAccountToken';
+export type ProfileField =
+  | 'name'
+  | 'clusterId'
+  | 'namespace'
+  | 'image'
+  | 'cpuMillis'
+  | 'memoryMebibytes'
+  | 'workspaceSizeGibibytes'
+  | 'idleTimeoutMinutes';
+
+export function runtimeProblem(draft: RuntimeDraft): RuntimeField | undefined {
   for (const [name, min, max] of RUNTIME_NUMBERS) {
     if (wholeNumber(draft[name], min, max) === undefined) return name;
   }
@@ -184,7 +212,10 @@ const NAMESPACE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
  * The first field the form cannot send, by name. A new cluster needs its CA bundle and token; a changed `apiUrl` needs
  * both again, as a credential is never sent to another server.
  */
-export function clusterProblem(draft: ClusterDraft, stored: CloudCluster | undefined): string | undefined {
+export function clusterProblem(
+  draft: ClusterDraft,
+  stored: CloudCluster | undefined,
+): ClusterField | undefined {
   if (draft.name.trim() === '') return 'name';
   if (!draft.apiUrl.trim().startsWith('https://')) return 'apiUrl';
   const namespaces = linesOf(draft.allowedNamespaces);
@@ -285,7 +316,7 @@ export function profileDraftOf(profile: CloudProfile): ProfileDraft {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The first field the form cannot send, by name. Resources come as a pair, as the server reads them. */
-export function profileProblem(draft: ProfileDraft): string | undefined {
+export function profileProblem(draft: ProfileDraft): ProfileField | undefined {
   if (draft.name.trim() === '') return 'name';
   if (!UUID.test(draft.clusterId.trim())) return 'clusterId';
   if (draft.namespace.trim() === '') return 'namespace';

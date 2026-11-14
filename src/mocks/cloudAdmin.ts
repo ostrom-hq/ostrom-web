@@ -84,7 +84,7 @@ export function initialCloudAdmin(): CloudAdminState {
         updatedAt: '2026-11-03T09:00:00Z',
       },
     ],
-    cloudSettings: { backgroundWorkMaxMinutes: 240 },
+    cloudSettings: { backgroundWorkMaxMinutes: 240, maxRunningAutomationsPerMember: 2 },
   };
 }
 
@@ -147,6 +147,10 @@ export function createCloudAdminHandlers(
         return refusal(409, 'cloud_settings_conflict', 'The settings were saved by someone else.');
       state().cloudSettings = {
         backgroundWorkMaxMinutes: body.data.backgroundWorkMaxMinutes,
+        maxRunningAutomationsPerMember:
+          body.data.maxRunningAutomationsPerMember ??
+          state().cloudSettings.maxRunningAutomationsPerMember ??
+          2,
         updatedAt: now().toISOString(),
         updatedBy: 'maya',
       };

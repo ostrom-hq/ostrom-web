@@ -1854,13 +1854,15 @@ export const en = {
     errorTag: 'Not saved',
     conflict: 'Someone saved this before you. Reload it to see their changes, then make yours again.',
     reload: 'Reload',
-    invalidField: 'Check {{field}} before saving.',
+    invalidField: 'Check “{{field}}” before saving.',
     settings: {
       title: 'Organization settings',
       background: 'Background work, longest hold (minutes)',
       backgroundHint:
         'How long an agent’s background work holds off the idle pause. 0 never holds it off; 240 by default.',
-      invalid: 'Enter a whole number of minutes, from 0 to 1440.',
+      automations: 'Automation sessions running per member',
+      automationsHint:
+        'How many sessions of one member’s automation runs work at once, from 1 to 100; a run over it waits in the queue. 2 by default.',
       readOnly: 'Only an owner or an admin changes these settings.',
       default: 'The default: nothing is saved yet.',
       saved: 'The organization’s cloud settings are saved.',

@@ -25,7 +25,7 @@ import type {
   SaveCloudRuntimeRequest,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -47,7 +47,7 @@ export interface CloudSettingsViewModel {
   readonly failure: Error | undefined;
   readonly canEdit: boolean;
   readonly reload: () => Promise<void>;
-  readonly save: (minutes: number) => void;
+  readonly save: (settings: { readonly minutes: number; readonly automations: number }) => void;
   readonly write: Saving;
 }
 
@@ -65,10 +65,11 @@ export function useCloudSettings(): CloudSettingsViewModel {
   const { mutate, reset } = mutation;
   const updatedAt = query.data?.updatedAt;
   const save = useCallback(
-    (minutes: number) => {
+    ({ minutes, automations }: { readonly minutes: number; readonly automations: number }) => {
       mutate({
         body: {
           backgroundWorkMaxMinutes: minutes,
+          maxRunningAutomationsPerMember: automations,
           ...(updatedAt === undefined ? {} : { updatedAt }),
         },
       });
@@ -236,11 +237,18 @@ export function useCloudProfiles(): CloudProfilesViewModel {
   };
 }
 
-/** The people a profile can be assigned to: the organization's members, as many as the first page. */
+/** The people a profile can be assigned to: every member of the organization, all the pages read. */
 export function useAssignableMembers(
   org: string,
 ): readonly { readonly id: string; readonly label: string }[] {
   const people = useOrgMembers(org);
+  const { more, loadingMore } = people;
+  const read = people.members?.length;
+  // A profile can be given to anyone: read every page, a hundred at a time, rather than the first only.
+  useEffect(() => {
+    if (more !== undefined && !loadingMore) more();
+    // `read` is a dependency so that each page read asks for the next.
+  }, [more, loadingMore, read]);
   return (people.members ?? []).map((member) => ({
     id: member.id,
     label: member.name === '' ? member.login : `${member.name} (${member.login})`,

@@ -1892,13 +1892,15 @@ export const fr = {
     conflict:
       'Quelqu’un a enregistré avant vous. Rechargez pour voir ses changements, puis refaites les vôtres.',
     reload: 'Recharger',
-    invalidField: 'Vérifiez {{field}} avant d’enregistrer.',
+    invalidField: 'Vérifiez « {{field}} » avant d’enregistrer.',
     settings: {
       title: 'Réglages de l’organisation',
       background: 'Travail en arrière-plan, durée maximale (minutes)',
       backgroundHint:
         'Combien de temps le travail en arrière-plan d’un agent retarde la pause d’inactivité. 0 ne la retarde jamais ; 240 par défaut.',
-      invalid: 'Saisissez un nombre entier de minutes, de 0 à 1440.',
+      automations: 'Sessions d’automatisations en cours par membre',
+      automationsHint:
+        'Combien de sessions des exécutions d’automatisations d’un membre travaillent en même temps, de 1 à 100 ; une exécution au-delà attend dans la file. 2 par défaut.',
       readOnly: 'Seul un propriétaire ou un admin change ces réglages.',
       default: 'La valeur par défaut : rien n’est encore enregistré.',
       saved: 'Les réglages cloud de l’organisation sont enregistrés.',

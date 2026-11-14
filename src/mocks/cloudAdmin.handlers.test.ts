@@ -174,5 +174,20 @@ describe('the mock cloud administration, as the server keeps it', () => {
       ).status,
     ).toBe(409);
     expect((await call('PUT', '/cloud/settings', { backgroundWorkMaxMinutes: 5 })).status).toBe(200);
+    expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(2);
+    const { maxRunningAutomationsPerMember: _cap, ...bare } = db.cloudSettings;
+    expect(_cap).toBe(2);
+    db.cloudSettings = bare;
+    const saved = await call('PUT', '/cloud/settings', {
+      backgroundWorkMaxMinutes: 5,
+      updatedAt: bare.updatedAt,
+    });
+    expect(saved.json).toMatchObject({ maxRunningAutomationsPerMember: 2 });
+    const set = await call('PUT', '/cloud/settings', {
+      backgroundWorkMaxMinutes: 5,
+      maxRunningAutomationsPerMember: 7,
+      updatedAt: db.cloudSettings.updatedAt,
+    });
+    expect(set.json).toMatchObject({ maxRunningAutomationsPerMember: 7 });
   });
 });
