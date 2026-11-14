@@ -107,15 +107,16 @@ export function createPersonalMcpHandlers(
     }),
     // A member's own server becomes a team server: its owner is cleared; a team server is answered as it is.
     handlePromoteMcpServer(({ request, params }) => {
-      if (!deps.manages(request)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
+      if (!deps.manages(request))
+        return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
       if (deps.stale())
         return refusal(403, 'step_up_required', 'Sign in again: your sign-in is more than five minutes old.');
+      if (!deps.inDemoOrg(request)) return refusal(404, 'not_found', 'MCP server not found');
       const db = state();
       const team = db.mcpServers.find((server) => server.name === params.name);
       if (team !== undefined) return HttpResponse.json(team);
       const own = db.myMcpServers.find((server) => server.name === params.name);
-      if (!deps.inDemoOrg(request) || own === undefined)
-        return refusal(404, 'not_found', 'MCP server not found');
+      if (own === undefined) return refusal(404, 'not_found', 'MCP server not found');
       const promoted: McpServer = { ...own };
       Reflect.deleteProperty(promoted, 'owner');
       db.myMcpServers = db.myMcpServers.filter((server) => server.name !== params.name);

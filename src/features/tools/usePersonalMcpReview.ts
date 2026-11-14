@@ -3,6 +3,7 @@ import {
   listMcpServersOptions,
   listMcpServersQueryKey,
   listMembersOptions,
+  listMyMcpServersQueryKey,
   promoteMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type { McpServer } from '@gen/api/types.gen';
@@ -50,7 +51,11 @@ export interface PersonalMcpPromoteViewModel {
 export function usePersonalMcpPromote(): PersonalMcpPromoteViewModel {
   const queryClient = useQueryClient();
   const refresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: listMcpServersQueryKey() });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: listMcpServersQueryKey() }),
+      // An administrator promoting their own server sees it leave their own list too.
+      queryClient.invalidateQueries({ queryKey: listMyMcpServersQueryKey() }),
+    ]);
   }, [queryClient]);
   const promote = useMutation({ ...promoteMcpServerMutation(), onSettled: refresh });
   const { mutate } = promote;

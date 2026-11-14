@@ -140,8 +140,8 @@ describe('the person’s own MCP servers', { timeout: 15_000 }, () => {
     expect(notes).toHaveTextContent(/Owner Maya/u);
     expect(notes).toHaveTextContent('Secret NOTES_TOKEN');
     expect(unowned).not.toHaveTextContent('Secret');
-    expect(unowned).toHaveTextContent('unownedOwner Promote');
-    await user.click(within(review).getAllByRole('button', { name: 'Promote to the team' })[0] ?? review);
+    expect(unowned).toHaveTextContent('unownedPromote');
+    await user.click(within(notes ?? review).getByRole('button', { name: 'Promote to the team' }));
     await user.click(await screen.findByRole('button', { name: 'Make maya-notes a team server' }));
     expect(await card('maya-notes')).toBeInTheDocument();
     await waitFor(() => {
