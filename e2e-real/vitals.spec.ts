@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 // The console's web vitals on a slow phone, against the real server: the largest contentful paint (LCP) of five
 // screens loaded cold, and the delay before the next paint after a real interaction on each (INP), on DevTools' Fast 3G
-// with a CPU four times slower. Within Google's "good": LCP under 2.5 s, INP under 200 ms. Chromium only: the network
-// and the CPU are slowed through the DevTools protocol.
+// with the CPU of a mid-tier phone. Within Google's "good": LCP under 2.5 s, INP under 200 ms. Chromium only: the
+// network and the CPU are slowed through the DevTools protocol.
 import { appendFileSync } from 'node:fs';
 import { type CDPSession, expect, type Locator, type Page, test } from '@playwright/test';
 import { z } from 'zod';
@@ -17,7 +17,58 @@ const FAST_3G = {
   downloadThroughput: (1.6 * 1000 * 1000 * 0.9) / 8,
   uploadThroughput: (750 * 1000 * 0.9) / 8,
 } as const;
-const CPU_SLOWDOWN = 4;
+/**
+ * Lighthouse's BenchmarkIndex (core/lib/page-functions.js, `computeBenchmarkIndex`), as is: how many times a second the
+ * browser builds a string of 10,000 characters and copies an array of 100,000 integers, divided by 10, averaged. About
+ * 1,500 to 2,000 on a high-end desktop, 125 to 800 on a mid-tier phone (docs/throttling.md).
+ */
+function benchmarkIndex(): number {
+  function withGarbage(): number {
+    const start = Date.now();
+    let iterations = 0;
+    while (Date.now() - start < 500) {
+      let built = '';
+      for (let j = 0; j < 10_000; j += 1) built += 'a';
+      if (built.length === 1) throw new Error('never: keeps the loop from being optimized away');
+      iterations += 1;
+    }
+    return Math.round(iterations / 10 / ((Date.now() - start) / 1000));
+  }
+  function withoutGarbage(): number {
+    const first: number[] = [];
+    const second: number[] = [];
+    for (let i = 0; i < 100_000; i += 1) first[i] = second[i] = i;
+    const start = Date.now();
+    let iterations = 0;
+    while (iterations % 10 !== 0 || Date.now() - start < 500) {
+      const from = iterations % 2 === 0 ? first : second;
+      const to = iterations % 2 === 0 ? second : first;
+      for (let j = 0; j < from.length; j += 1) to[j] = from[j] ?? 0;
+      iterations += 1;
+    }
+    return Math.round(iterations / 10 / ((Date.now() - start) / 1000));
+  }
+  return (withGarbage() + withoutGarbage()) / 2;
+}
+
+/** The benchmark is run this many times, unthrottled, before the loads; the median is kept. */
+const BENCHMARKS = 5;
+
+/**
+ * The CPU slowdown that brings this machine to Lighthouse's mobile device, from its BenchmarkIndex: the formula of
+ * Lighthouse's CPU throttling calculator (lighthouse-cpu-throttling-calculator.vercel.app, linked from
+ * docs/throttling.md), whose default ×4 is for a high-end desktop near 1,500. A fixed ×4 made the runner's own speed
+ * part of the result: the same build measured 2,364 to 2,584 ms from one run to another. Below 150 the machine is too
+ * slow to emulate that device, and the test says so rather than measure it.
+ */
+function cpuSlowdownFor(index: number): number {
+  if (index >= 1_300) return 3 + (index - 1_300) / 233;
+  if (index >= 800) return 2 + (index - 800) / 500;
+  if (index >= 150) return 1 + (index - 150) / 650;
+  throw new Error(
+    `BenchmarkIndex ${String(index)}: this machine is too slow to emulate Lighthouse's mobile device`,
+  );
+}
 /** Each screen is loaded this many times, cold; the median is kept. */
 const LOADS = 3;
 /** Google's "good" thresholds (web.dev/articles/vitals). */
@@ -110,12 +161,12 @@ async function measuredOn(page: Page): Promise<z.infer<typeof zMeasured>> {
 }
 
 /** The page's network and CPU slowed down, and its cache off: every load is a first visit. */
-async function slowed(page: Page): Promise<CDPSession> {
+async function slowed(page: Page, cpuSlowdown: number): Promise<CDPSession> {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Network.enable');
   await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
   await cdp.send('Network.emulateNetworkConditions', FAST_3G);
-  await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU_SLOWDOWN });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: cpuSlowdown });
   return cdp;
 }
 
@@ -154,7 +205,11 @@ function ms(value: number): string {
   return value === 0 ? '< 16 ms' : `${String(Math.round(value))} ms`;
 }
 
-test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserName, isMobile }) => {
+test('LCP and INP of five screens on Fast 3G, the CPU of a mid-tier phone', async ({
+  page,
+  browserName,
+  isMobile,
+}) => {
   test.skip(browserName !== 'chromium', 'the network and the CPU are slowed through the DevTools protocol');
   test.setTimeout(600_000);
   const { id: org } = await ownerOfNewOrganization(page, 'vita');
@@ -220,7 +275,12 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
         + ' at ' + event.sourceFile + ':' + event.lineNumber);
     });`,
   });
-  const cdp = await slowed(page);
+  // The machine's speed, measured unthrottled on the console's own page, sets the slowdown.
+  const indexes: number[] = [];
+  for (let run = 0; run < BENCHMARKS; run += 1) indexes.push(await page.evaluate(benchmarkIndex));
+  const index = median(indexes);
+  const cpuSlowdown = cpuSlowdownFor(index);
+  const cdp = await slowed(page, cpuSlowdown);
   // Every API call of the page, from the navigation on: what each load asked, and when.
   let calls: ApiCall[] = [];
   let navigatedAt = 0;
@@ -295,7 +355,7 @@ test('LCP and INP of five screens on Fast 3G, CPU ×4', async ({ page, browserNa
     );
   }
   await cdp.detach();
-  const table = `### Web vitals on Fast 3G, CPU ×${String(CPU_SLOWDOWN)}, cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n\nFiles of the first load (asked, sent, done in ms; KB over the wire):\n\n${files.join('\n')}\n`;
+  const table = `### Web vitals on Fast 3G, CPU ×${cpuSlowdown.toFixed(2)} (BenchmarkIndex ${String(index)}, runs ${indexes.join(', ')}), cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n\nFiles of the first load (asked, sent, done in ms; KB over the wire):\n\n${files.join('\n')}\n`;
   await test.info().attach('vitals.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
