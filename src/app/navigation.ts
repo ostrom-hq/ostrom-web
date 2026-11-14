@@ -9,6 +9,8 @@ interface NavLink {
   readonly feature?: FeatureKey;
   /** Only for a person who administers the instance, and only where the server says it serves the feature. */
   readonly instanceAdmin?: true;
+  /** The screen is an owner's or an admin's: the entry is hidden from the others (their calls are refused, 403). */
+  readonly adminOnly?: true;
 }
 
 export const NAV_LINKS = [
@@ -38,6 +40,7 @@ export const NAV_LINKS = [
   { to: '/cloud', label: 'cloud', feature: 'runners.cloud.v1' },
   { to: '/automations', label: 'automations', feature: 'automations.v1' },
   { to: '/artifacts', label: 'artifacts', feature: 'artifacts.v1' },
+  { to: '/webhooks', label: 'webhooks', feature: 'webhooks.v1', adminOnly: true },
   { to: '/accounts', label: 'accounts' },
   { to: '/admin', label: 'admin', feature: 'admin.settings.v1', instanceAdmin: true },
   { to: '/signin', label: 'signin' },

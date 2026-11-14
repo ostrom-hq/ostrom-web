@@ -296,7 +296,7 @@ describe('who the person is in the organization, in the top bar', () => {
     await user.click(within(list).getByRole('button', { name: 'Globex' }));
     const button = await screen.findByRole('button', { name: 'Organization: Globex. Switch' });
     await waitFor(() => {
-      expect(button).toHaveAccessibleDescription('Maya Lind (maya) · Admin');
+      expect(button).toHaveAccessibleDescription('Maya Lind (maya) · Owner');
     });
     expect(asked).toContain(globex.id);
     expect(asked).not.toContain(db.organization.id);

@@ -1,0 +1,52 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+.wh-types {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* The whole label is the tap target, at least 44 px high (WCAG 2.5.8). */
+.wh-type {
+  min-height: 44px;
+}
+
+.wh-help {
+  padding: var(--space-3) var(--space-4);
+}
+
+.wh-help summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.wh-help__headers {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}
+
+/* A table of five columns scrolls inside its own box, never the page. */
+.wh-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.wh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.wh-table caption {
+  text-align: start;
+  padding-bottom: var(--space-2);
+}
+
+.wh-table th,
+.wh-table td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}

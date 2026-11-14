@@ -29,6 +29,7 @@ export const FEATURES = [
   'slack.v1',
   'todos.v1',
   'waits.v1',
+  'webhooks.v1',
 ] as const;
 
 export type FeatureKey = (typeof FEATURES)[number];

@@ -262,6 +262,16 @@ const artifactsRoute = createRoute({
   path: '/artifacts',
   component: lazyRouteComponent(async () => import('@/features/sharing'), 'ArtifactsScreen'),
 });
+const webhooksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/webhooks',
+  component: lazyRouteComponent(async () => import('@/features/webhooks'), 'WebhooksScreen'),
+});
+const webhookRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/webhooks/$webhookId',
+  component: lazyRouteComponent(async () => import('@/features/webhooks'), 'WebhookScreen'),
+});
 const accountsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/accounts',
@@ -430,6 +440,8 @@ export const routeTree = rootRoute.addChildren([
   adminSettingsRoute,
   automationsRoute,
   artifactsRoute,
+  webhooksRoute,
+  webhookRoute,
   accountsRoute,
   groupsRoute,
   groupRoute,
