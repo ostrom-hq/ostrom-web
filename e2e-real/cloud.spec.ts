@@ -271,7 +271,8 @@ test('6.2 an owner starts an agent with a preparation recipe; the server keeps i
   await expect(other.getByText(name)).toHaveCount(0);
 
   // The owner has no E2E_RECIPE_TOKEN: once a runner prepares it, the preparation fails and says what to fix. Either
-  // way the session is stopped here; a stop of a session already over is a conflict, not a failure of this test.
+  // way the session is stopped here (202 while the server stops it); a stop of a session already over is a conflict,
+  // not a failure of this test.
   const stopped = await callFromPage(page, 'DELETE', `/api/v1/cloud/sessions/${id}`, undefined, org);
-  expect([204, 404, 409]).toContain(stopped.status);
+  expect([202, 204, 404, 409]).toContain(stopped.status);
 });
