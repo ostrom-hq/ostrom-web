@@ -46,16 +46,14 @@ export function createMcpHostedHandlers(
           'step_up_required',
           'Sign in again to restart: your sign-in is more than five minutes old.',
         );
-      const index = state().mcpHosted.findIndex(
-        (process) => process.server === body.data.server && process.member === body.data.member,
+      const process = state().mcpHosted.find(
+        (candidate) => candidate.server === body.data.server && candidate.member === body.data.member,
       );
-      if (index === -1) return refusal(404, 'not_found', 'No such hosted process.');
-      const process = state().mcpHosted[index];
       if (process === undefined) return refusal(404, 'not_found', 'No such hosted process.');
       // A restart lifts the failure: the process is idle until the next call starts it.
       const lifted: McpHostedProcess = { ...process, state: 'idle' };
       delete lifted.failure;
-      state().mcpHosted[index] = lifted;
+      state().mcpHosted = state().mcpHosted.map((candidate) => (candidate === process ? lifted : candidate));
       return new HttpResponse(null, { status: 204 });
     }),
   ];

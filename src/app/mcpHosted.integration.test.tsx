@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
@@ -39,6 +39,20 @@ describe('the hosted commands of the MCP screen', () => {
     await within(after).findByText('Idle');
     expect(after).not.toHaveTextContent('Last failure');
     expect(db.mcpHosted.find((process) => process.server === 'notes')?.state).toBe('idle');
+  });
+
+  it('restarts a shared process, and holds the buttons while one restarts', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/mcp/hosted/restart', async () => delay('infinite')));
+    visit('/mcp');
+    const shared = await findProcess('filesystem');
+    await user.click(within(shared).getByRole('button', { name: 'Restart filesystem' }));
+    expect(await within(shared).findByRole('button', { name: 'Restart filesystem' })).toHaveTextContent(
+      'Restarting…',
+    );
+    const notes = await findProcess('notes · theo');
+    expect(within(notes).getByRole('button', { name: 'Restart notes · theo' })).toBeDisabled();
+    expect(within(notes).getByRole('button', { name: 'Restart notes · theo' })).toHaveTextContent('Restart');
   });
 
   it('asks to sign in again when the sign-in is too old', async () => {
