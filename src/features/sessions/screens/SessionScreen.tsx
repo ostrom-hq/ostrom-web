@@ -70,6 +70,9 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
   const at = (iso: string | undefined): string | undefined =>
     iso === undefined ? undefined : formatAbsolute(iso, i18n.language);
   const money = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD' });
+  // A single read without `gates` is a session the caller reads the record of only (an owner or an administrator
+  // reading another member's, TeamCode #238): what it did is its person's and its approvers'.
+  const recordOnly = session.gates === undefined;
   const gates = session.gates ?? [];
   return (
     <>
@@ -135,6 +138,9 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
             optional(t('sessions.detail.package'), session.packageDigest, true),
           ]}
         />
+        {recordOnly ? (
+          <p className="o-screen__lead">{t('sessions.detail.recordOnly', { dev: session.dev })}</p>
+        ) : null}
         {gates.length === 0 ? null : (
           <>
             <h3 className="o-label">{t('sessions.detail.requests', { count: gates.length })}</h3>
@@ -155,7 +161,11 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
 
       <Section label={t('sessions.detail.receipt')}>
         {receipt === undefined ? (
-          <p className="o-screen__lead">{t('sessions.detail.noReceipt')}</p>
+          <p className="o-screen__lead">
+            {recordOnly && session.receiptId !== undefined
+              ? t('sessions.detail.signedReceipt', { id: session.receiptId })
+              : t('sessions.detail.noReceipt')}
+          </p>
         ) : (
           <Link to="/receipts/$receiptId" params={{ receiptId: receipt.id }} className="o-btn o-self-start">
             {t('sessions.detail.openReceipt', { id: receipt.id })}

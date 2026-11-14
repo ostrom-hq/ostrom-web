@@ -352,6 +352,55 @@ describe('a session', () => {
     expect(screen.getByText('Quiet')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'What it did' })).not.toHaveTextContent('Tool calls');
     expect(screen.queryByRole('heading', { name: /request/ })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Receipt' })).toHaveTextContent(
+      'The receipt is signed when the session ends.',
+    );
+  });
+
+  it('says an administrator reads another member’s session as its record, not what it did', async () => {
+    // TeamCode #238: a single read without `gates` holds the record only; the receipt is named, never opened.
+    server.use(
+      http.get('*/api/v1/sessions/:id', () =>
+        HttpResponse.json({
+          session: {
+            id: 'ses-lena',
+            agent: 'claude-code',
+            dev: 'lena',
+            startedAt: '2026-10-30T07:00:00.000Z',
+            endedAt: '2026-10-30T07:30:00.000Z',
+            receiptId: 'rcpt-ses-lena',
+            costUsd: 1.5,
+          },
+        }),
+      ),
+    );
+    visit('/sessions/ses-lena');
+    const what = await screen.findByRole('region', { name: 'What it did' });
+    expect(what).toHaveTextContent(
+      'You read this session’s record only: its requests, their answers and its receipt are lena’s, and the approvers’ of its requests.',
+    );
+    expect(what).toHaveTextContent('Model cost');
+    expect(screen.getByRole('region', { name: 'Receipt' })).toHaveTextContent('Signed as rcpt-ses-lena.');
+    expect(screen.queryByRole('link', { name: /Open receipt/ })).toBeNull();
+  });
+
+  it('says a session read whole made no request without the record-only note', async () => {
+    server.use(
+      http.get('*/api/v1/sessions/:id', () =>
+        HttpResponse.json({
+          session: {
+            id: 'ses-y',
+            agent: 'shell',
+            dev: 'lena',
+            startedAt: '2026-10-30T07:00:00.000Z',
+            gates: [],
+          },
+        }),
+      ),
+    );
+    visit('/sessions/ses-y');
+    const what = await screen.findByRole('region', { name: 'What it did' });
+    expect(what).not.toHaveTextContent('record only');
   });
 
   it('says when the session does not exist', async () => {
