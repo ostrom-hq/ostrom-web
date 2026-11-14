@@ -2,7 +2,7 @@
 import type { Approval } from '@gen/api/types.gen';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';

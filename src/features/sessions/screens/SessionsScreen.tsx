@@ -2,7 +2,7 @@
 import type { Session } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute, formatDuration, formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';

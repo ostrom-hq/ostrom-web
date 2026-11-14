@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId, useState } from 'react';
-import type { TFunction } from 'i18next';
-import { useTranslation } from 'react-i18next';
+import type { TFunction } from '@/shared/i18n/instance';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';

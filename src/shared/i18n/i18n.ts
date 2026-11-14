@@ -1,6 +1,5 @@
-import i18n, { type BackendModule, type i18n as I18n } from 'i18next';
-import { initReactI18next } from 'react-i18next';
 import { takeFirstWording, type Wording } from '@/shared/i18n/firstWording';
+import { createI18n, type I18n } from '@/shared/i18n/instance';
 import { type Language, LANGUAGES, type LocaleShape } from '@/shared/i18n/types';
 
 export function pickLanguage(candidates: readonly string[]): Language {
@@ -28,85 +27,98 @@ const WORDINGS: Wordings = {
 /** The first screen's wording `/boot.js` fetched for a language, if any (src/shared/i18n/firstWording.ts). */
 type FirstWording = (language: Language) => Promise<Wording | undefined> | undefined;
 
-/** Adds a language's whole wording to what i18next already has of it. */
-type MergeWording = (language: Language, wording: LocaleShape) => void;
-
-/** Into the console's i18next, over the first screen's own words (react-i18next renders again on `added`). */
-const mergeIntoConsole: MergeWording = (language, wording) => {
-  i18n.addResourceBundle(language, 'translation', wording, true, true);
-};
-
 /**
- * Hands i18next a language's wording when it needs it: at start, and when the person picks another language.
- *
- * At start, the first screen's own wording, if `/boot.js` fetched it: only the sections that screen shows, a few KB
- * where the whole language is some twenty, and so the first paint comes sooner on a slow network. The whole
- * language follows once that is handed over, merged in (react-i18next renders again on `added`), for every other
- * screen. Without it, or if it did not come, the whole language at once, as before.
+ * A chunk that did not come (a network drop) is asked twice more, 350 ms then 700 ms later, before English takes
+ * over: about a second.
  */
-export function wordingBackend(
-  wordings: Wordings = WORDINGS,
-  first: FirstWording = takeFirstWording,
-  merge: MergeWording = mergeIntoConsole,
-): BackendModule {
-  return {
-    type: 'backend',
-    init: () => undefined,
-    read(language, _namespace, callback) {
-      const known = LANGUAGES.find((one) => one === language);
-      if (known === undefined) {
-        callback(new Error(`no wording for the language ${language}`), false);
-        return;
-      }
-      const whole = async (): Promise<void> =>
-        wordings[known]().then(
-          (wording) => {
-            callback(null, wording);
-          },
-          // `true`: a chunk that did not come (a network drop) is asked again, a few times, before giving up.
-          (error: unknown) => {
-            callback(new Error(`the wording of ${known} did not load`, { cause: error }), true);
-          },
-        );
-      const early = first(known);
-      if (early === undefined) {
-        void whole();
-        return;
-      }
-      void early.then(async (wording) => {
-        if (wording === undefined) {
-          await whole();
-          return;
-        }
-        callback(null, wording);
-        await wordings[known]().then(
-          (all) => {
-            merge(known, all);
-          },
-          // The first screen keeps its words; another screen opened without network could not load either.
-          () => undefined,
-        );
-      });
-    },
-  };
+const RETRY_DELAYS_MS: readonly number[] = [350, 700];
+
+/** Brings a language's wording in, and says whether it could. */
+export type LoadWording = (language: string) => Promise<boolean>;
+
+async function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+/** A language's whole wording, asked again after each of `delays` when it does not come. */
+async function wholeWording(
+  load: () => Promise<LocaleShape>,
+  delays: readonly number[],
+): Promise<LocaleShape | undefined> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await load();
+    } catch {
+      const delay = delays[attempt];
+      if (delay === undefined) return undefined;
+      await wait(delay);
+    }
+  }
 }
 
 /**
+ * Hands `instance` a language's wording when it needs it: at start, and when the person picks another language.
+ *
+ * At start, the first screen's own wording, if `/boot.js` fetched it: only the sections that screen shows, a few KB
+ * where the whole language is some twenty, and so the first paint comes sooner on a slow network. The whole
+ * language follows once that is handed over, merged in (the screens render again on `added`), for every other
+ * screen. Without it, or if it did not come, the whole language at once, as before.
+ */
+export function wordingLoader(
+  instance: I18n,
+  wordings: Wordings = WORDINGS,
+  first: FirstWording = takeFirstWording,
+  retryDelays: readonly number[] = RETRY_DELAYS_MS,
+): LoadWording {
+  return async (language) => {
+    const known = LANGUAGES.find((one) => one === language);
+    if (known === undefined) return Promise.resolve(false);
+    const whole = async (): Promise<boolean> => {
+      const wording = await wholeWording(wordings[known], retryDelays);
+      if (wording === undefined) return false;
+      instance.addResourceBundle(known, wording);
+      return true;
+    };
+    // Asked at once, not after a turn: the first render waits for this very read.
+    const early = first(known);
+    if (early === undefined) return whole();
+    return early.then(async (wording) => {
+      if (wording === undefined) return whole();
+      instance.addResourceBundle(known, wording);
+      // The first screen keeps its words; another screen opened without network could not load either.
+      void wordings[known]().then(
+        (all) => {
+          instance.addResourceBundle(known, all);
+        },
+        () => undefined,
+      );
+      return true;
+    });
+  };
+}
+
+/** The console's words: its language is shown as soon as it is picked, before any wording is in (`t` gives keys). */
+export const i18n: I18n = createI18n(pickLanguage(navigator.languages));
+
+const loadWording: LoadWording = wordingLoader(i18n);
+
+/**
  * Shows `language` once its wording is in, and says whether it could. A wording that does not come (a network drop,
- * after i18next asked again) leaves the screen on the words it has; it is asked for anew the next time, as i18next
- * would otherwise never ask again for a language that failed once.
+ * after the retries) leaves the screen on the words it has; it is asked for anew the next time.
  */
 export async function showLanguage(
   language: Language,
   instance: I18n = i18n,
   stillWanted: () => boolean = () => true,
+  load: LoadWording = loadWording,
 ): Promise<boolean> {
-  if (!instance.hasResourceBundle(language, 'translation'))
-    await instance.reloadResources(language, 'translation');
-  if (!instance.hasResourceBundle(language, 'translation')) return false;
+  if (!instance.hasResourceBundle(language)) await load(language);
+  if (!instance.hasResourceBundle(language)) return false;
   // A newer change asked for while this wording came wins: an older one never shows over it.
   if (!stillWanted()) return false;
-  await instance.changeLanguage(language);
+  instance.changeLanguage(language);
   return true;
 }
 
@@ -114,9 +126,12 @@ export async function showLanguage(
  * At start, a language whose wording did not come gives way to English, the console's first language. Without English
  * either (no network at all), the console shows its keys: the screens could not load their data anyway.
  */
-export async function englishIfMissing(instance: I18n = i18n): Promise<void> {
-  if (instance.hasResourceBundle(instance.language, 'translation')) return;
-  await showLanguage('en', instance);
+export async function englishIfMissing(
+  instance: I18n = i18n,
+  load: LoadWording = loadWording,
+): Promise<void> {
+  if (instance.hasResourceBundle(instance.language)) return;
+  await showLanguage('en', instance, () => true, load);
 }
 
 /** The person changes the browser's language: the console follows, once that wording is in. */
@@ -127,33 +142,15 @@ export function followBrowserLanguage(): void {
 }
 
 i18n.on('languageChanged', syncDocumentLanguage);
+syncDocumentLanguage(i18n.language);
 
 /**
  * Settles once the wording of the language shown is in (or English's, englishIfMissing). The console renders only
  * then (main.tsx): no English replaced by French a moment later.
  */
-export const i18nReady: Promise<void> = i18n
-  .use(wordingBackend())
-  .use(initReactI18next)
-  .init({
-    lng: pickLanguage(navigator.languages),
-    // No fallback: every language has every key (LocaleShape), and a fallback would download English for French too.
-    fallbackLng: false,
-    supportedLngs: LANGUAGES,
-    interpolation: { escapeValue: false },
-    // A chunk that did not come is asked twice more, 350 ms then 700 ms later, before English takes over: about a
-    // second, not the eleven of i18next's five tries.
-    maxRetries: 2,
-    // The whole language merged in after the first screen's own wording (wordingBackend): the screens show it.
-    react: { bindI18nStore: 'added' },
-    // Asks the backend for the wording at once, not on a timer: the first render waits for this very read, and on a
-    // slow phone a timer set while the entry runs fires only after the tasks queued behind it.
-    initAsync: false,
-  })
+export const i18nReady: Promise<void> = loadWording(i18n.language)
   .then(async () => englishIfMissing())
   .then(() => {
     // Listened to once the start is settled: a change during it would race the start's own wording.
     window.addEventListener('languagechange', followBrowserLanguage);
   });
-
-export { i18n };

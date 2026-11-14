@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 /** What a variant is, who receives it and where it reaches a session, as TeamCode's page opens with. */
 export function EnvironmentHelp(): ReactElement {

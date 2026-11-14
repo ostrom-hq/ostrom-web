@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement, ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
 /** TeamCode's "How this works": what the screen does, folded away until the person wants it. */
 export function Help({ children }: { readonly children: ReactNode }): ReactElement {

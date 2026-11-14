@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute } from '@/shared/lib/time';
 import { WithOrg } from '@/shared/org/WithOrg';

@@ -3,7 +3,7 @@ import { capabilitiesQueryKey, logoutMutation } from '@gen/api/@tanstack/react-q
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { failureOf } from '@/shared/api/failureOf';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { CONSOLE_API_VERSION, type ServerStatus } from '@/shared/capabilities';

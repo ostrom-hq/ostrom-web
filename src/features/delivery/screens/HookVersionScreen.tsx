@@ -2,7 +2,7 @@
 import type { ArtifactFileContent } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { Administrators } from '../components/Administrators';

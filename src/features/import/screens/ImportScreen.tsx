@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Banner } from '@/shared/ui/Banner';

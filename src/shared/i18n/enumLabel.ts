@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { i18n as I18n } from 'i18next';
-import { useTranslation } from 'react-i18next';
+import type { I18n } from '@/shared/i18n/instance';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 
-/** Values an interpolated label takes, as i18next's `{{name}}`. */
+/** Values an interpolated label takes, as `{{name}}`. */
 export type LabelVars = Readonly<Record<string, string>>;
 
 const FALLBACK_LANGUAGE = 'en';
 
 function wordingOf(i18n: I18n, key: string): string | undefined {
   for (const language of [i18n.language, FALLBACK_LANGUAGE]) {
-    const found: unknown = i18n.getResource(language, 'translation', key);
+    const found: unknown = i18n.getResource(language, key);
     if (typeof found === 'string') return found;
   }
   return undefined;

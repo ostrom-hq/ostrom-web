@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Link, useNavigate } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { WorkflowEditor } from '../components/WorkflowEditor';
 import { WorkflowFailure } from '../components/WorkflowFailure';
