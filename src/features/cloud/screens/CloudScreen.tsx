@@ -10,8 +10,8 @@ import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { GithubAccessControl } from '../components/GithubAccessControl';
 import { SessionRow } from '../components/SessionRow';
 import { StartSessionForm } from '../components/StartSessionForm';
-import { isLive, mayChange } from '../model';
-import { useCloud, useGithubAccess, useSessionChange } from '../useCloud';
+import { isLive, mayChange, startRefusalOf } from '../model';
+import { useCloud, useGithubAccess, useSessionChange, useStartProfiles } from '../useCloud';
 import './cloud.css';
 
 /** Agents that run on the organization's runners, not on a laptop: start one, follow it, stop it. */
@@ -20,12 +20,14 @@ export function CloudScreen(): ReactElement {
   const view = useCloud();
   const change = useSessionChange();
   const github = useGithubAccess();
+  const { profiles } = useStartProfiles();
+  const refusal = change.failure === undefined ? undefined : startRefusalOf(change.failure);
   const now = useNow();
   return (
     <Screen title={t('cloud.title')} lead={t('cloud.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('cloud.errorTag')} live>
-          {change.failure.message}
+          {refusal === undefined ? change.failure.message : t(`cloud.start.refusal.${refusal}`)}
         </Banner>
       )}
       <StartSessionForm change={change} />
@@ -42,6 +44,7 @@ export function CloudScreen(): ReactElement {
                       session={session}
                       now={now}
                       busy={change.stopping === session.id}
+                      profileName={profiles?.find((item) => item.id === session.profile?.id)?.name}
                       onStop={
                         isLive(session) && mayChange(session.owner, view.viewer, view.canManage)
                           ? () => {
