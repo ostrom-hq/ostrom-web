@@ -4,7 +4,6 @@
 // organization never sees them. The cap of automation sessions per member (ostrom-server#502) is not asserted here:
 // it is added once the server serves it.
 import { expect, test } from '@playwright/test';
-import { z } from 'zod';
 import { zCloudSettings } from '../gen/api/zod.gen';
 import {
   anotherPerson,
@@ -66,6 +65,9 @@ test('an owner saves the organization’s cloud settings and reads them back, a 
     org,
   );
   expect(refused.status).toBe(403);
+  // And nothing was written: the owner still reads 45.
+  const after = await callFromPage(page, 'GET', '/api/v1/cloud/settings', undefined, org);
+  expect(zCloudSettings.parse(after.body).backgroundWorkMaxMinutes).toBe(45);
 });
 
 test('another organization never sees the first one’s cloud settings', async ({ page, browser }) => {
@@ -87,13 +89,16 @@ test('another organization never sees the first one’s cloud settings', async (
   // Their own, still the default: nothing of the first organization's 15.
   await expect(settings.getByLabel(/^Background work/)).toHaveValue(String(DEFAULT_MINUTES));
   const own = await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, theirOrg);
-  expect(z.object({ backgroundWorkMaxMinutes: z.number() }).parse(own.body).backgroundWorkMaxMinutes).toBe(
-    DEFAULT_MINUTES,
-  );
-  // Naming the first organization opens nothing either.
+  expect(own.status, shown(own.body)).toBe(200);
+  expect(zCloudSettings.parse(own.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
+  // Naming the first organization opens nothing either, and writes nothing there.
   expect((await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, org)).status).toBe(404);
   expect(
     (await callFromPage(stranger, 'PUT', '/api/v1/cloud/settings', { backgroundWorkMaxMinutes: 1 }, org))
       .status,
   ).toBe(404);
+  const first = await callFromPage(page, 'GET', '/api/v1/cloud/settings', undefined, org);
+  expect(zCloudSettings.parse(first.body).backgroundWorkMaxMinutes).toBe(15);
+  const mine = await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, theirOrg);
+  expect(zCloudSettings.parse(mine.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
 });
