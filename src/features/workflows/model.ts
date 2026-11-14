@@ -12,7 +12,6 @@ import type {
   WorkflowStatus,
 } from '@gen/api/types.gen';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
-import { z } from 'zod';
 import type { BadgeTone } from '@/shared/ui/Badge';
 import {
   CONDITION_OPS,
@@ -372,14 +371,14 @@ export function limitOf(text: string, key: LimitKey): number | undefined | 'inva
 const DOMAIN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
 /** The repository of a step, `owner/name` where `*` stands for any part of a name. */
 const REPOSITORY = /^[A-Za-z0-9_.*-]+\/[A-Za-z0-9_.*-]+$/;
-const zSchemaObject = z.record(z.string(), z.unknown());
 
 /** The JSON schema a person wrote for a `json` deliverable: an object, or undefined when it is not one. */
 export function schemaOf(text: string): Record<string, unknown> | undefined {
   try {
     const parsed: unknown = JSON.parse(text);
-    const object = zSchemaObject.safeParse(parsed);
-    return object.success ? object.data : undefined;
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? Object.fromEntries(Object.entries(parsed))
+      : undefined;
   } catch {
     return undefined;
   }

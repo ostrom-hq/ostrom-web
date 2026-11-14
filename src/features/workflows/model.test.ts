@@ -714,6 +714,8 @@ describe('delivery fields of the editor', () => {
   it('reads a schema object only', () => {
     expect(schemaOf('{"a":1}')).toEqual({ a: 1 });
     expect(schemaOf('[1]')).toBeUndefined();
+    expect(schemaOf('null')).toBeUndefined();
+    expect(schemaOf('3')).toBeUndefined();
     expect(schemaOf('{')).toBeUndefined();
   });
 

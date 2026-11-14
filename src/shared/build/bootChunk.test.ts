@@ -37,20 +37,25 @@ describe('bootChunkOf', () => {
     expect(bootChunkOf('/w/src/features/gone.ts', graph)).toBeNull();
   });
 
-  it('puts what the screens share in the boot chunk, but not a language, which comes on its own', () => {
+  it('puts what the screens share beside the entry, but not a language, which comes on its own', () => {
     const graph = graphOf({});
-    expect(bootChunkOf('/w/src/shared/ui/Screen.tsx', graph)).toBe('boot');
-    expect(bootChunkOf('C:\\w\\src\\shared\\org\\useCurrentOrg.ts', graph)).toBe('boot');
+    expect(bootChunkOf('/w/src/shared/ui/Screen.tsx', graph)).toBe('shared');
+    expect(bootChunkOf('C:\\w\\src\\shared\\org\\useCurrentOrg.ts', graph)).toBe('shared');
     expect(
       bootChunkOf(
         '/w/node_modules/.pnpm/@tanstack+react-query@5/node_modules/@tanstack/react-query/build/useInfiniteQuery.js',
         graph,
       ),
-    ).toBe('boot');
+    ).toBe('shared');
     expect(bootChunkOf('/w/node_modules/@tanstack/query-core/build/infiniteQueryObserver.js', graph)).toBe(
-      'boot',
+      'shared',
     );
     expect(bootChunkOf('/w/src/shared/i18n/locales/fr.ts', graph)).toBeNull();
+  });
+
+  it('keeps a shared part the entry imports in the boot chunk', () => {
+    const graph = graphOf({ [MAIN]: [], '/w/src/shared/ui/Page.tsx': [MAIN] });
+    expect(bootChunkOf('/w/src/shared/ui/Page.tsx', graph)).toBe('boot');
   });
 
   it('follows an import cycle without looping, and still finds the entry past it', () => {
@@ -84,7 +89,7 @@ describe('bootChunkOf', () => {
     expect(asked).toEqual(['/w/src/features/y.ts', '/w/src/features/x.ts', MAIN]);
   });
 
-  it('puts a small part two features use in the boot chunk, and leaves one a single feature uses to it', () => {
+  it('puts a small part two features use in the shared chunk, and leaves one a single feature uses to it', () => {
     const part = (name: string): string => `\0part#${name}`;
     const graph = graphOf({
       [MAIN]: [],
@@ -100,7 +105,7 @@ describe('bootChunkOf', () => {
       ],
     });
     const small = (id: string): boolean => id.startsWith('\0part#');
-    expect(bootChunkOf(part('listRules'), graph, new Map(), small)).toBe('boot');
+    expect(bootChunkOf(part('listRules'), graph, new Map(), small)).toBe('shared');
     expect(bootChunkOf(part('getSpend'), graph, new Map(), small)).toBeNull();
     // Shared, but not small: left to the automatic splitting.
     expect(bootChunkOf('/w/node_modules/chart/index.js', graph, new Map(), small)).toBeNull();

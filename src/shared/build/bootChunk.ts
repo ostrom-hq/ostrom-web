@@ -24,15 +24,19 @@ const SHARED =
 const FEATURE = /[\\/]src[\\/]features[\\/]([^\\/]+)[\\/]/;
 
 /**
- * The boot chunk's rule (vite.config.ts): everything the entry loads anyway, and every part the screens share. Shared
- * parts left to the automatic splitting became a dozen files of under a kilobyte each (the page, the current
- * organization, a list's "show more"), and a screen asked for up to nine of them: on a slow link each waits for one of
- * the six connections behind the entry, a round trip each. In the boot chunk they cost a few kilobytes, once. A
- * screen's own code stays in its chunk, loaded when it opens.
+ * The chunking rule (vite.config.ts): everything the entry loads anyway goes in the boot chunk; every other part the
+ * screens share goes in one `shared` chunk, beside it. Shared parts left to the automatic splitting became a dozen
+ * files of under a kilobyte each (the page, the current organization, a list's "show more"), and a screen asked for up
+ * to nine of them: on a slow link each waits for one of the six connections behind the entry, a round trip each. In
+ * one chunk they cost a few kilobytes, once, preloaded with the first screen's own chunk (/boot.js).
  *
- * A module `shareable` says is small (a generated call or schema, src/shared/build/splitModule.ts) is in the boot chunk
- * too once the screens of two features use it: left to the automatic splitting, each such set became a file of its
- * own, and `/` asked for four of them.
+ * They are not in the entry itself: every first download then carried them, and ran them before the first screen, used
+ * or not. As the console grew (the generated calls and schemas of each feature shared by two of them), the entry did
+ * too, and the largest paint on Fast 3G with a CPU four times slower went past 2.5 s (e2e-real/vitals.spec.ts).
+ *
+ * A module `shareable` says is small (a generated call or schema, src/shared/build/splitModule.ts) is in the shared
+ * chunk too once the screens of two features use it: left to the automatic splitting, each such set became a file of
+ * its own, and `/` asked for four of them.
  *
  * Returns the group's name for `id`, or `null` to leave the module to the automatic splitting. The answers of a build
  * are kept in `known`: one build, one graph.
@@ -42,9 +46,10 @@ export function bootChunkOf(
   graph: ModuleGraph,
   known = new Map<string, boolean>(),
   shareable: (id: string) => boolean = () => false,
-): 'boot' | null {
-  if (SHARED.test(id) || loadedWithEntry(id, graph, known)) return 'boot';
-  return shareable(id) && featuresUsing(id, graph, new Set()).size > 1 ? 'boot' : null;
+): 'boot' | 'shared' | null {
+  if (loadedWithEntry(id, graph, known)) return 'boot';
+  if (SHARED.test(id)) return 'shared';
+  return shareable(id) && featuresUsing(id, graph, new Set()).size > 1 ? 'shared' : null;
 }
 
 /** The features whose modules import `id`, directly or through modules of no feature. */

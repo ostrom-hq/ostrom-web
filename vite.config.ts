@@ -114,11 +114,15 @@ const LANGUAGE_MODULE = /[\\/]src[\\/]shared[\\/]i18n[\\/]locales[\\/]([a-z]{2})
 
 /**
  * The reads every signed-in screen's first paint waits for, as the console asks them at its start (vitals.spec.ts
- * lists them): who is signed in, their organizations, and who they are in the one they chose and kept.
+ * lists them): who is signed in, their organizations, and who they are in the one they chose and kept. And what the
+ * server serves (`/capabilities`): the console asks it once `/auth/me` says someone is signed in, and the reads of a
+ * feature the server announces (the badge of waits) wait for it; asked here, beside `/auth/me`, it is in when the
+ * console asks, instead of a third call in the chain (loading.spec.ts).
  */
 const FIRST_READS: readonly BootCall[] = [
   { path: '/api/v1/auth/me', org: 'none' },
   { path: '/api/v1/me/organizations', org: 'none' },
+  { path: '/api/v1/capabilities', org: 'none' },
   { path: '/api/v1/auth/me', org: 'chosen' },
 ];
 
@@ -242,11 +246,11 @@ function preloadBoot(): Plugin {
       const entry = new Set<string>();
       for (const chunk of chunks) if (chunk.isEntry) closure(chunk.fileName, entry);
       const sectionsOf = new Map<string, ReadonlySet<string>>();
-      const sectionNames = Object.keys(words.get('en') ?? {});
+      const english = words.get('en') ?? {};
       const named = (file: string): ReadonlySet<string> => {
         const known = sectionsOf.get(file);
         if (known !== undefined) return known;
-        const found = sectionsIn(byName.get(file)?.code ?? '', sectionNames);
+        const found = sectionsIn(byName.get(file)?.code ?? '', english);
         sectionsOf.set(file, found);
         return found;
       };
@@ -401,9 +405,9 @@ export default defineConfig({
               test: /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?zod[\\/]|[\\/]src[\\/]shared[\\/]lib[\\/]zodConfig\.ts$/,
             },
             // Everything the entry loads anyway in one chunk (react, the router, i18n, the API client), and the parts
-            // the screens share (src/shared/build/bootChunk.ts): on a slow link, fifteen small files share the
-            // bandwidth and each waits its turn, where one comes in a single response. What a lazy screen alone uses
-            // stays in its own chunk.
+            // the screens share in one more, beside it (src/shared/build/bootChunk.ts): on a slow link, fifteen small
+            // files share the bandwidth and each waits its turn, where one comes in a single response. What a lazy
+            // screen alone uses stays in its own chunk.
             {
               name: (id, graph) =>
                 bootChunkOf(id, graph, initialModules, (module) => module.startsWith(GENERATED_PART)),
