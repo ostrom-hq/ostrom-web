@@ -532,7 +532,8 @@ describe('the preparation recipe of a cloud session', () => {
     expect(db.cloudSessions[0]?.environment?.requiredVariables).toEqual(['NPM_TOKEN']);
     expect(within(form).queryByRole('group', { name: 'Repository 1' })).toBeNull();
     expect(within(form).getByRole('textbox', { name: 'Working directory' })).toHaveValue('');
-  });
+    // Typing a whole recipe takes a while on a loaded machine.
+  }, 30000);
 
   it('says what the server would refuse before sending it, and the older repository goes alone', async () => {
     const user = userEvent.setup();

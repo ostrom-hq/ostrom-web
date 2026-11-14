@@ -1085,6 +1085,11 @@ describe('mock cloud agents and automations', () => {
       throwOnError: true,
     });
     expect(together.data.environment).toEqual({ requireGitHub: true, setup: { create: ['make deps'] } });
+    const named = await createCloudSession({
+      body: { agent: 'claude', environment: { requiredVariables: ['NPM_TOKEN'] } },
+      throwOnError: true,
+    });
+    expect(named.data.environment).toEqual({ requiredVariables: ['NPM_TOKEN'] });
     const both = await fetch('http://ostrom.test/api/v1/cloud/sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
