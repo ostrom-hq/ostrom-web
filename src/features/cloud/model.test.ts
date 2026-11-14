@@ -146,6 +146,8 @@ describe('versionedUrl', () => {
   });
   it('gives nothing for an address that is not a trigger', () => {
     expect(versionedUrl('https://x.io/hook', 'latest', 1)).toBeUndefined();
+  });
+});
 
 describe('the image a session may run', () => {
   const profile = (allowed: string[]): CloudProfile => ({

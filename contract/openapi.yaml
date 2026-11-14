@@ -2106,7 +2106,7 @@ paths:
   /api/v1/github/app/configuration:
     get:
       operationId: getGithubAppConfiguration
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - github
       summary: The instance's GitHub App, as an administrator entered it or the manifest flow created it
@@ -2127,14 +2127,15 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: saveGithubAppConfiguration
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - github
       summary: Enter the instance's GitHub App by hand, or change it
       description: 'A person who administers the instance, signed in as a person (TeamCode''s `PUT /api/v1/github/app`).
         `version` absent or null creates the App (the private key and the client secret are then required); otherwise
         it must be the stored `version`, else 409 `github_app_conflict`. A null or absent secret keeps the stored one;
-        another `clientId` needs its own `clientSecret`. 400 `invalid_github_app` for an App ID outside
+        another `clientId` needs its own `clientSecret`, another `appId` its own private key (GitHub refuses the former
+        App''s, 422) and keeps no webhook secret. 400 `invalid_github_app` for an App ID outside
         1..999999999999, a client ID that is not a GitHub App''s (`Iv` then 2 to 62 of `[0-9A-Za-z._-]`), a client
         secret outside 20..256 characters or with a space or a control character, or a private key over 16384
         characters or not PEM. The App is checked with GitHub (its JWT signed by the key) before it is stored, which
@@ -9796,8 +9797,17 @@ paths:
         `NODE_OPTIONS`, `NODE_PATH`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `PYTHONPATH`,
         `PYTHONSTARTUP`, `PYTHONHOME`, `PERL5OPT`, `PERL5LIB`, `RUBYOPT`, `RUBYLIB`, `GIT_SSH`, `GIT_SSH_COMMAND`,
         `GIT_EXEC_PATH`, `GIT_CONFIG_GLOBAL`, `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`,
-        `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`, and the prefixes `LD_`, `DYLD_`, `OSTROM_`,
-        `TEAMCODE_`, `ANTHROPIC_`, `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_` (personal variants too). The
+        `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`; what else steers the loader or a runtime
+        (`GLIBC_TUNABLES`, `NODE_TLS_REJECT_UNAUTHORIZED`, `NODE_ICU_DATA`, `ELECTRON_RUN_AS_NODE`, `PYTHONUSERBASE`,
+        `PYTHONEXECUTABLE`, `PYTHONPLATLIBDIR`, `PYTHONBREAKPOINT`, `PERL5DB`, `CLASSPATH`, `DOTNET_STARTUP_HOOKS`,
+        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`), the
+        shell (`OLDPWD`, `SHELLOPTS`, `BASHOPTS`, `CDPATH`, `GLOBIGNORE`, `PS4`, `ZDOTDIR`), Git, SSH and the GitHub CLI
+        (`GIT_TERMINAL_PROMPT`, `GH_CONFIG_DIR`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`,
+        `GIT_PAGER`, `GIT_EDITOR`, `GIT_SEQUENCE_EDITOR`, `GIT_TEMPLATE_DIR`, `GIT_DIR`, `GIT_WORK_TREE`,
+        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`) or an agent's
+        tools (`RIPGREP_CONFIG_PATH`); and the prefixes `LD_`, `DYLD_`, `OSTROM_`, `TEAMCODE_`, `ANTHROPIC_`,
+        `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_`, `BASH_FUNC_` (personal variants too). A variant stored
+        under a name reserved later is never served to an agent, and can still be unassigned or deleted. The
         runner's own commands (clone, fetch, setup) never see a variable named with `GIT_`, `GH_` or `SSH_`, so a
         value cannot redirect the credential socket. At most 500 team variants (409 `variant_limit`). An owner or an admin from
         the console (scope `secrets:write`, step-up). The value is encrypted at rest with the secrets key (AES-256-GCM,
@@ -19084,7 +19094,7 @@ components:
       x-ostrom-kotlin: pending
     BillingPlanLimits:
       type: object
-      description: 'The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.'
+      description: 'The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster''s `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.'
       properties:
         maxPeople:
           type: [integer, 'null']
@@ -19499,12 +19509,11 @@ components:
           $ref: '#/components/schemas/InstanceSecretState'
         inCluster:
           type: boolean
-          x-ostrom-status: planned
           description: "Whether the cluster is the server's own, reached with the server pod's mounted service account
             (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet
             rotates them, and nothing is stored. Only the cluster imported once from the former
             `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster.
-            TeamCode has no such mode (it never read the cluster from variables). Absent means false. Planned"
+            TeamCode has no such mode (it never read the cluster from variables). Absent means false"
         createdAt:
           type: string
           format: date-time
@@ -19834,8 +19843,9 @@ components:
           type: [string, 'null']
           minLength: 1
           maxLength: 256
-          description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one. Optional, as an
-            App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)'
+          description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same
+            `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned
+            off: without it every webhook is refused (`webhookSecretSet` false)'
         version:
           type: [integer, 'null']
           description: The stored `version`; null or absent to create the App
@@ -19996,9 +20006,8 @@ components:
           $ref: '#/components/schemas/CloudSessionProfile'
         image:
           type: string
-          x-ostrom-status: planned
           description: "The session image its containers run, the profile's or the override asked at creation
-            (`runners.cloud.profiles.v1`). Absent from a session without a profile. Planned"
+            (`runners.cloud.profiles.v1`). Absent from a session without a profile"
         githubAccess:
           type: string
           enum:
@@ -20024,9 +20033,8 @@ components:
       - createdAt
     CloudSessionProfile:
       type: object
-      x-ostrom-status: planned
       description: "The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`,
-        TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned"
+        TeamCode's `profile {id, version}`). Absent from a session without a profile"
       properties:
         id:
           type: string
@@ -20072,7 +20080,6 @@ components:
         profileId:
           type: string
           format: uuid
-          x-ostrom-status: planned
           description: "The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`,
             `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace,
             at its current version, which the session keeps (TeamCode's `profileId`). 404
@@ -20084,13 +20091,12 @@ components:
             again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler
             checks both again at each later start, where they become the session's `failure.code` (a first
             start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on
-            registered runners. Planned: the server does not read it yet"
+            registered runners"
         image:
           type: string
-          x-ostrom-status: planned
           description: "The session image instead of the profile's: the profile's image, or one matching
             its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed`
-            otherwise. Absent: the profile's image. Planned: the server does not read it yet"
+            otherwise. Absent: the profile's image"
       required:
       - agent
     CloudSessionFailure:
@@ -20099,8 +20105,9 @@ components:
       properties:
         code:
           type: string
-          description: start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed,
-            cluster_unavailable or namespace_not_allowed (the profile's cluster or namespace at a start, planned)
+          description: "start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed,
+            cluster_unavailable, namespace_not_allowed or server_url_missing (a session on a cloud profile whose
+            cluster stopped opening, whose namespace is no longer allowed, or whose runner has no server URL)"
         message:
           type: string
         retryable:
