@@ -559,6 +559,9 @@ describe('the preparation recipe of a cloud session', () => {
       'git@github.com:acme/api',
     );
     await user.clear(within(form).getByRole('textbox', { name: 'Repository' }));
+    // Folded, the recipe still says why the agent cannot start: the message stands beside the button.
+    await user.click(within(form).getByText('Preparation recipe'));
+    expect(within(form).getByRole('textbox', { name: 'Working directory' })).not.toBeVisible();
     expect(within(form).getByRole('alert')).toHaveTextContent(
       'Use an https://github.com/<owner>/<name> clone URL',
     );
@@ -623,6 +626,7 @@ describe('the preparation recipe of a cloud session', () => {
     );
     expect(row('Idle')).toHaveTextContent('Paused after 30 minutes without activity.');
     expect(row('Idle')).not.toHaveTextContent('scheduling');
+    expect(row('Clone again')).not.toHaveTextContent('cloning the repositories');
     expect(row('Idle')).not.toHaveTextContent('try');
   });
 });

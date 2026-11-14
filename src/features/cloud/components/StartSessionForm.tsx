@@ -78,7 +78,13 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
             }}
           />
         </div>
-        {recipes ? <RecipeFields draft={recipe} onChange={setRecipe} problem={problem} /> : null}
+        {recipes ? <RecipeFields draft={recipe} onChange={setRecipe} /> : null}
+        {problem === undefined ? null : (
+          // Beside the button it holds, even with the recipe folded: the older Repository field alone can cause it.
+          <p className="cl-recipe__problem" role="alert">
+            {t(`cloud.recipe.problem.${problem}`)}
+          </p>
+        )}
         <div className="o-inline">
           <label htmlFor={ids.agent} className="o-field-label">
             {t('cloud.start.agent')}

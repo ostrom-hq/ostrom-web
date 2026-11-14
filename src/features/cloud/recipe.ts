@@ -61,11 +61,21 @@ export type RecipeProblem =
 export type RecipeCheck =
   { readonly problem: RecipeProblem } | { readonly environment: CloudEnvironment | undefined };
 
-function lines(text: string): string[] {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line !== '');
+/**
+ * One command a line; a line ending with a backslash goes on with the next one, as in a shell, so a long command keeps
+ * its continuation and its indentation.
+ */
+function commands(text: string): string[] {
+  const found: string[] = [];
+  let current: string[] = [];
+  for (const line of text.split('\n')) {
+    current.push(line);
+    if (line.trimEnd().endsWith('\\')) continue;
+    found.push(current.join('\n').trim());
+    current = [];
+  }
+  if (current.length > 0) found.push(current.join('\n').trim());
+  return found.filter((command) => command !== '');
 }
 
 function names(text: string): string[] {
@@ -145,8 +155,8 @@ export function checkRecipe(draft: RecipeDraft, repo: string): RecipeCheck {
   if (nested(repositories)) return { problem: 'nested' };
   const workingDirectory = draft.workingDirectory.trim();
   if (workingDirectory !== '' && !validPath(workingDirectory)) return { problem: 'path' };
-  const create = lines(draft.create);
-  const start = lines(draft.start);
+  const create = commands(draft.create);
+  const start = commands(draft.start);
   if (
     [create, start].some(
       (commands) =>
@@ -183,9 +193,15 @@ export function checkRecipe(draft: RecipeDraft, repo: string): RecipeCheck {
 export const PREPARATION_PHASES = knownValues(zRunnerPreparationReport.shape.phase);
 export type PreparationPhase = (typeof PREPARATION_PHASES)[number];
 
+/** The statuses of a session on its way to running (the contract's and the console's older ones). */
+const PREPARING = new Set(['queued', 'starting', 'creating', 'resuming', 'running']);
+
 /** The preparation step a session is in, when it is one the console has words for. */
 export function preparationOf(session: CloudSession): PreparationPhase | undefined {
   const phase = session.phase;
+  // A session that failed, paused or ended may keep the phase it stopped in: it is no longer being prepared.
+  if (session.failure !== undefined || session.endedAt !== undefined || !PREPARING.has(session.status))
+    return undefined;
   return phase !== undefined && isKnown(PREPARATION_PHASES, phase) ? phase : undefined;
 }
 

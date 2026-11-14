@@ -2,19 +2,11 @@
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/shared/ui/Button';
-import {
-  EMPTY_REPOSITORY,
-  MAX_REPOSITORIES,
-  type RecipeDraft,
-  type RecipeProblem,
-  type RepositoryDraft,
-} from '../recipe';
+import { EMPTY_REPOSITORY, MAX_REPOSITORIES, type RecipeDraft, type RepositoryDraft } from '../recipe';
 
 export interface RecipeFieldsProps {
   readonly draft: RecipeDraft;
   readonly onChange: (draft: RecipeDraft) => void;
-  /** What the server would refuse, said before the agent is started. */
-  readonly problem: RecipeProblem | undefined;
 }
 
 function RepositoryFields({
@@ -68,7 +60,7 @@ function RepositoryFields({
  * The preparation recipe of a session (`runners.cloud.environment.v1`): what the runner clones and runs before the agent
  * starts, the same at every resume. It holds no secret: variables are named, their values are the owner's.
  */
-export function RecipeFields({ draft, onChange, problem }: RecipeFieldsProps): ReactElement {
+export function RecipeFields({ draft, onChange }: RecipeFieldsProps): ReactElement {
   const { t } = useTranslation();
   const ids = {
     workingDirectory: useId(),
@@ -200,11 +192,6 @@ export function RecipeFields({ draft, onChange, problem }: RecipeFieldsProps): R
             />
           </span>
         </div>
-        {problem === undefined ? null : (
-          <p className="cl-recipe__problem" role="alert">
-            {t(`cloud.recipe.problem.${problem}`)}
-          </p>
-        )}
       </div>
     </details>
   );

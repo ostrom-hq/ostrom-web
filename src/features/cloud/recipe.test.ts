@@ -72,6 +72,16 @@ describe('a preparation recipe', () => {
     });
   });
 
+  it('keeps a command that goes on over several lines whole, as a shell would', () => {
+    expect(
+      checkRecipe(draft({ create: 'docker run \\\n  -e A=1 \\\n  img\nmake', start: 'echo \\' }), ''),
+    ).toEqual({
+      environment: {
+        setup: { create: ['docker run \\\n  -e A=1 \\\n  img', 'make'], start: ['echo \\'] },
+      },
+    });
+  });
+
   it('never names repositories together with the older single repository', () => {
     expect(problemOf({ repositories: [WEB] }, 'https://github.com/acme/api')).toBe('both');
     // A recipe without repositories goes with it.
@@ -136,6 +146,14 @@ describe('a session being prepared', () => {
     expect(preparationOf({ ...session, phase: 'running_setup' })).toBe('running_setup');
     expect(preparationOf({ ...session, phase: 'scheduling' })).toBeUndefined();
     expect(preparationOf(session)).toBeUndefined();
+    // A session no longer being prepared keeps the phase it stopped in: it is not shown.
+    const setup = { ...session, phase: 'running_setup' };
+    expect(preparationOf({ ...setup, status: 'resuming' })).toBe('running_setup');
+    expect(preparationOf({ ...setup, status: 'paused' })).toBeUndefined();
+    expect(preparationOf({ ...setup, endedAt: '2026-10-30T07:00:00.000Z' })).toBeUndefined();
+    expect(
+      preparationOf({ ...setup, failure: { code: 'preparation_failed', message: 'x' } }),
+    ).toBeUndefined();
   });
 
   it('says to try again only when the server says it may pass', () => {
