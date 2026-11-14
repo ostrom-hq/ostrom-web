@@ -55,19 +55,20 @@ function benchmarkIndex(): number {
 const BENCHMARKS = 5;
 
 /**
- * The CPU slowdown that brings this machine to Lighthouse's mobile device, from its BenchmarkIndex: the formula of
- * Lighthouse's CPU throttling calculator (lighthouse-cpu-throttling-calculator.vercel.app, linked from
- * docs/throttling.md), whose default ×4 is for a high-end desktop near 1,500. A fixed ×4 made the runner's own speed
- * part of the result: the same build measured 2,364 to 2,584 ms from one run to another. Below 150 the machine is too
- * slow to emulate that device, and the test says so rather than measure it.
+ * The phone the screens are measured on, by its BenchmarkIndex: what GitHub's runners (about 2,580) give with the CPU
+ * four times slower, which the budgets were set on. In Lighthouse's mid-tier mobile range (125 to 800,
+ * docs/throttling.md).
+ */
+const PHONE_INDEX = 640;
+
+/**
+ * The CPU slowdown that brings this machine to that phone, from its own BenchmarkIndex: a machine twice as fast is
+ * slowed twice as much, as DevTools' throttling divides the CPU time the page gets. A fixed ×4 made the runner's own
+ * speed part of the result. Lighthouse's calculator (lighthouse-cpu-throttling-calculator.vercel.app) targets a slower
+ * phone, near 300: ×8.5 on these runners. Slower than the phone already, the machine is measured unslowed.
  */
 function cpuSlowdownFor(index: number): number {
-  if (index >= 1_300) return 3 + (index - 1_300) / 233;
-  if (index >= 800) return 2 + (index - 800) / 500;
-  if (index >= 150) return 1 + (index - 150) / 650;
-  throw new Error(
-    `BenchmarkIndex ${String(index)}: this machine is too slow to emulate Lighthouse's mobile device`,
-  );
+  return Math.max(1, index / PHONE_INDEX);
 }
 /** Each screen is loaded this many times, cold; the median is kept. */
 const LOADS = 3;
