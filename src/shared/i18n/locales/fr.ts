@@ -1733,6 +1733,47 @@ export const fr = {
       },
       notPaused: 'Mets d’abord la session en pause : un agent qui tourne garde l’accès qu’il a déjà reçu.',
     },
+    phase: {
+      configuring_git: 'configuration de Git',
+      cloning_repositories: 'clonage des dépôts',
+      fetching_repositories: 'mise à jour des dépôts',
+      running_setup: 'préparation en cours',
+    },
+    preparation: {
+      retry: 'Un nouvel essai peut passer : reprenez la session pour réessayer.',
+      fix: 'Un nouvel essai échouera de même : corrigez d’abord la recette ou vos variables d’environnement.',
+    },
+    recipe: {
+      title: 'Recette de préparation',
+      lead: 'Ce que le runner prépare avant que l’agent démarre, à l’identique à chaque reprise. Elle ne contient aucun secret : nommez les variables, leurs valeurs sont les vôtres (Variables d’environnement).',
+      addRepository: 'Ajouter un dépôt',
+      repository: {
+        title: 'Dépôt {{number}}',
+        url: 'URL de clonage',
+        path: 'Dossier',
+        ref: 'Branche, tag ou commit',
+        branch: 'Nouvelle branche',
+        remove: 'Retirer le dépôt {{number}}',
+      },
+      workingDirectory: 'Dossier de travail',
+      requiredVariables: 'Variables requises',
+      create: 'Commandes de préparation, une fois par espace de travail (une par ligne)',
+      start: 'Commandes de préparation, à chaque démarrage (une par ligne)',
+      requireGitHub: 'Exiger un compte GitHub lié',
+      gitEmailDomain: 'Domaine de l’e-mail Git',
+      problem: {
+        both: 'Nommez les dépôts dans la recette ou dans Dépôt ci-dessus, pas les deux.',
+        repositories: 'Utilisez 16 dépôts au plus.',
+        url: 'Utilisez une URL de clonage https://github.com/<propriétaire>/<nom>, sans identifiants, requête ni fragment.',
+        path: 'Utilisez un chemin relatif sous l’espace de travail (lettres, chiffres, ., _, -), sans dossier commençant par un point.',
+        ref: 'Utilisez un nom de branche, de tag ou de commit valide.',
+        nested: 'Clonez chaque dépôt dans son propre dossier, jamais dans celui d’un autre.',
+        commands:
+          'Utilisez 16 commandes de préparation au plus par liste, de 4 096 caractères au plus chacune.',
+        variables: 'Nommez 64 variables requises distinctes au plus, en MAJUSCULES_AVEC_TIRETS_BAS.',
+        domain: 'Utilisez un nom DNS pour le domaine de l’e-mail Git.',
+      },
+    },
     runners: {
       title: 'Runners',
       empty:

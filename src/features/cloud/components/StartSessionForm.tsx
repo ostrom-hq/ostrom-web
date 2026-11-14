@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeature } from '@/shared/capabilities';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
 import { isPromptAgent, PROMPT_AGENTS, type PromptAgent } from '../model';
+import { checkRecipe, EMPTY_RECIPE, type RecipeDraft } from '../recipe';
 import type { SessionChangeViewModel } from '../useCloud';
+import { RecipeFields } from './RecipeFields';
 
 /** An agent on one of the organization's runners: what to do, where, and a name to find it again. */
 export function StartSessionForm({ change }: { readonly change: SessionChangeViewModel }): ReactElement {
@@ -13,6 +16,11 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
   const [prompt, setPrompt] = useState('');
   const [repo, setRepo] = useState('');
   const [name, setName] = useState('');
+  const [recipe, setRecipe] = useState<RecipeDraft>(EMPTY_RECIPE);
+  // A server without the recipe is never sent one: the older single repository stays the way to clone.
+  const recipes = useFeature('runners.cloud.environment.v1');
+  const checked = recipes ? checkRecipe(recipe, repo) : { environment: undefined };
+  const problem = 'problem' in checked ? checked.problem : undefined;
   const ids = { agent: useId(), prompt: useId(), repo: useId(), name: useId() };
   return (
     <Section label={t('cloud.start.title')}>
@@ -20,10 +28,12 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
         className="o-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          change.start({ agent, prompt, name, repo }, () => {
+          if ('problem' in checked) return;
+          change.start({ agent, prompt, name, repo, environment: checked.environment }, () => {
             setPrompt('');
             setRepo('');
             setName('');
+            setRecipe(EMPTY_RECIPE);
           });
         }}
       >
@@ -68,6 +78,13 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
             }}
           />
         </div>
+        {recipes ? <RecipeFields draft={recipe} onChange={setRecipe} /> : null}
+        {problem === undefined ? null : (
+          // Beside the button it holds, even with the recipe folded: the older Repository field alone can cause it.
+          <p className="cl-recipe__problem" role="alert">
+            {t(`cloud.recipe.problem.${problem}`)}
+          </p>
+        )}
         <div className="o-inline">
           <label htmlFor={ids.agent} className="o-field-label">
             {t('cloud.start.agent')}
@@ -86,7 +103,7 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
               </option>
             ))}
           </select>
-          <Button type="submit" disabled={change.starting || prompt.trim() === ''}>
+          <Button type="submit" disabled={change.starting || prompt.trim() === '' || problem !== undefined}>
             {change.starting ? t('cloud.start.starting') : t('cloud.start.submit')}
           </Button>
         </div>

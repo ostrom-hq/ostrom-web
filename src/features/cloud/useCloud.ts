@@ -22,6 +22,7 @@ import type {
   AutomationDryRun,
   AutomationRun,
   AutomationWrite,
+  CloudEnvironment,
   CloudSession,
   Runner,
 } from '@gen/api/types.gen';
@@ -64,6 +65,8 @@ export interface StartRequest {
   readonly prompt: string;
   readonly name: string;
   readonly repo: string;
+  /** The preparation recipe (`runners.cloud.environment.v1`), never with `repo`'s repository too. */
+  readonly environment?: CloudEnvironment | undefined;
 }
 
 export interface SessionChangeViewModel {
@@ -97,6 +100,7 @@ export function useSessionChange(): SessionChangeViewModel {
             prompt: request.prompt.trim(),
             ...(name === '' ? {} : { name }),
             ...(repo === '' ? {} : { repo }),
+            ...(request.environment === undefined ? {} : { environment: request.environment }),
           },
         },
         { onSuccess: onDone },
