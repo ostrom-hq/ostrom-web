@@ -108,9 +108,29 @@ export function preferencesOf(form: PhoneForm): NotificationPreferences {
   };
 }
 
-const CLOCK_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+/** `HH:MM`, 24-hour, as the server checks it. */
+export const CLOCK_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 /** An IANA name (`Area/Location`, up to three parts) or `UTC`, as the server checks it. */
-const TIME_ZONE = /^[A-Za-z][\w+-]{0,31}(?:\/[\w+-]{1,32}){0,2}$/;
+export const TIME_ZONE = /^[A-Za-z][\w+-]{0,31}(?:\/[\w+-]{1,32}){0,2}$/;
+
+/**
+ * A time as a time field gives it, as the server takes it: some browsers give `HH:MM:SS` (or with a fraction), whose
+ * seconds are dropped; anything else is kept as typed, for the check to name.
+ */
+export function clockOf(value: string): string {
+  return /^\d{2}:\d{2}:\d{2}(?:\.\d+)?$/.test(value) ? value.slice(0, 5) : value;
+}
+
+/** Whether two forms say the same: a form that differs from what it started from holds unsaved edits. */
+export function samePhoneForm(a: PhoneForm, b: PhoneForm): boolean {
+  return (
+    PHONE_SWITCHES.every((name) => a[name] === b[name]) &&
+    a.quiet === b.quiet &&
+    a.start === b.start &&
+    a.end === b.end &&
+    a.timeZone === b.timeZone
+  );
+}
 
 /** What keeps quiet hours from being saved, as the server would refuse them; undefined when they may be. */
 export type QuietHoursProblem = 'time' | 'same' | 'zone';

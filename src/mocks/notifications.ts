@@ -10,6 +10,7 @@ import type { NotificationPreferences, NotificationSetting, PushTestResult } fro
 import { zNotificationPreferences, zNotificationSettingChange } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { z } from 'zod';
+import { CLOCK_TIME, TIME_ZONE } from '@/features/notifications/model';
 import { NOTIFICATION_KIND_WIRES } from '@/mocks/fixtures/notifications';
 import { readJson, refusal } from '@/mocks/http';
 
@@ -31,11 +32,8 @@ export interface NotificationsState {
 /** The server's ten seconds between two tests (`TEST_WINDOW`). */
 export const PUSH_TEST_WINDOW_MS = 10_000;
 
-const CLOCK_TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
-const TIME_ZONE = /^[A-Za-z][\w+-]{0,31}(?:\/[\w+-]{1,32}){0,2}$/;
-
 /** The preferences a body says, with its quiet hours only when it has some. */
-function preferencesOf(body: z.infer<typeof zNotificationPreferences>): NotificationPreferences {
+function bodyPreferences(body: z.infer<typeof zNotificationPreferences>): NotificationPreferences {
   const { requests, decisions, spending, quietHours } = body;
   return quietHours === undefined
     ? { requests, decisions, spending }
@@ -93,7 +91,7 @@ export function createNotificationsHandlers(
     handleGetNotificationPreferences(() => HttpResponse.json(state().notificationPreferences)),
     handleSetNotificationPreferences(async ({ request }) => {
       const body = zNotificationPreferences.safeParse(await readJson(request));
-      const preferences = body.success ? preferencesOf(body.data) : undefined;
+      const preferences = body.success ? bodyPreferences(body.data) : undefined;
       if (preferences === undefined || !validQuietHours(preferences))
         return refusal(
           400,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleCapabilities } from '@gen/api/msw.gen';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { demoCapabilities } from '@/mocks/capabilities';
@@ -148,8 +148,10 @@ describe('approvals on the phone', () => {
     const save = within(box).getByRole('button', { name: 'Save' });
     await user.clear(end);
     await user.type(end, '12:00');
-    expect(await within(box).findByText('The start and the end must differ.')).toBeInTheDocument();
+    const problem = await within(box).findByRole('alert');
+    expect(problem).toHaveTextContent('The start and the end must differ.');
     expect(save).toBeDisabled();
+    expect(save).toHaveAttribute('aria-describedby', problem.id);
     const start = within(box).getByLabelText('From');
     await user.clear(start);
     expect(within(box).getByText('Give a start and an end, as hours and minutes.')).toBeInTheDocument();
@@ -158,6 +160,11 @@ describe('approvals on the phone', () => {
     await user.clear(zone);
     expect(within(box).getByText('Give a time zone such as Europe/Paris, or UTC.')).toBeInTheDocument();
     await user.type(zone, 'UTC');
+    expect(save).toBeEnabled();
+    expect(save).not.toHaveAttribute('aria-describedby');
+    // A browser that gives seconds: they are dropped, as the server takes HH:MM.
+    fireEvent.change(within(box).getByLabelText('From'), { target: { value: '09:15:00' } });
+    expect(within(box).getByLabelText('From')).toHaveValue('09:15');
     expect(save).toBeEnabled();
     await user.click(within(box).getByRole('checkbox', { name: 'No notifications during these hours' }));
     expect(within(box).queryByLabelText('From')).toBeNull();
@@ -179,6 +186,8 @@ describe('approvals on the phone', () => {
     await user.click(await within(box).findByRole('checkbox', { name: 'A request that waits for my yes' }));
     await user.click(within(box).getByRole('button', { name: 'Save' }));
     expect(await within(box).findByRole('button', { name: 'Saving…' })).toBeDisabled();
+    // Nothing can be changed while the server takes it: no edit is lost under a "Saved.".
+    expect(within(box).getByRole('checkbox', { name: 'A budget about to be reached' })).toBeDisabled();
     expect(await within(box).findByText('not with this token')).toBeInTheDocument();
   });
 });

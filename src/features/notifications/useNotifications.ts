@@ -55,7 +55,11 @@ export interface PhonePreferencesViewModel {
   /** What the person is told on their phone, across their organizations; undefined until it is read. */
   readonly preferences: NotificationPreferences | undefined;
   readonly failure: Error | undefined;
-  readonly save: (preferences: NotificationPreferences, onDone: () => void) => void;
+  /** Saves them; `onDone` gets what the server stored. */
+  readonly save: (
+    preferences: NotificationPreferences,
+    onDone: (saved: NotificationPreferences) => void,
+  ) => void;
   readonly saving: boolean;
   readonly saveFailure: Error | undefined;
 }
@@ -75,7 +79,14 @@ export function usePhonePreferences(enabled: boolean): PhonePreferencesViewModel
     preferences: query.data,
     failure: failureOf(query.error),
     save: (preferences, onDone) => {
-      mutate({ body: preferences }, { onSuccess: onDone });
+      mutate(
+        { body: preferences },
+        {
+          onSuccess: (saved) => {
+            onDone(saved);
+          },
+        },
+      );
     },
     saving: mutation.isPending,
     saveFailure: failureOf(mutation.error),

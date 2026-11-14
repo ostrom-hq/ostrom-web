@@ -2,11 +2,13 @@
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   browserTimeZone,
+  clockOf,
   isKnownKind,
   type PhoneForm,
   phoneFormOf,
   preferencesOf,
   quietHoursProblem,
+  samePhoneForm,
   sentCount,
   switchRows,
   testRefusalOf,
@@ -137,5 +139,35 @@ describe('the phone form', () => {
     });
     expect(browserTimeZone()).toBe('UTC');
     spy.mockRestore();
+  });
+});
+
+describe('the time fields', () => {
+  it('drops the seconds a browser adds, and keeps anything else as typed', () => {
+    expect(clockOf('22:00:00')).toBe('22:00');
+    expect(clockOf('07:30:15.250')).toBe('07:30');
+    expect(clockOf('07:30')).toBe('07:30');
+    expect(clockOf('7')).toBe('7');
+  });
+
+  it('tells two forms apart by any of their fields', () => {
+    const form: PhoneForm = {
+      requests: true,
+      decisions: true,
+      spending: false,
+      quiet: false,
+      start: '22:00',
+      end: '07:00',
+      timeZone: 'UTC',
+    };
+    expect(samePhoneForm(form, { ...form })).toBe(true);
+    for (const change of [
+      { spending: true },
+      { quiet: true },
+      { start: '21:00' },
+      { end: '06:00' },
+      { timeZone: 'Europe/Paris' },
+    ])
+      expect(samePhoneForm(form, { ...form, ...change })).toBe(false);
   });
 });

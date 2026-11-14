@@ -7,15 +7,9 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { FailureText } from '@/shared/ui/FailureText';
 import { LoadState, Section } from '@/shared/ui/Screen';
-import {
-  browserTimeZone,
-  PHONE_SWITCHES,
-  type PhoneForm,
-  phoneFormOf,
-  preferencesOf,
-  quietHoursProblem,
-} from '../model';
+import { clockOf, PHONE_SWITCHES, type PhoneForm, preferencesOf, quietHoursProblem } from '../model';
 import { type PhonePreferencesViewModel, usePhonePreferences } from '../useNotifications';
+import { usePhoneForm } from '../usePhoneForm';
 
 /**
  * What the person is told on their phone about the approvals (`/me/notifications`): a request for their yes, an
@@ -33,13 +27,7 @@ export function PhoneSection(): ReactElement | null {
       <p className="o-screen__lead">{t('notifications.phone.lead')}</p>
       <LoadState data={view.preferences} failure={view.failure} rows={3}>
         {(preferences) => (
-          <PhoneFormOf
-            key={JSON.stringify(preferences)}
-            preferences={preferences}
-            view={view}
-            saved={saved}
-            onSaved={setSaved}
-          />
+          <PhoneFormOf preferences={preferences} view={view} saved={saved} onSaved={setSaved} />
         )}
       </LoadState>
     </Section>
@@ -54,16 +42,16 @@ function PhoneFormOf({
 }: {
   readonly preferences: NotificationPreferences;
   readonly view: PhonePreferencesViewModel;
-  /** Kept above the form: what the server answers is read again, and the form starts over from it. */
   readonly saved: boolean;
   readonly onSaved: (saved: boolean) => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const [form, setForm] = useState<PhoneForm>(() => phoneFormOf(preferences, browserTimeZone()));
+  const state = usePhoneForm(preferences);
+  const { form } = state;
   const ids = useId();
   const problem = quietHoursProblem(form);
   const change = (next: Partial<PhoneForm>): void => {
-    setForm({ ...form, ...next });
+    state.change(next);
     onSaved(false);
   };
   return (
@@ -73,12 +61,13 @@ function PhoneFormOf({
       onSubmit={(event) => {
         event.preventDefault();
         onSaved(false);
-        view.save(preferencesOf(form), () => {
+        view.save(preferencesOf(form), (stored) => {
+          state.adopt(stored);
           onSaved(true);
         });
       }}
     >
-      <fieldset className="o-stack">
+      <fieldset className="o-stack" disabled={view.saving}>
         <legend className="o-field-label">{t('notifications.phone.tell')}</legend>
         {PHONE_SWITCHES.map((name) => (
           <label key={name} className="o-inline">
@@ -93,7 +82,7 @@ function PhoneFormOf({
           </label>
         ))}
       </fieldset>
-      <fieldset className="o-stack">
+      <fieldset className="o-stack" disabled={view.saving}>
         <legend className="o-field-label">{t('notifications.phone.quiet.title')}</legend>
         <label className="o-inline">
           <input
@@ -115,7 +104,7 @@ function PhoneFormOf({
                 type="time"
                 value={form.start}
                 onChange={(event) => {
-                  change({ start: event.target.value });
+                  change({ start: clockOf(event.target.value) });
                 }}
               />
             </label>
@@ -127,7 +116,7 @@ function PhoneFormOf({
                 type="time"
                 value={form.end}
                 onChange={(event) => {
-                  change({ end: event.target.value });
+                  change({ end: clockOf(event.target.value) });
                 }}
               />
             </label>
@@ -147,7 +136,9 @@ function PhoneFormOf({
           </div>
         ) : null}
         {problem === undefined ? null : (
-          <p className="o-screen__lead">{t(`notifications.phone.quiet.problem.${problem}`)}</p>
+          <p id={`${ids}-problem`} className="o-screen__lead" role="alert">
+            {t(`notifications.phone.quiet.problem.${problem}`)}
+          </p>
         )}
       </fieldset>
       {view.saveFailure === undefined ? null : (
@@ -161,7 +152,11 @@ function PhoneFormOf({
         </Banner>
       ) : null}
       <div className="o-inline">
-        <Button type="submit" disabled={view.saving || problem !== undefined}>
+        <Button
+          type="submit"
+          disabled={view.saving || problem !== undefined}
+          {...(problem === undefined ? {} : { 'aria-describedby': `${ids}-problem` })}
+        >
           {view.saving ? t('notifications.phone.saving') : t('notifications.phone.save')}
         </Button>
       </div>
