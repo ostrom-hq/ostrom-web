@@ -70,7 +70,10 @@ function SettingsForm({
       ) : null}
       {view.canEdit ? (
         <div className="o-inline">
-          <Button type="submit" disabled={write.saving || parsed === undefined || parsed === minutes}>
+          <Button
+            type="submit"
+            disabled={write.saving || parsed === undefined || (updatedAt !== undefined && parsed === minutes)}
+          >
             {write.saving ? t('cloudAdmin.saving') : t('cloudAdmin.save')}
           </Button>
           {updatedAt === undefined ? (

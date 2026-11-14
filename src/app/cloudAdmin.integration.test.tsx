@@ -73,7 +73,8 @@ describe('the organization’s cloud settings', () => {
     const minutes = await within(settings).findByLabelText(/^Background work/);
     expect(minutes).toHaveValue(240);
     expect(within(settings).getByText('The default: nothing is saved yet.')).toBeVisible();
-    expect(within(settings).getByRole('button', { name: 'Save' })).toBeDisabled();
+    // The default itself can be pinned: nothing is stored yet.
+    expect(within(settings).getByRole('button', { name: 'Save' })).toBeEnabled();
     await user.clear(minutes);
     await user.type(minutes, '30');
     await user.click(within(settings).getByRole('button', { name: 'Save' }));

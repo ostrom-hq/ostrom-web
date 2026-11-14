@@ -27,7 +27,10 @@ export function linesOf(text: string): string[] {
 
 /** A refused save the server answers with 409: someone else saved first. */
 export function isConflict(failure: Error | undefined): boolean {
-  return isApiFailure(failure) && failure.kind === 'conflict';
+  // Another 409 (a name already taken) says its own reason; only a version or date conflict asks to reload.
+  return (
+    isApiFailure(failure) && failure.kind === 'conflict' && (failure.code?.endsWith('_conflict') ?? true)
+  );
 }
 
 // ---- The organization's settings ----------------------------------------------------------------------------------
@@ -195,9 +198,13 @@ export function clusterProblem(draft: ClusterDraft, stored: CloudCluster | undef
   return undefined;
 }
 
-/** A new cluster, or one whose address changed: its CA bundle and token are written again. */
+/** A new cluster, one whose address changed, or one missing a secret: its CA bundle and token are written again. */
 export function needsCredentials(draft: ClusterDraft, stored: CloudCluster | undefined): boolean {
-  return stored?.apiUrl !== draft.apiUrl.trim();
+  return (
+    stored?.apiUrl !== draft.apiUrl.trim() ||
+    !stored.caCertificate.configured ||
+    !stored.serviceAccountToken.configured
+  );
 }
 
 export function clusterRequestOf(

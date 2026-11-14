@@ -73,6 +73,10 @@ describe('numbers and lists typed in a form', () => {
     expect(isConflict(new ApiFailure('conflict', 'x', 409, undefined))).toBe(true);
     expect(isConflict(new ApiFailure('server', 'x', 500, undefined))).toBe(false);
     expect(isConflict(undefined)).toBe(false);
+    expect(isConflict(new ApiFailure('conflict', 'x', 409, undefined, 'cloud_profile_conflict'))).toBe(true);
+    expect(isConflict(new ApiFailure('conflict', 'x', 409, undefined, 'cloud_profile_name_taken'))).toBe(
+      false,
+    );
   });
 });
 
@@ -144,6 +148,9 @@ describe('the cluster form', () => {
     const draft = clusterDraftOf(cluster);
     expect(draft).toMatchObject({ name: 'eu-west', allowedNamespaces: 'ostrom', caCertificate: '' });
     expect(needsCredentials(draft, cluster)).toBe(false);
+    const bare = { ...cluster, serviceAccountToken: { configured: false } };
+    expect(needsCredentials(draft, bare)).toBe(true);
+    expect(needsCredentials(draft, { ...cluster, caCertificate: { configured: false } })).toBe(true);
     expect(clusterProblem(draft, cluster)).toBeUndefined();
     expect(clusterRequestOf(draft, cluster)).toEqual({
       name: 'eu-west',
