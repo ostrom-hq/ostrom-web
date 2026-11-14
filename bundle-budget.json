@@ -1,6 +1,6 @@
 {
-  "entryKiB": 182.5,
-  "routeKiB": 200.3,
+  "entryKiB": 182.8,
+  "routeKiB": 200.6,
   "routes": {
     "/": 14.7,
     "/confirm/$confirmationId": 12.3,
