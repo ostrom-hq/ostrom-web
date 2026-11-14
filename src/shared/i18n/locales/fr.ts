@@ -2399,7 +2399,7 @@ export const fr = {
     expires: 'Expire à',
     adminTag: 'Connexion admin',
     admin:
-      'Ce terminal demande les droits d’écriture de gouvernance ci-dessous. Seul un propriétaire ou un admin de l’organisation peut l’approuver.',
+      'Ce terminal demande tous les droits ci-dessous : les écritures de gouvernance, la passation des comptes partagés (accounts:write) et ce que lit la CLI. Seul un propriétaire ou un admin de l’organisation peut l’approuver.',
     scopes: 'Droits demandés',
     approve: 'Connecter ce terminal',
     approveAdmin: 'Approuver la connexion admin',

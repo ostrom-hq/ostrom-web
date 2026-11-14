@@ -3,7 +3,7 @@ import type { ApiError } from '@gen/api/types.gen';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
+import { ADMIN_TOKEN_SCOPES, DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
 import { initialOrgMembers, otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS } from '@/mocks/handlers';
 import { setDemoRole } from '@/mocks/orgs';
@@ -110,15 +110,14 @@ describe('the device sign-in page', () => {
     expect(await screen.findByText('Admin sign-in')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'This terminal asks for the governance writes below. Only an owner or an admin of the organization may approve it.',
+        'This terminal asks for every right below: the governance writes, the handover of shared accounts (accounts:write) and what the CLI reads. Only an owner or an admin of the organization may approve it.',
       ),
     ).toBeInTheDocument();
     const scopes = within(screen.getByRole('list', { name: 'Scopes asked' })).getAllByRole('listitem');
-    expect(scopes.map((scope) => scope.textContent)).toEqual([
-      'gates:policy',
-      'harness:write',
-      'policy:write',
-    ]);
+    // exactly the token's scopes, the handover included: no power approved unseen
+    const listed = scopes.map((scope) => scope.textContent);
+    expect(listed).toEqual(ADMIN_TOKEN_SCOPES);
+    expect(listed).toEqual(expect.arrayContaining(['accounts:read', 'accounts:write']));
     await user.click(await approveAdmin());
     expect(await screen.findByText('Terminal signed in')).toBeInTheDocument();
   });
