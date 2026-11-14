@@ -969,7 +969,9 @@ paths:
       description: "Scope `sessions:write` (the CLI's device token, a browser session). A person's only: an agent token
         never launches. The person and the organization come from the credential. 403 when the organization's policy
         refuses the agent or the model, or the credential may not launch; 404 when it is no member of an organization
-        the request can act in."
+        the request can act in. The agent token acts for the person who launched it on its launch's sessions, the
+        workflow step it plays (`workflow:session`), the memory (`memory:use`) and, planned, the artifacts
+        (`artifacts:write`: publish and share as that person, never change an access nor delete)."
       tags:
       - auth
       summary: 'Start an agent launch: returns an agent token scoped to the sessions of this launch, expiring at its end.
@@ -1690,7 +1692,8 @@ paths:
                     `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read),
                     `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read),
                     `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and
-                    `hooks.v1`).
+                    `hooks.v1`), `memory:use` (the organization's memory and the creator's personal entries,
+                    `memory.v1`).
                     Reserved to an owner or an admin, and only while its creator still is one, checked at every call:
                     `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and
                     the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write
@@ -1853,9 +1856,9 @@ paths:
         Who sends the pushes is the instance's `push` settings section (Admin → Settings: `provider` `off` or
         `firebase`, the Firebase service account sealed); while it is `off`, phones register and nothing is sent. With
         `fcm`, a token that is not an FCM registration token or a missing or invalid public key is a 400; a platform
-        other than `ios` and `android`, or a provider other than `fcm` and `expo`, is a 400. Deprecated: `provider:
-        expo` with an Expo push token (`ExponentPushToken[…]`) and no public key is still taken until the apps
-        register FCM, then refused with a 400 like any other provider.
+        other than `ios` and `android`, or a provider other than `fcm`, is a 400. `expo` is refused (a 400) since
+        Expo was removed, as TeamCode has none; a phone an older app registered with it is never notified until the
+        app registers FCM.
       requestBody:
         required: true
         content:
@@ -8028,7 +8031,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: createMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Remember something"
@@ -8083,7 +8086,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "The memory index"
@@ -8141,7 +8144,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: searchMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Search the memory"
@@ -8193,7 +8196,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listMemoryProposals
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Team entries proposed by agents, waiting for an answer"
@@ -8227,7 +8230,7 @@ paths:
         type: string
     post:
       operationId: acceptMemoryProposal
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Accept a proposal"
@@ -8265,7 +8268,7 @@ paths:
         type: string
     post:
       operationId: rejectMemoryProposal
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Reject a proposal"
@@ -8485,7 +8488,7 @@ paths:
         type: string
     get:
       operationId: readMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Read an entry"
@@ -8512,7 +8515,7 @@ paths:
           $ref: '#/components/responses/Error'
     patch:
       operationId: updateMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Change an entry"
@@ -8551,7 +8554,7 @@ paths:
           $ref: '#/components/responses/Error'
     delete:
       operationId: forgetMemory
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - memory
       summary: "Forget an entry"
@@ -11907,7 +11910,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getCloudSettings
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: The organization's cloud session settings
@@ -11927,7 +11930,7 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: saveCloudSettings
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: Save the organization's cloud session settings
@@ -12665,7 +12668,7 @@ paths:
         (`runners.cloud.variables.v1`), to start the agent with them and to serve them to its Bash commands while it
         runs (Claude Code's `CLAUDE_ENV_FILE`, asked again when its last answer is older than 30 seconds). Only the
         runner of the current execution of a session that runs (`creating`, `resuming`, `running`, `pausing`): 409
-        `execution_fenced` for another execution, 409 `variables_unavailable` otherwise. A disabled owner gets none.
+        `execution_fenced` for another execution, 409 `variables_unavailable` otherwise. A body over the bound answers 413. A disabled owner gets none.
         `Cache-Control: no-store`; never logged or journaled"
       requestBody:
         required: true
@@ -12690,12 +12693,14 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
   /api/v1/cloud/runner/skills:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: fetchRunnerSkills
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: "The runner of a cloud session reads the skills the session's owner receives (`runners.cloud.skills.v1`), at every start of the agent, to install them in the agent's personal skills folder under the agent's own UID: the same manifest as `getSkillDelivery` for that member (team skills their decisions or the audience allow, and their own personal skills), resolved at every call. Only the runner of the current execution of a session that runs (`creating`, `resuming`, `running`, `pausing`), with the execution's runner token checked before the body is read: 409 `execution_fenced` for another execution, 409 `delivery_unavailable` otherwise. A disabled owner receives none. `Cache-Control: no-store`"
@@ -12727,7 +12732,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: downloadRunnerSkill
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: "The files of a skill version the session's owner receives (`runners.cloud.skills.v1`), as `downloadSkill`: only the currently effective pinned version is served (404 otherwise), its digest recomputed from the stored files (500 `skill_integrity` on a mismatch). The runner verifies it again before installing. Only the runner of the current execution of a session that runs (`creating`, `resuming`, `running`, `pausing`), with the execution's runner token checked before the body is read: 409 `execution_fenced` for another execution, 409 `delivery_unavailable` otherwise."
@@ -12759,7 +12764,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: fetchRunnerHooks
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: "The runner of a cloud session reads the team hooks the session's owner receives (`runners.cloud.hooks.v1`), at every start of a Claude Code agent: the same manifest as `getHookDelivery` for that member, resolved at every call. There is no member approval in a pod: the administrator's pin and the owner's decision are the approval, as in TeamCode. Codex sessions run no team hook. Only the runner of the current execution of a session that runs (`creating`, `resuming`, `running`, `pausing`), with the execution's runner token checked before the body is read: 409 `execution_fenced` for another execution, 409 `delivery_unavailable` otherwise. A disabled owner receives none. `Cache-Control: no-store`"
@@ -12791,7 +12796,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: downloadRunnerHook
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: "The files and definition of a hook version the session's owner receives (`runners.cloud.hooks.v1`), as `downloadHook`: only the currently effective pinned version is served (404 otherwise), its digest recomputed (500 `hook_integrity` on a mismatch). The runner verifies it again before installing. Only the runner of the current execution of a session that runs (`creating`, `resuming`, `running`, `pausing`), with the execution's runner token checked before the body is read: 409 `execution_fenced` for another execution, 409 `delivery_unavailable` otherwise."
@@ -12997,6 +13002,12 @@ paths:
       tags:
       - artifacts
       summary: "The artifacts MCP server (Streamable HTTP, JSON answers); 202 for a notification"
+      description: "A member credential with `artifacts:read` (list, read) or `artifacts:write` (publish, share). An
+        agent token (planned) holds `artifacts:write` and acts as the member who launched it, as a plain member
+        whatever their role: `ostrom <agent>` and the cloud runner connect it to the agent as `ostrom-artifacts`
+        (`ostrom mcp --server ostrom-artifacts`, a stdio bridge to the launch's local relay, which forwards here
+        with the agent token) when `getArtifactPolicy` answers `canPublish`. Its tools never make an artifact public
+        nor delete one (both need a person, `setArtifactAccess`, `deleteArtifact`)."
       requestBody:
         required: true
         content:
@@ -13237,8 +13248,9 @@ paths:
       description: 'Any member credential with `artifacts:read` (or `artifacts:write`). Answers even while artifacts are
         inactive: `reason` is then `artifact_storage_missing`, `artifact_storage_unverified` or `artifacts_disabled`;
         `artifact_publish_forbidden` when only administrators publish and the caller is not one; `credential_scope`
-        for a credential without `artifacts:write`. `ostrom run` (and the cloud runner) connect the artifacts MCP server
-        only when `canPublish` is true'
+        for a credential without `artifacts:write`. `ostrom <agent>` and the cloud runner ask it with the launch''s
+        agent token (planned: the agent token holds `artifacts:write` and is the member who launched it) and connect
+        the artifacts MCP server only when `canPublish` is true'
       responses:
         '200':
           description: OK
@@ -19295,14 +19307,6 @@ components:
           type: integer
           minimum: 1
           maximum: 10000
-        maxRunningAutomationsPerMember:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: How many sessions of one member's automation runs may work at once (TeamCode's
-            `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails
-            `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps
-            the stored value (2 while nothing is stored)
         transcriptRetentionDays:
           type: integer
           minimum: 1
@@ -19353,14 +19357,6 @@ components:
           type: integer
           minimum: 1
           maximum: 10000
-        maxRunningAutomationsPerMember:
-          type: integer
-          minimum: 1
-          maximum: 100
-          description: How many sessions of one member's automation runs may work at once (TeamCode's
-            `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails
-            `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps
-            the stored value (2 while nothing is stored)
         transcriptRetentionDays:
           type: integer
           minimum: 1
@@ -19618,6 +19614,13 @@ components:
           description: How long an agent's background work (background subagents and commands, monitors, scheduled
             wake-ups, reported by its runner) holds off the idle pause, from when it was first reported; 0 never holds it
             off. 240 by default (TeamCode af1a5f7b)
+        maxRunningAutomationsPerMember:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: How many sessions of one member's automation runs may work at once (TeamCode's
+            `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails
+            `capacity_timeout`). A run of a workflow action does not count. 2 by default
         updatedAt:
           type: string
           format: date-time
@@ -19634,6 +19637,11 @@ components:
           type: integer
           minimum: 0
           maximum: 1440
+        maxRunningAutomationsPerMember:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Absent keeps the stored value (2 while nothing is stored)
         updatedAt:
           type: string
           format: date-time
@@ -20533,7 +20541,8 @@ components:
         `self_approval_refused`: the server
         names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`;
         `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom
-        person, from an answerer who linked no GitHub account)'
+        person, from an answerer who linked no GitHub account; `hosted_not_allowed`: a member''s own stdio MCP server
+        while the organization does not let members host theirs)'
       properties:
         error:
           type: object
@@ -20542,7 +20551,7 @@ components:
             type:
               type: string
               enum: [forbidden, email_link_other_browser, installation_not_yours, probe_not_yours, cutover_owner_required,
-                self_approval_refused, github_link_required, signup_closed, org_creation_closed]
+                self_approval_refused, github_link_required, signup_closed, org_creation_closed, hosted_not_allowed]
             message:
               type: string
           required:
@@ -24054,10 +24063,10 @@ components:
       properties:
         pushToken:
           type: string
-          description: The FCM registration token (`fcm`), or an Expo push token (`expo`, deprecated)
+          description: The FCM registration token
         provider:
           type: string
-          description: '`fcm` (`expo` is deprecated)'
+          description: '`fcm`'
         platform:
           type: string
           description: '`ios` or `android`'

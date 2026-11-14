@@ -1096,7 +1096,6 @@ export const zCloudRuntime = z.object({
     failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
-    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
@@ -1112,7 +1111,6 @@ export const zSaveCloudRuntimeRequest = z.object({
     failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
-    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
@@ -1187,12 +1185,14 @@ export const zSaveCompilerSettingsRequest = z.object({
  */
 export const zCloudSettings = z.object({
     backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
+    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     updatedAt: z.optional(z.iso.datetime({ offset: true })),
     updatedBy: z.optional(z.string())
 });
 
 export const zSaveCloudSettingsRequest = z.object({
     backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
+    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
 });
 
@@ -1606,7 +1606,7 @@ export const zApproval = z.object({
 });
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `signup_closed`: no account for this person on an invite-only instance, `org_creation_closed`: creating an organization there is for its owners and admins, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `signup_closed`: no account for this person on an invite-only instance, `org_creation_closed`: creating an organization there is for its owners and admins, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account; `hosted_not_allowed`: a member's own stdio MCP server while the organization does not let members host theirs)
  */
 export const zForbidden = z.object({
     error: z.object({
@@ -1619,7 +1619,8 @@ export const zForbidden = z.object({
                 'self_approval_refused',
                 'github_link_required',
                 'signup_closed',
-                'org_creation_closed'
+                'org_creation_closed',
+                'hosted_not_allowed'
             ]), z.string()]),
         message: z.string()
     })

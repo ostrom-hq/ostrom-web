@@ -1541,10 +1541,6 @@ export type CloudRuntime = {
     maxRunningSessionsPerMember: number;
     maxRetainedSessionsPerMember: number;
     /**
-     * How many sessions of one member's automation runs may work at once (TeamCode's `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps the stored value (2 while nothing is stored)
-     */
-    maxRunningAutomationsPerMember?: number;
-    /**
      * Days transcript events are kept; absent keeps them
      */
     transcriptRetentionDays?: number;
@@ -1571,10 +1567,6 @@ export type SaveCloudRuntimeRequest = {
     failedWorkspaceRetentionDays: number;
     maxRunningSessionsPerMember: number;
     maxRetainedSessionsPerMember: number;
-    /**
-     * How many sessions of one member's automation runs may work at once (TeamCode's `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps the stored value (2 while nothing is stored)
-     */
-    maxRunningAutomationsPerMember?: number;
     transcriptRetentionDays?: number;
     memberTransfers: 'offer' | 'disabled' | (string & {});
     /**
@@ -1722,6 +1714,10 @@ export type CloudSettings = {
      */
     backgroundWorkMaxMinutes: number;
     /**
+     * How many sessions of one member's automation runs may work at once (TeamCode's `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails `capacity_timeout`). A run of a workflow action does not count. 2 by default
+     */
+    maxRunningAutomationsPerMember?: number;
+    /**
      * The last save; absent while nothing is stored
      */
     updatedAt?: string;
@@ -1733,6 +1729,10 @@ export type CloudSettings = {
 
 export type SaveCloudSettingsRequest = {
     backgroundWorkMaxMinutes: number;
+    /**
+     * Absent keeps the stored value (2 while nothing is stored)
+     */
+    maxRunningAutomationsPerMember?: number;
     /**
      * The `updatedAt` of the settings edited; absent while nothing is stored
      */
@@ -2317,14 +2317,14 @@ export type Evidence = {
 };
 
 /**
- * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `signup_closed`: no account for this person on an invite-only instance, `org_creation_closed`: creating an organization there is for its owners and admins, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account)
+ * 403 other than step_up_required: `forbidden` (a token without the scope, a member without the role, a credential the route does not admit), or a finer key (`email_link_other_browser`, `installation_not_yours`, `probe_not_yours`, `cutover_owner_required`, `signup_closed`: no account for this person on an invite-only instance, `org_creation_closed`: creating an organization there is for its owners and admins, `self_approval_refused`: the server names the other approvers in `message` only, without the `others` of `SelfApprovalRefused`; `github_link_required`: a yes under a never-self-approve policy, on a pull request whose author linked no Ostrom person, from an answerer who linked no GitHub account; `hosted_not_allowed`: a member's own stdio MCP server while the organization does not let members host theirs)
  */
 export type Forbidden = {
     /**
      * `ErrorDetail`, its `type` any 403 key but `step_up_required`
      */
     error: {
-        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required' | 'signup_closed' | 'org_creation_closed' | (string & {});
+        type: 'forbidden' | 'email_link_other_browser' | 'installation_not_yours' | 'probe_not_yours' | 'cutover_owner_required' | 'self_approval_refused' | 'github_link_required' | 'signup_closed' | 'org_creation_closed' | 'hosted_not_allowed' | (string & {});
         message: string;
     };
 };
@@ -4746,11 +4746,11 @@ export type KeyRotation = {
  */
 export type RegisterPushDeviceRequest = {
     /**
-     * The FCM registration token (`fcm`), or an Expo push token (`expo`, deprecated)
+     * The FCM registration token
      */
     pushToken: string;
     /**
-     * `fcm` (`expo` is deprecated)
+     * `fcm`
      */
     provider: string;
     /**
@@ -8816,7 +8816,7 @@ export type CreateServiceKeyData = {
     body: {
         name: string;
         /**
-         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read), `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and `hooks.v1`). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and `hooks:publish` (publish hook versions, which only an administrator pins). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
+         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read), `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and `hooks.v1`), `memory:use` (the organization's memory and the creator's personal entries, `memory.v1`). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and `hooks:publish` (publish hook versions, which only an administrator pins). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
          */
         scopes: Array<string>;
         /**
@@ -22827,6 +22827,10 @@ export type FetchRunnerVariablesErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type FetchRunnerVariablesError = FetchRunnerVariablesErrors[keyof FetchRunnerVariablesErrors];
