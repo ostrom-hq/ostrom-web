@@ -215,6 +215,7 @@ import {
   initialSkillVersions,
 } from '@/mocks/fixtures/delivery';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
+import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
 import {
   type AdminState,
   createAdminHandlers,
@@ -234,6 +235,7 @@ export interface MockDb
   extends
     AccountState,
     AdminState,
+    CloudAdminState,
     ActivityState,
     AuditState,
     BillingState,
@@ -318,6 +320,7 @@ export function createMockDb(): MockDb {
   const opened = Date.now();
   return {
     instanceAdmin: false,
+    ...initialCloudAdmin(),
     instanceAdmins: initialInstanceAdmins(),
     instanceSettings: initialInstanceSettings(),
     activity: initialActivity(),
@@ -1154,6 +1157,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createDeliveryHandlers(
       () => db,
       (request) => organizationOf(db, request),
+      now,
+    ),
+    ...createCloudAdminHandlers(
+      () => db,
+      {
+        manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+        memberId: (request) =>
+          membersIn(db, organizationOf(db, request), now).find((member) => member.login === me.dev.login)?.id,
+        instanceAdmin: () => db.instanceAdmin,
+      },
       now,
     ),
     ...createPolicyHandlers(
