@@ -563,7 +563,9 @@ describe('a change of the people the server holds for a confirmation', () => {
   });
 });
 
-describe('the members of a large organization', () => {
+// Two hundred rows, each drawn again at every search with an administrator's two fields (the Stop hook box and the
+// concurrent requests): jsdom takes longer than the 5 s default over a whole test, not over any one step.
+describe('the members of a large organization', { timeout: 15_000 }, () => {
   beforeEach(() => {
     db.orgMembers[ACME] = [...(db.orgMembers[ACME] ?? []), ...largeMembers()];
   });
