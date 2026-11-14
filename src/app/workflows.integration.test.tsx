@@ -589,6 +589,14 @@ describe('changing the workflows', () => {
     expect(db.workflows.find((workflow) => workflow.id === 'wf-migrations')?.status).toBe('rejected');
   });
 
+  it('says a rejection is under way', async () => {
+    const user = userEvent.setup();
+    server.use(http.put('*/api/v1/workflows/:id', never));
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    expect(await screen.findByRole('button', { name: 'Rejecting…' })).toBeDisabled();
+  });
+
   it('accepts a proposed workflow saved unchanged as found', async () => {
     const user = userEvent.setup();
     const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');
