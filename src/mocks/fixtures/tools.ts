@@ -12,8 +12,8 @@ import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 const servers: McpServer[] = [
   {
     name: 'linear',
-    url: 'https://mcp.linear.app/sse',
-    transport: 'sse',
+    url: 'https://mcp.linear.app/mcp',
+    transport: 'http',
     secretNames: ['LINEAR_TOKEN'],
     tools: ['list_issues', 'create_issue', 'update_issue'],
     enabled: true,

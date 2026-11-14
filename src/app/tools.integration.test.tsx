@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { fireEvent, screen, within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -47,8 +47,8 @@ describe('the MCP servers', () => {
     // Read once the screen is in: the title of its waiting state is another node, replaced by this one.
     expect(screen.getByRole('heading', { level: 1, name: 'MCP servers' })).toBeInTheDocument();
     expect(linear).toHaveTextContent('On');
-    expect(linear).toHaveTextContent('SSE');
-    expect(linear).toHaveTextContent('https://mcp.linear.app/sse');
+    expect(linear).toHaveTextContent('HTTP');
+    expect(linear).toHaveTextContent('https://mcp.linear.app/mcp');
     expect(linear).toHaveTextContent(
       'Scope shared · 3 calls · Tools list_issues, create_issue, update_issue · Uses LINEAR_TOKEN',
     );
@@ -104,13 +104,10 @@ describe('the MCP servers', () => {
     ).toBeInTheDocument();
     await user.clear(within(form).getByRole('textbox', { name: /Secrets it needs/ }));
     await user.type(within(form).getByRole('textbox', { name: /Secrets it needs/ }), 'NOTION_KEY');
-    await user.selectOptions(within(form).getByRole('combobox', { name: 'Transport' }), 'sse');
-    fireEvent.change(within(form).getByRole('combobox', { name: 'Transport' }), {
-      target: { value: 'stdio' },
-    });
+    expect(within(form).queryByRole('combobox', { name: 'Transport' })).toBeNull();
     await user.click(add);
     const notion = await findServer('notion');
-    expect(notion).toHaveTextContent('SSE');
+    expect(notion).toHaveTextContent('HTTP');
     expect(within(notion).getByText(/Missing secret NOTION_KEY/)).toBeInTheDocument();
     expect(within(form).getByRole('textbox', { name: 'Name' })).toHaveValue('');
     expect(within(form).queryByText(/is not a secret name/)).toBeNull();
