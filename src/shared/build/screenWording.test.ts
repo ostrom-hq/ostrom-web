@@ -7,7 +7,8 @@ describe('sectionsIn', () => {
     yes: { signin: { offer: 'Sign in' } },
     billing: { monthly: 'Monthly', items_one: 'One item', items_other: 'Items' },
     spend: { total: 'Total' },
-    rules: { title: 'Rules' },
+    rules: { title: 'Rules', kind_open: 'Open' },
+    plans: { 'plan-pro': 'Pro' },
     webhooks: { title: 'Webhooks' },
     github: { title: 'GitHub' },
     waits: { filter: { 'waiting-you': 'Waiting for you' } },
@@ -22,6 +23,13 @@ describe('sectionsIn', () => {
   it('finds a key by the stem of its plural forms, and a key built from a part of its path', () => {
     expect([...sectionsIn(`t("billing.items",{count})`, wording)]).toEqual(['billing']);
     expect([...sectionsIn(`t("yes.signin."+part)`, wording)]).toEqual(['yes']);
+  });
+
+  it('finds a key built from the start of a segment', () => {
+    expect([...sectionsIn(`t(\`rules.kind_\${kind}\`);t("plans.plan-"+tier)`, wording)]).toEqual([
+      'rules',
+      'plans',
+    ]);
   });
 
   it('finds a key with a hyphen, and a key whose own name has a dot', () => {

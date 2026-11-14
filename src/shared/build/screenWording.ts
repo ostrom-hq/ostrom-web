@@ -10,14 +10,26 @@ function keyPaths(node: unknown, prefix = ''): string[] {
 }
 
 /**
- * Whether the static part of a literal after its section leads into it: a key path of the section, the start of one
- * (a key built from it, `'billing.' + period`), or the stem of a plural or context form (`items` of `items_one`).
+ * Whether the static part of a literal after its section leads into it: the start of a key path of the section, so a
+ * whole key, a key built from it (`'billing.' + period`, `` `rules.kind_${kind}` ``) or the stem of a plural or context
+ * form (`items` of `items_one`).
  */
 function leadsInto(paths: readonly string[], path: string): boolean {
-  const stem = path.endsWith('.') ? path : `${path}.`;
-  return (
-    path === '' || paths.some((key) => key === path || key.startsWith(stem) || key.startsWith(`${path}_`))
-  );
+  return paths.some((key) => key.startsWith(path));
+}
+
+/** The key paths of each section of a wording, built once per wording: the build reads every chunk against it. */
+const indexes = new WeakMap<object, Map<string, readonly string[]>>();
+
+function indexOf(wording: Readonly<Record<string, unknown>>): Map<string, readonly string[]> {
+  const known = indexes.get(wording);
+  if (known !== undefined) return known;
+  const paths = new Map<string, readonly string[]>();
+  for (const [section, node] of Object.entries(wording))
+    if (!/^[A-Za-z]\w*$/.test(section)) throw new Error(`a section of the wording is not a name: ${section}`);
+    else paths.set(section, keyPaths(node));
+  indexes.set(wording, paths);
+  return paths;
 }
 
 /**
@@ -29,10 +41,7 @@ function leadsInto(paths: readonly string[], path: string): boolean {
  * the screen never shows, which only costs a few bytes; a key never escapes it.
  */
 export function sectionsIn(code: string, wording: Readonly<Record<string, unknown>>): Set<string> {
-  const paths = new Map<string, readonly string[]>();
-  for (const [section, node] of Object.entries(wording))
-    if (!/^[A-Za-z]\w*$/.test(section)) throw new Error(`a section of the wording is not a name: ${section}`);
-    else paths.set(section, keyPaths(node));
+  const paths = indexOf(wording);
   const named = new Set<string>();
   for (const [, section = '', path = ''] of code.matchAll(/["'`]([A-Za-z]\w*)\.([\w.-]*)(?=["'`$])/g)) {
     const keys = paths.get(section);
