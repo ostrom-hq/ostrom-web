@@ -18,12 +18,11 @@ import {
   useQueryClient,
 } from '@tanstack/react-query';
 import { useMemo, useRef } from 'react';
-import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
-import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { runnable } from './model';
+import { type PendingStart, pressOf, startRefused } from './startKey';
 import { type Delivery, deliveryOf, deliveryVisit, deliverableOf, finished, inputsOf } from './runs';
 import { useViewer } from '@/shared/auth/useViewer';
 import { useFeature } from '@/shared/capabilities';
@@ -133,21 +132,6 @@ export interface StartRunViewModel {
   readonly failure: Error | undefined;
 }
 
-/**
- * Whether the server answered a start with a refusal (400 to 499): no run was started under the key, so the next press
- * is a new one. A lost answer, a timeout or a server error says nothing, so the key stays: pressing Start again
- * returns the run the first press may have started, never a second.
- */
-export function startRefused(error: unknown): boolean {
-  return isApiFailure(error) && error.status !== undefined && error.status >= 400 && error.status < 500;
-}
-
-/** The key of a press whose answer is unknown, with what it started: other inputs are another press. */
-interface PendingStart {
-  readonly key: string;
-  readonly what: string;
-}
-
 export function useStartRun(workflow: Workflow): StartRunViewModel {
   const workflowId = workflow.id;
   const queryClient = useQueryClient();
@@ -158,23 +142,25 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
     mutationFn: async (start: RunStart) => {
       const inputs = inputsOf(workflow.inputs ?? [], start.inputs);
       const repository = start.repository.trim();
-      const what = JSON.stringify([workflowId, inputs, withRepository ? repository : '']);
       // One key per press, kept while its answer is unknown so that pressing again cannot start a second run.
-      pending.current = pending.current?.what === what ? pending.current : { key: idempotencyKey(), what };
-      return (
-        await startWorkflowRun({
-          path: { id: workflowId },
-          body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
-          headers: { 'Idempotency-Key': pending.current.key },
-          throwOnError: true,
-        })
-      ).data;
-    },
-    onSuccess: () => {
-      pending.current = undefined;
-    },
-    onError: (error) => {
-      if (startRefused(error)) pending.current = undefined;
+      const press = pressOf(pending.current, workflowId, inputs, withRepository ? repository : '');
+      pending.current = press;
+      try {
+        const run = (
+          await startWorkflowRun({
+            path: { id: workflowId },
+            body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
+            headers: { 'Idempotency-Key': press.key },
+            throwOnError: true,
+          })
+        ).data;
+        if (pending.current === press) pending.current = undefined;
+        return run;
+      } catch (error) {
+        // A press still in flight is another one's: only this press's own key is dropped.
+        if (startRefused(error) && pending.current === press) pending.current = undefined;
+        throw error;
+      }
     },
     // The new run comes first in both lists: they are read again, whatever the answer.
     onSettled: async () => {

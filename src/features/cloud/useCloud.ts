@@ -31,11 +31,12 @@ import type {
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
-import { type CloudAgent, type GithubAccess, idempotencyKey } from './model';
+import { type CloudAgent, type GithubAccess } from './model';
 
 const POLL_MS = 10_000;
 
