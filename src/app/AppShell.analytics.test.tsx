@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { createMemoryHistory } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import '@/shared/i18n/i18n';
