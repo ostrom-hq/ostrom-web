@@ -237,6 +237,12 @@ import {
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createRunHandlers } from '@/mocks/runs';
 import { createWorkflowSettingsHandlers } from '@/mocks/workflowSettings';
+import { createNotificationsHandlers, type NotificationsState } from '@/mocks/notifications';
+import {
+  initialNotificationPreferences,
+  initialNotificationSwitches,
+  initialPushPhones,
+} from '@/mocks/fixtures/notifications';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
@@ -257,6 +263,7 @@ export interface MockDb
     DeviceState,
     EnvironmentState,
     PersonalMcpState,
+    NotificationsState,
     GithubState,
     GroupsState,
     OrgsState,
@@ -372,6 +379,12 @@ export function createMockDb(): MockDb {
     workflows: initialWorkflows(),
     workflowRuns: initialWorkflowRuns(),
     workflowEditors: { mode: 'admins' },
+    notificationChannels: ['push'],
+    notificationSwitches: initialNotificationSwitches(),
+    notificationPreferences: initialNotificationPreferences(),
+    pushProvider: 'relay',
+    pushPhones: initialPushPhones(),
+    lastPushTestAt: undefined,
     selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
@@ -1609,6 +1622,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => DEMO_LOGIN,
       now,
     ),
+    ...createNotificationsHandlers(() => db, now),
     ...createWorkflowSettingsHandlers(
       () => db,
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),

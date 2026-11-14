@@ -41,6 +41,7 @@ export const NAV_LINKS = [
   { to: '/billing', label: 'billing', feature: 'billing.v1' },
   { to: '/settings', label: 'settings' },
   { to: '/account', label: 'account' },
+  { to: '/me/notifications', label: 'myNotifications', feature: 'notifications.v1' },
   { to: '/tokens', label: 'tokens' },
   { to: '/cloud', label: 'cloud', feature: 'runners.cloud.v1' },
   { to: '/cloud/admin', label: 'cloudAdmin', feature: 'cloud.admin.v1' },
