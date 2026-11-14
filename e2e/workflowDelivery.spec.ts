@@ -33,8 +33,8 @@ test('an owner starts a release run with its inputs and a repository', async ({ 
 test('an admin changes who decides workflows', async ({ page }) => {
   await page.goto('/settings');
   const box = page.getByRole('region', { name: 'Who can decide workflows' });
-  await expect(box.getByRole('radio', { name: 'Owners and admins' })).toBeChecked();
-  await box.getByRole('radio', { name: 'Every member' }).check();
+  await expect(box.getByRole('radio', { name: 'Owners and admins', exact: true })).toBeChecked();
+  await box.getByRole('radio', { name: 'Every member', exact: true }).check();
   await box.getByRole('button', { name: 'Save' }).click();
   await expect(box.getByText('Saved.')).toBeVisible();
 });
