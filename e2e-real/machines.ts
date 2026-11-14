@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Registered runners on the job's Docker, for line 6.2 against a server whose cloud sessions run on registered runners
-// (`OSTROM_RUNNERS_DRIVER=registered`, ostrom-server console-journey.yml). Each machine is `ostrom-runner machine`, in
+// (`OSTROM_RUNNERS_DRIVER=registered`, ostrom-server console-journey.yml). Each machine is `ostrom cloud machine`, in
 // its own container on the host network, with the Engine API of the job's socket proxy: it takes the sessions the
 // server hands its organization's runners. Without `OSTROM_E2E_MACHINE_IMAGE`, the server runs sessions on its own
 // Docker driver and no machine is needed.
@@ -12,6 +12,8 @@ import { callFromPage } from './real';
 /** The runner image the machines run (by digest), set when the server hands sessions to registered runners. */
 export const machineImage = process.env['OSTROM_E2E_MACHINE_IMAGE'];
 
+/** The CLI in the runner image, whatever the image's own entrypoint (as ostrom-cli's e2e/cloud.py). */
+const MACHINE_BINARY = '/usr/local/bin/ostrom';
 const SERVER_URL = process.env['OSTROM_E2E_MACHINE_SERVER_URL'] ?? 'http://127.0.0.1:4600';
 const DOCKER_API_URL = process.env['OSTROM_E2E_MACHINE_DOCKER_API'] ?? 'http://127.0.0.1:2375';
 const RUNNER_LABEL = 'ostrom.run/runner';
@@ -61,7 +63,13 @@ export async function startMachine(page: Page, org: string, name: string): Promi
       `OSTROM_DOCKER_API_URL=${DOCKER_API_URL}`,
       '-e',
       `OSTROM_RUNNER_SESSION_IMAGE=${machineImage}`,
+      '-e',
+      `OSTROM_RUNNER_DELIVERY_IMAGE=${machineImage}`,
+      // The image's own entrypoint is not the CLI: the machine is the CLI's `ostrom cloud machine`.
+      '--entrypoint',
+      MACHINE_BINARY,
       machineImage,
+      'cloud',
       'machine',
     ],
     { encoding: 'utf8', env: { ...process.env, OSTROM_RUNNER_KEY: token } },
