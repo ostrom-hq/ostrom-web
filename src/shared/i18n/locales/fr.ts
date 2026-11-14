@@ -1324,7 +1324,7 @@ export const fr = {
       unassignLabel: 'Retirer {{variable}} à {{who}}',
       excluded: '{{variable}} exclue',
       include: 'Lever l’exclusion',
-      includeLabel: 'Lever l’exclusion de {{who}} pour {{variable}}',
+      includeLabel: 'Lever l’exclusion de {{variable}} pour {{who}}',
     },
     assign: {
       title: 'Attribuer une variante',

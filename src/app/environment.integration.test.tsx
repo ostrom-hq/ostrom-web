@@ -314,9 +314,7 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     await within(theo).findByText('GITHUB_TOKEN excluded');
     expect(theo).not.toHaveTextContent('GITHUB_TOKEN → acme');
     expect(within(form).getByLabelText('Variable name')).toHaveValue('');
-    await user.click(
-      within(theo).getByRole('button', { name: 'Remove the exclusion of theo from GITHUB_TOKEN' }),
-    );
+    await user.click(within(theo).getByRole('button', { name: 'Remove exclusion of GITHUB_TOKEN for theo' }));
     await waitFor(async () => {
       expect(await memberRow('theo')).not.toHaveTextContent('GITHUB_TOKEN excluded');
     });

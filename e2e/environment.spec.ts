@@ -7,7 +7,7 @@ test('an administrator creates a variant, assigns it and never sees a value', as
   const create = page.getByRole('region', { name: 'Create a variant' });
   await create.getByLabel('Variable name').fill('LINEAR_KEY');
   await create.getByLabel('Variant name').fill('acme');
-  await create.getByLabel('Value').fill('lin_api_demo_value');
+  await create.getByLabel('Value', { exact: true }).fill('lin_api_demo_value');
   await create.getByRole('button', { name: 'Create variant' }).click();
   const variants = page.getByRole('list', { name: 'Team variants' });
   await expect(variants.getByRole('listitem').filter({ hasText: 'LINEAR_KEY' })).toContainText(
@@ -15,7 +15,7 @@ test('an administrator creates a variant, assigns it and never sees a value', as
   );
 
   const assign = page.getByRole('region', { name: 'Assign a variant' });
-  await assign.getByLabel('Member').selectOption({ label: 'theo' });
+  await assign.getByLabel('Member', { exact: true }).selectOption({ label: 'theo' });
   await assign.getByLabel('Variant').selectOption({ label: 'LINEAR_KEY: acme (shared)' });
   await assign.getByRole('button', { name: 'Assign' }).click();
   await expect(

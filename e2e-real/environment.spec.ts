@@ -36,7 +36,7 @@ test('an owner creates, assigns and excludes; the value never shows; a member an
   const create = page.getByRole('region', { name: 'Create a variant' });
   await create.getByLabel('Variable name').fill('E2E_TOKEN');
   await create.getByLabel('Variant name').fill('acme');
-  await create.getByLabel('Value').fill(value);
+  await create.getByLabel('Value', { exact: true }).fill(value);
   await create.getByRole('button', { name: 'Create variant' }).click();
   const variants = page.getByRole('list', { name: 'Team variants' });
   await expect(variants.getByRole('listitem').filter({ hasText: 'E2E_TOKEN' })).toContainText(
@@ -45,16 +45,26 @@ test('an owner creates, assigns and excludes; the value never shows; a member an
 
   // Nobody receives it until it is assigned: the owner picks it for themself.
   const assign = page.getByRole('region', { name: 'Assign a variant' });
-  const ownerOption = assign.getByLabel('Member').locator('option').filter({ hasNotText: 'wim' });
-  await assign.getByLabel('Member').selectOption((await ownerOption.getAttribute('value')) ?? '');
+  const ownerOption = assign
+    .getByLabel('Member', { exact: true })
+    .locator('option')
+    .filter({ hasNotText: 'wim' });
+  await assign
+    .getByLabel('Member', { exact: true })
+    .selectOption((await ownerOption.getAttribute('value')) ?? '');
   await assign.getByRole('button', { name: 'Assign' }).click();
   const assignments = page.getByRole('list', { name: 'Effective assignments' });
   await expect(assignments.getByText(/E2E_TOKEN/).first()).toBeVisible();
 
   // The member is excluded from the variable.
   const exclude = page.getByRole('region', { name: 'Exclude a member' });
-  const memberOption = exclude.getByLabel('Member').locator('option').filter({ hasText: 'wim' });
-  await exclude.getByLabel('Member').selectOption((await memberOption.getAttribute('value')) ?? '');
+  const memberOption = exclude
+    .getByLabel('Member', { exact: true })
+    .locator('option')
+    .filter({ hasText: 'wim' });
+  await exclude
+    .getByLabel('Member', { exact: true })
+    .selectOption((await memberOption.getAttribute('value')) ?? '');
   await exclude.getByLabel('Variable name').fill('E2E_TOKEN');
   await exclude.getByRole('button', { name: 'Exclude' }).click();
   await expect(assignments.getByText('E2E_TOKEN excluded')).toBeVisible();

@@ -1293,7 +1293,7 @@ export const en = {
       unassignLabel: 'Remove {{variable}} from {{who}}',
       excluded: '{{variable}} excluded',
       include: 'Remove exclusion',
-      includeLabel: 'Remove the exclusion of {{who}} from {{variable}}',
+      includeLabel: 'Remove exclusion of {{variable}} for {{who}}',
     },
     assign: {
       title: 'Assign a variant',
