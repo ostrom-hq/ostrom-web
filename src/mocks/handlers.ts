@@ -204,6 +204,7 @@ import {
 import { createConfirmationHandlers, type ConfirmationsState } from '@/mocks/confirmations';
 import { createWaitsHandlers, type WaitsState } from '@/mocks/waits';
 import { createWebhooksHandlers, type WebhooksState } from '@/mocks/webhooks';
+import { createForecastsHandlers, type ForecastsState, initialForecastWindows } from '@/mocks/forecasts';
 import { initialWebhookDeliveries, initialWebhooks } from '@/mocks/fixtures/webhooks';
 import { initialWaits } from '@/mocks/fixtures/waits';
 import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
@@ -276,7 +277,8 @@ export interface MockDb
     TeamCodeImportState,
     TodosState,
     WaitsState,
-    WebhooksState {
+    WebhooksState,
+    ForecastsState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -445,6 +447,9 @@ export function createMockDb(): MockDb {
     confirmations: initialConfirmations(opened),
     waits: initialWaits(opened),
     webhooks: initialWebhooks(),
+    forecastWindows: initialForecastWindows(opened),
+    forecastThreshold: 0.95,
+    forecastsTruncated: false,
     webhookDeliveries: initialWebhookDeliveries(),
     webhookTests: {},
     nextWebhook: 4,
@@ -1021,6 +1026,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => managesMembers(demoRoleIn(db, db.organization, now)),
     ),
     ...createWebhooksHandlers(
+      () => db,
+      now,
+      (request) => organizationOf(db, request),
+    ),
+    ...createForecastsHandlers(
       () => db,
       now,
       (request) => organizationOf(db, request),

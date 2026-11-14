@@ -11,6 +11,7 @@ import { AppShell } from '@/app/AppShell';
 import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens';
 import { activitySearchSchema } from '@/features/activity/route';
 import { deviceSearchSchema } from '@/features/device/route';
+import { forecastsSearchSchema } from '@/features/forecasts/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
 import { fragmentValue, useEmailLinkStore, useSetupLinkStore } from '@/features/signin/route';
@@ -352,6 +353,13 @@ const accountsRoute = createRoute({
   path: '/accounts',
   component: lazyRouteComponent(async () => import('@/features/sharing'), 'AccountsScreen'),
 });
+/** TeamCode's Forecasts page, `?account=` naming the shared account shown (the first one without it). */
+const forecastsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forecasts',
+  validateSearch: forecastsSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/forecasts'), 'ForecastsScreen'),
+});
 /** `?gone` says, above the list, that the group just asked for no longer exists. */
 export const groupsSearchSchema = z.object({
   gone: z.optional(
@@ -532,6 +540,7 @@ export const routeTree = rootRoute.addChildren([
   webhooksRoute,
   webhookRoute,
   accountsRoute,
+  forecastsRoute,
   groupsRoute,
   groupRoute,
 ]);

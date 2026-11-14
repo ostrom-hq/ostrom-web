@@ -134,6 +134,7 @@ describe('features the server does not serve', () => {
     ['/billing', 'Billing'],
     ['/automations', 'Automations'],
     ['/webhooks', 'Webhooks'],
+    ['/forecasts', 'Forecasts'],
     ['/cloud', 'Cloud agents'],
     ['/import', 'Import'],
   ])('tells a direct address to %s that the screen is not available here', async (path, name) => {

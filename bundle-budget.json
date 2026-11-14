@@ -51,6 +51,7 @@
     "/webhooks": 11.9,
     "/webhooks/$webhookId": 11.9,
     "/accounts": 17.7,
+    "/forecasts": 11.9,
     "/accounts/groups": 17.7,
     "/accounts/groups/$groupId": 17.7,
     "/receipts": 9.7,
