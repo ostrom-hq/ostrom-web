@@ -67,7 +67,7 @@ export function requestOf(settings: InstanceSettings, draft: SectionDraft): Save
     // Trimmed, as `isChanged` compares them; a blank field is left out, which the server reads as unset.
     values: Object.fromEntries(
       Object.entries(draft.values)
-        .map(([name, value]) => [name, value.trim()])
+        .map(([name, value]): [string, string] => [name, value.trim()])
         .filter(([, value]) => value !== ''),
     ),
     secrets: secretsOf(draft),
