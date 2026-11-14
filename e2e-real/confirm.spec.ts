@@ -55,7 +55,8 @@ test('an owner confirms on the console the governance change their admin CLI tok
   const { pending, to } = await askWithCli(page, org.id, 'admin');
 
   await page.goto(new URL(pending.confirmUrl).pathname);
-  await expect(page.getByText('Waiting for you')).toBeVisible();
+  // The request's state, in the screen: the navigation has a link of the same name (the waits).
+  await expect(page.getByRole('main').getByText('Waiting for you')).toBeVisible();
   await expect(page.getByText(/^expires in \d+:\d\d$/)).toBeVisible();
   await expect(
     page.getByText('If you did not run this command yourself, refuse: an agent may have asked for it.'),
@@ -153,7 +154,7 @@ test('2.6: a person’s API token invites, and an owner confirms on the console 
   expect(JSON.stringify(before.body)).not.toContain(invited);
 
   await page.goto(new URL(pending.confirmUrl).pathname);
-  await expect(page.getByText('Waiting for you')).toBeVisible();
+  await expect(page.getByRole('main').getByText('Waiting for you')).toBeVisible();
   const who = page.getByRole('region', { name: 'Who is invited' });
   await expect(who).toContainText(invited);
   await expect(who).toContainText('Approver');
