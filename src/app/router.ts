@@ -247,6 +247,12 @@ const secretsRoute = createRoute({
   path: '/secrets',
   component: lazyRouteComponent(async () => import('@/features/tools'), 'SecretsScreen'),
 });
+/** The organization's environment variants, their assignments and exclusions (`environment.v1`). */
+const environmentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/environment',
+  component: lazyRouteComponent(async () => import('@/features/environment'), 'EnvironmentScreen'),
+});
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/import',
@@ -475,6 +481,7 @@ export const routeTree = rootRoute.addChildren([
   mcpRoute,
   policyRoute,
   secretsRoute,
+  environmentRoute,
   skillsRoute,
   skillRoute,
   hooksRoute,

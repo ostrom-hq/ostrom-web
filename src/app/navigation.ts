@@ -31,6 +31,7 @@ export const NAV_LINKS = [
   { to: '/policy', label: 'policy' },
   { to: '/mcp', label: 'mcp' },
   { to: '/secrets', label: 'secrets' },
+  { to: '/environment', label: 'environment', feature: 'environment.v1', adminOnly: true },
   { to: '/skills', label: 'skills', feature: 'skills.v1' },
   { to: '/hooks', label: 'hooks', feature: 'hooks.v1' },
   { to: '/import', label: 'import', feature: 'import.teamcode.v1' },

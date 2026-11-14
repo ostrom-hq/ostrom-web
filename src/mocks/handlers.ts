@@ -219,6 +219,12 @@ import {
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
 import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
+import { createEnvironmentHandlers, type EnvironmentState } from '@/mocks/environment';
+import {
+  initialEnvironmentAssignments,
+  initialEnvironmentExclusions,
+  initialEnvironmentVariants,
+} from '@/mocks/fixtures/environment';
 import {
   type AdminState,
   createAdminHandlers,
@@ -245,6 +251,7 @@ export interface MockDb
     ConfirmationsState,
     DeliveryState,
     DeviceState,
+    EnvironmentState,
     GithubState,
     GroupsState,
     OrgsState,
@@ -364,6 +371,10 @@ export function createMockDb(): MockDb {
     secrets: initialSecrets(),
     mcpCalls: initialMcpCalls(),
     mcpHosted: initialMcpHosted(),
+    environmentVariants: initialEnvironmentVariants(),
+    environmentAssignments: initialEnvironmentAssignments(),
+    environmentExclusions: initialEnvironmentExclusions(),
+    nextEnvironmentVariant: 6,
     mcpAssignments: initialMcpAssignments(),
     mcpPolicies: initialMcpPolicies(),
     mcpPrefixes: {},
@@ -1154,6 +1165,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         byTool[call.tool] = (byTool[call.tool] ?? 0) + 1;
       }
       return HttpResponse.json({ byServer, byTool });
+    }),
+    ...createEnvironmentHandlers(() => db, {
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+      inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
+      memberIds: () => db.members.filter((member) => member.role !== 'invited').map((member) => member.id),
+      stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
+      now,
     }),
     ...createMcpHostedHandlers(
       () => db,
