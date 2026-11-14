@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useInstanceAdmin } from '@/shared/auth/useInstanceAdmin';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Screen } from '@/shared/ui/Screen';

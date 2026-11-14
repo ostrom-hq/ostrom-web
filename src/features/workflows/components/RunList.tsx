@@ -2,7 +2,7 @@
 import type { WorkflowRun } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { knownOr } from '@/shared/lib/openEnum';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatAbsolute, formatDuration } from '@/shared/lib/time';

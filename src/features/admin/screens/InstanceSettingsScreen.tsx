@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { InstanceSettings } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { EmptyState, LoadState } from '@/shared/ui/Screen';
 import { AdminFrame } from '../components/AdminFrame';
 import { SectionForm } from '../components/SectionForm';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudRuntime } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {

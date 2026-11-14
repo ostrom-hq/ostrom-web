@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { OrgMember, SharedAccount } from '@gen/api/types.gen';
 import { type ReactElement, useId, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useStep } from '@/shared/lib/useStep';
 import type { OrgMembers } from '@/shared/org/members';
 import { isFound } from '@/shared/org/people';

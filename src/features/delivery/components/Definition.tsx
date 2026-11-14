@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { HookDefinition } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { factsOf } from '../model';
 
 /** When and what a hook runs: its events, its matcher, its command and its timeout. */

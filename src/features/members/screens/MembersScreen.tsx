@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { OrgMember, OrgView } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { MEMBERS_PAGE } from '@/shared/org/members';

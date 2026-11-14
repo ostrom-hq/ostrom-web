@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import type { ThemePreference } from '@/shared/theme/themeStore';
 import { useTheme } from '@/shared/theme/useTheme';
 import { Button } from '@/shared/ui/Button';

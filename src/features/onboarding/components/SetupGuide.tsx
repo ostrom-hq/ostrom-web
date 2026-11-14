@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { Link } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { CopyField } from '@/shared/ui/CopyField';
 import { currentStep, type SetupStep } from '../model';

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { SECRET_MAX, type SecretIntent } from '../model';
 

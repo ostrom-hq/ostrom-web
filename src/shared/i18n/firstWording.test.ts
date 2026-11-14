@@ -7,6 +7,13 @@ afterEach(() => {
 });
 
 describe('takeFirstWording', () => {
+  it('resolves to nothing for a 200 whose body is not JSON, or is cut off', async () => {
+    for (const body of ['<html>sign in</html>', '{"app":']) {
+      const store = { [wordingKey('en')]: Promise.resolve(new Response(body, { status: 200 })) };
+      await expect(takeFirstWording('en', store)).resolves.toBeUndefined();
+    }
+  });
+
   it('takes the wording /boot.js fetched for the language, once', async () => {
     const store = { [wordingKey('fr')]: Promise.resolve(Response.json({ app: { name: 'Ostrom' } })) };
     expect(takeFirstWording('en', store)).toBeUndefined();

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import type { Analytics } from '@/shared/analytics/analytics';
 import { useConsentStore } from '@/shared/analytics/consent';
 import { Button } from '@/shared/ui/Button';

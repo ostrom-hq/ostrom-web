@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { z } from 'zod/mini';
 import { BOOTED, wordingKey } from '@/shared/build/bootScript';
+import type { Wording } from '@/shared/i18n/instance';
 
-/** Wording as i18next keeps it: sections of keys, of sections or texts. */
+/** Wording as the console keeps it: sections of keys, of sections or texts. */
 const zWording = z.record(z.string(), z.unknown());
-export type Wording = z.infer<typeof zWording>;
 
 /**
  * The wording of `language` that `/boot.js` fetched for the first screen (only the sections it shows), taken out of
@@ -23,7 +23,9 @@ export function takeFirstWording(
   return fetched.then(
     async (response: unknown) => {
       if (!(response instanceof Response) || !response.ok) return undefined;
-      const parsed = zWording.safeParse(await response.json());
+      // A 200 that is a page, or a body cut off, is not a wording either: the whole language is loaded instead.
+      const body: unknown = await response.json().catch(() => undefined);
+      const parsed = zWording.safeParse(body);
       return parsed.success ? parsed.data : undefined;
     },
     () => undefined,

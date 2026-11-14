@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
 import { isRefusal } from '@/shared/api/poll';
 import { Banner } from '@/shared/ui/Banner';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { McpArgumentCondition, McpArgumentPolicy, McpAssignment, OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';

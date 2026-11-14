@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { SkillEntry } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { type SkillChangeViewModel, isPersonal } from '../useSkills';

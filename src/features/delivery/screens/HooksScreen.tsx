@@ -2,7 +2,7 @@
 import type { HookEntry } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useViewer } from '@/shared/auth/useViewer';
 import { formatAbsolute } from '@/shared/lib/time';
 import { WithOrg } from '@/shared/org/WithOrg';
