@@ -86,8 +86,11 @@ jobs:
 
   # The server the journeys run against, resolved once so that every shard runs the same one: the newest
   # docker.io/ostromhq/ostrom-server:sha-<commit> of main's last commits (never `latest`, which a slower run of an older
-  # commit may still hold), and the cloud sessions' image docker.io/ostromhq/ostrom-runner:latest, by digest. Both
-  # images are public: nothing here needs a secret, a pull request from a fork runs the journeys too.
+  # commit may still hold). The cloud sessions run docker.io/ostromhq/ostrom-session:latest, the server's default
+  # session image (its cloud runtime's `sessionImage`), named by that tag because the server's plan names it so. It
+  # also holds `ostrom` at /usr/local/bin, so it is the runner image too (OSTROM_RUNNERS_IMAGE, the machines' delivery
+  # image): a server from before the session image setting runs OSTROM_RUNNERS_IMAGE as both. Both images are public:
+  # nothing here needs a secret, a pull request from a fork runs the journeys too.
   server:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
@@ -113,7 +116,7 @@ jobs:
           # The oldest server the console's journeys need: cloud sessions on registered runners (server#223), after
           # /auth/me with Ostrom-Org (server#92) and the browser session (server#58).
           MIN_SERVER: b091032
-          RUNNER_IMAGE: docker.io/ostromhq/ostrom-runner:latest
+          RUNNER_IMAGE: docker.io/ostromhq/ostrom-session:latest
         run: |
           image=
           for commit in $(git -C server rev-list --first-parent --max-count=10 HEAD); do
@@ -127,7 +130,8 @@ jobs:
           runner=$(docker buildx imagetools inspect "$RUNNER_IMAGE" --format '{{json .Manifest}}' | jq -r .digest) \
             || { echo "::error::$RUNNER_IMAGE cannot be read"; exit 1; }
           [[ "$runner" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::$RUNNER_IMAGE has no digest: $runner"; exit 1; }
-          runner=docker.io/ostromhq/ostrom-runner@$runner
+          # by its tag, the name the server's plan uses; the digest only says it is published
+          runner=$RUNNER_IMAGE
           main=$(git -C server rev-parse HEAD)
           {
             echo "image=$image"
