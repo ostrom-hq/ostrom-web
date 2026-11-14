@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NotificationPreferences, NotificationSetting, PushTestResult } from '@gen/api/types.gen';
+import type {
+  NotificationPreferences,
+  NotificationSetting,
+  PushDevice,
+  PushTestResult,
+} from '@gen/api/types.gen';
 
 /** The kinds the server routes (`NotificationKinds` in ostrom-core), as it lists them. */
 export const NOTIFICATION_KIND_WIRES = [
@@ -26,4 +31,12 @@ export function initialNotificationPreferences(): NotificationPreferences {
 /** Maya's two phones, as a test reaches them: one took it, one was forgotten by the provider. */
 export function initialPushPhones(): PushTestResult[] {
   return [{ status: 'sent' }, { status: 'unregistered', error: 'unregistered' }];
+}
+
+/** Maya's two phones, the most recently seen first, in the order a test reaches them (`initialPushPhones`). */
+export function initialPushDevices(): PushDevice[] {
+  return [
+    { id: 'pd_ios', provider: 'fcm', platform: 'ios', locale: 'fr', createdAt: '2026-11-10T08:30:00Z' },
+    { id: 'pd_android', provider: 'fcm', platform: 'android', createdAt: '2026-10-02T17:05:00Z' },
+  ];
 }

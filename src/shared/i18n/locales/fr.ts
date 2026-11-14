@@ -2630,6 +2630,19 @@ export const fr = {
         rateLimited: 'Un test vient d’être envoyé. Attends quelques secondes, puis réessaie.',
       },
     },
+    phones: {
+      title: 'Téléphones enregistrés',
+      lead: 'Les téléphones notifiés pour toi dans cette organisation. Retire celui que tu n’utilises plus.',
+      none: 'Aucun téléphone enregistré pour l’instant. Connecte-toi avec l’app sur ton téléphone et autorise les notifications.',
+      since: 'Enregistré {{date}}',
+      platform: {
+        ios: 'iPhone',
+        android: 'Téléphone Android',
+      },
+      remove: 'Retirer',
+      removeConfirm: 'Ne plus notifier {{phone}}',
+      keep: 'Garder',
+    },
   },
   account: {
     title: 'Mon compte',

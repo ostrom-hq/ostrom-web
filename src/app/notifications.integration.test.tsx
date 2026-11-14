@@ -13,6 +13,12 @@ async function region(name: string): Promise<HTMLElement> {
   return screen.findByRole('region', { name });
 }
 
+function nth<T>(items: readonly T[], index: number): T {
+  const item = items[index];
+  if (item === undefined) throw new Error(`no item ${String(index)}`);
+  return item;
+}
+
 function without(...features: readonly FeatureKey[]): void {
   server.use(
     handleCapabilities(() =>
@@ -209,6 +215,78 @@ describe('approvals on the phone', () => {
   });
 });
 
+describe('the phones notified', () => {
+  it('lists them, and stops one after a confirmation', async () => {
+    const user = userEvent.setup();
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    const phones = await within(box).findByRole('list', { name: 'Registered phones' });
+    expect(within(phones).getByText('iPhone')).toBeInTheDocument();
+    expect(within(phones).getByText('Android phone')).toBeInTheDocument();
+    await user.click(nth(within(phones).getAllByRole('button', { name: 'Remove' }), 0));
+    await user.click(await within(phones).findByRole('button', { name: 'Stop notifying iPhone' }));
+    await vi.waitFor(() => {
+      expect(within(box).queryByText('iPhone')).toBeNull();
+    });
+    expect(db.pushDevices.map((phone) => phone.id)).toEqual(['pd_android']);
+  });
+
+  it('keeps a phone when the confirmation is declined', async () => {
+    const user = userEvent.setup();
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    const phones = await within(box).findByRole('list', { name: 'Registered phones' });
+    await user.click(nth(within(phones).getAllByRole('button', { name: 'Remove' }), 0));
+    await user.click(within(phones).getByRole('button', { name: 'Keep' }));
+    expect(db.pushDevices).toHaveLength(2);
+    expect(within(phones).getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
+  });
+
+  it('says there is none, and names a platform it does not know by its wire value', async () => {
+    db.pushDevices = [];
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    expect(
+      await within(box).findByText(
+        'No phone is registered yet. Sign in with the app on your phone and allow notifications.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('shows an unknown platform as text', async () => {
+    db.pushDevices = [{ id: 'pd_x', provider: 'fcm', platform: 'watch', createdAt: '2026-11-10T08:30:00Z' }];
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    expect(await within(box).findByText('watch')).toBeInTheDocument();
+  });
+
+  it('says why a phone was not stopped, and reads the list again', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/push-devices/:id', () =>
+        HttpResponse.json({ error: { type: 'not_found', message: 'already gone' } }, { status: 404 }),
+      ),
+    );
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    const phones = await within(box).findByRole('list', { name: 'Registered phones' });
+    await user.click(nth(within(phones).getAllByRole('button', { name: 'Remove' }), 1));
+    await user.click(await within(phones).findByRole('button', { name: 'Stop notifying Android phone' }));
+    expect(await within(box).findByText('already gone')).toBeInTheDocument();
+  });
+
+  it('says it did not read them', async () => {
+    server.use(
+      http.get('*/api/v1/push-devices', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'phones are down' } }, { status: 500 }),
+      ),
+    );
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    expect(await within(box).findByText('phones are down', {}, { timeout: 4_000 })).toBeInTheDocument();
+  });
+});
+
 describe('a test notification', () => {
   it('sends one and lists each phone’s answer', async () => {
     const user = userEvent.setup();
@@ -293,7 +371,9 @@ describe('a server without notifications', () => {
     await new Promise((done) => setTimeout(done, 200));
     expect(screen.queryByRole('region', { name: 'Approvals on your phone' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Test' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Registered phones' })).toBeNull();
     expect(asked).not.toContain('/api/v1/me/notifications');
+    expect(asked).not.toContain('/api/v1/push-devices');
   });
 
   it('keeps the phone and the test without the switches', async () => {
