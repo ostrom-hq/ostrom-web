@@ -5,7 +5,7 @@ import type {
   EnvironmentExclusion,
   EnvironmentVariant,
   EnvironmentVariantCreate,
-  Member,
+  OrgMember,
 } from '@gen/api/types.gen';
 
 /** An environment variable's name, as the server takes it: `[A-Z_][A-Z0-9_]*`, at most 128 characters. */
@@ -47,8 +47,8 @@ export function checkVariant(
 }
 
 /** How a member is named on the page: their name and login, or the login alone. */
-export function memberLabel(member: Member): string {
-  return member.name === undefined || member.name === '' ? member.login : `${member.name} (${member.login})`;
+export function memberLabel(member: OrgMember): string {
+  return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 
 /** One member's row of the effective assignments: what they receive and what they are excluded from. */
@@ -67,11 +67,13 @@ export interface MemberEnvironment {
 
 /**
  * Every member with what they receive, in the order of the member list, then any member the assignments name that
- * the list does not (by id). An invitation not accepted yet has no member to assign to.
+ * the list does not (by id). An invitation not accepted yet has no member to assign to. Until `complete` (every page
+ * of the list read), a member the list does not name may be on a page not read: they stay pickable.
  */
 export function memberRows(
-  members: readonly Member[] | undefined,
+  members: readonly OrgMember[] | undefined,
   page: EnvironmentAssignmentsPage,
+  complete = true,
 ): MemberEnvironment[] {
   const known = (members ?? []).filter((member) => member.role !== 'invited');
   const ids = [
@@ -84,7 +86,7 @@ export function memberRows(
     return {
       id,
       label: member === undefined ? id : memberLabel(member),
-      listed: members === undefined || member !== undefined,
+      listed: members === undefined || !complete || member !== undefined,
       assignments: page.items
         .filter((assignment) => assignment.member === id)
         .toSorted((a, b) => a.variable.localeCompare(b.variable)),

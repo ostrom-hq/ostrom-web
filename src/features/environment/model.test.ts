@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentVariant, Member } from '@gen/api/types.gen';
+import type { EnvironmentVariant, OrgMember } from '@gen/api/types.gen';
 import {
   bindingOf,
   checkVariant,
@@ -23,11 +23,14 @@ const variant = (overrides: Partial<EnvironmentVariant>): EnvironmentVariant => 
   ...overrides,
 });
 
-const member = (id: string, login: string, overrides: Partial<Member> = {}): Member => ({
+const member = (id: string, login: string, overrides: Partial<OrgMember> = {}): OrgMember => ({
   id,
   login,
+  name: '',
   avatarUrl: '',
+  email: null,
   role: 'member',
+  joinedAt: '2026-09-01T09:00:00Z',
   ...overrides,
 });
 
@@ -125,6 +128,12 @@ describe('the effective assignments by member', () => {
     expect(memberRows(undefined, { items: [], exclusions: [{ member: 'm1', variable: 'A' }] })).toEqual([
       { id: 'm1', label: 'm1', listed: true, assignments: [], exclusions: [{ member: 'm1', variable: 'A' }] },
     ]);
+  });
+
+  it('keeps a member the list does not name pickable until every page of it is read', () => {
+    const page = { items: [], exclusions: [{ member: 'm9', variable: 'A' }] };
+    expect(memberRows([member('m1', 'ana')], page, false).map((row) => row.listed)).toEqual([true, true]);
+    expect(memberRows([member('m1', 'ana')], page).map((row) => row.listed)).toEqual([true, false]);
   });
 
   it('names a member by login when they have no name', () => {

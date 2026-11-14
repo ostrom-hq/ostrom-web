@@ -1187,7 +1187,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createEnvironmentHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
-      memberIds: () => db.members.filter((member) => member.role !== 'invited').map((member) => member.id),
+      // As the server: the organization's members, the ones `/orgs/{org}/members` lists.
+      memberIds: () => membersIn(db, db.organization, now).map((member) => member.id),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       now,
       me: () => MEMBER_IDS.maya,

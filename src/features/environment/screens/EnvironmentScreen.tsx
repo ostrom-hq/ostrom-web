@@ -5,6 +5,7 @@ import { managesMembers } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Banner } from '@/shared/ui/Banner';
 import { FailureText } from '@/shared/ui/FailureText';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { EmptyState, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { AssignForm } from '../components/AssignForm';
 import { CreateVariantForm } from '../components/CreateVariantForm';
@@ -22,9 +23,9 @@ export function EnvironmentScreen(): ReactElement {
   const { t } = useTranslation();
   return (
     <WithOrg title={t('environment.title')}>
-      {(_org, role) =>
+      {(org, role) =>
         managesMembers(role) ? (
-          <EnvironmentAdmin />
+          <EnvironmentAdmin org={org.id} />
         ) : (
           <Screen title={t('environment.title')}>
             <EmptyState title={t('environment.adminsOnlyTitle')}>{t('environment.adminsOnly')}</EmptyState>
@@ -35,10 +36,10 @@ export function EnvironmentScreen(): ReactElement {
   );
 }
 
-function EnvironmentAdmin(): ReactElement {
+function EnvironmentAdmin({ org }: { readonly org: string }): ReactElement {
   const { t } = useTranslation();
   const view = useEnvironmentAdmin();
-  const change = useEnvironmentChange();
+  const change = useEnvironmentChange(org);
   const busy = change.pending;
   const ownerOf = (id: string): string => view.members?.find((member) => member.id === id)?.label ?? id;
   return (
@@ -114,6 +115,7 @@ function EnvironmentAdmin(): ReactElement {
                 assign={change.assign}
               />
               <ExcludeForm members={pickable} busy={busy} exclude={change.exclude} />
+              <MorePeople people={view.people} />
             </>
           );
         }}
