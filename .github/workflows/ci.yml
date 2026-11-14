@@ -166,7 +166,9 @@ jobs:
           docker run -d --name ostrom-server --network host \
             -v "$RUNNER_TEMP/ostrom-mail:/var/lib/ostrom/mail" \
             -e OSTROM_DATABASE_URL="$APP_URL" -e OSTROM_PORT=4600 \
-            -e OSTROM_MAIL_DIR=/var/lib/ostrom/mail \
+            -e OSTROM_MAIL_DIR=/var/lib/ostrom/mail -e OSTROM_SIGNUP=open \
+            -e OSTROM_TRUSTED_PROXIES=127.0.0.1/32,::1/128 -e OSTROM_READS_PER_MINUTE=6000 \
+            -e OSTROM_READS_IN_FLIGHT=64 -e OSTROM_READ_WAITS_IN_FLIGHT=256 \
             -e OSTROM_PUBLIC_URL=http://localhost:4173 -e OSTROM_CONSOLE_URL=http://localhost:4173 \
             -e OSTROM_STRIPE_SECRET_KEY=sk_test_web_e2e -e OSTROM_STRIPE_WEBHOOK_SECRET=whsec_web_e2e \
             -e OSTROM_STRIPE_API_BASE=http://127.0.0.1:12111 \
