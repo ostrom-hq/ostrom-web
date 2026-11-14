@@ -85,6 +85,7 @@ import type {
   CloudSession,
   Decision,
   McpCall,
+  McpHostedProcess,
   McpServer,
   Member,
   Organization,
@@ -192,6 +193,7 @@ import { initialBudgets, spendingFor } from '@/mocks/fixtures/spend';
 import {
   initialMcpAssignments,
   initialMcpCalls,
+  initialMcpHosted,
   initialMcpPolicies,
   initialMcpServers,
   initialSecrets,
@@ -216,6 +218,7 @@ import {
 } from '@/mocks/fixtures/delivery';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
+import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
 import {
   type AdminState,
   createAdminHandlers,
@@ -248,6 +251,7 @@ export interface MockDb
     TokensState,
     KeysAndDevicesState,
     McpAccessState,
+    McpHostedState,
     PolicyState,
     TeamCodeImportState,
     TodosState,
@@ -288,6 +292,8 @@ export interface MockDb
   /** Secrets as the server lists them: names and metadata, never a value. */
   secrets: Secret[];
   mcpCalls: McpCall[];
+  /** The MCP host's processes; a restart clears a failure and a backoff. */
+  mcpHosted: McpHostedProcess[];
   budgets: Budget[];
   /** The spending served instead of the fixture's: the large organization's (PERF-CONSOLE). */
   spending?: (period: 'month' | 'week') => Spending;
@@ -357,6 +363,7 @@ export function createMockDb(): MockDb {
     mcpServers: initialMcpServers(),
     secrets: initialSecrets(),
     mcpCalls: initialMcpCalls(),
+    mcpHosted: initialMcpHosted(),
     mcpAssignments: initialMcpAssignments(),
     mcpPolicies: initialMcpPolicies(),
     mcpPrefixes: {},
@@ -1148,6 +1155,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       }
       return HttpResponse.json({ byServer, byTool });
     }),
+    ...createMcpHostedHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
+    ),
     ...createMcpAccessHandlers(
       () => db,
       (request) => organizationOf(db, request),

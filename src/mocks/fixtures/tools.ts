@@ -1,5 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpArgumentPolicy, McpAssignment, McpCall, McpServer, Secret } from '@gen/api/types.gen';
+import type {
+  McpArgumentPolicy,
+  McpAssignment,
+  McpCall,
+  McpHostedProcess,
+  McpServer,
+  Secret,
+} from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const servers: McpServer[] = [
@@ -130,4 +137,33 @@ export function initialMcpPolicies(): Record<string, McpArgumentPolicy[]> {
       },
     ],
   };
+}
+
+/** The hosted stdio processes of the demo organization: a shared one running, a member's in backoff. */
+export function initialMcpHosted(): McpHostedProcess[] {
+  return [
+    {
+      server: 'filesystem',
+      launcher: 'npm',
+      package: '@modelcontextprotocol/server-filesystem@2026.1.14',
+      state: 'ready',
+      starts: 3,
+      failures: 0,
+      coldStartMs: 1840,
+      memoryBytes: 96 * 1024 * 1024,
+    },
+    {
+      server: 'notes',
+      member: MEMBER_IDS.theo,
+      memberName: 'theo',
+      launcher: 'pypi',
+      package: 'mcp-notes==0.4.2',
+      state: 'backoff',
+      failure: 'crashed',
+      starts: 5,
+      failures: 4,
+      lastExitCode: 1,
+      stderr: "Traceback (most recent call last):\n  ModuleNotFoundError: No module named 'notes_store'\n",
+    },
+  ];
 }

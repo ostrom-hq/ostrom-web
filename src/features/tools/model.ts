@@ -203,3 +203,33 @@ export function sortAssignments(assignments: readonly McpAssignment[]): McpAssig
 export function memberLabel(member: Member): string {
   return member.name === undefined || member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
+
+export const HOSTED_STATES = ['idle', 'starting', 'ready', 'failed', 'backoff', 'unknown'] as const;
+export type HostedState = (typeof HOSTED_STATES)[number];
+
+/** A state the host documents; anything else reads as `unknown`, as the server stores it. */
+export function hostedStateOf(value: string): HostedState {
+  return HOSTED_STATES.find((state) => state === value) ?? 'unknown';
+}
+
+/** Ready is healthy; a failure or a backoff needs a look; the rest is neither good nor bad. */
+export function hostedTone(state: HostedState): 'success' | 'danger' | 'warning' | 'neutral' {
+  switch (state) {
+    case 'ready':
+      return 'success';
+    case 'failed':
+      return 'danger';
+    case 'backoff':
+      return 'warning';
+    case 'idle':
+    case 'starting':
+    case 'unknown':
+      return 'neutral';
+  }
+}
+
+/** Resident memory as a person reads it: 96 MiB, 1.5 GiB. */
+export function formatMemory(bytes: number): string {
+  const mib = Math.round(bytes / (1024 * 1024));
+  return mib >= 1024 ? `${(bytes / 1024 ** 3).toFixed(1)} GiB` : `${String(mib)} MiB`;
+}
