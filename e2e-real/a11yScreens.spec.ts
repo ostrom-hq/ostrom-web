@@ -24,6 +24,8 @@ const SCREENS = [
   '/policy',
   '/mcp',
   '/secrets',
+  '/skills',
+  '/hooks',
   '/import',
   '/spend',
   '/billing',

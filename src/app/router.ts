@@ -196,6 +196,47 @@ const mcpRoute = createRoute({
   path: '/mcp',
   component: lazyRouteComponent(async () => import('@/features/tools'), 'McpScreen'),
 });
+/** The team's skills and hooks, pinned by an administrator and delivered to members; what a member receives. */
+const skillsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/skills',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'SkillsScreen'),
+});
+const skillRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/skills/$name',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'SkillScreen'),
+});
+const hooksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hooks',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'HooksScreen'),
+});
+const hookRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hooks/$name',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'HookScreen'),
+});
+const hookVersionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/hooks/$name/versions/$version',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'HookVersionScreen'),
+});
+const memberSkillsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/members/$memberId/skills',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'MemberSkillsScreen'),
+});
+const memberHooksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/members/$memberId/hooks',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'MemberHooksScreen'),
+});
+const personalSkillsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/me/skills',
+  component: lazyRouteComponent(async () => import('@/features/delivery'), 'PersonalSkillsScreen'),
+});
 const policyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/policy',
@@ -419,6 +460,14 @@ export const routeTree = rootRoute.addChildren([
   mcpRoute,
   policyRoute,
   secretsRoute,
+  skillsRoute,
+  skillRoute,
+  hooksRoute,
+  hookRoute,
+  hookVersionRoute,
+  memberSkillsRoute,
+  memberHooksRoute,
+  personalSkillsRoute,
   importRoute,
   spendRoute,
   billingRoute,

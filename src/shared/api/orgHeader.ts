@@ -33,6 +33,11 @@ const ORG_FREE: readonly RegExp[] = [
   // launch, no organization is named.
   /^\/api\/v1\/launches\/[^/]+(?:\/hooks-missing)?$/,
   /^\/api\/v1\/cloud\/runner\/terminal$/,
+  // The instance's own administration, its cloud runtime and clusters, and a pinned version of an automation's webhook
+  // (the secret in its address says the organization): the contract gives them no `Ostrom-Org`.
+  /^\/api\/v1\/admin\/(?:instance-admins|settings)(?:\/[^/]+)?$/,
+  /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,
+  /^\/api\/v1\/automations\/[^/]+\/v\/[^/]+\/trigger$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */
