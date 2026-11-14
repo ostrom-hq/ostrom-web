@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
+import type { Automation, AutomationAction, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
 
 export const TRIGGER_KINDS = ['cron', 'webhook'] as const;
 export type TriggerKind = (typeof TRIGGER_KINDS)[number];
@@ -14,6 +14,14 @@ export type OverlapMode = (typeof OVERLAPS)[number];
 
 export function isOverlap(value: string): value is OverlapMode {
   return OVERLAPS.some((mode) => mode === value);
+}
+
+/** What an automation starts: an agent session with a prompt, or a run of an accepted workflow. */
+export const ACTION_KINDS = ['prompt', 'workflow'] as const;
+export type ActionKind = (typeof ACTION_KINDS)[number];
+
+export function isActionKind(value: string): value is ActionKind {
+  return ACTION_KINDS.some((kind) => kind === value);
 }
 
 export const VARIABLE_TYPES = ['string', 'int', 'number', 'boolean', 'enum'] as const;
@@ -53,6 +61,13 @@ export interface AutomationDraft {
   readonly overlap: OverlapMode;
   readonly variables: readonly VariableDraft[];
   readonly sample: string;
+  /** Which action it is; the fields below are those of a workflow action. */
+  readonly actionKind: ActionKind;
+  readonly workflowId: string;
+  /** The workflow's inputs as templates, by input id. */
+  readonly inputs: Readonly<Record<string, string>>;
+  /** `owner/name`: the repository of the workflow's agent steps that name none; empty: none. */
+  readonly repository: string;
 }
 
 /** The time zone of this browser, the one a new schedule most likely means. */
@@ -91,6 +106,10 @@ export function automationDraftOf(automation: Automation | undefined, timezone: 
       overlap: 'skip',
       variables: [],
       sample: '',
+      actionKind: 'prompt',
+      workflowId: '',
+      inputs: {},
+      repository: '',
     };
   }
   const { trigger, action } = automation;
@@ -109,6 +128,10 @@ export function automationDraftOf(automation: Automation | undefined, timezone: 
     overlap: automation.overlap === 'allow' ? 'allow' : 'skip',
     variables: (automation.variables ?? []).map(variableDraft),
     sample: automation.samplePayload === undefined ? '' : JSON.stringify(automation.samplePayload, null, 2),
+    actionKind: action.workflowId === undefined ? 'prompt' : 'workflow',
+    workflowId: action.workflowId ?? '',
+    inputs: action.inputs ?? {},
+    repository: action.repository ?? '',
   };
 }
 
@@ -154,18 +177,36 @@ export type AutomationProblem =
   | 'variables'
   | 'variable'
   | 'enum'
-  | 'sample';
+  | 'sample'
+  | 'workflow'
+  | 'input'
+  | 'repository';
 
-/** The first thing the server would refuse that the form can see; undefined when the draft may be sent. */
-export function automationProblem(draft: AutomationDraft): AutomationProblem | undefined {
+/** `owner/name` of a repository. */
+const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
+/**
+ * The first thing the server would refuse that the form can see; undefined when the draft may be sent. A workflow
+ * action needs `required` (the ids of the workflow's required inputs): each one must be given a template.
+ */
+export function automationProblem(
+  draft: AutomationDraft,
+  required: readonly string[] = [],
+): AutomationProblem | undefined {
   const name = draft.name.trim();
   if (name === '' || name.length > LIMITS.name) return 'name';
   if (draft.kind === 'cron') {
     if (!looksLikeCron(draft.cron)) return 'cron';
     if (draft.timezone.trim() === '') return 'timezone';
   }
-  if (draft.prompt.trim() === '' || draft.prompt.length > LIMITS.prompt) return 'prompt';
-  if (wholeNumber(draft.runtime, 1, LIMITS.runtimeMinutes) === undefined) return 'runtime';
+  if (draft.actionKind === 'workflow') {
+    if (draft.workflowId === '') return 'workflow';
+    if (required.some((id) => (draft.inputs[id] ?? '').trim() === '')) return 'input';
+    if (draft.repository.trim() !== '' && !REPOSITORY.test(draft.repository.trim())) return 'repository';
+  } else {
+    if (draft.prompt.trim() === '' || draft.prompt.length > LIMITS.prompt) return 'prompt';
+    if (wholeNumber(draft.runtime, 1, LIMITS.runtimeMinutes) === undefined) return 'runtime';
+  }
   if (wholeNumber(draft.runsPerDay, 1, LIMITS.runsPerDay) === undefined) return 'runsPerDay';
   if (draft.kind === 'webhook') {
     if (draft.variables.length > LIMITS.variables) return 'variables';
@@ -199,7 +240,25 @@ function variableOf(draft: VariableDraft, before: AutomationVariable | undefined
  * variable's length) is kept from `automation`; an edit sends the version it read, so a change made since is refused.
  * A webhook has no schedule and a schedule has no payload: switching the trigger drops what the other one had.
  */
-export function automationWriteOf(draft: AutomationDraft, automation?: Automation): AutomationWrite {
+/** A workflow action: the workflow, its inputs as templates (an empty one is left out), the repository; no prompt. */
+function workflowActionOf(draft: AutomationDraft, known: readonly string[] | undefined): AutomationAction {
+  const inputs = Object.entries(draft.inputs).filter(
+    ([id, template]) => template.trim() !== '' && (known === undefined || known.includes(id)),
+  );
+  const repository = draft.repository.trim();
+  return {
+    workflowId: draft.workflowId,
+    ...(inputs.length === 0 ? {} : { inputs: Object.fromEntries(inputs) }),
+    ...(repository === '' ? {} : { repository }),
+  };
+}
+
+export function automationWriteOf(
+  draft: AutomationDraft,
+  automation?: Automation,
+  /** The ids of the chosen workflow's inputs: templates for any other are dropped. */
+  known?: readonly string[],
+): AutomationWrite {
   const before = automation?.trigger;
   const effort = automation?.action.effort;
   const model = draft.model.trim();
@@ -218,13 +277,16 @@ export function automationWriteOf(draft: AutomationDraft, automation?: Automatio
             ? {}
             : { catchupGraceMinutes: before.catchupGraceMinutes }),
         },
-    action: {
-      prompt: draft.prompt,
-      agent: draft.agent,
-      ...(model === '' ? {} : { model }),
-      ...(effort === undefined ? {} : { effort }),
-      maxRuntimeMinutes: Number(draft.runtime.trim()),
-    },
+    action:
+      draft.actionKind === 'workflow'
+        ? workflowActionOf(draft, known)
+        : {
+            prompt: draft.prompt,
+            agent: draft.agent,
+            ...(model === '' ? {} : { model }),
+            ...(effort === undefined ? {} : { effort }),
+            maxRuntimeMinutes: Number(draft.runtime.trim()),
+          },
     variables: webhook
       ? draft.variables.map((variable) =>
           variableOf(

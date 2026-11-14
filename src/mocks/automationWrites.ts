@@ -22,14 +22,12 @@ const WEBHOOK_BASE = 'https://api.ostrom.run/api/v1/automations';
  * its own words. Gives the prompt it checked, or the refusal.
  */
 function promptOrRefusal(write: Write): string | HttpResponse<ApiError> {
-  if (write.action.workflowId !== undefined)
-    return refusal(
-      400,
-      'invalid_request',
-      'Workflow actions are not available yet: give the action a prompt.',
-    );
-  const { prompt } = write.action;
-  if (prompt === undefined || prompt.trim() === '')
+  const { workflowId } = write.action;
+  // A workflow action has no prompt: the workflow is what runs, and its inputs are the action's.
+  if (workflowId !== undefined && write.action.prompt !== undefined)
+    return refusal(400, 'invalid_request', 'A workflow action has no prompt.');
+  const prompt = workflowId === undefined ? write.action.prompt : '';
+  if (prompt === undefined || (workflowId === undefined && prompt.trim() === ''))
     return refusal(400, 'invalid_request', 'The prompt has 1 to 32000 characters.');
   if (write.overlap !== undefined && write.overlap !== 'skip' && write.overlap !== 'allow')
     return refusal(400, 'invalid_request', 'overlap is skip or allow.');
@@ -57,12 +55,19 @@ function definitionOf(
       ...(trigger.timezone === undefined ? {} : { timezone: trigger.timezone }),
       ...(trigger.kind === 'cron' ? { catchup: trigger.catchup ?? 'once' } : {}),
     },
-    action: {
-      agent: action.agent ?? 'claude',
-      prompt,
-      ...(action.model === undefined ? {} : { model: action.model }),
-      maxRuntimeMinutes: action.maxRuntimeMinutes ?? 60,
-    },
+    action:
+      action.workflowId === undefined
+        ? {
+            agent: action.agent ?? 'claude',
+            prompt,
+            ...(action.model === undefined ? {} : { model: action.model }),
+            maxRuntimeMinutes: action.maxRuntimeMinutes ?? 60,
+          }
+        : {
+            workflowId: action.workflowId,
+            inputs: action.inputs ?? {},
+            ...(action.repository === undefined ? {} : { repository: action.repository }),
+          },
     variables: (write.variables ?? []).map((variable) => ({
       name: variable.name,
       path: variable.path,

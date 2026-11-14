@@ -34,6 +34,7 @@ import {
   handleListArtifactMembers,
   handleListArtifacts,
   handleListArtifactVersions,
+  handleCancelAutomationRun,
   handleListAutomationRuns,
   handleListAutomations,
   handleListBudgets,
@@ -1441,6 +1442,27 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListAutomationRuns(({ params }) =>
       HttpResponse.json({ items: db.automationRuns.filter((run) => run.automationId === params.id) }),
     ),
+    // Its owner, an owner or an admin ends a run that has not finished: queued or started.
+    handleCancelAutomationRun(({ params }) => {
+      const automation = db.automations.find((item) => item.id === params.id);
+      const index = db.automationRuns.findIndex(
+        (item) => item.id === params.runId && item.automationId === params.id,
+      );
+      const run = db.automationRuns[index];
+      if (automation === undefined || run === undefined) return refusal(404, 'not_found', 'run not found');
+      if (!mayChange(db, automation))
+        return refusal(403, 'forbidden', 'only its owner, an owner or an admin ends it');
+      if (run.status !== 'queued' && run.status !== 'started')
+        return refusal(409, 'run_finished', 'The run is already over.');
+      const cancelled: AutomationRun = {
+        ...run,
+        status: 'cancelled',
+        reason: 'cancelled',
+        updatedAt: now().toISOString(),
+      };
+      db.automationRuns[index] = cancelled;
+      return HttpResponse.json(cancelled);
+    }),
     handleTestAutomation(async ({ request, params }) => {
       const automation = db.automations.find((item) => item.id === params.id);
       if (automation === undefined) return refusal(404, 'not_found', 'automation not found');

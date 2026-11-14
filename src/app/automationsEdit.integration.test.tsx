@@ -195,7 +195,7 @@ describe('writing an automation', () => {
 });
 
 describe('editing an automation', () => {
-  it('edits its own automation over the version it read, and a workflow one gets a prompt', async () => {
+  it('edits its own automation over the version it read, and a workflow one can get a prompt', async () => {
     const user = userEvent.setup();
     visit('/automations');
     const sentry = await card('Triage new Sentry issues');
@@ -204,11 +204,20 @@ describe('editing an automation', () => {
     ).toBeNull();
     await user.click(within(sentry).getByRole('button', { name: 'Edit' }));
     expect(within(sentry).queryByRole('button', { name: 'Edit' })).toBeNull();
-    expect(
-      within(sentry).getByText(/runs the workflow wf-backend\. Workflow runs cannot be started/),
-    ).toBeInTheDocument();
+    // it starts a workflow: the form shows that one, and the action can become a prompt
+    await vi.waitFor(() => {
+      expect(within(sentry).getByRole('combobox', { name: 'The workflow' })).toHaveValue('wf-backend');
+    });
+    await user.selectOptions(
+      within(sentry).getByRole('combobox', { name: 'What it starts' }),
+      'An agent with a prompt',
+    );
     expect(within(sentry).getByRole('textbox', { name: 'Sample payload (JSON, optional)' })).toHaveValue(
       '{\n  "issue": {\n    "id": "SENTRY-1",\n    "title": "TypeError in invoice.ts"\n  }\n}',
+    );
+    await user.selectOptions(
+      within(sentry).getByRole('combobox', { name: 'What it starts' }),
+      'An agent with a prompt',
     );
     await user.type(within(sentry).getByRole('textbox', { name: 'What the agent does' }), 'Triage it.');
     await user.click(within(sentry).getByRole('button', { name: 'Save' }));
@@ -225,6 +234,10 @@ describe('editing an automation', () => {
     const sentry = await card('Triage new Sentry issues');
     await user.click(within(sentry).getByRole('button', { name: 'Edit' }));
     await user.selectOptions(within(sentry).getByRole('combobox', { name: 'Starts on' }), 'A schedule');
+    await user.selectOptions(
+      within(sentry).getByRole('combobox', { name: 'What it starts' }),
+      'An agent with a prompt',
+    );
     await user.type(within(sentry).getByRole('textbox', { name: 'What the agent does' }), 'Look.');
     await user.click(within(sentry).getByRole('button', { name: 'Save' }));
     expect(await within(sentry).findByText(/Starts on a schedule: 0 9 \* \* 1-5/)).toBeInTheDocument();
@@ -249,6 +262,10 @@ describe('editing an automation', () => {
     visit('/automations');
     const sentry = await card('Triage new Sentry issues');
     await user.click(within(sentry).getByRole('button', { name: 'Edit' }));
+    await user.selectOptions(
+      within(sentry).getByRole('combobox', { name: 'What it starts' }),
+      'An agent with a prompt',
+    );
     await user.type(within(sentry).getByRole('textbox', { name: 'What the agent does' }), 'Triage it.');
     await user.click(within(sentry).getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The automation changed since you read it');
@@ -266,6 +283,10 @@ describe('editing an automation', () => {
     visit('/automations');
     const sentry = await card('Triage new Sentry issues');
     await user.click(within(sentry).getByRole('button', { name: 'Edit' }));
+    await user.selectOptions(
+      within(sentry).getByRole('combobox', { name: 'What it starts' }),
+      'An agent with a prompt',
+    );
     await user.type(within(sentry).getByRole('textbox', { name: 'What the agent does' }), 'Triage it.');
     await user.click(within(sentry).getByRole('button', { name: 'Save' }));
     expect(within(sentry).getByRole('button', { name: 'Saving…' })).toBeDisabled();

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  cancelAutomationRunMutation,
   createAutomationMutation,
   createCloudSessionMutation,
   disableAutomationMutation,
@@ -11,6 +12,7 @@ import {
   listCloudSessionsOptions,
   listCloudSessionsQueryKey,
   listRunnersOptions,
+  listWorkflowsOptions,
   rotateAutomationSecretMutation,
   setCloudSessionGithubAccessMutation,
   saveAutomationMutation,
@@ -25,9 +27,10 @@ import type {
   CloudEnvironment,
   CloudSession,
   Runner,
+  Workflow,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
@@ -221,6 +224,21 @@ export function useAutomationEdit(): AutomationEditViewModel {
   };
 }
 
+/**
+ * The workflows an automation may start: those a person accepted (`accepted`, `edited`), as the server runs only
+ * those. Undefined while they are read; a workflow list the caller may not read is simply empty.
+ */
+export function useRunnableWorkflows(): readonly Workflow[] | undefined {
+  const workflows = useQuery(ready(listWorkflowsOptions(), { retry: false, staleTime: 30_000 }));
+  return useMemo(
+    () =>
+      workflows.data?.items.filter(
+        (workflow) => workflow.status === 'accepted' || workflow.status === 'edited',
+      ),
+    [workflows.data],
+  );
+}
+
 export interface AutomationChangeViewModel {
   readonly toggle: (automation: Automation) => void;
   /** Runs it now, or checks the trigger and inputs without running anything (`dry`). */
@@ -311,9 +329,35 @@ export function useAutomationChange(): AutomationChangeViewModel {
 export function useAutomationRuns(id: string): {
   readonly runs: readonly AutomationRun[] | undefined;
   readonly failure: Error | undefined;
+  /** Ends a queued or started run: a queued one at once, a working one by pausing its session or its workflow run. */
+  readonly cancel: (runId: string) => void;
+  /** The run being cancelled. */
+  readonly cancelling: string | undefined;
+  readonly cancelFailure: Error | undefined;
 } {
+  const queryClient = useQueryClient();
   const runs = useQuery(ready(listAutomationRunsOptions({ path: { id } })));
-  return { runs: runs.data?.items, failure: failureOf(runs.error) };
+  const cancellation = useMutation({
+    ...cancelAutomationRunMutation(),
+    // Whatever the answer, the runs are read again: a run that had already ended shows as it ended.
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: listAutomationRunsQueryKey({ path: { id } }) });
+    },
+  });
+  const { mutate } = cancellation;
+  const cancel = useCallback(
+    (runId: string) => {
+      mutate({ path: { id, runId } });
+    },
+    [mutate, id],
+  );
+  return {
+    runs: runs.data?.items,
+    failure: failureOf(runs.error),
+    cancel,
+    cancelling: cancellation.isPending ? cancellation.variables.path.runId : undefined,
+    cancelFailure: failureOf(cancellation.error),
+  };
 }
 
 export interface GithubAccessViewModel {

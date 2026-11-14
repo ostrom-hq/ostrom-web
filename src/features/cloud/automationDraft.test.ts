@@ -2,6 +2,7 @@
 import type { Automation } from '@gen/api/types.gen';
 import {
   addVariable,
+  isActionKind,
   type AutomationDraft,
   automationDraftOf,
   automationProblem,
@@ -315,5 +316,60 @@ describe('the automation form', () => {
       ownsAutomation(automation({ owner: 'theo' }), viewer),
       ownsAutomation(automation({ owner: 'theo' }), { login: undefined, memberId: undefined }),
     ]).toEqual([true, true, false, false]);
+  });
+});
+
+describe('a workflow action', () => {
+  const action = { workflowId: 'wf-1', inputs: { tag: '{{tag}}' }, repository: 'acme/api' };
+
+  it('reads as a draft and writes back without a prompt', () => {
+    const draft = automationDraftOf(automation({ action }), 'Europe/Paris');
+    expect(draft).toMatchObject({ actionKind: 'workflow', workflowId: 'wf-1', repository: 'acme/api' });
+    expect(automationDraftOf(undefined, 'Europe/Paris')).toMatchObject({
+      actionKind: 'prompt',
+      workflowId: '',
+      inputs: {},
+      repository: '',
+    });
+    expect(automationDraftOf(automation({ action: { workflowId: 'w' } }), 'Europe/Paris')).toMatchObject({
+      inputs: {},
+      repository: '',
+    });
+    expect(automationWriteOf(draft).action).toEqual(action);
+  });
+
+  it('leaves out empty inputs, an empty repository, and inputs the workflow does not have', () => {
+    const draft = fresh({
+      actionKind: 'workflow',
+      workflowId: 'wf-1',
+      inputs: { tag: ' x ', gone: 'y', empty: ' ' },
+      repository: ' ',
+    });
+    expect(automationWriteOf(draft, undefined, ['tag', 'empty']).action).toEqual({
+      workflowId: 'wf-1',
+      inputs: { tag: ' x ' },
+    });
+    expect(automationWriteOf({ ...draft, inputs: {} }).action).toEqual({ workflowId: 'wf-1' });
+  });
+
+  it('asks for a workflow, its required inputs and a repository that reads owner/name', () => {
+    const base = fresh({ actionKind: 'workflow', prompt: '', runtime: '' });
+    expect(automationProblem(base)).toBe('workflow');
+    const chosen = { ...base, workflowId: 'wf-1' };
+    expect(automationProblem(chosen, ['tag'])).toBe('input');
+    expect(automationProblem({ ...chosen, inputs: { tag: ' ' } }, ['tag'])).toBe('input');
+    expect(automationProblem({ ...chosen, inputs: { tag: 'v' }, repository: 'nope' }, ['tag'])).toBe(
+      'repository',
+    );
+    expect(
+      automationProblem({ ...chosen, inputs: { tag: 'v' }, repository: 'a/b' }, ['tag']),
+    ).toBeUndefined();
+    expect(automationProblem(chosen)).toBeUndefined();
+  });
+
+  it('knows the action kinds', () => {
+    expect(isActionKind('workflow')).toBe(true);
+    expect(isActionKind('prompt')).toBe(true);
+    expect(isActionKind('other')).toBe(false);
   });
 });

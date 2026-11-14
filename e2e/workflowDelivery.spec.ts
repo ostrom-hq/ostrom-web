@@ -38,3 +38,20 @@ test('an admin changes who decides workflows', async ({ page }) => {
   await box.getByRole('button', { name: 'Save' }).click();
   await expect(box.getByText('Saved.')).toBeVisible();
 });
+
+test('an automation links its run to the workflow run it started, and ends a queued one', async ({
+  page,
+}) => {
+  await page.goto('/automations');
+  const sentry = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: 'Triage new Sentry issues' }) });
+  await sentry.getByRole('button', { name: 'Show the runs' }).click();
+  await expect(sentry.getByRole('link', { name: 'Its workflow run' })).toHaveAttribute(
+    'href',
+    '/runs/run-backend-3',
+  );
+  await sentry.getByRole('button', { name: 'Cancel' }).nth(1).click();
+  await sentry.getByRole('button', { name: 'Cancel this run' }).click();
+  await expect(sentry.getByText('Cancelled by a person.')).toBeVisible();
+});

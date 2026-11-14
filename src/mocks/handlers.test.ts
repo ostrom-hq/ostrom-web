@@ -13,6 +13,7 @@ import {
   createSecret,
   deleteMcpServer,
   deleteSecret,
+  cancelAutomationRun,
   disableAutomation,
   enableAutomation,
   getApproval,
@@ -1145,9 +1146,37 @@ describe('mock cloud agents and automations', () => {
     expect(
       (await listAutomationRuns({ path: { id: 'au-nightly' }, throwOnError: true })).data.items,
     ).toHaveLength(2);
-    expect((await listAutomationRuns({ path: { id: 'au-sentry' }, throwOnError: true })).data.items).toEqual(
-      [],
-    );
+    expect(
+      (await listAutomationRuns({ path: { id: 'au-sentry' }, throwOnError: true })).data.items,
+    ).toHaveLength(2);
+  });
+
+  it('cancels a queued run for whoever may change the automation, and only a run that is not over', async () => {
+    const path = { id: 'au-sentry', runId: 'run-91' };
+    expect(
+      await statusOf(async () =>
+        cancelAutomationRun({ path: { id: 'nope', runId: 'run-91' }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    expect(
+      await statusOf(async () =>
+        cancelAutomationRun({ path: { id: 'au-sentry', runId: 'nope' }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    demote();
+    expect(
+      await statusOf(async () =>
+        cancelAutomationRun({ path: { id: 'au-nightly', runId: 'run-88' }, throwOnError: true }),
+      ),
+    ).toBe(403);
+    const done = await cancelAutomationRun({ path, throwOnError: true });
+    expect(done.data).toMatchObject({ id: 'run-91', status: 'cancelled', reason: 'cancelled' });
+    expect(db.automationRuns.find((run) => run.id === 'run-91')?.status).toBe('cancelled');
+    expect(await statusOf(async () => cancelAutomationRun({ path, throwOnError: true }))).toBe(409);
+    expect(
+      (await cancelAutomationRun({ path: { id: 'au-sentry', runId: 'run-92' }, throwOnError: true })).data
+        .status,
+    ).toBe('cancelled');
   });
 
   it('turns an automation on and off for its owner, and refuses another member or an unknown one', async () => {
@@ -1204,7 +1233,7 @@ describe('mock cloud agents and automations', () => {
       automationId: 'au-nightly',
       version: 4,
     });
-    expect(db.automationRuns).toHaveLength(3);
+    expect(db.automationRuns).toHaveLength(5);
     const replay = await testAutomation({
       path: { id: 'au-nightly' },
       body: {},
@@ -1212,7 +1241,7 @@ describe('mock cloud agents and automations', () => {
       throwOnError: true,
     });
     expect(replay.data).toEqual(real.data);
-    expect(db.automationRuns).toHaveLength(3);
+    expect(db.automationRuns).toHaveLength(5);
     // The same key on another automation is another gesture.
     const elsewhere = await testAutomation({
       path: { id: 'au-sentry' },
@@ -1221,7 +1250,7 @@ describe('mock cloud agents and automations', () => {
       throwOnError: true,
     });
     expect(elsewhere.data).toMatchObject({ automationId: 'au-sentry' });
-    expect(db.automationRuns).toHaveLength(4);
+    expect(db.automationRuns).toHaveLength(6);
     expect(
       await statusOf(async () =>
         testAutomation({ path: { id: 'nope' }, body: {}, headers: once, throwOnError: true }),

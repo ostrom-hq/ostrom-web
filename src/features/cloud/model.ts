@@ -77,6 +77,8 @@ export const RUN_TONES = {
   invalid_payload: 'danger',
   skipped_overlap: 'neutral',
   skipped_budget: 'warning',
+  cancelled: 'neutral',
+  succeeded: 'success',
 } as const satisfies Readonly<Record<string, BadgeTone>>;
 export type KnownRunStatus = keyof typeof RUN_TONES;
 
@@ -85,7 +87,18 @@ export function isKnownRunStatus(value: string): value is KnownRunStatus {
 }
 
 /** The reasons of a failed run the console has words for; the contract keeps the list open. */
-export const RUN_REASONS = ['cloud_session_limit', 'cloud_hours_exhausted', 'owner_unavailable'] as const;
+export const RUN_REASONS = [
+  'cloud_session_limit',
+  'cloud_hours_exhausted',
+  'owner_unavailable',
+  'capacity_timeout',
+  'cancelled',
+  'run_limit',
+  'workflow_missing',
+  'invalid_inputs',
+  'workflow_failed',
+  'workflow_cancelled',
+] as const;
 export type KnownRunReason = (typeof RUN_REASONS)[number];
 
 export function isKnownRunReason(value: string): value is KnownRunReason {
@@ -115,4 +128,23 @@ export function sessionTitle(session: CloudSession): string {
 
 export function isWebhook(automation: Automation): boolean {
   return automation.trigger.kind === 'webhook';
+}
+
+/** A run that has not ended: the one a person may still cancel (`queued`, or `started`). */
+export function isCancellable(status: string): boolean {
+  return status === 'queued' || status === 'started';
+}
+
+/** Which version of the automation a webhook address triggers: always the newest, or the one now saved. */
+export type UrlVersion = 'latest' | 'current';
+
+/**
+ * The versioned form of the webhook address (`…/trigger` → `…/v/latest/trigger`, or `…/v/<version>/trigger`): a
+ * sender that pins a version keeps getting the behaviour it was written against (`409 automation_version_changed` once
+ * the automation changed under it). Undefined for an address of another shape: the console does not guess one.
+ */
+export function versionedUrl(url: string, which: UrlVersion, version: number): string | undefined {
+  const suffix = '/trigger';
+  if (!url.endsWith(suffix)) return undefined;
+  return `${url.slice(0, -suffix.length)}/v/${which === 'latest' ? 'latest' : String(version)}${suffix}`;
 }
