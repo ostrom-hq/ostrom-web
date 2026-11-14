@@ -5,8 +5,6 @@ import {
   listEnvironmentAssignmentsQueryKey,
   listEnvironmentVariantsOptions,
   listEnvironmentVariantsQueryKey,
-  listMembersOptions,
-  listMembersQueryKey,
   listPersonalEnvironmentVariantsOptions,
   listPersonalEnvironmentVariantsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -24,12 +22,14 @@ import type {
   EnvironmentBulkAssignment,
   EnvironmentVariant,
   EnvironmentVariantCreate,
-  Member,
+  OrgMember,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
+import { orgMembersKey, type OrgMembers } from '@/shared/org/members';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import { type MemberEnvironment, memberRows, type PersonalVariant, personalOf, sortVariants } from './model';
 
 export interface EnvironmentAdminViewModel {
@@ -40,7 +40,9 @@ export interface EnvironmentAdminViewModel {
   /** Every member with what they receive and what they are excluded from. */
   readonly members: readonly MemberEnvironment[] | undefined;
   /** The member list, to pick whom to assign or exclude; absent if it could not be read. */
-  readonly directory: readonly Member[] | undefined;
+  readonly directory: readonly OrgMember[] | undefined;
+  /** A next page of members that could not be read, to ask for again. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   /** Why the variants cannot be read. */
   readonly failure: Error | undefined;
   /** Why the assignments cannot be read: the members, assign and exclude sections say it. */
@@ -53,8 +55,8 @@ export function useEnvironmentAdmin(): EnvironmentAdminViewModel {
   const variants = useQuery(ready(listEnvironmentVariantsOptions()));
   const personal = useQuery(ready(listPersonalEnvironmentVariantsOptions()));
   const assignments = useQuery(ready(listEnvironmentAssignmentsOptions()));
-  // Only names: a refusal is not asked again, a member then reads as their id.
-  const directory = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  // Only names, every page of them: a refusal is not asked again, a member then reads as their id.
+  const directory = useCurrentOrgMembers({ all: true });
   const sorted = useMemo(
     () => (variants.data === undefined ? undefined : sortVariants(variants.data.items)),
     [variants.data],
@@ -64,14 +66,18 @@ export function useEnvironmentAdmin(): EnvironmentAdminViewModel {
     [personal.data],
   );
   const rows = useMemo(
-    () => (assignments.data === undefined ? undefined : memberRows(directory.data?.items, assignments.data)),
-    [assignments.data, directory.data],
+    () =>
+      assignments.data === undefined
+        ? undefined
+        : memberRows(directory.members, assignments.data, directory.complete),
+    [assignments.data, directory.members, directory.complete],
   );
   return {
     variants: sorted,
     personal: ownedPersonal,
     members: rows,
-    directory: directory.data?.items,
+    directory: directory.members,
+    people: { more: directory.more, loadingMore: directory.loadingMore, moreFailed: directory.moreFailed },
     // Missing assignments would read as "nobody receives anything": each failed part is said where it shows.
     failure: failureOf(variants.error),
     assignmentsFailure: failureOf(assignments.error),
@@ -105,9 +111,9 @@ export interface EnvironmentChangeViewModel {
 /**
  * An administrator's writes on the environment, one at a time: they share a pending flag and a failure, and each reads
  * the variants and the assignments again, whether the server took it or not. A value rides in the write only: the
- * mutation is forgotten as soon as it settles, never cached.
+ * mutation is forgotten as soon as it settles, never cached. `orgId`: the organization whose members are read again.
  */
-export function useEnvironmentChange(): EnvironmentChangeViewModel {
+export function useEnvironmentChange(orgId: string): EnvironmentChangeViewModel {
   const queryClient = useQueryClient();
   const refresh = useCallback(async () => {
     await Promise.all(
@@ -116,10 +122,10 @@ export function useEnvironmentChange(): EnvironmentChangeViewModel {
         listPersonalEnvironmentVariantsQueryKey(),
         listEnvironmentAssignmentsQueryKey(),
         // A member who left is refused: the pickers then offer the members the organization has now.
-        listMembersQueryKey(),
+        orgMembersKey(orgId),
       ].map(async (queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
-  }, [queryClient]);
+  }, [queryClient, orgId]);
   const write = useMutation({
     mutationFn: async (call: () => Promise<unknown>) => call(),
     gcTime: 0,

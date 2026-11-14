@@ -965,7 +965,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     // The contract's planned `/org`, kept for the organization tests; the screens read `/orgs/{org}`.
     handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
-    handleListMembers(() => HttpResponse.json({ items: db.members })),
+    // The contract's planned `/members`: the server does not serve it (it serves `/orgs/{org}/members`), so the demo
+    // answers 404 as it does, and a screen that still reads it fails in the tests instead of on a real server.
+    handleListMembers(() =>
+      refusal(404, 'not_found', 'GET /api/v1/members is not served: read /orgs/{org}/members'),
+    ),
     ...createOrgsHandlers(() => db, now),
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
@@ -1214,7 +1218,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createEnvironmentHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
-      memberIds: () => db.members.filter((member) => member.role !== 'invited').map((member) => member.id),
+      // As the server: the organization's members, the ones `/orgs/{org}/members` lists.
+      memberIds: () => membersIn(db, db.organization, now).map((member) => member.id),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       now,
       me: () => MEMBER_IDS.maya,

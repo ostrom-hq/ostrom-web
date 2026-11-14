@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Member, Secret } from '@gen/api/types.gen';
+import type { OrgMember, Secret } from '@gen/api/types.gen';
 import {
   addMemberRow,
   allows,
@@ -87,12 +87,21 @@ describe('a model policy', () => {
   });
 
   it('names a member by login when the members are known', () => {
-    const members: Member[] = [{ id: 'm1', login: 'lena', avatarUrl: '', role: 'owner' }];
+    const lena: OrgMember = {
+      id: 'm1',
+      login: 'lena',
+      name: '',
+      avatarUrl: '',
+      email: null,
+      role: 'owner',
+      joinedAt: '2026-09-01T09:00:00Z',
+    };
+    const members: OrgMember[] = [lena];
     expect(memberName('m1', members)).toBe('lena');
     expect(memberName('m2', members)).toBe('m2');
     expect(memberName('m1', undefined)).toBe('m1');
-    expect(runsAgents(members[0] ?? { id: '', login: '', avatarUrl: '', role: 'invited' })).toBe(true);
-    expect(runsAgents({ id: 'm2', login: 'jo', avatarUrl: '', role: 'invited' })).toBe(false);
+    expect(runsAgents(lena)).toBe(true);
+    expect(runsAgents({ ...lena, id: 'm2', login: 'jo', role: 'invited' })).toBe(false);
   });
 });
 

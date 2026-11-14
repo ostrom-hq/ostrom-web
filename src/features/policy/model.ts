@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InferenceSettings, Member, ModelPolicy, Secret } from '@gen/api/types.gen';
+import type { InferenceSettings, OrgMember, ModelPolicy, Secret } from '@gen/api/types.gen';
 import { zModelPolicy } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
 
@@ -57,7 +57,7 @@ export function policyDraftOf(policy: ModelPolicy): PolicyDraft {
 }
 
 /** A member by their login when the members are known, else by the id the policy keys them by. */
-export function memberName(id: string, members: readonly Member[] | undefined): string {
+export function memberName(id: string, members: readonly OrgMember[] | undefined): string {
   return members?.find((member) => member.id === id)?.login ?? id;
 }
 
@@ -105,7 +105,7 @@ export function defaultRefusedFor(draft: PolicyDraft): string[] {
 }
 
 /** Who may get a list of their own: a member who runs agents, not an invitation (no account yet). */
-export function runsAgents(member: Member): boolean {
+export function runsAgents(member: OrgMember): boolean {
   return member.role !== 'invited';
 }
 

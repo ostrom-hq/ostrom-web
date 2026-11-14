@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -178,7 +179,7 @@ describe('one hook', () => {
   });
 
   it('says the members cannot be read, and why a hook is not there', async () => {
-    server.use(http.get('*/api/v1/members', refuse(403, 'forbidden', 'no members')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse(403, 'forbidden', 'no members')));
     visit('/hooks/require-status');
     expect(
       await screen.findByText('The members could not be read, so their decisions cannot be shown.'),
@@ -236,4 +237,20 @@ describe('the code of a hook version', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Delivered hooks' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(`/members/${MEMBER_IDS.maya}/hooks`);
   });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('reads every page of members for the decisions, without being asked', async () => {
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    visit('/hooks/require-status');
+    const list = await screen.findByRole('list', { name: 'Decision of each member' });
+    expect(
+      await within(list).findByText(`${far.name} (${far.login})`, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(large.length);
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  }, 15_000);
 });

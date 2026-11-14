@@ -14,6 +14,7 @@ export const fr = {
     showMore_one: 'En afficher 1 de plus',
     showMore_other: 'En afficher {{count}} de plus (reste {{left}})',
     morePeople: 'Afficher plus de personnes',
+    morePeopleFailed: 'Les personnes suivantes n’ont pas pu être lues.',
     held: {
       tag: 'En attente',
       text: 'Ostrom garde ce changement jusqu’à ce qu’un propriétaire ou un admin le confirme.',

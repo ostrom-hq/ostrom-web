@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpAssignment, McpServer, Member, Secret } from '@gen/api/types.gen';
+import type { McpAssignment, McpServer, OrgMember, Secret } from '@gen/api/types.gen';
 import {
   AGENT_PREFIX,
   agentToolName,
@@ -213,7 +213,15 @@ describe('sortAssignments and memberLabel', () => {
   });
 
   it('names a member by name and login, or login alone', () => {
-    const member: Member = { id: 'm', login: 'theo', avatarUrl: '', role: 'member' };
+    const member: OrgMember = {
+      id: 'm',
+      login: 'theo',
+      name: '',
+      avatarUrl: '',
+      email: null,
+      role: 'member',
+      joinedAt: '2026-09-01T09:00:00Z',
+    };
     expect(memberLabel(member)).toBe('theo');
     expect(memberLabel({ ...member, name: '' })).toBe('theo');
     expect(memberLabel({ ...member, name: 'Theo B' })).toBe('Theo B (theo)');

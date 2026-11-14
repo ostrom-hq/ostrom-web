@@ -93,6 +93,7 @@ function SkillPage({ name, title }: { readonly name: string; readonly title: str
                   delivered="skills"
                   allMembers={skill.allMembers}
                   members={view.members}
+                  people={view.people}
                   decisions={view.decisions}
                   busy={change.pending}
                   onDecide={change.decide}

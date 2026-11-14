@@ -10,6 +10,7 @@ export const en = {
     showMore_one: 'Show 1 more',
     showMore_other: 'Show {{count}} more ({{left}} left)',
     morePeople: 'Show more people',
+    morePeopleFailed: 'The next people could not be read.',
     held: {
       tag: 'Waiting',
       text: 'Ostrom holds this change until an owner or an admin confirms it.',

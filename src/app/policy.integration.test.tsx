@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -116,7 +117,7 @@ describe('the agent policy', () => {
 
   it('takes a member id by hand when the members are not readable', async () => {
     const user = userEvent.setup();
-    server.use(http.get('*/api/v1/members', () => refused('no', 403)));
+    server.use(http.get('*/api/v1/orgs/:org/members', () => refused('no', 403)));
     db.modelPolicies[db.organization.id] = { allowed: [], default: '' };
     visit('/policy');
     const models = await section('Models');
@@ -449,5 +450,31 @@ describe('the launch check', () => {
     await user.type(within(check).getByRole('textbox', { name: 'Model' }), 'y');
     await user.click(within(check).getByRole('button', { name: 'Ask' }));
     expect(await within(check).findByRole('button', { name: 'Asking…' })).toBeDisabled();
+  });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('names a member beyond the first hundred, and keeps them in their row when the policy is changed', async () => {
+    const user = userEvent.setup();
+    const large = largeMembers().slice(0, 150);
+    const far = large[120];
+    if (far === undefined) throw new Error('no member 120');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.modelPolicies[db.organization.id] = {
+      allowed: [],
+      default: 'claude-haiku',
+      byMember: { [far.id]: ['claude-haiku'] },
+    };
+    visit('/policy');
+    const models = await section('Models');
+    expect(await within(models).findByText(`Only for ${far.login}`)).toBeInTheDocument();
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
+    const pick = within(models).getByRole('combobox', { name: 'Member 1' });
+    expect(pick).toHaveValue(far.id);
+    expect(within(pick).getAllByRole('option').length).toBeGreaterThan(large.length);
+    expect(within(models).queryByRole('button', { name: 'Show more people' })).toBeNull();
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
+    expect(db.modelPolicies[db.organization.id]?.byMember).toEqual({ [far.id]: ['claude-haiku'] });
   });
 });

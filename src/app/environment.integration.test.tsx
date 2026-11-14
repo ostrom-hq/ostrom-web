@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
@@ -192,7 +193,7 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
       within(npm).getByRole('button', { name: 'Assign NPM_TOKEN: registry to every current member' }),
     );
     expect(await within(await variantRow('NPM_TOKEN', 'registry')).findByRole('status')).toHaveTextContent(
-      'Assigned to 4 members. 0 kept their direct selection, 0 excluded were skipped.',
+      'Assigned to 5 members. 0 kept their direct selection, 0 excluded were skipped.',
     );
     expect(await memberRow('theo')).toHaveTextContent('NPM_TOKEN → registry v1 · bulk');
     // The next gesture clears it.
@@ -213,7 +214,7 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
       within(acme).getByRole('button', { name: 'Assign GITHUB_TOKEN: acme to every current member' }),
     );
     expect(await within(await variantRow('GITHUB_TOKEN', 'acme')).findByRole('status')).toHaveTextContent(
-      'Assigned to 2 members. 2 kept their direct selection, 0 excluded were skipped.',
+      'Assigned to 3 members. 2 kept their direct selection, 0 excluded were skipped.',
     );
   });
 
@@ -354,7 +355,8 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     db.environmentVariants = [];
     db.environmentAssignments = [];
     db.environmentExclusions = [];
-    db.members = [];
+    // Nobody but the viewer has joined, and the page lists no one else.
+    server.use(http.get('*/api/v1/orgs/:org/members', () => HttpResponse.json({ items: [] })));
     visit('/environment');
     expect(await screen.findByText('No variants yet.')).toBeInTheDocument();
     expect(await screen.findByText('No member declared a personal variant.')).toBeInTheDocument();
@@ -366,7 +368,7 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
 
   it('names a member by id when the member list cannot be read', async () => {
     server.use(
-      http.get('*/api/v1/members', () =>
+      http.get('*/api/v1/orgs/:org/members', () =>
         HttpResponse.json({ error: { type: 'x', message: 'no' } }, { status: 500 }),
       ),
     );
@@ -447,14 +449,16 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     const exclude = await region('Exclude a member');
     await user.selectOptions(within(exclude).getByLabelText('Member'), 'theo');
     // Theo leaves: his rows stay on display, by id, and the pickers fall back to the first member.
-    db.members = db.members.filter((member) => member.login !== 'theo');
+    db.orgMembers[db.organization.id] = (db.orgMembers[db.organization.id] ?? []).filter(
+      (member) => member.login !== 'theo',
+    );
     const maya = await memberRow('Maya Lind (maya)');
     await user.click(within(maya).getByRole('button', { name: 'Remove GITHUB_TOKEN from Maya Lind (maya)' }));
     await waitFor(() => {
-      expect(within(form).getByLabelText('Member')).toHaveDisplayValue('Maya Lind (maya)');
+      expect(within(form).getByLabelText('Member')).toHaveDisplayValue('Lena Ortiz (lena)');
     });
     await memberRow(MEMBER_IDS.theo);
-    expect(within(exclude).getByLabelText('Member')).toHaveDisplayValue('Maya Lind (maya)');
+    expect(within(exclude).getByLabelText('Member')).toHaveDisplayValue('Lena Ortiz (lena)');
     expect(within(form).queryByRole('option', { name: MEMBER_IDS.theo })).toBeNull();
   });
 
@@ -506,5 +510,51 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     expect(variants).not.toContain('GITHUB_TOKEN');
     expect(personal).not.toContain('OPENROUTER_API_KEY');
     expect(assignments).not.toContain(MEMBER_IDS.theo);
+  });
+});
+
+describe('a team of more than a hundred people', { timeout: 15_000 }, () => {
+  it('names a member beyond the first hundred, and offers them to assign to', async () => {
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.environmentExclusions.push({ member: far.id, variable: 'GITHUB_TOKEN' });
+    visit('/environment');
+    const label = `${far.name} (${far.login})`;
+    const list = await screen.findByRole('list', { name: 'Effective assignments' });
+    // The second page comes by itself, after the first.
+    const row = await within(list).findByRole('listitem', { name: label }, { timeout: 10_000 });
+    expect(row).toHaveTextContent('GITHUB_TOKEN');
+    const form = await region('Assign a variant');
+    expect(within(form).getByRole('option', { name: label })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  });
+
+  it('says a page of members could not be read, and asks again, even when the assignments failed', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [
+      ...(db.orgMembers[db.organization.id] ?? []),
+      ...largeMembers().slice(0, 150),
+    ];
+    let failing = true;
+    server.use(
+      http.get('*/api/v1/environment/assignments', () =>
+        HttpResponse.json({ error: { type: 'unavailable', message: 'down' } }, { status: 503 }),
+      ),
+      http.get('*/api/v1/orgs/:org/members', ({ request }) =>
+        failing && new URL(request.url).searchParams.has('after')
+          ? HttpResponse.json({ error: { type: 'internal', message: 'page 2 is down' } }, { status: 500 })
+          : undefined,
+      ),
+    );
+    visit('/environment');
+    expect(await screen.findByText('The next people could not be read.')).toBeInTheDocument();
+    failing = false;
+    await user.click(screen.getByRole('button', { name: 'Show more people' }));
+    await waitFor(() => {
+      expect(screen.queryByText('The next people could not be read.')).toBeNull();
+    });
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
   });
 });
