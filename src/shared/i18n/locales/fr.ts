@@ -61,6 +61,7 @@ export const fr = {
       import: 'Importer',
       policy: 'Politique des agents',
       admin: 'Admin',
+      environment: 'Variables d’environnement',
       cloudAdmin: 'Administration du cloud',
     },
     server: {
@@ -1233,6 +1234,126 @@ export const fr = {
         badName:
           'Un nom de secret s’écrit en MAJUSCULES, chiffres et tirets bas, et commence par une lettre : il devient une variable d’environnement.',
       },
+    },
+  },
+  environment: {
+    title: 'Variables d’environnement',
+    lead: 'Les valeurs que l’équipe remet aux agents de ses membres, dans ostrom run et dans les sessions cloud, au lieu de les coller sur chaque machine.',
+    adminsOnlyTitle: 'Pour les propriétaires et les administrateurs',
+    adminsOnly:
+      'Seul un propriétaire ou un administrateur de l’organisation gère ses variantes d’environnement.',
+    errorTag: 'Non enregistré',
+    problemTag: 'À vérifier',
+    saving: 'Enregistrement…',
+    cancel: 'Annuler',
+    keep: 'Garder',
+    remove: 'Supprimer',
+    removeConfirm: 'Supprimer {{what}}',
+    help: {
+      title: 'Qu’est-ce qu’une variante ?',
+      what: 'Une variante est une valeur nommée pour une variable d’environnement, comme GITHUB_TOKEN, que l’équipe partage par Ostrom. Plusieurs variantes peuvent exister pour la même variable, par exemple une par organisation ou par client.',
+      who: 'Qui la reçoit : personne, tant que vous ne l’attribuez pas. Choisissez une variante pour un membre, ou attribuez une variante partagée à tous les membres actuels d’un coup. Un membre a au plus une variante par variable, une attribution directe l’emporte sur une attribution groupée, et une exclusion l’emporte toujours sur une attribution.',
+      where:
+        'Où elle arrive : la variable est posée dans l’agent du membre à chaque démarrage par ostrom run et à chaque préparation ou reprise d’une session cloud ; un Claude Code en cours voit un changement en moins d’une minute. Les valeurs sont chiffrées, en écriture seule et jamais réaffichées.',
+    },
+    variants: {
+      title: 'Variantes de l’équipe',
+      empty: 'Aucune variante pour l’instant.',
+    },
+    create: {
+      title: 'Créer une variante',
+      variable: 'Nom de la variable',
+      variableHint:
+        'Majuscules, chiffres et tirets bas. Les noms que l’environnement réserve, comme PATH ou ANTHROPIC_*, sont refusés.',
+      name: 'Nom de la variante',
+      namePlaceholder: 'Organisation Acme',
+      nameHint:
+        'Distingue les variantes d’une même variable au moment de l’attribution, comme acme et perso.',
+      binding: 'Qui fournit la valeur',
+      value: 'Valeur',
+      valueHint:
+        'Obligatoire. Chiffrée et jamais réaffichée ; pour la changer plus tard, modifiez la variante.',
+      submit: 'Créer la variante',
+      problem: {
+        variable:
+          'Utilisez des majuscules, des chiffres et des tirets bas, en commençant par une lettre ou un tiret bas (128 au plus).',
+        name: 'Donnez à la variante un nom de 1 à 120 caractères.',
+        value: 'Saisissez la valeur que recevront tous les membres attribués.',
+      },
+    },
+    binding: {
+      shared: {
+        title: 'Une valeur pour tous les membres attribués',
+        hint: 'Vous saisissez la valeur une fois ci-dessous ; chaque membre attribué reçoit la même.',
+        short: 'partagée',
+      },
+      perMember: {
+        title: 'Chaque membre a la sienne',
+        hint: 'Rien n’est stocké ici : vous saisissez la valeur propre à chaque membre en lui attribuant la variante.',
+        short: 'par membre',
+      },
+    },
+    variant: {
+      version: 'v{{version}}',
+      value: {
+        perMember: 'valeur propre à chaque membre',
+        stored: 'valeur partagée enregistrée',
+        none: 'aucune valeur enregistrée',
+      },
+      updated: 'modifiée {{at}}',
+      bulkDone:
+        'Attribuée à {{assigned}} membres. {{kept}} ont gardé leur sélection directe, {{excluded}} exclus ont été ignorés.',
+      bulk: 'Attribuer à tous les membres',
+      bulkConfirm: 'Attribuer {{what}} à tous les membres actuels',
+      edit: 'Modifier {{what}}',
+      editShort: 'Modifier',
+      editTitle: 'Modifier {{what}}',
+      newValue: 'Nouvelle valeur (facultatif)',
+      newValueHint:
+        'Laissez vide pour garder la valeur enregistrée. Chaque membre attribué reçoit la nouvelle à son prochain démarrage.',
+      save: 'Enregistrer',
+    },
+    members: {
+      title: 'Attributions effectives',
+      nothing: 'Rien d’attribué',
+      direct: 'directe',
+      bulk: 'groupée',
+      personal: 'la sienne',
+      memberValue: 'valeur du membre enregistrée',
+      unassign: 'Retirer',
+      unassignLabel: 'Retirer {{variable}} à {{who}}',
+      excluded: '{{variable}} exclue',
+      include: 'Lever l’exclusion',
+      includeLabel: 'Lever l’exclusion de {{variable}} pour {{who}}',
+    },
+    assign: {
+      title: 'Attribuer une variante',
+      nothing: 'Créez d’abord une variante ; les membres apparaissent ici une fois qu’ils ont rejoint.',
+      member: 'Membre',
+      variant: 'Variante',
+      value: 'Valeur du membre',
+      valueHint: 'La valeur propre à ce membre pour une variante par membre. Chiffrée et jamais réaffichée.',
+      hint: 'Remplace la sélection actuelle du membre pour cette variable. Refusé tant que le membre en est exclu.',
+      needsValue: 'Une variante par membre demande la valeur de ce membre.',
+      submit: 'Attribuer',
+    },
+    exclude: {
+      title: 'Exclure un membre',
+      nobody: 'Aucun membre à exclure pour l’instant.',
+      hint: 'Le membre ne reçoit alors rien pour cette variable, et l’attribution groupée le saute, jusqu’à ce que vous leviez l’exclusion. La lever ne rend rien.',
+      submit: 'Exclure',
+    },
+    review: {
+      title: 'Variantes personnelles des membres',
+      lead: 'Les valeurs que des membres ont déclarées pour eux-mêmes, attribuées à eux seuls. Vous voyez leur définition, jamais leur valeur ; promouvez-en une pour en faire une variante de l’équipe, ou supprimez-la.',
+      empty: 'Aucun membre n’a déclaré de variante personnelle.',
+      promote: 'Promouvoir à l’équipe',
+      promoteConfirm: 'Faire de {{what}} une variante de l’équipe',
+    },
+    personal: {
+      owner: 'de {{who}}',
+      unassigned:
+        'Non attribuée : une attribution d’un administrateur ou une exclusion a pris cette variable. Elle reste non attribuée jusqu’à ce que son propriétaire la supprime.',
     },
   },
   delivery: {

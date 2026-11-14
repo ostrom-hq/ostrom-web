@@ -18,6 +18,7 @@ export const FEATURES = [
   'automations.v1',
   'billing.v1',
   'cloud.admin.v1',
+  'environment.v1',
   'github.link.v1',
   'github.v1',
   'hooks.v1',

@@ -57,6 +57,7 @@ export const en = {
       import: 'Import',
       policy: 'Agent policy',
       admin: 'Admin',
+      environment: 'Environment variables',
       cloudAdmin: 'Cloud administration',
     },
     server: {
@@ -1205,6 +1206,123 @@ export const en = {
         badName:
           'A secret name is CAPITALS, digits and underscores, starting with a letter: it becomes an environment variable.',
       },
+    },
+  },
+  environment: {
+    title: 'Environment variables',
+    lead: 'Values the team hands to its members’ agents, in ostrom run and in cloud sessions, instead of pasting them into each machine.',
+    adminsOnlyTitle: 'For owners and admins',
+    adminsOnly: 'Only an owner or an admin of the organization manages its environment variants.',
+    errorTag: 'Not saved',
+    problemTag: 'Check this',
+    saving: 'Saving…',
+    cancel: 'Cancel',
+    keep: 'Keep',
+    remove: 'Delete',
+    removeConfirm: 'Delete {{what}}',
+    help: {
+      title: 'What is a variant?',
+      what: 'A variant is a named value for one environment variable, such as GITHUB_TOKEN, that the team shares through Ostrom. Several variants can exist for the same variable, for example one per organization or customer.',
+      who: 'Who receives it: nobody, until you assign it. Pick a variant for one member, or assign a shared one to every current member at once. A member has at most one variant per variable, a direct assignment beats a bulk one, and an exclusion always wins over an assignment.',
+      where:
+        'Where it reaches a session: the variable is set in the member’s agent each time ostrom run starts it and each time a cloud session is prepared or resumed; a running Claude Code picks up a change within a minute. Values are encrypted, write-only and never shown again.',
+    },
+    variants: {
+      title: 'Team variants',
+      empty: 'No variants yet.',
+    },
+    create: {
+      title: 'Create a variant',
+      variable: 'Variable name',
+      variableHint:
+        'Uppercase letters, digits and underscores. Names the runtime reserves, such as PATH or ANTHROPIC_*, are refused.',
+      name: 'Variant name',
+      namePlaceholder: 'Acme organization',
+      nameHint: 'Tells variants of the same variable apart when assigning, such as acme and personal.',
+      binding: 'Who provides the value',
+      value: 'Value',
+      valueHint: 'Required. Encrypted and never shown again; to change it later, edit the variant.',
+      submit: 'Create variant',
+      problem: {
+        variable:
+          'Use uppercase letters, digits and underscores, starting with a letter or an underscore (at most 128).',
+        name: 'Give the variant a name of 1 to 120 characters.',
+        value: 'Enter the value everyone assigned will receive.',
+      },
+    },
+    binding: {
+      shared: {
+        title: 'One value for everyone assigned',
+        hint: 'You enter the value once below; every assigned member gets the same one.',
+        short: 'shared',
+      },
+      perMember: {
+        title: 'Each member has their own',
+        hint: 'Nothing is stored here: you enter each member’s own value when you assign the variant to them.',
+        short: 'per member',
+      },
+    },
+    variant: {
+      version: 'v{{version}}',
+      value: {
+        perMember: 'value set per member',
+        stored: 'shared value stored',
+        none: 'no value stored',
+      },
+      updated: 'changed {{at}}',
+      bulkDone:
+        'Assigned to {{assigned}} members. {{kept}} kept their direct selection, {{excluded}} excluded were skipped.',
+      bulk: 'Assign to all members',
+      bulkConfirm: 'Assign {{what}} to every current member',
+      edit: 'Edit {{what}}',
+      editShort: 'Edit',
+      editTitle: 'Edit {{what}}',
+      newValue: 'New value (optional)',
+      newValueHint:
+        'Leave empty to keep the stored value. Every assigned member gets the new one at their next start.',
+      save: 'Save',
+    },
+    members: {
+      title: 'Effective assignments',
+      nothing: 'Nothing assigned',
+      direct: 'direct',
+      bulk: 'bulk',
+      personal: 'their own',
+      memberValue: 'member value stored',
+      unassign: 'Remove',
+      unassignLabel: 'Remove {{variable}} from {{who}}',
+      excluded: '{{variable}} excluded',
+      include: 'Remove exclusion',
+      includeLabel: 'Remove exclusion of {{variable}} for {{who}}',
+    },
+    assign: {
+      title: 'Assign a variant',
+      nothing: 'Create a variant first; members appear here once they joined.',
+      member: 'Member',
+      variant: 'Variant',
+      value: 'Member value',
+      valueHint: 'This member’s own value for a per-member variant. Encrypted and never shown again.',
+      hint: 'Replaces the member’s current selection for this variable. Refused while the member is excluded from it.',
+      needsValue: 'A per-member variant needs this member’s value.',
+      submit: 'Assign',
+    },
+    exclude: {
+      title: 'Exclude a member',
+      nobody: 'No member to exclude yet.',
+      hint: 'The member then receives nothing for this variable, and bulk assignment skips them, until you remove the exclusion. Removing it grants nothing back.',
+      submit: 'Exclude',
+    },
+    review: {
+      title: 'Members’ personal variants',
+      lead: 'Values members declared for themselves, assigned to them alone. You see their definition, never their value; promote one to make it a team variant, or delete it.',
+      empty: 'No member declared a personal variant.',
+      promote: 'Promote to the team',
+      promoteConfirm: 'Make {{what}} a team variant',
+    },
+    personal: {
+      owner: 'by {{who}}',
+      unassigned:
+        'Not assigned: an administrator’s assignment or an exclusion took this variable. It stays unassigned until its owner deletes it.',
     },
   },
   delivery: {
