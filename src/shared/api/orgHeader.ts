@@ -15,13 +15,17 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/orgs(?:\/|$)/,
   /^\/api\/v1\/invitations\/(?:preview|accept)$/,
   /^\/api\/v1\/tokens(?:\/|$)/,
+  // The instance's own administrators and settings: for a person who administers the instance, in no organization.
+  /^\/api\/v1\/admin\//,
   /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
   // A link a person follows from GitHub or from a wait's message: the secret in it says the organization.
   /^\/api\/v1\/github\/link\/callback$/,
   /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback)$/,
-  /^\/api\/v1\/automations\/[^/]+\/trigger$/,
+  /^\/api\/v1\/automations\/[^/]+(?:\/v\/[^/]+)?\/trigger$/,
+  // The cloud runtime and its clusters are the instance's, for a person who administers it.
+  /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,
   // An event wait's webhook: the secret is the proof (no sign-in); GitHub's link callback names the person's own link.
   /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/link\/callback$/,

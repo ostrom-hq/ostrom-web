@@ -13,6 +13,7 @@ export const CONSOLE_API_VERSION = 1;
  * lists that is not here is ignored; the console only asks for the ones its screens depend on.
  */
 export const FEATURES = [
+  'admin.settings.v1',
   'artifacts.v1',
   'automations.v1',
   'billing.v1',

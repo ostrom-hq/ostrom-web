@@ -13,6 +13,16 @@ const OPEN_ENUM_MIN_VALUES = 2;
 export default defineConfig({
   input,
   output: { path: 'gen/api' },
+  parser: {
+    hooks: {
+      operations: {
+        // The live event feed is a server-sent event stream, which the console will read with an `EventSource`, never
+        // through a query: its `after` cursor makes the react-query plugin generate an infinite query, which does not
+        // type for a stream. The operation keeps its SDK function and types, and gets no query.
+        getKind: (operation) => (operation.path === '/api/v1/events' ? [] : undefined),
+      },
+    },
+  },
   plugins: [
     '@hey-api/client-fetch',
     {

@@ -7,6 +7,8 @@ interface NavLink {
   readonly label: string;
   /** The server feature the screen needs: without it, the entry is hidden and the address says so. */
   readonly feature?: FeatureKey;
+  /** Only for a person who administers the instance, and only where the server says it serves the feature. */
+  readonly instanceAdmin?: true;
 }
 
 export const NAV_LINKS = [
@@ -37,6 +39,7 @@ export const NAV_LINKS = [
   { to: '/automations', label: 'automations', feature: 'automations.v1' },
   { to: '/artifacts', label: 'artifacts', feature: 'artifacts.v1' },
   { to: '/accounts', label: 'accounts' },
+  { to: '/admin', label: 'admin', feature: 'admin.settings.v1', instanceAdmin: true },
   { to: '/signin', label: 'signin' },
 ] as const satisfies readonly NavLink[];
 

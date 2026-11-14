@@ -202,6 +202,12 @@ import { initialWaits } from '@/mocks/fixtures/waits';
 import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
+import {
+  type AdminState,
+  createAdminHandlers,
+  initialInstanceAdmins,
+  initialInstanceSettings,
+} from '@/mocks/admin';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createRunHandlers } from '@/mocks/runs';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
@@ -214,6 +220,7 @@ import { sameValue } from '@/features/workflows/model';
 export interface MockDb
   extends
     AccountState,
+    AdminState,
     ActivityState,
     AuditState,
     BillingState,
@@ -295,6 +302,9 @@ export interface MockDb
 export function createMockDb(): MockDb {
   const opened = Date.now();
   return {
+    instanceAdmin: false,
+    instanceAdmins: initialInstanceAdmins(),
+    instanceSettings: initialInstanceSettings(),
     activity: initialActivity(),
     audit: initialAudit(),
     approvals: initialApprovals(),
@@ -716,7 +726,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const { member, ...signedIn } = me;
       const named = request.headers.get(ORG_HEADER);
       const organization = membershipsOf(db).find((item) => item.id === named);
-      return HttpResponse.json(organization === undefined ? signedIn : { ...signedIn, member, organization });
+      // `instanceAdmin` is on the answer only for a person who administers the instance.
+      const who = db.instanceAdmin ? { ...signedIn, instanceAdmin: true } : signedIn;
+      return HttpResponse.json(organization === undefined ? who : { ...who, member, organization });
     }),
     // Every feature, as a server with everything configured: a test that needs less overrides this handler.
     handleCapabilities(() =>
@@ -1097,6 +1109,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       (request) => organizationOf(db, request),
       now,
     ),
+    ...createAdminHandlers(() => db, now),
     ...createPolicyHandlers(
       () => db,
       (request) => organizationOf(db, request),
