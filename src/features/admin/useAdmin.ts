@@ -9,12 +9,7 @@ import {
   removeInstanceAdminMutation,
   saveInstanceSettingsMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type {
-  InstanceAdmin,
-  InstanceSettings,
-  ListInstanceSettingsResponse,
-  SaveInstanceSettingsRequest,
-} from '@gen/api/types.gen';
+import type { InstanceAdmin, InstanceSettings, SaveInstanceSettingsRequest } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -119,19 +114,8 @@ export function useSaveInstanceSettings(): SaveSectionViewModel {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...saveInstanceSettingsMutation(),
-    onSuccess: (settings) => {
-      // The saved section takes its place in the list: its form fills from it, the new version and secrets with it.
-      queryClient.setQueryData<ListInstanceSettingsResponse>(listInstanceSettingsQueryKey(), (list) =>
-        list === undefined
-          ? list
-          : {
-              ...list,
-              sections: list.sections.map((section) =>
-                section.section === settings.section ? settings : section,
-              ),
-            },
-      );
-    },
+    // The section is read again: its form fills from it, the new version and secrets with it.
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: listInstanceSettingsQueryKey() }),
   });
   const { mutate, reset } = mutation;
   const save = useCallback(

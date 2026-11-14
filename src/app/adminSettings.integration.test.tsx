@@ -2,7 +2,7 @@
 import { handleListInstanceSettings, handleSaveInstanceSettings } from '@gen/api/msw.gen';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HttpResponse } from 'msw';
+import { delay, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db, traffic } = setupMockApp();
@@ -111,6 +111,19 @@ describe('Admin, Settings', () => {
         secrets: { password: null },
       },
     ]);
+  });
+
+  it('says it is saving, and locks the form, while the server answers', async () => {
+    const user = userEvent.setup();
+    db.instanceAdmin = true;
+    server.use(handleSaveInstanceSettings(async () => delay('infinite')));
+    visit('/admin/settings');
+    const mail = await section('mail');
+    await user.type(within(mail).getByLabelText(/^host/), '!');
+    await user.click(within(mail).getByRole('button', { name: 'Save' }));
+    expect(await within(mail).findByRole('button', { name: 'Saving' })).toBeDisabled();
+    expect(within(mail).getByLabelText(/^host/)).toBeDisabled();
+    expect(within(mail).getByLabelText(/^password/)).toBeDisabled();
   });
 
   it('says a refused field in the server’s words, and keeps what was typed', async () => {

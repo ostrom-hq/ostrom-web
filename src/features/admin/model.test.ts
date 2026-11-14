@@ -7,10 +7,12 @@ import {
   isChanged,
   isConfigured,
   isLastAdmin,
+  intentOf,
   isSettingsConflict,
   plainFields,
   requestOf,
   secretFields,
+  valueOf,
 } from './model';
 
 function mail(): InstanceSettings {
@@ -82,6 +84,16 @@ describe('a settings section', () => {
     );
     // A field the section never had a value for.
     expect(isChanged({ ...settings, values: {} }, { ...draft, values: { host: '', from: '' } })).toBe(false);
+  });
+});
+
+describe('the form’s fallbacks', () => {
+  it('keeps a secret nothing was chosen for, and leaves an untyped field empty', () => {
+    const draft = draftOf(mail());
+    expect(intentOf(draft, 'password')).toEqual({ kind: 'keep' });
+    expect(intentOf(draft, 'other')).toEqual({ kind: 'keep' });
+    expect(valueOf(draft, 'host')).toBe('smtp.acme.test');
+    expect(valueOf(draft, 'other')).toBe('');
   });
 });
 

@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import { handleGetMe, handleListInstanceAdmins, handleRemoveInstanceAdmin } from '@gen/api/msw.gen';
+import {
+  handleAddInstanceAdmin,
+  handleGetMe,
+  handleListInstanceAdmins,
+  handleRemoveInstanceAdmin,
+} from '@gen/api/msw.gen';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
@@ -105,6 +110,18 @@ describe('Admin, for a person who does not administer the instance', () => {
 });
 
 describe('Admin, Administrators', () => {
+  it('says it is adding while the server answers', async () => {
+    administering();
+    const user = userEvent.setup();
+    server.use(handleAddInstanceAdmin(async () => delay('infinite')));
+    visit('/admin');
+    await screen.findByText('maya');
+    const add = await section('Add an administrator');
+    await user.type(within(add).getByLabelText('Verified e-mail address'), 'sam@acme.test');
+    await user.click(within(add).getByRole('button', { name: 'Make administrator' }));
+    expect(await within(add).findByRole('button', { name: 'Adding' })).toBeDisabled();
+  });
+
   it('lists who administers the instance and how they became one', async () => {
     administering();
     visit('/admin');
@@ -147,6 +164,21 @@ describe('Admin, Administrators', () => {
     await waitFor(() => {
       expect(screen.queryByText('sam')).toBeNull();
     });
+  });
+
+  it('locks the row of the administrator being removed', async () => {
+    administering();
+    const user = userEvent.setup();
+    db.instanceAdmins = [
+      ...db.instanceAdmins,
+      { userId: SAM?.userId ?? '', login: 'sam', source: 'dashboard', addedAt: '2026-10-03T09:00:00Z' },
+    ];
+    server.use(handleRemoveInstanceAdmin(async () => delay('infinite')));
+    visit('/admin');
+    const row = within((await screen.findByText('sam')).closest('li') ?? document.body);
+    await user.click(row.getByRole('button', { name: 'Remove' }));
+    await user.click(row.getByRole('button', { name: 'Remove sam' }));
+    expect(await row.findByRole('button', { name: 'Remove' })).toBeDisabled();
   });
 
   it('says an address that belongs to no account, and keeps what was typed', async () => {

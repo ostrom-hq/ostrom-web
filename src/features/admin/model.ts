@@ -32,6 +32,16 @@ export function isConfigured(settings: InstanceSettings, name: string): boolean 
   return settings.secrets[name]?.configured === true;
 }
 
+/** What the form does with a secret: keep it when nothing was chosen for it. */
+export function intentOf(draft: SectionDraft, name: string): SecretIntent {
+  return draft.secrets[name] ?? { kind: 'keep' };
+}
+
+/** What is typed for a plain field: nothing until something is. */
+export function valueOf(draft: SectionDraft, name: string): string {
+  return draft.values[name] ?? '';
+}
+
 /** The form as the stored section fills it: every plain value as stored, every secret kept. */
 export function draftOf(settings: InstanceSettings): SectionDraft {
   return {

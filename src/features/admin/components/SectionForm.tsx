@@ -10,9 +10,11 @@ import {
   draftOf,
   isChanged,
   isConfigured,
+  intentOf,
   isSettingsConflict,
   requestOf,
   type SectionDraft,
+  valueOf,
   VALUE_MAX,
 } from '../model';
 import type { SaveSectionViewModel } from '../useAdmin';
@@ -57,7 +59,6 @@ export function SectionForm({ settings, save, onReload }: SectionFormProps): Rea
           </Banner>
         ) : null}
         {settings.fields.map((field) => {
-          const intent = draft.secrets[field.name];
           if (field.secret)
             return (
               <SecretField
@@ -65,7 +66,7 @@ export function SectionForm({ settings, save, onReload }: SectionFormProps): Rea
                 name={field.name}
                 required={field.required}
                 configured={isConfigured(settings, field.name)}
-                intent={intent ?? { kind: 'keep' }}
+                intent={intentOf(draft, field.name)}
                 disabled={save.saving}
                 onChange={(next) => {
                   setSaved(false);
@@ -85,7 +86,7 @@ export function SectionForm({ settings, save, onReload }: SectionFormProps): Rea
                 className="o-input"
                 autoComplete="off"
                 maxLength={VALUE_MAX}
-                value={draft.values[field.name] ?? ''}
+                value={valueOf(draft, field.name)}
                 disabled={save.saving}
                 onChange={(event) => {
                   setSaved(false);

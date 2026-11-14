@@ -54,7 +54,7 @@ export function initialInstanceSettings(): InstanceSettings[] {
       secrets: { password: { configured: true } },
       fields: [
         { name: 'host', secret: false, required: true },
-        { name: 'from', secret: false, required: true },
+        { name: 'from', secret: false, required: false },
         { name: 'password', secret: true, required: false },
       ],
       updatedAt: '2026-10-02T10:00:00Z',
