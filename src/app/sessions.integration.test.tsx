@@ -40,7 +40,10 @@ describe('the sessions list', () => {
     const live = screen.getByRole('link', { name: /claude-code · acme\/billing-api/ });
     expect(live).toHaveAttribute('href', '/sessions/ses-7f3a');
     expect(within(live).getByText('Live')).toBeInTheDocument();
-    expect(within(live).getByText('Waiting for a person').parentElement).toHaveAttribute('title', '3 min. ago');
+    expect(within(live).getByText('Waiting for a person').parentElement).toHaveAttribute(
+      'title',
+      '3 min. ago',
+    );
     expect(within(live).getByText('theo · claude-opus-5-5')).toBeInTheDocument();
     expect(within(live).getByText(/^since /)).toBeInTheDocument();
 
