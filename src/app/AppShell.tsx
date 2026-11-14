@@ -16,7 +16,7 @@ import { useNavLinks } from '@/app/useNavLinks';
 
 // Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
 // (offline, blocked) leaves the console without it: nothing shows, nothing breaks.
-const NOTHING = (): null => null;
+const NOTHING = (): ReactElement => <></>;
 const AnalyticsLayer = lazy(async () =>
   import('@/app/AnalyticsLayer')
     .then((m) => ({ default: m.AnalyticsLayer }))
