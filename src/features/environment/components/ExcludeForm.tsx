@@ -33,7 +33,9 @@ function ExcludeFields({
   exclude,
 }: Omit<ExcludeFormProps, 'members'> & { readonly members: NonEmpty<MemberEnvironment> }): ReactElement {
   const { t } = useTranslation();
-  const [chosen, setChosen] = useState(members[0].id);
+  const [picked, setChosen] = useState(members[0].id);
+  // The chosen member, or the first one once they are gone from the list: what is sent is what the select shows.
+  const chosen = (members.find((member) => member.id === picked) ?? members[0]).id;
   const [variable, setVariable] = useState('');
   const [tried, setTried] = useState(false);
   const trimmed = variable.trim();

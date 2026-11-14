@@ -389,6 +389,7 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     );
     visit('/environment');
     expect(await screen.findByText('assignments are down')).toBeInTheDocument();
+    expect(await variantRow('NPM_TOKEN', 'registry')).toBeInTheDocument();
     const review = await screen.findByRole('list', { name: 'Members’ personal variants' });
     // Without the assignments, nothing is said to be unassigned.
     expect(review).not.toHaveTextContent('Not assigned');
@@ -404,6 +405,59 @@ describe('the environment variants page', { timeout: 15_000 }, () => {
     expect(await screen.findByText('variants are down')).toBeInTheDocument();
     const form = await region('Assign a variant');
     expect(form).toHaveTextContent('Create a variant first');
+  });
+
+  it('says when the personal variants cannot be read', async () => {
+    server.use(
+      http.get('*/api/v1/environment/variants/personal', () =>
+        HttpResponse.json({ error: { type: 'unavailable', message: 'personal is down' } }, { status: 503 }),
+      ),
+    );
+    visit('/environment');
+    expect(await screen.findByText('personal is down')).toBeInTheDocument();
+  });
+
+  it('turns a rename made meanwhile by another administrator into a conflict, never overwrites it', async () => {
+    const user = userEvent.setup();
+    visit('/environment');
+    const acme = await variantRow('GITHUB_TOKEN', 'acme');
+    await user.click(within(acme).getByRole('button', { name: 'Edit GITHUB_TOKEN: acme' }));
+    db.environmentVariants = db.environmentVariants.map((variant) =>
+      variant.id === 'env-1' ? { ...variant, name: 'renamed', version: 3 } : variant,
+    );
+    // Another write reads the list again: the row now says the new name, the open edit still holds what it read.
+    const maya = await memberRow('Maya Lind (maya)');
+    await user.click(within(maya).getByRole('button', { name: 'Remove GITHUB_TOKEN from Maya Lind (maya)' }));
+    const row = await variantRow('GITHUB_TOKEN', 'renamed');
+    await user.type(within(row).getByLabelText('New value (optional)'), 'ghp_late');
+    await user.click(within(row).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('This variant changed since you read it');
+    expect(db.environmentVariants.find((variant) => variant.id === 'env-1')?.name).toBe('renamed');
+  });
+
+  it('clears a member value when another member is chosen, and follows a member who left the list', async () => {
+    const user = userEvent.setup();
+    visit('/environment');
+    const form = await region('Assign a variant');
+    await user.selectOptions(
+      within(form).getByLabelText('Variant'),
+      'GITHUB_TOKEN: own account (per member)',
+    );
+    await user.type(within(form).getByLabelText('Member value'), 'ghp_for_theo');
+    await user.selectOptions(within(form).getByLabelText('Member'), 'theo');
+    expect(within(form).getByLabelText('Member value')).toHaveValue('');
+    const exclude = await region('Exclude a member');
+    await user.selectOptions(within(exclude).getByLabelText('Member'), 'theo');
+    // Theo leaves: his rows stay on display, by id, and the pickers fall back to the first member.
+    db.members = db.members.filter((member) => member.login !== 'theo');
+    const maya = await memberRow('Maya Lind (maya)');
+    await user.click(within(maya).getByRole('button', { name: 'Remove GITHUB_TOKEN from Maya Lind (maya)' }));
+    await waitFor(() => {
+      expect(within(form).getByLabelText('Member')).toHaveDisplayValue('Maya Lind (maya)');
+    });
+    await memberRow(MEMBER_IDS.theo);
+    expect(within(exclude).getByLabelText('Member')).toHaveDisplayValue('Maya Lind (maya)');
+    expect(within(form).queryByRole('option', { name: MEMBER_IDS.theo })).toBeNull();
   });
 
   it('holds every button while a write is on its way', async () => {

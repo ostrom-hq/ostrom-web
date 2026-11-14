@@ -85,32 +85,40 @@ function EnvironmentAdmin(): ReactElement {
         )}
       </LoadState>
       <CreateVariantForm create={change.create} pending={busy} />
-      <LoadState data={view.members} failure={undefined}>
-        {(members) => (
-          <>
-            <Section label={t('environment.members.title')}>
-              <ul className="o-rows" aria-label={t('environment.members.title')}>
-                {members.map((member) => (
-                  <MemberRow
-                    key={member.id}
-                    member={member}
-                    busy={busy}
-                    unassign={(variable) => {
-                      change.unassign(member.id, variable);
-                    }}
-                    include={(variable) => {
-                      change.include(member.id, variable);
-                    }}
-                  />
-                ))}
-              </ul>
-            </Section>
-            <AssignForm members={members} variants={view.variants ?? []} busy={busy} assign={change.assign} />
-            <ExcludeForm members={members} busy={busy} exclude={change.exclude} />
-          </>
-        )}
+      <LoadState data={view.members} failure={view.assignmentsFailure}>
+        {(members) => {
+          const pickable = members.filter((member) => member.listed);
+          return (
+            <>
+              <Section label={t('environment.members.title')}>
+                <ul className="o-rows" aria-label={t('environment.members.title')}>
+                  {members.map((member) => (
+                    <MemberRow
+                      key={member.id}
+                      member={member}
+                      busy={busy}
+                      unassign={(variable) => {
+                        change.unassign(member.id, variable);
+                      }}
+                      include={(variable) => {
+                        change.include(member.id, variable);
+                      }}
+                    />
+                  ))}
+                </ul>
+              </Section>
+              <AssignForm
+                members={pickable}
+                variants={view.variants ?? []}
+                busy={busy}
+                assign={change.assign}
+              />
+              <ExcludeForm members={pickable} busy={busy} exclude={change.exclude} />
+            </>
+          );
+        }}
       </LoadState>
-      <LoadState data={view.personal} failure={undefined}>
+      <LoadState data={view.personal} failure={view.personalFailure}>
         {(personal) => (
           <Section label={t('environment.review.title')}>
             <p className="o-row__meta">{t('environment.review.lead')}</p>

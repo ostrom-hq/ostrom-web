@@ -39,7 +39,9 @@ function AssignFields({
   readonly variants: NonEmpty<EnvironmentVariant>;
 }): ReactElement {
   const { t } = useTranslation();
-  const [chosenMember, setMember] = useState(members[0].id);
+  const [pickedMember, setMember] = useState(members[0].id);
+  // The chosen member, or the first one once they are gone from the list: what is sent is what the select shows.
+  const chosenMember = (members.find((member) => member.id === pickedMember) ?? members[0]).id;
   const [variantId, setVariantId] = useState(variants[0].id);
   // A value is typed for one variant: it never follows to another choice.
   const [typed, setTyped] = useState({ variant: '', value: '' });
@@ -67,7 +69,11 @@ function AssignFields({
         label={t('environment.assign.member')}
         value={chosenMember}
         options={members.map((item) => ({ value: item.id, label: item.label }))}
-        onChange={setMember}
+        onChange={(next) => {
+          setMember(next);
+          // A member's value never follows to another member.
+          setTyped({ variant: '', value: '' });
+        }}
       />
       <Choice
         label={t('environment.assign.variant')}

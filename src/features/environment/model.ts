@@ -56,6 +56,11 @@ export interface MemberEnvironment {
   readonly id: string;
   /** Their name, or their id when the member list could not be read or no longer lists them. */
   readonly label: string;
+  /**
+   * The member list names them (or could not be read): they can be picked to assign or exclude. A member who left
+   * keeps their rows on display only.
+   */
+  readonly listed: boolean;
   readonly assignments: readonly EnvironmentAssignment[];
   readonly exclusions: readonly EnvironmentExclusion[];
 }
@@ -79,6 +84,7 @@ export function memberRows(
     return {
       id,
       label: member === undefined ? id : memberLabel(member),
+      listed: members === undefined || member !== undefined,
       assignments: page.items
         .filter((assignment) => assignment.member === id)
         .toSorted((a, b) => a.variable.localeCompare(b.variable)),

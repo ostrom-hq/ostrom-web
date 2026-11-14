@@ -14,7 +14,11 @@ export interface VariantRowProps {
   readonly busy: boolean;
   /** What the last bulk assignment of this variant did, if it was the last gesture. */
   readonly bulkResult: EnvironmentBulkAssignment | undefined;
-  readonly update: (change: { readonly name: string; readonly value: string }, onDone: () => void) => void;
+  /** `expectedVersion`: the version the edit was opened on, so a change made meanwhile is a conflict, not overwritten. */
+  readonly update: (
+    change: { readonly name: string; readonly value: string; readonly expectedVersion: number },
+    onDone: () => void,
+  ) => void;
   readonly remove: () => void;
   /** Absent for a per-member variant: it cannot be assigned in bulk. */
   readonly bulkAssign: (() => void) | undefined;
@@ -32,6 +36,7 @@ export function VariantRow({
   const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(variant.name);
+  const [opened, setOpened] = useState(variant);
   const [value, setValue] = useState('');
   const shared = bindingOf(variant.binding) === 'shared';
   const label = `${variant.variable}: ${variant.name}`;
@@ -72,7 +77,7 @@ export function VariantRow({
             aria-label={t('environment.variant.editTitle', { what: label })}
             onSubmit={(event) => {
               event.preventDefault();
-              update({ name, value }, close);
+              update({ name, value, expectedVersion: opened.version }, close);
             }}
           >
             <Field
@@ -95,7 +100,7 @@ export function VariantRow({
             <div className="o-inline">
               <Button
                 type="submit"
-                disabled={busy || name.trim() === '' || (name.trim() === variant.name && value === '')}
+                disabled={busy || name.trim() === '' || (name.trim() === opened.name && value === '')}
               >
                 {t('environment.variant.save')}
               </Button>
@@ -123,6 +128,8 @@ export function VariantRow({
             disabled={busy}
             aria-label={t('environment.variant.edit', { what: label })}
             onClick={() => {
+              setOpened(variant);
+              setName(variant.name);
               setEditing(true);
             }}
           >

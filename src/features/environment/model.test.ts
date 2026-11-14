@@ -116,13 +116,14 @@ describe('the effective assignments by member', () => {
       },
     );
     expect(rows.map((row) => row.label)).toEqual(['Ana (ana)', 'bo', 'gone']);
+    expect(rows.map((row) => row.listed)).toEqual([true, true, false]);
     expect(rows[1]?.assignments.map((item) => item.variable)).toEqual(['A', 'Z']);
     expect(rows[2]?.exclusions.map((item) => item.variable)).toEqual(['A', 'B']);
   });
 
   it('names members by id without a member list', () => {
     expect(memberRows(undefined, { items: [], exclusions: [{ member: 'm1', variable: 'A' }] })).toEqual([
-      { id: 'm1', label: 'm1', assignments: [], exclusions: [{ member: 'm1', variable: 'A' }] },
+      { id: 'm1', label: 'm1', listed: true, assignments: [], exclusions: [{ member: 'm1', variable: 'A' }] },
     ]);
   });
 

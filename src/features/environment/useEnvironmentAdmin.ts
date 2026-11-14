@@ -6,6 +6,7 @@ import {
   listEnvironmentVariantsOptions,
   listEnvironmentVariantsQueryKey,
   listMembersOptions,
+  listMembersQueryKey,
   listPersonalEnvironmentVariantsOptions,
   listPersonalEnvironmentVariantsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -40,7 +41,11 @@ export interface EnvironmentAdminViewModel {
   readonly members: readonly MemberEnvironment[] | undefined;
   /** The member list, to pick whom to assign or exclude; absent if it could not be read. */
   readonly directory: readonly Member[] | undefined;
+  /** Why the variants cannot be read. */
   readonly failure: Error | undefined;
+  /** Why the assignments cannot be read: the members, assign and exclude sections say it. */
+  readonly assignmentsFailure: Error | undefined;
+  readonly personalFailure: Error | undefined;
 }
 
 /** What an owner or an admin reads of the organization's environment: metadata only, never a value. */
@@ -67,8 +72,10 @@ export function useEnvironmentAdmin(): EnvironmentAdminViewModel {
     personal: ownedPersonal,
     members: rows,
     directory: directory.data?.items,
-    // Missing assignments would read as "nobody receives anything": any failed part is said.
-    failure: failureOf(variants.error ?? personal.error ?? assignments.error),
+    // Missing assignments would read as "nobody receives anything": each failed part is said where it shows.
+    failure: failureOf(variants.error),
+    assignmentsFailure: failureOf(assignments.error),
+    personalFailure: failureOf(personal.error),
   };
 }
 
@@ -78,7 +85,7 @@ export interface EnvironmentChangeViewModel {
   /** A new name, or a new shared value (absent keeps the stored one), against the version read. */
   readonly update: (
     variant: EnvironmentVariant,
-    change: { readonly name: string; readonly value: string },
+    change: { readonly name: string; readonly value: string; readonly expectedVersion: number },
     onDone: () => void,
   ) => void;
   readonly remove: (variant: EnvironmentVariant) => void;
@@ -108,6 +115,8 @@ export function useEnvironmentChange(): EnvironmentChangeViewModel {
         listEnvironmentVariantsQueryKey(),
         listPersonalEnvironmentVariantsQueryKey(),
         listEnvironmentAssignmentsQueryKey(),
+        // A member who left is refused: the pickers then offer the members the organization has now.
+        listMembersQueryKey(),
       ].map(async (queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
   }, [queryClient]);
@@ -150,8 +159,8 @@ export function useEnvironmentChange(): EnvironmentChangeViewModel {
           updateEnvironmentVariant({
             path: { id: variant.id },
             body: {
-              expectedVersion: variant.version,
-              ...(name === '' || name === variant.name ? {} : { name }),
+              expectedVersion: change.expectedVersion,
+              ...(name === variant.name ? {} : { name }),
               ...(change.value === '' ? {} : { value: change.value }),
             },
             throwOnError: true,
