@@ -12,6 +12,9 @@ import {
   isHttpsUrl,
   isPolicyEffect,
   isToolName,
+  formatMemory,
+  hostedStateOf,
+  hostedTone,
   isTransport,
   memberLabel,
   missingSecrets,
@@ -215,5 +218,24 @@ describe('sortAssignments and memberLabel', () => {
     expect(memberLabel(member)).toBe('theo');
     expect(memberLabel({ ...member, name: '' })).toBe('theo');
     expect(memberLabel({ ...member, name: 'Theo B' })).toBe('Theo B (theo)');
+  });
+});
+
+describe('the hosted process states', () => {
+  it('reads a state the host does not document as unknown', () => {
+    expect(['ready', 'backoff', 'paused'].map(hostedStateOf)).toEqual(['ready', 'backoff', 'unknown']);
+  });
+
+  it('calls ready good, failed bad and a backoff a warning', () => {
+    expect(['ready', 'failed', 'backoff', 'idle'].map((state) => hostedTone(hostedStateOf(state)))).toEqual([
+      'success',
+      'danger',
+      'warning',
+      'neutral',
+    ]);
+  });
+
+  it('writes the memory in MiB, then in GiB', () => {
+    expect([formatMemory(96 * 1024 * 1024), formatMemory(1536 * 1024 * 1024)]).toEqual(['96 MiB', '1.5 GiB']);
   });
 });

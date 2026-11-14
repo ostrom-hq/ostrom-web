@@ -33,3 +33,15 @@
 .tl-says {
   white-space: normal;
 }
+.tl-stderr {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2);
+  max-height: 10rem;
+  overflow: auto;
+  font-size: var(--fs-12);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}

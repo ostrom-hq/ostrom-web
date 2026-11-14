@@ -7,14 +7,17 @@ import {
   getMcpUsageOptions,
   getMcpUsageQueryKey,
   listMcpCallsOptions,
+  listMcpHostedProcessesOptions,
+  listMcpHostedProcessesQueryKey,
   listMcpServersOptions,
   listMcpServersQueryKey,
   listSecretsOptions,
   listSecretsQueryKey,
+  restartMcpHostedProcessMutation,
   rotateSecretMutation,
   saveMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { McpCall, McpServer, Secret } from '@gen/api/types.gen';
+import type { McpCall, McpHostedProcess, McpServer, Secret } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -202,5 +205,59 @@ export function useSecretChange(): SecretChangeViewModel {
           ? dropped.variables.path.name
           : undefined,
     failure: failureOf(created.error ?? rotated.error ?? dropped.error),
+  };
+}
+
+export interface McpHostedViewModel {
+  readonly processes: readonly McpHostedProcess[] | undefined;
+  /** False when the MCP host did not answer: the states are then the ones last recorded. */
+  readonly hostReachable: boolean | undefined;
+  readonly failure: Error | undefined;
+}
+
+/** The hosted stdio processes, read live from the host; an administrator's view. */
+export function useMcpHosted(): McpHostedViewModel {
+  const hosted = useQuery(ready(listMcpHostedProcessesOptions(), { retry: false }));
+  return {
+    processes: hosted.data?.items,
+    hostReachable: hosted.data?.hostReachable,
+    failure: failureOf(hosted.error),
+  };
+}
+
+export interface McpRestartViewModel {
+  /** Stops the process and lifts its backoff; the next call starts it again. */
+  readonly restart: (process: McpHostedProcess) => void;
+  /** The process being restarted: its server, and its member for a per-member one. */
+  readonly pending: { readonly server: string; readonly member: string | undefined } | undefined;
+  readonly failure: Error | undefined;
+}
+
+export function useMcpRestart(): McpRestartViewModel {
+  const invalidate = useInvalidate();
+  const mutation = useMutation({
+    ...restartMcpHostedProcessMutation(),
+    onSettled: async () => {
+      await invalidate([listMcpHostedProcessesQueryKey()]);
+    },
+  });
+  const { mutate } = mutation;
+  const restart = useCallback(
+    (process: McpHostedProcess) => {
+      mutate({
+        body:
+          process.member === undefined
+            ? { server: process.server }
+            : { server: process.server, member: process.member },
+      });
+    },
+    [mutate],
+  );
+  return {
+    restart,
+    pending: mutation.isPending
+      ? { server: mutation.variables.body.server, member: mutation.variables.body.member }
+      : undefined,
+    failure: failureOf(mutation.error),
   };
 }

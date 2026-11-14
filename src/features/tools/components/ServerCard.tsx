@@ -6,6 +6,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { isTransport } from '../model';
+import { HostedState } from './HostedState';
 
 export interface ServerCardProps {
   readonly server: McpServer;
@@ -41,6 +42,7 @@ export function ServerCard({
         <Badge>
           {isTransport(server.transport) ? t(`tools.mcp.transport.${server.transport}`) : server.transport}
         </Badge>
+        {server.state === undefined ? null : <HostedState state={server.state} failure={server.failure} />}
       </div>
       <p className="o-row__meta o-mono tl-url">{server.url}</p>
       <p className="o-row__meta">
