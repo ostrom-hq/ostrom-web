@@ -92,7 +92,7 @@ test('an owner limits a workflow to repositories of the organization, then to no
   await edit.getByRole('checkbox', { name: 'web', exact: true }).uncheck();
   await expect(edit.getByRole('note')).toContainText('No repository picked');
   await edit.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(page.getByRole('form')).toHaveCount(0);
+  await expect(page.getByRole('form', { name: 'Edit the workflow' })).toHaveCount(0);
   const again = await callFromPage(page, 'GET', `/api/v1/workflows/${id}`, undefined, org);
   expect(again.status).toBe(200);
   expect(again.body).not.toHaveProperty('repos');

@@ -775,16 +775,25 @@ export const zGitHubDeviceLink = z.object({
     interval: z.int()
 });
 
+export const zGitHubDeviceLinkStatus = z.union([z.enum([
+        'pending',
+        'linked',
+        'expired',
+        'denied'
+    ]), z.string()]);
+
+export const zGitHubLinkState = z.union([z.enum([
+        'not_linked',
+        'linked',
+        'reconnect_required'
+    ]), z.string()]);
+
 /**
  * A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens reach only the runner of the member's own sessions. `state` is `not_linked`, `linked` or `reconnect_required` (GitHub refused the refresh token, or the instance's App changed: the member links again)
  */
 export const zGitHubLink = z.object({
     memberId: z.string(),
-    state: z.union([z.enum([
-            'not_linked',
-            'linked',
-            'reconnect_required'
-        ]), z.string()]),
+    state: zGitHubLinkState,
     appConfigured: z.boolean(),
     login: z.optional(z.string()),
     userId: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
@@ -797,12 +806,7 @@ export const zGitHubLink = z.object({
  * One poll of a device link; `link` once linked, `interval` (seconds) while pending
  */
 export const zGitHubDeviceLinkPoll = z.object({
-    status: z.union([z.enum([
-            'pending',
-            'linked',
-            'expired',
-            'denied'
-        ]), z.string()]),
+    status: zGitHubDeviceLinkStatus,
     interval: z.optional(z.int()),
     link: z.optional(zGitHubLink)
 });
@@ -1742,6 +1746,28 @@ export const zCloudFilePolicy = z.object({
 });
 
 /**
+ * A member a session can be given to
+ */
+export const zCloudTransferRecipient = z.object({
+    id: z.string(),
+    login: z.string(),
+    administrator: z.boolean()
+});
+
+export const zCloudTransferRecipients = z.object({
+    recipients: z.array(zCloudTransferRecipient)
+});
+
+export const zCreateCloudTransferRequest = z.object({
+    toMemberId: z.string(),
+    resume: z._default(z.optional(z.boolean()), false)
+});
+
+export const zAcceptCloudTransferRequest = z.object({
+    resume: z.optional(z.boolean())
+});
+
+/**
  * The cloud session to start (`createCloudSession`)
  */
 export const zCreateCloudSessionRequest = z.object({
@@ -1776,6 +1802,35 @@ export const zCloudWorkspaceDeletion = z.object({
     volumeDeletedAt: z.optional(z.string()),
     volumeHandle: z.optional(z.string()),
     problem: z.optional(zCloudSessionFailure)
+});
+
+/**
+ * A change of owner of a cloud session (`runners.cloud.transfer.v1`): `offered`, then `accepted`, then `completed`; or `declined`, `cancelled`, `expired` or `failed`
+ */
+export const zCloudTransfer = z.object({
+    id: z.string(),
+    sessionId: z.string(),
+    fromMemberId: z.string(),
+    toMemberId: z.string(),
+    state: z.string(),
+    initiatedBy: z.string(),
+    decidedBy: z.optional(z.string()),
+    resume: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    expiresAt: z.optional(z.string()),
+    decidedAt: z.optional(z.string()),
+    completedAt: z.optional(z.string()),
+    atEpoch: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    failure: z.optional(zCloudSessionFailure)
+});
+
+/**
+ * A page of the caller's transfers, newest first; `next` is the cursor of the following page
+ */
+export const zCloudTransferPage = z.object({
+    items: z.array(zCloudTransfer),
+    next: z.optional(z.string())
 });
 
 /**
@@ -1822,6 +1877,7 @@ export const zCloudSession = z.object({
         ]), z.string()])),
     mode: z.optional(z.string()),
     effort: z.optional(z.string()),
+    transferId: z.optional(z.string()),
     permissionBypass: z.optional(z.boolean()),
     waiting: z.optional(zCloudSessionWaiting),
     runId: z.optional(z.string()),
@@ -3137,7 +3193,8 @@ export const zRunnerEnvironment = z.object({
     environment: zCloudEnvironment,
     git: zRunnerGitIdentity,
     variables: z.record(z.string(), z.string()),
-    unavailable: z.array(z.string())
+    unavailable: z.array(z.string()),
+    untrustedWorkspace: z.optional(z.boolean())
 });
 
 /**
@@ -7970,7 +8027,7 @@ export const zStartWorkflowRunPath = z.object({
 });
 
 /**
- * The first run of this `Idempotency-Key` (planned)
+ * The first run of this `Idempotency-Key`, with `Idempotency-Replayed: true`
  */
 export const zStartWorkflowRunResponse = zWorkflowRun;
 
@@ -9991,6 +10048,106 @@ export const zGetCloudSessionPath = z.object({
  * OK
  */
 export const zGetCloudSessionResponse = zCloudSession;
+
+export const zListCloudTransferRecipientsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListCloudTransferRecipientsResponse = zCloudTransferRecipients;
+
+export const zTransferCloudSessionBody = zCreateCloudTransferRequest;
+
+export const zTransferCloudSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.string()
+});
+
+export const zTransferCloudSessionPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted
+ */
+export const zTransferCloudSessionResponse = zCloudTransfer;
+
+export const zListCloudTransfersHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListCloudTransfersQuery = z.object({
+    direction: z.optional(z.union([z.enum([
+            'incoming',
+            'outgoing',
+            'all'
+        ]), z.string()])),
+    state: z.optional(z.array(z.string())),
+    session: z.optional(z.string()),
+    before: z.optional(z.string()),
+    limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(50))), 50)
+});
+
+/**
+ * OK
+ */
+export const zListCloudTransfersResponse = zCloudTransferPage;
+
+export const zGetCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetCloudTransferResponse = zCloudTransfer;
+
+export const zAcceptCloudTransferBody = zAcceptCloudTransferRequest;
+
+export const zAcceptCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zAcceptCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted
+ */
+export const zAcceptCloudTransferResponse = zCloudTransfer;
+
+export const zDeclineCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeclineCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zDeclineCloudTransferResponse = zCloudTransfer;
+
+export const zCancelCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCancelCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zCancelCloudTransferResponse = zCloudTransfer;
 
 export const zPauseCloudSessionHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())

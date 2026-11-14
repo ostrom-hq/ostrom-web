@@ -37,9 +37,27 @@ const screens = [
 
 /** Who the person is and the organizations they have, asked together, then what the organization holds. */
 const MAX_DEPTH = 2;
-const MAX_CALLS = 10;
+/**
+ * Ten for a screen and the reads of who is asking (#65), and two the shell has asked on every screen since: what the
+ * server serves (`/capabilities`, #139) and the badge of the open waits (#144).
+ */
+const MAX_CALLS = 12;
+/**
+ * A screen that holds more distinct things than the rest, each read once and together (depth 2), may ask for more.
+ * `/mcp` reads eight: the hosted commands, the person's own servers, the team's servers, the members (to name who
+ * is given a server), the secrets, the usage, the calls and the relay settings (#163, #173, #177). It is raised for
+ * that screen alone, so a new read anywhere else still counts against the common ceiling.
+ */
+const MAX_CALLS_OF: Readonly<Partial<Record<(typeof screens)[number], number>>> = { '/mcp': 14 };
 /** A screen that asks the server still after this long never settles: a loop, not a load. */
 const SETTLE_LIMIT_MS = 30_000;
+/**
+ * A round trip of every request while a screen loads, as on any real network. A chain is read from the times (a call
+ * started once another had answered), and a server that answers in a few milliseconds on the job's loopback made two
+ * calls of the same render, asked 25 ms apart, read as a chain: the second started after the first had answered.
+ * With a round trip, calls asked together overlap and only a call that waits for another's answer starts after it.
+ */
+const ROUND_TRIP_MS = 150;
 /**
  * The questions a screen asks again on purpose once answered, and how often (useYes.ts): the queue of approvals every
  * 2 s, for the other approvers' answers, and the decided requests every 10 s. A repeat sooner than three quarters of
@@ -56,13 +74,10 @@ const POLLS: Readonly<Partial<Record<(typeof screens)[number], Readonly<Record<s
 };
 /**
  * Questions read a second time for a cause outside the console, with it; shown apart, once a load at most (any more
- * count), and removed with their cause. The policy reads its members' names by `GET /api/v1/members`, still `planned`
- * in the contract, which the server answers 404; a 404 in the organization reads the person's list again
- * (shared/api/apiClient.ts). To be served by the server: SRV-ORG.
+ * count), and removed with their cause. None now: the policy's members, read from `GET /api/v1/members` (answered 404,
+ * which read the person's organizations again), come from the served `GET /orgs/{org}/members` since #172.
  */
-const KNOWN: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
-  '/policy': ['GET /api/v1/me/organizations'],
-};
+const KNOWN: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {};
 
 interface Call {
   readonly name: string;
@@ -84,6 +99,14 @@ async function callsOnLoad(
   path: string,
 ): Promise<{ readonly calls: Call[]; readonly settled: boolean }> {
   await page.goto('about:blank');
+  const network = await page.context().newCDPSession(page);
+  await network.send('Network.enable');
+  await network.send('Network.emulateNetworkConditions', {
+    offline: false,
+    latency: ROUND_TRIP_MS,
+    downloadThroughput: -1,
+    uploadThroughput: -1,
+  });
   const started = new Map<Request, number>();
   const ended = new Map<Request, number>();
   const aborted = new Set<Request>();
@@ -115,6 +138,7 @@ async function callsOnLoad(
     page.off('request', onRequest);
     page.off('requestfinished', onEnd);
     page.off('requestfailed', onFail);
+    await network.detach();
   }
   const calls = [...started].map(([request, start]) => {
     const url = new URL(request.url());
@@ -211,7 +235,8 @@ async function measure(
   if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
   if (again.length > 0) problems.push(`${screen}: asked again once answered ${listed(again, 'name')}`);
   if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
-  if (calls.length > MAX_CALLS) problems.push(`${screen}: ${String(calls.length)} calls`);
+  if (calls.length > (MAX_CALLS_OF[screen] ?? MAX_CALLS))
+    problems.push(`${screen}: ${String(calls.length)} calls`);
   const counted = (some: readonly Call[], key: 'name' | 'asked'): string =>
     some.length === 0 ? '' : `${String(some.length)} ${listed(some, key)}`;
   const cells = [

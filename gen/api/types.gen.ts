@@ -1089,17 +1089,21 @@ export type GitHubDeviceLink = {
  * One poll of a device link; `link` once linked, `interval` (seconds) while pending
  */
 export type GitHubDeviceLinkPoll = {
-    status: 'pending' | 'linked' | 'expired' | 'denied' | (string & {});
+    status: GitHubDeviceLinkStatus;
     interval?: number;
     link?: GitHubLink;
 };
+
+export type GitHubDeviceLinkStatus = 'pending' | 'linked' | 'expired' | 'denied' | (string & {});
+
+export type GitHubLinkState = 'not_linked' | 'linked' | 'reconnect_required' | (string & {});
 
 /**
  * A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens reach only the runner of the member's own sessions. `state` is `not_linked`, `linked` or `reconnect_required` (GitHub refused the refresh token, or the instance's App changed: the member links again)
  */
 export type GitHubLink = {
     memberId: string;
-    state: 'not_linked' | 'linked' | 'reconnect_required' | (string & {});
+    state: GitHubLinkState;
     /**
      * Whether the instance's GitHub App can link accounts (its OAuth client is known)
      */
@@ -2365,7 +2369,7 @@ export type CloudSession = {
     repo?: string;
     ref?: string;
     /**
-     * creating, running, pausing, paused, resuming, terminated or failed
+     * creating, running, pausing, paused, resuming, transferring (the owner changes at a paused boundary, `runners.cloud.transfer.v1`), terminated or failed
      */
     status: string;
     /**
@@ -2414,6 +2418,10 @@ export type CloudSession = {
      * The effort (reasoning level) the agent runs with, if chosen (`runners.cloud.effort.v1`)
      */
     effort?: string;
+    /**
+     * The accepted transfer the session is moving toward, from its acceptance until the owner changed or the transfer ended (`runners.cloud.transfer.v1`)
+     */
+    transferId?: string;
     /**
      * The owner's standing approval of tool uses is on (`runners.cloud.permissions.bypass.v1`); absent from a server without it
      */
@@ -2662,6 +2670,84 @@ export type CloudFilePolicy = {
     maxMessageBytes: number;
     maxFilesPerMessage: number;
     types: Array<string>;
+};
+
+/**
+ * A change of owner of a cloud session (`runners.cloud.transfer.v1`): `offered`, then `accepted`, then `completed`; or `declined`, `cancelled`, `expired` or `failed`
+ */
+export type CloudTransfer = {
+    id: string;
+    sessionId: string;
+    fromMemberId: string;
+    toMemberId: string;
+    /**
+     * offered, accepted, completed, declined, cancelled, expired or failed; tolerate unknown values
+     */
+    state: string;
+    /**
+     * The member who asked
+     */
+    initiatedBy: string;
+    /**
+     * The member who accepted, declined or cancelled
+     */
+    decidedBy?: string;
+    /**
+     * Resume the session for the recipient once the owner changed
+     */
+    resume: boolean;
+    createdAt: string;
+    updatedAt: string;
+    /**
+     * Offers - the recipient must accept before this time
+     */
+    expiresAt?: string;
+    decidedAt?: string;
+    completedAt?: string;
+    /**
+     * The last execution run for the former owner; later executions run for the recipient
+     */
+    atEpoch?: number;
+    failure?: CloudSessionFailure;
+};
+
+/**
+ * A page of the caller's transfers, newest first; `next` is the cursor of the following page
+ */
+export type CloudTransferPage = {
+    items: Array<CloudTransfer>;
+    next?: string;
+};
+
+/**
+ * A member a session can be given to
+ */
+export type CloudTransferRecipient = {
+    id: string;
+    login: string;
+    administrator: boolean;
+};
+
+export type CloudTransferRecipients = {
+    recipients: Array<CloudTransferRecipient>;
+};
+
+export type CreateCloudTransferRequest = {
+    /**
+     * The recipient's member id or login
+     */
+    toMemberId: string;
+    /**
+     * Resume the session for the recipient once the owner changed
+     */
+    resume?: boolean;
+};
+
+export type AcceptCloudTransferRequest = {
+    /**
+     * Resume once the session is the recipient's; absent keeps what the offer asked for
+     */
+    resume?: boolean;
 };
 
 /**
@@ -4699,6 +4785,10 @@ export type RunnerEnvironment = {
         [key: string]: string;
     };
     unavailable: Array<string>;
+    /**
+     * Another member's execution ran on the workspace since the owner's last execution that was ready (`runners.cloud.transfer.v1`): the runner resets the agent's settings and each repository's Git configuration and hooks before the setup and the agent run, and names it in the preparation. Absent when false
+     */
+    untrustedWorkspace?: boolean;
 };
 
 /**
@@ -6221,7 +6311,7 @@ export type Session = {
      */
     activitySince?: string;
     /**
-     * The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them on a run; absent when the launch has none. Planned: the server does not send them yet
+     * The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them on a run; absent when the launch has none
      */
     labels?: {
         [key: string]: string;
@@ -9014,7 +9104,7 @@ export type CreateLaunchData = {
         agent: string;
         model?: string;
         /**
-         * Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label. Planned: the server does not read it yet
+         * Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label
          */
         labels?: {
             [key: string]: string;
@@ -12719,7 +12809,7 @@ export type ListSessionsData = {
         open?: boolean;
         before?: string;
         /**
-         * `key=value`, repeatable (at most 16): only the sessions whose launch carries every label given (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed one. Planned: the server does not read it yet
+         * `key=value`, repeatable (at most 16): only the sessions whose launch carries every label given (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed one
          */
         label?: Array<string>;
         /**
@@ -15994,7 +16084,7 @@ export type StartWorkflowRunData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * 1 to 128 characters of `A-Za-z0-9._:-` (planned)
+         * 1 to 128 characters of `A-Za-z0-9._:-`; one fresh key per press of Start, reused for each retry of it
          */
         'Idempotency-Key'?: string;
     };
@@ -16032,7 +16122,7 @@ export type StartWorkflowRunError = StartWorkflowRunErrors[keyof StartWorkflowRu
 
 export type StartWorkflowRunResponses = {
     /**
-     * The first run of this `Idempotency-Key` (planned)
+     * The first run of this `Idempotency-Key`, with `Idempotency-Replayed: true`
      */
     200: WorkflowRun;
     /**
@@ -23859,6 +23949,363 @@ export type GetCloudSessionResponses = {
 };
 
 export type GetCloudSessionResponse = GetCloudSessionResponses[keyof GetCloudSessionResponses];
+
+export type ListCloudTransferRecipientsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/transfer-recipients';
+};
+
+export type ListCloudTransferRecipientsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListCloudTransferRecipientsError = ListCloudTransferRecipientsErrors[keyof ListCloudTransferRecipientsErrors];
+
+export type ListCloudTransferRecipientsResponses = {
+    /**
+     * OK
+     */
+    200: CloudTransferRecipients;
+};
+
+export type ListCloudTransferRecipientsResponse = ListCloudTransferRecipientsResponses[keyof ListCloudTransferRecipientsResponses];
+
+export type TransferCloudSessionData = {
+    body: CreateCloudTransferRequest;
+    headers: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+        /**
+         * 1 to 128 characters of `A-Za-z0-9._:-`
+         */
+        'Idempotency-Key': string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/transfer';
+};
+
+export type TransferCloudSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type TransferCloudSessionError = TransferCloudSessionErrors[keyof TransferCloudSessionErrors];
+
+export type TransferCloudSessionResponses = {
+    /**
+     * Accepted
+     */
+    202: CloudTransfer;
+};
+
+export type TransferCloudSessionResponse = TransferCloudSessionResponses[keyof TransferCloudSessionResponses];
+
+export type ListCloudTransfersData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        direction?: 'incoming' | 'outgoing' | 'all' | (string & {});
+        state?: Array<string>;
+        session?: string;
+        before?: string;
+        limit?: number;
+    };
+    url: '/api/v1/cloud/transfers';
+};
+
+export type ListCloudTransfersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListCloudTransfersError = ListCloudTransfersErrors[keyof ListCloudTransfersErrors];
+
+export type ListCloudTransfersResponses = {
+    /**
+     * OK
+     */
+    200: CloudTransferPage;
+};
+
+export type ListCloudTransfersResponse = ListCloudTransfersResponses[keyof ListCloudTransfersResponses];
+
+export type GetCloudTransferData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/transfers/{id}';
+};
+
+export type GetCloudTransferErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetCloudTransferError = GetCloudTransferErrors[keyof GetCloudTransferErrors];
+
+export type GetCloudTransferResponses = {
+    /**
+     * OK
+     */
+    200: CloudTransfer;
+};
+
+export type GetCloudTransferResponse = GetCloudTransferResponses[keyof GetCloudTransferResponses];
+
+export type AcceptCloudTransferData = {
+    body?: AcceptCloudTransferRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/transfers/{id}/accept';
+};
+
+export type AcceptCloudTransferErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type AcceptCloudTransferError = AcceptCloudTransferErrors[keyof AcceptCloudTransferErrors];
+
+export type AcceptCloudTransferResponses = {
+    /**
+     * Accepted
+     */
+    202: CloudTransfer;
+};
+
+export type AcceptCloudTransferResponse = AcceptCloudTransferResponses[keyof AcceptCloudTransferResponses];
+
+export type DeclineCloudTransferData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/transfers/{id}/decline';
+};
+
+export type DeclineCloudTransferErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeclineCloudTransferError = DeclineCloudTransferErrors[keyof DeclineCloudTransferErrors];
+
+export type DeclineCloudTransferResponses = {
+    /**
+     * OK
+     */
+    200: CloudTransfer;
+};
+
+export type DeclineCloudTransferResponse = DeclineCloudTransferResponses[keyof DeclineCloudTransferResponses];
+
+export type CancelCloudTransferData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/transfers/{id}/cancel';
+};
+
+export type CancelCloudTransferErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CancelCloudTransferError = CancelCloudTransferErrors[keyof CancelCloudTransferErrors];
+
+export type CancelCloudTransferResponses = {
+    /**
+     * OK
+     */
+    200: CloudTransfer;
+};
+
+export type CancelCloudTransferResponse = CancelCloudTransferResponses[keyof CancelCloudTransferResponses];
 
 export type PauseCloudSessionData = {
     body?: never;

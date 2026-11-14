@@ -2,7 +2,7 @@
 
 import { type DefaultBodyType, http, type HttpHandler, HttpResponse, type HttpResponseResolver, type RequestHandlerOptions as RequestHandlerOptions2 } from 'msw';
 
-import type { AcceptInvitationData, AcceptInvitationResponses, AcceptMemoryProposalResponses, AcknowledgeDirectiveData, AcknowledgeDirectiveResponses, AddGroupMemberResponses, AddInstanceAdminData, AddInstanceAdminResponses, AddTodoItemData, AddTodoItemResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerCloudPermissionData, AnswerCloudPermissionResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ApplyMemoryReviewResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignEnvironmentVariantData, AssignEnvironmentVariantResponses, AssignMcpServerData, AssignMcpServerResponses, BulkAssignEnvironmentVariantResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelAutomationRunResponses, CancelBillingSubscriptionResponses, CancelInferenceRequestResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClaimDirectiveData, ClaimDirectiveResponses, ClearHookAssignmentResponses, ClearSkillAssignmentResponses, ClientOptions, CloudRunnerAgentData, CloudRunnerAgentResponses, CloudRunnerEventsData, CloudRunnerEventsResponses, CloudRunnerFileResponses, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, CloudRunnerInputsAckData, CloudRunnerInputsAckResponses, CloudRunnerInputsData, CloudRunnerInputsResponses, CompleteTodoItemData, CompleteTodoItemResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateArtifactUploadData, CreateArtifactUploadResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudClusterData, CreateCloudClusterResponses, CreateCloudProfileData, CreateCloudProfileResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateEnvironmentVariantData, CreateEnvironmentVariantResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateMemoryData, CreateMemoryResponses, CreateMyEnvironmentVariantData, CreateMyEnvironmentVariantResponses, CreateMyMcpServerData, CreateMyMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSessionTodoData, CreateSessionTodoResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeleteArtifactResponses, DeleteArtifactStorageResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteEnvironmentVariantResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteMyEnvironmentVariantResponses, DeleteMyMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DeliverRunData, DeliverRunResponses, DeliverWorkflowSessionData, DeliverWorkflowSessionResponses, DisableAutomationResponses, DismissMemoryReviewResponses, DownloadHookResponses, DownloadRunnerHookData, DownloadRunnerHookResponses, DownloadRunnerSkillData, DownloadRunnerSkillResponses, DownloadSkillResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, ExcludeEnvironmentVariableResponses, FetchRunnerEnvironmentData, FetchRunnerEnvironmentResponses, FetchRunnerGithubTokenData, FetchRunnerGithubTokenResponses, FetchRunnerHooksData, FetchRunnerHooksResponses, FetchRunnerSkillsData, FetchRunnerSkillsResponses, FetchRunnerVariablesData, FetchRunnerVariablesResponses, ForgetMemoryResponses, GetAnalysisStateResponses, GetApiPricesResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactPolicyResponses, GetArtifactResponses, GetArtifactSettingsResponses, GetArtifactStorageResponses, GetArtifactUsageResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudFilePolicyResponses, GetCloudInputResponses, GetCloudRuntimeResponses, GetCloudSessionResponses, GetCloudSettingsResponses, GetCompilerSettingsResponses, GetCurrentDirectiveResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetEnvironmentResponses, GetForecastsResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppConfigurationResponses, GetGithubAppResponses, GetGithubLinkResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceQueueResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetInstanceSettingsResponses, GetLauncherConfigResponses, GetLaunchLimitsResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberGithubLinkResponses, GetMemberHookDeliveryResponses, GetMemberResponses, GetMemberSkillDeliveryResponses, GetMemoryCurationResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetNotificationSettingsResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPacingSettingsResponses, GetPackageResponses, GetPackageStatusResponses, GetPoolSizeResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionDirectiveData, GetSessionDirectiveResponses, GetSessionResponses, GetSessionTodoResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageReviewResponses, GetUsageSummaryResponses, GetWaitResponses, GetWebhookResponses, GetWorkflowResponses, GetWorkflowSettingsResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HandOverSharedAccountResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, IncludeEnvironmentVariableResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InterruptCloudSessionResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, LinkTodoItemData, LinkTodoItemResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudClustersResponses, ListCloudEventsResponses, ListCloudInputsResponses, ListCloudProfilesResponses, ListCloudSessionsResponses, ListCloudSubagentsResponses, ListDecisionsResponses, ListDevicesResponses, ListEnvironmentAssignmentsResponses, ListEnvironmentVariantsResponses, ListGatesResponses, ListGithubLinksResponses, ListGroupsResponses, ListHookAssignmentsResponses, ListHooksResponses, ListHookVersionsResponses, ListInferenceRoutesResponses, ListInstanceAdminsResponses, ListInstanceKeysResponses, ListInstanceSettingsResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpHostedProcessesResponses, ListMcpServersResponses, ListMemberDevicesResponses, ListMemberSkillInstallationsResponses, ListMembersResponses, ListMemoryProposalsResponses, ListMemoryResponses, ListMemoryReviewsResponses, ListMyAuditResponses, ListMyEnvironmentVariantsResponses, ListMyMcpServersResponses, ListMyOrganizationsResponses, ListMySkillInstallationsResponses, ListMySkillsResponses, ListMySkillVersionsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListPersonalEnvironmentVariantsResponses, ListPushDevicesResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillAssignmentsResponses, ListSkillsResponses, ListSkillVersionsResponses, ListSupersededMemoryResponses, ListTasksResponses, ListTeamsResponses, ListTodoStopHooksResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LoadApiPriceDefaultsResponses, LogoutEverywhereResponses, LogoutResponses, MakeSharedAccountAccessOnlyResponses, MobileTokenData, MobileTokenResponses, NoteTodoItemData, NoteTodoItemResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PendingWorkflowSessionResponses, PinHookData, PinHookResponses, PinMySkillData, PinMySkillResponses, PinSkillData, PinSkillResponses, PollDeviceLoginData, PollDeviceLoginResponses, PollGithubDeviceLinkResponses, PreviewDirectiveResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PromoteEnvironmentVariantResponses, PromoteMcpServerResponses, PromoteSkillResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishHookVersionData, PublishHookVersionResponses, PublishMySkillVersionData, PublishMySkillVersionResponses, PublishSkillVersionData, PublishSkillVersionResponses, PutArtifactUploadChunkData, PutArtifactUploadChunkResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadHookVersionResponses, ReadMemoryResponses, ReadTodoContextResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReceiveWaitEventData, ReceiveWaitEventResponses, ReconcileUsageData, ReconcileUsageResponses, RecordTodoHookErrorData, RecordTodoHookErrorResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RejectMemoryProposalResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveInstanceAdminResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameDeviceData, RenameDeviceResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportRunnerPreparationData, ReportRunnerPreparationResponses, ReportSeenData, ReportSeenResponses, ReportSessionActivityData, ReportSessionActivityResponses, ReportSkillInstallationsData, ReportSkillInstallationsResponses, RequestSignInEmailData, RequestSignInEmailResponses, RequestTodoDropData, RequestTodoDropResponses, ReserveGateResponses, ResetTodoData, ResetTodoResponses, RestartAnalysisResponses, RestartMcpHostedProcessData, RestartMcpHostedProcessResponses, RestoreMemoryResponses, RestoreMySkillResponses, RestorePackageResponses, RestoreSkillResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RetireMySkillResponses, RetireSkillResponses, RetireSkillVersionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideData, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RotateWebhookSecretResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveArtifactSettingsData, SaveArtifactSettingsResponses, SaveArtifactStorageData, SaveArtifactStorageResponses, SaveAutomationData, SaveAutomationResponses, SaveCloudRuntimeData, SaveCloudRuntimeResponses, SaveCloudSettingsData, SaveCloudSettingsResponses, SaveCompilerSettingsData, SaveCompilerSettingsResponses, SaveGithubAppConfigurationData, SaveGithubAppConfigurationResponses, SaveInstanceSettingsData, SaveInstanceSettingsResponses, SaveMcpServerData, SaveMcpServerResponses, SaveMyMcpServerData, SaveMyMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SaveWorkflowSettingsData, SaveWorkflowSettingsResponses, SearchMemoryResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SendTestPushResponses, SessionAliveData, SessionAliveResponses, SetApiPricesData, SetApiPricesResponses, SetBudgetData, SetBudgetResponses, SetCloudPermissionBypassData, SetCloudPermissionBypassResponses, SetCloudSessionEffortData, SetCloudSessionEffortResponses, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessResponses, SetCloudSessionModelData, SetCloudSessionModelResponses, SetGatePolicyData, SetGatePolicyResponses, SetHookAssignmentData, SetHookAssignmentResponses, SetHookAudienceData, SetHookAudienceResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetLaunchLimitsData, SetLaunchLimitsResponses, SetMemberTodoStopHookData, SetMemberTodoStopHookResponses, SetMemoryCurationData, SetMemoryCurationResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, SetNotificationSettingData, SetNotificationSettingResponses, SetPacingSettingsData, SetPacingSettingsResponses, SetSkillAssignmentData, SetSkillAssignmentResponses, SetSkillAudienceData, SetSkillAudienceResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartGithubDeviceLinkResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartTodoItemData, StartTodoItemResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StopCloudTaskData, StopCloudTaskResponses, StopTodoSessionData, StopTodoSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestArtifactStorageResponses, TestAutomationData, TestAutomationResponses, TestWebhookResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, TriggerAutomationVersionResponses, UnassignEnvironmentVariantResponses, UnassignMcpServerResponses, UnlinkGithubResponses, UnlinkMemberGithubResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnpinHookResponses, UnpinMySkillResponses, UnpinSkillResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateCloudClusterData, UpdateCloudClusterResponses, UpdateCloudProfileData, UpdateCloudProfileResponses, UpdateEnvironmentVariantData, UpdateEnvironmentVariantResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateMemoryData, UpdateMemoryResponses, UpdateMyEnvironmentVariantData, UpdateMyEnvironmentVariantResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, UpdateWebhookData, UpdateWebhookResponses, UploadCloudFileData, UploadCloudFileResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses, WakeWaitsData, WakeWaitsResponses, WorkflowsMcpResponses } from './types.gen';
+import type { AcceptCloudTransferData, AcceptCloudTransferResponses, AcceptInvitationData, AcceptInvitationResponses, AcceptMemoryProposalResponses, AcknowledgeDirectiveData, AcknowledgeDirectiveResponses, AddGroupMemberResponses, AddInstanceAdminData, AddInstanceAdminResponses, AddTodoItemData, AddTodoItemResponses, AnswerApprovalData, AnswerApprovalResponses, AnswerCloudPermissionData, AnswerCloudPermissionResponses, AnswerDeviceLoginData, AnswerDeviceLoginResponses, AnswerGovernanceConfirmationData, AnswerGovernanceConfirmationResponses, AnswerWaitData, AnswerWaitResponses, ApplyMemoryReviewResponses, ArtifactsMcpResponses, AskGateData, AskGateResponses, AssignEnvironmentVariantData, AssignEnvironmentVariantResponses, AssignMcpServerData, AssignMcpServerResponses, BulkAssignEnvironmentVariantResponses, BulkUpdateRulesData, BulkUpdateRulesResponses, CancelAutomationRunResponses, CancelBillingSubscriptionResponses, CancelCloudTransferResponses, CancelInferenceRequestResponses, CancelRunResponses, CancelWaitResponses, CapabilitiesResponses, ChangeBillingPlanData, ChangeBillingPlanResponses, CheckAgentPolicyResponses, ClaimDirectiveData, ClaimDirectiveResponses, ClearHookAssignmentResponses, ClearSkillAssignmentResponses, ClientOptions, CloudRunnerAgentData, CloudRunnerAgentResponses, CloudRunnerEventsData, CloudRunnerEventsResponses, CloudRunnerFileResponses, CloudRunnerHeartbeatData, CloudRunnerHeartbeatResponses, CloudRunnerInputsAckData, CloudRunnerInputsAckResponses, CloudRunnerInputsData, CloudRunnerInputsResponses, CompleteTodoItemData, CompleteTodoItemResponses, ConsumeGateResponses, CreateArtifactTicketData, CreateArtifactTicketResponses, CreateArtifactUploadData, CreateArtifactUploadResponses, CreateAutomationData, CreateAutomationResponses, CreateBudgetOverrideData, CreateBudgetOverrideResponses, CreateCloudClusterData, CreateCloudClusterResponses, CreateCloudProfileData, CreateCloudProfileResponses, CreateCloudSessionData, CreateCloudSessionResponses, CreateEnvironmentVariantData, CreateEnvironmentVariantResponses, CreateGroupData, CreateGroupResponses, CreateInferenceRouteData, CreateInferenceRouteResponses, CreateInvitationLinkData, CreateInvitationLinkResponses, CreateLaunchData, CreateLaunchResponses, CreateMcpArgumentPolicyData, CreateMcpArgumentPolicyResponses, CreateMcpServerData, CreateMcpServerResponses, CreateMemoryData, CreateMemoryResponses, CreateMyEnvironmentVariantData, CreateMyEnvironmentVariantResponses, CreateMyMcpServerData, CreateMyMcpServerResponses, CreateOrgData, CreateOrgResponses, CreateRuleData, CreateRuleResponses, CreateSecretData, CreateSecretResponses, CreateServiceKeyData, CreateServiceKeyResponses, CreateSessionTodoData, CreateSessionTodoResponses, CreateSignInLinkResponses, CreateTokenData, CreateTokenResponses, CreateWaitData, CreateWaitResponses, CreateWebhookData, CreateWebhookResponses, CreateWorkflowData, CreateWorkflowResponses, DeclineCloudTransferResponses, DeleteArtifactResponses, DeleteArtifactStorageResponses, DeleteAutomationResponses, DeleteDeviceResponses, DeleteEnvironmentVariantResponses, DeleteGroupResponses, DeleteInferenceRouteResponses, DeleteMcpArgumentPolicyResponses, DeleteMcpServerResponses, DeleteMyEnvironmentVariantResponses, DeleteMyMcpServerResponses, DeleteOrgData, DeleteOrgResponses, DeletePushDeviceResponses, DeleteRuleResponses, DeleteRunnerResponses, DeleteSecretResponses, DeleteServiceKeyResponses, DeleteWebhookResponses, DeleteWorkflowResponses, DeliverRunData, DeliverRunResponses, DeliverWorkflowSessionData, DeliverWorkflowSessionResponses, DisableAutomationResponses, DismissMemoryReviewResponses, DownloadHookResponses, DownloadRunnerHookData, DownloadRunnerHookResponses, DownloadRunnerSkillData, DownloadRunnerSkillResponses, DownloadSkillResponses, EnableAutomationResponses, EndLaunchResponses, EndSessionData, EndSessionResponses, EnrollSharedAccountData, EnrollSharedAccountResponses, ExchangeSignInLinkData, ExchangeSignInLinkResponses, ExcludeEnvironmentVariableResponses, FetchRunnerEnvironmentData, FetchRunnerEnvironmentResponses, FetchRunnerGithubTokenData, FetchRunnerGithubTokenResponses, FetchRunnerHooksData, FetchRunnerHooksResponses, FetchRunnerSkillsData, FetchRunnerSkillsResponses, FetchRunnerVariablesData, FetchRunnerVariablesResponses, ForgetMemoryResponses, GetAnalysisStateResponses, GetApiPricesResponses, GetApprovalQueueResponses, GetApprovalResponses, GetApprovalViewResponses, GetApproversGraphResponses, GetArtifactContentResponses, GetArtifactFileResponses, GetArtifactLinkContentResponses, GetArtifactPolicyResponses, GetArtifactResponses, GetArtifactSettingsResponses, GetArtifactStorageResponses, GetArtifactUsageResponses, GetAutomationResponses, GetBillingResponses, GetCapacityResponses, GetCloudFilePolicyResponses, GetCloudInputResponses, GetCloudRuntimeResponses, GetCloudSessionResponses, GetCloudSettingsResponses, GetCloudTransferResponses, GetCompilerSettingsResponses, GetCurrentDirectiveResponses, GetCurrentPackageResponses, GetDeviceLoginResponses, GetEnvironmentResponses, GetForecastsResponses, GetGateCatalogResponses, GetGatePolicyResponses, GetGateResponses, GetGithubAppConfigurationResponses, GetGithubAppResponses, GetGithubLinkResponses, GetGovernanceConfirmationResponses, GetGroupResponses, GetHookDeliveryResponses, GetInferenceQueueResponses, GetInferenceSettingsResponses, GetInstanceResponses, GetInstanceSettingsResponses, GetLauncherConfigResponses, GetLaunchLimitsResponses, GetMcpSettingsResponses, GetMcpUsageResponses, GetMemberGithubLinkResponses, GetMemberHookDeliveryResponses, GetMemberResponses, GetMemberSkillDeliveryResponses, GetMemoryCurationResponses, GetMeResponses, GetModelPolicyResponses, GetMyAccountResponses, GetMyBudgetResponses, GetNotificationPreferencesResponses, GetNotificationSettingsResponses, GetOrganizationResponses, GetOrgMemberResponses, GetOrgResponses, GetPacingSettingsResponses, GetPackageResponses, GetPackageStatusResponses, GetPoolSizeResponses, GetReceiptBundleResponses, GetReceiptResponses, GetReplayResponses, GetRuleResponses, GetRunResponses, GetSessionDirectiveData, GetSessionDirectiveResponses, GetSessionResponses, GetSessionTodoResponses, GetSettingsResponses, GetSignedGatePolicyResponses, GetSkillDeliveryResponses, GetSpendingResponses, GetUsageResponses, GetUsageReviewResponses, GetUsageSummaryResponses, GetWaitResponses, GetWebhookResponses, GetWorkflowResponses, GetWorkflowSettingsResponses, GithubCheckData, GithubCheckResponses, GithubWebhookResponses, GrantSignUpData, GrantSignUpResponses, HandOverSharedAccountResponses, HealthResponses, HealthRootResponses, ImportTeamCodeData, ImportTeamCodeResponses, IncludeEnvironmentVariableResponses, InferenceChatCompletionsResponses, InferenceMessagesResponses, InferenceModelsResponses, InferenceResponsesResponses, InterruptCloudSessionResponses, InviteMembersData, InviteMembersResponses, InviteOrgMembersData, InviteOrgMembersResponses, IssueCloudTerminalTicketResponses, LauncherLoginData, LauncherLoginResponses, LeaveOrgResponses, LinkSignInProviderResponses, LinkTodoItemData, LinkTodoItemResponses, ListActivityResponses, ListApprovalsResponses, ListArtifactMembersResponses, ListArtifactsResponses, ListArtifactVersionsResponses, ListAuditResponses, ListAuthSessionsResponses, ListAutomationRunsResponses, ListAutomationsResponses, ListBillingInvoicesResponses, ListBudgetOverridesResponses, ListBudgetsResponses, ListChecksResponses, ListCloudClustersResponses, ListCloudEventsResponses, ListCloudInputsResponses, ListCloudProfilesResponses, ListCloudSessionsResponses, ListCloudSubagentsResponses, ListCloudTransferRecipientsResponses, ListCloudTransfersResponses, ListDecisionsResponses, ListDevicesResponses, ListEnvironmentAssignmentsResponses, ListEnvironmentVariantsResponses, ListGatesResponses, ListGithubLinksResponses, ListGroupsResponses, ListHookAssignmentsResponses, ListHooksResponses, ListHookVersionsResponses, ListInferenceRoutesResponses, ListInstanceAdminsResponses, ListInstanceKeysResponses, ListInstanceSettingsResponses, ListInvitationsResponses, ListMcpArgumentPoliciesResponses, ListMcpAssignmentsResponses, ListMcpCallsResponses, ListMcpHostedProcessesResponses, ListMcpServersResponses, ListMemberDevicesResponses, ListMemberSkillInstallationsResponses, ListMembersResponses, ListMemoryProposalsResponses, ListMemoryResponses, ListMemoryReviewsResponses, ListMyAuditResponses, ListMyEnvironmentVariantsResponses, ListMyMcpServersResponses, ListMyOrganizationsResponses, ListMySkillInstallationsResponses, ListMySkillsResponses, ListMySkillVersionsResponses, ListNotificationsResponses, ListOrgMembersResponses, ListOrgsResponses, ListPackageAuditResponses, ListPackagesResponses, ListPendingUsageResponses, ListPersonalEnvironmentVariantsResponses, ListPushDevicesResponses, ListReceiptKeysResponses, ListReceiptsResponses, ListReposResponses, ListRulesResponses, ListRunnersResponses, ListRunsResponses, ListSecretsResponses, ListServiceKeysResponses, ListSessionsResponses, ListSharedAccountsResponses, ListSignInMethodsResponses, ListSkillAssignmentsResponses, ListSkillsResponses, ListSkillVersionsResponses, ListSupersededMemoryResponses, ListTasksResponses, ListTeamsResponses, ListTodoStopHooksResponses, ListTokenScopesResponses, ListTokensResponses, ListUsageEventsResponses, ListUsageReconciliationsResponses, ListWaitsResponses, ListWebhookDeliveriesResponses, ListWebhooksResponses, ListWorkflowRunsResponses, ListWorkflowsResponses, LoadApiPriceDefaultsResponses, LogoutEverywhereResponses, LogoutResponses, MakeSharedAccountAccessOnlyResponses, MobileTokenData, MobileTokenResponses, NoteTodoItemData, NoteTodoItemResponses, OauthLoginCallbackResponses, OpenBillingPortalResponses, OpenRunnerLaunchData, OpenRunnerLaunchResponses, PauseCloudSessionResponses, PauseGroupMemberData, PauseGroupMemberResponses, PendingWorkflowSessionResponses, PinHookData, PinHookResponses, PinMySkillData, PinMySkillResponses, PinSkillData, PinSkillResponses, PollDeviceLoginData, PollDeviceLoginResponses, PollGithubDeviceLinkResponses, PreviewDirectiveResponses, PreviewInvitationData, PreviewInvitationResponses, PreviewPackageData, PreviewPackageResponses, PromoteEnvironmentVariantResponses, PromoteMcpServerResponses, PromoteSkillResponses, PublishArtifactData, PublishArtifactResponses, PublishArtifactVersionData, PublishArtifactVersionResponses, PublishHookVersionData, PublishHookVersionResponses, PublishMySkillVersionData, PublishMySkillVersionResponses, PublishSkillVersionData, PublishSkillVersionResponses, PutArtifactUploadChunkData, PutArtifactUploadChunkResponses, PutMcpSettingsData, PutMcpSettingsResponses, ReadHookVersionResponses, ReadMemoryResponses, ReadTodoContextResponses, ReadyResponses, ReceiveSlackInteractionData, ReceiveSlackInteractionResponses, ReceiveStripeWebhookAliasData, ReceiveStripeWebhookAliasResponses, ReceiveStripeWebhookData, ReceiveStripeWebhookResponses, ReceiveWaitEventData, ReceiveWaitEventResponses, ReconcileUsageData, ReconcileUsageResponses, RecordTodoHookErrorData, RecordTodoHookErrorResponses, RecordUsageEventsData, RecordUsageEventsResponses, RefreshTokenData, RefreshTokenResponses, RegisterPushDeviceData, RegisterPushDeviceResponses, RegisterRunnerData, RegisterRunnerResponses, RejectMemoryProposalResponses, RelayMcpResponses, ReleaseGateResponses, RemoveGroupMemberResponses, RemoveInstanceAdminResponses, RemoveMemberResponses, RemoveOrgMemberResponses, RemoveSharedAccountResponses, RenameDeviceData, RenameDeviceResponses, RenameOrgData, RenameOrgResponses, ReopenSessionData, ReopenSessionResponses, ReportCheckData, ReportCheckResponses, ReportHooksMissingData, ReportHooksMissingResponses, ReportLocalGateDenialData, ReportLocalGateDenialResponses, ReportRunnerCheckData, ReportRunnerCheckResponses, ReportRunnerPreparationData, ReportRunnerPreparationResponses, ReportSeenData, ReportSeenResponses, ReportSessionActivityData, ReportSessionActivityResponses, ReportSkillInstallationsData, ReportSkillInstallationsResponses, RequestSignInEmailData, RequestSignInEmailResponses, RequestTodoDropData, RequestTodoDropResponses, ReserveGateResponses, ResetTodoData, ResetTodoResponses, RestartAnalysisResponses, RestartMcpHostedProcessData, RestartMcpHostedProcessResponses, RestoreMemoryResponses, RestoreMySkillResponses, RestorePackageResponses, RestoreSkillResponses, ResumeBillingSubscriptionResponses, ResumeCloudSessionResponses, RetireMySkillResponses, RetireSkillResponses, RetireSkillVersionResponses, RevokeAuthSessionResponses, RevokeBudgetOverrideData, RevokeBudgetOverrideResponses, RevokeInvitationResponses, RevokePackageData, RevokePackageResponses, RevokeTokenResponses, RotateAutomationSecretResponses, RotateSecretData, RotateSecretResponses, RotateTokenResponses, RotateWebhookSecretResponses, RunnerHeartbeatData, RunnerHeartbeatResponses, RunTaskResponses, SaveArtifactSettingsData, SaveArtifactSettingsResponses, SaveArtifactStorageData, SaveArtifactStorageResponses, SaveAutomationData, SaveAutomationResponses, SaveCloudRuntimeData, SaveCloudRuntimeResponses, SaveCloudSettingsData, SaveCloudSettingsResponses, SaveCompilerSettingsData, SaveCompilerSettingsResponses, SaveGithubAppConfigurationData, SaveGithubAppConfigurationResponses, SaveInstanceSettingsData, SaveInstanceSettingsResponses, SaveMcpServerData, SaveMcpServerResponses, SaveMyMcpServerData, SaveMyMcpServerResponses, SaveWorkflowData, SaveWorkflowResponses, SaveWorkflowSettingsData, SaveWorkflowSettingsResponses, SearchMemoryResponses, SendCloudMessageData, SendCloudMessageResponses, SendNotificationData, SendNotificationResponses, SendTestPushResponses, SessionAliveData, SessionAliveResponses, SetApiPricesData, SetApiPricesResponses, SetBudgetData, SetBudgetResponses, SetCloudPermissionBypassData, SetCloudPermissionBypassResponses, SetCloudSessionEffortData, SetCloudSessionEffortResponses, SetCloudSessionGithubAccessData, SetCloudSessionGithubAccessResponses, SetCloudSessionModelData, SetCloudSessionModelResponses, SetGatePolicyData, SetGatePolicyResponses, SetHookAssignmentData, SetHookAssignmentResponses, SetHookAudienceData, SetHookAudienceResponses, SetInferenceSettingsData, SetInferenceSettingsResponses, SetLaunchLimitsData, SetLaunchLimitsResponses, SetMemberTodoStopHookData, SetMemberTodoStopHookResponses, SetMemoryCurationData, SetMemoryCurationResponses, SetModelPolicyData, SetModelPolicyResponses, SetNotificationPreferencesData, SetNotificationPreferencesResponses, SetNotificationSettingData, SetNotificationSettingResponses, SetPacingSettingsData, SetPacingSettingsResponses, SetSkillAssignmentData, SetSkillAssignmentResponses, SetSkillAudienceData, SetSkillAudienceResponses, ShareArtifactResponses, SignWorkflowReceiptData, SignWorkflowReceiptResponses, StartAnalysisResponses, StartBillingCheckoutData, StartBillingCheckoutResponses, StartDeviceLoginData, StartDeviceLoginResponses, StartGithubAppManifestResponses, StartGithubDeviceLinkResponses, StartReplayResponses, StartSessionData, StartSessionResponses, StartTodoItemData, StartTodoItemResponses, StartWorkflowRunData, StartWorkflowRunResponses, StopCloudSessionResponses, StopCloudTaskData, StopCloudTaskResponses, StopTodoSessionData, StopTodoSessionResponses, StreamCloudSessionResponses, StreamEventsResponses, StreamUsageResponses, TestArtifactStorageResponses, TestAutomationData, TestAutomationResponses, TestWebhookResponses, TransferCloudSessionData, TransferCloudSessionResponses, TransferOrgData, TransferOrgResponses, TriggerAutomationResponses, TriggerAutomationVersionResponses, UnassignEnvironmentVariantResponses, UnassignMcpServerResponses, UnlinkGithubResponses, UnlinkMemberGithubResponses, UnlockMobileAppData, UnlockMobileAppResponses, UnpinHookResponses, UnpinMySkillResponses, UnpinSkillResponses, UnshareArtifactResponses, UpdateArtifactData, UpdateArtifactResponses, UpdateCloudClusterData, UpdateCloudClusterResponses, UpdateCloudProfileData, UpdateCloudProfileResponses, UpdateEnvironmentVariantData, UpdateEnvironmentVariantResponses, UpdateGroupData, UpdateGroupResponses, UpdateMemberData, UpdateMemberResponses, UpdateMemoryData, UpdateMemoryResponses, UpdateMyEnvironmentVariantData, UpdateMyEnvironmentVariantResponses, UpdateOrgMemberData, UpdateOrgMemberResponses, UpdateRuleData, UpdateRuleResponses, UpdateSettingsData, UpdateSettingsResponses, UpdateSharedAccountData, UpdateSharedAccountResponses, UpdateWebhookData, UpdateWebhookResponses, UploadCloudFileData, UploadCloudFileResponses, VerifyReceiptResponses, VerifySignInEmailData, VerifySignInEmailResponses, WaitsMcpResponses, WakeWaitsData, WakeWaitsResponses, WorkflowsMcpResponses } from './types.gen';
 
 export type RequestHandlerOptions = RequestHandlerOptions2 & {
     baseUrl?: ClientOptions['baseUrl'];
@@ -9483,6 +9483,215 @@ export function handleGetCloudSession(response?: HandleGetCloudSessionResponse |
     }, options);
 }
 
+export type HandleListCloudTransferRecipientsResponse = {
+    body: ListCloudTransferRecipientsResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/transfer-recipients` operation.
+ */
+export function handleListCloudTransferRecipients(response?: HandleListCloudTransferRecipientsResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfer-recipients`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleTransferCloudSessionResponse = {
+    body: TransferCloudSessionResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/sessions/{id}/transfer` operation.
+ */
+export function handleTransferCloudSession(response?: HandleTransferCloudSessionResponse | HttpResponseResolver<{
+    id: string;
+}, TransferCloudSessionData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, TransferCloudSessionData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions/:id/transfer`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleListCloudTransfersResponse = {
+    body: ListCloudTransfersResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/transfers` operation.
+ */
+export function handleListCloudTransfers(response?: HandleListCloudTransfersResponse | HttpResponseResolver<never, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<never, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfers`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleGetCloudTransferResponse = {
+    body: GetCloudTransferResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `GET /api/v1/cloud/transfers/{id}` operation.
+ */
+export function handleGetCloudTransfer(response?: HandleGetCloudTransferResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.get<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfers/:id`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleAcceptCloudTransferResponse = {
+    body: AcceptCloudTransferResponses[202];
+    status?: 202;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/transfers/{id}/accept` operation.
+ */
+export function handleAcceptCloudTransfer(response?: HandleAcceptCloudTransferResponse | HttpResponseResolver<{
+    id: string;
+}, AcceptCloudTransferData['body']>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, AcceptCloudTransferData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfers/:id/accept`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 202 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleDeclineCloudTransferResponse = {
+    body: DeclineCloudTransferResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/transfers/{id}/decline` operation.
+ */
+export function handleDeclineCloudTransfer(response?: HandleDeclineCloudTransferResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfers/:id/decline`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
+export type HandleCancelCloudTransferResponse = {
+    body: CancelCloudTransferResponses[200];
+    status?: 200;
+};
+
+/**
+ * Handler for the `POST /api/v1/cloud/transfers/{id}/cancel` operation.
+ */
+export function handleCancelCloudTransfer(response?: HandleCancelCloudTransferResponse | HttpResponseResolver<{
+    id: string;
+}, never>, options?: RequestHandlerOptions): HttpHandler {
+    return http.post<{
+        id: string;
+    }, never>(`${options?.baseUrl ?? '*'}/api/v1/cloud/transfers/:id/cancel`, info => {
+        if (typeof response === 'function') {
+            return response(info);
+        }
+        const body = response?.body;
+        if (body !== undefined) {
+            return HttpResponse.json(body, { status: response?.status ?? 200 });
+        }
+        if (options?.responseFallback === 'passthrough') {
+            return;
+        }
+        return new Response('Not Implemented', {
+            status: 501,
+            statusText: 'Not Implemented'
+        });
+    }, options);
+}
+
 export type HandlePauseCloudSessionResponse = {
     body: PauseCloudSessionResponses[202];
     status?: 202;
@@ -15243,6 +15452,34 @@ export type MswHandlerFactories = {
      */
     getCloudSession: typeof handleGetCloudSession;
     /**
+     * Handler for the `GET /api/v1/cloud/transfer-recipients` operation.
+     */
+    listCloudTransferRecipients: typeof handleListCloudTransferRecipients;
+    /**
+     * Handler for the `POST /api/v1/cloud/sessions/{id}/transfer` operation.
+     */
+    transferCloudSession: typeof handleTransferCloudSession;
+    /**
+     * Handler for the `GET /api/v1/cloud/transfers` operation.
+     */
+    listCloudTransfers: typeof handleListCloudTransfers;
+    /**
+     * Handler for the `GET /api/v1/cloud/transfers/{id}` operation.
+     */
+    getCloudTransfer: typeof handleGetCloudTransfer;
+    /**
+     * Handler for the `POST /api/v1/cloud/transfers/{id}/accept` operation.
+     */
+    acceptCloudTransfer: typeof handleAcceptCloudTransfer;
+    /**
+     * Handler for the `POST /api/v1/cloud/transfers/{id}/decline` operation.
+     */
+    declineCloudTransfer: typeof handleDeclineCloudTransfer;
+    /**
+     * Handler for the `POST /api/v1/cloud/transfers/{id}/cancel` operation.
+     */
+    cancelCloudTransfer: typeof handleCancelCloudTransfer;
+    /**
      * Handler for the `POST /api/v1/cloud/sessions/{id}/pause` operation.
      */
     pauseCloudSession: typeof handlePauseCloudSession;
@@ -16188,6 +16425,13 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
         createCloudSession: wrap(handleCreateCloudSession),
         stopCloudSession: wrap(handleStopCloudSession),
         getCloudSession: wrap(handleGetCloudSession),
+        listCloudTransferRecipients: wrap(handleListCloudTransferRecipients),
+        transferCloudSession: wrap(handleTransferCloudSession),
+        listCloudTransfers: wrap(handleListCloudTransfers),
+        getCloudTransfer: wrap(handleGetCloudTransfer),
+        acceptCloudTransfer: wrap(handleAcceptCloudTransfer),
+        declineCloudTransfer: wrap(handleDeclineCloudTransfer),
+        cancelCloudTransfer: wrap(handleCancelCloudTransfer),
         pauseCloudSession: wrap(handlePauseCloudSession),
         resumeCloudSession: wrap(handleResumeCloudSession),
         setCloudSessionGithubAccess: wrap(handleSetCloudSessionGithubAccess),
@@ -16395,6 +16639,10 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.promoteEnvironmentVariant, overrides.promoteEnvironmentVariant),
             invoke(pick.cancelInferenceRequest, overrides.cancelInferenceRequest),
             invoke(pick.reconcileUsage, overrides.reconcileUsage),
+            invoke(pick.transferCloudSession, overrides.transferCloudSession),
+            invoke(pick.acceptCloudTransfer, overrides.acceptCloudTransfer),
+            invoke(pick.declineCloudTransfer, overrides.declineCloudTransfer),
+            invoke(pick.cancelCloudTransfer, overrides.cancelCloudTransfer),
             invoke(pick.pauseCloudSession, overrides.pauseCloudSession),
             invoke(pick.resumeCloudSession, overrides.resumeCloudSession),
             invoke(pick.setCloudSessionGithubAccess, overrides.setCloudSessionGithubAccess),
@@ -16509,6 +16757,7 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.updateCloudProfile, overrides.updateCloudProfile),
             invoke(pick.stopCloudSession, overrides.stopCloudSession),
             invoke(pick.getCloudSession, overrides.getCloudSession),
+            invoke(pick.getCloudTransfer, overrides.getCloudTransfer),
             invoke(pick.retireMySkill, overrides.retireMySkill),
             invoke(pick.startOAuthLogin, overrides.startOAuthLogin),
             invoke(pick.oauthLoginCallback, overrides.oauthLoginCallback),
@@ -16678,6 +16927,8 @@ export function createMswHandlers(config: RequestHandlerOptions = {}): CreateMsw
             invoke(pick.saveCloudSettings, overrides.saveCloudSettings),
             invoke(pick.listCloudSessions, overrides.listCloudSessions),
             invoke(pick.createCloudSession, overrides.createCloudSession),
+            invoke(pick.listCloudTransferRecipients, overrides.listCloudTransferRecipients),
+            invoke(pick.listCloudTransfers, overrides.listCloudTransfers),
             invoke(pick.artifactsMcp, overrides.artifactsMcp),
             invoke(pick.deleteArtifactStorage, overrides.deleteArtifactStorage),
             invoke(pick.getArtifactStorage, overrides.getArtifactStorage),

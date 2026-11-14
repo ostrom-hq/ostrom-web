@@ -994,13 +994,12 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
-                  x-ostrom-status: planned
+                  x-ostrom-status: served
                   description: "Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as
                     TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or
                     digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control
                     characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the
-                    launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label. Planned: the
-                    server does not read it yet"
+                    launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label"
                 workflowId:
                   type: string
                   x-ostrom-status: planned
@@ -1113,14 +1112,14 @@ paths:
         type: string
     get:
       operationId: getLaunchLimits
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sessions
       summary: The limits of a launch and what it spent (`launches.limits.v1`)
       description: "An owner or an admin from a signed-in session, a service key with `team:read`, or the launch's own
         person (to read their own launch). 404 for a launch of another organization or one that does not exist. A launch
         that was never given limits answers zeros (`budgetMicros` 0 and `maxConcurrent` 0 add no cap) and
-        `paused: false`. Planned: the server does not serve it yet"
+        `paused: false`"
       responses:
         '200':
           description: OK
@@ -1136,7 +1135,7 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: setLaunchLimits
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sessions
       summary: Set the limits of a launch (`launches.limits.v1`)
@@ -1150,7 +1149,7 @@ paths:
         model call of the launch, on every replica. Past a limit the gateway answers its own refusals, each with
         `x-ostrom-error`: `launch_paused` (403, the launch is paused), `launch_budget_exhausted` (429, the launch spent
         its budget, or what is left does not cover the call), and a call over `maxConcurrent` waits in the admission
-        queue (`inference.queue.v1`) like a member over theirs. Planned: the server does not serve it yet"
+        queue (`inference.queue.v1`) like a member over theirs"
       requestBody:
         required: true
         content:
@@ -1989,7 +1988,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: listPushDevices
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - notifications
       summary: The caller's phones registered for push notifications
@@ -3923,11 +3922,11 @@ paths:
       - name: label
         in: query
         required: false
-        x-ostrom-status: planned
+        x-ostrom-status: served
         description: "`key=value`, repeatable (at most 16): only the sessions whose launch carries every label given
           (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It
           composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed
-          one. Planned: the server does not read it yet"
+          one"
         schema:
           type: array
           items:
@@ -6342,7 +6341,7 @@ paths:
       summary: Start a run
       description: "Planned with `workflows.deliver.v1` (docs/decisions/workflows-one-system.md in ostrom-server): any
         member starts an accepted workflow as themselves; at most 20 unfinished runs per member (409 `run_limit`); the
-        same `Idempotency-Key` returns the first run (200, `Idempotency-Replayed: true`); `repository` is the repository
+        same `Idempotency-Key` returns the first run (200, `Idempotency-Replayed: true`; a malformed key is 400 `invalid_request`); `repository` is the repository
         of the agent nodes that name none (400 `repository_required` when one needs it)"
       parameters:
       - name: id
@@ -6353,7 +6352,7 @@ paths:
       - name: Idempotency-Key
         in: header
         required: false
-        description: 1 to 128 characters of `A-Za-z0-9._:-` (planned)
+        description: '1 to 128 characters of `A-Za-z0-9._:-`; one fresh key per press of Start, reused for each retry of it'
         schema:
           type: string
       requestBody:
@@ -6364,7 +6363,7 @@ paths:
               $ref: '#/components/schemas/StartWorkflowRunRequest'
       responses:
         '200':
-          description: "The first run of this `Idempotency-Key` (planned)"
+          description: "The first run of this `Idempotency-Key`, with `Idempotency-Replayed: true`"
           content:
             application/json:
               schema:
@@ -12687,6 +12686,282 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfer-recipients:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudTransferRecipients
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The members a session can be given to, for a picker"
+      description: "`runners.cloud.transfer.v1` (TeamCode's `GET /cloud/transfer-recipients`). Members of the organization who can own a session, by login, at most 500, the caller included (an administrator may take a session over): only the id, the login and whether the member is an administrator. An administrator, or a member while the instance's `memberTransfers` is `offer` (403 `transfer_disabled` otherwise). A listed member can still be refused for a given session, with 422 `recipient_ineligible`"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransferRecipients'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/transfer:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: transferCloudSession
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Give one of the caller's cloud sessions to another member"
+      description: "`runners.cloud.transfer.v1`. Only the owner asks. An administrator's transfer is `accepted` at once; a member's is `offered` and the recipient accepts within 7 days (403 `transfer_disabled` when the instance's `memberTransfers` is `disabled`). Accepting pauses the session (the agent stops, its pod is gone); the owner changes only then, and the workspace is marked untrusted for the recipient. At most one open transfer per session (409 `transfer_pending`); a session still being created is 409 `session_preparing`, an ended one 409 `session_not_running`; a recipient who cannot own the session (disabled, not a member, at their cloud session limit) is 422 `recipient_ineligible` naming every reason. `Idempotency-Key` is required (400 `idempotency_key_required`): a retry returns the first transfer (`Idempotency-Replayed: true`), the same key with another request is 422 `idempotency_conflict`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: true
+        description: 1 to 128 characters of `A-Za-z0-9._:-`
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCloudTransferRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudTransfers
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The caller's transfers, incoming and outgoing, newest first"
+      description: "`runners.cloud.transfer.v1`. A transfer is visible to its two members only. An offer past its validity reads `expired` before the server records it. `direction` is `incoming`, `outgoing` or `all` (default), `state` is repeatable"
+      parameters:
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - incoming
+          - outgoing
+          - all
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: session
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransferPage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "One transfer"
+      description: "`runners.cloud.transfer.v1`. 404 for anyone but the two members"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/accept:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: acceptCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Accept a session offered to the caller"
+      description: "`runners.cloud.transfer.v1`. Only the recipient. The session pauses, then becomes the recipient's; before it runs again the runner resets the agent's settings and the repositories' Git configuration (`untrustedWorkspace`). Idempotent. 409 `transfer_expired`, `transfer_not_open`; 422 `recipient_ineligible`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptCloudTransferRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/decline:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: declineCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Decline an offered session"
+      description: "`runners.cloud.transfer.v1`. Only the recipient; only an offered transfer"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cancelCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Withdraw an offer, or cancel an accepted transfer before the owner change starts"
+      description: "`runners.cloud.transfer.v1`. Only the session's former owner; an accepted transfer only by an administrator, and not once the session is `transferring` (409 `transfer_in_progress`)"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
   /api/v1/cloud/sessions/{id}/pause:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -15627,7 +15902,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     get:
       operationId: getForecasts
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sharing
       summary: Quota forecasts of one shared account (`capacity.forecasts.v1`)
@@ -20435,25 +20710,31 @@ components:
       - verificationUri
       - expiresAt
       - interval
-      x-ostrom-kotlin: pending
     GitHubDeviceLinkPoll:
       type: object
       description: One poll of a device link; `link` once linked, `interval` (seconds) while pending
       properties:
         status:
-          type: string
-          enum:
-          - pending
-          - linked
-          - expired
-          - denied
+          $ref: '#/components/schemas/GitHubDeviceLinkStatus'
         interval:
           type: integer
         link:
           $ref: '#/components/schemas/GitHubLink'
       required:
       - status
-      x-ostrom-kotlin: pending
+    GitHubDeviceLinkStatus:
+      type: string
+      enum:
+      - pending
+      - linked
+      - expired
+      - denied
+    GitHubLinkState:
+      type: string
+      enum:
+      - not_linked
+      - linked
+      - reconnect_required
     GitHubLink:
       type: object
       description: "A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens
@@ -20463,11 +20744,7 @@ components:
         memberId:
           type: string
         state:
-          type: string
-          enum:
-          - not_linked
-          - linked
-          - reconnect_required
+          $ref: '#/components/schemas/GitHubLinkState'
         appConfigured:
           type: boolean
           description: Whether the instance's GitHub App can link accounts (its OAuth client is known)
@@ -20486,7 +20763,6 @@ components:
       - memberId
       - state
       - appConfigured
-      x-ostrom-kotlin: pending
     HookArtifact:
       type: object
       description: "A version's definition and files; the digest is recomputable from them"
@@ -22368,7 +22644,7 @@ components:
           type: string
         status:
           type: string
-          description: creating, running, pausing, paused, resuming, terminated or failed
+          description: creating, running, pausing, paused, resuming, transferring (the owner changes at a paused boundary, `runners.cloud.transfer.v1`), terminated or failed
         desiredStatus:
           type: string
           description: What the owner asked for, running, paused or terminated
@@ -22433,6 +22709,9 @@ components:
         effort:
           type: string
           description: The effort (reasoning level) the agent runs with, if chosen (`runners.cloud.effort.v1`)
+        transferId:
+          type: string
+          description: "The accepted transfer the session is moving toward, from its acceptance until the owner changed or the transfer ended (`runners.cloud.transfer.v1`)"
         permissionBypass:
           type: boolean
           description: "The owner's standing approval of tool uses is on (`runners.cloud.permissions.bypass.v1`);
@@ -22847,6 +23126,110 @@ components:
       - maxMessageBytes
       - maxFilesPerMessage
       - types
+    CloudTransfer:
+      type: object
+      description: "A change of owner of a cloud session (`runners.cloud.transfer.v1`): `offered`, then `accepted`, then `completed`; or `declined`, `cancelled`, `expired` or `failed`"
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        fromMemberId:
+          type: string
+        toMemberId:
+          type: string
+        state:
+          type: string
+          description: offered, accepted, completed, declined, cancelled, expired or failed; tolerate unknown values
+        initiatedBy:
+          type: string
+          description: The member who asked
+        decidedBy:
+          type: string
+          description: The member who accepted, declined or cancelled
+        resume:
+          type: boolean
+          description: Resume the session for the recipient once the owner changed
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        expiresAt:
+          type: string
+          description: Offers - the recipient must accept before this time
+        decidedAt:
+          type: string
+        completedAt:
+          type: string
+        atEpoch:
+          type: integer
+          format: int64
+          description: The last execution run for the former owner; later executions run for the recipient
+        failure:
+          $ref: '#/components/schemas/CloudSessionFailure'
+      required:
+      - id
+      - sessionId
+      - fromMemberId
+      - toMemberId
+      - state
+      - initiatedBy
+      - resume
+      - createdAt
+      - updatedAt
+    CloudTransferPage:
+      type: object
+      description: "A page of the caller's transfers, newest first; `next` is the cursor of the following page"
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudTransfer'
+        next:
+          type: string
+      required:
+      - items
+    CloudTransferRecipient:
+      type: object
+      description: A member a session can be given to
+      properties:
+        id:
+          type: string
+        login:
+          type: string
+        administrator:
+          type: boolean
+      required:
+      - id
+      - login
+      - administrator
+    CloudTransferRecipients:
+      type: object
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudTransferRecipient'
+      required:
+      - recipients
+    CreateCloudTransferRequest:
+      type: object
+      properties:
+        toMemberId:
+          type: string
+          description: The recipient's member id or login
+        resume:
+          type: boolean
+          description: Resume the session for the recipient once the owner changed
+          default: false
+      required:
+      - toMemberId
+    AcceptCloudTransferRequest:
+      type: object
+      properties:
+        resume:
+          type: boolean
+          description: Resume once the session is the recipient's; absent keeps what the offer asked for
     CloudSessionPage:
       type: object
       description: "A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page"
@@ -25799,6 +26182,9 @@ components:
           type: array
           items:
             type: string
+        untrustedWorkspace:
+          type: boolean
+          description: "Another member's execution ran on the workspace since the owner's last execution that was ready (`runners.cloud.transfer.v1`): the runner resets the agent's settings and each repository's Git configuration and hooks before the setup and the agent run, and names it in the preparation. Absent when false"
       required:
       - environment
       - git
@@ -28176,9 +28562,9 @@ components:
           type: object
           additionalProperties:
             type: string
-          x-ostrom-status: planned
+          x-ostrom-status: served
           description: "The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them
-            on a run; absent when the launch has none. Planned: the server does not send them yet"
+            on a run; absent when the launch has none"
       required:
       - id
       - agent

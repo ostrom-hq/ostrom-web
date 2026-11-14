@@ -44,7 +44,7 @@ test('an owner writes a workflow in the console, changes it, and deletes it', as
   await page.getByLabel('Step 2: What it is').fill('Unit tests pass');
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(steps).toContainText('Unit tests pass');
-  await expect(page.getByRole('form')).toHaveCount(0);
+  await expect(page.getByRole('form', { name: 'Edit the workflow' })).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Delete' }).click();
   await page.getByRole('button', { name: 'Delete this workflow' }).click();

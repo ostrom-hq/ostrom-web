@@ -250,12 +250,14 @@ test('6.2 an owner starts an agent with a preparation recipe; the server keeps i
   const row = page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').filter({ hasText: name });
   await expect(row).toBeVisible();
 
-  // Stored as asked, never edited: a resume prepares what the first execution did.
+  // Stored as asked, what was not asked at its default, never edited: a resume prepares what the first execution did.
   const session = await sessionNamed(page, org, name);
   expect(session?.environment).toEqual({
-    setup: { start: ['true'] },
+    setup: { create: [], start: ['true'] },
     requiredVariables: ['E2E_RECIPE_TOKEN'],
     gitEmailDomain: 'e2e.ostrom.invalid',
+    repositories: [],
+    requireGitHub: false,
   });
   const id = session?.id ?? '';
 
@@ -270,5 +272,5 @@ test('6.2 an owner starts an agent with a preparation recipe; the server keeps i
   // The owner has no E2E_RECIPE_TOKEN: once a runner prepares it, the preparation fails and says what to fix. Either
   // way the session is stopped here; a stop of a session already over is a conflict, not a failure of this test.
   const stopped = await callFromPage(page, 'DELETE', `/api/v1/cloud/sessions/${id}`, undefined, org);
-  expect([204, 404, 409]).toContain(stopped.status);
+  expect([202, 404, 409]).toContain(stopped.status);
 });

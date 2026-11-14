@@ -173,3 +173,18 @@ export const i18nReady: Promise<void> = loadWording(i18n.language)
     // Listened to once the start is settled: a change during it would race the start's own wording.
     window.addEventListener('languagechange', followBrowserLanguage);
   });
+
+/**
+ * The words of one feature, which ship with the feature's own chunk instead of the wording every screen loads: added to
+ * the language shown now, and to each language the person picks later (once that language's own wording is in, so a
+ * bundle of a few words never stands for the whole language). Kept here, in the entry, so that the features that call
+ * it share no chunk of their own for it.
+ */
+export function registerWording(wordings: Readonly<Record<Language, Wording>>, instance: I18n = i18n): void {
+  const add = (language: string): void => {
+    const known = LANGUAGES.find((one) => one === language);
+    if (known !== undefined) instance.addResourceBundle(known, wordings[known]);
+  };
+  if (instance.hasResourceBundle(instance.language)) add(instance.language);
+  instance.on('languageChanged', add);
+}

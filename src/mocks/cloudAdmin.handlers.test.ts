@@ -190,4 +190,37 @@ describe('the mock cloud administration, as the server keeps it', () => {
     });
     expect(set.json).toMatchObject({ maxRunningAutomationsPerMember: 7 });
   });
+
+  it('starts a cloud session on a profile as the server does, and refuses what it refuses', async () => {
+    const start = async (body: object) => call('POST', '/cloud/sessions', { agent: 'claude', ...body });
+    const none = '00000000-0000-4000-8000-0000000000ff';
+    const ok = await start({});
+    expect(ok.json).toMatchObject({
+      profile: { id: PROFILE_ID, version: 2 },
+      image: 'ghcr.io/acme/session:latest',
+    });
+    const asked = await start({ profileId: PROFILE_ID, image: 'other' });
+    expect(asked.status).toBe(403);
+    expect((await start({ profileId: none })).status).toBe(404);
+    const [first] = db.cloudProfiles;
+    if (first === undefined) throw new Error('fixture');
+    db.cloudProfiles = [...db.cloudProfiles, { ...first, id: none, name: 'two' }];
+    expect((await start({})).status).toBe(422);
+    db.cloudProfiles = db.cloudProfiles.map((item) => ({
+      ...item,
+      spec: { ...item.spec, allowedImageOverrides: ['x*'] },
+    }));
+    const over = await start({ profileId: PROFILE_ID, image: 'xyz' });
+    expect(over.json).toMatchObject({ image: 'xyz' });
+    setDemoRole(db, 'member');
+    expect((await start({ profileId: PROFILE_ID })).status).toBe(403);
+    expect((await start({})).status).toBe(422);
+    setDemoRole(db, 'owner');
+    db.cloudClusters = db.cloudClusters.map((item) => ({ ...item, allowedNamespaces: ['other'] }));
+    expect((await start({ profileId: PROFILE_ID })).status).toBe(409);
+    db.cloudClusters = [];
+    expect((await start({ profileId: PROFILE_ID })).status).toBe(409);
+    db.cloudProfiles = [];
+    expect((await start({})).status).toBe(201);
+  });
 });
