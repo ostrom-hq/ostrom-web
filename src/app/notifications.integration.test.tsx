@@ -61,6 +61,23 @@ describe('what a person is told about', () => {
     expect(within(finished).getByRole('checkbox', { name: 'Push to your phones' })).not.toBeChecked();
   });
 
+  it('shows the switch turned in the click itself, before the server answers', async () => {
+    server.use(
+      http.put('*/api/v1/notifications/settings', async () => {
+        await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/me/notifications');
+    const box = await region('What you are told about');
+    const waiting = await within(box).findByRole('group', { name: 'An agent waits for you' });
+    const push = within(waiting).getByRole('checkbox', { name: 'Push to your phones' });
+    expect(push).toBeChecked();
+    fireEvent.click(push);
+    // No wait: whoever reads the switch right after the click sees it turned.
+    expect(push).not.toBeChecked();
+  });
+
   it('says why a switch was refused', async () => {
     const user = userEvent.setup();
     server.use(

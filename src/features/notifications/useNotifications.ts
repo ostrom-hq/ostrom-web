@@ -15,6 +15,7 @@ import type {
   PushTestResults,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
@@ -40,13 +41,24 @@ export function useNotificationSwitches(enabled: boolean): NotificationSwitchesV
     },
   });
   const { mutate } = mutation;
+  // Set in the click itself: the mutation's own state reaches the screen a tick later, and until then the switch
+  // would still show what it was (a person, or a test, reading it right after the click would see nothing change).
+  const [pending, setPending] = useState<NotificationSettingChange | undefined>(undefined);
   return {
     settings: query.data,
     failure: failureOf(query.error),
     toggle: (change) => {
-      mutate({ body: change });
+      setPending(change);
+      mutate(
+        { body: change },
+        {
+          onSettled: () => {
+            setPending(undefined);
+          },
+        },
+      );
     },
-    pending: mutation.isPending ? mutation.variables.body : undefined,
+    pending,
     toggleFailure: failureOf(mutation.error),
   };
 }
