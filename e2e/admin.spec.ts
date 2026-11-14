@@ -32,13 +32,10 @@ test('an administrator of the instance adds an administrator, then configures a 
 });
 
 test('anyone else has no Admin entry, and the address says why there is nothing to see', async ({ page }) => {
-  await page.goto('/');
-  await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Home' }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Admin', exact: true }),
-  ).toHaveCount(0);
+  await page.goto('/sessions');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  // Neither the bar nor, on a phone, its menu offers Admin.
+  await expect(page.getByRole('link', { name: 'Admin', exact: true })).toHaveCount(0);
   await page.goto('/admin');
   await expect(page.getByText('Only a person who administers this instance sees this page.')).toBeVisible();
 });
