@@ -454,6 +454,9 @@ export const fr = {
       receipt: 'Reçu',
       noReceipt: 'Le reçu est signé à la fin de la session.',
       openReceipt: 'Ouvrir le reçu {{id}}',
+      recordOnly:
+        'Vous ne lisez que la fiche de cette session : ses demandes, leurs réponses et son reçu sont à {{dev}}, et aux approbateurs de ses demandes.',
+      signedReceipt: 'Signé sous {{id}}.',
     },
   },
   receipts: {

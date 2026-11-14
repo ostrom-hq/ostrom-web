@@ -449,6 +449,9 @@ export const en = {
       receipt: 'Receipt',
       noReceipt: 'The receipt is signed when the session ends.',
       openReceipt: 'Open receipt {{id}}',
+      recordOnly:
+        'You read this session’s record only: its requests, their answers and its receipt are {{dev}}’s, and the approvers’ of its requests.',
+      signedReceipt: 'Signed as {{id}}.',
     },
   },
   receipts: {
