@@ -4,7 +4,10 @@ import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Facts, Section } from '@/shared/ui/Screen';
 
-/** What the plan in force allows; going past a limit is refused by the server, which names it. */
+/**
+ * What the plan in force allows; going past a limit is refused by the server, which names it. Cloud agents at once are
+ * unlimited on every plan, which the server writes 0 (as TeamCode's concurrency settings); null is unlimited too.
+ */
 export function Limits({ limits }: { readonly limits: BillingPlanLimits }): ReactElement {
   const { t } = useTranslation();
   const amount = (value: number | null): string | number => value ?? t('billing.limits.unlimited');
@@ -13,7 +16,10 @@ export function Limits({ limits }: { readonly limits: BillingPlanLimits }): Reac
       <Facts
         facts={[
           { label: t('billing.limits.people'), value: amount(limits.maxPeople) },
-          { label: t('billing.limits.cloudAgents'), value: amount(limits.maxConcurrentCloudAgents) },
+          {
+            label: t('billing.limits.cloudAgents'),
+            value: amount(limits.maxConcurrentCloudAgents === 0 ? null : limits.maxConcurrentCloudAgents),
+          },
           { label: t('billing.limits.hours'), value: amount(limits.agentHoursPerPeriod) },
           {
             label: t('billing.limits.retention'),

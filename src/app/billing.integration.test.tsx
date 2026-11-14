@@ -107,6 +107,16 @@ describe('the billing', () => {
     expect(within(limits).getByText('365 days')).toBeInTheDocument();
     expect(within(limits).getByText('Not included')).toBeInTheDocument();
     expect(within(limits).getByText('Included')).toBeInTheDocument();
+    // No plan caps the cloud agents running at once (0 on the wire).
+    expect(within(limits).getAllByText('Unlimited')).toHaveLength(1);
+  });
+
+  it('shows a cap on cloud agents a server would still send', async () => {
+    billingWith({ limits: { ...PLAN_LIMITS.team, maxConcurrentCloudAgents: 7 } });
+    visit('/billing');
+    const limits = await region('What the plan allows');
+    expect(within(limits).getByText('7')).toBeInTheDocument();
+    expect(within(limits).queryByText('Unlimited')).toBeNull();
   });
 
   it('switches the plan and the interval, priced per person', async () => {
@@ -124,7 +134,7 @@ describe('the billing', () => {
     expect(await within(await region('Plan')).findByText('Business')).toBeInTheDocument();
     expect(within(await region('Plan')).getByText(/^Billed yearly/)).toBeInTheDocument();
     expect(within(business).getByRole('button', { name: 'Your plan' })).toBeDisabled();
-    expect(within(await region('What the plan allows')).getAllByText('Unlimited')).toHaveLength(2);
+    expect(within(await region('What the plan allows')).getAllByText('Unlimited')).toHaveLength(3);
   });
 
   it('sends an organization without a subscription to Stripe Checkout, then waits', async () => {

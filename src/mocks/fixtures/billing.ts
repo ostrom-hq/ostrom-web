@@ -2,11 +2,11 @@
 import type { BillingInvoice, BillingOverview, BillingPlanLimits } from '@gen/api/types.gen';
 import type { Known } from '@/shared/lib/openEnum';
 
-/** What each plan allows, as the server's catalog says; null is unlimited. */
+/** What each plan allows, as the server's catalog says; null is unlimited, and so are 0 cloud agents at once. */
 export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, BillingPlanLimits>> = {
   free: {
     maxPeople: 3,
-    maxConcurrentCloudAgents: 1,
+    maxConcurrentCloudAgents: 0,
     agentHoursPerPeriod: 10,
     sso: false,
     policies: false,
@@ -14,7 +14,7 @@ export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, Billin
   },
   team: {
     maxPeople: 25,
-    maxConcurrentCloudAgents: 3,
+    maxConcurrentCloudAgents: 0,
     agentHoursPerPeriod: 200,
     sso: false,
     policies: true,
@@ -22,7 +22,7 @@ export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, Billin
   },
   business: {
     maxPeople: null,
-    maxConcurrentCloudAgents: 10,
+    maxConcurrentCloudAgents: 0,
     agentHoursPerPeriod: 1000,
     sso: true,
     policies: true,
@@ -30,7 +30,7 @@ export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, Billin
   },
   enterprise: {
     maxPeople: null,
-    maxConcurrentCloudAgents: null,
+    maxConcurrentCloudAgents: 0,
     agentHoursPerPeriod: null,
     sso: true,
     policies: true,

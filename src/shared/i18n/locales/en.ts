@@ -2035,7 +2035,7 @@ export const en = {
       succeeded: 'Succeeded',
     },
     runReason: {
-      cloud_session_limit: 'Too many cloud agents at once for the plan.',
+      cloud_session_limit: 'Too many cloud agents at once.',
       cloud_hours_exhausted: 'The plan’s agent hours are used up for this period.',
       owner_unavailable: 'Its owner can no longer run agents here.',
       capacity_timeout: 'It waited 30 minutes for its owner’s running runs to end.',
@@ -2466,7 +2466,7 @@ export const en = {
       noPrice: 'No price on this instance',
       pitch: {
         team: 'For a team that ships with agents: policies, a year of receipts.',
-        business: 'For a company: single sign-on, more agents at once, receipts kept for good.',
+        business: 'For a company: single sign-on, more agent hours, receipts kept for good.',
       },
       current: 'Your plan',
       buy: 'Choose {{plan}}',
