@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 
@@ -151,7 +152,7 @@ describe('who may use a server', () => {
 
   it('names a member by id when the members cannot be read', async () => {
     server.use(
-      http.get('*/api/v1/members', () =>
+      http.get('*/api/v1/orgs/:org/members', () =>
         HttpResponse.json({ error: { type: 'forbidden', message: 'no' } }, { status: 403 }),
       ),
     );
@@ -425,5 +426,20 @@ describe('another organization', () => {
     expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Recent calls' })).toBeNull();
     expect(screen.queryByText(/acme-ai/)).toBeNull();
+  });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('reads the next page of members to give a server to, when asked', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+    visit('/mcp');
+    const card = await openAccess('linear');
+    const who = within(card).getByRole('combobox', { name: 'Give it to' });
+    const before = within(who).getAllByRole('option').length;
+    await user.click(within(card).getByRole('button', { name: 'Show more people' }));
+    await waitFor(() => {
+      expect(within(who).getAllByRole('option').length).toBeGreaterThan(before);
+    });
   });
 });

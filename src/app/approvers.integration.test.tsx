@@ -139,7 +139,7 @@ describe('who approves what', () => {
 
   it('names approvers by login when the organization gives no name, and needs no warning when every gate has one', async () => {
     server.use(
-      http.get('*/api/v1/members', () =>
+      http.get('*/api/v1/orgs/:org/members', () =>
         HttpResponse.json({
           items: [
             {
@@ -147,7 +147,9 @@ describe('who approves what', () => {
               login: 'ana',
               name: '',
               avatarUrl: '',
+              email: null,
               role: 'approver',
+              joinedAt: '2026-09-01T09:00:00.000Z',
             },
           ],
         }),

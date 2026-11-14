@@ -6,7 +6,7 @@ import type {
   McpAssignment,
   McpAssignmentRequest,
   McpServer,
-  Member,
+  OrgMember,
   Secret,
 } from '@gen/api/types.gen';
 
@@ -199,8 +199,8 @@ export function sortAssignments(assignments: readonly McpAssignment[]): McpAssig
 }
 
 /** "Maya Lind (maya)", or the login alone. */
-export function memberLabel(member: Member): string {
-  return member.name === undefined || member.name === '' ? member.login : `${member.name} (${member.login})`;
+export function memberLabel(member: OrgMember): string {
+  return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 
 export const HOSTED_STATES = ['idle', 'starting', 'ready', 'failed', 'backoff', 'unknown'] as const;

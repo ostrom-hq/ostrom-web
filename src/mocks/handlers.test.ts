@@ -498,9 +498,9 @@ describe('mock receipts', () => {
 });
 
 describe('mock members', () => {
-  it('still lists the members by id for the screens that share with them', async () => {
-    const members = await listMembers({ throwOnError: true });
-    expect(members.data.items.map((member) => member.login)).toContain('samir');
+  it('does not serve the planned /members, as the server does: the screens read /orgs/{org}/members', async () => {
+    const error = await failureOf(async () => listMembers({ throwOnError: true }));
+    expect(isApiFailure(error) && error.kind).toBe('not-found');
   });
 });
 

@@ -8,7 +8,6 @@ import {
   listArtifactsOptions,
   listArtifactsQueryKey,
   listArtifactVersionsOptions,
-  listMembersOptions,
   listSecretsOptions,
   listSharedAccountsOptions,
   listSharedAccountsQueryKey,
@@ -21,7 +20,6 @@ import type {
   Artifact,
   ArtifactVersion,
   EnrollSharedAccountData,
-  Member,
   OrgMember,
   Secret,
   SharedAccount,
@@ -34,6 +32,7 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
 import { type OrgMembers, useOrgMembers } from '@/shared/org/members';
 import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 export interface ArtifactsViewModel {
   readonly artifacts: readonly Artifact[] | undefined;
@@ -52,7 +51,9 @@ export interface ArtifactDetailViewModel {
   readonly versions: readonly ArtifactVersion[] | undefined;
   readonly readers: readonly string[] | undefined;
   /** The organization's members, to name the readers (ids) and pick a new one: never in the way when missing. */
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   /** The members came back or failed: the readers are named only then, never shown as ids in between. */
   readonly membersSettled: boolean;
   /** Why the members could not be read: the owner sees it where the form to add a reader goes. */
@@ -69,7 +70,7 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
   const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
   const readers = useQuery(ready(listArtifactMembersOptions({ path: { id } })));
   // Only names: a refusal is not asked again, the detail opens without them.
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers();
   const sorted = useMemo(
     () => (versions.data === undefined ? undefined : newestFirst(versions.data.items)),
     [versions.data],
@@ -77,8 +78,9 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
   return {
     versions: sorted,
     readers: readers.data?.members,
-    members: members.data?.items,
-    membersSettled: !members.isPending,
+    members: members.members,
+    people: { more: members.more, loadingMore: members.loadingMore },
+    membersSettled: members.settled,
     membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),
   };
@@ -184,7 +186,7 @@ export interface AccountsViewModel {
 export function useAccounts(): AccountsViewModel {
   const accounts = useQuery(ready(listSharedAccountsOptions()));
   const secrets = useQuery(ready(listSecretsOptions()));
-  // From the organization's own route, which the server serves (`GET /members` is still planned), once it is known.
+  // From the organization's own route, which the server serves, once it is known.
   const current = useCurrentOrg();
   const { org } = current;
   const people = useOrgMembers(org?.id ?? '', { enabled: org !== undefined });

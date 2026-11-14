@@ -89,6 +89,7 @@ function HookPage({ name, title }: { readonly name: string; readonly title: stri
                 delivered="hooks"
                 allMembers={hook.allMembers}
                 members={view.members}
+                people={view.people}
                 decisions={decisions}
                 busy={change.pending}
                 onDecide={change.decide}

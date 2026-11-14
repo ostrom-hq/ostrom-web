@@ -2,6 +2,7 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setupMockApp, visit } from '@/test/mockApp';
 
@@ -112,7 +113,7 @@ describe('the artifacts', () => {
 
   it('has no form when every member already reads it, and says when nobody does', async () => {
     const user = userEvent.setup();
-    db.artifactMembers['art-7'] = db.members.map((member) => member.id);
+    db.artifactMembers['art-7'] = (db.orgMembers[db.organization.id] ?? []).map((member) => member.id);
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
@@ -170,7 +171,7 @@ describe('the artifacts', () => {
     const user = userEvent.setup();
     db.artifactVersions['art-5'] = [...(db.artifactVersions['art-7'] ?? [])].reverse();
     db.artifactMembers['art-5'] = [MEMBER_IDS.samir];
-    server.use(http.get('*/api/v1/members', refuse('members are private')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse('members are private')));
     visit('/artifacts');
     const checklist = await findCard('Release checklist');
     await user.click(within(checklist).getByRole('button', { name: 'Versions and readers' }));
@@ -185,7 +186,7 @@ describe('the artifacts', () => {
 
   it('tells the owner why no reader can be added when the members cannot be read', async () => {
     const user = userEvent.setup();
-    server.use(http.get('*/api/v1/members', refuse('members are private')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse('members are private')));
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
@@ -521,5 +522,21 @@ describe('the shared subscriptions', () => {
     visit('/accounts');
     const form = await screen.findByRole('region', { name: 'Share a subscription' });
     expect(within(form).queryByRole('group')).toBeNull();
+  });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('reads the next page of members to share an artifact with, when asked', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+    visit('/artifacts');
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    const reader = await within(study).findByRole('combobox', { name: 'Add a reader' });
+    const before = within(reader).getAllByRole('option').length;
+    await user.click(within(study).getByRole('button', { name: 'Show more people' }));
+    await vi.waitFor(() => {
+      expect(within(reader).getAllByRole('option').length).toBeGreaterThan(before);
+    });
   });
 });

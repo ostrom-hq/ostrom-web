@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useViewer } from '@/shared/auth/useViewer';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import type { ArtifactChangeViewModel } from '../useSharing';
 import { isArtifactAccess } from '../model';
 import { useArtifactDetail } from '../useSharing';
@@ -130,10 +131,11 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
             <option value="">{t('sharing.artifacts.pickReader')}</option>
             {candidates.map((member) => (
               <option key={member.id} value={member.id}>
-                {member.name === undefined ? member.login : `${member.name} (${member.login})`}
+                {member.name === '' ? member.login : `${member.name} (${member.login})`}
               </option>
             ))}
           </select>
+          <MorePeople people={detail.people} />
           <Button type="submit" disabled={busy || reader === ''}>
             {t('sharing.artifacts.share')}
           </Button>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Assignment, HookDefinition, Member } from '@gen/api/types.gen';
+import type { Assignment, HookDefinition, OrgMember } from '@gen/api/types.gen';
 
 /** A member's explicit decision on a skill or a hook, as the server writes it: `allow` is the Yes, `deny` the No. */
 export type Decision = 'allow' | 'deny';
@@ -26,18 +26,18 @@ export function decisionsById(assignments: readonly Assignment[]): ReadonlyMap<s
 }
 
 /** "Maya Lind (maya)", or the login alone. */
-export function memberLabel(member: Member): string {
-  return member.name === undefined || member.name === '' ? member.login : `${member.name} (${member.login})`;
+export function memberLabel(member: OrgMember): string {
+  return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 
 /** Whom a member id names: the member, else the id itself (the members are unreadable, or the person left). */
-export function whoIs(id: string, members: readonly Member[] | undefined): string {
+export function whoIs(id: string, members: readonly OrgMember[] | undefined): string {
   const known = members?.find((member) => member.id === id);
   return known === undefined ? id : memberLabel(known);
 }
 
 /** An invitation not accepted yet has no account a skill or a hook could reach. */
-export function candidatesOf(members: readonly Member[] | undefined): readonly Member[] {
+export function candidatesOf(members: readonly OrgMember[] | undefined): readonly OrgMember[] {
   return (members ?? []).filter((member) => member.role !== 'invited');
 }
 

@@ -3,7 +3,6 @@ import {
   getApproversGraphOptions,
   getGatePolicyOptions,
   getGatePolicyQueryKey,
-  listMembersOptions,
   listWorkflowsOptions,
   setGatePolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -17,6 +16,7 @@ import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 export interface ApproversViewModel {
   /** The steps, as soon as the workflows come: a slow graph never holds them. */
@@ -34,7 +34,7 @@ export interface ApproversViewModel {
 
 export function useApprovers(): ApproversViewModel {
   const workflows = useQuery(ready(listWorkflowsOptions()));
-  const members = useQuery(ready(listMembersOptions()));
+  const members = useCurrentOrgMembers();
   // Read again on every visit: a workflow changed elsewhere changes who approves what.
   const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));
   // A server without the route says nothing; any other failure says why. Neither leaves a stale graph on screen.
@@ -46,12 +46,12 @@ export function useApprovers(): ApproversViewModel {
   const names = useMemo(
     () =>
       new Map(
-        (members.data?.items ?? []).map((member) => [
+        (members.members ?? []).map((member) => [
           member.login,
-          member.name === undefined || member.name === '' ? member.login : member.name,
+          member.name === '' ? member.login : member.name,
         ]),
       ),
-    [members.data],
+    [members.members],
   );
   const nameOf = useCallback((login: string) => names.get(login) ?? login, [names]);
   return {

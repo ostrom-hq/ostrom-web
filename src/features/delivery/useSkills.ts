@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
-  listMembersOptions,
   listSkillAssignmentsOptions,
   listSkillAssignmentsQueryKey,
   listSkillsOptions,
@@ -19,13 +18,15 @@ import {
   setSkillAudience,
   unpinSkill,
 } from '@gen/api/sdk.gen';
-import type { Member, SkillEntry, SkillVersion } from '@gen/api/types.gen';
+import type { OrgMember, SkillEntry, SkillVersion } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { type Decision, type DecisionChoice, decisionsById } from './model';
 import { type DeliveryChange, useDeliveryChange } from './useDeliveryChange';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
+import type { OrgMembers } from '@/shared/org/members';
 
 /** A skill a member published for themself: only they receive it, until an administrator promotes it. */
 export function isPersonal(skill: SkillEntry): boolean {
@@ -36,7 +37,7 @@ export interface SkillCatalogViewModel {
   /** Newest change first, as the server lists them. */
   readonly skills: readonly SkillEntry[] | undefined;
   /** To name the owner of a personal skill; absent if unreadable. */
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -44,8 +45,8 @@ export interface SkillCatalogViewModel {
 export function useSkillCatalog(): SkillCatalogViewModel {
   const catalog = useQuery(ready(listSkillsOptions()));
   // Only names: a refusal is not asked again, an owner then reads as their id.
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
-  return { skills: catalog.data?.items, members: members.data?.items, failure: failureOf(catalog.error) };
+  const members = useCurrentOrgMembers();
+  return { skills: catalog.data?.items, members: members.members, failure: failureOf(catalog.error) };
 }
 
 export interface SkillViewModel {
@@ -54,7 +55,9 @@ export interface SkillViewModel {
   readonly versions: readonly SkillVersion[] | undefined;
   /** The explicit decisions by member id; absent until read, and for a personal skill, which has none. */
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly failure: Error | undefined;
 }
 
@@ -69,7 +72,7 @@ export function useSkill(name: string): SkillViewModel {
       enabled: skill !== undefined && !isPersonal(skill),
     }),
   );
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers();
   const decisions = useMemo(
     () => (assignments.data === undefined ? undefined : decisionsById(assignments.data.items)),
     [assignments.data],
@@ -78,7 +81,8 @@ export function useSkill(name: string): SkillViewModel {
     skill,
     versions: detail.data?.versions,
     decisions,
-    members: members.data?.items,
+    members: members.members,
+    people: { more: members.more, loadingMore: members.loadingMore },
     failure: failureOf(detail.error ?? assignments.error),
   };
 }

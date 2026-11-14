@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { HookVersion, Member } from '@gen/api/types.gen';
+import type { HookVersion, OrgMember } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ export interface HookVersionsProps {
   readonly name: string;
   /** Newest first. */
   readonly versions: readonly HookVersion[];
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
   readonly change: HookChangeViewModel;
 }
 

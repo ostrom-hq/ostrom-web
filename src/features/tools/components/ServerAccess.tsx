@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpArgumentCondition, McpArgumentPolicy, McpAssignment, Member } from '@gen/api/types.gen';
+import type { McpArgumentCondition, McpArgumentPolicy, McpAssignment, OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -78,7 +78,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
                 ))}
               </ul>
             )}
-            <AssignForm server={server} members={view.members} change={change} />
+            <AssignForm server={server} members={view.members} people={view.people} change={change} />
             <h4 className="tl-label">{t('tools.mcp.access.policies')}</h4>
             {policies.length === 0 ? (
               <p className="o-screen__lead">{t('tools.mcp.access.noPolicy')}</p>
@@ -106,7 +106,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
 
 interface AssignmentRowProps {
   readonly assignment: McpAssignment;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
   readonly busy: boolean;
   readonly onRemove: () => void;
 }

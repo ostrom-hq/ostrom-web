@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Member } from '@gen/api/types.gen';
+import type { OrgMember } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
+import type { OrgMembers } from '@/shared/org/members';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { checkAssignment, EVERYONE, memberLabel } from '../model';
 import type { ServerAccessChangeViewModel } from '../useMcpAccess';
 
@@ -13,12 +15,14 @@ const BY_ID = 'by-id';
 export interface AssignFormProps {
   readonly server: string;
   /** The members to pick from; without them, a member is given by id. */
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly change: ServerAccessChangeViewModel;
 }
 
 /** Gives the server to everyone or to one member, with every tool or an allowlist. */
-export function AssignForm({ server, members, change }: AssignFormProps): ReactElement {
+export function AssignForm({ server, members, people, change }: AssignFormProps): ReactElement {
   const { t } = useTranslation();
   const [who, setWho] = useState(EVERYONE);
   const [memberId, setMemberId] = useState('');
@@ -73,6 +77,7 @@ export function AssignForm({ server, members, change }: AssignFormProps): ReactE
           ))}
           <option value={BY_ID}>{t('tools.mcp.access.assign.byId')}</option>
         </select>
+        <MorePeople people={people} />
       </div>
       {who === BY_ID ? (
         <>

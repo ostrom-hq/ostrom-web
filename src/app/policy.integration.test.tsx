@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -116,7 +117,7 @@ describe('the agent policy', () => {
 
   it('takes a member id by hand when the members are not readable', async () => {
     const user = userEvent.setup();
-    server.use(http.get('*/api/v1/members', () => refused('no', 403)));
+    server.use(http.get('*/api/v1/orgs/:org/members', () => refused('no', 403)));
     db.modelPolicies[db.organization.id] = { allowed: [], default: '' };
     visit('/policy');
     const models = await section('Models');
@@ -449,5 +450,23 @@ describe('the launch check', () => {
     await user.type(within(check).getByRole('textbox', { name: 'Model' }), 'y');
     await user.click(within(check).getByRole('button', { name: 'Ask' }));
     expect(await within(check).findByRole('button', { name: 'Asking…' })).toBeDisabled();
+  });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('reads the next page of members to give a list of models to, when asked', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+    db.modelPolicies[db.organization.id] = { allowed: [], default: '' };
+    visit('/policy');
+    const models = await section('Models');
+    await user.click(await within(models).findByRole('button', { name: 'Change' }));
+    await user.click(within(models).getByRole('button', { name: 'Add a member' }));
+    const pick = within(models).getByRole('combobox', { name: 'Member 1' });
+    const before = within(pick).getAllByRole('option').length;
+    await user.click(within(models).getByRole('button', { name: 'Show more people' }));
+    await waitFor(() => {
+      expect(within(pick).getAllByRole('option').length).toBeGreaterThan(before);
+    });
   });
 });

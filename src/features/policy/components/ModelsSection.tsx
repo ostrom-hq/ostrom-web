@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Member, ModelPolicy } from '@gen/api/types.gen';
+import type { OrgMember, ModelPolicy } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
+import type { OrgMembers } from '@/shared/org/members';
 import { Button } from '@/shared/ui/Button';
+import { MorePeople } from '@/shared/ui/MorePeople';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   addMemberRow,
@@ -24,7 +26,7 @@ function PolicyFacts({
   members,
 }: {
   readonly policy: ModelPolicy;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   const own = Object.entries(policy.byMember ?? {});
@@ -59,7 +61,7 @@ function MemberPicker({
 }: {
   readonly row: MemberModels;
   readonly number: number;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
   readonly onChange: (member: string) => void;
 }): ReactElement {
   const { t } = useTranslation();
@@ -102,11 +104,14 @@ function MemberPicker({
 function PolicyForm({
   policy,
   members,
+  people,
   change,
   onDone,
 }: {
   readonly policy: ModelPolicy;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
   readonly change: SaveViewModel<ModelPolicy>;
   readonly onDone: () => void;
 }): ReactElement {
@@ -188,6 +193,7 @@ function PolicyForm({
             </Button>
           </div>
         ))}
+        <MorePeople people={people} />
         <span className="o-self-start">
           <Button
             variant="ghost"
@@ -259,6 +265,7 @@ export function ModelsSection({ view, canChange }: ModelsSectionProps): ReactEle
             <PolicyForm
               policy={loaded}
               members={view.members}
+              people={view.people}
               change={change}
               onDone={() => {
                 setEditing(false);
