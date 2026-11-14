@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { checkServer, isTransport, type Transport, TRANSPORTS } from '../model';
+import { checkServer } from '../model';
 import type { McpChangeViewModel } from '../useTools';
 
 /** A new server is checked as it is typed; the first problem is said before anything is sent. */
@@ -12,11 +12,10 @@ export function AddServerForm({ change }: { readonly change: McpChangeViewModel 
   const { t } = useTranslation();
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
-  const [transport, setTransport] = useState<Transport>('http');
   const [secrets, setSecrets] = useState('');
   const [tried, setTried] = useState(false);
-  const ids = { name: useId(), url: useId(), transport: useId(), secrets: useId() };
-  const checked = checkServer({ name, url, transport, secrets });
+  const ids = { name: useId(), url: useId(), secrets: useId() };
+  const checked = checkServer({ name, url, secrets });
   return (
     <Section label={t('tools.mcp.add.title')}>
       <form
@@ -84,23 +83,6 @@ export function AddServerForm({ change }: { readonly change: McpChangeViewModel 
           </Banner>
         ) : null}
         <div className="o-inline">
-          <label htmlFor={ids.transport} className="o-field-label">
-            {t('tools.mcp.add.transport')}
-          </label>
-          <select
-            id={ids.transport}
-            className="o-input o-select"
-            value={transport}
-            onChange={(event) => {
-              if (isTransport(event.target.value)) setTransport(event.target.value);
-            }}
-          >
-            {TRANSPORTS.map((option) => (
-              <option key={option} value={option}>
-                {t(`tools.mcp.transport.${option}`)}
-              </option>
-            ))}
-          </select>
           <Button type="submit" disabled={change.pending === true}>
             {change.pending === true ? t('tools.mcp.add.adding') : t('tools.mcp.add.submit')}
           </Button>

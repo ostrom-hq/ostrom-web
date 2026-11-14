@@ -35,8 +35,8 @@ describe('isHttpsUrl', () => {
 });
 
 describe('isTransport', () => {
-  it('knows http and sse', () => {
-    expect([isTransport('http'), isTransport('sse'), isTransport('stdio')]).toEqual([true, true, false]);
+  it('knows http only, as TeamCode has no sse', () => {
+    expect([isTransport('http'), isTransport('sse'), isTransport('stdio')]).toEqual([true, false, false]);
   });
 });
 
@@ -50,16 +50,15 @@ describe('parseNames', () => {
 describe('checkServer', () => {
   const draft = {
     name: ' linear ',
-    url: ' https://mcp.linear.app/sse ',
-    transport: 'sse' as const,
+    url: ' https://mcp.linear.app/mcp ',
     secrets: 'LINEAR_TOKEN',
   };
   it('builds the server to send, trimmed and on', () => {
     expect(checkServer(draft)).toEqual({
       server: {
         name: 'linear',
-        url: 'https://mcp.linear.app/sse',
-        transport: 'sse',
+        url: 'https://mcp.linear.app/mcp',
+        transport: 'http',
         secretNames: ['LINEAR_TOKEN'],
         enabled: true,
         scope: 'shared',

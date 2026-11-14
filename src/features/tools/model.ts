@@ -14,11 +14,11 @@ import type {
 export const MCP_SERVER_NAME = /^[a-z][a-z0-9-]{0,39}$/;
 /** A secret is an environment variable in the agent's sandbox. */
 export const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
-export const TRANSPORTS = ['http', 'sse'] as const;
-export type Transport = (typeof TRANSPORTS)[number];
+/** A server added here is reached over HTTP; a stdio server is hosted by the server and added with the CLI. TeamCode has no sse. */
+export type Transport = 'http';
 
 export function isTransport(value: string): value is Transport {
-  return TRANSPORTS.some((transport) => transport === value);
+  return value === 'http';
 }
 
 /** The relay only reaches servers over TLS. */
@@ -38,7 +38,6 @@ export function parseNames(text: string): string[] {
 export interface ServerDraft {
   readonly name: string;
   readonly url: string;
-  readonly transport: Transport;
   readonly secrets: string;
 }
 
@@ -56,7 +55,7 @@ export function checkServer(
   const wrong = secretNames.find((secret) => !SECRET_NAME.test(secret));
   if (wrong !== undefined) return { problem: 'secret', detail: wrong };
   // `shared`: one credential for everyone, the org secrets above; the server takes `shared` or `per-member` only.
-  return { server: { name, url, transport: draft.transport, secretNames, enabled: true, scope: 'shared' } };
+  return { server: { name, url, transport: 'http', secretNames, enabled: true, scope: 'shared' } };
 }
 
 /** The secrets a server needs that the organization does not have: its calls fail until they exist. */
