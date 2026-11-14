@@ -530,4 +530,31 @@ describe('a team of more than a hundred people', { timeout: 15_000 }, () => {
     expect(within(form).getByRole('option', { name: label })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
   });
+
+  it('says a page of members could not be read, and asks again, even when the assignments failed', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [
+      ...(db.orgMembers[db.organization.id] ?? []),
+      ...largeMembers().slice(0, 150),
+    ];
+    let failing = true;
+    server.use(
+      http.get('*/api/v1/environment/assignments', () =>
+        HttpResponse.json({ error: { type: 'unavailable', message: 'down' } }, { status: 503 }),
+      ),
+      http.get('*/api/v1/orgs/:org/members', ({ request }) =>
+        failing && new URL(request.url).searchParams.has('after')
+          ? HttpResponse.json({ error: { type: 'internal', message: 'page 2 is down' } }, { status: 500 })
+          : undefined,
+      ),
+    );
+    visit('/environment');
+    expect(await screen.findByText('The next people could not be read.')).toBeInTheDocument();
+    failing = false;
+    await user.click(screen.getByRole('button', { name: 'Show more people' }));
+    await waitFor(() => {
+      expect(screen.queryByText('The next people could not be read.')).toBeNull();
+    });
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  });
 });

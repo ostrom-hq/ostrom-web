@@ -58,7 +58,8 @@ export function useOrgMembers(org: string, tuning: QueryTuning = {}, q?: string)
     () =>
       hasNextPage
         ? () => {
-            void fetchNextPage();
+            // Asked again while it is read (a second screen part, or a second click): the page on its way is kept.
+            void fetchNextPage({ cancelRefetch: false });
           }
         : undefined,
     [hasNextPage, fetchNextPage],

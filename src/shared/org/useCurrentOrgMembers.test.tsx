@@ -118,4 +118,37 @@ describe('the members of the organization a screen acts in', () => {
       expect(asked).toBe(2);
     });
   });
+
+  it('ask for each page once, however many parts of the screen read every page', async () => {
+    db.orgMembers[db.organization.id] = [
+      ...(db.orgMembers[db.organization.id] ?? []),
+      ...moreMembers(),
+      ...moreMembers().map((member) => ({
+        ...member,
+        id: member.id.replace('00000000-0000', '11111111-1111'),
+        login: `${member.login}-b`,
+      })),
+    ];
+    const asked: string[] = [];
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get('after') ?? 'first');
+        return undefined;
+      }),
+    );
+    const { result } = renderHook(
+      () => [useCurrentOrgMembers({ all: true }), useCurrentOrgMembers({ all: true })] as const,
+      { wrapper },
+    );
+    await waitFor(
+      () => {
+        expect(result.current[0].complete && result.current[1].complete).toBe(true);
+      },
+      { timeout: 10_000 },
+    );
+    expect(result.current[0].members?.length).toBe(db.orgMembers[db.organization.id]?.length);
+    // 305 members: three pages of a hundred, then the last five, each asked once.
+    expect(asked).toHaveLength(4);
+    expect(new Set(asked).size).toBe(4);
+  });
 });

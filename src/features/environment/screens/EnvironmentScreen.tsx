@@ -115,11 +115,12 @@ function EnvironmentAdmin({ org }: { readonly org: string }): ReactElement {
                 assign={change.assign}
               />
               <ExcludeForm members={pickable} busy={busy} exclude={change.exclude} />
-              <MorePeople people={view.people} />
             </>
           );
         }}
       </LoadState>
+      {/* Whatever the assignments: a page of members that could not be read is said, and asked again, here. */}
+      <MorePeople people={view.people} />
       <LoadState data={view.personal} failure={view.personalFailure}>
         {(personal) => (
           <Section label={t('environment.review.title')}>

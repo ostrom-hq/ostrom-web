@@ -53,7 +53,7 @@ export function useHook(name: string): HookViewModel {
   const path = { name };
   const detail = useQuery(ready(listHookVersionsOptions({ path })));
   const assignments = useQuery(ready(listHookAssignmentsOptions({ path })));
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   const decisions = useMemo(
     () => (assignments.data === undefined ? undefined : decisionsById(assignments.data.items)),
     [assignments.data],

@@ -53,7 +53,7 @@ export interface ArtifactDetailViewModel {
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
-  /** The members came back or failed: the readers are named only then, never shown as ids in between. */
+  /** The first page of members came back, or they failed: the readers are named from then on, not as ids before. */
   readonly membersSettled: boolean;
   /** Every page of members is read: a reader none of them is has left (else it may be on a page not read). */
   readonly membersComplete: boolean;
@@ -81,7 +81,8 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
     readers: readers.data?.members,
     members: members.members,
     people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
-    membersSettled: members.settled,
+    // Once the first page is in: the readers on later pages are named as those pages arrive.
+    membersSettled: members.settled || members.members !== undefined,
     membersComplete: members.complete,
     membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),

@@ -72,7 +72,7 @@ export function useSkill(name: string): SkillViewModel {
       enabled: skill !== undefined && !isPersonal(skill),
     }),
   );
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   const decisions = useMemo(
     () => (assignments.data === undefined ? undefined : decisionsById(assignments.data.items)),
     [assignments.data],

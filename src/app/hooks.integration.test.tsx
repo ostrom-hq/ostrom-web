@@ -240,15 +240,17 @@ describe('the code of a hook version', () => {
 });
 
 describe('a team of more than a hundred people', () => {
-  it('reads the next page of members for the decisions, when asked', async () => {
-    const user = userEvent.setup();
-    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+  it('reads every page of members for the decisions, without being asked', async () => {
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
     visit('/hooks/require-status');
     const list = await screen.findByRole('list', { name: 'Decision of each member' });
-    expect(within(list).getAllByRole('listitem')).toHaveLength(100);
-    await user.click(screen.getByRole('button', { name: 'Show more people' }));
-    await waitFor(() => {
-      expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(100);
-    });
-  });
+    expect(
+      await within(list).findByText(`${far.name} (${far.login})`, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(large.length);
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  }, 15_000);
 });
