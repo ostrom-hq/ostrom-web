@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
+import { setDemoRole } from '@/mocks/orgs';
 import { createMockServer } from '@/mocks/node';
 
 const { server, db } = createMockServer();
@@ -74,5 +75,30 @@ describe('the mock personal MCP servers', () => {
     expect((await call('GET', '', undefined, globex.id)).text).not.toContain('maya-notes');
     expect((await call('POST', '', SERVER, globex.id)).status).toBe(403);
     expect((await call('DELETE', '/maya-notes', undefined, globex.id)).status).toBe(404);
+  });
+
+  it('lists the members’ own servers for review and promotes one to the team', async () => {
+    const team = async (path: string, method = 'GET', org?: string): Promise<Response> =>
+      fetch(`http://ostrom.test/api/v1/mcp/servers${path}`, {
+        method,
+        headers: org === undefined ? {} : { 'Ostrom-Org': org },
+      });
+    expect(await (await team('?personal=true')).text()).toContain('maya-notes');
+    const teamName = db.mcpServers[0]?.name ?? '';
+    expect((await team(`/${teamName}/promote`, 'POST')).status).toBe(200);
+    expect((await team('/nope/promote', 'POST')).status).toBe(404);
+    const globex = otherOrganization();
+    db.otherOrganizations = [globex];
+    expect((await team('/maya-notes/promote', 'POST', globex.id)).status).toBe(404);
+    db.otherOrganizations = [];
+    db.signedInAt = 0;
+    expect((await team('/maya-notes/promote', 'POST')).status).toBe(403);
+    db.signedInAt = Date.now();
+    expect((await team('/maya-notes/promote', 'POST')).status).toBe(200);
+    expect(db.myMcpServers.some((server) => server.name === 'maya-notes')).toBe(false);
+    const promoted = db.mcpServers.find((server) => server.name === 'maya-notes');
+    expect(promoted?.owner).toBeUndefined();
+    setDemoRole(db, 'member');
+    expect((await team('/maya-notes/promote', 'POST')).status).toBe(403);
   });
 });
