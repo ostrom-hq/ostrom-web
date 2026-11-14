@@ -2048,7 +2048,7 @@ export const fr = {
       skipped_budget: 'Sautée : budget dépassé',
     },
     runReason: {
-      cloud_session_limit: 'Trop d’agents cloud en même temps pour l’offre.',
+      cloud_session_limit: 'Trop d’agents cloud en même temps.',
       cloud_hours_exhausted: 'Les heures d’agent de l’offre sont épuisées pour cette période.',
       owner_unavailable: 'Son propriétaire ne peut plus lancer d’agents ici.',
     },
@@ -2480,7 +2480,7 @@ export const fr = {
       noPrice: 'Pas de prix sur cette instance',
       pitch: {
         team: 'Pour une équipe qui livre avec des agents : politiques, un an de reçus.',
-        business: 'Pour une entreprise : SSO, plus d’agents en même temps, reçus conservés sans limite.',
+        business: 'Pour une entreprise : SSO, plus d’heures d’agent, reçus conservés sans limite.',
       },
       current: 'Ton offre',
       buy: 'Choisir {{plan}}',
