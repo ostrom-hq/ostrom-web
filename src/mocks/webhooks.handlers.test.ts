@@ -212,3 +212,19 @@ describe('the mock webhooks, as the server refuses', () => {
     expect((await call('DELETE', '/webhooks/wh-1')).status).toBe(404);
   });
 });
+
+describe('the mock /auth/me with the organization named', () => {
+  const roleIn = async (): Promise<unknown> => {
+    const body: unknown = (await call('GET', '/auth/me', undefined, db.organization.id)).body;
+    const member = typeof body === 'object' && body !== null && 'member' in body ? body.member : undefined;
+    return typeof member === 'object' && member !== null && 'role' in member ? member.role : undefined;
+  };
+
+  it('says the role held there, and the person’s own when the organization does not list them', async () => {
+    expect(await roleIn()).toBe('admin');
+    setDemoRole(db, 'member');
+    expect(await roleIn()).toBe('member');
+    db.orgMembers[db.organization.id] = [];
+    expect(await roleIn()).toBe('admin');
+  });
+});
