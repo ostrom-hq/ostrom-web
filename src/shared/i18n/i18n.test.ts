@@ -1,12 +1,12 @@
-import i18next, { type ReadCallback } from 'i18next';
 import {
   englishIfMissing,
   i18n,
   i18nReady,
   pickLanguage,
   showLanguage,
-  wordingBackend,
+  wordingLoader,
 } from '@/shared/i18n/i18n';
+import { createI18n, type I18n } from '@/shared/i18n/instance';
 import { en } from '@/shared/i18n/locales/en';
 import { fr } from '@/shared/i18n/locales/fr';
 
@@ -16,7 +16,7 @@ describe('the start', () => {
     await i18nReady;
     expect(i18n.language).toBe('en');
     expect(i18n.t('app.loading')).toBe(en.app.loading);
-    expect(i18n.hasResourceBundle('fr', 'translation')).toBe(false);
+    expect(i18n.hasResourceBundle('fr')).toBe(false);
   });
 });
 
@@ -32,72 +32,92 @@ describe('pickLanguage', () => {
 });
 
 describe('document language', () => {
-  it('follows the language shown', async () => {
+  it('follows the language shown', () => {
     expect(document.documentElement.lang).toBe('en');
-    await i18n.changeLanguage('fr');
+    i18n.changeLanguage('fr');
     expect(document.documentElement.lang).toBe('fr');
-    await i18n.changeLanguage('en');
+    i18n.changeLanguage('en');
   });
 });
 
-/** What the backend answered to one read. */
-async function read(
-  backend: ReturnType<typeof wordingBackend>,
-  language: string,
-): Promise<Parameters<ReadCallback>> {
-  return new Promise((resolve) => {
-    backend.read(language, 'translation', (...answer) => {
-      resolve(answer);
-    });
-  });
-}
+type Wordings = Parameters<typeof wordingLoader>[1];
+type First = Parameters<typeof wordingLoader>[2];
+
+const bothLanguages: Wordings = { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) };
 
 describe('loading only the language shown', () => {
   it('loads the other language when it is chosen, before showing it', async () => {
-    await i18n.changeLanguage('fr');
+    expect(await showLanguage('fr')).toBe(true);
     expect(i18n.t('app.loading')).toBe(fr.app.loading);
-    await i18n.changeLanguage('en');
+    i18n.changeLanguage('en');
   });
 
   it('reads a language from its own chunk', async () => {
-    const [error, wording] = await read(wordingBackend(), 'fr');
-    expect(error).toBeNull();
-    expect(wording).toBe(fr);
+    const instance = createI18n();
+    expect(await wordingLoader(instance)('fr')).toBe(true);
+    expect(instance.getResource('fr', 'app.nav.home')).toBe(fr.app.nav.home);
+    expect(instance.hasResourceBundle('en')).toBe(false);
   });
 
   it('has no wording for a language the console does not speak', async () => {
-    const [error, retry] = await read(wordingBackend(), 'de');
-    expect(String(error)).toContain('de');
-    expect(retry).toBe(false);
+    const instance = createI18n();
+    expect(await wordingLoader(instance)('de')).toBe(false);
+    expect(instance.hasResourceBundle('de')).toBe(false);
   });
 
-  it('asks i18next to try again when a chunk does not come', async () => {
-    const offline = new TypeError('Failed to fetch dynamically imported module');
-    const backend = wordingBackend({
-      en: async () => Promise.reject(offline),
-      fr: async () => Promise.resolve(fr),
-    });
-    const [error, retry] = await read(backend, 'en');
-    expect(error).toBeInstanceOf(Error);
-    expect(error instanceof Error && error.cause).toBe(offline);
-    expect(retry).toBe(true);
+  it('asks again, after 350 ms then 700 ms, when a chunk does not come, then gives up', async () => {
+    vi.useFakeTimers();
+    try {
+      let tries = 0;
+      const instance = createI18n();
+      const load = wordingLoader(instance, {
+        en: async () => {
+          tries += 1;
+          return Promise.reject(new TypeError('Failed to fetch dynamically imported module'));
+        },
+        fr: async () => Promise.resolve(fr),
+      });
+      const loaded = load('en');
+      await vi.advanceTimersByTimeAsync(349);
+      expect(tries).toBe(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(tries).toBe(2);
+      await vi.advanceTimersByTimeAsync(699);
+      expect(tries).toBe(2);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(tries).toBe(3);
+      expect(await loaded).toBe(false);
+      expect(instance.hasResourceBundle('en')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('shows what a retry brings', async () => {
+    let tries = 0;
+    const instance = createI18n();
+    const load = wordingLoader(
+      instance,
+      {
+        en: async () => {
+          tries += 1;
+          return tries === 1 ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(en);
+        },
+        fr: async () => Promise.resolve(fr),
+      },
+      () => undefined,
+      [0],
+    );
+    expect(await load('en')).toBe(true);
+    expect(instance.t('app.loading')).toBe(en.app.loading);
   });
 });
 
 describe("the first screen's own wording", () => {
-  type Wordings = Parameters<typeof wordingBackend>[0];
-  type First = Parameters<typeof wordingBackend>[1];
-
-  /** An i18next started on these wordings, as the console starts, the whole language merged into it. */
-  async function started(wordings: Wordings, first: First): Promise<typeof i18next> {
-    const instance = i18next.createInstance();
-    await instance
-      .use(
-        wordingBackend(wordings, first, (language, wording) => {
-          instance.addResourceBundle(language, 'translation', wording, true, true);
-        }),
-      )
-      .init({ lng: 'en', fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
+  /** A console started on these wordings, as it starts: the first screen's words, the whole language after. */
+  async function started(wordings: Wordings, first: First): Promise<I18n> {
+    const instance = createI18n();
+    await wordingLoader(instance, wordings, first, [])('en');
     return instance;
   }
 
@@ -118,7 +138,7 @@ describe("the first screen's own wording", () => {
       async () => Promise.resolve({ app: { loading: 'First' } }),
     );
     expect(instance.t('app.loading')).toBe('First');
-    expect(instance.exists('app.nav.home')).toBe(false);
+    expect(instance.t('app.nav.home')).toBe('app.nav.home');
     expect(wholeAsked).toBe(1);
     arrive(en);
     await vi.waitFor(() => {
@@ -136,25 +156,16 @@ describe("the first screen's own wording", () => {
     expect(instance.t('app.loading')).toBe('First');
   });
 
-  it("merges the whole language into the console's i18next by default", async () => {
-    const backend = wordingBackend(
-      { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
-      async () => Promise.resolve({ app: { loading: 'First' } }),
-    );
-    const [error, wording] = await read(backend, 'fr');
-    expect(error).toBeNull();
-    expect(wording).toEqual({ app: { loading: 'First' } });
-    await vi.waitFor(() => {
-      expect(i18n.getResource('fr', 'translation', 'app.nav.home')).toBe(fr.app.nav.home);
-    });
+  it('reads the whole language when /boot.js fetched none of it (the default)', async () => {
+    const instance = createI18n();
+    expect(await wordingLoader(instance, bothLanguages)('fr')).toBe(true);
+    expect(instance.t('app.nav.home')).toBe('app.nav.home');
+    expect(instance.getFixedT('fr')('app.nav.home')).toBe(fr.app.nav.home);
   });
 
   it('gives way to the whole language when it did not come, or was not fetched', async () => {
     for (const first of [async () => Promise.resolve(undefined), () => undefined]) {
-      const instance = await started(
-        { en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) },
-        first,
-      );
+      const instance = await started(bothLanguages, first);
       expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
     }
   });
@@ -166,9 +177,9 @@ function browserLanguages(languages: readonly string[]): void {
 }
 
 describe('a change of the browser language', () => {
-  afterEach(async () => {
+  afterEach(() => {
     browserLanguages(['en-US']);
-    await i18n.changeLanguage('en');
+    i18n.changeLanguage('en');
   });
 
   it('is followed, with the new wording loaded first', async () => {
@@ -192,69 +203,68 @@ describe('a change of the browser language', () => {
 });
 
 describe('a wording that never comes', () => {
-  /** A console whose French chunk never comes, started in `language`, without retries. */
-  async function offlineFrench(language: string): Promise<typeof i18next> {
-    const instance = i18next.createInstance();
+  /** A console whose French chunk never comes, started in `language`. */
+  async function offlineFrench(
+    language: string,
+  ): Promise<{ instance: I18n; load: (l: string) => Promise<boolean> }> {
+    const instance = createI18n(language);
     const offline = async (): Promise<never> => Promise.reject(new TypeError('Failed to fetch'));
-    await instance
-      .use(wordingBackend({ en: async () => Promise.resolve(en), fr: offline }))
-      .init({ lng: language, fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
-    return instance;
+    const load = wordingLoader(
+      instance,
+      { en: async () => Promise.resolve(en), fr: offline },
+      () => undefined,
+      [],
+    );
+    await load(language);
+    return { instance, load };
   }
 
   it('gives way to English at start', async () => {
-    const instance = await offlineFrench('fr');
-    await englishIfMissing(instance);
+    const { instance, load } = await offlineFrench('fr');
+    await englishIfMissing(instance, load);
     expect(instance.language).toBe('en');
     expect(instance.t('app.loading')).toBe(en.app.loading);
   });
 
   it('leaves a language whose wording came as it is', async () => {
-    const instance = await offlineFrench('en');
-    await englishIfMissing(instance);
+    const { instance, load } = await offlineFrench('en');
+    await englishIfMissing(instance, load);
     expect(instance.language).toBe('en');
   });
 
   it('keeps the screen on the words it has, when chosen later', async () => {
-    const instance = await offlineFrench('en');
-    expect(await showLanguage('fr', instance)).toBe(false);
+    const { instance, load } = await offlineFrench('en');
+    expect(await showLanguage('fr', instance, () => true, load)).toBe(false);
     expect(instance.language).toBe('en');
     expect(instance.t('app.loading')).toBe(en.app.loading);
   });
 
   it('is asked for anew the next time, and shows once it comes', async () => {
     let tries = 0;
-    const instance = i18next.createInstance();
-    await instance
-      .use(
-        wordingBackend({
-          en: async () => Promise.resolve(en),
-          fr: async () => {
-            tries += 1;
-            return tries === 1 ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(fr);
-          },
-        }),
-      )
-      .init({ lng: 'en', fallbackLng: false, maxRetries: 0, interpolation: { escapeValue: false } });
-    expect(await showLanguage('fr', instance)).toBe(false);
-    expect(await showLanguage('fr', instance)).toBe(true);
+    const instance = createI18n();
+    const load = wordingLoader(
+      instance,
+      {
+        en: async () => Promise.resolve(en),
+        fr: async () => {
+          tries += 1;
+          return tries === 1 ? Promise.reject(new TypeError('Failed to fetch')) : Promise.resolve(fr);
+        },
+      },
+      () => undefined,
+      [],
+    );
+    expect(await showLanguage('fr', instance, () => true, load)).toBe(false);
+    expect(await showLanguage('fr', instance, () => true, load)).toBe(true);
     expect(instance.t('app.loading')).toBe(fr.app.loading);
   });
 });
 
 describe('a change overtaken by a newer one', () => {
   it('does not show its language once its wording comes', async () => {
-    const instance = await startedInEnglish();
-    expect(await showLanguage('fr', instance, () => false)).toBe(false);
+    const instance = createI18n();
+    const load = wordingLoader(instance, bothLanguages, () => undefined);
+    expect(await showLanguage('fr', instance, () => false, load)).toBe(false);
     expect(instance.language).toBe('en');
   });
 });
-
-/** A console started in English, every wording at hand. */
-async function startedInEnglish(): Promise<typeof i18next> {
-  const instance = i18next.createInstance();
-  await instance
-    .use(wordingBackend({ en: async () => Promise.resolve(en), fr: async () => Promise.resolve(fr) }))
-    .init({ lng: 'en', fallbackLng: false, interpolation: { escapeValue: false } });
-  return instance;
-}

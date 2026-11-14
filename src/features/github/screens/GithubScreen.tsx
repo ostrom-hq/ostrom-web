@@ -2,7 +2,7 @@
 import type { OrgView, Repo } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import type { OrgRole } from '@/shared/org/roles';
 import { Feature } from '@/shared/capabilities';
 import { WithOrg } from '@/shared/org/WithOrg';

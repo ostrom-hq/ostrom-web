@@ -2,7 +2,7 @@
 import type { OrgMember, Secret } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { parseUsd } from '@/shared/lib/money';
 import type { OrgMembers } from '@/shared/org/members';
 import { Banner } from '@/shared/ui/Banner';

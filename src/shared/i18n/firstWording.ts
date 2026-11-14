@@ -2,7 +2,7 @@
 import { z } from 'zod/mini';
 import { BOOTED, wordingKey } from '@/shared/build/bootScript';
 
-/** Wording as i18next keeps it: sections of keys, of sections or texts. */
+/** Wording as the console keeps it: sections of keys, of sections or texts. */
 const zWording = z.record(z.string(), z.unknown());
 export type Wording = z.infer<typeof zWording>;
 

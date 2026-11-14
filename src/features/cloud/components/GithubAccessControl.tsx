@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudSession } from '@gen/api/types.gen';
 import { type ReactElement, useId } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { FailureText } from '@/shared/ui/FailureText';
 import { accessOf, GITHUB_ACCESS, type GithubAccess } from '../model';

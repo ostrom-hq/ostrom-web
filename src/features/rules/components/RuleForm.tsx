@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { GateAction, Rule } from '@gen/api/types.gen';
 import { type KeyboardEvent, type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Button } from '@/shared/ui/Button';
 import {

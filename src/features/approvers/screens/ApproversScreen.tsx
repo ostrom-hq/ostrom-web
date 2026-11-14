@@ -2,7 +2,7 @@
 import type { ApproversGraph } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useId, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';

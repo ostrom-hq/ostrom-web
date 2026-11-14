@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { WebhookDelivery } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { lastAnswer, utcTime } from '../model';
 

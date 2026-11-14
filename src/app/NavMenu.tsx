@@ -2,7 +2,7 @@
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, type RefObject, useCallback, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { useModal } from '@/shared/ui/useModal';
 import { NavLabel } from '@/app/NavLabel';

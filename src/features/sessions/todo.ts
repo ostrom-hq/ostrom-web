@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { TFunction } from 'i18next';
+import type { TFunction } from '@/shared/i18n/instance';
 import type { Todo, TodoCheck, TodoHookEvent, TodoItem } from '@gen/api/types.gen';
 
 /** The Stop hook errors the view lists: the newest three, as TeamCode's companion does. */

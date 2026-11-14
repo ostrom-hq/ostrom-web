@@ -2,7 +2,7 @@
 import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/api/types.gen';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { type Viewer, useViewer } from '@/shared/auth/useViewer';

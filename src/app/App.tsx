@@ -2,7 +2,7 @@ import { getMeQueryKey, listMyOrganizationsQueryKey } from '@gen/api/@tanstack/r
 import { hashKey, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { type ReactElement, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import type { AppRouter } from '@/app/router';
 import { retryOnce } from '@/shared/api/retry';
 import { resetArrivals } from '@/features/yes/route';

@@ -2,7 +2,7 @@
 import type { OrgView } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { Banner } from '@/shared/ui/Banner';
 import { EmptyState, Screen } from '@/shared/ui/Screen';

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { SharedAccount } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
