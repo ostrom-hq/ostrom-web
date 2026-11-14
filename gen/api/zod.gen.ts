@@ -930,7 +930,7 @@ export const zBillingPaymentIssue = z.object({
 });
 
 /**
- * The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
+ * The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster's `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
  */
 export const zBillingPlanLimits = z.object({
     maxPeople: z.nullable(z.int()),
@@ -1285,7 +1285,7 @@ export const zCloudEnvironment = z.object({
 });
 
 /**
- * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile
  */
 export const zCloudSessionProfile = z.object({
     id: z.uuid(),

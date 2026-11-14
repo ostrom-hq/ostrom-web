@@ -149,6 +149,7 @@ export function versionedUrl(url: string, which: UrlVersion, version: number): s
   const suffix = '/trigger';
   if (!url.endsWith(suffix)) return undefined;
   return `${url.slice(0, -suffix.length)}/v/${which === 'latest' ? 'latest' : String(version)}${suffix}`;
+}
 
 /** A glob with `*` for any run of characters, as the server matches a profile's `allowedImageOverrides`. */
 function globMatches(pattern: string, text: string): boolean {

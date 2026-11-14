@@ -1367,7 +1367,7 @@ export type BillingPaymentIssue = {
 };
 
 /**
- * The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
+ * The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster's `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
  */
 export type BillingPlanLimits = {
     maxPeople: number | null;
@@ -1611,7 +1611,7 @@ export type CloudCluster = {
     caCertificate: InstanceSecretState;
     serviceAccountToken: InstanceSecretState;
     /**
-     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false. Planned
+     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false
      */
     inCluster?: boolean;
     createdAt: string;
@@ -1834,7 +1834,7 @@ export type SaveGitHubAppConfigurationRequest = {
      */
     privateKey?: string | null;
     /**
-     * The secret GitHub signs the webhooks with; null or absent keeps the stored one. Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
+     * The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
      */
     webhookSecret?: string | null;
     /**
@@ -1961,7 +1961,7 @@ export type CloudSession = {
     environment?: CloudEnvironment;
     profile?: CloudSessionProfile;
     /**
-     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile. Planned
+     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile
      */
     image?: string;
     /**
@@ -1975,7 +1975,7 @@ export type CloudSession = {
 };
 
 /**
- * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile
  */
 export type CloudSessionProfile = {
     id: string;
@@ -2011,11 +2011,11 @@ export type CreateCloudSessionRequest = {
     name?: string;
     environment?: CloudEnvironment;
     /**
-     * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners. Planned: the server does not read it yet
+     * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners
      */
     profileId?: string;
     /**
-     * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image. Planned: the server does not read it yet
+     * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image
      */
     image?: string;
 };
@@ -2025,7 +2025,7 @@ export type CreateCloudSessionRequest = {
  */
 export type CloudSessionFailure = {
     /**
-     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable or namespace_not_allowed (the profile's cluster or namespace at a start, planned)
+     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable, namespace_not_allowed or server_url_missing (a session on a cloud profile whose cluster stopped opening, whose namespace is no longer allowed, or whose runner has no server URL)
      */
     code: string;
     message: string;
