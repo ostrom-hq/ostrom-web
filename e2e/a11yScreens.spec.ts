@@ -37,6 +37,7 @@ const SCREENS = [
   '/cloud',
   '/automations',
   '/artifacts',
+  '/webhooks',
   '/accounts',
   // Reached by the tab of the shared accounts, not the navigation (web#97).
   '/accounts/groups',

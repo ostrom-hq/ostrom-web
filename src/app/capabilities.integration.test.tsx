@@ -133,6 +133,7 @@ describe('features the server does not serve', () => {
   it.each([
     ['/billing', 'Billing'],
     ['/automations', 'Automations'],
+    ['/webhooks', 'Webhooks'],
     ['/cloud', 'Cloud agents'],
     ['/import', 'Import'],
   ])('tells a direct address to %s that the screen is not available here', async (path, name) => {

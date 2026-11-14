@@ -198,6 +198,8 @@ import {
 } from '@/mocks/fixtures/tools';
 import { createConfirmationHandlers, type ConfirmationsState } from '@/mocks/confirmations';
 import { createWaitsHandlers, type WaitsState } from '@/mocks/waits';
+import { createWebhooksHandlers, type WebhooksState } from '@/mocks/webhooks';
+import { initialWebhookDeliveries, initialWebhooks } from '@/mocks/fixtures/webhooks';
 import { initialWaits } from '@/mocks/fixtures/waits';
 import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
@@ -235,7 +237,8 @@ export interface MockDb
     PolicyState,
     TeamCodeImportState,
     TodosState,
-    WaitsState {
+    WaitsState,
+    WebhooksState {
   approvals: Approval[];
   /** Who may answer each approval, by id. */
   approvers: Record<string, readonly string[]>;
@@ -366,6 +369,12 @@ export function createMockDb(): MockDb {
     signedIn: true,
     confirmations: initialConfirmations(opened),
     waits: initialWaits(opened),
+    webhooks: initialWebhooks(),
+    webhookDeliveries: initialWebhookDeliveries(),
+    webhookTests: {},
+    nextWebhook: 4,
+    nextDelivery: 4,
+    nextWebhookSecret: 100,
     staleConfirmations: ['gc-models-stale'],
     refusedWrites: initialRefusedWrites(),
     usedLinks: [],
@@ -728,7 +737,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const organization = membershipsOf(db).find((item) => item.id === named);
       // `instanceAdmin` is on the answer only for a person who administers the instance.
       const who = db.instanceAdmin ? { ...signedIn, instanceAdmin: true } : signedIn;
-      return HttpResponse.json(organization === undefined ? who : { ...who, member, organization });
+      if (organization === undefined) return HttpResponse.json(who);
+      // The person's member in the organization named, with the role they hold there (the first one's until set).
+      const role = demoRoleIn(db, organization, now);
+      return HttpResponse.json({
+        ...who,
+        member: { ...member, ...(role === undefined ? {} : { role }) },
+        organization,
+      });
     }),
     // Every feature, as a server with everything configured: a test that needs less overrides this handler.
     handleCapabilities(() =>
@@ -894,6 +910,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       now,
       (request) => organizationOf(db, request),
       () => managesMembers(demoRoleIn(db, db.organization, now)),
+    ),
+    ...createWebhooksHandlers(
+      () => db,
+      now,
+      (request) => organizationOf(db, request),
     ),
     ...createActivityHandlers(
       () => db,

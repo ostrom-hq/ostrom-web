@@ -15,6 +15,8 @@ describe('the navigation menu (a phone has no room for the bar)', () => {
     const bar = screen.getByRole('navigation', { name: 'Main' });
     // "Waiting for you" says how many wait: the menu is opened once that count is in.
     await within(bar).findByRole('link', { name: /^Waiting for you 3 open$/ });
+    // An owner's or an admin's entry comes once the role in the organization is read.
+    await within(bar).findByRole('link', { name: 'Webhooks' });
     const screens = within(bar)
       .getAllByRole('link')
       .map((link) => link.textContent);
