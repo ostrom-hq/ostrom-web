@@ -29,6 +29,8 @@ const SCREENS = [
   '/policy',
   '/mcp',
   '/secrets',
+  '/skills',
+  '/hooks',
   '/import',
   '/spend',
   '/billing',
@@ -41,6 +43,14 @@ const SCREENS = [
   '/accounts',
   // Reached by the tab of the shared accounts, not the navigation (web#97).
   '/accounts/groups',
+  // Reached from the catalogs and a member's row, not the navigation.
+  '/skills/review-pr',
+  '/skills/maya-notes',
+  '/hooks/require-status',
+  '/hooks/require-status/versions/1.0.0',
+  '/members/3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60/skills',
+  '/members/3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60/hooks',
+  '/me/skills',
   '/signin',
 ] as const;
 

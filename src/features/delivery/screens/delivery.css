@@ -1,0 +1,17 @@
+.dl-help summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.dl-digest {
+  overflow-wrap: anywhere;
+}
+.dl-file {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2, 6px);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--fs-14);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

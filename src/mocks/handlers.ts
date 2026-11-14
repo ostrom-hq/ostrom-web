@@ -203,6 +203,17 @@ import { initialWebhookDeliveries, initialWebhooks } from '@/mocks/fixtures/webh
 import { initialWaits } from '@/mocks/fixtures/waits';
 import { initialConfirmations, initialRefusedWrites } from '@/mocks/fixtures/confirmations';
 import { FRESH_SIGN_IN_MS } from '@/mocks/http';
+import { createDeliveryHandlers, type DeliveryState } from '@/mocks/delivery';
+import {
+  initialHookAssignments,
+  initialHookFiles,
+  initialHooks,
+  initialHookVersions,
+  initialSkillAssignments,
+  initialSkillInstallations,
+  initialSkills,
+  initialSkillVersions,
+} from '@/mocks/fixtures/delivery';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import {
   type AdminState,
@@ -227,6 +238,7 @@ export interface MockDb
     AuditState,
     BillingState,
     ConfirmationsState,
+    DeliveryState,
     DeviceState,
     GithubState,
     GroupsState,
@@ -345,6 +357,14 @@ export function createMockDb(): MockDb {
     mcpAssignments: initialMcpAssignments(),
     mcpPolicies: initialMcpPolicies(),
     mcpPrefixes: {},
+    skills: initialSkills(),
+    skillVersions: initialSkillVersions(),
+    skillAssignments: initialSkillAssignments(),
+    skillInstallations: initialSkillInstallations(),
+    hooks: initialHooks(),
+    hookVersions: initialHookVersions(),
+    hookAssignments: initialHookAssignments(),
+    hookFiles: initialHookFiles(),
     modelPolicies: { [initialOrganization().id]: initialModelPolicy(MEMBER_IDS.theo) },
     inferenceSettings: {
       [initialOrganization().id]: { anthropicKeySecret: 'ANTHROPIC_API_KEY', useSharedAccounts: true },
@@ -1131,6 +1151,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       now,
     ),
     ...createAdminHandlers(() => db, now),
+    ...createDeliveryHandlers(
+      () => db,
+      (request) => organizationOf(db, request),
+      now,
+    ),
     ...createPolicyHandlers(
       () => db,
       (request) => organizationOf(db, request),
