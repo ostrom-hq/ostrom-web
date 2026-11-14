@@ -24,6 +24,7 @@ export const FEATURES = [
   'hooks.v1',
   'import.teamcode.v1',
   'inference.queue.v1',
+  'mcp.personal.v1',
   'notifications.push.v1',
   'runners.cloud.github.v1',
   'runners.cloud.v1',

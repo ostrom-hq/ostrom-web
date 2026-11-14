@@ -232,4 +232,82 @@ describe('the mock environment variants, as the server refuses', () => {
       ),
     ).toBe(false);
   });
+
+  it('serves the demo person their own variables, withholding the unreadable ones', async () => {
+    db.environmentUnavailable = ['GITHUB_TOKEN'];
+    expect((await call('GET', '')).body).toEqual({ variables: {}, unavailable: ['GITHUB_TOKEN'] });
+    db.environmentUnavailable = [];
+    expect((await call('GET', '')).body).toEqual({
+      variables: { GITHUB_TOKEN: 'demo-value-of-env-1' },
+      unavailable: [],
+    });
+  });
+
+  it('lets the demo person declare, change and delete variants of their own', async () => {
+    db.signedInAt = 0;
+    expect(
+      (await call('POST', '/../me/environment/variants', { variable: 'A', name: 'a', value: 'v' })).type,
+    ).toBe('step_up_required');
+    expect((await call('PATCH', '/../me/environment/variants/env-1', { expectedVersion: 1 })).type).toBe(
+      'step_up_required',
+    );
+    expect((await call('DELETE', '/../me/environment/variants/env-1')).type).toBe('step_up_required');
+  });
+});
+
+describe('the mock personal environment variants', () => {
+  const me = async (method: string, path: string, body?: unknown, org?: string): Promise<Answer> =>
+    call(method, `/../me/environment/variants${path}`, body, org);
+
+  it('checks what a personal variant is made of, and where it may go', async () => {
+    expect((await me('POST', '', 'not json')).status).toBe(400);
+    expect((await me('POST', '', { variable: 'lower', name: 'a', value: 'v' })).status).toBe(400);
+    expect((await me('POST', '', { variable: 'A', name: ' ', value: 'v' })).status).toBe(400);
+    expect(
+      (await me('POST', '', { variable: 'A', name: 'a', binding: 'perMember', value: 'v' })).status,
+    ).toBe(400);
+    expect((await me('POST', '', { variable: 'A', name: 'a' })).status).toBe(400);
+    expect((await me('POST', '', { variable: 'PATH', name: 'a', value: 'v' })).status).toBe(400);
+    expect((await me('POST', '', { variable: 'GITHUB_TOKEN', name: 'a', value: 'v' })).type).toBe(
+      'slot_taken',
+    );
+    db.environmentExclusions.push({ member: MEMBER_IDS.maya, variable: 'NPM_TOKEN' });
+    expect((await me('POST', '', { variable: 'NPM_TOKEN', name: 'a', value: 'v' })).type).toBe(
+      'variant_excluded',
+    );
+    const globex = otherOrganization();
+    db.otherOrganizations = [globex];
+    expect((await me('POST', '', { variable: 'B', name: 'b', value: 'v' }, globex.id)).status).toBe(403);
+    expect((await me('GET', '', undefined, globex.id)).body).toEqual({ items: [] });
+  });
+
+  it('keeps at most 20 of them', async () => {
+    for (let index = 0; index < 20; index += 1) {
+      expect(
+        (await me('POST', '', { variable: `V_${String(index)}`, name: 'mine', value: 'v' })).status,
+      ).toBe(201);
+    }
+    expect((await me('POST', '', { variable: 'V_LAST', name: 'mine', value: 'v' })).type).toBe(
+      'variant_limit',
+    );
+    expect(JSON.stringify((await me('GET', '')).body)).toContain('"variable":"V_0"');
+  });
+
+  it('changes and deletes the person’s own only', async () => {
+    const created = await me('POST', '', { variable: 'MINE', name: 'mine', value: 'v' });
+    expect(created.status).toBe(201);
+    expect((await me('PATCH', '/env-1', { expectedVersion: 2 })).status).toBe(404);
+    expect((await me('PATCH', '/env-6', {})).status).toBe(400);
+    expect((await me('PATCH', '/env-6', { expectedVersion: 7 })).type).toBe('variant_version_conflict');
+    expect((await me('PATCH', '/env-6', { expectedVersion: 1, name: 'renamed' })).body).toMatchObject({
+      name: 'renamed',
+      version: 2,
+    });
+    expect((await me('PATCH', '/env-6', { expectedVersion: 2, value: 'w' })).body).toMatchObject({
+      name: 'renamed',
+    });
+    expect((await me('DELETE', '/env-1')).status).toBe(404);
+    expect((await me('DELETE', '/env-6')).status).toBe(204);
+    expect(db.environmentAssignments.some((item) => item.variantId === 'env-6')).toBe(false);
+  });
 });

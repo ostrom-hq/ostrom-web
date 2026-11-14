@@ -114,3 +114,70 @@ test('an owner creates, assigns and excludes; the value never shows; a member an
     ).status,
   ).toBe(404);
 });
+
+test('a member declares a value of their own, receives it by name, an owner reviews and promotes it; another organization sees none of it', async ({
+  page,
+  browser,
+}) => {
+  expect(await served(page, 'GET', '/api/v1/me/environment/variants')).toBe(true);
+  const { id: org } = await ownerOfNewOrganization(page, 'yara');
+  const member = await anotherPerson(browser);
+  await joinAs(page, org, member, 'zeno', 'member');
+
+  const value = valueOfAVariant();
+  await member.goto('/me/environment');
+  await expect(member.getByRole('heading', { level: 1, name: 'My environment' })).toBeVisible();
+  const create = member.getByRole('region', { name: 'Add a value of your own' });
+  await create.getByLabel('Variable name').fill('E2E_MINE');
+  await create.getByLabel('Variant name').fill('mine');
+  await create.getByLabel('Value', { exact: true }).fill(value);
+  await create.getByRole('button', { name: 'Create variant' }).click();
+  await expect(member.getByRole('list', { name: 'Your own values' })).toContainText('E2E_MINE');
+  await expect(member.getByRole('list', { name: 'What your agents receive' })).toContainText('E2E_MINE');
+  await expect(member.getByText(value)).toHaveCount(0);
+
+  // The owner reviews it, never its value, and promotes it to the team.
+  await page.goto('/environment');
+  const review = page.getByRole('list', { name: 'Members’ personal variants' });
+  const row = review.getByRole('listitem').filter({ hasText: 'E2E_MINE' });
+  await expect(row).toContainText('shared value stored');
+  await expect(page.getByText(value)).toHaveCount(0);
+  await row.getByRole('button', { name: 'Promote to the team' }).click();
+  await row.getByRole('button', { name: 'Make E2E_MINE: mine a team variant' }).click();
+  await expect(
+    page.getByRole('list', { name: 'Team variants' }).getByRole('listitem').filter({ hasText: 'E2E_MINE' }),
+  ).toBeVisible();
+
+  // Another organization: none of it, and naming the first one opens nothing.
+  const stranger = await anotherPerson(browser);
+  await ownerOfNewOrganization(stranger, 'abel');
+  await stranger.goto('/me/environment');
+  await expect(stranger.getByText('You have not declared any value of your own.')).toBeVisible();
+  await expect(stranger.getByText('E2E_MINE')).toHaveCount(0);
+  expect(
+    (await callFromPage(stranger, 'GET', '/api/v1/me/environment/variants', undefined, org)).status,
+  ).toBe(404);
+  expect((await callFromPage(stranger, 'GET', '/api/v1/environment', undefined, org)).status).toBe(404);
+});
+
+test('a member declares an MCP server of their own; another organization never sees it', async ({
+  page,
+  browser,
+}) => {
+  expect(await served(page, 'GET', '/api/v1/me/mcp/servers')).toBe(true);
+  const { id: org } = await ownerOfNewOrganization(page, 'bram');
+  await page.goto('/me/mcp');
+  await expect(page.getByRole('heading', { level: 1, name: 'My MCP servers' })).toBeVisible();
+  const form = page.getByRole('region', { name: 'Add a server' });
+  await form.getByLabel('Name').fill('e2e-mine');
+  await form.getByLabel('URL').fill('https://mcp.example.com/mcp');
+  await form.getByRole('button', { name: 'Add the server' }).click();
+  await expect(page.getByRole('article', { name: 'e2e-mine' })).toBeVisible();
+
+  const stranger = await anotherPerson(browser);
+  await ownerOfNewOrganization(stranger, 'cleo');
+  await stranger.goto('/me/mcp');
+  await expect(stranger.getByText('You have not declared any MCP server of your own.')).toBeVisible();
+  await expect(stranger.getByText('e2e-mine')).toHaveCount(0);
+  expect((await callFromPage(stranger, 'GET', '/api/v1/me/mcp/servers', undefined, org)).status).toBe(404);
+});

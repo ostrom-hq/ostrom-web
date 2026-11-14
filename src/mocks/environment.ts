@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  handleCreateMyEnvironmentVariant,
+  handleDeleteMyEnvironmentVariant,
+  handleGetEnvironment,
+  handleListMyEnvironmentVariants,
+  handleUpdateMyEnvironmentVariant,
   handleAssignEnvironmentVariant,
   handleBulkAssignEnvironmentVariant,
   handleCreateEnvironmentVariant,
@@ -24,6 +29,8 @@ export interface EnvironmentState {
   environmentAssignments: EnvironmentAssignment[];
   environmentExclusions: EnvironmentExclusion[];
   nextEnvironmentVariant: number;
+  /** Variables assigned to the demo person whose value the server cannot read now: withheld, by name. */
+  environmentUnavailable: string[];
 }
 
 export interface EnvironmentDeps {
@@ -36,7 +43,12 @@ export interface EnvironmentDeps {
   /** The sign-in is more than five minutes old: a write is refused with `step_up_required`. */
   readonly stale: () => boolean;
   readonly now: () => Date;
+  /** The demo person's member id in the demo organization. */
+  readonly me: () => string;
 }
+
+/** At most 20 personal variants per member. */
+const PERSONAL_LIMIT = 20;
 
 const VARIABLE = /^[A-Z_][A-Z0-9_]{0,127}$/;
 /** A part of the server's reserved list (the contract gives it whole): enough for the demo to refuse one. */
@@ -95,7 +107,117 @@ export function createEnvironmentHandlers(
         ? state().environmentVariants.filter((variant) => (variant.owner !== undefined) === personal)
         : [],
     });
+  const mine = (request: Request, id: string): EnvironmentVariant | undefined => {
+    const variant = find(request, id);
+    return variant?.owner === deps.me() ? variant : undefined;
+  };
+  const stale = (): ReturnType<typeof refusal> | undefined =>
+    deps.stale()
+      ? refusal(403, 'step_up_required', 'Sign in again: your sign-in is more than five minutes old.')
+      : undefined;
   return [
+    handleGetEnvironment(({ request }) => {
+      if (!deps.inDemoOrg(request)) return HttpResponse.json({ variables: {}, unavailable: [] });
+      const db = state();
+      const withheld = new Set(db.environmentUnavailable);
+      const variables = Object.fromEntries(
+        db.environmentAssignments
+          .filter((item) => item.member === deps.me() && !withheld.has(item.variable))
+          .map((item) => [item.variable, `demo-value-of-${item.variantId}`]),
+      );
+      return HttpResponse.json(
+        { variables, unavailable: db.environmentUnavailable },
+        { headers: { 'Cache-Control': 'no-store' } },
+      );
+    }),
+    handleListMyEnvironmentVariants(({ request }) =>
+      HttpResponse.json({
+        items: deps.inDemoOrg(request)
+          ? state().environmentVariants.filter((variant) => variant.owner === deps.me())
+          : [],
+      }),
+    ),
+    handleCreateMyEnvironmentVariant(async ({ request }) => {
+      const refused = stale();
+      if (refused !== undefined) return refused;
+      const body = zEnvironmentVariantCreate.safeParse(await readJson(request));
+      if (
+        !body.success ||
+        !VARIABLE.test(body.data.variable) ||
+        body.data.name.trim() === '' ||
+        (body.data.binding ?? 'shared') !== 'shared' ||
+        (body.data.value ?? '') === ''
+      )
+        return refusal(400, 'invalid_environment_variant', 'A variable, a name and a value are needed.');
+      if (reservedVariable(body.data.variable))
+        return refusal(400, 'invalid_environment_variant', `${body.data.variable} is reserved.`);
+      if (!deps.inDemoOrg(request))
+        return refusal(403, 'forbidden', 'The demo keeps variants for its own organization only.');
+      const db = state();
+      const me = deps.me();
+      if (excluded(me, body.data.variable))
+        return refusal(409, 'variant_excluded', 'An administrator excluded you from this variable.');
+      if (
+        db.environmentAssignments.some((item) => item.member === me && item.variable === body.data.variable)
+      )
+        return refusal(409, 'slot_taken', 'You already receive this variable.');
+      if (db.environmentVariants.filter((variant) => variant.owner === me).length >= PERSONAL_LIMIT)
+        return refusal(409, 'variant_limit', 'At most 20 personal variants.');
+      const at = deps.now().toISOString();
+      const variant: EnvironmentVariant = {
+        id: `env-${String(db.nextEnvironmentVariant)}`,
+        variable: body.data.variable,
+        name: body.data.name.trim(),
+        binding: 'shared',
+        owner: me,
+        hasValue: true,
+        version: 1,
+        createdAt: at,
+        updatedAt: at,
+      };
+      db.nextEnvironmentVariant += 1;
+      db.environmentVariants = [...db.environmentVariants, variant];
+      select({
+        member: me,
+        variable: variant.variable,
+        variantId: variant.id,
+        variantName: variant.name,
+        version: 1,
+        source: 'direct',
+        personal: true,
+        hasMemberValue: false,
+        assignedAt: at,
+      });
+      return HttpResponse.json(variant, { status: 201 });
+    }),
+    handleUpdateMyEnvironmentVariant(async ({ request, params }) => {
+      const refused = stale();
+      if (refused !== undefined) return refused;
+      const variant = mine(request, params.id);
+      if (variant === undefined) return notFound();
+      const body = zEnvironmentVariantUpdate.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_environment_variant', 'expectedVersion is needed.');
+      if (body.data.expectedVersion !== variant.version)
+        return refusal(409, 'variant_version_conflict', 'This variant changed since you read it: reload it.');
+      const next: EnvironmentVariant = {
+        ...variant,
+        name: body.data.name ?? variant.name,
+        version: variant.version + 1,
+        updatedAt: deps.now().toISOString(),
+      };
+      const db = state();
+      db.environmentVariants = db.environmentVariants.map((item) => (item.id === variant.id ? next : item));
+      return HttpResponse.json(next);
+    }),
+    handleDeleteMyEnvironmentVariant(({ request, params }) => {
+      const refused = stale();
+      if (refused !== undefined) return refused;
+      if (mine(request, params.id) === undefined) return notFound();
+      const db = state();
+      db.environmentVariants = db.environmentVariants.filter((item) => item.id !== params.id);
+      db.environmentAssignments = db.environmentAssignments.filter((item) => item.variantId !== params.id);
+      return new HttpResponse(null, { status: 204 });
+    }),
     handleListEnvironmentVariants(({ request }) => guard(request, false) ?? page(request, false)),
     handleListPersonalEnvironmentVariants(({ request }) => guard(request, false) ?? page(request, true)),
     handleCreateEnvironmentVariant(async ({ request }) => {

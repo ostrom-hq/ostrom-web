@@ -253,6 +253,18 @@ const environmentRoute = createRoute({
   path: '/environment',
   component: lazyRouteComponent(async () => import('@/features/environment'), 'EnvironmentScreen'),
 });
+/** What the person's agents receive, by name, and their own environment values. */
+const myEnvironmentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/me/environment',
+  component: lazyRouteComponent(async () => import('@/features/environment'), 'MyEnvironmentScreen'),
+});
+/** The person's own MCP servers (`mcp.personal.v1`). */
+const myMcpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/me/mcp',
+  component: lazyRouteComponent(async () => import('@/features/tools'), 'PersonalMcpScreen'),
+});
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/import',
@@ -482,6 +494,8 @@ export const routeTree = rootRoute.addChildren([
   policyRoute,
   secretsRoute,
   environmentRoute,
+  myEnvironmentRoute,
+  myMcpRoute,
   skillsRoute,
   skillRoute,
   hooksRoute,

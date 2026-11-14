@@ -220,6 +220,7 @@ import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess'
 import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
 import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
 import { createEnvironmentHandlers, type EnvironmentState } from '@/mocks/environment';
+import { createPersonalMcpHandlers, type PersonalMcpState } from '@/mocks/personalMcp';
 import {
   initialEnvironmentAssignments,
   initialEnvironmentExclusions,
@@ -252,6 +253,7 @@ export interface MockDb
     DeliveryState,
     DeviceState,
     EnvironmentState,
+    PersonalMcpState,
     GithubState,
     GroupsState,
     OrgsState,
@@ -375,6 +377,18 @@ export function createMockDb(): MockDb {
     environmentAssignments: initialEnvironmentAssignments(),
     environmentExclusions: initialEnvironmentExclusions(),
     nextEnvironmentVariant: 6,
+    environmentUnavailable: [],
+    myMcpServers: [
+      {
+        name: 'maya-notes',
+        url: 'https://notes.maya.dev/mcp',
+        transport: 'http',
+        enabled: true,
+        scope: 'per-member',
+        secretNames: [],
+        owner: MEMBER_IDS.maya,
+      },
+    ],
     mcpAssignments: initialMcpAssignments(),
     mcpPolicies: initialMcpPolicies(),
     mcpPrefixes: {},
@@ -1172,6 +1186,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       memberIds: () => db.members.filter((member) => member.role !== 'invited').map((member) => member.id),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       now,
+      me: () => MEMBER_IDS.maya,
+    }),
+    ...createPersonalMcpHandlers(() => db, {
+      inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
+      stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
+      me: () => MEMBER_IDS.maya,
     }),
     ...createMcpHostedHandlers(
       () => db,
