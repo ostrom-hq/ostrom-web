@@ -225,6 +225,23 @@ export const zApproversGraph = z.object({
 });
 
 /**
+ * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
+ */
+export const zArtifactAccess = z.union([z.enum([
+        'personal',
+        'team',
+        'link'
+    ]), z.string()]);
+
+/**
+ * The launch an agent published from (TeamCode's `cloud_session` origin): the launch of its agent token, and the cloud session it was opened for. A session is only the origin; the artifact belongs to the member the launch runs for
+ */
+export const zArtifactOrigin = z.object({
+    launchId: z.string(),
+    cloudSessionId: z.optional(z.string())
+});
+
+/**
  * A published page or file set, behind the login
  */
 export const zArtifact = z.object({
@@ -241,7 +258,8 @@ export const zArtifact = z.object({
     url: z.string(),
     publicUrl: z.optional(z.string()),
     createdAt: z.string(),
-    updatedAt: z.string()
+    updatedAt: z.string(),
+    origin: z.optional(zArtifactOrigin)
 });
 
 /**
@@ -251,15 +269,6 @@ export const zArtifactPage = z.object({
     items: z.array(zArtifact),
     next: z.optional(z.string())
 });
-
-/**
- * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
- */
-export const zArtifactAccess = z.union([z.enum([
-        'personal',
-        'team',
-        'link'
-    ]), z.string()]);
 
 /**
  * A file of the version to publish: its `content` inline, or, for a commit of an upload, its `sha256` and `size`, sent by that upload (`createArtifactUpload`) or already held by the artifact
@@ -493,7 +502,8 @@ export const zArtifactVersion = z.object({
     createdBy: z.string(),
     digest: z.optional(z.string()),
     baseVersion: z.optional(z.int()),
-    replayed: z.optional(z.boolean())
+    replayed: z.optional(z.boolean()),
+    origin: z.optional(zArtifactOrigin)
 });
 
 /**
@@ -1033,7 +1043,7 @@ export const zBudgetOverride = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1200,6 +1210,32 @@ export const zCloudProfileList = z.object({
     profiles: z.array(zCloudProfile)
 });
 
+/**
+ * The instance's GitHub App, without its private key and secrets (TeamCode's `GitHubAppView`)
+ */
+export const zGitHubAppConfiguration = z.object({
+    configured: z.boolean(),
+    appId: z.nullish(z.int()),
+    slug: z.nullish(z.string()),
+    owner: z.nullish(z.string()),
+    clientId: z.nullish(z.string()),
+    privateKeySet: z.boolean(),
+    clientSecretSet: z.boolean(),
+    webhookSecretSet: z.boolean(),
+    version: z.nullish(z.int()),
+    updatedAt: z.nullish(z.iso.datetime({ offset: true })),
+    callbackUrls: z.array(z.string())
+});
+
+export const zSaveGitHubAppConfigurationRequest = z.object({
+    appId: z.int().check(z.gte(1), z.lte(999999999999)),
+    clientId: z.string().check(z.minLength(4), z.maxLength(64), z.regex(/^Iv[0-9A-Za-z._-]{2,62}$/)),
+    clientSecret: z.nullish(z.string().check(z.minLength(20), z.maxLength(256))),
+    privateKey: z.nullish(z.string().check(z.maxLength(16384))),
+    webhookSecret: z.nullish(z.string().check(z.minLength(1), z.maxLength(256))),
+    version: z.nullish(z.int())
+});
+
 export const zSaveCloudProfileRequest = z.object({
     name: z.string().check(z.minLength(1), z.maxLength(100)),
     version: z.int().check(z.gte(0)),
@@ -1249,6 +1285,14 @@ export const zCloudEnvironment = z.object({
 });
 
 /**
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ */
+export const zCloudSessionProfile = z.object({
+    id: z.uuid(),
+    version: z.int()
+});
+
+/**
  * Why a cloud session failed or paused on its own
  */
 export const zCloudSessionFailure = z.object({
@@ -1289,6 +1333,8 @@ export const zCloudSession = z.object({
     pausedAt: z.optional(z.string()),
     runnerId: z.optional(z.string()),
     environment: z.optional(zCloudEnvironment),
+    profile: z.optional(zCloudSessionProfile),
+    image: z.optional(z.string()),
     githubAccess: z.optional(z.union([z.enum([
             'owner',
             'shared',
@@ -1963,6 +2009,7 @@ export const zCloudCluster = z.object({
     version: z.int(),
     caCertificate: zInstanceSecretState,
     serviceAccountToken: zInstanceSecretState,
+    inCluster: z.optional(z.boolean()),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true })
 });
@@ -3718,6 +3765,24 @@ export const zServiceKey = z.object({
 });
 
 /**
+ * What an agent's hook reports (`reportSessionActivity`): only the state, never the prompt, the message, the tool or a path.
+ */
+export const zSessionActivityRequest = z.object({
+    state: z.union([z.enum(['working', 'waiting_for_human']), z.string()]),
+    observedAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+/**
+ * The segment's activity once a report is applied (`reportSessionActivity`).
+ */
+export const zSessionActivity = z.object({
+    id: z.string(),
+    state: z.optional(z.union([z.enum(['working', 'waiting_for_human']), z.string()])),
+    since: z.optional(z.iso.datetime({ offset: true })),
+    superseded: z.boolean()
+});
+
+/**
  * The answer to a gate a session asked or joined, as the session's thread shows it.
  */
 export const zSessionGateAnswer = z.object({
@@ -3761,7 +3826,17 @@ export const zSession = z.object({
     exitCode: z.optional(z.int()),
     runId: z.optional(z.string()),
     ended: z.optional(z.boolean()),
-    lost: z.optional(z.boolean())
+    lost: z.optional(z.boolean()),
+    activity: z.optional(z.union([z.enum(['working', 'waiting_for_human']), z.string()])),
+    activitySince: z.optional(z.iso.datetime({ offset: true }))
+});
+
+/**
+ * A page of session segments, newest first; `next` is the cursor of the following page
+ */
+export const zSessionPage = z.object({
+    items: z.array(zSession),
+    next: z.optional(z.string())
 });
 
 /**
@@ -4935,6 +5010,14 @@ export const zWorkflowRun = z.object({
 });
 
 /**
+ * A page of workflow runs, newest first; `next` is the cursor of the following page
+ */
+export const zWorkflowRunPage = z.object({
+    items: z.array(zWorkflowRun),
+    next: z.optional(z.string())
+});
+
+/**
  * Whether a session's agent step still waits for its delivery (`pendingWorkflowSession`)
  */
 export const zWorkflowSessionPending = z.object({
@@ -5224,6 +5307,14 @@ export const zAnalysisState = z.object({
     rules: z.array(zRule),
     workflows: z.array(zWorkflow),
     failure: z.optional(z.record(z.string(), z.string()))
+});
+
+/**
+ * The workflows; `next` is the cursor of the following page
+ */
+export const zWorkflowPage = z.object({
+    items: z.array(zWorkflow),
+    next: z.optional(z.string())
 });
 
 /**
@@ -5868,6 +5959,18 @@ export const zGetGithubAppResponse = z.object({
     htmlUrl: z.optional(z.string())
 });
 
+/**
+ * OK
+ */
+export const zGetGithubAppConfigurationResponse = zGitHubAppConfiguration;
+
+export const zSaveGithubAppConfigurationBody = zSaveGitHubAppConfigurationRequest;
+
+/**
+ * OK
+ */
+export const zSaveGithubAppConfigurationResponse = zGitHubAppConfiguration;
+
 export const zStartGithubAppManifestQuery = z.object({
     owner: z.optional(z.string())
 });
@@ -6339,10 +6442,7 @@ export const zListSessionsQuery = z.object({
 /**
  * OK
  */
-export const zListSessionsResponse = z.object({
-    items: z.array(zSession),
-    next: z.optional(z.string())
-});
+export const zListSessionsResponse = zSessionPage;
 
 export const zStartSessionBody = zStartSessionRequest;
 
@@ -6416,6 +6516,21 @@ export const zReopenSessionPath = z.object({
  * OK
  */
 export const zReopenSessionResponse = zSessionResponse;
+
+export const zReportSessionActivityBody = zSessionActivityRequest;
+
+export const zReportSessionActivityHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zReportSessionActivityPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zReportSessionActivityResponse = zSessionActivity;
 
 export const zSignWorkflowReceiptBody = z.object({
     digest: z.string(),
@@ -7127,10 +7242,7 @@ export const zListWorkflowsQuery = z.object({
 /**
  * OK
  */
-export const zListWorkflowsResponse = z.object({
-    items: z.array(zWorkflow),
-    next: z.optional(z.string())
-});
+export const zListWorkflowsResponse = zWorkflowPage;
 
 export const zCreateWorkflowBody = zWorkflow;
 
@@ -7203,10 +7315,7 @@ export const zListWorkflowRunsQuery = z.object({
 /**
  * OK
  */
-export const zListWorkflowRunsResponse = z.object({
-    items: z.array(zWorkflowRun),
-    next: z.optional(z.string())
-});
+export const zListWorkflowRunsResponse = zWorkflowRunPage;
 
 export const zStartWorkflowRunBody = z.object({
     inputs: z.optional(z.record(z.string(), z.string())),
@@ -7241,10 +7350,7 @@ export const zListRunsQuery = z.object({
 /**
  * OK
  */
-export const zListRunsResponse = z.object({
-    items: z.array(zWorkflowRun),
-    next: z.optional(z.string())
-});
+export const zListRunsResponse = zWorkflowRunPage;
 
 export const zGetRunHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -9167,7 +9273,9 @@ export const zCreateCloudSessionBody = z.object({
     ref: z.optional(z.string()),
     prompt: z.optional(z.string()),
     name: z.optional(z.string()),
-    environment: z.optional(zCloudEnvironment)
+    environment: z.optional(zCloudEnvironment),
+    profileId: z.optional(z.uuid()),
+    image: z.optional(z.string())
 });
 
 export const zCreateCloudSessionHeaders = z.object({

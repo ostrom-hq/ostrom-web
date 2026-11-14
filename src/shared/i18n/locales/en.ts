@@ -387,6 +387,7 @@ export const en = {
       emptyTitle: 'No agent is working right now',
       emptyBody: 'A session shows up here as soon as someone starts an agent with ostrom.',
     },
+    activity: { working: 'Working', waiting: 'Waiting for a person' },
     state: { live: 'Live', quiet: 'Quiet', ended: 'Ended' },
     todo: {
       title: 'Todo',

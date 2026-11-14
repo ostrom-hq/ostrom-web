@@ -8,6 +8,7 @@ import { formatAbsolute, formatDuration } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';
 import { type Fact, Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
+import { ActivityBadge } from '../components/ActivityBadge';
 import { StateBadge } from '../components/StateBadge';
 import { TodoPill } from '../components/TodoPill';
 import { TodoView } from '../components/TodoView';
@@ -33,6 +34,7 @@ export function SessionScreen(): ReactElement {
                 {t('sessions.detail.back')}
               </Link>
               <StateBadge state={sessionState(found, now)} />
+              <ActivityBadge session={found} now={now} />
               {todo === undefined ? null : (
                 <TodoPill
                   todo={todo}
