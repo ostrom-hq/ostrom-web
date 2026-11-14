@@ -55,6 +55,7 @@ describe('the mock personal MCP servers', () => {
 
   it('saves and deletes the person’s own only, after a fresh sign-in', async () => {
     expect((await call('PUT', '/nope', SERVER)).status).toBe(404);
+    expect((await call('PUT', '/maya-notes', SERVER)).status).toBe(400);
     expect((await call('PUT', '/maya-notes', { ...SERVER, name: 'maya-notes', enabled: false })).status).toBe(
       200,
     );

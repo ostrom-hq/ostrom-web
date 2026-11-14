@@ -46,14 +46,15 @@ export function createPersonalMcpHandlers(
     if (!deps.inDemoOrg(request))
       return { refused: refusal(403, 'forbidden', 'The demo keeps servers for its own organization only.') };
     const body = zMcpServerWritable.safeParse(await readJson(request));
-    if (!body.success || !NAME.test(body.data.name) || !(body.data.url ?? '').startsWith('https://'))
+    const url = body.success ? (body.data.url ?? '') : '';
+    if (!body.success || !NAME.test(body.data.name) || !url.startsWith('https://'))
       return { refused: refusal(400, 'invalid_request', 'A name and an https URL are needed.') };
     if (body.data.transport === 'stdio')
       return { refused: refusal(403, 'hosted_not_allowed', 'Hosted commands are an administrator’s.') };
     // The server sets the owner and keeps every tool: a value sent is ignored.
     const server: McpServer = {
       name: body.data.name,
-      url: body.data.url ?? '',
+      url,
       transport: body.data.transport,
       enabled: body.data.enabled,
       scope: 'per-member',
@@ -85,6 +86,8 @@ export function createPersonalMcpHandlers(
       const db = state();
       if (!db.myMcpServers.some((server) => server.name === params.name))
         return refusal(404, 'not_found', 'MCP server not found');
+      if (checked.server.name !== params.name)
+        return refusal(400, 'invalid_request', 'A server keeps its name: create another one.');
       db.myMcpServers = db.myMcpServers.map((server) =>
         server.name === params.name ? checked.server : server,
       );

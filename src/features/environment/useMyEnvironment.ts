@@ -44,7 +44,14 @@ export interface MyEnvironmentViewModel {
 }
 
 export function useMyEnvironment(): MyEnvironmentViewModel {
-  const received = useQuery({ queryKey: RECEIVED_KEY, queryFn: receivedNames, retry: false });
+  // What the agents receive changes with an administrator's gestures: read again each time the page opens.
+  const received = useQuery({
+    queryKey: RECEIVED_KEY,
+    queryFn: receivedNames,
+    retry: false,
+    staleTime: 0,
+    refetchOnMount: 'always',
+  });
   const variants = useQuery(ready(listMyEnvironmentVariantsOptions()));
   return {
     received: received.data,
