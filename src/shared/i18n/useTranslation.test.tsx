@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { act, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { i18n } from '@/shared/i18n/i18n';
