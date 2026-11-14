@@ -22,6 +22,8 @@ export interface VariantRowProps {
   readonly remove: () => void;
   /** Absent for a per-member variant: it cannot be assigned in bulk. */
   readonly bulkAssign: (() => void) | undefined;
+  /** A person's own variant: always theirs alone, so its binding is not said. */
+  readonly own?: boolean;
 }
 
 /** A team variant: its variable, name, version and binding, never its value; edit, delete, assign to everyone. */
@@ -32,6 +34,7 @@ export function VariantRow({
   update,
   remove,
   bulkAssign,
+  own = false,
 }: VariantRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -51,9 +54,11 @@ export function VariantRow({
         <span className="o-inline">
           <span className="o-row__title o-mono">{variant.variable}</span>
           <span>{variant.name}</span>
-          <Badge tone={shared ? 'signal' : 'neutral'}>
-            {t(`environment.binding.${bindingOf(variant.binding)}.short`)}
-          </Badge>
+          {own ? null : (
+            <Badge tone={shared ? 'signal' : 'neutral'}>
+              {t(`environment.binding.${bindingOf(variant.binding)}.short`)}
+            </Badge>
+          )}
         </span>
         <span className="o-row__meta">
           {[

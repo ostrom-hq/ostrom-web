@@ -57,6 +57,10 @@ describe('the navigation menu (a phone has no room for the bar)', () => {
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/sessions');
     });
+    // The test ends once the navigation is over: a transition left running outlives jsdom.
+    await waitFor(() => {
+      expect(router.state.status).toBe('idle');
+    });
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

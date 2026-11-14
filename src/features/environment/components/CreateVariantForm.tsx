@@ -11,10 +11,16 @@ import { type Binding, BINDINGS, checkVariant, VALUE_MAX, VARIANT_NAME_MAX } fro
 export interface CreateVariantFormProps {
   readonly create: (body: EnvironmentVariantCreate, onDone: () => void) => void;
   readonly pending: boolean;
+  /** The person's own form: one value, theirs, so no choice of who provides it. */
+  readonly personal?: boolean;
 }
 
 /** A variant for one variable: one value for everyone assigned, or each member's own given at assignment. */
-export function CreateVariantForm({ create, pending }: CreateVariantFormProps): ReactElement {
+export function CreateVariantForm({
+  create,
+  pending,
+  personal = false,
+}: CreateVariantFormProps): ReactElement {
   const { t } = useTranslation();
   const [variable, setVariable] = useState('');
   const [name, setName] = useState('');
@@ -28,7 +34,7 @@ export function CreateVariantForm({ create, pending }: CreateVariantFormProps): 
   const body = 'body' in checked ? checked.body : undefined;
   const typedVariable = variable.trim();
   return (
-    <Section label={t('environment.create.title')}>
+    <Section label={t(personal ? 'environment.mine.create' : 'environment.create.title')}>
       <form
         className="o-stack"
         noValidate
@@ -62,32 +68,34 @@ export function CreateVariantForm({ create, pending }: CreateVariantFormProps): 
           value={name}
           onChange={setName}
         />
-        <fieldset className="env-choices">
-          <legend className="o-field-label">{t('environment.create.binding')}</legend>
-          {BINDINGS.map((option) => (
-            <div key={option} className="env-choice">
-              <input
-                id={`${bindingName}-${option}`}
-                type="radio"
-                name={bindingName}
-                value={option}
-                checked={binding === option}
-                aria-describedby={`${bindingName}-${option}-hint`}
-                onChange={() => {
-                  setBinding(option);
-                }}
-              />
-              <span>
-                <label htmlFor={`${bindingName}-${option}`} className="env-choice__title">
-                  {t(`environment.binding.${option}.title`)}
-                </label>
-                <span id={`${bindingName}-${option}-hint`} className="o-row__meta">
-                  {t(`environment.binding.${option}.hint`)}
+        {personal ? null : (
+          <fieldset className="env-choices">
+            <legend className="o-field-label">{t('environment.create.binding')}</legend>
+            {BINDINGS.map((option) => (
+              <div key={option} className="env-choice">
+                <input
+                  id={`${bindingName}-${option}`}
+                  type="radio"
+                  name={bindingName}
+                  value={option}
+                  checked={binding === option}
+                  aria-describedby={`${bindingName}-${option}-hint`}
+                  onChange={() => {
+                    setBinding(option);
+                  }}
+                />
+                <span>
+                  <label htmlFor={`${bindingName}-${option}`} className="env-choice__title">
+                    {t(`environment.binding.${option}.title`)}
+                  </label>
+                  <span id={`${bindingName}-${option}-hint`} className="o-row__meta">
+                    {t(`environment.binding.${option}.hint`)}
+                  </span>
                 </span>
-              </span>
-            </div>
-          ))}
-        </fieldset>
+              </div>
+            ))}
+          </fieldset>
+        )}
         {draft.binding === 'shared' ? (
           <Field
             label={t('environment.create.value')}

@@ -58,6 +58,8 @@ export const en = {
       policy: 'Agent policy',
       admin: 'Admin',
       environment: 'Environment variables',
+      myEnvironment: 'My environment',
+      myMcp: 'My MCP servers',
       cloudAdmin: 'Cloud administration',
     },
     server: {
@@ -1034,6 +1036,11 @@ export const en = {
     },
   },
   tools: {
+    mine: {
+      title: 'My MCP servers',
+      lead: 'Remote MCP servers you declared for yourself: Ostrom relays them to your agents alone, until an administrator promotes one to the team.',
+      empty: 'You have not declared any MCP server of your own.',
+    },
     errorTag: 'Not saved',
     scope: 'Scope {{scope}}',
     remove: { ask: 'Remove', confirm: 'Remove {{what}}', keep: 'Keep' },
@@ -1318,6 +1325,24 @@ export const en = {
       empty: 'No member declared a personal variant.',
       promote: 'Promote to the team',
       promoteConfirm: 'Make {{what}} a team variant',
+    },
+    mine: {
+      title: 'My environment',
+      lead: 'The environment variables your agents receive in ostrom run and in your cloud sessions, and the values you declared for yourself.',
+      create: 'Add a value of your own',
+      received: {
+        title: 'What your agents receive',
+        empty: 'Nothing is assigned to you yet.',
+        unavailableTag: 'Withheld',
+        unavailable:
+          'Assigned but withheld, because its value cannot be read now: {{list}}. Ask an administrator.',
+        hint: 'Names only: the values go to your agents, never to this page.',
+      },
+      own: {
+        title: 'Your own values',
+        lead: 'Assigned to you alone. If an administrator assigns you a team variant for the same variable, or excludes you from it, your own value stays unassigned until you delete it.',
+        empty: 'You have not declared any value of your own.',
+      },
     },
     personal: {
       owner: 'by {{who}}',

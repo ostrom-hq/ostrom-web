@@ -62,6 +62,8 @@ export const fr = {
       policy: 'Politique des agents',
       admin: 'Admin',
       environment: 'Variables d’environnement',
+      myEnvironment: 'Mon environnement',
+      myMcp: 'Mes serveurs MCP',
       cloudAdmin: 'Administration du cloud',
     },
     server: {
@@ -1060,6 +1062,11 @@ export const fr = {
     },
   },
   tools: {
+    mine: {
+      title: 'Mes serveurs MCP',
+      lead: 'Les serveurs MCP distants que vous avez déclarés pour vous-même : Ostrom les relaie à vos seuls agents, jusqu’à ce qu’un administrateur en promeuve un à l’équipe.',
+      empty: 'Vous n’avez déclaré aucun serveur MCP à vous.',
+    },
     errorTag: 'Non enregistré',
     scope: 'Portée {{scope}}',
     remove: { ask: 'Retirer', confirm: 'Retirer {{what}}', keep: 'Garder' },
@@ -1349,6 +1356,24 @@ export const fr = {
       empty: 'Aucun membre n’a déclaré de variante personnelle.',
       promote: 'Promouvoir à l’équipe',
       promoteConfirm: 'Faire de {{what}} une variante de l’équipe',
+    },
+    mine: {
+      title: 'Mon environnement',
+      lead: 'Les variables d’environnement que reçoivent vos agents dans ostrom run et dans vos sessions cloud, et les valeurs que vous avez déclarées pour vous-même.',
+      create: 'Ajouter une valeur à vous',
+      received: {
+        title: 'Ce que reçoivent vos agents',
+        empty: 'Rien ne vous est attribué pour l’instant.',
+        unavailableTag: 'Retenue',
+        unavailable:
+          'Attribuées mais retenues, car leur valeur ne peut pas être lue maintenant : {{list}}. Demandez à un administrateur.',
+        hint: 'Les noms seulement : les valeurs vont à vos agents, jamais à cette page.',
+      },
+      own: {
+        title: 'Vos propres valeurs',
+        lead: 'Attribuées à vous seul. Si un administrateur vous attribue une variante de l’équipe pour la même variable, ou vous en exclut, votre valeur reste non attribuée jusqu’à ce que vous la supprimiez.',
+        empty: 'Vous n’avez déclaré aucune valeur à vous.',
+      },
     },
     personal: {
       owner: 'de {{who}}',

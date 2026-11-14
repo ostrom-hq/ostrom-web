@@ -30,6 +30,8 @@ const SCREENS = [
   '/mcp',
   '/secrets',
   '/environment',
+  '/me/environment',
+  '/me/mcp',
   '/skills',
   '/hooks',
   '/import',
