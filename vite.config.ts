@@ -405,9 +405,9 @@ export default defineConfig({
               test: /[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?zod[\\/]|[\\/]src[\\/]shared[\\/]lib[\\/]zodConfig\.ts$/,
             },
             // Everything the entry loads anyway in one chunk (react, the router, i18n, the API client), and the parts
-            // the screens share (src/shared/build/bootChunk.ts): on a slow link, fifteen small files share the
-            // bandwidth and each waits its turn, where one comes in a single response. What a lazy screen alone uses
-            // stays in its own chunk.
+            // the screens share in one more, beside it (src/shared/build/bootChunk.ts): on a slow link, fifteen small
+            // files share the bandwidth and each waits its turn, where one comes in a single response. What a lazy
+            // screen alone uses stays in its own chunk.
             {
               name: (id, graph) =>
                 bootChunkOf(id, graph, initialModules, (module) => module.startsWith(GENERATED_PART)),
