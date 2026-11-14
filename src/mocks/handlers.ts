@@ -103,6 +103,7 @@ import type {
   Spending,
   Team,
   Workflow,
+  WorkflowEditors,
   WorkflowRun,
 } from '@gen/api/types.gen';
 import {
@@ -235,6 +236,7 @@ import {
 } from '@/mocks/admin';
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createRunHandlers } from '@/mocks/runs';
+import { createWorkflowSettingsHandlers } from '@/mocks/workflowSettings';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
 import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/teamcodeImport';
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
@@ -290,6 +292,8 @@ export interface MockDb
   workflows: Workflow[];
   /** The organization's workflow runs, newest first. */
   workflowRuns: WorkflowRun[];
+  /** Who decides a workflow that has no gate node; the server's default is the administrators. */
+  workflowEditors: WorkflowEditors;
   /**
    * `never` (the server's default since core#66 and server#159, S2-15): the asker never approves their own request;
    * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
@@ -367,6 +371,7 @@ export function createMockDb(): MockDb {
     teams: initialTeams(),
     workflows: initialWorkflows(),
     workflowRuns: initialWorkflowRuns(),
+    workflowEditors: { mode: 'admins' },
     selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
@@ -1603,6 +1608,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       () => DEMO_LOGIN,
       now,
+    ),
+    ...createWorkflowSettingsHandlers(
+      () => db,
+      (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
     ),
     handleListWorkflows(({ request }) => {
       const status = new URL(request.url).searchParams.get('status');

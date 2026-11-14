@@ -137,3 +137,22 @@ export function toggleServiceKeyScope(scopes: readonly string[], scope: string, 
   else next.delete(scope);
   return SERVICE_KEY_SCOPES.map((item) => item.scope).filter((item) => next.has(item));
 }
+
+/** Who may accept, edit and delete workflows (`WorkflowEditors.mode`): everyone, the admins (the default), or a list. */
+export const WORKFLOW_EDITOR_MODES = ['all', 'admins', 'members'] as const;
+export type WorkflowEditorMode = (typeof WORKFLOW_EDITOR_MODES)[number];
+
+/** A mode the server sent, or `admins` (its default) for one this console does not know. */
+export function workflowEditorModeOf(mode: string): WorkflowEditorMode {
+  return WORKFLOW_EDITOR_MODES.find((known) => known === mode) ?? 'admins';
+}
+
+/** `members` with nobody chosen would let no member decide: the console asks for at least one before sending it. */
+export function workflowEditorsProblem(mode: WorkflowEditorMode, memberIds: readonly string[]): boolean {
+  return mode === 'members' && memberIds.length === 0;
+}
+
+/** A member added to, or removed from, the chosen ones. */
+export function toggleMember(chosen: readonly string[], id: string): string[] {
+  return chosen.includes(id) ? chosen.filter((one) => one !== id) : [...chosen, id];
+}

@@ -10,6 +10,7 @@ import { AboutSection } from '../components/AboutSection';
 import { DangerZone } from '../components/DangerZone';
 import { DevicesSection } from '../components/DevicesSection';
 import { GeneralSection } from '../components/GeneralSection';
+import { WorkflowEditorsSection } from '../components/WorkflowEditorsSection';
 import { SecuritySection } from '../components/SecuritySection';
 import { ServiceKeysSection } from '../components/ServiceKeysSection';
 import { useDevices, useServiceKeys } from '../useKeysAndDevices';
@@ -44,6 +45,7 @@ function SettingsPage({
   return (
     <Screen title={t('settings.title')} lead={t('settings.lead', { name: org.name })}>
       <GeneralSection org={org} canRename={manages} rename={rename} />
+      <WorkflowEditorsSection orgId={org.id} manages={manages} />
       <SecuritySection view={sessions} actions={sessionActions} back="/settings" />
       <DevicesSection view={devices} />
       <ServiceKeysSection orgName={org.name} manages={manages} view={serviceKeys} />

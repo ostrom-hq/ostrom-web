@@ -2592,6 +2592,27 @@ export const fr = {
       keep: 'Garder',
       errorTag: 'Non fait',
     },
+    workflowEditors: {
+      title: 'Qui décide des workflows',
+      lead: 'Qui accepte, modifie, rejette et supprime les workflows de cette organisation. Tout le monde les lit.',
+      mode: {
+        all: 'Tous les membres',
+        admins: 'Les propriétaires et les admins',
+        members: 'Des membres choisis, et les propriétaires et les admins',
+      },
+      members: 'Membres choisis',
+      loadingMembers: 'Lecture des membres…',
+      moreMembers: 'Plus de membres',
+      noMember: 'Choisis au moins un membre, ou une autre règle.',
+      gates:
+        'Un workflow avec une étape d’approbation reste la décision d’un propriétaire ou d’un admin, quoi que dise ceci.',
+      readOnly: 'Les propriétaires et les admins changent ceci.',
+      save: 'Enregistrer',
+      saving: 'Enregistrement…',
+      saved: 'Enregistré.',
+      savedTag: 'Fait',
+      errorTag: 'Non enregistré',
+    },
     serviceKeys: {
       title: 'Clés de service',
       lead: 'Pour la CI de {{name}} : une clé agit pour l’organisation, pas pour une personne, et chaque usage est tracé.',
