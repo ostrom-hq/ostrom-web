@@ -33,8 +33,9 @@ export function useCurrentOrgMembers({ all = false }: CurrentOrgMembersOptions =
     staleTime: 60_000,
     retry: false,
   });
-  const { more, loadingMore, moreFailed } = people;
-  const following = all && more !== undefined && !loadingMore && !moreFailed;
+  const { more, fetching, moreFailed } = people;
+  // Not while the pages are read again: a next page asked then is the read on its way, and nothing would ask again.
+  const following = all && more !== undefined && !fetching && !moreFailed;
   useEffect(() => {
     if (following) more();
   }, [following, more]);

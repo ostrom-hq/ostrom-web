@@ -151,4 +151,27 @@ describe('the members of the organization a screen acts in', () => {
     expect(asked).toHaveLength(4);
     expect(new Set(asked).size).toBe(4);
   });
+
+  it('go on to the next pages once the pages read before are read again', async () => {
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...moreMembers()];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const shared = ({ children }: { readonly children: ReactNode }): ReactElement => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    // A screen read the first page only; it is out of date when a screen reading every page opens.
+    const first = renderHook(() => useCurrentOrgMembers(), { wrapper: shared });
+    await waitFor(() => {
+      expect(first.result.current.members).toHaveLength(100);
+    });
+    first.unmount();
+    await client.invalidateQueries();
+    const { result } = renderHook(() => useCurrentOrgMembers({ all: true }), { wrapper: shared });
+    await waitFor(
+      () => {
+        expect(result.current.complete).toBe(true);
+      },
+      { timeout: 10_000 },
+    );
+    expect(result.current.members?.length).toBe(db.orgMembers[db.organization.id]?.length);
+  });
 });
