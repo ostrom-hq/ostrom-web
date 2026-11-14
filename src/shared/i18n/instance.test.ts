@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { createI18n } from '@/shared/i18n/instance';
 import { en } from '@/shared/i18n/locales/en';
 import { fr } from '@/shared/i18n/locales/fr';
