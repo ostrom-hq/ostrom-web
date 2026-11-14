@@ -47,7 +47,7 @@ export interface CloudSettingsViewModel {
   readonly failure: Error | undefined;
   readonly canEdit: boolean;
   readonly reload: () => Promise<void>;
-  readonly save: (settings: { readonly minutes: number; readonly automations: number }) => void;
+  readonly save: (settings: { readonly minutes: number; readonly automations?: number }) => void;
   readonly write: Saving;
 }
 
@@ -65,11 +65,11 @@ export function useCloudSettings(): CloudSettingsViewModel {
   const { mutate, reset } = mutation;
   const updatedAt = query.data?.updatedAt;
   const save = useCallback(
-    ({ minutes, automations }: { readonly minutes: number; readonly automations: number }) => {
+    ({ minutes, automations }: { readonly minutes: number; readonly automations?: number }) => {
       mutate({
         body: {
           backgroundWorkMaxMinutes: minutes,
-          maxRunningAutomationsPerMember: automations,
+          ...(automations === undefined ? {} : { maxRunningAutomationsPerMember: automations }),
           ...(updatedAt === undefined ? {} : { updatedAt }),
         },
       });
@@ -242,13 +242,13 @@ export function useAssignableMembers(
   org: string,
 ): readonly { readonly id: string; readonly label: string }[] {
   const people = useOrgMembers(org);
-  const { more, loadingMore } = people;
+  const { more, loadingMore, error: failed } = people;
   const read = people.members?.length;
   // A profile can be given to anyone: read every page, a hundred at a time, rather than the first only.
   useEffect(() => {
-    if (more !== undefined && !loadingMore) more();
+    if (more !== undefined && !loadingMore && failed === null) more();
     // `read` is a dependency so that each page read asks for the next.
-  }, [more, loadingMore, read]);
+  }, [more, loadingMore, read, failed]);
   return (people.members ?? []).map((member) => ({
     id: member.id,
     label: member.name === '' ? member.login : `${member.name} (${member.login})`,

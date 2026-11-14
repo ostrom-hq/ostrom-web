@@ -50,10 +50,12 @@ function SettingsForm({
   const parsed = minutesOf(typed);
   const parsedAutomations = automationsOf(typedAutomations);
   const { write } = view;
+  // A cap left as it was read is not checked: the server's own value is not the person's to fix.
+  const automationsChanged = typedAutomations !== String(automations);
   const problem =
     parsed === undefined
       ? t('cloudAdmin.settings.background')
-      : parsedAutomations === undefined
+      : parsedAutomations === undefined && automationsChanged
         ? t('cloudAdmin.settings.automations')
         : undefined;
   return (
@@ -62,8 +64,14 @@ function SettingsForm({
       onSubmit={(event) => {
         event.preventDefault();
         setTouched(true);
-        if (parsed === undefined || parsedAutomations === undefined) return;
-        view.save({ minutes: parsed, automations: parsedAutomations });
+        if (parsed === undefined || (parsedAutomations === undefined && automationsChanged)) return;
+        // The cap goes only when it was changed: absent keeps what is stored, so another admin's cap is not undone.
+        view.save({
+          minutes: parsed,
+          ...(automationsChanged && parsedAutomations !== undefined
+            ? { automations: parsedAutomations }
+            : {}),
+        });
       }}
     >
       <Field
@@ -97,7 +105,6 @@ function SettingsForm({
             type="submit"
             disabled={
               write.saving ||
-              problem !== undefined ||
               (updatedAt !== undefined && parsed === minutes && parsedAutomations === automations)
             }
           >

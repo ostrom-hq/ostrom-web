@@ -187,7 +187,7 @@ function ProfileForm({
         shown={touched}
       />
       <div className="o-inline">
-        <Button type="submit" disabled={write.saving || problem !== undefined}>
+        <Button type="submit" disabled={write.saving}>
           {write.saving ? t('cloudAdmin.saving') : t('cloudAdmin.save')}
         </Button>
         <Button variant="ghost" onClick={onDone}>
