@@ -67,13 +67,10 @@ const POLLS: Readonly<Partial<Record<(typeof screens)[number], Readonly<Record<s
 };
 /**
  * Questions read a second time for a cause outside the console, with it; shown apart, once a load at most (any more
- * count), and removed with their cause. The policy reads its members' names by `GET /api/v1/members`, still `planned`
- * in the contract, which the server answers 404; a 404 in the organization reads the person's list again
- * (shared/api/apiClient.ts). To be served by the server: SRV-ORG.
+ * count), and removed with their cause. None now: the policy's members, read from `GET /api/v1/members` (answered 404,
+ * which read the person's organizations again), come from the served `GET /orgs/{org}/members` since #172.
  */
-const KNOWN: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {
-  '/policy': ['GET /api/v1/me/organizations'],
-};
+const KNOWN: Readonly<Partial<Record<(typeof screens)[number], readonly string[]>>> = {};
 
 interface Call {
   readonly name: string;
