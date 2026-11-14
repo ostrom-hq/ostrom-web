@@ -548,4 +548,23 @@ describe('what the forms say while they work, and the fields that are seldom tou
     fireEvent.submit(minutes);
     expect(db.cloudSettings.backgroundWorkMaxMinutes).toBe(240);
   });
+
+  it('sends nothing from a form that is not valid, even when submitted without the button', async () => {
+    db.instanceAdmin = true;
+    const user = userEvent.setup();
+    visit('/cloud/admin');
+    const profiles = await section('Profiles');
+    await user.click(await within(profiles).findByRole('button', { name: 'Create a profile' }));
+    fireEvent.submit(await screen.findByRole('form', { name: 'Create a profile' }));
+    const clusters = await section('Clusters');
+    await user.click(await within(clusters).findByRole('button', { name: 'Connect a cluster' }));
+    fireEvent.submit(await screen.findByRole('form', { name: 'Connect a cluster' }));
+    const runtime = await section('Runtime of the instance');
+    const sessions = await within(runtime).findByLabelText('Sessions running per member');
+    await user.clear(sessions);
+    fireEvent.submit(sessions);
+    expect(db.cloudProfiles).toHaveLength(1);
+    expect(db.cloudClusters).toHaveLength(1);
+    expect(db.cloudRuntime.maxRunningSessionsPerMember).toBe(3);
+  });
 });
