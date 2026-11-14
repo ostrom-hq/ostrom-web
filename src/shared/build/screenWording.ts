@@ -1,18 +1,56 @@
 // SPDX-License-Identifier: Apache-2.0
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 
+/** Every key path of a section, its segments joined by dots: `title`, `nav.open`, `events.session.started`. */
+function keyPaths(node: unknown, prefix = ''): string[] {
+  if (typeof node !== 'object' || node === null || Array.isArray(node)) return [prefix];
+  return Object.entries(node).flatMap(([key, value]) =>
+    keyPaths(value, prefix === '' ? key : `${prefix}.${key}`),
+  );
+}
+
+/**
+ * Whether the static part of a literal after its section leads into it. A whole literal is a key path of the section or
+ * the stem of a plural or context form (`items` of `items_one`); a literal the code goes on building (`'billing.' +
+ * period`, `` `rules.kind_${kind}` ``) is the start of one.
+ */
+function leadsInto(paths: readonly string[], path: string, built: boolean): boolean {
+  return paths.some((key) =>
+    built ? key.startsWith(path) : key === path || key.startsWith(`${path}.`) || key.startsWith(`${path}_`),
+  );
+}
+
+/** The key paths of each section of a wording, built once per wording: the build reads every chunk against it. */
+const indexes = new WeakMap<object, Map<string, readonly string[]>>();
+
+function indexOf(wording: Readonly<Record<string, unknown>>): Map<string, readonly string[]> {
+  const known = indexes.get(wording);
+  if (known !== undefined) return known;
+  const paths = new Map<string, readonly string[]>();
+  for (const [section, node] of Object.entries(wording))
+    if (!/^[A-Za-z]\w*$/.test(section)) throw new Error(`a section of the wording is not a name: ${section}`);
+    else paths.set(section, keyPaths(node));
+  indexes.set(wording, paths);
+  return paths;
+}
+
 /**
  * The sections of the wording (its top-level keys) that `code` names: a key the console reads is a typed literal,
  * `'yes.signin.offer'`, `` `billing.${period}` `` or `'billing.' + period` once minified, so a section is named
- * wherever such a literal starts with it.
+ * wherever such a literal starts with it and its static part leads into the section. Another literal of the same shape
+ * is not a key and names nothing: a feature the server announces (`'webhooks.v1'`), a host (`'github.com'`).
  * The build reads the code of a screen's chunks with it (vite.config.ts, `preloadBoot`): a word may name a section
  * the screen never shows, which only costs a few bytes; a key never escapes it.
  */
-export function sectionsIn(code: string, sections: Iterable<string>): Set<string> {
+export function sectionsIn(code: string, wording: Readonly<Record<string, unknown>>): Set<string> {
+  const paths = indexOf(wording);
   const named = new Set<string>();
-  for (const section of sections)
-    if (!/^[A-Za-z]\w*$/.test(section)) throw new Error(`a section of the wording is not a name: ${section}`);
-    else if (new RegExp(`["'\`]${section}\\.[A-Za-z_$"'\`]`).test(code)) named.add(section);
+  for (const [, section = '', path = '', end = ''] of code.matchAll(
+    /["'`]([A-Za-z]\w*)\.([\w.-]*)(?=(\$\{|["'`]\s*\+)?)(?=["'`$])/g,
+  )) {
+    const keys = paths.get(section);
+    if (keys !== undefined && leadsInto(keys, path, end !== '')) named.add(section);
+  }
   return named;
 }
 
