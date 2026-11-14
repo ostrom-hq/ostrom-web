@@ -338,4 +338,23 @@ describe('a member’s personal skill', () => {
       within(await versions('maya-notes')).getByRole('button', { name: 'Pin this version' }),
     ).toBeInTheDocument();
   });
+
+  it('shows the shape of the screen, and asks nothing of the catalog, until it knows who is looking', async () => {
+    setDemoRole(db, 'member');
+    let asked = false;
+    server.use(
+      http.get('*/api/v1/auth/me', async ({ request }) => {
+        if (request.headers.has('Ostrom-Org')) return delay('infinite');
+        return HttpResponse.json({ dev: { login: 'maya', verified: true, via: 'github' }, capabilities: [] });
+      }),
+      http.get('*/api/v1/skills', () => {
+        asked = true;
+        return HttpResponse.json({ items: [] });
+      }),
+    );
+    const router = visit('/skills');
+    await waitFor(() => expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument());
+    expect(router.state.location.pathname).toBe('/skills');
+    expect(asked).toBe(false);
+  });
 });
