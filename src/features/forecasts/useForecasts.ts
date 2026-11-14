@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getForecastsOptions } from '@gen/api/@tanstack/react-query.gen';
 import type { ForecastSnapshot } from '@gen/api/types.gen';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
@@ -10,7 +10,7 @@ import { ready } from '@/shared/api/ready';
 import { FORECAST_POLL_MS } from './model';
 
 export interface ForecastsViewModel {
-  /** The latest snapshot of the account; the last one stays on screen while the next one loads. */
+  /** The latest snapshot of the account asked for (never the previous account's while the next one loads). */
   readonly snapshot: ForecastSnapshot | undefined;
   readonly failure: Error | undefined;
   /** 403: only an owner or an admin reads the forecasts. */
@@ -20,7 +20,6 @@ export interface ForecastsViewModel {
   /** The live updates are paused by the person (TeamCode's « Pause live updates »). */
   readonly paused: boolean;
   readonly togglePaused: () => void;
-  readonly refreshing: boolean;
   /** Reads the forecasts again now (TeamCode's « Show account / refresh »). */
   readonly refresh: () => void;
 }
@@ -35,7 +34,6 @@ export function useForecasts(account: string | undefined): ForecastsViewModel {
   const query = useQuery(
     ready(getForecastsOptions(account === undefined ? {} : { query: { account } }), {
       refetchInterval: paused ? () => false : pollUnlessRefused(FORECAST_POLL_MS),
-      placeholderData: keepPreviousData,
       retry: false,
     }),
   );
@@ -51,7 +49,6 @@ export function useForecasts(account: string | undefined): ForecastsViewModel {
     togglePaused: () => {
       setPaused((was) => !was);
     },
-    refreshing: query.isFetching,
     refresh: () => {
       void refetch();
     },

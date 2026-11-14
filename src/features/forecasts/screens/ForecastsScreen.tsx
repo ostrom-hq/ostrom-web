@@ -51,7 +51,7 @@ function Forecasts(): ReactElement {
         <Button variant="secondary" onClick={view.togglePaused}>
           {view.paused ? t('forecasts.live.resume') : t('forecasts.live.pause')}
         </Button>
-        <Button variant="secondary" onClick={view.refresh} disabled={view.refreshing}>
+        <Button variant="secondary" onClick={view.refresh}>
           {t('forecasts.live.refresh')}
         </Button>
       </div>

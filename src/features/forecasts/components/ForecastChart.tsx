@@ -23,15 +23,17 @@ const GRID = [0, 0.5, 1] as const;
 export function ForecastChart({ window, now, threshold }: ForecastChartProps): ReactElement {
   const { t, i18n } = useTranslation();
   const titleId = useId();
-  // The place of the reading under the pointer: the points are rebuilt at each render, so never compared by identity.
-  const [hoveredAt, setHoveredAt] = useState(-1);
+  // The reading under the pointer, by its time: a new snapshot every 15 s keeps it while it is still drawn.
+  const [hoveredAt, setHoveredAt] = useState<string | undefined>(undefined);
+  // `useId` may hold characters a `url(#…)` reference does not take.
+  const clipId = `fc-clip-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const scale = scaleOf(Date.parse(now));
   const segments = segmentsOf(window, scale);
   if (segments.length === 0) {
     return <p className="o-empty fc-chart__empty">{t('forecasts.chart.noReadings')}</p>;
   }
   const points = segments.flat();
-  const hovered = points[hoveredAt];
+  const hovered = points.find((point) => point.sample.observedAt === hoveredAt);
   const projection = projectionOf(window, scale);
   const percent = new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 1 });
   const clock = new Intl.DateTimeFormat(i18n.language, { hour: '2-digit', minute: '2-digit' });
@@ -43,7 +45,9 @@ export function ForecastChart({ window, now, threshold }: ForecastChartProps): R
   const track = (event: PointerEvent<SVGRectElement>): void => {
     const box = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
     if (box === undefined || box.width <= 0) return;
-    setHoveredAt(nearestIndex(points, ((event.clientX - box.left) / box.width) * CHART.width));
+    setHoveredAt(
+      points[nearestIndex(points, ((event.clientX - box.left) / box.width) * CHART.width)]?.sample.observedAt,
+    );
   };
   const nowX = scale.x(scale.now);
   const thresholdY = scale.y(threshold);
@@ -76,36 +80,47 @@ export function ForecastChart({ window, now, threshold }: ForecastChartProps): R
           {t('forecasts.chart.threshold', { value: percent.format(threshold) })}
         </text>
         <line className="fc-chart__now" x1={nowX} x2={nowX} y1={CHART.top} y2={CHART.bottom} />
-        {segments.map((segment, index) => (
-          <polyline
-            // The segments come oldest first and only grow at the end: their place is their identity.
-            key={index}
-            className="fc-chart__measured"
-            data-testid="measured"
-            points={segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')}
+        <clipPath id={clipId}>
+          {/* The plot area, with room for a dot on its edges: a reading outside the two hours is never drawn over the axes. */}
+          <rect
+            x={CHART.left - 5}
+            y={CHART.top - 5}
+            width={CHART.right - CHART.left + 10}
+            height={CHART.bottom - CHART.top + 10}
           />
-        ))}
-        {points.map((point, index) => (
-          <circle
-            key={index}
-            className="fc-chart__dot"
-            cx={point.x}
-            cy={point.y}
-            r={index === hoveredAt ? 4 : 2.5}
-          >
-            <title>{reading(point)}</title>
-          </circle>
-        ))}
-        {projection === undefined ? null : (
-          <line
-            className="fc-chart__projection"
-            data-testid="projection"
-            x1={projection.x1}
-            y1={projection.y1}
-            x2={projection.x2}
-            y2={projection.y2}
-          />
-        )}
+        </clipPath>
+        <g clipPath={`url(#${clipId})`} data-testid="plot">
+          {segments.map((segment, index) => (
+            <polyline
+              // The segments come oldest first and only grow at the end: their place is their identity.
+              key={index}
+              className="fc-chart__measured"
+              data-testid="measured"
+              points={segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ')}
+            />
+          ))}
+          {points.map((point, index) => (
+            <circle
+              key={index}
+              className="fc-chart__dot"
+              cx={point.x}
+              cy={point.y}
+              r={point === hovered ? 4 : 2.5}
+            >
+              <title>{reading(point)}</title>
+            </circle>
+          ))}
+          {projection === undefined ? null : (
+            <line
+              className="fc-chart__projection"
+              data-testid="projection"
+              x1={projection.x1}
+              y1={projection.y1}
+              x2={projection.x2}
+              y2={projection.y2}
+            />
+          )}
+        </g>
         {hovered === undefined ? null : (
           <line
             className="fc-chart__crosshair"
@@ -135,7 +150,7 @@ export function ForecastChart({ window, now, threshold }: ForecastChartProps): R
           height={CHART.bottom - CHART.top}
           onPointerMove={track}
           onPointerLeave={() => {
-            setHoveredAt(-1);
+            setHoveredAt(undefined);
           }}
         />
       </svg>

@@ -2927,6 +2927,12 @@ export const fr = {
         already: 'Seuil déjà atteint',
         at: 'Vers {{when}}',
       },
+      readings: {
+        summary: 'Relevés de la dernière heure',
+        segment: 'Segment',
+        when: 'Relevé à',
+        value: 'Utilisé',
+      },
       learning: 'Dernier segment continu',
       samples_one: '1 relevé sur {{seconds}} s',
       samples_other: '{{count}} relevés sur {{seconds}} s',

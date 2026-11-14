@@ -2863,6 +2863,12 @@ export const en = {
         already: 'Already at the threshold',
         at: 'Around {{when}}',
       },
+      readings: {
+        summary: 'Readings of the past hour',
+        segment: 'Segment',
+        when: 'Read at',
+        value: 'Used',
+      },
       learning: 'Latest continuous segment',
       samples_one: '1 reading over {{seconds}} s',
       samples_other: '{{count}} readings over {{seconds}} s',

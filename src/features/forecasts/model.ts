@@ -106,7 +106,7 @@ export interface Projection {
 
 /**
  * TeamCode's conditional projection: from the latest reading, at the learned rate, until the window reaches the
- * threshold, resets, or leaves the chart, whichever comes first. Only where a rate is learned and the window fills up
+ * threshold, resets, fills the window or leaves the chart, whichever comes first. Only where a rate is learned and the window fills up
  * before or after its reset; never for an unknown, stale, idle or exhausted window.
  */
 export function projectionOf(window: ForecastWindow, scale: ChartScale): Projection | undefined {
@@ -120,7 +120,9 @@ export function projectionOf(window: ForecastWindow, scale: ChartScale): Project
     .filter((at) => Number.isFinite(at));
   if (ends.length === 0) return undefined;
   const observed = Date.parse(window.observedAt);
-  const end = Math.min(...ends, scale.until);
+  // A full window (100 %) is the top of the chart: the line stops there rather than bend along it.
+  const full = observed + ((1 - window.utilization) / (rate / 100)) * HOUR_MS;
+  const end = Math.min(...ends, full, scale.until);
   if (!Number.isFinite(observed) || end <= observed) return undefined;
   const projected = window.utilization + ((rate / 100) * (end - observed)) / HOUR_MS;
   return {

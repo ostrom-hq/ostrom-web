@@ -132,3 +132,30 @@
     fill: CanvasText;
   }
 }
+
+.fc-readings summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* The readings scroll inside their own box, never the page. */
+.fc-readings__scroll {
+  max-height: 16rem;
+  overflow: auto;
+}
+
+.fc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.fc-table th,
+.fc-table td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}

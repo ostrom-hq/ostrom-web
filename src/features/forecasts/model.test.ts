@@ -103,6 +103,18 @@ describe('projectionOf', () => {
     expect(projectionOf(noReset, scale)?.x2).toBe(scale.x(NOW + 600_000));
   });
 
+  it('stops where the window is full, never bent along the top of the chart', () => {
+    const fast = windowOf({
+      state: 'exhausts_first',
+      utilization: 0.9,
+      pointsPerHour: 60,
+      resetsAt: at(7_200_000),
+    });
+    const projection = projectionOf(fast, scale);
+    expect(projection?.x2).toBeCloseTo(scale.x(NOW + 600_000));
+    expect(projection?.y2).toBeCloseTo(CHART.top);
+  });
+
   it('never projects an unknown, stale, idle or exhausted window, nor one without a rate or an end', () => {
     for (const state of ['unknown', 'stale', 'idle', 'exhausted', 'other']) {
       expect(projectionOf(windowOf({ state }), scale)).toBeUndefined();

@@ -60,6 +60,11 @@ describe('the forecasts screen (TeamCode’s Forecasts page)', { timeout: 20_000
     expect(fact(five, 'Recent speed')).toBe('60 percentage points per hour');
     expect(fact(five, 'Reaches the threshold')).toMatch(/^Around /);
     expect(fact(five, 'Latest continuous segment')).toBe('31 readings over 1,800 s');
+    // The table view of the chart: every reading, by segment.
+    const table = within(five).getByRole('table');
+    expect(within(table).getAllByRole('row')).toHaveLength(42);
+    expect(within(table).getAllByRole('row')[41]).toHaveTextContent(/^2.*62%$/);
+    expect(within(card('model:opus')).getAllByRole('row')).toHaveLength(3);
 
     const week = card('seven_day');
     expect(within(week).getByText('Reset before the threshold')).toBeVisible();
@@ -139,6 +144,7 @@ describe('the forecasts screen (TeamCode’s Forecasts page)', { timeout: 20_000
     visit('/forecasts');
     expect(await screen.findByText(/Only a bounded part of the accounts/)).toBeVisible();
     expect(within(card('empty')).getByText('No reading in the past hour.')).toBeVisible();
+    expect(within(card('empty')).queryByRole('table')).toBeNull();
     expect(within(card('odd')).getByText('Rate unknown')).toBeVisible();
     expect(within(card('odd')).queryByTestId('projection')).toBeNull();
     expect(fact(card('late'), 'Reaches the threshold')).toBe('Unknown');

@@ -46,6 +46,33 @@ export function WindowCard({ window, now, threshold }: WindowCardProps): ReactEl
         {t('forecasts.card.observed', { value: percent.format(window.utilization) })}
       </p>
       <ForecastChart window={window} now={now} threshold={threshold} />
+      {window.segments.some((segment) => segment.length > 0) ? (
+        <details className="fc-readings">
+          <summary>{t('forecasts.card.readings.summary')}</summary>
+          <div className="fc-readings__scroll">
+            <table className="fc-table">
+              <thead>
+                <tr>
+                  <th scope="col">{t('forecasts.card.readings.segment')}</th>
+                  <th scope="col">{t('forecasts.card.readings.when')}</th>
+                  <th scope="col">{t('forecasts.card.readings.value')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {window.segments.flatMap((segment, index) =>
+                  segment.map((sample) => (
+                    <tr key={`${String(index)}-${sample.observedAt}`}>
+                      <td>{index + 1}</td>
+                      <td>{formatAbsolute(sample.observedAt, i18n.language)}</td>
+                      <td>{percent.format(sample.utilization)}</td>
+                    </tr>
+                  )),
+                )}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      ) : null}
       <Facts
         facts={[
           {
