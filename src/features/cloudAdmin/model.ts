@@ -233,8 +233,9 @@ export function clusterProblem(
 export function needsCredentials(draft: ClusterDraft, stored: CloudCluster | undefined): boolean {
   return (
     stored?.apiUrl !== draft.apiUrl.trim() ||
-    !stored.caCertificate.configured ||
-    !stored.serviceAccountToken.configured
+    // The server's own cluster reads its credentials from its pod: none is missing.
+    (stored.inCluster !== true &&
+      (!stored.caCertificate.configured || !stored.serviceAccountToken.configured))
   );
 }
 
