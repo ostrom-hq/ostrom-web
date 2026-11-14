@@ -1077,10 +1077,14 @@ describe('mock cloud agents and automations', () => {
     expect(legacy.data.environment).toBeUndefined();
     // A recipe without repositories goes with the older repository.
     const together = await createCloudSession({
-      body: { agent: 'claude', repo: 'https://github.com/acme/web', environment: { requireGitHub: true } },
+      body: {
+        agent: 'claude',
+        repo: 'https://github.com/acme/web',
+        environment: { requireGitHub: true, setup: { create: ['make deps'] } },
+      },
       throwOnError: true,
     });
-    expect(together.data.environment).toEqual({ requireGitHub: true });
+    expect(together.data.environment).toEqual({ requireGitHub: true, setup: { create: ['make deps'] } });
     const both = await fetch('http://ostrom.test/api/v1/cloud/sessions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
