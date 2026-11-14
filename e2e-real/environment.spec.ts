@@ -169,8 +169,8 @@ test('a member declares an MCP server of their own; another organization never s
   await page.goto('/me/mcp');
   await expect(page.getByRole('heading', { level: 1, name: 'My MCP servers' })).toBeVisible();
   const form = page.getByRole('region', { name: 'Add a server' });
-  await form.getByLabel('Name').fill('e2e-mine');
-  await form.getByLabel('URL').fill('https://mcp.example.com/mcp');
+  await form.getByLabel('Name', { exact: true }).fill('e2e-mine');
+  await form.getByLabel('URL', { exact: true }).fill('https://mcp.example.com/mcp');
   await form.getByRole('button', { name: 'Add the server' }).click();
   await expect(page.getByRole('article', { name: 'e2e-mine' })).toBeVisible();
 

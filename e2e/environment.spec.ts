@@ -40,8 +40,8 @@ test('a person declares an MCP server of their own', async ({ page }) => {
   await page.goto('/me/mcp');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('My MCP servers');
   const form = page.getByRole('region', { name: 'Add a server' });
-  await form.getByLabel('Name').fill('my-tracker');
-  await form.getByLabel('URL').fill('https://mcp.tracker.dev/mcp');
+  await form.getByLabel('Name', { exact: true }).fill('my-tracker');
+  await form.getByLabel('URL', { exact: true }).fill('https://mcp.tracker.dev/mcp');
   await form.getByRole('button', { name: 'Add the server' }).click();
   await expect(page.getByRole('article', { name: 'my-tracker' })).toBeVisible();
 });
