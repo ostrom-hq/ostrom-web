@@ -227,3 +227,48 @@ test('6.2 when the machine running an agent is lost, the agent comes back runnin
   // The machine that is left removes the session's containers once the server no longer lists it.
   await expect.poll(() => holder(id), { timeout: 60_000, intervals: [2_000] }).toBeUndefined();
 });
+
+test('6.2 an owner starts an agent with a preparation recipe; the server keeps it, and another organization never sees it', async ({
+  page,
+  browser,
+}) => {
+  const { id: org } = await ownerOfNewOrganization(page, 'eve');
+  const capabilities = await callFromPage(page, 'GET', '/api/v1/capabilities', undefined, org);
+  const features = z.object({ features: z.array(z.string()) }).parse(capabilities.body).features;
+  test.skip(!features.includes('runners.cloud.environment.v1'), 'This server does not serve the recipe');
+  const name = `recipe-${Date.now().toString(36)}`;
+
+  await page.goto('/cloud');
+  const form = page.getByRole('region', { name: 'Start an agent' });
+  await form.getByRole('textbox', { name: 'What should it do?' }).fill('Say hello, then wait.');
+  await form.getByRole('textbox', { name: 'Name', exact: true }).fill(name);
+  await form.getByText('Preparation recipe').click();
+  await form.getByRole('textbox', { name: 'Required variables' }).fill('E2E_RECIPE_TOKEN');
+  await form.getByRole('textbox', { name: 'Setup commands, at every start (one a line)' }).fill('true');
+  await form.getByRole('textbox', { name: 'Git e-mail domain' }).fill('e2e.ostrom.invalid');
+  await form.getByRole('button', { name: 'Start the agent' }).click();
+  const row = page.getByRole('region', { name: 'Sessions' }).getByRole('listitem').filter({ hasText: name });
+  await expect(row).toBeVisible();
+
+  // Stored as asked, never edited: a resume prepares what the first execution did.
+  const session = await sessionNamed(page, org, name);
+  expect(session?.environment).toEqual({
+    setup: { start: ['true'] },
+    requiredVariables: ['E2E_RECIPE_TOKEN'],
+    gitEmailDomain: 'e2e.ostrom.invalid',
+  });
+  const id = session?.id ?? '';
+
+  const other = await anotherPerson(browser);
+  const { id: otherOrg } = await ownerOfNewOrganization(other, 'fay');
+  const theirs = await callFromPage(other, 'GET', `/api/v1/cloud/sessions/${id}`, undefined, otherOrg);
+  expect(theirs.status).toBe(404);
+  await other.goto('/cloud');
+  await expect(other.getByRole('region', { name: 'Sessions' })).toBeVisible();
+  await expect(other.getByText(name)).toHaveCount(0);
+
+  // The owner has no E2E_RECIPE_TOKEN: once a runner prepares it, the preparation fails and says what to fix. Either
+  // way the session is stopped here; a stop of a session already over is a conflict, not a failure of this test.
+  const stopped = await callFromPage(page, 'DELETE', `/api/v1/cloud/sessions/${id}`, undefined, org);
+  expect([204, 404, 409]).toContain(stopped.status);
+});
