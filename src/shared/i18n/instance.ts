@@ -64,7 +64,7 @@ function find(node: unknown, key: string): unknown {
 }
 
 /** `{{name}}` filled with `vars`; a placeholder without a value gives nothing. */
-function filled(text: string, vars: Vars): string {
+export function filled(text: string, vars: Vars): string {
   return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_placeholder, name: string) => String(vars[name] ?? ''));
 }
 
@@ -82,7 +82,12 @@ export function createI18n(language = 'en'): I18n {
   const plural = (of: string, count: number): Intl.LDMLPluralRule => {
     let rule = rules.get(of);
     if (rule === undefined) {
-      rule = new Intl.PluralRules(of);
+      try {
+        rule = new Intl.PluralRules(of);
+      } catch {
+        // Not a language tag: the English rule, rather than a screen that cannot render.
+        rule = new Intl.PluralRules('en');
+      }
       rules.set(of, rule);
     }
     return rule.select(count);
@@ -112,7 +117,9 @@ export function createI18n(language = 'en'): I18n {
     },
     getResource: (of, key) => find(wordings.get(of), key),
     addResourceBundle(to, wording) {
-      wordings.set(to, merged(wordings.get(to) ?? {}, wording));
+      // The first words are kept as they came (no copy on the way to the first paint); later ones are merged into a copy.
+      const had = wordings.get(to);
+      wordings.set(to, had === undefined ? wording : merged(had, wording));
       emit('added', to);
     },
     hasResourceBundle: (of) => wordings.has(of),

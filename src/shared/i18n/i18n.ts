@@ -72,27 +72,40 @@ export function wordingLoader(
   first: FirstWording = takeFirstWording,
   retryDelays: readonly number[] = RETRY_DELAYS_MS,
 ): LoadWording {
-  return async (language) => {
-    const known = LANGUAGES.find((one) => one === language);
-    if (known === undefined) return Promise.resolve(false);
-    const whole = async (): Promise<boolean> => {
-      const wording = await wholeWording(wordings[known], retryDelays);
+  // The languages whose whole wording is in, and the whole wordings being asked for now.
+  const complete = new Set<Language>();
+  const asking = new Map<Language, Promise<boolean>>();
+  /** The whole wording of a language, asked once at a time; a failure leaves it to be asked for again. */
+  const askWhole = async (known: Language): Promise<boolean> => {
+    const running = asking.get(known);
+    if (running !== undefined) return running;
+    const task = wholeWording(wordings[known], retryDelays).then((wording) => {
+      asking.delete(known);
       if (wording === undefined) return false;
       instance.addResourceBundle(known, wording);
-      return true;
-    };
-    // Asked at once, not after a turn: the first render waits for this very read.
-    const early = first(known);
-    if (early === undefined) return whole();
-    return early.then(async (wording) => {
-      if (wording === undefined) return whole();
-      instance.addResourceBundle(known, wording);
-      // The first screen keeps its words if the rest does not come, even after the retries.
-      void wholeWording(wordings[known], retryDelays).then((all) => {
-        if (all !== undefined) instance.addResourceBundle(known, all);
-      });
+      complete.add(known);
       return true;
     });
+    asking.set(known, task);
+    return task;
+  };
+  return async (language) => {
+    const known = LANGUAGES.find((one) => one === language);
+    if (known === undefined) return false;
+    if (complete.has(known)) return true;
+    // Words are in (the first screen's) but not all of them: the rest is asked for again, without making anyone wait.
+    if (instance.hasResourceBundle(known)) {
+      void askWhole(known);
+      return true;
+    }
+    // Asked at once, not after a turn: the first render waits for this very read.
+    const early = first(known);
+    if (early === undefined) return askWhole(known);
+    const wording = await early;
+    if (wording === undefined) return askWhole(known);
+    instance.addResourceBundle(known, wording);
+    void askWhole(known);
+    return true;
   };
 }
 
@@ -116,7 +129,8 @@ export async function showLanguage(
   stillWanted: () => boolean = () => true,
   load: LoadWording = loaderOf(instance),
 ): Promise<boolean> {
-  if (!instance.hasResourceBundle(language)) await load(language);
+  // Also when a first wording is in: the rest of the language is asked for again if it never came.
+  await load(language);
   if (!instance.hasResourceBundle(language)) return false;
   // A newer change asked for while this wording came wins: an older one never shows over it.
   if (!stillWanted()) return false;
@@ -132,7 +146,10 @@ export async function englishIfMissing(
   instance: I18n = i18n,
   load: LoadWording = loaderOf(instance),
 ): Promise<void> {
-  if (instance.hasResourceBundle(instance.language)) return;
+  if (instance.hasResourceBundle(instance.language)) {
+    void load(instance.language);
+    return;
+  }
   await showLanguage('en', instance, () => true, load);
 }
 

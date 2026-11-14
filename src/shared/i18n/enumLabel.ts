@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { I18n } from '@/shared/i18n/instance';
+import { filled, type I18n } from '@/shared/i18n/instance';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 
 /** Values an interpolated label takes, as `{{name}}`. */
@@ -23,7 +23,7 @@ function wordingOf(i18n: I18n, key: string): string | undefined {
 export function enumLabel(i18n: I18n, prefix: string, value: string, vars: LabelVars = {}): string {
   const wording = wordingOf(i18n, `${prefix}.${value}`);
   if (wording === undefined) return value;
-  return wording.replace(/\{\{\s*(\w+)\s*\}\}/g, (placeholder, name: string) => vars[name] ?? placeholder);
+  return filled(wording, vars);
 }
 
 /** `enumLabel` bound to the language shown: `const label = useEnumLabel(); label('confirm.status', status)`. */

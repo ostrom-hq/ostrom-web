@@ -181,6 +181,78 @@ describe("the first screen's own wording", () => {
     });
   });
 
+  it('asks the whole language again, at the next show, when it never came after the first screen', async () => {
+    let tries = 0;
+    const instance = createI18n();
+    const load = wordingLoader(
+      instance,
+      {
+        en: async () => Promise.resolve(en),
+        fr: async () => {
+          tries += 1;
+          return tries === 1 ? Promise.reject(new Error('offline')) : Promise.resolve(fr);
+        },
+      },
+      async () => Promise.resolve({ app: { loading: 'Premier' } }),
+      [],
+    );
+    expect(await load('fr')).toBe(true);
+    await vi.waitFor(() => {
+      expect(tries).toBe(1);
+    });
+    // The failed ask settles (it is no longer running) before the next show.
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+    expect(instance.t('app.nav.home')).toBe('app.nav.home');
+    expect(await showLanguage('fr', instance, () => true, load)).toBe(true);
+    await vi.waitFor(() => {
+      expect(instance.getFixedT('fr')('app.nav.home')).toBe(fr.app.nav.home);
+    });
+    expect(tries).toBe(2);
+    expect(await load('fr')).toBe(true);
+    expect(tries).toBe(2);
+  });
+
+  it('asks the rest of the language once at a time', async () => {
+    let tries = 0;
+    let arrive: (wording: typeof fr) => void = () => undefined;
+    const coming = new Promise<typeof fr>((resolve) => {
+      arrive = resolve;
+    });
+    const instance = createI18n();
+    const load = wordingLoader(
+      instance,
+      {
+        en: async () => Promise.resolve(en),
+        fr: async () => {
+          tries += 1;
+          return coming;
+        },
+      },
+      async () => Promise.resolve({ app: { loading: 'Premier' } }),
+      [],
+    );
+    expect(await load('fr')).toBe(true);
+    expect(await load('fr')).toBe(true);
+    expect(tries).toBe(1);
+    arrive(fr);
+    await vi.waitFor(() => {
+      expect(instance.getFixedT('fr')('app.nav.home')).toBe(fr.app.nav.home);
+    });
+  });
+
+  it('asks for the rest again at start too, when the language shown has only its first words', async () => {
+    const instance = createI18n('en');
+    instance.addResourceBundle('en', { app: { loading: 'First' } });
+    let asked = 0;
+    await englishIfMissing(instance, async () => {
+      asked += 1;
+      return Promise.resolve(true);
+    });
+    expect(asked).toBe(1);
+  });
+
   it('gives way to the whole language when it did not come, or was not fetched', async () => {
     for (const first of [async () => Promise.resolve(undefined), () => undefined]) {
       const instance = await started(bothLanguages, first);

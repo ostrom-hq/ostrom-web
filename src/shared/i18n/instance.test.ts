@@ -57,6 +57,23 @@ describe('a plural text', () => {
 });
 
 describe('the wording added', () => {
+  it('is kept as it came the first time, and never changed by a later merge', () => {
+    const instance = createI18n();
+    const first = { app: { loading: 'One' } };
+    instance.addResourceBundle('en', first);
+    expect(instance.getResource('en', 'app')).toBe(first.app);
+    instance.addResourceBundle('en', { app: { name: 'Two' } });
+    expect(first).toEqual({ app: { loading: 'One' } });
+    expect(instance.t('app.name')).toBe('Two');
+  });
+
+  it('counts with the English rule for a language that is not a tag', () => {
+    const instance = createI18n('not a tag!');
+    instance.addResourceBundle('not a tag!', { app: { showMore_one: 'one', showMore_other: 'other' } });
+    expect(instance.t('app.showMore', { count: 1 })).toBe('one');
+    expect(instance.t('app.showMore', { count: 2 })).toBe('other');
+  });
+
   it('never lets a `__proto__` key of the JSON become the prototype of a section', () => {
     const instance = createI18n();
     // As `JSON.parse` makes it: an own key called `__proto__`.
@@ -64,6 +81,7 @@ describe('the wording added', () => {
       ['__proto__', { polluted: 'yes' }],
       ['app', { loading: 'Hi' }],
     ]);
+    instance.addResourceBundle('en', fetched);
     instance.addResourceBundle('en', fetched);
     expect(instance.t('app.loading')).toBe('Hi');
     expect(instance.getResource('en', 'polluted')).toBeUndefined();

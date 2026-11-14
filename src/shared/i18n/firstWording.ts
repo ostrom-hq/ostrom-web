@@ -23,7 +23,9 @@ export function takeFirstWording(
   return fetched.then(
     async (response: unknown) => {
       if (!(response instanceof Response) || !response.ok) return undefined;
-      const parsed = zWording.safeParse(await response.json());
+      // A 200 that is a page, or a body cut off, is not a wording either: the whole language is loaded instead.
+      const body: unknown = await response.json().catch(() => undefined);
+      const parsed = zWording.safeParse(body);
       return parsed.success ? parsed.data : undefined;
     },
     () => undefined,

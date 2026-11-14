@@ -17,11 +17,11 @@ describe('enumLabel', () => {
     expect(enumLabel(i18n, 'waits', 'status')).toBe('status');
   });
 
-  it('fills the placeholders of the wording, and leaves one it has no value for', () => {
+  it('fills the placeholders of the wording, and gives nothing where it has no value, as `t` does', () => {
     const wording = enumLabel(i18n, 'confirm.outcome.by', 'confirmed', { who: 'maya', when: ' now' });
     expect(wording).toContain('maya');
     expect(wording).not.toContain('{{who}}');
-    expect(enumLabel(i18n, 'confirm.outcome.by', 'confirmed')).toContain('{{who}}');
+    expect(enumLabel(i18n, 'confirm.outcome.by', 'confirmed')).not.toContain('{{');
   });
 
   it('reads the English wording where the language shown has none', () => {
