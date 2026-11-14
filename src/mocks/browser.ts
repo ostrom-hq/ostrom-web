@@ -22,6 +22,9 @@ const MOCK_SCALE_KEY = 'ostrom.mock.scale';
  */
 const MOCK_GITHUB_KEY = 'ostrom.mock.github';
 
+/** Set before the demo loads: `yes`, the demo person also administers the instance (the Admin screens). */
+const MOCK_INSTANCE_ADMIN_KEY = 'ostrom.mock.instanceAdmin';
+
 /** The browser's Trusted Types factory, where it has one (Chromium). */
 interface TrustedTypesFactory {
   readonly createPolicy: (
@@ -63,6 +66,7 @@ export async function startMocks(): Promise<void> {
   if (role !== undefined) setDemoRole(db, role);
   if (safeLocalStorage.getItem(MOCK_SCALE_KEY) === 'large') growLarge(db);
   if (safeLocalStorage.getItem(MOCK_GITHUB_KEY) === 'unlinked') db.providers = ['email'];
+  if (safeLocalStorage.getItem(MOCK_INSTANCE_ADMIN_KEY) === 'yes') db.instanceAdmin = true;
   allowMockWorker();
   const worker = setupWorker(...createHandlers(db));
   await worker.start({ onUnhandledFrame: 'bypass', quiet: true });

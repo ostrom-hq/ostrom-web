@@ -53,6 +53,14 @@ export const zActivityItem = z.object({
     sessionId: z.optional(z.string())
 });
 
+/**
+ * A page of the organization's activity; `next` is the cursor of the following page
+ */
+export const zActivityPage = z.object({
+    items: z.array(zActivityItem),
+    next: z.optional(z.string())
+});
+
 export const zAgentEvent = z.union([z.enum([
         'SessionStart',
         'UserPromptSubmit',
@@ -158,6 +166,27 @@ export const zApprovalStatus = z.union([z.enum([
     ]), z.string()]);
 
 /**
+ * Who asked for an approval: the developer, their agent, its model and session
+ */
+export const zApprovalWho = z.object({
+    dev: z.optional(z.string()),
+    agent: z.optional(z.string()),
+    model: z.optional(z.string()),
+    session: z.optional(z.string())
+});
+
+/**
+ * What an approval is for: the action, its command and repository, the session's repository and harness
+ */
+export const zApprovalWhat = z.object({
+    action: z.optional(z.string()),
+    command: z.optional(z.string()),
+    repo: z.optional(z.string()),
+    sessionRepo: z.optional(z.string()),
+    harness: z.optional(z.string())
+});
+
+/**
  * Who is looking at the yes queue
  */
 export const zApprovalViewer = z.object({
@@ -216,6 +245,14 @@ export const zArtifact = z.object({
 });
 
 /**
+ * A page of artifacts; `next` is the cursor of the following page
+ */
+export const zArtifactPage = z.object({
+    items: z.array(zArtifact),
+    next: z.optional(z.string())
+});
+
+/**
  * Who reads it; `personal` when absent at publication. `personal`: the owner and the members it is shared with, never an administrator for their role alone; `team`: every member; `link`: anyone with its public link, set only by a person
  */
 export const zArtifactAccess = z.union([z.enum([
@@ -225,12 +262,201 @@ export const zArtifactAccess = z.union([z.enum([
     ]), z.string()]);
 
 /**
- * A file sent for publication
+ * A file of the version to publish: its `content` inline, or, for a commit of an upload, its `sha256` and `size`, sent by that upload (`createArtifactUpload`) or already held by the artifact
  */
 export const zArtifactFile = z.object({
     path: z.string(),
-    content: z.string(),
-    encoding: z.optional(z.union([z.enum(['utf8', 'base64']), z.string()]))
+    content: z.optional(z.string()),
+    encoding: z.optional(z.union([z.enum(['utf8', 'base64']), z.string()])),
+    sha256: z.optional(z.string().check(z.regex(/^[0-9a-f]{64}$/))),
+    size: z.optional(z.coerce.bigint().check(z.gte(BigInt(0)), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
+ * A delivered file, with what verifies it
+ */
+export const zArtifactFileContent = z.object({
+    path: z.string(),
+    mode: z.union([z.enum(['file', 'executable']), z.string()]),
+    size: z.int(),
+    sha256: z.string(),
+    contentBase64: z.string()
+});
+
+/**
+ * The organization's artifact bucket. `secretConfigured` only says a secret is stored, never returned. `verifiedAt` is the last passed test of this `version`, absent after any change. `inUse`: artifacts may have files in it, so the endpoint, bucket and prefix are fixed
+ */
+export const zArtifactStorage = z.object({
+    configured: z.boolean(),
+    endpoint: z.optional(z.string()),
+    region: z.optional(z.string()),
+    bucket: z.optional(z.string()),
+    prefix: z.optional(z.string()),
+    pathStyle: z.boolean(),
+    accessKeyId: z.optional(z.string()),
+    secretConfigured: z.boolean(),
+    serverSideEncryption: z.union([z.enum(['none', 'AES256']), z.string()]),
+    verifiedAt: z.optional(z.string()),
+    version: z.int(),
+    updatedAt: z.optional(z.string()),
+    inUse: z.boolean()
+});
+
+/**
+ * `version` is the one replaced (0 for the first save); an omitted `secretAccessKey` keeps the stored one
+ */
+export const zSaveArtifactStorageRequest = z.object({
+    version: z.int(),
+    endpoint: z.string().check(z.maxLength(512)),
+    region: z.string().check(z.maxLength(64)),
+    bucket: z.string().check(z.maxLength(63)),
+    prefix: z.optional(z.string().check(z.maxLength(200))),
+    pathStyle: z.optional(z.boolean()),
+    accessKeyId: z.string().check(z.maxLength(256)),
+    secretAccessKey: z.optional(z.string().check(z.maxLength(512))),
+    serverSideEncryption: z.optional(z.union([z.enum(['none', 'AES256']), z.string()]))
+});
+
+/**
+ * `put`, `get`, `list`, `delete`, `gone` or `record`; `code` is the S3 error code or a short local code, never a response body
+ */
+export const zArtifactStorageTestStep = z.object({
+    step: z.string(),
+    ok: z.boolean(),
+    status: z.optional(z.int()),
+    code: z.optional(z.string())
+});
+
+/**
+ * The outcome of a connection test, step by step
+ */
+export const zArtifactStorageTest = z.object({
+    ok: z.boolean(),
+    steps: z.array(zArtifactStorageTestStep)
+});
+
+/**
+ * Switches, quotas and retention (TeamCode's defaults: off, `everyone`, `owners_of_artifacts`, 2 GiB per member, 50 GiB per organization, 500 artifacts per member, 60 publications per member and hour, kept forever, 50 versions). `active` is whether artifacts work now; `inactiveReason` says why not
+ */
+export const zArtifactSettings = z.object({
+    enabled: z.boolean(),
+    whoCanPublish: z.union([z.enum(['everyone', 'admins']), z.string()]),
+    publicSharing: z.union([z.enum([
+            'owners_of_artifacts',
+            'admins',
+            'off'
+        ]), z.string()]),
+    quotaMemberBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    quotaOrgBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    quotaArtifactsPerMember: z.int(),
+    quotaPublishesPerHour: z.int(),
+    personalRetentionDays: z.optional(z.int()),
+    sharedRetentionDays: z.optional(z.int()),
+    maxVersionsPerArtifact: z.int(),
+    version: z.int(),
+    updatedAt: z.optional(z.string()),
+    active: z.boolean(),
+    inactiveReason: z.optional(z.union([z.enum([
+            'artifact_storage_missing',
+            'artifact_storage_unverified',
+            'artifacts_disabled'
+        ]), z.string()]))
+});
+
+/**
+ * Every setting, with the `version` replaced (0 before the first save); a null retention keeps artifacts
+ */
+export const zSaveArtifactSettingsRequest = z.object({
+    version: z.int(),
+    enabled: z.boolean(),
+    whoCanPublish: z.union([z.enum(['everyone', 'admins']), z.string()]),
+    publicSharing: z.union([z.enum([
+            'owners_of_artifacts',
+            'admins',
+            'off'
+        ]), z.string()]),
+    quotaMemberBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    quotaOrgBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    quotaArtifactsPerMember: z.int(),
+    quotaPublishesPerHour: z.int(),
+    personalRetentionDays: z.nullish(z.int()),
+    sharedRetentionDays: z.nullish(z.int()),
+    maxVersionsPerArtifact: z.int()
+});
+
+/**
+ * One member's artifacts and bytes
+ */
+export const zArtifactMemberUsage = z.object({
+    memberId: z.string(),
+    name: z.optional(z.string()),
+    artifacts: z.int(),
+    bytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
+ * The bytes the organization stores, and per member the published artifacts they own and their bytes
+ */
+export const zArtifactUsage = z.object({
+    orgBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    members: z.array(zArtifactMemberUsage)
+});
+
+/**
+ * Whether the caller may publish now and, when not, why
+ */
+export const zArtifactPolicy = z.object({
+    canPublish: z.boolean(),
+    reason: z.optional(z.union([z.enum([
+            'artifact_storage_missing',
+            'artifact_storage_unverified',
+            'artifacts_disabled',
+            'artifact_publish_forbidden',
+            'credential_scope'
+        ]), z.string()]))
+});
+
+/**
+ * A file of the version to publish, by its content (lower-case hex SHA-256) and size
+ */
+export const zArtifactFileRef = z.object({
+    sha256: z.string().check(z.regex(/^[0-9a-f]{64}$/)),
+    size: z.coerce.bigint().check(z.gte(BigInt(0)), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
+ * The distinct files of the whole version; without `artifactId`, a draft artifact is created
+ */
+export const zCreateArtifactUploadRequest = z.object({
+    artifactId: z.optional(z.string()),
+    files: z.array(zArtifactFileRef).check(z.maxLength(200))
+});
+
+/**
+ * `missing` are the SHA-256 values to send, in chunks of at most `chunkBytes`, before `expiresAt`
+ */
+export const zArtifactUpload = z.object({
+    uploadId: z.string(),
+    artifactId: z.string(),
+    missing: z.array(z.string()),
+    chunkBytes: z.int(),
+    expiresAt: z.string()
+});
+
+/**
+ * One chunk received; `complete` once every chunk of the file arrived and it was checked and stored
+ */
+export const zArtifactUploadChunk = z.object({
+    complete: z.boolean(),
+    received: z.int(),
+    total: z.int()
+});
+
+/**
+ * Which version of an artifact a ticket opens
+ */
+export const zArtifactTicketRequest = z.object({
+    version: z.optional(z.int())
 });
 
 /**
@@ -264,7 +490,67 @@ export const zArtifactVersion = z.object({
     files: z.array(z.string()),
     entry: z.string(),
     createdAt: z.string(),
-    createdBy: z.string()
+    createdBy: z.string(),
+    digest: z.optional(z.string()),
+    baseVersion: z.optional(z.int()),
+    replayed: z.optional(z.boolean())
+});
+
+/**
+ * A page of the versions of an artifact; `next` is the cursor of the following page
+ */
+export const zArtifactVersionPage = z.object({
+    items: z.array(zArtifactVersion),
+    next: z.optional(z.string())
+});
+
+/**
+ * A member's explicit decision
+ */
+export const zAssignment = z.object({
+    memberId: z.string(),
+    decision: z.union([z.enum(['allow', 'deny']), z.string()]),
+    updatedAt: z.string()
+});
+
+/**
+ * The explicit decisions, by member id
+ */
+export const zAssignmentList = z.object({
+    items: z.array(zAssignment)
+});
+
+/**
+ * What an agent step delivers (`deliverRun`)
+ */
+export const zDeliverRequest = z.object({
+    output: z.unknown()
+});
+
+/**
+ * What a session's agent step delivers (`deliverWorkflowSession`)
+ */
+export const zDeliverSessionRequest = z.object({
+    sessionId: z.optional(z.string()),
+    output: z.unknown()
+});
+
+/**
+ * A pinned skill version the member receives
+ */
+export const zEffectiveSkill = z.object({
+    name: z.string(),
+    version: z.string(),
+    digest: z.string(),
+    sizeBytes: z.int(),
+    fileCount: z.int()
+});
+
+/**
+ * The data of `event: gap`: events after the cursor were purged, the stream goes on at the oldest kept
+ */
+export const zEventGap = z.object({
+    oldestSeq: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
 });
 
 /**
@@ -308,6 +594,76 @@ export const zGitHubDeviceLinkPoll = z.object({
         ]), z.string()]),
     interval: z.optional(z.int()),
     link: z.optional(zGitHubLink)
+});
+
+/**
+ * When and what a team hook runs: `command` is a file of the artifact, run with no argument and the event's JSON on standard input, as the agent defines it
+ */
+export const zHookDefinition = z.object({
+    events: z.array(z.union([z.enum([
+            'PreToolUse',
+            'PostToolUse',
+            'UserPromptSubmit',
+            'Stop',
+            'SubagentStop',
+            'SessionStart',
+            'SessionEnd',
+            'PreCompact',
+            'Notification'
+        ]), z.string()])),
+    matcher: z.nullish(z.string()),
+    command: z.string(),
+    timeoutSeconds: z.optional(z.int())
+});
+
+/**
+ * A pinned hook version the member receives
+ */
+export const zEffectiveHook = z.object({
+    name: z.string(),
+    version: z.string(),
+    digest: z.string(),
+    definition: zHookDefinition,
+    sizeBytes: z.int(),
+    fileCount: z.int()
+});
+
+/**
+ * A version's definition and files; the digest is recomputable from them
+ */
+export const zHookArtifact = z.object({
+    name: z.string(),
+    version: z.string(),
+    digest: z.string(),
+    definition: zHookDefinition,
+    files: z.array(zArtifactFileContent)
+});
+
+/**
+ * A team hook. Delivered only through its pinned version, which only an administrator sets.
+ */
+export const zHookEntry = z.object({
+    id: z.string(),
+    name: z.string(),
+    pinnedVersion: z.nullish(z.string()),
+    allMembers: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string()
+});
+
+/**
+ * Hooks, newest change first
+ */
+export const zHookCatalog = z.object({
+    items: z.array(zHookEntry)
+});
+
+/**
+ * What a member receives, sorted by name
+ */
+export const zHookManifest = z.object({
+    memberId: z.string(),
+    hooks: z.array(zEffectiveHook)
 });
 
 /**
@@ -371,6 +727,30 @@ export const zAuthToken = z.object({
 });
 
 /**
+ * The one-time code of the mobile sign-in (PKCE), with the verifier and the exact redirect URI of its start
+ */
+export const zMobileTokenRequest = z.object({
+    code: z.string(),
+    codeVerifier: z.string(),
+    redirectUri: z.string()
+});
+
+/**
+ * The phone's biometric unlock: the app's key, and the approval the unlock is for
+ */
+export const zMobileUnlockRequest = z.object({
+    unlockKey: z.string(),
+    requestId: z.optional(z.string())
+});
+
+/**
+ * When the unlock was recorded
+ */
+export const zMobileUnlock = z.object({
+    authenticatedAt: z.iso.datetime({ offset: true })
+});
+
+/**
  * The signed-in person
  */
 export const zAuthUser = z.object({
@@ -380,10 +760,22 @@ export const zAuthUser = z.object({
 });
 
 /**
+ * The token of a mobile sign-in, its person and the key the app keeps behind the phone's biometrics
+ */
+export const zMobileToken = z.object({
+    token: z.string(),
+    user: zAuthUser,
+    expiresAt: z.optional(z.string()),
+    unlockKey: z.optional(z.string())
+});
+
+/**
  * What an automation starts: a workflow run, or a cloud agent session with a prompt
  */
 export const zAutomationAction = z.object({
     workflowId: z.optional(z.string()),
+    inputs: z.optional(z.record(z.string(), z.string())),
+    repository: z.optional(z.string()),
     prompt: z.optional(z.string()),
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
@@ -409,6 +801,7 @@ export const zAutomationRun = z.object({
     status: z.string(),
     version: z.int(),
     sessionId: z.nullish(z.string()),
+    workflowRunId: z.nullish(z.string()),
     reason: z.nullish(z.string()),
     problems: z.array(zAutomationPayloadProblem),
     slotAt: z.nullish(z.string()),
@@ -421,6 +814,7 @@ export const zAutomationRun = z.object({
  */
 export const zAutomationDryRun = z.object({
     renderedPrompt: z.string(),
+    renderedInputs: z.optional(z.record(z.string(), z.string())),
     variables: z.array(z.object({
         name: z.string(),
         value: z.nullish(z.string()),
@@ -639,7 +1033,7 @@ export const zBudgetOverride = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -689,6 +1083,129 @@ export const zApprovalCheck = z.object({
 });
 
 /**
+ * How cloud sessions run on this instance (TeamCode's cloud runtime and cloud settings)
+ */
+export const zCloudRuntime = z.object({
+    enabled: z.boolean(),
+    runnerImage: z.optional(z.string()),
+    runnerBinary: z.string(),
+    serverUrl: z.optional(z.string()),
+    effectiveServerUrl: z.string(),
+    workspaceAccessMode: z.union([z.enum(['ReadWriteOncePod', 'ReadWriteOnce']), z.string()]),
+    pausedRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
+    maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
+    maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
+    transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
+    updatedAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+export const zSaveCloudRuntimeRequest = z.object({
+    enabled: z.boolean(),
+    runnerImage: z.optional(z.string().check(z.maxLength(512))),
+    runnerBinary: z.string().check(z.maxLength(256)),
+    serverUrl: z.optional(z.string().check(z.maxLength(512))),
+    workspaceAccessMode: z.union([z.enum(['ReadWriteOncePod', 'ReadWriteOnce']), z.string()]),
+    pausedRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
+    maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
+    maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
+    transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
+    updatedAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+export const zSaveCloudClusterRequest = z.object({
+    name: z.string().check(z.minLength(1), z.maxLength(100)),
+    apiUrl: z.string().check(z.maxLength(512)),
+    caCertificate: z.optional(z.string().check(z.maxLength(65536))),
+    serviceAccountToken: z.optional(z.string().check(z.maxLength(16384))),
+    allowedNamespaces: z.array(z.string().check(z.regex(/^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/))).check(z.minLength(1), z.maxLength(100)),
+    maxRunningPods: z.int().check(z.gte(1), z.lte(100000)),
+    defaultStorageClass: z.optional(z.string().check(z.maxLength(253))),
+    version: z.int().check(z.gte(0))
+});
+
+export const zCloudResources = z.object({
+    cpuMillis: z.int().check(z.gte(100), z.lte(64000)),
+    memoryMebibytes: z.int().check(z.gte(128), z.lte(262144))
+});
+
+/**
+ * What a session of the profile runs (TeamCode's profile spec)
+ */
+export const zCloudProfileSpec = z.object({
+    clusterId: z.uuid(),
+    namespace: z.string(),
+    image: z.string().check(z.maxLength(512)),
+    allowedImageOverrides: z.optional(z.array(z.string()).check(z.maxLength(50))),
+    imagePullSecrets: z.optional(z.array(z.string()).check(z.maxLength(20))),
+    resources: z.optional(zCloudResources),
+    workspaceSizeGibibytes: z.optional(z.int().check(z.gte(1), z.lte(2048))),
+    storageClass: z.optional(z.string()),
+    agentKind: z.optional(z.string()),
+    agentVersion: z.optional(z.string()),
+    idleTimeoutMinutes: z.optional(z.int().check(z.gte(1), z.lte(1440))),
+    minIdleTimeoutMinutes: z.optional(z.int().check(z.gte(1), z.lte(1440))),
+    maxIdleTimeoutMinutes: z.optional(z.int().check(z.gte(1), z.lte(1440)))
+});
+
+export const zCloudProfile = z.object({
+    id: z.uuid(),
+    name: z.string(),
+    version: z.int(),
+    spec: zCloudProfileSpec,
+    assignedMemberIds: z.array(z.string()),
+    clusterName: z.optional(z.string()),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * How an organization compiles its packages
+ */
+export const zCompilerSettings = z.object({
+    pin: z.union([z.enum(['auto', 'manual']), z.string()]),
+    codePublishers: z.optional(z.array(z.string().check(z.minLength(1), z.maxLength(100))).check(z.maxLength(100))),
+    prodApprover: z.optional(z.string().check(z.minLength(1), z.maxLength(100))),
+    updatedAt: z.optional(z.iso.datetime({ offset: true })),
+    updatedBy: z.optional(z.string())
+});
+
+export const zSaveCompilerSettingsRequest = z.object({
+    pin: z.union([z.enum(['auto', 'manual']), z.string()]),
+    codePublishers: z.optional(z.array(z.string().check(z.minLength(1), z.maxLength(100))).check(z.maxLength(100))),
+    prodApprover: z.optional(z.string().check(z.minLength(1), z.maxLength(100))),
+    updatedAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+/**
+ * An organization's cloud session settings
+ */
+export const zCloudSettings = z.object({
+    backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
+    updatedAt: z.optional(z.iso.datetime({ offset: true })),
+    updatedBy: z.optional(z.string())
+});
+
+export const zSaveCloudSettingsRequest = z.object({
+    backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
+    updatedAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+export const zCloudProfileList = z.object({
+    profiles: z.array(zCloudProfile)
+});
+
+export const zSaveCloudProfileRequest = z.object({
+    name: z.string().check(z.minLength(1), z.maxLength(100)),
+    version: z.int().check(z.gte(0)),
+    spec: zCloudProfileSpec,
+    assignedMemberIds: z.optional(z.array(z.string()).check(z.maxLength(1000)))
+});
+
+/**
  * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
  */
 export const zCloudAgentKind = z.union([z.enum([
@@ -700,11 +1217,42 @@ export const zCloudAgentKind = z.union([z.enum([
     ]), z.string()]);
 
 /**
+ * A repository the runner clones into the workspace
+ */
+export const zCloudRepository = z.object({
+    url: z.string(),
+    path: z.optional(z.string()),
+    ref: z.optional(z.string()),
+    branch: z.optional(z.string())
+});
+
+/**
+ * Commands run with `/bin/sh -c` in the working directory, in the agent's container and under its user, with the owner's environment variables; their output goes to the session's terminal, its known variable values masked
+ */
+export const zCloudSetup = z.object({
+    create: z.optional(z.array(z.string()).check(z.maxLength(16))),
+    start: z.optional(z.array(z.string()).check(z.maxLength(16)))
+});
+
+/**
+ * The preparation recipe of a cloud session (`runners.cloud.environment.v1`): what the runner does in the workspace before the agent starts, the same on every execution. Stored on the session at creation and never edited, so a resume prepares exactly what the first execution did. Holds no secret: variable values and the GitHub token are resolved for the session's owner at every start. The image carries the toolchain; the recipe says what to do with it
+ */
+export const zCloudEnvironment = z.object({
+    repositories: z.optional(z.array(zCloudRepository).check(z.maxLength(16))),
+    workingDirectory: z.optional(z.string()),
+    setup: z.optional(zCloudSetup),
+    requiredVariables: z.optional(z.array(z.string()).check(z.maxLength(64))),
+    requireGitHub: z.optional(z.boolean()),
+    gitEmailDomain: z.optional(z.string())
+});
+
+/**
  * Why a cloud session failed or paused on its own
  */
 export const zCloudSessionFailure = z.object({
     code: z.string(),
-    message: z.string()
+    message: z.string(),
+    retryable: z.optional(z.boolean())
 });
 
 /**
@@ -738,6 +1286,7 @@ export const zCloudSession = z.object({
     lastActivityAt: z.optional(z.string()),
     pausedAt: z.optional(z.string()),
     runnerId: z.optional(z.string()),
+    environment: z.optional(zCloudEnvironment),
     githubAccess: z.optional(z.union([z.enum([
             'owner',
             'shared',
@@ -789,7 +1338,8 @@ export const zDecision = z.object({
 export const zDeliverable = z.object({
     type: z.string(),
     label: z.optional(z.string()),
-    schema: z.optional(z.unknown())
+    schema: z.optional(z.unknown()),
+    domain: z.optional(z.string())
 });
 
 /**
@@ -850,6 +1400,13 @@ export const zDeviceAuthorization = z.object({
 });
 
 /**
+ * The device code to exchange for a token (RFC 8628 section 3.4)
+ */
+export const zDeviceTokenRequest = z.object({
+    deviceCode: z.string()
+});
+
+/**
  * OAuth device flow start
  */
 export const zDeviceCode = z.object({
@@ -897,10 +1454,115 @@ export const zApiError = z.object({
 });
 
 /**
+ * The refusal of a publication: `ApiError` with, for `artifact_conflict`, the live version (TeamCode's `{error, current}`)
+ */
+export const zArtifactConflict = z.object({
+    error: zErrorDetail,
+    current: z.optional(zArtifactVersion)
+});
+
+/**
  * 403 email_link_other_browser: the e-mailed link was asked for in another browser (its `ostrom_email_link` nonce is missing or not that browser's). The link is not used: open it in the browser that asked for it, or ask for a new link from this one
  */
 export const zEmailLinkOtherBrowser = z.object({
     error: zErrorDetail
+});
+
+/**
+ * Selects a team variant for a member's variable
+ */
+export const zEnvironmentAssign = z.object({
+    variantId: z.string(),
+    value: z.optional(z.string().check(z.minLength(1), z.maxLength(16384)))
+});
+
+/**
+ * One member's selection for one variable, metadata only
+ */
+export const zEnvironmentAssignment = z.object({
+    member: z.string(),
+    variable: z.string(),
+    variantId: z.string(),
+    variantName: z.string(),
+    version: z.int(),
+    source: z.union([z.enum(['direct', 'bulk']), z.string()]),
+    personal: z.boolean(),
+    hasMemberValue: z.boolean(),
+    assignedAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * What a bulk assignment did
+ */
+export const zEnvironmentBulkAssignment = z.object({
+    assigned: z.int(),
+    keptDirect: z.int(),
+    excluded: z.int()
+});
+
+/**
+ * A member excluded from a variable
+ */
+export const zEnvironmentExclusion = z.object({
+    member: z.string(),
+    variable: z.string()
+});
+
+/**
+ * Effective environment assignments and exclusions, by member then variable; always one page
+ */
+export const zEnvironmentAssignmentsPage = z.object({
+    items: z.array(zEnvironmentAssignment),
+    exclusions: z.array(zEnvironmentExclusion)
+});
+
+/**
+ * A member's environment variables with their values: never logged, stored, or shown to anyone else
+ */
+export const zEnvironmentValues = z.object({
+    variables: z.record(z.string(), z.string()),
+    unavailable: z.array(z.string())
+});
+
+/**
+ * An environment variant (`environment.v1`): a named value for one environment variable, never with its value
+ */
+export const zEnvironmentVariant = z.object({
+    id: z.string(),
+    variable: z.string(),
+    name: z.string(),
+    binding: z.union([z.enum(['shared', 'perMember']), z.string()]),
+    owner: z.optional(z.string()),
+    hasValue: z.boolean(),
+    version: z.int(),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * Creates an environment variant; the variable and the binding never change afterwards
+ */
+export const zEnvironmentVariantCreate = z.object({
+    variable: z.string(),
+    name: z.string(),
+    binding: z.optional(z.union([z.enum(['shared', 'perMember']), z.string()])),
+    value: z.optional(z.string().check(z.minLength(1), z.maxLength(16384)))
+});
+
+/**
+ * Renames a variant or replaces its shared value
+ */
+export const zEnvironmentVariantUpdate = z.object({
+    expectedVersion: z.int(),
+    name: z.optional(z.string()),
+    value: z.optional(z.string().check(z.minLength(1), z.maxLength(16384)))
+});
+
+/**
+ * Environment variants, by variable then name; always one page (at most 500)
+ */
+export const zEnvironmentVariantsPage = z.object({
+    items: z.array(zEnvironmentVariant)
 });
 
 /**
@@ -1165,13 +1827,34 @@ export const zHealth = z.object({
 });
 
 /**
- * A hook delivered to developers outside session packages
+ * An immutable published version: its definition, files and digest never change
  */
-export const zHook = z.object({
-    name: z.string(),
+export const zHookVersion = z.object({
     version: z.string(),
-    pinned: z.boolean(),
-    assignedTo: z.array(z.string())
+    digest: z.string(),
+    definition: zHookDefinition,
+    sizeBytes: z.int(),
+    fileCount: z.int(),
+    publishedBy: z.string(),
+    publishedAt: z.string(),
+    pinned: z.boolean()
+});
+
+/**
+ * A hook and its versions, newest first
+ */
+export const zHookDetail = z.object({
+    hook: zHookEntry,
+    versions: z.array(zHookVersion)
+});
+
+/**
+ * What a publication did
+ */
+export const zHookPublication = z.object({
+    hook: zHookEntry,
+    version: zHookVersion,
+    created: z.boolean()
 });
 
 /**
@@ -1184,7 +1867,10 @@ export const zImportItem = z.object({
             'server',
             'policy',
             'assignment',
-            'account'
+            'account',
+            'workflow',
+            'editors',
+            'automation'
         ]), z.string()]),
     name: z.string(),
     action: z.union([z.enum([
@@ -1222,6 +1908,103 @@ export const zInferenceRoute = z.object({
     provider: z.string(),
     account: z.optional(z.string()),
     priority: z.int()
+});
+
+/**
+ * An administrator of the instance
+ */
+export const zInstanceAdmin = z.object({
+    userId: z.uuid(),
+    login: z.optional(z.string()),
+    email: z.optional(z.string()),
+    source: z.union([z.enum([
+            'setup',
+            'dashboard',
+            'environment'
+        ]), z.string()]),
+    addedAt: z.iso.datetime({ offset: true }),
+    addedBy: z.optional(z.uuid())
+});
+
+/**
+ * The administrators of the instance, oldest first
+ */
+export const zInstanceAdminList = z.object({
+    admins: z.array(zInstanceAdmin)
+});
+
+/**
+ * The person to make an administrator of the instance
+ */
+export const zAddInstanceAdminRequest = z.object({
+    email: z.string().check(z.minLength(3), z.maxLength(320))
+});
+
+/**
+ * A write-only secret of a settings section, as it is shown back
+ */
+export const zInstanceSecretState = z.object({
+    configured: z.boolean()
+});
+
+/**
+ * A connected Kubernetes cluster; its CA bundle and service-account token are never returned
+ */
+export const zCloudCluster = z.object({
+    id: z.uuid(),
+    name: z.string(),
+    apiUrl: z.string(),
+    allowedNamespaces: z.array(z.string()),
+    maxRunningPods: z.int(),
+    defaultStorageClass: z.optional(z.string()),
+    version: z.int(),
+    caCertificate: zInstanceSecretState,
+    serviceAccountToken: zInstanceSecretState,
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true })
+});
+
+export const zCloudClusterList = z.object({
+    clusters: z.array(zCloudCluster)
+});
+
+/**
+ * A field of a settings section
+ */
+export const zInstanceSettingField = z.object({
+    name: z.string(),
+    secret: z.boolean(),
+    required: z.boolean()
+});
+
+/**
+ * One section of the instance's settings
+ */
+export const zInstanceSettings = z.object({
+    section: z.string(),
+    version: z.int(),
+    values: z.record(z.string(), z.string()),
+    secrets: z.record(z.string(), zInstanceSecretState),
+    fields: z.array(zInstanceSettingField),
+    updatedAt: z.optional(z.iso.datetime({ offset: true })),
+    updatedBy: z.optional(z.uuid()),
+    importedFromEnvironment: z.boolean()
+});
+
+/**
+ * Every section of the instance's settings, by name order
+ */
+export const zInstanceSettingsList = z.object({
+    sections: z.array(zInstanceSettings)
+});
+
+/**
+ * A section's new settings
+ */
+export const zSaveInstanceSettingsRequest = z.object({
+    version: z.int().check(z.gte(0)),
+    values: z.optional(z.record(z.string(), z.string().check(z.maxLength(4096)))),
+    secrets: z.optional(z.record(z.string(), z.nullable(z.string().check(z.maxLength(16384)))))
 });
 
 /**
@@ -1321,6 +2104,170 @@ export const zLinkStarted = z.object({
 });
 
 /**
+ * What the index or a search shows of an entry: never its content
+ */
+export const zMemoryIndexEntry = z.object({
+    id: z.string(),
+    scope: z.union([z.enum(['team', 'personal']), z.string()]),
+    title: z.string(),
+    summary: z.string(),
+    tags: z.optional(z.array(z.string())),
+    updatedAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * A page of the memory index
+ */
+export const zMemoryIndexPage = z.object({
+    entries: z.array(zMemoryIndexEntry),
+    next: z.optional(z.string())
+});
+
+/**
+ * The entries a search found, newest first, at most 20
+ */
+export const zMemorySearchResult = z.object({
+    entries: z.array(zMemoryIndexEntry)
+});
+
+/**
+ * One entry of the memory with its content (`memory.v1`)
+ */
+export const zMemoryEntry = z.object({
+    id: z.string(),
+    scope: z.union([z.enum(['team', 'personal']), z.string()]),
+    title: z.string().check(z.maxLength(160)),
+    summary: z.string().check(z.maxLength(300)),
+    content: z.string().check(z.maxLength(16000)),
+    tags: z.optional(z.array(z.string())),
+    refs: z.optional(z.array(z.string())),
+    status: z.union([z.enum([
+            'active',
+            'proposed',
+            'superseded',
+            'rejected'
+        ]), z.string()]),
+    origin: z.union([z.enum([
+            'human',
+            'agent',
+            'curation'
+        ]), z.string()]),
+    authorId: z.string(),
+    sessionId: z.optional(z.string()),
+    supersedesId: z.optional(z.string()),
+    expiresAt: z.optional(z.iso.datetime({ offset: true })),
+    version: z.int(),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
+    lastReadAt: z.optional(z.iso.datetime({ offset: true })),
+    readCount: z.optional(z.int())
+});
+
+/**
+ * A new entry; never stores a credential
+ */
+export const zCreateMemoryRequest = z.object({
+    title: z.string().check(z.minLength(1), z.maxLength(160)),
+    summary: z.string().check(z.minLength(1), z.maxLength(300)),
+    content: z.string().check(z.minLength(1), z.maxLength(16000)),
+    scope: z.optional(z.union([z.enum(['team', 'personal']), z.string()])),
+    tags: z.optional(z.array(z.string()).check(z.maxLength(8))),
+    refs: z.optional(z.array(z.string()).check(z.maxLength(10))),
+    expiresAt: z.optional(z.iso.datetime({ offset: true })),
+    sessionId: z.optional(z.string())
+});
+
+/**
+ * Replaces an entry
+ */
+export const zUpdateMemoryRequest = z.object({
+    expectedVersion: z.int(),
+    title: z.string().check(z.minLength(1), z.maxLength(160)),
+    summary: z.string().check(z.minLength(1), z.maxLength(300)),
+    content: z.string().check(z.minLength(1), z.maxLength(16000)),
+    tags: z.optional(z.array(z.string()).check(z.maxLength(8))),
+    refs: z.optional(z.array(z.string()).check(z.maxLength(10))),
+    expiresAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+/**
+ * Team entries agents proposed, waiting for an answer, oldest first
+ */
+export const zMemoryProposals = z.object({
+    proposals: z.array(zMemoryEntry)
+});
+
+/**
+ * Whether the organization's memory is curated, and what its last run did; off by default
+ */
+export const zMemoryCuration = z.object({
+    enabled: z.boolean(),
+    lastRunAt: z.optional(z.iso.datetime({ offset: true })),
+    lastRunId: z.optional(z.string()),
+    lastSuperseded: z.optional(z.int()),
+    lastQueued: z.optional(z.int())
+});
+
+/**
+ * Turns the curation on or off
+ */
+export const zSetMemoryCurationRequest = z.object({
+    enabled: z.boolean()
+});
+
+/**
+ * A pair curation did not decide alone: applying it supersedes `olderId` by `newerId`
+ */
+export const zMemoryReview = z.object({
+    id: z.string(),
+    scope: z.union([z.enum(['team', 'personal']), z.string()]),
+    kind: z.union([z.enum(['duplicate', 'same_title']), z.string()]),
+    reason: z.string(),
+    olderId: z.string(),
+    olderTitle: z.string(),
+    olderOrigin: z.union([z.enum([
+            'human',
+            'agent',
+            'curation'
+        ]), z.string()]),
+    newerId: z.string(),
+    newerTitle: z.string(),
+    newerOrigin: z.union([z.enum([
+            'human',
+            'agent',
+            'curation'
+        ]), z.string()]),
+    createdAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * Open reviews, oldest first
+ */
+export const zMemoryReviews = z.object({
+    reviews: z.array(zMemoryReview)
+});
+
+/**
+ * An entry curation replaced, restorable for 90 days
+ */
+export const zSupersededMemory = z.object({
+    id: z.string(),
+    scope: z.union([z.enum(['team', 'personal']), z.string()]),
+    title: z.string(),
+    summary: z.string(),
+    authorId: z.string(),
+    supersededById: z.optional(z.string()),
+    supersededAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * Superseded entries, newest first
+ */
+export const zSupersededMemories = z.object({
+    entries: z.array(zSupersededMemory)
+});
+
+/**
  * One test on a tool call's arguments
  */
 export const zMcpArgumentCondition = z.object({
@@ -1413,6 +2360,42 @@ export const zMcpCall = z.object({
 });
 
 /**
+ * One hosted stdio process; no secret, argument value or environment
+ */
+export const zMcpHostedProcess = z.object({
+    server: z.string(),
+    member: z.optional(z.string()),
+    memberName: z.optional(z.string()),
+    launcher: z.string(),
+    package: z.string(),
+    state: z.string(),
+    failure: z.optional(z.string()),
+    starts: z.int(),
+    failures: z.int(),
+    lastExitCode: z.optional(z.int()),
+    coldStartMs: z.optional(z.int()),
+    memoryBytes: z.optional(z.int()),
+    stderr: z.optional(z.string())
+});
+
+/**
+ * The org's hosted stdio processes (`GET /api/v1/mcp/hosted`)
+ */
+export const zMcpHostedProcesses = z.object({
+    hostReachable: z.boolean(),
+    hostVersion: z.optional(z.string()),
+    items: z.array(zMcpHostedProcess)
+});
+
+/**
+ * The process to restart
+ */
+export const zMcpHostedRestart = z.object({
+    server: z.string(),
+    member: z.optional(z.string())
+});
+
+/**
  * How the gateway reaches model providers for the org (bring your own key)
  */
 export const zInferenceSettings = z.object({
@@ -1424,10 +2407,19 @@ export const zInferenceSettings = z.object({
 });
 
 /**
+ * The organization's admission queue (`inference.queue.v1`)
+ */
+export const zInferenceQueue = z.object({
+    waiting: z.int(),
+    waitingMine: z.int()
+});
+
+/**
  * How agents see relayed servers
  */
 export const zMcpSettings = z.object({
-    agentPrefix: z.string().check(z.regex(/^[a-z0-9][a-z0-9_-]{0,31}$/))
+    agentPrefix: z.string().check(z.regex(/^[a-z0-9][a-z0-9_-]{0,31}$/)),
+    memberHostedMcp: z._default(z.optional(z.boolean()), false)
 });
 
 /**
@@ -1453,11 +2445,14 @@ export const zMcpServer = z.object({
     enabled: z.boolean(),
     scope: z.string(),
     agentName: z.optional(z.readonly(z.string())),
+    state: z.optional(z.readonly(z.string())),
+    failure: z.optional(z.readonly(z.string())),
     path: z.optional(z.readonly(z.string())),
     credentialHeader: z.optional(z.string()),
     stdio: z.optional(zMcpStdioSpec),
     version: z.optional(z.readonly(z.int())),
-    createdAt: z.optional(z.readonly(z.iso.datetime({ offset: true })))
+    createdAt: z.optional(z.readonly(z.iso.datetime({ offset: true }))),
+    owner: z.optional(z.readonly(z.string()))
 });
 
 export const zAccountEmail = z.object({
@@ -1507,6 +2502,103 @@ export const zOpenAiResponsesStreamEvent = z.object({
 });
 
 /**
+ * One event of the organization's feed (`GET /api/v1/events`), and the `data` of a webhook delivery
+ */
+export const zOrgEvent = z.object({
+    seq: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    type: z.string(),
+    subject: z.string(),
+    subjectId: z.string(),
+    memberId: z.optional(z.string()),
+    at: z.string(),
+    data: z.record(z.string(), z.unknown())
+});
+
+/**
+ * The version to pin
+ */
+export const zPinSkillRequest = z.object({
+    version: z.string()
+});
+
+/**
+ * The execution a runner call is for
+ */
+export const zRunnerExecution = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
+ * The execution a runner call is for, and the version it downloads: a name and a version label of the owner's manifest
+ */
+export const zRunnerArtifactRequest = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    name: z.string(),
+    version: z.string()
+});
+
+/**
+ * The Git identity the agent commits with, the session owner's: a linked GitHub account's login and no-reply address, otherwise the member's name and `<name>@<gitEmailDomain>`
+ */
+export const zRunnerGitIdentity = z.object({
+    name: z.string(),
+    email: z.string()
+});
+
+/**
+ * What the runner prepares for one execution: holds secrets, never logged or stored
+ */
+export const zRunnerEnvironment = z.object({
+    environment: zCloudEnvironment,
+    git: zRunnerGitIdentity,
+    variables: z.record(z.string(), z.string()),
+    unavailable: z.array(z.string())
+});
+
+/**
+ * What the runner must do next
+ */
+export const zRunnerHeartbeatAnswer = z.object({
+    instruction: z.string(),
+    state: z.string()
+});
+
+/**
+ * A failed preparation step, as structured fields only
+ */
+export const zRunnerPreparationFailure = z.object({
+    step: z.union([z.enum([
+            'git_identity',
+            'clone',
+            'checkout',
+            'fetch',
+            'working_directory',
+            'setup_create',
+            'setup_start',
+            'runner'
+        ]), z.string()]),
+    index: z.optional(z.int()),
+    exitCode: z.optional(z.int())
+});
+
+/**
+ * A preparation phase, or its failure
+ */
+export const zRunnerPreparationReport = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    phase: z.union([z.enum([
+            'configuring_git',
+            'cloning_repositories',
+            'fetching_repositories',
+            'running_setup'
+        ]), z.string()]),
+    failure: z.optional(zRunnerPreparationFailure)
+});
+
+/**
  * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
  */
 export const zRunnerGitHubToken = z.object({
@@ -1518,6 +2610,225 @@ export const zRunnerGitHubToken = z.object({
     token: z.optional(z.string()),
     expiresAt: z.optional(z.string()),
     login: z.optional(z.string())
+});
+
+/**
+ * A decision
+ */
+export const zSetAssignmentRequest = z.object({
+    decision: z.union([z.enum(['allow', 'deny']), z.string()])
+});
+
+/**
+ * Who receives the pinned version without an explicit decision
+ */
+export const zSetAudienceRequest = z.object({
+    allMembers: z.boolean()
+});
+
+/**
+ * The files of one effective version; the digest is recomputable from their metadata
+ */
+export const zSkillArtifact = z.object({
+    name: z.string(),
+    version: z.string(),
+    digest: z.string(),
+    files: z.array(zArtifactFileContent)
+});
+
+/**
+ * A skill of the catalog. Delivered only through its pinned version.
+ */
+export const zSkillEntry = z.object({
+    id: z.string(),
+    name: z.string(),
+    pinnedVersion: z.nullish(z.string()),
+    retired: z.boolean(),
+    allMembers: z.boolean(),
+    ownerId: z.nullish(z.string()),
+    createdAt: z.string(),
+    updatedAt: z.string()
+});
+
+/**
+ * Skills, newest change first
+ */
+export const zSkillCatalog = z.object({
+    items: z.array(zSkillEntry)
+});
+
+/**
+ * A file sent for publication
+ */
+export const zSkillFileUpload = z.object({
+    path: z.string(),
+    mode: z.optional(z.union([z.enum(['file', 'executable']), z.string()])),
+    contentBase64: z.string()
+});
+
+/**
+ * A hook version to publish; it is not delivered until an administrator pins it
+ */
+export const zPublishHookVersionRequest = z.object({
+    version: z.string(),
+    definition: zHookDefinition,
+    files: z.array(zSkillFileUpload),
+    allMembers: z.optional(z.boolean())
+});
+
+/**
+ * A version to publish
+ */
+export const zPublishSkillVersionRequest = z.object({
+    version: z.string(),
+    files: z.array(zSkillFileUpload),
+    pin: z.optional(z.boolean()),
+    allMembers: z.optional(z.boolean())
+});
+
+/**
+ * A skill's state on one workstation, as it last reported it
+ */
+export const zSkillInstallation = z.object({
+    deviceId: z.string(),
+    deviceName: z.string(),
+    name: z.string(),
+    version: z.nullish(z.string()),
+    digest: z.nullish(z.string()),
+    status: z.union([z.enum([
+            'installed',
+            'failed',
+            'conflict',
+            'removed'
+        ]), z.string()]),
+    reportedAt: z.string()
+});
+
+/**
+ * Installation reports, newest first
+ */
+export const zSkillInstallationList = z.object({
+    items: z.array(zSkillInstallation)
+});
+
+/**
+ * A skill's state on the reporting workstation
+ */
+export const zSkillInstallationReport = z.object({
+    name: z.string(),
+    version: z.optional(z.string()),
+    digest: z.optional(z.string()),
+    status: z.union([z.enum([
+            'installed',
+            'failed',
+            'conflict',
+            'removed'
+        ]), z.string()])
+});
+
+/**
+ * Up to 500 reports, each skill once
+ */
+export const zReportSkillInstallationsRequest = z.object({
+    installations: z.array(zSkillInstallationReport)
+});
+
+/**
+ * What a member receives, sorted by name
+ */
+export const zSkillManifest = z.object({
+    memberId: z.string(),
+    skills: z.array(zEffectiveSkill)
+});
+
+/**
+ * An immutable published version: its files and digest never change
+ */
+export const zSkillVersion = z.object({
+    version: z.string(),
+    digest: z.string(),
+    sizeBytes: z.int(),
+    fileCount: z.int(),
+    publishedBy: z.string(),
+    publishedAt: z.string(),
+    retired: z.boolean(),
+    pinned: z.boolean()
+});
+
+/**
+ * A skill and its versions, newest first
+ */
+export const zSkillDetail = z.object({
+    skill: zSkillEntry,
+    versions: z.array(zSkillVersion)
+});
+
+/**
+ * What a publication did
+ */
+export const zSkillPublication = z.object({
+    skill: zSkillEntry,
+    version: zSkillVersion,
+    created: z.boolean()
+});
+
+/**
+ * A row of TeamCode's `automations` table, without its secrets; the server maps it to an Ostrom automation of the mapped owner, disabled until the cutover run
+ */
+export const zTeamCodeAutomation = z.object({
+    id: z.string(),
+    ownerId: z.string(),
+    name: z.string(),
+    triggerKind: z.string(),
+    cron: z.optional(z.string()),
+    timezone: z.optional(z.string()),
+    catchup: z.optional(z.string()),
+    catchupGraceMinutes: z.optional(z.int()),
+    actionKind: z.string(),
+    profileId: z.optional(z.string()),
+    model: z.optional(z.string()),
+    effort: z.optional(z.string()),
+    maxRuntimeMinutes: z.optional(z.int()),
+    prompt: z.optional(z.string()),
+    variables: z.optional(z.array(z.unknown())),
+    samplePayload: z.optional(z.unknown()),
+    overlap: z.optional(z.string()),
+    maxRunsPerDay: z.optional(z.int()),
+    enabled: z.boolean(),
+    version: z.optional(z.int()),
+    workflowId: z.optional(z.string()),
+    workflowInputs: z.optional(z.record(z.string(), z.string()))
+});
+
+/**
+ * The repositories of a TeamCode cloud profile's current version that a workflow or an automation names; the first becomes the `repository` of the node or the action
+ */
+export const zTeamCodeProfile = z.object({
+    id: z.string(),
+    name: z.optional(z.string()),
+    repositories: z.array(z.string()),
+    setupCommands: z.optional(z.int())
+});
+
+/**
+ * A row of TeamCode's `workflows` table, its definition as TeamCode stores it; the server maps it to an Ostrom `Workflow` (`tc-<id>`, accepted, docs/decisions/workflows-one-system.md in ostrom-server)
+ */
+export const zTeamCodeWorkflow = z.object({
+    id: z.string(),
+    name: z.string(),
+    version: z.int(),
+    definition: z.record(z.string(), z.unknown()),
+    updatedById: z.optional(z.string()),
+    createdAt: z.optional(z.int()),
+    updatedAt: z.optional(z.int())
+});
+
+/**
+ * TeamCode's `workflow_settings` row
+ */
+export const zTeamCodeWorkflowEditors = z.object({
+    mode: z.string(),
+    memberIds: z.optional(z.array(z.string()))
 });
 
 export const zTokenScope = z.object({
@@ -1571,6 +2882,13 @@ export const zMyOrganization = z.object({
     name: z.string(),
     avatarUrl: z.string(),
     role: zMemberRole
+});
+
+/**
+ * The organizations the caller is an active member of
+ */
+export const zMyOrganizationList = z.object({
+    items: z.array(zMyOrganization)
 });
 
 /**
@@ -1629,6 +2947,32 @@ export const zNodePosition = z.object({
 export const zNodeRunOn = z.object({
     classes: z.optional(z.array(z.string())),
     patterns: z.optional(z.array(z.string()))
+});
+
+/**
+ * A member's switch for one kind on one channel
+ */
+export const zNotificationSetting = z.object({
+    channel: z.string(),
+    kind: z.string(),
+    enabled: z.boolean()
+});
+
+/**
+ * One switch to set for the caller
+ */
+export const zNotificationSettingChange = z.object({
+    channel: z.string(),
+    kind: z.string(),
+    enabled: z.boolean()
+});
+
+/**
+ * The channels this server offers and every switch in force, defaults filled
+ */
+export const zNotificationSettings = z.object({
+    channels: z.array(z.string()),
+    settings: z.array(zNotificationSetting)
 });
 
 export const zNotificationStatus = z.union([z.enum([
@@ -1755,6 +3099,7 @@ export const zMe = z.object({
     member: z.optional(zMember),
     organization: z.optional(zOrganization),
     capabilities: z.array(z.string()),
+    instanceAdmin: z.optional(z.boolean()),
     csrfToken: z.optional(z.string())
 });
 
@@ -1925,6 +3270,42 @@ export const zPublicKey = z.object({
 });
 
 /**
+ * The public keys that sign the instance's receipts
+ */
+export const zReceiptKeyList = z.object({
+    keys: z.array(zPublicKey)
+});
+
+/**
+ * A phone to notify: its push token, the push provider, the platform and the key its pushes are encrypted for
+ */
+export const zRegisterPushDeviceRequest = z.object({
+    pushToken: z.string(),
+    provider: z.string(),
+    platform: z.string(),
+    locale: z.optional(z.string()),
+    publicKey: z.optional(z.string())
+});
+
+/**
+ * What an `fcm` push carries, encrypted for the phone's public key (TeamCode's push payload). The FCM data is `{"p": <encrypted payload>, "v": "1"}`; the encrypted payload is `base64(0x01 | ephemeral P-256 public key (65 bytes, uncompressed) | nonce (12 bytes) | AES-256-GCM ciphertext and 16-byte tag)`, its key `HKDF-SHA256(ECDH(ephemeral private, phone public), salt = ephemeral point | phone point, info = "ostrom-push-v1", 32 bytes)`, both points as 65-byte uncompressed SEC1 points (`0x04 | x | y`, the phone's read from its SubjectPublicKeyInfo), its plaintext this object's JSON, `v` always written. On iOS a generic alert shows when the notification service extension cannot decrypt it.
+ */
+export const zPushPayload = z.object({
+    v: z.optional(z.int()),
+    id: z.string(),
+    origin: z.string(),
+    orgId: z.string(),
+    memberId: z.string(),
+    kind: z.string(),
+    title: z.string(),
+    body: z.string(),
+    approvalId: z.optional(z.string()),
+    sessionId: z.optional(z.string()),
+    waitId: z.optional(z.string()),
+    at: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
  * A phone registered for push notifications
  */
 export const zPushDevice = z.object({
@@ -1933,6 +3314,56 @@ export const zPushDevice = z.object({
     platform: z.string(),
     locale: z.optional(z.string()),
     createdAt: z.string()
+});
+
+/**
+ * Ostrom Push relay (`push.v1`), `POST /v1/instances`: an instance introduces its Ed25519 public key. The same key gets the same id. This and the other `PushRelay` schemas are the wire format between a server and the relay that holds the Firebase project of the published apps; the relay sees an instance, a token and an encrypted blob, never a member, a session or the text. Every request but this one carries `Ostrom-Instance`, `Ostrom-Timestamp` (Unix seconds, at most 300 s off) and `Ostrom-Signature`, Ed25519 over `<METHOD>\n<path>\n<timestamp>\n<sha256 of the body, lowercase hex>`, base64url without padding.
+ */
+export const zPushRelayRegisterRequest = z.object({
+    publicKey: z.string()
+});
+
+/**
+ * The relay's id for the instance
+ */
+export const zPushRelayRegisterResponse = z.object({
+    instanceId: z.string()
+});
+
+/**
+ * `POST /v1/send`: one push to one installation
+ */
+export const zPushRelaySendRequest = z.object({
+    token: z.string(),
+    platform: z.string(),
+    payload: z.string(),
+    collapseKey: z.string(),
+    ttlSeconds: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
+ * The outcome of one push
+ */
+export const zPushRelaySendResponse = z.object({
+    status: z.string(),
+    retryAfterSeconds: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    error: z.optional(z.string())
+});
+
+/**
+ * One installation's result of a test push
+ */
+export const zPushTestResult = z.object({
+    status: z.string(),
+    error: z.optional(z.string())
+});
+
+/**
+ * A test push to the caller's phones; `ok` when one was sent
+ */
+export const zPushTestResults = z.object({
+    ok: z.boolean(),
+    results: z.array(zPushTestResult)
 });
 
 /**
@@ -2037,6 +3468,14 @@ export const zReceipt = z.object({
 });
 
 /**
+ * A page of receipts; `next` is the cursor of the following page
+ */
+export const zReceiptPage = z.object({
+    items: z.array(zReceipt),
+    next: z.optional(z.string())
+});
+
+/**
  * A receipt with every signed piece it cites, verifiable offline (ostrom.receipt-bundle/1)
  */
 export const zReceiptBundle = z.object({
@@ -2075,7 +3514,8 @@ export const zRepo = z.object({
     defaultBranch: z.string(),
     archived: z.boolean(),
     pushedAt: z.optional(z.string()),
-    owners: z.optional(z.array(z.string()))
+    owners: z.optional(z.array(z.string())),
+    processes: z.optional(z.int().check(z.gte(0)))
 });
 
 /**
@@ -2153,7 +3593,8 @@ export const zNodeRun = z.object({
     instructions: z.optional(z.string()),
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
-    deliverable: z.optional(zDeliverable)
+    deliverable: z.optional(zDeliverable),
+    repository: z.optional(z.string())
 });
 
 /**
@@ -2367,7 +3808,7 @@ export const zSharedAccount = z.object({
     mine: z.optional(z.boolean()),
     priority: z.optional(z.int()),
     limits: z.optional(z.object({
-        maxConcurrent: z.optional(z.int()),
+        maxConcurrent: z._default(z.optional(z.int().check(z.gte(0))), 0),
         utilizationCeiling: z.optional(z.number()),
         monthlyBudgetMicros: z.optional(z.int()),
         dailyBudgetMicros: z.optional(z.int()),
@@ -2393,11 +3834,16 @@ export const zSignUpGrantRequest = z.object({
 });
 
 /**
+ * Who may get a new account on an instance (`SignInMethods.signUp`)
+ */
+export const zSignUpPolicy = z.union([z.enum(['open', 'invite']), z.string()]);
+
+/**
  * The sign-in methods this instance offers
  */
 export const zSignInMethods = z.object({
     methods: z.array(z.string()),
-    signUp: z.optional(z.union([z.enum(['open', 'invite']), z.string()]))
+    signUp: z.optional(zSignUpPolicy)
 });
 
 /**
@@ -2426,17 +3872,6 @@ export const zSignInLink = z.object({
 export const zSignedIn = z.object({
     redirect: z.string(),
     csrfToken: z.optional(z.string())
-});
-
-/**
- * A skill delivered to developers
- */
-export const zSkill = z.object({
-    name: z.string(),
-    version: z.string(),
-    description: z.optional(z.string()),
-    pinned: z.boolean(),
-    assignedTo: z.array(z.string())
 });
 
 /**
@@ -2661,6 +4096,10 @@ export const zTeamCodeImportRequest = z.object({
     mcpServers: z.optional(z.array(zTeamCodeMcpServer)),
     assignments: z.optional(z.array(zTeamCodeAssignment)),
     accounts: z.optional(z.array(zTeamCodeAccount)),
+    workflows: z.optional(z.array(zTeamCodeWorkflow)),
+    workflowEditors: z.optional(zTeamCodeWorkflowEditors),
+    automations: z.optional(z.array(zTeamCodeAutomation)),
+    profiles: z.optional(z.array(zTeamCodeProfile)),
     memberMap: z.optional(z.record(z.string(), z.string()))
 });
 
@@ -2992,6 +4431,10 @@ export const zTodoStopAction = z.union([z.enum([
         'block'
     ]), z.string()]);
 
+export const zResetTodoRequest = z.object({
+    sessionId: z.optional(z.string())
+});
+
 export const zTodoHookErrorRequest = z.object({
     sessionId: z.optional(z.string()),
     text: z.string()
@@ -3100,6 +4543,14 @@ export const zVerification = z.object({
     kid: z.optional(z.string()),
     reason: z.optional(z.string()),
     orgBound: z.optional(z.boolean())
+});
+
+/**
+ * An answer to a wait: one of its actions and the values of its fields
+ */
+export const zAnswerWaitRequest = z.object({
+    action: z.string(),
+    values: z.optional(z.record(z.string(), z.unknown()))
 });
 
 /**
@@ -3263,6 +4714,14 @@ export const zWait = z.object({
 });
 
 /**
+ * A page of waits; `next` is the cursor of the following page
+ */
+export const zWaitPage = z.object({
+    items: z.array(zWait),
+    next: z.optional(z.string())
+});
+
+/**
  * The wait the event resolved
  */
 export const zWaitEventReceived = z.object({
@@ -3271,14 +4730,67 @@ export const zWaitEventReceived = z.object({
 });
 
 /**
- * An outgoing webhook
+ * An outgoing webhook of the organization. Each event of `types` is POSTed to `url` as JSON `{id, type, createdAt, data}`, `data` being the `OrgEvent` (`{"message": ...}` for `webhook.test`), with the headers `Ostrom-Delivery` (one id per event and webhook, the same on every retry: deduplicate on it), `Ostrom-Event`, `Ostrom-Timestamp` (Unix seconds) and `Ostrom-Signature: v1=<hex>`, the HMAC-SHA256 of `<timestamp>.<raw body>` keyed with the whole `whsec_` secret. A receiver compares in constant time and rejects a timestamp more than five minutes old. The body is fixed when the event is queued: every retry sends the same bytes, only the timestamp and the signature are fresh. A 2xx within 10 seconds is a delivery; a network error, a timeout, a 5xx, 408 or 429 is retried, 8 attempts in all, after 10 s, 30 s, 2 min, 10 min, 30 min, 2 h and 6 h; any other answer (a 4xx, a redirect) is final. A delivery still pending after 24 hours is given up (`expired`). Twenty final failures in a row disable the webhook (`too_many_failures`); a success resets the count. Deliveries are not ordered: use `data.seq` when order matters.
  */
 export const zWebhook = z.object({
     id: z.string(),
     url: z.string(),
-    events: z.array(z.string()),
+    types: z.array(z.string()),
+    description: z.string(),
     enabled: z.boolean(),
-    createdAt: z.string()
+    disabledReason: z.optional(z.string()),
+    createdBy: z.string(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    version: z.int(),
+    consecutiveFailures: z.int()
+});
+
+export const zWebhookList = z.object({
+    items: z.array(zWebhook)
+});
+
+/**
+ * A webhook and its signing secret, in the answer to its creation or a rotation only
+ */
+export const zCreatedWebhook = z.object({
+    webhook: zWebhook,
+    secret: z.string()
+});
+
+export const zCreateWebhookRequest = z.object({
+    url: z.string(),
+    types: z.array(z.string()),
+    description: z.optional(z.string())
+});
+
+export const zUpdateWebhookRequest = z.object({
+    version: z.int(),
+    url: z.string(),
+    types: z.array(z.string()),
+    description: z.optional(z.string()),
+    enabled: z.optional(z.boolean())
+});
+
+/**
+ * One event for one webhook, and its attempts
+ */
+export const zWebhookDelivery = z.object({
+    id: z.string(),
+    eventSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    eventType: z.string(),
+    state: z.string(),
+    attempts: z.int(),
+    nextAttemptAt: z.optional(z.string()),
+    lastStatus: z.optional(z.int()),
+    lastError: z.optional(z.string()),
+    createdAt: z.string(),
+    deliveredAt: z.optional(z.string()),
+    test: z.boolean()
+});
+
+export const zWebhookDeliveryList = z.object({
+    items: z.array(zWebhookDelivery)
 });
 
 /**
@@ -3292,6 +4804,14 @@ export const zWorkflowEdge = z.object({
 });
 
 /**
+ * Who may decide workflows besides owners and admins
+ */
+export const zWorkflowEditors = z.object({
+    mode: z.string(),
+    memberIds: z.optional(z.array(z.string()))
+});
+
+/**
  * An input of a workflow run
  */
 export const zWorkflowInput = z.object({
@@ -3300,6 +4820,15 @@ export const zWorkflowInput = z.object({
     required: z.optional(z.boolean()),
     default: z.optional(z.string()),
     maxLength: z.optional(z.int())
+});
+
+/**
+ * The bounds of a run of the workflow: `maxNodes` (50, at most 100), `maxVisits` in all (100, at most 500), `maxDepth` of sub-workflows (3, at most 5)
+ */
+export const zWorkflowLimits = z.object({
+    maxNodes: z.optional(z.int()),
+    maxVisits: z.optional(z.int()),
+    maxDepth: z.optional(z.int())
 });
 
 export const zWorkflowNodeKind = z.union([z.enum([
@@ -3362,8 +4891,17 @@ export const zNodeVisit = z.object({
     waitId: z.optional(z.string()),
     gateId: z.optional(z.string()),
     childRunId: z.optional(z.string()),
+    nodeTitle: z.optional(z.string()),
     startedAt: z.string(),
     endedAt: z.optional(z.string())
+});
+
+/**
+ * The form of a pending deliverable, never its schema
+ */
+export const zWorkflowPendingDeliverable = z.object({
+    type: z.string(),
+    domain: z.optional(z.string())
 });
 
 /**
@@ -3380,20 +4918,45 @@ export const zWorkflowRun = z.object({
     automationId: z.optional(z.string()),
     inputs: z.optional(z.record(z.string(), z.string())),
     currentNodeId: z.optional(z.string()),
+    currentNodeKind: z.optional(zWorkflowNodeKind),
     parentRunId: z.optional(z.string()),
     sessionId: z.optional(z.string()),
+    repository: z.optional(z.string()),
     visits: z.optional(z.array(zNodeVisit)),
     failure: z.optional(z.string()),
+    failureCode: z.optional(z.string()),
     output: z.optional(z.string()),
     receiptId: z.optional(z.string()),
     startedAt: z.string(),
     endedAt: z.optional(z.string())
 });
 
+/**
+ * Whether a session's agent step still waits for its delivery (`pendingWorkflowSession`)
+ */
+export const zWorkflowSessionPending = z.object({
+    needsAction: z.boolean(),
+    runId: z.optional(z.string()),
+    nodeTitle: z.optional(z.string()),
+    deliverable: z.optional(zWorkflowPendingDeliverable)
+});
+
+/**
+ * The editing rights of workflows, and the caller's
+ */
+export const zWorkflowSettings = z.object({
+    editors: zWorkflowEditors,
+    canEdit: z.boolean()
+});
+
+/**
+ * `rejected`: a proposal a person turned down, kept so the analysis never proposes it again; it compiles nothing and never runs
+ */
 export const zWorkflowStatus = z.union([z.enum([
         'proposed',
         'accepted',
-        'edited'
+        'edited',
+        'rejected'
     ]), z.string()]);
 
 /**
@@ -3526,19 +5089,8 @@ export const zRule = z.object({
  */
 export const zApprovalView = z.object({
     approval: zApproval,
-    who: z.optional(z.object({
-        dev: z.optional(z.string()),
-        agent: z.optional(z.string()),
-        model: z.optional(z.string()),
-        session: z.optional(z.string())
-    })),
-    what: z.optional(z.object({
-        action: z.optional(z.string()),
-        command: z.optional(z.string()),
-        repo: z.optional(z.string()),
-        sessionRepo: z.optional(z.string()),
-        harness: z.optional(z.string())
-    })),
+    who: z.optional(zApprovalWho),
+    what: z.optional(zApprovalWhat),
     gate: z.optional(zGateRef),
     rules: z.optional(z.array(zRule)),
     diff: z.optional(z.string()),
@@ -3650,6 +5202,8 @@ export const zWorkflow = z.object({
     edges: z.array(zWorkflowEdge),
     start: z.optional(z.string()),
     inputs: z.optional(z.array(zWorkflowInput)),
+    sessionMode: z.optional(z.string()),
+    limits: z.optional(zWorkflowLimits),
     sources: z.optional(z.array(zRuleSource)),
     status: zWorkflowStatus,
     foundAt: z.string(),
@@ -3741,8 +5295,27 @@ export const zTeamCodeImportRequestWritable = z.object({
     mcpServers: z.optional(z.array(zTeamCodeMcpServerWritable)),
     assignments: z.optional(z.array(zTeamCodeAssignmentWritable)),
     accounts: z.optional(z.array(zTeamCodeAccountWritable)),
+    workflows: z.optional(z.array(zTeamCodeWorkflow)),
+    workflowEditors: z.optional(zTeamCodeWorkflowEditors),
+    automations: z.optional(z.array(zTeamCodeAutomation)),
+    profiles: z.optional(z.array(zTeamCodeProfile)),
     memberMap: z.optional(z.record(z.string(), z.string()))
 });
+
+/**
+ * The scheduling class of an inference call in the admission queue (`inference.queue.v1`): `interactive` (the default) or `background` (unattended work, `ostrom run --workload background`). A hint the caller sets, not a permission: it changes only the order of waiting calls. Never sent to a provider. Another value, or the header twice, is refused with 400 `invalid_workload`
+ */
+export const zOstromWorkload = z.union([z.enum(['interactive', 'background']), z.string()]);
+
+/**
+ * The caller's own id of an inference call (`inference.cancel.v1`), a lowercase UUID, fresh for each call: `cancelInferenceRequest` with it stops the call on whichever replica runs it, queued or streaming. Never sent to a provider. Not a UUID in lowercase: 400 `invalid_request_id`
+ */
+export const zOstromClientRequestId = z.string().check(z.regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/));
+
+/**
+ * `agent`: set by the CLI's local relay on every memory call it forwards for an agent, whoever's sign-in it carries (`memory.v1`). A team entry such a call writes is a proposal. Any other value is ignored
+ */
+export const zOstromOrigin = z.string();
 
 /**
  * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -3779,6 +5352,52 @@ export const zListInstanceKeysResponse = z.object({
 /**
  * OK
  */
+export const zListInstanceAdminsResponse = zInstanceAdminList;
+
+export const zAddInstanceAdminBody = zAddInstanceAdminRequest;
+
+/**
+ * OK
+ */
+export const zAddInstanceAdminResponse = zInstanceAdminList;
+
+export const zRemoveInstanceAdminPath = z.object({
+    userId: z.uuid()
+});
+
+/**
+ * Removed
+ */
+export const zRemoveInstanceAdminResponse = z.void();
+
+/**
+ * OK
+ */
+export const zListInstanceSettingsResponse = zInstanceSettingsList;
+
+export const zGetInstanceSettingsPath = z.object({
+    section: z.string().check(z.regex(/^[a-z][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zGetInstanceSettingsResponse = zInstanceSettings;
+
+export const zSaveInstanceSettingsBody = zSaveInstanceSettingsRequest;
+
+export const zSaveInstanceSettingsPath = z.object({
+    section: z.string().check(z.regex(/^[a-z][a-z0-9-]{0,39}$/))
+});
+
+/**
+ * OK
+ */
+export const zSaveInstanceSettingsResponse = zInstanceSettings;
+
+/**
+ * OK
+ */
 export const zCapabilitiesResponse = zCapabilities;
 
 export const zStartGithubLoginQuery = z.object({
@@ -3789,33 +5408,19 @@ export const zStartGithubLoginQuery = z.object({
     code_challenge_method: z.optional(z.string())
 });
 
-export const zMobileTokenBody = z.object({
-    code: z.string(),
-    codeVerifier: z.string(),
-    redirectUri: z.string()
-});
+export const zMobileTokenBody = zMobileTokenRequest;
 
 /**
  * OK
  */
-export const zMobileTokenResponse = z.object({
-    token: z.string(),
-    user: zAuthUser,
-    expiresAt: z.optional(z.string()),
-    unlockKey: z.optional(z.string())
-});
+export const zMobileTokenResponse = zMobileToken;
 
-export const zUnlockMobileAppBody = z.object({
-    unlockKey: z.string(),
-    requestId: z.optional(z.string())
-});
+export const zUnlockMobileAppBody = zMobileUnlockRequest;
 
 /**
  * OK
  */
-export const zUnlockMobileAppResponse = z.object({
-    authenticatedAt: z.iso.datetime({ offset: true })
-});
+export const zUnlockMobileAppResponse = zMobileUnlock;
 
 export const zGithubLoginCallbackQuery = z.object({
     code: z.optional(z.string()),
@@ -3891,9 +5496,7 @@ export const zStartDeviceLoginBody = zDeviceLoginStart;
  */
 export const zStartDeviceLoginResponse = zDeviceCode;
 
-export const zPollDeviceLoginBody = z.object({
-    deviceCode: z.string()
-});
+export const zPollDeviceLoginBody = zDeviceTokenRequest;
 
 /**
  * OK
@@ -4180,12 +5783,7 @@ export const zDeleteDevicePath = z.object({
  */
 export const zDeleteDeviceResponse = z.void();
 
-export const zRegisterPushDeviceBody = z.object({
-    pushToken: z.string(),
-    provider: z.string(),
-    platform: z.string(),
-    locale: z.optional(z.string())
-});
+export const zRegisterPushDeviceBody = zRegisterPushDeviceRequest;
 
 export const zRegisterPushDeviceHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -4212,9 +5810,7 @@ export const zDeletePushDeviceResponse = z.void();
 /**
  * OK
  */
-export const zListMyOrganizationsResponse = z.object({
-    items: z.array(zMyOrganization)
-});
+export const zListMyOrganizationsResponse = zMyOrganizationList;
 
 /**
  * OK
@@ -4240,10 +5836,7 @@ export const zListActivityQuery = z.object({
 /**
  * OK
  */
-export const zListActivityResponse = z.object({
-    items: z.array(zActivityItem),
-    next: z.optional(z.string())
-});
+export const zListActivityResponse = zActivityPage;
 
 export const zGetSpendingHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5152,17 +6745,12 @@ export const zListReceiptsQuery = z.object({
 /**
  * OK
  */
-export const zListReceiptsResponse = z.object({
-    items: z.array(zReceipt),
-    next: z.optional(z.string())
-});
+export const zListReceiptsResponse = zReceiptPage;
 
 /**
  * OK
  */
-export const zListReceiptKeysResponse = z.object({
-    keys: z.array(zPublicKey)
-});
+export const zListReceiptKeysResponse = zReceiptKeyList;
 
 export const zGetReceiptHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5202,6 +6790,26 @@ export const zGetReceiptBundlePath = z.object({
  * OK
  */
 export const zGetReceiptBundleResponse = zReceiptBundle;
+
+export const zGetCompilerSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetCompilerSettingsResponse = zCompilerSettings;
+
+export const zSaveCompilerSettingsBody = zSaveCompilerSettingsRequest;
+
+export const zSaveCompilerSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSaveCompilerSettingsResponse = zCompilerSettings;
 
 export const zGetCurrentPackageHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5376,6 +6984,35 @@ export const zSendNotificationHeaders = z.object({
  * OK
  */
 export const zSendNotificationResponse = zNotification;
+
+export const zSendTestPushHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSendTestPushResponse = zPushTestResults;
+
+export const zGetNotificationSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetNotificationSettingsResponse = zNotificationSettings;
+
+export const zSetNotificationSettingBody = zNotificationSettingChange;
+
+export const zSetNotificationSettingHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSetNotificationSettingResponse = zNotificationSettings;
 
 export const zListRulesHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5569,11 +7206,13 @@ export const zListWorkflowRunsResponse = z.object({
 });
 
 export const zStartWorkflowRunBody = z.object({
-    inputs: z.optional(z.record(z.string(), z.string()))
+    inputs: z.optional(z.record(z.string(), z.string())),
+    repository: z.optional(z.string())
 });
 
 export const zStartWorkflowRunHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.optional(z.string())
 });
 
 export const zStartWorkflowRunPath = z.object({
@@ -5581,7 +7220,7 @@ export const zStartWorkflowRunPath = z.object({
 });
 
 /**
- * OK
+ * The first run of this `Idempotency-Key` (planned)
  */
 export const zStartWorkflowRunResponse = zWorkflowRun;
 
@@ -5590,6 +7229,8 @@ export const zListRunsHeaders = z.object({
 });
 
 export const zListRunsQuery = z.object({
+    all: z.optional(z.boolean()),
+    workflow: z.optional(z.string()),
     status: z.optional(z.string()),
     before: z.optional(z.string())
 });
@@ -5627,6 +7268,75 @@ export const zCancelRunPath = z.object({
  * OK
  */
 export const zCancelRunResponse = zWorkflowRun;
+
+export const zDeliverRunBody = zDeliverRequest;
+
+export const zDeliverRunHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeliverRunPath = z.object({
+    id: z.string()
+});
+
+/**
+ * The run after the delivery
+ */
+export const zDeliverRunResponse = zWorkflowRun;
+
+export const zDeliverWorkflowSessionBody = zDeliverSessionRequest;
+
+export const zDeliverWorkflowSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * The run after the delivery
+ */
+export const zDeliverWorkflowSessionResponse = zWorkflowRun;
+
+export const zPendingWorkflowSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPendingWorkflowSessionQuery = z.object({
+    sessionId: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zPendingWorkflowSessionResponse = zWorkflowSessionPending;
+
+export const zWorkflowsMcpBody = z.unknown();
+
+export const zWorkflowsMcpHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zWorkflowsMcpQuery = z.object({
+    session: z.optional(z.string())
+});
+
+export const zGetWorkflowSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetWorkflowSettingsResponse = zWorkflowSettings;
+
+export const zSaveWorkflowSettingsBody = zWorkflowEditors;
+
+export const zSaveWorkflowSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSaveWorkflowSettingsResponse = zWorkflowSettings;
 
 export const zListAutomationsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5773,6 +7483,36 @@ export const zListAutomationRunsResponse = z.object({
     next: z.optional(z.string())
 });
 
+export const zCancelAutomationRunHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCancelAutomationRunPath = z.object({
+    id: z.string(),
+    runId: z.string()
+});
+
+/**
+ * The run
+ */
+export const zCancelAutomationRunResponse = zAutomationRun;
+
+export const zTriggerAutomationVersionBody = z.unknown();
+
+export const zTriggerAutomationVersionPath = z.object({
+    id: z.string(),
+    version: z.string()
+});
+
+/**
+ * OK
+ */
+export const zTriggerAutomationVersionResponse = z.object({
+    runId: z.optional(z.string()),
+    status: z.optional(z.string()),
+    deduplicated: z.boolean()
+});
+
 export const zTriggerAutomationBody = z.unknown();
 
 export const zTriggerAutomationPath = z.object({
@@ -5811,10 +7551,7 @@ export const zListWaitsQuery = z.object({
 /**
  * OK
  */
-export const zListWaitsResponse = z.object({
-    items: z.array(zWait),
-    next: z.optional(z.string())
-});
+export const zListWaitsResponse = zWaitPage;
 
 export const zCreateWaitBody = z.object({
     sessionId: z.optional(z.string()),
@@ -5882,10 +7619,7 @@ export const zGetWaitPath = z.object({
  */
 export const zGetWaitResponse = zWait;
 
-export const zAnswerWaitBody = z.object({
-    action: z.string(),
-    values: z.optional(z.record(z.string(), z.unknown()))
-});
+export const zAnswerWaitBody = zAnswerWaitRequest;
 
 export const zAnswerWaitHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -6077,6 +7811,17 @@ export const zRecordTodoHookErrorHeaders = z.object({
  */
 export const zRecordTodoHookErrorResponse = zSessionTodo;
 
+export const zResetTodoBody = zResetTodoRequest;
+
+export const zResetTodoHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zResetTodoResponse = zSessionTodo;
+
 export const zListTodoStopHooksHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -6101,12 +7846,209 @@ export const zSetMemberTodoStopHookPath = z.object({
  */
 export const zSetMemberTodoStopHookResponse = zTodoStopHook;
 
+export const zCreateMemoryBody = zCreateMemoryRequest;
+
+export const zCreateMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'x-ostrom-origin': z.optional(z.string())
+});
+
+/**
+ * Created
+ */
+export const zCreateMemoryResponse = zMemoryEntry;
+
+export const zListMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListMemoryQuery = z.object({
+    scope: z.optional(z.string()),
+    tags: z.optional(z.string()),
+    after: z.optional(z.string()),
+    limit: z.optional(z.int().check(z.gte(1), z.lte(50)))
+});
+
+/**
+ * OK
+ */
+export const zListMemoryResponse = zMemoryIndexPage;
+
+export const zSearchMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSearchMemoryQuery = z.object({
+    q: z.string(),
+    tags: z.optional(z.string()),
+    limit: z.optional(z.int().check(z.gte(1), z.lte(20)))
+});
+
+/**
+ * OK
+ */
+export const zSearchMemoryResponse = zMemorySearchResult;
+
+export const zListMemoryProposalsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMemoryProposalsResponse = zMemoryProposals;
+
+export const zAcceptMemoryProposalHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zAcceptMemoryProposalPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zAcceptMemoryProposalResponse = zMemoryEntry;
+
+export const zRejectMemoryProposalHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRejectMemoryProposalPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRejectMemoryProposalResponse = zMemoryEntry;
+
+export const zGetMemoryCurationHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetMemoryCurationResponse = zMemoryCuration;
+
+export const zSetMemoryCurationBody = zSetMemoryCurationRequest;
+
+export const zSetMemoryCurationHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSetMemoryCurationResponse = zMemoryCuration;
+
+export const zListMemoryReviewsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMemoryReviewsResponse = zMemoryReviews;
+
+export const zApplyMemoryReviewHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zApplyMemoryReviewPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zApplyMemoryReviewResponse = zMemoryReview;
+
+export const zDismissMemoryReviewHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDismissMemoryReviewPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zDismissMemoryReviewResponse = zMemoryReview;
+
+export const zListSupersededMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListSupersededMemoryResponse = zSupersededMemories;
+
+export const zForgetMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zForgetMemoryPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Forgotten
+ */
+export const zForgetMemoryResponse = z.void();
+
+export const zReadMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zReadMemoryPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zReadMemoryResponse = zMemoryEntry;
+
+export const zUpdateMemoryBody = zUpdateMemoryRequest;
+
+export const zUpdateMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUpdateMemoryPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUpdateMemoryResponse = zMemoryEntry;
+
+export const zRestoreMemoryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRestoreMemoryPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRestoreMemoryResponse = zMemoryEntry;
+
 export const zListMcpServersHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
 
 export const zListMcpServersQuery = z.object({
-    mine: z.optional(z.boolean())
+    mine: z.optional(z.boolean()),
+    personal: z.optional(z.boolean())
 });
 
 /**
@@ -6155,6 +8097,19 @@ export const zSaveMcpServerPath = z.object({
  * OK
  */
 export const zSaveMcpServerResponse = zMcpServer;
+
+export const zPromoteMcpServerHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPromoteMcpServerPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPromoteMcpServerResponse = zMcpServer;
 
 export const zListMcpAssignmentsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -6241,6 +8196,56 @@ export const zDeleteMcpArgumentPolicyPath = z.object({
  */
 export const zDeleteMcpArgumentPolicyResponse = z.void();
 
+export const zListMyMcpServersHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMyMcpServersResponse = z.object({
+    items: z.array(zMcpServer)
+});
+
+export const zCreateMyMcpServerBody = zMcpServerWritable;
+
+export const zCreateMyMcpServerHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCreateMyMcpServerResponse = zMcpServer;
+
+export const zDeleteMyMcpServerHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeleteMyMcpServerPath = z.object({
+    name: z.string()
+});
+
+/**
+ * Done
+ */
+export const zDeleteMyMcpServerResponse = z.void();
+
+export const zSaveMyMcpServerBody = zMcpServerWritable;
+
+export const zSaveMyMcpServerHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSaveMyMcpServerPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSaveMyMcpServerResponse = zMcpServer;
+
 export const zGetMcpSettingsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -6311,6 +8316,26 @@ export const zGetMcpUsageResponse = z.object({
     })))
 });
 
+export const zListMcpHostedProcessesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMcpHostedProcessesResponse = zMcpHostedProcesses;
+
+export const zRestartMcpHostedProcessBody = zMcpHostedRestart;
+
+export const zRestartMcpHostedProcessHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Done
+ */
+export const zRestartMcpHostedProcessResponse = z.void();
+
 export const zListSecretsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -6362,6 +8387,217 @@ export const zRotateSecretPath = z.object({
  */
 export const zRotateSecretResponse = zSecret;
 
+export const zGetEnvironmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetEnvironmentResponse = zEnvironmentValues;
+
+export const zListEnvironmentVariantsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListEnvironmentVariantsResponse = zEnvironmentVariantsPage;
+
+export const zCreateEnvironmentVariantBody = zEnvironmentVariantCreate;
+
+export const zCreateEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCreateEnvironmentVariantResponse = zEnvironmentVariant;
+
+export const zListPersonalEnvironmentVariantsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListPersonalEnvironmentVariantsResponse = zEnvironmentVariantsPage;
+
+export const zDeleteEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeleteEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Deleted
+ */
+export const zDeleteEnvironmentVariantResponse = z.void();
+
+export const zUpdateEnvironmentVariantBody = zEnvironmentVariantUpdate;
+
+export const zUpdateEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUpdateEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUpdateEnvironmentVariantResponse = zEnvironmentVariant;
+
+export const zBulkAssignEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zBulkAssignEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zBulkAssignEnvironmentVariantResponse = zEnvironmentBulkAssignment;
+
+export const zPromoteEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPromoteEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPromoteEnvironmentVariantResponse = zEnvironmentVariant;
+
+export const zListEnvironmentAssignmentsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListEnvironmentAssignmentsQuery = z.object({
+    member: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListEnvironmentAssignmentsResponse = zEnvironmentAssignmentsPage;
+
+export const zUnassignEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUnassignEnvironmentVariantPath = z.object({
+    member: z.string(),
+    variable: z.string()
+});
+
+/**
+ * Removed
+ */
+export const zUnassignEnvironmentVariantResponse = z.void();
+
+export const zAssignEnvironmentVariantBody = zEnvironmentAssign;
+
+export const zAssignEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zAssignEnvironmentVariantPath = z.object({
+    member: z.string(),
+    variable: z.string()
+});
+
+/**
+ * OK
+ */
+export const zAssignEnvironmentVariantResponse = zEnvironmentAssignment;
+
+export const zIncludeEnvironmentVariableHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zIncludeEnvironmentVariablePath = z.object({
+    member: z.string(),
+    variable: z.string()
+});
+
+/**
+ * Removed
+ */
+export const zIncludeEnvironmentVariableResponse = z.void();
+
+export const zExcludeEnvironmentVariableHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zExcludeEnvironmentVariablePath = z.object({
+    member: z.string(),
+    variable: z.string()
+});
+
+/**
+ * Excluded
+ */
+export const zExcludeEnvironmentVariableResponse = z.void();
+
+export const zListMyEnvironmentVariantsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMyEnvironmentVariantsResponse = zEnvironmentVariantsPage;
+
+export const zCreateMyEnvironmentVariantBody = zEnvironmentVariantCreate;
+
+export const zCreateMyEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCreateMyEnvironmentVariantResponse = zEnvironmentVariant;
+
+export const zDeleteMyEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeleteMyEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Deleted
+ */
+export const zDeleteMyEnvironmentVariantResponse = z.void();
+
+export const zUpdateMyEnvironmentVariantBody = zEnvironmentVariantUpdate;
+
+export const zUpdateMyEnvironmentVariantHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUpdateMyEnvironmentVariantPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUpdateMyEnvironmentVariantResponse = zEnvironmentVariant;
+
 export const zImportTeamCodeBody = zTeamCodeImportRequestWritable;
 
 export const zImportTeamCodeHeaders = z.object({
@@ -6382,19 +8618,25 @@ export const zImportTeamCodeResponse = zImportReport;
 export const zInferenceMessagesBody = z.unknown();
 
 export const zInferenceMessagesHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'x-ostrom-workload': z.optional(z.union([z.enum(['interactive', 'background']), z.string()])),
+    'x-ostrom-client-request-id': z.optional(z.string().check(z.regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)))
 });
 
 export const zInferenceResponsesBody = z.unknown();
 
 export const zInferenceResponsesHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'x-ostrom-workload': z.optional(z.union([z.enum(['interactive', 'background']), z.string()])),
+    'x-ostrom-client-request-id': z.optional(z.string().check(z.regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)))
 });
 
 export const zInferenceChatCompletionsBody = z.unknown();
 
 export const zInferenceChatCompletionsHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'x-ostrom-workload': z.optional(z.union([z.enum(['interactive', 'background']), z.string()])),
+    'x-ostrom-client-request-id': z.optional(z.string().check(z.regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)))
 });
 
 export const zInferenceModelsHeaders = z.object({
@@ -6408,6 +8650,28 @@ export const zInferenceModelsResponse = z.object({
     object: z.optional(z.enum(['list'])),
     data: z.array(z.record(z.string(), z.unknown()))
 });
+
+export const zGetInferenceQueueHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetInferenceQueueResponse = zInferenceQueue;
+
+export const zCancelInferenceRequestHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCancelInferenceRequestPath = z.object({
+    id: z.string().check(z.regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/))
+});
+
+/**
+ * The marker is stored
+ */
+export const zCancelInferenceRequestResponse = z.void();
 
 export const zGetInferenceSettingsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -6785,6 +9049,96 @@ export const zRunnerHeartbeatResponse = z.object({
     workspaces: z.array(z.uuid())
 });
 
+/**
+ * OK
+ */
+export const zGetCloudRuntimeResponse = zCloudRuntime;
+
+export const zSaveCloudRuntimeBody = zSaveCloudRuntimeRequest;
+
+/**
+ * OK
+ */
+export const zSaveCloudRuntimeResponse = zCloudRuntime;
+
+/**
+ * OK
+ */
+export const zListCloudClustersResponse = zCloudClusterList;
+
+export const zCreateCloudClusterBody = zSaveCloudClusterRequest;
+
+/**
+ * Created
+ */
+export const zCreateCloudClusterResponse = zCloudCluster;
+
+export const zUpdateCloudClusterBody = zSaveCloudClusterRequest;
+
+export const zUpdateCloudClusterPath = z.object({
+    id: z.uuid()
+});
+
+/**
+ * OK
+ */
+export const zUpdateCloudClusterResponse = zCloudCluster;
+
+export const zListCloudProfilesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListCloudProfilesResponse = zCloudProfileList;
+
+export const zCreateCloudProfileBody = zSaveCloudProfileRequest;
+
+export const zCreateCloudProfileHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Created
+ */
+export const zCreateCloudProfileResponse = zCloudProfile;
+
+export const zUpdateCloudProfileBody = zSaveCloudProfileRequest;
+
+export const zUpdateCloudProfileHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUpdateCloudProfilePath = z.object({
+    id: z.uuid()
+});
+
+/**
+ * OK
+ */
+export const zUpdateCloudProfileResponse = zCloudProfile;
+
+export const zGetCloudSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetCloudSettingsResponse = zCloudSettings;
+
+export const zSaveCloudSettingsBody = zSaveCloudSettingsRequest;
+
+export const zSaveCloudSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSaveCloudSettingsResponse = zCloudSettings;
+
 export const zListCloudSessionsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -6809,7 +9163,8 @@ export const zCreateCloudSessionBody = z.object({
     repo: z.optional(z.string()),
     ref: z.optional(z.string()),
     prompt: z.optional(z.string()),
-    name: z.optional(z.string())
+    name: z.optional(z.string()),
+    environment: z.optional(zCloudEnvironment)
 });
 
 export const zCreateCloudSessionHeaders = z.object({
@@ -6932,7 +9287,8 @@ export const zCloudRunnerHeartbeatBody = z.object({
     epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
     ready: z.optional(z.boolean()),
     stopped: z.optional(z.boolean()),
-    lastModelRequestAt: z.optional(z.string())
+    lastModelRequestAt: z.optional(z.string()),
+    background: z.optional(z.boolean())
 });
 
 export const zCloudRunnerHeartbeatHeaders = z.object({
@@ -6995,6 +9351,83 @@ export const zFetchRunnerGithubTokenHeaders = z.object({
  */
 export const zFetchRunnerGithubTokenResponse = zRunnerGitHubToken;
 
+export const zFetchRunnerEnvironmentBody = zRunnerExecution;
+
+export const zFetchRunnerEnvironmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zFetchRunnerEnvironmentResponse = zRunnerEnvironment;
+
+export const zReportRunnerPreparationBody = zRunnerPreparationReport;
+
+export const zReportRunnerPreparationHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zReportRunnerPreparationResponse = zRunnerHeartbeatAnswer;
+
+export const zFetchRunnerVariablesBody = zRunnerExecution;
+
+export const zFetchRunnerVariablesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zFetchRunnerVariablesResponse = zEnvironmentValues;
+
+export const zFetchRunnerSkillsBody = zRunnerExecution;
+
+export const zFetchRunnerSkillsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zFetchRunnerSkillsResponse = zSkillManifest;
+
+export const zDownloadRunnerSkillBody = zRunnerArtifactRequest;
+
+export const zDownloadRunnerSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zDownloadRunnerSkillResponse = zSkillArtifact;
+
+export const zFetchRunnerHooksBody = zRunnerExecution;
+
+export const zFetchRunnerHooksHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zFetchRunnerHooksResponse = zHookManifest;
+
+export const zDownloadRunnerHookBody = zRunnerArtifactRequest;
+
+export const zDownloadRunnerHookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zDownloadRunnerHookResponse = zHookArtifact;
+
 export const zSendCloudMessageBody = z.object({
     text: z.string()
 });
@@ -7039,10 +9472,7 @@ export const zListArtifactsQuery = z.object({
 /**
  * OK
  */
-export const zListArtifactsResponse = z.object({
-    items: z.array(zArtifact),
-    next: z.optional(z.string())
-});
+export const zListArtifactsResponse = zArtifactPage;
 
 export const zPublishArtifactBody = z.object({
     title: z.string(),
@@ -7064,6 +9494,110 @@ export const zArtifactsMcpBody = z.unknown();
 export const zArtifactsMcpHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
+
+export const zDeleteArtifactStorageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Removed
+ */
+export const zDeleteArtifactStorageResponse = z.void();
+
+export const zGetArtifactStorageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactStorageResponse = zArtifactStorage;
+
+export const zSaveArtifactStorageBody = zSaveArtifactStorageRequest;
+
+export const zSaveArtifactStorageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSaveArtifactStorageResponse = zArtifactStorage;
+
+export const zTestArtifactStorageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zTestArtifactStorageResponse = zArtifactStorageTest;
+
+export const zGetArtifactSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactSettingsResponse = zArtifactSettings;
+
+export const zSaveArtifactSettingsBody = zSaveArtifactSettingsRequest;
+
+export const zSaveArtifactSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSaveArtifactSettingsResponse = zArtifactSettings;
+
+export const zGetArtifactUsageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactUsageResponse = zArtifactUsage;
+
+export const zGetArtifactPolicyHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetArtifactPolicyResponse = zArtifactPolicy;
+
+export const zCreateArtifactUploadBody = zCreateArtifactUploadRequest;
+
+export const zCreateArtifactUploadHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Created
+ */
+export const zCreateArtifactUploadResponse = zArtifactUpload;
+
+export const zPutArtifactUploadChunkBody = z.string();
+
+export const zPutArtifactUploadChunkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPutArtifactUploadChunkPath = z.object({
+    upload: z.string(),
+    sha256: z.string(),
+    n: z.int().check(z.gte(0))
+});
+
+/**
+ * OK
+ */
+export const zPutArtifactUploadChunkResponse = zArtifactUploadChunk;
 
 export const zGetArtifactContentPath = z.object({
     id: z.string(),
@@ -7141,13 +9675,17 @@ export const zListArtifactVersionsPath = z.object({
 /**
  * OK
  */
-export const zListArtifactVersionsResponse = z.object({
-    items: z.array(zArtifactVersion),
-    next: z.optional(z.string())
-});
+export const zListArtifactVersionsResponse = zArtifactVersionPage;
 
 export const zPublishArtifactVersionBody = z.object({
-    files: z.array(zArtifactFile)
+    files: z.array(zArtifactFile),
+    uploadId: z.optional(z.string()),
+    entry: z.optional(z.string()),
+    baseVersion: z.optional(z.int().check(z.gte(0))),
+    title: z.optional(z.string()),
+    description: z.optional(z.string()),
+    icon: z.optional(z.string()),
+    access: z.optional(zArtifactAccess)
 });
 
 export const zPublishArtifactVersionHeaders = z.object({
@@ -7159,7 +9697,7 @@ export const zPublishArtifactVersionPath = z.object({
 });
 
 /**
- * OK
+ * The same commit again within 10 minutes (same credential, base version and manifest digest): the version it made, `replayed` true
  */
 export const zPublishArtifactVersionResponse = zArtifactVersion;
 
@@ -7224,9 +9762,7 @@ export const zShareArtifactPath = z.object({
  */
 export const zShareArtifactResponse = z.void();
 
-export const zCreateArtifactTicketBody = z.object({
-    version: z.optional(z.int())
-});
+export const zCreateArtifactTicketBody = zArtifactTicketRequest;
 
 export const zCreateArtifactTicketHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7461,42 +9997,265 @@ export const zListSkillsHeaders = z.object({
 /**
  * OK
  */
-export const zListSkillsResponse = z.object({
-    items: z.array(zSkill),
-    next: z.optional(z.string())
-});
+export const zListSkillsResponse = zSkillCatalog;
 
-export const zDeleteSkillHeaders = z.object({
+export const zRetireSkillHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
 
-export const zDeleteSkillPath = z.object({
-    name: z.string()
-});
-
-/**
- * Done
- */
-export const zDeleteSkillResponse = z.void();
-
-export const zPublishSkillBody = z.object({
-    version: z.string(),
-    files: z.array(z.record(z.string(), z.string())),
-    description: z.optional(z.string())
-});
-
-export const zPublishSkillHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
-});
-
-export const zPublishSkillPath = z.object({
+export const zRetireSkillPath = z.object({
     name: z.string()
 });
 
 /**
  * OK
  */
-export const zPublishSkillResponse = zSkill;
+export const zRetireSkillResponse = zSkillEntry;
+
+export const zRestoreSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRestoreSkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRestoreSkillResponse = zSkillEntry;
+
+export const zListSkillVersionsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListSkillVersionsPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListSkillVersionsResponse = zSkillDetail;
+
+export const zPublishSkillVersionBody = zPublishSkillVersionRequest;
+
+export const zPublishSkillVersionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPublishSkillVersionPath = z.object({
+    name: z.string()
+});
+
+/**
+ * Already published with the same digest
+ */
+export const zPublishSkillVersionResponse = zSkillPublication;
+
+export const zRetireSkillVersionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRetireSkillVersionPath = z.object({
+    name: z.string(),
+    version: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRetireSkillVersionResponse = zSkillVersion;
+
+export const zUnpinSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUnpinSkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUnpinSkillResponse = zSkillEntry;
+
+export const zPinSkillBody = zPinSkillRequest;
+
+export const zPinSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPinSkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPinSkillResponse = zSkillEntry;
+
+export const zSetSkillAudienceBody = zSetAudienceRequest;
+
+export const zSetSkillAudienceHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetSkillAudiencePath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetSkillAudienceResponse = zSkillEntry;
+
+export const zListSkillAssignmentsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListSkillAssignmentsPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListSkillAssignmentsResponse = zAssignmentList;
+
+export const zClearSkillAssignmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zClearSkillAssignmentPath = z.object({
+    name: z.string(),
+    memberId: z.string()
+});
+
+/**
+ * Done
+ */
+export const zClearSkillAssignmentResponse = z.void();
+
+export const zSetSkillAssignmentBody = zSetAssignmentRequest;
+
+export const zSetSkillAssignmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetSkillAssignmentPath = z.object({
+    name: z.string(),
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetSkillAssignmentResponse = zAssignment;
+
+export const zPromoteSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPromoteSkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPromoteSkillResponse = zSkillEntry;
+
+export const zListMySkillsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMySkillsResponse = zSkillCatalog;
+
+export const zRetireMySkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRetireMySkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRetireMySkillResponse = zSkillEntry;
+
+export const zRestoreMySkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRestoreMySkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRestoreMySkillResponse = zSkillEntry;
+
+export const zListMySkillVersionsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListMySkillVersionsPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListMySkillVersionsResponse = zSkillDetail;
+
+export const zPublishMySkillVersionBody = zPublishSkillVersionRequest;
+
+export const zPublishMySkillVersionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPublishMySkillVersionPath = z.object({
+    name: z.string()
+});
+
+/**
+ * Already published with the same digest
+ */
+export const zPublishMySkillVersionResponse = zSkillPublication;
+
+export const zUnpinMySkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUnpinMySkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUnpinMySkillResponse = zSkillEntry;
+
+export const zPinMySkillBody = zPinSkillRequest;
+
+export const zPinMySkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPinMySkillPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPinMySkillResponse = zSkillEntry;
 
 export const zGetSkillDeliveryHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7505,9 +10264,67 @@ export const zGetSkillDeliveryHeaders = z.object({
 /**
  * OK
  */
-export const zGetSkillDeliveryResponse = z.object({
-    skills: z.array(zSkill)
+export const zGetSkillDeliveryResponse = zSkillManifest;
+
+export const zGetMemberSkillDeliveryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
 });
+
+export const zGetMemberSkillDeliveryPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetMemberSkillDeliveryResponse = zSkillManifest;
+
+export const zDownloadSkillHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDownloadSkillPath = z.object({
+    name: z.string(),
+    version: z.string()
+});
+
+/**
+ * OK
+ */
+export const zDownloadSkillResponse = zSkillArtifact;
+
+export const zListMySkillInstallationsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListMySkillInstallationsResponse = zSkillInstallationList;
+
+export const zReportSkillInstallationsBody = zReportSkillInstallationsRequest;
+
+export const zReportSkillInstallationsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Done
+ */
+export const zReportSkillInstallationsResponse = z.void();
+
+export const zListMemberSkillInstallationsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListMemberSkillInstallationsPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListMemberSkillInstallationsResponse = zSkillInstallationList;
 
 export const zListHooksHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7516,10 +10333,135 @@ export const zListHooksHeaders = z.object({
 /**
  * OK
  */
-export const zListHooksResponse = z.object({
-    items: z.array(zHook),
-    next: z.optional(z.string())
+export const zListHooksResponse = zHookCatalog;
+
+export const zListHookVersionsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
 });
+
+export const zListHookVersionsPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListHookVersionsResponse = zHookDetail;
+
+export const zPublishHookVersionBody = zPublishHookVersionRequest;
+
+export const zPublishHookVersionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPublishHookVersionPath = z.object({
+    name: z.string()
+});
+
+/**
+ * Already published with the same digest
+ */
+export const zPublishHookVersionResponse = zHookPublication;
+
+export const zReadHookVersionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zReadHookVersionPath = z.object({
+    name: z.string(),
+    version: z.string()
+});
+
+/**
+ * OK
+ */
+export const zReadHookVersionResponse = zHookArtifact;
+
+export const zUnpinHookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUnpinHookPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUnpinHookResponse = zHookEntry;
+
+export const zPinHookBody = zPinSkillRequest;
+
+export const zPinHookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zPinHookPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zPinHookResponse = zHookEntry;
+
+export const zSetHookAudienceBody = zSetAudienceRequest;
+
+export const zSetHookAudienceHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetHookAudiencePath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetHookAudienceResponse = zHookEntry;
+
+export const zListHookAssignmentsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListHookAssignmentsPath = z.object({
+    name: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListHookAssignmentsResponse = zAssignmentList;
+
+export const zClearHookAssignmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zClearHookAssignmentPath = z.object({
+    name: z.string(),
+    memberId: z.string()
+});
+
+/**
+ * Done
+ */
+export const zClearHookAssignmentResponse = z.void();
+
+export const zSetHookAssignmentBody = zSetAssignmentRequest;
+
+export const zSetHookAssignmentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetHookAssignmentPath = z.object({
+    name: z.string(),
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetHookAssignmentResponse = zAssignment;
 
 export const zGetHookDeliveryHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7528,9 +10470,34 @@ export const zGetHookDeliveryHeaders = z.object({
 /**
  * OK
  */
-export const zGetHookDeliveryResponse = z.object({
-    hooks: z.array(zHook)
+export const zGetHookDeliveryResponse = zHookManifest;
+
+export const zGetMemberHookDeliveryHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
 });
+
+export const zGetMemberHookDeliveryPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetMemberHookDeliveryResponse = zHookManifest;
+
+export const zDownloadHookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDownloadHookPath = z.object({
+    name: z.string(),
+    version: z.string()
+});
+
+/**
+ * OK
+ */
+export const zDownloadHookResponse = zHookArtifact;
 
 export const zListWebhooksHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7539,24 +10506,18 @@ export const zListWebhooksHeaders = z.object({
 /**
  * OK
  */
-export const zListWebhooksResponse = z.object({
-    items: z.array(zWebhook),
-    next: z.optional(z.string())
-});
+export const zListWebhooksResponse = zWebhookList;
 
-export const zCreateWebhookBody = z.object({
-    url: z.string(),
-    events: z.array(z.string())
-});
+export const zCreateWebhookBody = zCreateWebhookRequest;
 
 export const zCreateWebhookHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
 
 /**
- * OK
+ * Created
  */
-export const zCreateWebhookResponse = zWebhook;
+export const zCreateWebhookResponse = zCreatedWebhook;
 
 export const zDeleteWebhookHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7571,6 +10532,34 @@ export const zDeleteWebhookPath = z.object({
  */
 export const zDeleteWebhookResponse = z.void();
 
+export const zGetWebhookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetWebhookPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetWebhookResponse = zWebhook;
+
+export const zUpdateWebhookBody = zUpdateWebhookRequest;
+
+export const zUpdateWebhookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zUpdateWebhookPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zUpdateWebhookResponse = zWebhook;
+
 export const zListWebhookDeliveriesHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -7579,12 +10568,40 @@ export const zListWebhookDeliveriesPath = z.object({
     id: z.string()
 });
 
+export const zListWebhookDeliveriesQuery = z.object({
+    limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(200))), 50)
+});
+
 /**
  * OK
  */
-export const zListWebhookDeliveriesResponse = z.object({
-    items: z.array(z.record(z.string(), z.unknown()))
+export const zListWebhookDeliveriesResponse = zWebhookDeliveryList;
+
+export const zTestWebhookHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
 });
+
+export const zTestWebhookPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Queued
+ */
+export const zTestWebhookResponse = zWebhookDelivery;
+
+export const zRotateWebhookSecretHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRotateWebhookSecretPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRotateWebhookSecretResponse = zCreatedWebhook;
 
 export const zListAuditHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7605,28 +10622,19 @@ export const zListAuditResponse = z.object({
 });
 
 export const zStreamEventsHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Last-Event-ID': z.optional(z.string())
+});
+
+export const zStreamEventsQuery = z.object({
+    after: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    types: z.optional(z.string())
 });
 
 /**
  * Server-sent events
  */
 export const zStreamEventsResponse = z.string();
-
-export const zListEventsHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
-});
-
-export const zListEventsQuery = z.object({
-    since: z.optional(z.string())
-});
-
-/**
- * OK
- */
-export const zListEventsResponse = z.object({
-    items: z.array(z.record(z.string(), z.unknown()))
-});
 
 export const zStartAnalysisHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())

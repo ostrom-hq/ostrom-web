@@ -24,6 +24,7 @@ export const STATUS_TONES: Readonly<Record<Known<WorkflowStatus>, BadgeTone>> = 
   proposed: 'warning',
   accepted: 'success',
   edited: 'success',
+  rejected: 'danger',
 };
 
 /** A run under way is the signal colour, one waiting for a person amber, one that failed red. */

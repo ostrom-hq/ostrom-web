@@ -54,6 +54,14 @@ export type ActivityActor = {
 };
 
 /**
+ * A page of the organization's activity; `next` is the cursor of the following page
+ */
+export type ActivityPage = {
+    items: Array<ActivityItem>;
+    next?: string;
+};
+
+/**
  * A line of the activity feed (kind: session.started, session.ended, gate.requested, gate.decided, check.passed, check.failed, workflow.changed; clients keep an unknown kind as UNKNOWN)
  */
 export type ActivityItem = {
@@ -232,23 +240,33 @@ export type ApprovalQueue = {
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | (string & {});
 
 /**
+ * Who asked for an approval: the developer, their agent, its model and session
+ */
+export type ApprovalWho = {
+    dev?: string;
+    agent?: string;
+    model?: string;
+    session?: string;
+};
+
+/**
+ * What an approval is for: the action, its command and repository, the session's repository and harness
+ */
+export type ApprovalWhat = {
+    action?: string;
+    command?: string;
+    repo?: string;
+    sessionRepo?: string;
+    harness?: string;
+};
+
+/**
  * An approval as the console and the app show it: the request, the gate, the rules, the commits and checks (in `approval`), the receipt once answered
  */
 export type ApprovalView = {
     approval: Approval;
-    who?: {
-        dev?: string;
-        agent?: string;
-        model?: string;
-        session?: string;
-    };
-    what?: {
-        action?: string;
-        command?: string;
-        repo?: string;
-        sessionRepo?: string;
-        harness?: string;
-    };
+    who?: ApprovalWho;
+    what?: ApprovalWhat;
     gate?: GateRef;
     rules?: Array<Rule>;
     diff?: string;
@@ -329,6 +347,14 @@ export type ApproversGraph = {
 };
 
 /**
+ * A page of artifacts; `next` is the cursor of the following page
+ */
+export type ArtifactPage = {
+    items: Array<Artifact>;
+    next?: string;
+};
+
+/**
  * A published page or file set, behind the login
  */
 export type Artifact = {
@@ -359,18 +385,215 @@ export type Artifact = {
 export type ArtifactAccess = 'personal' | 'team' | 'link' | (string & {});
 
 /**
- * A file sent for publication
+ * A file of the version to publish: its `content` inline, or, for a commit of an upload, its `sha256` and `size`, sent by that upload (`createArtifactUpload`) or already held by the artifact
  */
 export type ArtifactFile = {
     /**
      * Its path in the version (`index.html`, `img/a.png`)
      */
     path: string;
-    content: string;
+    content?: string;
     /**
      * `utf8` when absent
      */
     encoding?: 'utf8' | 'base64' | (string & {});
+    sha256?: string;
+    size?: number;
+};
+
+/**
+ * A delivered file, with what verifies it
+ */
+export type ArtifactFileContent = {
+    /**
+     * Its path
+     */
+    path: string;
+    /**
+     * `file` or `executable`
+     */
+    mode: 'file' | 'executable' | (string & {});
+    /**
+     * In bytes
+     */
+    size: number;
+    /**
+     * Lower-case hex of its content
+     */
+    sha256: string;
+    /**
+     * Standard padded base64
+     */
+    contentBase64: string;
+};
+
+/**
+ * The organization's artifact bucket. `secretConfigured` only says a secret is stored, never returned. `verifiedAt` is the last passed test of this `version`, absent after any change. `inUse`: artifacts may have files in it, so the endpoint, bucket and prefix are fixed
+ */
+export type ArtifactStorage = {
+    configured: boolean;
+    endpoint?: string;
+    region?: string;
+    bucket?: string;
+    prefix?: string;
+    pathStyle: boolean;
+    accessKeyId?: string;
+    secretConfigured: boolean;
+    serverSideEncryption: 'none' | 'AES256' | (string & {});
+    verifiedAt?: string;
+    version: number;
+    updatedAt?: string;
+    inUse: boolean;
+};
+
+/**
+ * `version` is the one replaced (0 for the first save); an omitted `secretAccessKey` keeps the stored one
+ */
+export type SaveArtifactStorageRequest = {
+    version: number;
+    endpoint: string;
+    region: string;
+    bucket: string;
+    prefix?: string;
+    pathStyle?: boolean;
+    accessKeyId: string;
+    secretAccessKey?: string;
+    serverSideEncryption?: 'none' | 'AES256' | (string & {});
+};
+
+/**
+ * The outcome of a connection test, step by step
+ */
+export type ArtifactStorageTest = {
+    ok: boolean;
+    steps: Array<ArtifactStorageTestStep>;
+};
+
+/**
+ * `put`, `get`, `list`, `delete`, `gone` or `record`; `code` is the S3 error code or a short local code, never a response body
+ */
+export type ArtifactStorageTestStep = {
+    step: string;
+    ok: boolean;
+    status?: number;
+    code?: string;
+};
+
+/**
+ * Switches, quotas and retention (TeamCode's defaults: off, `everyone`, `owners_of_artifacts`, 2 GiB per member, 50 GiB per organization, 500 artifacts per member, 60 publications per member and hour, kept forever, 50 versions). `active` is whether artifacts work now; `inactiveReason` says why not
+ */
+export type ArtifactSettings = {
+    enabled: boolean;
+    whoCanPublish: 'everyone' | 'admins' | (string & {});
+    publicSharing: 'owners_of_artifacts' | 'admins' | 'off' | (string & {});
+    quotaMemberBytes: number;
+    quotaOrgBytes: number;
+    quotaArtifactsPerMember: number;
+    quotaPublishesPerHour: number;
+    personalRetentionDays?: number;
+    sharedRetentionDays?: number;
+    maxVersionsPerArtifact: number;
+    version: number;
+    updatedAt?: string;
+    active: boolean;
+    inactiveReason?: 'artifact_storage_missing' | 'artifact_storage_unverified' | 'artifacts_disabled' | (string & {});
+};
+
+/**
+ * Every setting, with the `version` replaced (0 before the first save); a null retention keeps artifacts
+ */
+export type SaveArtifactSettingsRequest = {
+    version: number;
+    enabled: boolean;
+    whoCanPublish: 'everyone' | 'admins' | (string & {});
+    publicSharing: 'owners_of_artifacts' | 'admins' | 'off' | (string & {});
+    quotaMemberBytes: number;
+    quotaOrgBytes: number;
+    quotaArtifactsPerMember: number;
+    quotaPublishesPerHour: number;
+    personalRetentionDays?: number | null;
+    sharedRetentionDays?: number | null;
+    maxVersionsPerArtifact: number;
+};
+
+/**
+ * The bytes the organization stores, and per member the published artifacts they own and their bytes
+ */
+export type ArtifactUsage = {
+    orgBytes: number;
+    members: Array<ArtifactMemberUsage>;
+};
+
+/**
+ * One member's artifacts and bytes
+ */
+export type ArtifactMemberUsage = {
+    memberId: string;
+    name?: string;
+    artifacts: number;
+    bytes: number;
+};
+
+/**
+ * Whether the caller may publish now and, when not, why
+ */
+export type ArtifactPolicy = {
+    canPublish: boolean;
+    reason?: 'artifact_storage_missing' | 'artifact_storage_unverified' | 'artifacts_disabled' | 'artifact_publish_forbidden' | 'credential_scope' | (string & {});
+};
+
+/**
+ * A file of the version to publish, by its content (lower-case hex SHA-256) and size
+ */
+export type ArtifactFileRef = {
+    sha256: string;
+    size: number;
+};
+
+/**
+ * The distinct files of the whole version; without `artifactId`, a draft artifact is created
+ */
+export type CreateArtifactUploadRequest = {
+    artifactId?: string;
+    files: Array<ArtifactFileRef>;
+};
+
+/**
+ * The refusal of a publication: `ApiError` with, for `artifact_conflict`, the live version (TeamCode's `{error, current}`)
+ */
+export type ArtifactConflict = {
+    error: ErrorDetail;
+    current?: ArtifactVersion;
+};
+
+/**
+ * `missing` are the SHA-256 values to send, in chunks of at most `chunkBytes`, before `expiresAt`
+ */
+export type ArtifactUpload = {
+    uploadId: string;
+    artifactId: string;
+    missing: Array<string>;
+    chunkBytes: number;
+    expiresAt: string;
+};
+
+/**
+ * One chunk received; `complete` once every chunk of the file arrived and it was checked and stored
+ */
+export type ArtifactUploadChunk = {
+    complete: boolean;
+    received: number;
+    total: number;
+};
+
+/**
+ * Which version of an artifact a ticket opens
+ */
+export type ArtifactTicketRequest = {
+    /**
+     * The version; the latest when absent
+     */
+    version?: number;
 };
 
 /**
@@ -393,6 +616,14 @@ export type ArtifactTicket = {
 export type ArtifactType = 'skill' | 'context' | 'hook' | 'script' | 'mcp' | 'approval' | 'notify' | 'subagent' | 'receipt' | (string & {});
 
 /**
+ * A page of the versions of an artifact; `next` is the cursor of the following page
+ */
+export type ArtifactVersionPage = {
+    items: Array<ArtifactVersion>;
+    next?: string;
+};
+
+/**
  * A version of an artifact
  */
 export type ArtifactVersion = {
@@ -404,6 +635,130 @@ export type ArtifactVersion = {
     entry: string;
     createdAt: string;
     createdBy: string;
+    /**
+     * The SHA-256 of its canonical manifest
+     */
+    digest?: string;
+    /**
+     * The version its publisher started from
+     */
+    baseVersion?: number;
+    /**
+     * The same commit again within 10 minutes, answered with the version it made
+     */
+    replayed?: boolean;
+};
+
+/**
+ * A member's explicit decision
+ */
+export type Assignment = {
+    /**
+     * The member
+     */
+    memberId: string;
+    /**
+     * `allow` (yes) or `deny` (no)
+     */
+    decision: 'allow' | 'deny' | (string & {});
+    /**
+     * ISO 8601
+     */
+    updatedAt: string;
+};
+
+/**
+ * The explicit decisions, by member id
+ */
+export type AssignmentList = {
+    /**
+     * The decisions
+     */
+    items: Array<Assignment>;
+};
+
+/**
+ * What an agent step delivers (`deliverRun`)
+ */
+export type DeliverRequest = {
+    /**
+     * Any JSON value: a string for `text`, `url` and `artifact`, an object or an array for `json`
+     */
+    output: unknown;
+};
+
+/**
+ * What a session's agent step delivers (`deliverWorkflowSession`)
+ */
+export type DeliverSessionRequest = {
+    /**
+     * Required for a person or a key; an agent token delivers for its own session
+     */
+    sessionId?: string;
+    /**
+     * Any JSON value, as in `DeliverRequest`
+     */
+    output: unknown;
+};
+
+/**
+ * A pinned hook version the member receives
+ */
+export type EffectiveHook = {
+    /**
+     * The hook
+     */
+    name: string;
+    /**
+     * The pinned version
+     */
+    version: string;
+    /**
+     * Its digest
+     */
+    digest: string;
+    definition: HookDefinition;
+    /**
+     * Its content, in bytes
+     */
+    sizeBytes: number;
+    /**
+     * Its files
+     */
+    fileCount: number;
+};
+
+/**
+ * A pinned skill version the member receives
+ */
+export type EffectiveSkill = {
+    /**
+     * The skill
+     */
+    name: string;
+    /**
+     * The pinned version
+     */
+    version: string;
+    /**
+     * Its digest
+     */
+    digest: string;
+    /**
+     * Its content, in bytes
+     */
+    sizeBytes: number;
+    /**
+     * Its files
+     */
+    fileCount: number;
+};
+
+/**
+ * The data of `event: gap`: events after the cursor were purged, the stream goes on at the oldest kept
+ */
+export type EventGap = {
+    oldestSeq: number;
 };
 
 /**
@@ -441,6 +796,128 @@ export type GitHubLink = {
     linkedAt?: string;
     refreshedAt?: string;
     accessExpiresAt?: string;
+};
+
+/**
+ * A version's definition and files; the digest is recomputable from them
+ */
+export type HookArtifact = {
+    /**
+     * The hook
+     */
+    name: string;
+    /**
+     * The version
+     */
+    version: string;
+    /**
+     * Its digest
+     */
+    digest: string;
+    definition: HookDefinition;
+    /**
+     * Sorted by path
+     */
+    files: Array<ArtifactFileContent>;
+};
+
+/**
+ * Hooks, newest change first
+ */
+export type HookCatalog = {
+    /**
+     * The hooks
+     */
+    items: Array<HookEntry>;
+};
+
+/**
+ * When and what a team hook runs: `command` is a file of the artifact, run with no argument and the event's JSON on standard input, as the agent defines it
+ */
+export type HookDefinition = {
+    /**
+     * One or more agent events, each once (Codex has no Notification)
+     */
+    events: Array<'PreToolUse' | 'PostToolUse' | 'UserPromptSubmit' | 'Stop' | 'SubagentStop' | 'SessionStart' | 'SessionEnd' | 'PreCompact' | 'Notification' | (string & {})>;
+    /**
+     * 1 to 256 characters passed to the agent unchanged (a tool name for PreToolUse)
+     */
+    matcher?: string | null;
+    /**
+     * The path of an executable file of the artifact
+     */
+    command: string;
+    /**
+     * 1 to 600 (60 by default)
+     */
+    timeoutSeconds?: number;
+};
+
+/**
+ * A hook and its versions, newest first
+ */
+export type HookDetail = {
+    hook: HookEntry;
+    /**
+     * Its versions
+     */
+    versions: Array<HookVersion>;
+};
+
+/**
+ * A team hook. Delivered only through its pinned version, which only an administrator sets.
+ */
+export type HookEntry = {
+    /**
+     * Its id
+     */
+    id: string;
+    /**
+     * Its name
+     */
+    name: string;
+    /**
+     * The approved version, delivered; absent when nothing is delivered
+     */
+    pinnedVersion?: string | null;
+    /**
+     * Delivered to every member without an explicit decision
+     */
+    allMembers: boolean;
+    /**
+     * ISO 8601
+     */
+    createdAt: string;
+    /**
+     * ISO 8601
+     */
+    updatedAt: string;
+};
+
+/**
+ * What a member receives, sorted by name
+ */
+export type HookManifest = {
+    /**
+     * The member
+     */
+    memberId: string;
+    /**
+     * The hooks
+     */
+    hooks: Array<EffectiveHook>;
+};
+
+/**
+ * What a publication did
+ */
+export type HookPublication = {
+    hook: HookEntry;
+    version: HookVersion;
+    /**
+     * False when the label was already published with the same digest
+     */
+    created: boolean;
 };
 
 /**
@@ -541,6 +1018,46 @@ export type AuthToken = {
 };
 
 /**
+ * The one-time code of the mobile sign-in (PKCE), with the verifier and the exact redirect URI of its start
+ */
+export type MobileTokenRequest = {
+    code: string;
+    codeVerifier: string;
+    redirectUri: string;
+};
+
+/**
+ * The token of a mobile sign-in, its person and the key the app keeps behind the phone's biometrics
+ */
+export type MobileToken = {
+    token: string;
+    user: AuthUser;
+    expiresAt?: string;
+    /**
+     * Kept by the app behind the phone's biometrics (keychain item that requires them), presented to `unlockMobileApp` before a yes; never sent anywhere else
+     */
+    unlockKey?: string;
+};
+
+/**
+ * The phone's biometric unlock: the app's key, and the approval the unlock is for
+ */
+export type MobileUnlockRequest = {
+    unlockKey: string;
+    /**
+     * The approval this unlock is for: the `id` of the `Approval`, as in the path of `answerApproval`. A yes from the app to a high-risk action is taken only with an unlock bound to its own approval, less than 60 seconds old, and only once; otherwise 403 `step_up_required` with `error.requestBound` true. High risk is every action whose `risk` is not `low`, an approval without an `action` included (no yes is low today: the server measures no risk). The first yes sent after the unlock uses it, whatever its outcome (a 409, another 403 or a 5xx included): a yes sent again unlocks again. A token holds one binding: a new unlock replaces the last one, so an app unlocks just before each yes. Every unlock, bound or not, also opens the 5-minute window, which a low-risk yes and every no are given with. The server does not check the id: one that names no approval the caller may answer serves no yes. The binding limits one unlock to one yes; it does not prove to the server a biometric per unlock (the `unlockKey` stays the app's). Planned: the server does not read it yet
+     */
+    requestId?: string;
+};
+
+/**
+ * When the unlock was recorded
+ */
+export type MobileUnlock = {
+    authenticatedAt: string;
+};
+
+/**
  * The signed-in person
  */
 export type AuthUser = {
@@ -586,6 +1103,16 @@ export type Automation = {
  */
 export type AutomationAction = {
     workflowId?: string;
+    /**
+     * The workflow's inputs, templates rendered like the prompt; one that renders empty is left out (the workflow's default applies). Workflow action only, with an empty prompt
+     */
+    inputs?: {
+        [key: string]: string;
+    };
+    /**
+     * `owner/name`: the session's repository, or a workflow run's for its agent nodes that name none
+     */
+    repository?: string;
     prompt?: string;
     agent?: string;
     model?: string;
@@ -604,7 +1131,7 @@ export type AutomationRun = {
      */
     source: string;
     /**
-     * queued, started, failed, invalid_payload, skipped_overlap or skipped_budget
+     * queued (also while it waits for its owner's running cap, up to 30 minutes), started, failed, invalid_payload, skipped_overlap, skipped_budget, cancelled or succeeded. A workflow action's run is `started` once its workflow run exists and ends as that run ends: `succeeded`, `failed` (`workflow_failed`) or `cancelled` (`workflow_cancelled`)
      */
     status: string;
     /**
@@ -613,7 +1140,11 @@ export type AutomationRun = {
     version: number;
     sessionId?: string | null;
     /**
-     * A stable code when it failed (cloud_session_limit, cloud_hours_exhausted, owner_unavailable…)
+     * The workflow run a workflow action started (`WorkflowRun.id`), under the idempotency key `automation-run:<run id>`: a retried start finds it, never a second one. Absent for a session action
+     */
+    workflowRunId?: string | null;
+    /**
+     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
      */
     reason?: string | null;
     problems: Array<AutomationPayloadProblem>;
@@ -641,6 +1172,12 @@ export type AutomationPayloadProblem = {
  */
 export type AutomationDryRun = {
     renderedPrompt: string;
+    /**
+     * A workflow action's inputs as the run would send them; one that renders empty is left out
+     */
+    renderedInputs?: {
+        [key: string]: string;
+    };
     variables: Array<{
         name: string;
         /**
@@ -908,7 +1445,7 @@ export type BudgetOverride = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `import.teamcode.v1`, `inference.v1`, `mcp.v1`, `notifications.v1`, `notifications.push.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.github.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -972,9 +1509,306 @@ export type CheckRun = {
 export type CheckState = 'success' | 'failure' | 'pending' | 'skipped' | (string & {});
 
 /**
+ * How cloud sessions run on this instance (TeamCode's cloud runtime and cloud settings)
+ */
+export type CloudRuntime = {
+    /**
+     * Whether new cloud sessions start; off refuses only new work
+     */
+    enabled: boolean;
+    /**
+     * The delivery image carrying the `ostrom` Linux binary at `runnerBinary`, copied into each session pod by an init container; absent before it is set
+     */
+    runnerImage?: string;
+    /**
+     * Where the binary is in `runnerImage`, `/usr/local/bin/ostrom` by default
+     */
+    runnerBinary: string;
+    /**
+     * The https origin session pods call back; absent uses the public URL
+     */
+    serverUrl?: string;
+    /**
+     * The origin session pods call back
+     */
+    effectiveServerUrl: string;
+    workspaceAccessMode: 'ReadWriteOncePod' | 'ReadWriteOnce' | (string & {});
+    /**
+     * Days a paused session keeps its workspace; absent keeps it
+     */
+    pausedRetentionDays?: number;
+    failedWorkspaceRetentionDays: number;
+    maxRunningSessionsPerMember: number;
+    maxRetainedSessionsPerMember: number;
+    /**
+     * Days transcript events are kept; absent keeps them
+     */
+    transcriptRetentionDays?: number;
+    /**
+     * Whether an owner who is not an administrator may offer a session to another member
+     */
+    memberTransfers: 'offer' | 'disabled' | (string & {});
+    /**
+     * When it was saved last; absent while nothing is stored
+     */
+    updatedAt?: string;
+};
+
+export type SaveCloudRuntimeRequest = {
+    enabled: boolean;
+    runnerImage?: string;
+    runnerBinary: string;
+    /**
+     * The https origin session pods call back, without a path; never a link-local, unspecified or cloud metadata address in any spelling. Absent uses the server's public URL
+     */
+    serverUrl?: string;
+    workspaceAccessMode: 'ReadWriteOncePod' | 'ReadWriteOnce' | (string & {});
+    pausedRetentionDays?: number;
+    failedWorkspaceRetentionDays: number;
+    maxRunningSessionsPerMember: number;
+    maxRetainedSessionsPerMember: number;
+    transcriptRetentionDays?: number;
+    memberTransfers: 'offer' | 'disabled' | (string & {});
+    /**
+     * The `updatedAt` of the runtime edited; absent only while nothing is stored (absent when a runtime is stored, or not the stored one, is a 409 `cloud_runtime_conflict`)
+     */
+    updatedAt?: string;
+};
+
+/**
+ * A connected Kubernetes cluster; its CA bundle and service-account token are never returned
+ */
+export type CloudCluster = {
+    id: string;
+    name: string;
+    apiUrl: string;
+    allowedNamespaces: Array<string>;
+    maxRunningPods: number;
+    defaultStorageClass?: string;
+    version: number;
+    caCertificate: InstanceSecretState;
+    serviceAccountToken: InstanceSecretState;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CloudClusterList = {
+    clusters: Array<CloudCluster>;
+};
+
+export type SaveCloudClusterRequest = {
+    name: string;
+    apiUrl: string;
+    /**
+     * PEM bundle; absent keeps the stored one (not when `apiUrl` changes)
+     */
+    caCertificate?: string;
+    /**
+     * Bearer token; absent keeps the stored one (not when `apiUrl` changes)
+     */
+    serviceAccountToken?: string;
+    allowedNamespaces: Array<string>;
+    maxRunningPods: number;
+    defaultStorageClass?: string;
+    version: number;
+};
+
+export type CloudResources = {
+    cpuMillis: number;
+    memoryMebibytes: number;
+};
+
+/**
+ * What a session of the profile runs (TeamCode's profile spec)
+ */
+export type CloudProfileSpec = {
+    clusterId: string;
+    namespace: string;
+    /**
+     * The session image the team chose
+     */
+    image: string;
+    /**
+     * Images a member may ask for instead, by exact reference or a prefix ending in `*`
+     */
+    allowedImageOverrides?: Array<string>;
+    /**
+     * Names of Secrets of the namespace
+     */
+    imagePullSecrets?: Array<string>;
+    resources?: CloudResources;
+    workspaceSizeGibibytes?: number;
+    storageClass?: string;
+    agentKind?: string;
+    agentVersion?: string;
+    idleTimeoutMinutes?: number;
+    minIdleTimeoutMinutes?: number;
+    maxIdleTimeoutMinutes?: number;
+};
+
+export type CloudProfile = {
+    id: string;
+    name: string;
+    version: number;
+    spec: CloudProfileSpec;
+    /**
+     * Members allowed to use it; owners and admins may always
+     */
+    assignedMemberIds: Array<string>;
+    clusterName?: string;
+    createdAt: string;
+    updatedAt: string;
+};
+
+/**
+ * How an organization compiles its packages
+ */
+export type CompilerSettings = {
+    /**
+     * `auto` (the default): each compilation moves the repository's pin to the package it built. `manual`: a person pins each version; an agent starting a session never sets the first pin
+     */
+    pin: 'auto' | 'manual' | (string & {});
+    /**
+     * The member logins (as in a signed decision) whose decision lets a workflow run code (its scripts), compared without case and stored lower case without duplicates; absent for every person who decides, empty for nobody
+     */
+    codePublishers?: Array<string>;
+    /**
+     * The member login that approves a gate naming no approver; absent for none
+     */
+    prodApprover?: string;
+    /**
+     * The last save; absent while nothing is stored
+     */
+    updatedAt?: string;
+    /**
+     * The person who saved last; absent while nothing is stored
+     */
+    updatedBy?: string;
+};
+
+export type SaveCompilerSettingsRequest = {
+    /**
+     * `auto` (the default): each compilation moves the repository's pin to the package it built. `manual`: a person pins each version; an agent starting a session never sets the first pin
+     */
+    pin: 'auto' | 'manual' | (string & {});
+    /**
+     * The member logins (as in a signed decision) whose decision lets a workflow run code (its scripts), compared without case and stored lower case without duplicates; absent for every person who decides, empty for nobody
+     */
+    codePublishers?: Array<string>;
+    /**
+     * The member login that approves a gate naming no approver; absent for none
+     */
+    prodApprover?: string;
+    /**
+     * The `updatedAt` of the settings edited; absent while nothing is stored
+     */
+    updatedAt?: string;
+};
+
+/**
+ * An organization's cloud session settings
+ */
+export type CloudSettings = {
+    /**
+     * How long an agent's background work (background subagents and commands, monitors, scheduled wake-ups, reported by its runner) holds off the idle pause, from when it was first reported; 0 never holds it off. 240 by default (TeamCode af1a5f7b)
+     */
+    backgroundWorkMaxMinutes: number;
+    /**
+     * The last save; absent while nothing is stored
+     */
+    updatedAt?: string;
+    /**
+     * The person who saved last; absent while nothing is stored
+     */
+    updatedBy?: string;
+};
+
+export type SaveCloudSettingsRequest = {
+    backgroundWorkMaxMinutes: number;
+    /**
+     * The `updatedAt` of the settings edited; absent while nothing is stored
+     */
+    updatedAt?: string;
+};
+
+export type CloudProfileList = {
+    profiles: Array<CloudProfile>;
+};
+
+export type SaveCloudProfileRequest = {
+    name: string;
+    version: number;
+    spec: CloudProfileSpec;
+    assignedMemberIds?: Array<string>;
+};
+
+/**
  * The agent a cloud session starts, for cloud sessions only (a launch names its agent otherwise): `shell` is a plain shell, to prepare a workspace or debug an image. Any other name is refused with a 400.
  */
 export type CloudAgentKind = 'claude' | 'codex' | 'opencode' | 'gemini' | 'shell' | (string & {});
+
+/**
+ * The preparation recipe of a cloud session (`runners.cloud.environment.v1`): what the runner does in the workspace before the agent starts, the same on every execution. Stored on the session at creation and never edited, so a resume prepares exactly what the first execution did. Holds no secret: variable values and the GitHub token are resolved for the session's owner at every start. The image carries the toolchain; the recipe says what to do with it
+ */
+export type CloudEnvironment = {
+    /**
+     * Cloned on the first execution into `/workspace/<path>`, only fetched (`git fetch --prune origin`) afterwards; work on the workspace is never reset or cloned again
+     */
+    repositories?: Array<CloudRepository>;
+    /**
+     * Relative to `/workspace`, where the setup commands and the agent start; must exist after cloning. The first repository's directory when absent and there is one, the workspace otherwise
+     */
+    workingDirectory?: string;
+    setup?: CloudSetup;
+    /**
+     * Environment variable names the owner must be assigned (`getEnvironment`); preparation fails (`preparation_failed`, naming them) without them, and a variable withheld in `unavailable` counts as missing
+     */
+    requiredVariables?: Array<string>;
+    /**
+     * Preparation fails when the owner has no usable GitHub link (`github.link.v1`)
+     */
+    requireGitHub?: boolean;
+    /**
+     * The domain of the Git e-mail address for an owner without a GitHub link (`users.noreply.ostrom.invalid` when absent); a linked owner commits as `<id>+<login>@users.noreply.github.com`
+     */
+    gitEmailDomain?: string;
+};
+
+/**
+ * A repository the runner clones into the workspace
+ */
+export type CloudRepository = {
+    /**
+     * `https://github.com/<owner>/<name>[.git]`: no credentials, query or fragment
+     */
+    url: string;
+    /**
+     * Relative to `/workspace` (at most 8 segments of letters, digits, `.`, `_`, `-`), outside `.ostrom` and `.home`, never inside another repository's; the repository's name when absent
+     */
+    path?: string;
+    /**
+     * The branch, tag or commit checked out after cloning; the default branch when absent. A ref that looks like an option is refused
+     */
+    ref?: string;
+    /**
+     * A local branch created at `ref` after cloning, for example one branch per task
+     */
+    branch?: string;
+};
+
+/**
+ * Commands run with `/bin/sh -c` in the working directory, in the agent's container and under its user, with the owner's environment variables; their output goes to the session's terminal, its known variable values masked
+ */
+export type CloudSetup = {
+    /**
+     * Run once per workspace, in order; each is marked done on the workspace when it succeeds, so an interrupted first start runs only what did not finish (up to 4,096 characters each)
+     */
+    create?: Array<string>;
+    /**
+     * Run on every execution (first start and every resume), in order, after `create`
+     */
+    start?: Array<string>;
+};
 
 /**
  * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
@@ -1016,6 +1850,7 @@ export type CloudSession = {
     lastActivityAt?: string;
     pausedAt?: string;
     runnerId?: string;
+    environment?: CloudEnvironment;
     /**
      * Who may instruct the agent while it holds the owner's GitHub token (`runners.cloud.github.v1`): `owner` (the default) the owner only, `shared` everyone who may use the session, `none` no GitHub token at all. Absent from a server without the feature
      */
@@ -1031,10 +1866,14 @@ export type CloudSession = {
  */
 export type CloudSessionFailure = {
     /**
-     * start_failed, execution_lost, idle_timeout, max_duration or hours_exhausted
+     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted or preparation_failed
      */
     code: string;
     message: string;
+    /**
+     * Whether trying again may succeed (a clone or a fetch), for `preparation_failed`
+     */
+    retryable?: boolean;
 };
 
 /**
@@ -1171,6 +2010,10 @@ export type Deliverable = {
     type: string;
     label?: string;
     schema?: unknown;
+    /**
+     * A `url` deliverable only: the host it must be on (`github.com`), or a subdomain of it
+     */
+    domain?: string;
 };
 
 /**
@@ -1229,7 +2072,7 @@ export type DeviceAuthorization = {
     userCode: string;
     clientName: string;
     /**
-     * The governance write scopes an `ostrom login --admin` asks for, shown before the yes; only an owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary sign-in
+     * Every scope the token of an `ostrom login --admin` will hold (its governance writes, the CLI's, their reads and the handover of shared accounts), shown before the yes so that no power is approved unseen; only an owner or admin may approve them (`answerDeviceLogin` answers 403 otherwise). Absent for the ordinary sign-in
      */
     scopes?: Array<string>;
     expiresAt: string;
@@ -1241,6 +2084,13 @@ export type DeviceAuthorization = {
      * The network the login was started from, never the address: a /24 for IPv4 (`203.0.113.0/24`), a /48 for IPv6 (`2001:db8:abcd::/48`), shown before the yes. Absent when the server could not tell
      */
     requestedFrom?: string;
+};
+
+/**
+ * The device code to exchange for a token (RFC 8628 section 3.4)
+ */
+export type DeviceTokenRequest = {
+    deviceCode: string;
 };
 
 /**
@@ -1291,6 +2141,162 @@ export type EndSessionRequest = {
 export type ErrorDetail = {
     type: string;
     message: string;
+};
+
+/**
+ * Selects a team variant for a member's variable
+ */
+export type EnvironmentAssign = {
+    variantId: string;
+    /**
+     * The member's own value, required for a `perMember` variant and refused for a `shared` one; 1 to 16,384 characters, without NUL, written once, never returned
+     */
+    value?: string;
+};
+
+/**
+ * One member's selection for one variable, metadata only
+ */
+export type EnvironmentAssignment = {
+    member: string;
+    variable: string;
+    variantId: string;
+    variantName: string;
+    /**
+     * The variant's version, bumped by its edits
+     */
+    version: number;
+    source: 'direct' | 'bulk' | (string & {});
+    /**
+     * The member's own personal variant
+     */
+    personal: boolean;
+    /**
+     * A `perMember` variant's value for this member is stored
+     */
+    hasMemberValue: boolean;
+    /**
+     * Changed by a new selection or a new member value
+     */
+    assignedAt: string;
+};
+
+/**
+ * Effective environment assignments and exclusions, by member then variable; always one page
+ */
+export type EnvironmentAssignmentsPage = {
+    items: Array<EnvironmentAssignment>;
+    exclusions: Array<EnvironmentExclusion>;
+};
+
+/**
+ * What a bulk assignment did
+ */
+export type EnvironmentBulkAssignment = {
+    assigned: number;
+    /**
+     * Members kept on their direct selection
+     */
+    keptDirect: number;
+    /**
+     * Members skipped because they are excluded from the variable
+     */
+    excluded: number;
+};
+
+/**
+ * A member excluded from a variable
+ */
+export type EnvironmentExclusion = {
+    member: string;
+    variable: string;
+};
+
+/**
+ * A member's environment variables with their values: never logged, stored, or shown to anyone else
+ */
+export type EnvironmentValues = {
+    /**
+     * By name
+     */
+    variables: {
+        [key: string]: string;
+    };
+    /**
+     * Assigned variables withheld because their value cannot be read now, by name only
+     */
+    unavailable: Array<string>;
+};
+
+/**
+ * An environment variant (`environment.v1`): a named value for one environment variable, never with its value
+ */
+export type EnvironmentVariant = {
+    id: string;
+    /**
+     * The environment variable it fills, `[A-Z_][A-Z0-9_]*`, at most 128 characters
+     */
+    variable: string;
+    /**
+     * The variant's name, unique per variable and owner (case-insensitively), 1 to 120 characters
+     */
+    name: string;
+    /**
+     * `shared`: one value on the variant; `perMember`: each assignment carries the member's own value
+     */
+    binding: 'shared' | 'perMember' | (string & {});
+    /**
+     * The member a personal variant belongs to, assigned to them alone; absent for a team variant
+     */
+    owner?: string;
+    /**
+     * A shared value is stored
+     */
+    hasValue: boolean;
+    /**
+     * Bumped at each change
+     */
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+/**
+ * Creates an environment variant; the variable and the binding never change afterwards
+ */
+export type EnvironmentVariantCreate = {
+    variable: string;
+    name: string;
+    /**
+     * `shared` when absent; a personal variant is always `shared`
+     */
+    binding?: 'shared' | 'perMember' | (string & {});
+    /**
+     * The shared value, required for `shared` and refused for `perMember`; 1 to 16,384 characters, without NUL, written once, never returned
+     */
+    value?: string;
+};
+
+/**
+ * Renames a variant or replaces its shared value
+ */
+export type EnvironmentVariantUpdate = {
+    /**
+     * The version read; another one is 409 `variant_version_conflict`
+     */
+    expectedVersion: number;
+    name?: string;
+    /**
+     * A new shared value (a `shared` variant only, 400 otherwise); 1 to 16,384 characters, without NUL; absent keeps the stored one
+     */
+    value?: string;
+};
+
+/**
+ * Environment variants, by variable then name; always one page (at most 500)
+ */
+export type EnvironmentVariantsPage = {
+    items: Array<EnvironmentVariant>;
 };
 
 /**
@@ -1635,13 +2641,38 @@ export type Health = {
 };
 
 /**
- * A hook delivered to developers outside session packages
+ * An immutable published version: its definition, files and digest never change
  */
-export type Hook = {
-    name: string;
+export type HookVersion = {
+    /**
+     * Its label
+     */
     version: string;
+    /**
+     * `sha256:<64 hex>` over `hook\0<events sorted, comma-separated>\0<matcher or empty>\0<command>\0<timeout>\n` then the skills' file lines
+     */
+    digest: string;
+    definition: HookDefinition;
+    /**
+     * Its content, in bytes
+     */
+    sizeBytes: number;
+    /**
+     * Its files
+     */
+    fileCount: number;
+    /**
+     * The member who published it (the key's creator for a key)
+     */
+    publishedBy: string;
+    /**
+     * ISO 8601
+     */
+    publishedAt: string;
+    /**
+     * The hook's pinned version
+     */
     pinned: boolean;
-    assignedTo: Array<string>;
 };
 
 /**
@@ -1651,7 +2682,7 @@ export type ImportItem = {
     /**
      * Clients keep an unknown kind as UNKNOWN
      */
-    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account' | (string & {});
+    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account' | 'workflow' | 'editors' | 'automation' | (string & {});
     name: string;
     /**
      * `revive_at_cutover`: a shared account waiting for a reconnection, left so while TeamCode runs; the cutover run revives it.
@@ -1699,6 +2730,125 @@ export type InferenceRoute = {
     provider: string;
     account?: string;
     priority: number;
+};
+
+/**
+ * An administrator of the instance
+ */
+export type InstanceAdmin = {
+    userId: string;
+    login?: string;
+    /**
+     * Their verified primary e-mail, when they have one
+     */
+    email?: string;
+    /**
+     * `setup`: the person who used the setup link; `dashboard`: added by an administrator; `environment`: imported once from the former `OSTROM_INSTANCE_ADMINS`
+     */
+    source: 'setup' | 'dashboard' | 'environment' | (string & {});
+    addedAt: string;
+    /**
+     * The administrator who added them, for `dashboard`
+     */
+    addedBy?: string;
+};
+
+/**
+ * The administrators of the instance, oldest first
+ */
+export type InstanceAdminList = {
+    admins: Array<InstanceAdmin>;
+};
+
+/**
+ * The person to make an administrator of the instance
+ */
+export type AddInstanceAdminRequest = {
+    /**
+     * A verified address of their account
+     */
+    email: string;
+};
+
+/**
+ * A write-only secret of a settings section, as it is shown back
+ */
+export type InstanceSecretState = {
+    configured: boolean;
+};
+
+/**
+ * One section of the instance's settings
+ */
+export type InstanceSettings = {
+    section: string;
+    /**
+     * 0 before the first save
+     */
+    version: number;
+    /**
+     * The plain fields set, by name
+     */
+    values: {
+        [key: string]: string;
+    };
+    /**
+     * Every secret field of the section, by name, with whether it is set; never its value
+     */
+    secrets: {
+        [key: string]: InstanceSecretState;
+    };
+    /**
+     * The section's fields, in display order
+     */
+    fields: Array<InstanceSettingField>;
+    updatedAt?: string;
+    /**
+     * The administrator who saved last; absent when the settings were imported from the environment
+     */
+    updatedBy?: string;
+    /**
+     * True while the stored settings are those imported once from the former environment variables
+     */
+    importedFromEnvironment: boolean;
+};
+
+/**
+ * A field of a settings section
+ */
+export type InstanceSettingField = {
+    name: string;
+    secret: boolean;
+    /**
+     * The section does nothing until it is set
+     */
+    required: boolean;
+};
+
+/**
+ * Every section of the instance's settings, by name order
+ */
+export type InstanceSettingsList = {
+    sections: Array<InstanceSettings>;
+};
+
+/**
+ * A section's new settings
+ */
+export type SaveInstanceSettingsRequest = {
+    /**
+     * The version replaced, 0 before the first save
+     */
+    version: number;
+    values?: {
+        [key: string]: string;
+    };
+    /**
+     * A value replaces the secret, `null` removes it, an absent or empty one keeps it
+     */
+    secrets?: {
+        [key: string]: string | null;
+    };
 };
 
 /**
@@ -1819,6 +2969,216 @@ export type JsonRpcError = {
  */
 export type LinkStarted = {
     authorizationUrl: string;
+};
+
+/**
+ * What the index or a search shows of an entry: never its content
+ */
+export type MemoryIndexEntry = {
+    id: string;
+    /**
+     * `team` or `personal`
+     */
+    scope: 'team' | 'personal' | (string & {});
+    title: string;
+    summary: string;
+    /**
+     * Sorted
+     */
+    tags?: Array<string>;
+    updatedAt: string;
+};
+
+/**
+ * A page of the memory index
+ */
+export type MemoryIndexPage = {
+    entries: Array<MemoryIndexEntry>;
+    /**
+     * The `after` of the following page, absent on the last
+     */
+    next?: string;
+};
+
+/**
+ * The entries a search found, newest first, at most 20
+ */
+export type MemorySearchResult = {
+    entries: Array<MemoryIndexEntry>;
+};
+
+/**
+ * One entry of the memory with its content (`memory.v1`)
+ */
+export type MemoryEntry = {
+    id: string;
+    /**
+     * `team` or `personal`
+     */
+    scope: 'team' | 'personal' | (string & {});
+    title: string;
+    summary: string;
+    content: string;
+    /**
+     * Sorted
+     */
+    tags?: Array<string>;
+    /**
+     * Free references (a ticket, a pull request, a URL, a path), never fetched
+     */
+    refs?: Array<string>;
+    /**
+     * `active` (the only one listed, searched or read), `proposed` (a team entry an agent proposed), `superseded` or `rejected`
+     */
+    status: 'active' | 'proposed' | 'superseded' | 'rejected' | (string & {});
+    origin: 'human' | 'agent' | 'curation' | (string & {});
+    /**
+     * The member who wrote it
+     */
+    authorId: string;
+    /**
+     * The session an agent wrote it from
+     */
+    sessionId?: string;
+    /**
+     * The entry this one replaced
+     */
+    supersedesId?: string;
+    /**
+     * No longer listed or read after this time; absent for no expiry
+     */
+    expiresAt?: string;
+    /**
+     * The version to send as `expectedVersion`
+     */
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+    lastReadAt?: string;
+    readCount?: number;
+};
+
+/**
+ * A new entry; never stores a credential
+ */
+export type CreateMemoryRequest = {
+    title: string;
+    /**
+     * One line
+     */
+    summary: string;
+    content: string;
+    /**
+     * `personal` by default
+     */
+    scope?: 'team' | 'personal' | (string & {});
+    /**
+     * At most 8 distinct tags `[a-z0-9][a-z0-9._-]*`, 40 characters each
+     */
+    tags?: Array<string>;
+    /**
+     * At most 10 references of 1 to 300 characters
+     */
+    refs?: Array<string>;
+    /**
+     * In the future; absent for no expiry
+     */
+    expiresAt?: string;
+    /**
+     * The session an agent proposes a team entry from; an agent token names its own
+     */
+    sessionId?: string;
+};
+
+/**
+ * Replaces an entry
+ */
+export type UpdateMemoryRequest = {
+    /**
+     * The version read
+     */
+    expectedVersion: number;
+    title: string;
+    summary: string;
+    content: string;
+    tags?: Array<string>;
+    refs?: Array<string>;
+    expiresAt?: string;
+};
+
+/**
+ * Team entries agents proposed, waiting for an answer, oldest first
+ */
+export type MemoryProposals = {
+    proposals: Array<MemoryEntry>;
+};
+
+/**
+ * Whether the organization's memory is curated, and what its last run did; off by default
+ */
+export type MemoryCuration = {
+    enabled: boolean;
+    lastRunAt?: string;
+    /**
+     * As in the audit log
+     */
+    lastRunId?: string;
+    lastSuperseded?: number;
+    lastQueued?: number;
+};
+
+/**
+ * Turns the curation on or off
+ */
+export type SetMemoryCurationRequest = {
+    enabled: boolean;
+};
+
+/**
+ * A pair curation did not decide alone: applying it supersedes `olderId` by `newerId`
+ */
+export type MemoryReview = {
+    id: string;
+    scope: 'team' | 'personal' | (string & {});
+    /**
+     * `duplicate` (equal text) or `same_title` (one title, two texts)
+     */
+    kind: 'duplicate' | 'same_title' | (string & {});
+    reason: string;
+    olderId: string;
+    olderTitle: string;
+    olderOrigin: 'human' | 'agent' | 'curation' | (string & {});
+    newerId: string;
+    newerTitle: string;
+    newerOrigin: 'human' | 'agent' | 'curation' | (string & {});
+    createdAt: string;
+};
+
+/**
+ * Open reviews, oldest first
+ */
+export type MemoryReviews = {
+    reviews: Array<MemoryReview>;
+};
+
+/**
+ * An entry curation replaced, restorable for 90 days
+ */
+export type SupersededMemory = {
+    id: string;
+    scope: 'team' | 'personal' | (string & {});
+    title: string;
+    summary: string;
+    authorId: string;
+    supersededById?: string;
+    supersededAt: string;
+};
+
+/**
+ * Superseded entries, newest first
+ */
+export type SupersededMemories = {
+    entries: Array<SupersededMemory>;
 };
 
 /**
@@ -1961,7 +3321,7 @@ export type McpCall = {
  */
 export type McpServer = {
     /**
-     * 1 to 64 characters; `servers`, `settings`, `calls` and `usage` are reserved (they are paths of this API), and so is a name agents would see as one of Ostrom's own MCP servers, which every agent already has (`ostrom`, `ostrom-workflow` and `workflow`, since the launcher labels a server `ostrom-<name>` and keeps a name that starts with `ostrom`), whatever their case and surrounding spaces; a reserved name is refused with a 400
+     * 1 to 64 characters; `servers`, `settings`, `calls`, `usage` and `hosted` are reserved (they are paths of this API), and so is a name agents would see as one of Ostrom's own MCP servers, which every agent already has (`ostrom`, `ostrom-workflow` and `workflow`, since the launcher labels a server `ostrom-<name>` and keeps a name that starts with `ostrom`), whatever their case and surrounding spaces; a reserved name is refused with a 400
      */
     name: string;
     /**
@@ -1984,6 +3344,14 @@ export type McpServer = {
      */
     readonly agentName?: string;
     /**
+     * A stdio server's process in a member's list, as the minute sweep last recorded it: `idle`, `starting`, `ready`, `failed` (the last start failed), `backoff` or `unknown`; absent for an HTTP server or when the state cannot be read (a server is never hidden for it)
+     */
+    readonly state?: string;
+    /**
+     * The last failure of that process not yet followed by a successful start (a host error code such as `start_failed` or `crashed`), in a member's list
+     */
+    readonly failure?: string;
+    /**
      * The relay endpoint, in a member's list
      */
     readonly path?: string;
@@ -1997,6 +3365,88 @@ export type McpServer = {
      */
     readonly version?: number;
     readonly createdAt?: string;
+    /**
+     * The member id a personal server belongs to (`mcp.personal.v1`); absent for a team server
+     */
+    readonly owner?: string;
+};
+
+/**
+ * The org's hosted stdio processes (`GET /api/v1/mcp/hosted`)
+ */
+export type McpHostedProcesses = {
+    /**
+     * False when the MCP host did not answer; the states are then the recorded ones
+     */
+    hostReachable: boolean;
+    /**
+     * The host's version, when it answered
+     */
+    hostVersion?: string;
+    items: Array<McpHostedProcess>;
+};
+
+/**
+ * One hosted stdio process; no secret, argument value or environment
+ */
+export type McpHostedProcess = {
+    /**
+     * The server's name
+     */
+    server: string;
+    /**
+     * The member's id, for a `perMember` server's process; absent for a `shared` server's
+     */
+    member?: string;
+    /**
+     * The member's display name, when known
+     */
+    memberName?: string;
+    /**
+     * npm or pypi
+     */
+    launcher: string;
+    /**
+     * The pinned package
+     */
+    package: string;
+    /**
+     * idle, starting, ready, failed, backoff or unknown
+     */
+    state: string;
+    /**
+     * The last failure not yet followed by a successful start
+     */
+    failure?: string;
+    starts: number;
+    failures: number;
+    lastExitCode?: number;
+    /**
+     * How long the last start took
+     */
+    coldStartMs?: number;
+    /**
+     * Resident memory of the process tree
+     */
+    memoryBytes?: number;
+    /**
+     * The last 4 KiB of the process's stderr, every secret value scrubbed (administrators only)
+     */
+    stderr?: string;
+};
+
+/**
+ * The process to restart
+ */
+export type McpHostedRestart = {
+    /**
+     * The stdio server's name
+     */
+    server: string;
+    /**
+     * The member's id, for a `perMember` server; omitted for a `shared` server
+     */
+    member?: string;
 };
 
 /**
@@ -2028,6 +3478,20 @@ export type InferenceSettings = {
 };
 
 /**
+ * The organization's admission queue (`inference.queue.v1`)
+ */
+export type InferenceQueue = {
+    /**
+     * Calls of the organization waiting now (at most 128)
+     */
+    waiting: number;
+    /**
+     * The caller's own calls among them
+     */
+    waitingMine: number;
+};
+
+/**
  * How agents see relayed servers
  */
 export type McpSettings = {
@@ -2035,6 +3499,10 @@ export type McpSettings = {
      * Tools are `mcp__<agentPrefix>-<server>__<tool>`; 1 to 32 characters of a-z 0-9 _ -, default `ostrom`
      */
     agentPrefix: string;
+    /**
+     * Whether members may declare a hosted stdio MCP server of their own (`mcp.personal.v1`); false by default. Absent in a change keeps the stored value. Turning it off refuses new ones and keeps the servers already declared, which go on running
+     */
+    memberHostedMcp?: boolean;
 };
 
 /**
@@ -2066,6 +3534,10 @@ export type Me = {
     member?: Member;
     organization?: Organization;
     capabilities: Array<string>;
+    /**
+     * True when the caller is a person who administers the instance (Admin in the console)
+     */
+    instanceAdmin?: boolean;
     /**
      * For a browser session, the token to send in `X-CSRF-Token` on state-changing requests
      */
@@ -2106,6 +3578,13 @@ export type MemberInvite = {
      * The slug of a team they join; none when absent
      */
     team?: string;
+};
+
+/**
+ * The organizations the caller is an active member of
+ */
+export type MyOrganizationList = {
+    items: Array<MyOrganization>;
 };
 
 /**
@@ -2194,6 +3673,183 @@ export type OpenAiResponsesStreamEvent = {
 };
 
 /**
+ * One event of the organization's feed (`GET /api/v1/events`), and the `data` of a webhook delivery
+ */
+export type OrgEvent = {
+    /**
+     * The organization's sequence, gap-free and increasing
+     */
+    seq: number;
+    /**
+     * The event type, also the SSE `event:` field (`cloud.wait.created`); an open list
+     */
+    type: string;
+    /**
+     * What the event is about (`session`, `wait`, `workflow_run`...)
+     */
+    subject: string;
+    subjectId: string;
+    /**
+     * The member the subject belonged to when it happened; absent for an event of the whole organization
+     */
+    memberId?: string;
+    /**
+     * ISO instant of the change
+     */
+    at: string;
+    /**
+     * The type's facts, identifiers and short labels only
+     */
+    data: {
+        [key: string]: unknown;
+    };
+};
+
+/**
+ * The version to pin
+ */
+export type PinSkillRequest = {
+    /**
+     * A published, non-retired label
+     */
+    version: string;
+};
+
+/**
+ * A hook version to publish; it is not delivered until an administrator pins it
+ */
+export type PublishHookVersionRequest = {
+    /**
+     * Its label
+     */
+    version: string;
+    definition: HookDefinition;
+    /**
+     * 1 to 50 files, the command among them as `executable`
+     */
+    files: Array<SkillFileUpload>;
+    /**
+     * Deliver the hook to all members once pinned (a key: only before the first pin)
+     */
+    allMembers?: boolean;
+};
+
+/**
+ * A version to publish
+ */
+export type PublishSkillVersionRequest = {
+    /**
+     * Its label
+     */
+    version: string;
+    /**
+     * 1 to 200 files, `SKILL.md` at the root
+     */
+    files: Array<SkillFileUpload>;
+    /**
+     * Pin it in the same transaction (a key needs `skills:pin`)
+     */
+    pin?: boolean;
+    /**
+     * Deliver the skill to all members (a key needs `skills:assign`); false leaves the audience as it is
+     */
+    allMembers?: boolean;
+};
+
+/**
+ * Up to 500 reports, each skill once
+ */
+export type ReportSkillInstallationsRequest = {
+    /**
+     * The reports
+     */
+    installations: Array<SkillInstallationReport>;
+};
+
+/**
+ * What the runner prepares for one execution: holds secrets, never logged or stored
+ */
+export type RunnerEnvironment = {
+    environment: CloudEnvironment;
+    git: RunnerGitIdentity;
+    /**
+     * The owner's environment variables, by name
+     */
+    variables: {
+        [key: string]: string;
+    };
+    unavailable: Array<string>;
+};
+
+/**
+ * The execution a runner call is for
+ */
+export type RunnerExecution = {
+    sessionId: string;
+    epoch: number;
+};
+
+/**
+ * The execution a runner call is for, and the version it downloads: a name and a version label of the owner's manifest
+ */
+export type RunnerArtifactRequest = {
+    sessionId: string;
+    epoch: number;
+    /**
+     * 1 to 64 lowercase letters, digits and single hyphens
+     */
+    name: string;
+    /**
+     * A version label, case-sensitive
+     */
+    version: string;
+};
+
+/**
+ * The Git identity the agent commits with, the session owner's: a linked GitHub account's login and no-reply address, otherwise the member's name and `<name>@<gitEmailDomain>`
+ */
+export type RunnerGitIdentity = {
+    name: string;
+    email: string;
+};
+
+/**
+ * What the runner must do next
+ */
+export type RunnerHeartbeatAnswer = {
+    /**
+     * run or stop
+     */
+    instruction: string;
+    state: string;
+};
+
+/**
+ * A failed preparation step, as structured fields only
+ */
+export type RunnerPreparationFailure = {
+    step: 'git_identity' | 'clone' | 'checkout' | 'fetch' | 'working_directory' | 'setup_create' | 'setup_start' | 'runner' | (string & {});
+    /**
+     * The repository or the setup command, from 0
+     */
+    index?: number;
+    exitCode?: number;
+};
+
+/**
+ * A preparation phase, or its failure
+ */
+export type RunnerPreparationReport = {
+    sessionId: string;
+    epoch: number;
+    /**
+     * The phase starting, or the one that failed
+     */
+    phase: 'configuring_git' | 'cloning_repositories' | 'fetching_repositories' | 'running_setup' | (string & {});
+    failure?: RunnerPreparationFailure;
+};
+
+/**
  * The GitHub token of a cloud session's owner, for its runner only (`fetchRunnerGithubToken`): `token`, `expiresAt` and `login` (the linked account, for the agent's `gh` configuration) when `status` is `linked`
  */
 export type RunnerGitHubToken = {
@@ -2204,9 +3860,333 @@ export type RunnerGitHubToken = {
 };
 
 /**
+ * A decision
+ */
+export type SetAssignmentRequest = {
+    /**
+     * `allow` or `deny`
+     */
+    decision: 'allow' | 'deny' | (string & {});
+};
+
+/**
+ * Who receives the pinned version without an explicit decision
+ */
+export type SetAudienceRequest = {
+    /**
+     * True: every member; false: only members set to `allow`
+     */
+    allMembers: boolean;
+};
+
+/**
+ * The files of one effective version; the digest is recomputable from their metadata
+ */
+export type SkillArtifact = {
+    /**
+     * The skill
+     */
+    name: string;
+    /**
+     * The version
+     */
+    version: string;
+    /**
+     * Its digest
+     */
+    digest: string;
+    /**
+     * Sorted by path
+     */
+    files: Array<ArtifactFileContent>;
+};
+
+/**
+ * Skills, newest change first
+ */
+export type SkillCatalog = {
+    /**
+     * The skills
+     */
+    items: Array<SkillEntry>;
+};
+
+/**
+ * A skill and its versions, newest first
+ */
+export type SkillDetail = {
+    skill: SkillEntry;
+    /**
+     * Its versions
+     */
+    versions: Array<SkillVersion>;
+};
+
+/**
+ * A skill of the catalog. Delivered only through its pinned version.
+ */
+export type SkillEntry = {
+    /**
+     * Its id
+     */
+    id: string;
+    /**
+     * Its name
+     */
+    name: string;
+    /**
+     * The approved version, delivered; absent when nothing is delivered
+     */
+    pinnedVersion?: string | null;
+    /**
+     * Removed from the catalog: delivered to nobody, closed to publication
+     */
+    retired: boolean;
+    /**
+     * Delivered to every member without an explicit decision, members who join later included
+     */
+    allMembers: boolean;
+    /**
+     * The member a personal skill belongs to (delivered to them only); absent for a team skill
+     */
+    ownerId?: string | null;
+    /**
+     * ISO 8601
+     */
+    createdAt: string;
+    /**
+     * ISO 8601
+     */
+    updatedAt: string;
+};
+
+/**
+ * A file sent for publication
+ */
+export type SkillFileUpload = {
+    /**
+     * Relative, `/` separators, at most 8 segments and 255 characters; each segment `[A-Za-z0-9_][A-Za-z0-9._+-]*`, not ending with a dot, not a Windows device name
+     */
+    path: string;
+    /**
+     * `file` (by default) or `executable`; `symlink` is refused
+     */
+    mode?: 'file' | 'executable' | (string & {});
+    /**
+     * The content, standard padded base64
+     */
+    contentBase64: string;
+};
+
+/**
+ * A skill's state on one workstation, as it last reported it
+ */
+export type SkillInstallation = {
+    /**
+     * The workstation (`GET /api/v1/devices`)
+     */
+    deviceId: string;
+    /**
+     * Its name
+     */
+    deviceName: string;
+    /**
+     * The skill
+     */
+    name: string;
+    /**
+     * The version
+     */
+    version?: string | null;
+    /**
+     * Its digest
+     */
+    digest?: string | null;
+    /**
+     * installed, failed, conflict or removed
+     */
+    status: 'installed' | 'failed' | 'conflict' | 'removed' | (string & {});
+    /**
+     * ISO 8601
+     */
+    reportedAt: string;
+};
+
+/**
+ * Installation reports, newest first
+ */
+export type SkillInstallationList = {
+    /**
+     * The reports
+     */
+    items: Array<SkillInstallation>;
+};
+
+/**
+ * A skill's state on the reporting workstation
+ */
+export type SkillInstallationReport = {
+    /**
+     * The skill
+     */
+    name: string;
+    /**
+     * The version installed, if any
+     */
+    version?: string;
+    /**
+     * Its digest, if known; it names its version
+     */
+    digest?: string;
+    /**
+     * What the workstation did
+     */
+    status: 'installed' | 'failed' | 'conflict' | 'removed' | (string & {});
+};
+
+/**
+ * What a member receives, sorted by name
+ */
+export type SkillManifest = {
+    /**
+     * The member
+     */
+    memberId: string;
+    /**
+     * The skills
+     */
+    skills: Array<EffectiveSkill>;
+};
+
+/**
+ * What a publication did
+ */
+export type SkillPublication = {
+    skill: SkillEntry;
+    version: SkillVersion;
+    /**
+     * False when the label was already published with the same digest
+     */
+    created: boolean;
+};
+
+/**
+ * An immutable published version: its files and digest never change
+ */
+export type SkillVersion = {
+    /**
+     * Its label
+     */
+    version: string;
+    /**
+     * `sha256:<64 hex>` over one line per file sorted by path, `<path>\0<mode>\0<size>\0<sha256 hex of content>\n`
+     */
+    digest: string;
+    /**
+     * Its content, in bytes
+     */
+    sizeBytes: number;
+    /**
+     * Its files
+     */
+    fileCount: number;
+    /**
+     * The member who published it (the key's creator for a key)
+     */
+    publishedBy: string;
+    /**
+     * ISO 8601
+     */
+    publishedAt: string;
+    /**
+     * Can no longer be pinned
+     */
+    retired: boolean;
+    /**
+     * The skill's pinned version
+     */
+    pinned: boolean;
+};
+
+/**
  * A 403 of a write that may need a fresh sign-in: `step_up_required` (sign in again, then send it again) or `forbidden`, told apart by `error.type`
  */
 export type StepUpOrForbidden = StepUpRequired | Forbidden;
+
+/**
+ * A row of TeamCode's `automations` table, without its secrets; the server maps it to an Ostrom automation of the mapped owner, disabled until the cutover run
+ */
+export type TeamCodeAutomation = {
+    id: string;
+    ownerId: string;
+    name: string;
+    triggerKind: string;
+    cron?: string;
+    timezone?: string;
+    catchup?: string;
+    catchupGraceMinutes?: number;
+    actionKind: string;
+    profileId?: string;
+    model?: string;
+    effort?: string;
+    maxRuntimeMinutes?: number;
+    prompt?: string;
+    variables?: Array<unknown>;
+    samplePayload?: unknown;
+    overlap?: string;
+    maxRunsPerDay?: number;
+    enabled: boolean;
+    version?: number;
+    workflowId?: string;
+    workflowInputs?: {
+        [key: string]: string;
+    };
+};
+
+/**
+ * The repositories of a TeamCode cloud profile's current version that a workflow or an automation names; the first becomes the `repository` of the node or the action
+ */
+export type TeamCodeProfile = {
+    id: string;
+    name?: string;
+    repositories: Array<string>;
+    /**
+     * How many setup commands the recipe has (they are not carried, the report says so)
+     */
+    setupCommands?: number;
+};
+
+/**
+ * A row of TeamCode's `workflows` table, its definition as TeamCode stores it; the server maps it to an Ostrom `Workflow` (`tc-<id>`, accepted, docs/decisions/workflows-one-system.md in ostrom-server)
+ */
+export type TeamCodeWorkflow = {
+    id: string;
+    name: string;
+    version: number;
+    /**
+     * TeamCode's definition JSON (`start`, `sessionMode`, `inputs`, `nodes`, `limits`, `description`)
+     */
+    definition: {
+        [key: string]: unknown;
+    };
+    updatedById?: string;
+    /**
+     * Epoch milliseconds
+     */
+    createdAt?: number;
+    /**
+     * Epoch milliseconds
+     */
+    updatedAt?: number;
+};
+
+/**
+ * TeamCode's `workflow_settings` row
+ */
+export type TeamCodeWorkflowEditors = {
+    mode: string;
+    memberIds?: Array<string>;
+};
 
 export type TokenScope = {
     /**
@@ -2308,6 +4288,10 @@ export type NodeRun = {
     agent?: string;
     model?: string;
     deliverable?: Deliverable;
+    /**
+     * Agent: the repository (`owner/name`) its session works in, else the run's
+     */
+    repository?: string;
 };
 
 /**
@@ -2344,6 +4328,10 @@ export type NodeVisit = {
     waitId?: string;
     gateId?: string;
     childRunId?: string;
+    /**
+     * The node's label in the run's copy of the definition
+     */
+    nodeTitle?: string;
     startedAt: string;
     endedAt?: string;
 };
@@ -2390,6 +4378,38 @@ export type NotificationPreferences = {
     decisions: boolean;
     spending: boolean;
     quietHours?: QuietHours;
+};
+
+/**
+ * A member's switch for one kind on one channel
+ */
+export type NotificationSetting = {
+    /**
+     * `push` (later `slack`, `discord`); a client tolerates one it does not know
+     */
+    channel: string;
+    /**
+     * `waiting`, `turn_completed`, `turn_failed` or `session_failed`; a client tolerates one it does not know
+     */
+    kind: string;
+    enabled: boolean;
+};
+
+/**
+ * One switch to set for the caller
+ */
+export type NotificationSettingChange = {
+    channel: string;
+    kind: string;
+    enabled: boolean;
+};
+
+/**
+ * The channels this server offers and every switch in force, defaults filled
+ */
+export type NotificationSettings = {
+    channels: Array<string>;
+    settings: Array<NotificationSetting>;
 };
 
 export type NotificationStatus = 'queued' | 'sent' | 'logged-only' | 'not-sent' | (string & {});
@@ -2683,6 +4703,13 @@ export type Profile = {
 };
 
 /**
+ * The public keys that sign the instance's receipts
+ */
+export type ReceiptKeyList = {
+    keys: Array<PublicKey>;
+};
+
+/**
  * A public key of the instance
  */
 export type PublicKey = {
@@ -2707,6 +4734,68 @@ export type KeyRotation = {
 };
 
 /**
+ * A phone to notify: its push token, the push provider, the platform and the key its pushes are encrypted for
+ */
+export type RegisterPushDeviceRequest = {
+    /**
+     * The FCM registration token (`fcm`), or an Expo push token (`expo`, deprecated)
+     */
+    pushToken: string;
+    /**
+     * `fcm` (`expo` is deprecated)
+     */
+    provider: string;
+    /**
+     * `ios` or `android`
+     */
+    platform: string;
+    locale?: string;
+    /**
+     * The phone's P-256 public key, SubjectPublicKeyInfo DER in base64; required with `fcm`
+     */
+    publicKey?: string;
+};
+
+/**
+ * What an `fcm` push carries, encrypted for the phone's public key (TeamCode's push payload). The FCM data is `{"p": <encrypted payload>, "v": "1"}`; the encrypted payload is `base64(0x01 | ephemeral P-256 public key (65 bytes, uncompressed) | nonce (12 bytes) | AES-256-GCM ciphertext and 16-byte tag)`, its key `HKDF-SHA256(ECDH(ephemeral private, phone public), salt = ephemeral point | phone point, info = "ostrom-push-v1", 32 bytes)`, both points as 65-byte uncompressed SEC1 points (`0x04 | x | y`, the phone's read from its SubjectPublicKeyInfo), its plaintext this object's JSON, `v` always written. On iOS a generic alert shows when the notification service extension cannot decrypt it.
+ */
+export type PushPayload = {
+    /**
+     * The format, 1
+     */
+    v?: number;
+    id: string;
+    /**
+     * The server's public URL; with orgId and memberId, which signed-in account it is for
+     */
+    origin: string;
+    orgId: string;
+    memberId: string;
+    /**
+     * `approval` (a request waits for the member's yes), a notification kind (`waiting`, `turn_completed`, `turn_failed`, `session_failed`) or `test`
+     */
+    kind: string;
+    title: string;
+    body: string;
+    /**
+     * The request a tap opens, for `approval`
+     */
+    approvalId?: string;
+    /**
+     * The session a tap opens
+     */
+    sessionId?: string;
+    /**
+     * The wait a tap opens, for a wait outside a session
+     */
+    waitId?: string;
+    /**
+     * Unix milliseconds
+     */
+    at: number;
+};
+
+/**
  * A phone registered for push notifications
  */
 export type PushDevice = {
@@ -2718,12 +4807,100 @@ export type PushDevice = {
 };
 
 /**
+ * Ostrom Push relay (`push.v1`), `POST /v1/instances`: an instance introduces its Ed25519 public key. The same key gets the same id. This and the other `PushRelay` schemas are the wire format between a server and the relay that holds the Firebase project of the published apps; the relay sees an instance, a token and an encrypted blob, never a member, a session or the text. Every request but this one carries `Ostrom-Instance`, `Ostrom-Timestamp` (Unix seconds, at most 300 s off) and `Ostrom-Signature`, Ed25519 over `<METHOD>\n<path>\n<timestamp>\n<sha256 of the body, lowercase hex>`, base64url without padding.
+ */
+export type PushRelayRegisterRequest = {
+    /**
+     * The raw 32 bytes, base64url
+     */
+    publicKey: string;
+};
+
+/**
+ * The relay's id for the instance
+ */
+export type PushRelayRegisterResponse = {
+    instanceId: string;
+};
+
+/**
+ * `POST /v1/send`: one push to one installation
+ */
+export type PushRelaySendRequest = {
+    /**
+     * The FCM registration token, at most 512 characters
+     */
+    token: string;
+    /**
+     * `ios` or `android`
+     */
+    platform: string;
+    /**
+     * The encrypted `PushPayload`, base64, at most 3000 characters
+     */
+    payload: string;
+    /**
+     * An opaque lowercase hex token grouping pushes that replace one another
+     */
+    collapseKey: string;
+    /**
+     * How long FCM keeps it, at most a day
+     */
+    ttlSeconds: number;
+};
+
+/**
+ * The outcome of one push
+ */
+export type PushRelaySendResponse = {
+    /**
+     * `sent`, `unregistered` (forget the token), `retry` or `rejected` (refused for good)
+     */
+    status: string;
+    retryAfterSeconds?: number;
+    /**
+     * A short code
+     */
+    error?: string;
+};
+
+/**
+ * One installation's result of a test push
+ */
+export type PushTestResult = {
+    /**
+     * `sent`, `unregistered`, `retry` or `rejected`
+     */
+    status: string;
+    /**
+     * A short code, never a provider's answer
+     */
+    error?: string;
+};
+
+/**
+ * A test push to the caller's phones; `ok` when one was sent
+ */
+export type PushTestResults = {
+    ok: boolean;
+    results: Array<PushTestResult>;
+};
+
+/**
  * Hours without notifications
  */
 export type QuietHours = {
     start: string;
     end: string;
     timeZone: string;
+};
+
+/**
+ * A page of receipts; `next` is the cursor of the following page
+ */
+export type ReceiptPage = {
+    items: Array<Receipt>;
+    next?: string;
 };
 
 /**
@@ -2851,6 +5028,10 @@ export type Repo = {
     archived: boolean;
     pushedAt?: string;
     owners?: Array<string>;
+    /**
+     * How many process workflows (pull request checks, release, instruction lists, skills) the analysis found in this repository; each is stored proposed under its own id once, and a later analysis never rewrites it. Absent before the analysis proposed processes.
+     */
+    processes?: number;
 };
 
 /**
@@ -3074,6 +5255,9 @@ export type Session = {
     endedAt?: string;
     endedBy?: string;
     lastSeenAt?: string;
+    /**
+     * On a single read only, by a caller who reads what the session did (its person, its launch's agent token, an approver of its gates); absent from another member's session read by an owner or an administrator, who read its record only.
+     */
     gates?: Array<string>;
     /**
      * On a single read only, the answers to those of `gates` someone answered, oldest gate first. A token that reads sessions without reading gates (the device of `ostrom login`) sees them here; nothing of another session's gates.
@@ -3197,6 +5381,9 @@ export type SharedAccount = {
     mine?: boolean;
     priority?: number;
     limits?: {
+        /**
+         * Requests in flight at once on the account, 0 for unlimited (the default)
+         */
         maxConcurrent?: number;
         utilizationCeiling?: number;
         monthlyBudgetMicros?: number;
@@ -3232,6 +5419,11 @@ export type SignUpGrantRequest = {
 };
 
 /**
+ * Who may get a new account on an instance (`SignInMethods.signUp`)
+ */
+export type SignUpPolicy = 'open' | 'invite' | (string & {});
+
+/**
  * The sign-in methods this instance offers
  */
 export type SignInMethods = {
@@ -3239,7 +5431,7 @@ export type SignInMethods = {
     /**
      * Who may get a new account (`OSTROM_SIGNUP`). `open`: anyone who signs in. `invite` (the default of a self-hosted instance): a sign-in creates an account only with a pending invitation for the address it proves, an invitation link (`grantSignUp`), the instance's one-time setup link (`ostrom-server bootstrap`) or the organization's SSO; anyone else is refused with `signup_closed`, and only owners and admins of an organization, or the person who used the setup link, create organizations (`org_creation_closed`). Absent from a server older than this field: treat as `open`
      */
-    signUp?: 'open' | 'invite' | (string & {});
+    signUp?: SignUpPolicy;
 };
 
 /**
@@ -3296,17 +5488,6 @@ export type SignedIn = {
      * The same value as the `__Host-ostrom_csrf` cookie, for the `X-CSRF-Token` header
      */
     csrfToken?: string;
-};
-
-/**
- * A skill delivered to developers
- */
-export type Skill = {
-    name: string;
-    version: string;
-    description?: string;
-    pinned: boolean;
-    assignedTo: Array<string>;
 };
 
 /**
@@ -3502,6 +5683,19 @@ export type TeamCodeImportRequest = {
     mcpServers?: Array<TeamCodeMcpServer>;
     assignments?: Array<TeamCodeAssignment>;
     accounts?: Array<TeamCodeAccount>;
+    /**
+     * TeamCode's workflows (planned with `workflows.deliver.v1`)
+     */
+    workflows?: Array<TeamCodeWorkflow>;
+    workflowEditors?: TeamCodeWorkflowEditors;
+    /**
+     * TeamCode's automations, without their secrets (planned)
+     */
+    automations?: Array<TeamCodeAutomation>;
+    /**
+     * The cloud profiles the workflows and automations name (planned)
+     */
+    profiles?: Array<TeamCodeProfile>;
     /**
      * TeamCode member id to Ostrom member id (`Member.id`); unmapped members are skipped
      */
@@ -3925,7 +6119,7 @@ export type TodoHookEvent = {
 
 export type CreateTodoRequest = {
     /**
-     * The session, named by its owner; ignored for an agent token
+     * The session, named by its owner or by its agent token
      */
     sessionId?: string;
     /**
@@ -4078,6 +6272,13 @@ export type TodoStopDecision = {
     escalated?: boolean;
 };
 
+export type ResetTodoRequest = {
+    /**
+     * The session, named by its owner or by its agent token
+     */
+    sessionId?: string;
+};
+
 export type TodoHookErrorRequest = {
     sessionId?: string;
     /**
@@ -4215,6 +6416,24 @@ export type Verification = {
      * Whether the signed body names the organization that verifies it. `ok` says only that the signature holds: a client that relies on the receipt being this organization's checks `orgBound` is true, and reads an absent `orgBound` (a server that predates it) as not bound. False for a receipt signed before `Receipt.orgId`: valid, shown as not bound to an organization, never accepted as this organization's. A receipt that names another organization is not ok, with a `reason` that names no organization. Planned
      */
     orgBound?: boolean;
+};
+
+/**
+ * A page of waits; `next` is the cursor of the following page
+ */
+export type WaitPage = {
+    items: Array<Wait>;
+    next?: string;
+};
+
+/**
+ * An answer to a wait: one of its actions and the values of its fields
+ */
+export type AnswerWaitRequest = {
+    action: string;
+    values?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -4364,14 +6583,106 @@ export type WaitSpec = {
 export type WaitStatus = 'open' | 'resolved' | 'cancelled' | (string & {});
 
 /**
- * An outgoing webhook
+ * An outgoing webhook of the organization. Each event of `types` is POSTed to `url` as JSON `{id, type, createdAt, data}`, `data` being the `OrgEvent` (`{"message": ...}` for `webhook.test`), with the headers `Ostrom-Delivery` (one id per event and webhook, the same on every retry: deduplicate on it), `Ostrom-Event`, `Ostrom-Timestamp` (Unix seconds) and `Ostrom-Signature: v1=<hex>`, the HMAC-SHA256 of `<timestamp>.<raw body>` keyed with the whole `whsec_` secret. A receiver compares in constant time and rejects a timestamp more than five minutes old. The body is fixed when the event is queued: every retry sends the same bytes, only the timestamp and the signature are fresh. A 2xx within 10 seconds is a delivery; a network error, a timeout, a 5xx, 408 or 429 is retried, 8 attempts in all, after 10 s, 30 s, 2 min, 10 min, 30 min, 2 h and 6 h; any other answer (a 4xx, a redirect) is final. A delivery still pending after 24 hours is given up (`expired`). Twenty final failures in a row disable the webhook (`too_many_failures`); a success resets the count. Deliveries are not ordered: use `data.seq` when order matters.
  */
 export type Webhook = {
     id: string;
     url: string;
-    events: Array<string>;
+    /**
+     * The event types it receives, sorted
+     */
+    types: Array<string>;
+    description: string;
     enabled: boolean;
+    /**
+     * `disabled` (paused by a person) or `too_many_failures`; absent while enabled
+     */
+    disabledReason?: string;
+    /**
+     * The member who created it
+     */
+    createdBy: string;
     createdAt: string;
+    updatedAt: string;
+    /**
+     * Sent back by `updateWebhook`
+     */
+    version: number;
+    /**
+     * Final failures in a row since the last success
+     */
+    consecutiveFailures: number;
+};
+
+export type WebhookList = {
+    items: Array<Webhook>;
+};
+
+/**
+ * A webhook and its signing secret, in the answer to its creation or a rotation only
+ */
+export type CreatedWebhook = {
+    webhook: Webhook;
+    /**
+     * `whsec_…`; store it now, it is never readable again
+     */
+    secret: string;
+};
+
+export type CreateWebhookRequest = {
+    url: string;
+    types: Array<string>;
+    description?: string;
+};
+
+export type UpdateWebhookRequest = {
+    version: number;
+    url: string;
+    types: Array<string>;
+    description?: string;
+    /**
+     * Absent keeps the current state
+     */
+    enabled?: boolean;
+};
+
+/**
+ * One event for one webhook, and its attempts
+ */
+export type WebhookDelivery = {
+    /**
+     * Also the `Ostrom-Delivery` header
+     */
+    id: string;
+    /**
+     * The event's `seq`; absent for a test
+     */
+    eventSeq?: number;
+    eventType: string;
+    /**
+     * `pending`, `delivered` or `failed`
+     */
+    state: string;
+    attempts: number;
+    /**
+     * While pending
+     */
+    nextAttemptAt?: string;
+    /**
+     * The last HTTP status the receiver answered
+     */
+    lastStatus?: number;
+    /**
+     * `timeout`, `connect`, `tls`, `dns`, `host_not_allowed`, `secret_unreadable` or `expired`
+     */
+    lastError?: string;
+    createdAt: string;
+    deliveredAt?: string;
+    test: boolean;
+};
+
+export type WebhookDeliveryList = {
+    items: Array<WebhookDelivery>;
 };
 
 /**
@@ -4391,6 +6702,11 @@ export type Workflow = {
     edges: Array<WorkflowEdge>;
     start?: string;
     inputs?: Array<WorkflowInput>;
+    /**
+     * `same`: the agent steps of a run are messages of one session; `handoff` (when absent): each agent step starts a session whose first message carries what the earlier steps delivered
+     */
+    sessionMode?: string;
+    limits?: WorkflowLimits;
     sources?: Array<RuleSource>;
     status: WorkflowStatus;
     foundAt: string;
@@ -4409,6 +6725,20 @@ export type WorkflowEdge = {
 };
 
 /**
+ * Who may decide workflows besides owners and admins
+ */
+export type WorkflowEditors = {
+    /**
+     * `all`, `admins` (the default) or `members`
+     */
+    mode: string;
+    /**
+     * The members who may, with `members` (`Member.id`)
+     */
+    memberIds?: Array<string>;
+};
+
+/**
  * An input of a workflow run
  */
 export type WorkflowInput = {
@@ -4417,6 +6747,15 @@ export type WorkflowInput = {
     required?: boolean;
     default?: string;
     maxLength?: number;
+};
+
+/**
+ * The bounds of a run of the workflow: `maxNodes` (50, at most 100), `maxVisits` in all (100, at most 500), `maxDepth` of sub-workflows (3, at most 5)
+ */
+export type WorkflowLimits = {
+    maxNodes?: number;
+    maxVisits?: number;
+    maxDepth?: number;
 };
 
 /**
@@ -4453,6 +6792,14 @@ export type WorkflowNode = {
 export type WorkflowNodeKind = 'trigger' | 'step' | 'check' | 'gate' | 'notify' | 'agent' | 'wait' | 'workflow' | (string & {});
 
 /**
+ * The form of a pending deliverable, never its schema
+ */
+export type WorkflowPendingDeliverable = {
+    type: string;
+    domain?: string;
+};
+
+/**
  * A workflow run
  */
 export type WorkflowRun = {
@@ -4468,24 +6815,57 @@ export type WorkflowRun = {
         [key: string]: string;
     };
     currentNodeId?: string;
+    currentNodeKind?: WorkflowNodeKind;
     parentRunId?: string;
     sessionId?: string;
+    /**
+     * The repository of the agent nodes that name none
+     */
+    repository?: string;
     visits?: Array<NodeVisit>;
     failure?: string;
+    /**
+     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried
+     */
+    failureCode?: string;
     output?: string;
     receiptId?: string;
     startedAt: string;
     endedAt?: string;
 };
 
-export type WorkflowStatus = 'proposed' | 'accepted' | 'edited' | (string & {});
+/**
+ * Whether a session's agent step still waits for its delivery (`pendingWorkflowSession`)
+ */
+export type WorkflowSessionPending = {
+    needsAction: boolean;
+    runId?: string;
+    nodeTitle?: string;
+    deliverable?: WorkflowPendingDeliverable;
+};
+
+/**
+ * The editing rights of workflows, and the caller's
+ */
+export type WorkflowSettings = {
+    editors: WorkflowEditors;
+    /**
+     * Whether the caller may decide a workflow without a gate node
+     */
+    canEdit: boolean;
+};
+
+/**
+ * `rejected`: a proposal a person turned down, kept so the analysis never proposes it again; it compiles nothing and never runs
+ */
+export type WorkflowStatus = 'proposed' | 'accepted' | 'edited' | 'rejected' | (string & {});
 
 /**
  * An MCP server relayed by Ostrom; its credentials stay on the server
  */
 export type McpServerWritable = {
     /**
-     * 1 to 64 characters; `servers`, `settings`, `calls` and `usage` are reserved (they are paths of this API), and so is a name agents would see as one of Ostrom's own MCP servers, which every agent already has (`ostrom`, `ostrom-workflow` and `workflow`, since the launcher labels a server `ostrom-<name>` and keeps a name that starts with `ostrom`), whatever their case and surrounding spaces; a reserved name is refused with a 400
+     * 1 to 64 characters; `servers`, `settings`, `calls`, `usage` and `hosted` are reserved (they are paths of this API), and so is a name agents would see as one of Ostrom's own MCP servers, which every agent already has (`ostrom`, `ostrom-workflow` and `workflow`, since the launcher labels a server `ostrom-<name>` and keeps a name that starts with `ostrom`), whatever their case and surrounding spaces; a reserved name is refused with a 400
      */
     name: string;
     /**
@@ -4548,6 +6928,19 @@ export type TeamCodeImportRequestWritable = {
     assignments?: Array<TeamCodeAssignmentWritable>;
     accounts?: Array<TeamCodeAccountWritable>;
     /**
+     * TeamCode's workflows (planned with `workflows.deliver.v1`)
+     */
+    workflows?: Array<TeamCodeWorkflow>;
+    workflowEditors?: TeamCodeWorkflowEditors;
+    /**
+     * TeamCode's automations, without their secrets (planned)
+     */
+    automations?: Array<TeamCodeAutomation>;
+    /**
+     * The cloud profiles the workflows and automations name (planned)
+     */
+    profiles?: Array<TeamCodeProfile>;
+    /**
      * TeamCode member id to Ostrom member id (`Member.id`); unmapped members are skipped
      */
     memberMap?: {
@@ -4597,6 +6990,21 @@ export type TeamCodeStdioWritable = {
         [key: string]: string;
     };
 };
+
+/**
+ * The scheduling class of an inference call in the admission queue (`inference.queue.v1`): `interactive` (the default) or `background` (unattended work, `ostrom run --workload background`). A hint the caller sets, not a permission: it changes only the order of waiting calls. Never sent to a provider. Another value, or the header twice, is refused with 400 `invalid_workload`
+ */
+export type OstromWorkload = 'interactive' | 'background' | (string & {});
+
+/**
+ * The caller's own id of an inference call (`inference.cancel.v1`), a lowercase UUID, fresh for each call: `cancelInferenceRequest` with it stops the call on whichever replica runs it, queued or streaming. Never sent to a provider. Not a UUID in lowercase: 400 `invalid_request_id`
+ */
+export type OstromClientRequestId = string;
+
+/**
+ * `agent`: set by the CLI's local relay on every memory call it forwards for an agent, whoever's sign-in it carries (`memory.v1`). A team entry such a call writes is a proposal. Any other value is ignored
+ */
+export type OstromOrigin = string;
 
 /**
  * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -4720,6 +7128,224 @@ export type ListInstanceKeysResponses = {
 
 export type ListInstanceKeysResponse = ListInstanceKeysResponses[keyof ListInstanceKeysResponses];
 
+export type ListInstanceAdminsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/instance-admins';
+};
+
+export type ListInstanceAdminsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListInstanceAdminsError = ListInstanceAdminsErrors[keyof ListInstanceAdminsErrors];
+
+export type ListInstanceAdminsResponses = {
+    /**
+     * OK
+     */
+    200: InstanceAdminList;
+};
+
+export type ListInstanceAdminsResponse = ListInstanceAdminsResponses[keyof ListInstanceAdminsResponses];
+
+export type AddInstanceAdminData = {
+    body: AddInstanceAdminRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/instance-admins';
+};
+
+export type AddInstanceAdminErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type AddInstanceAdminError = AddInstanceAdminErrors[keyof AddInstanceAdminErrors];
+
+export type AddInstanceAdminResponses = {
+    /**
+     * OK
+     */
+    200: InstanceAdminList;
+};
+
+export type AddInstanceAdminResponse = AddInstanceAdminResponses[keyof AddInstanceAdminResponses];
+
+export type RemoveInstanceAdminData = {
+    body?: never;
+    path: {
+        userId: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/instance-admins/{userId}';
+};
+
+export type RemoveInstanceAdminErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RemoveInstanceAdminError = RemoveInstanceAdminErrors[keyof RemoveInstanceAdminErrors];
+
+export type RemoveInstanceAdminResponses = {
+    /**
+     * Removed
+     */
+    204: void;
+};
+
+export type RemoveInstanceAdminResponse = RemoveInstanceAdminResponses[keyof RemoveInstanceAdminResponses];
+
+export type ListInstanceSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/admin/settings';
+};
+
+export type ListInstanceSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListInstanceSettingsError = ListInstanceSettingsErrors[keyof ListInstanceSettingsErrors];
+
+export type ListInstanceSettingsResponses = {
+    /**
+     * OK
+     */
+    200: InstanceSettingsList;
+};
+
+export type ListInstanceSettingsResponse = ListInstanceSettingsResponses[keyof ListInstanceSettingsResponses];
+
+export type GetInstanceSettingsData = {
+    body?: never;
+    path: {
+        /**
+         * The section, a key such as `mail`, `push` or `google`
+         */
+        section: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/settings/{section}';
+};
+
+export type GetInstanceSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetInstanceSettingsError = GetInstanceSettingsErrors[keyof GetInstanceSettingsErrors];
+
+export type GetInstanceSettingsResponses = {
+    /**
+     * OK
+     */
+    200: InstanceSettings;
+};
+
+export type GetInstanceSettingsResponse = GetInstanceSettingsResponses[keyof GetInstanceSettingsResponses];
+
+export type SaveInstanceSettingsData = {
+    body: SaveInstanceSettingsRequest;
+    path: {
+        /**
+         * The section, a key such as `mail`, `push` or `google`
+         */
+        section: string;
+    };
+    query?: never;
+    url: '/api/v1/admin/settings/{section}';
+};
+
+export type SaveInstanceSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveInstanceSettingsError = SaveInstanceSettingsErrors[keyof SaveInstanceSettingsErrors];
+
+export type SaveInstanceSettingsResponses = {
+    /**
+     * OK
+     */
+    200: InstanceSettings;
+};
+
+export type SaveInstanceSettingsResponse = SaveInstanceSettingsResponses[keyof SaveInstanceSettingsResponses];
+
 export type CapabilitiesData = {
     body?: never;
     path?: never;
@@ -4772,11 +7398,7 @@ export type StartGithubLoginErrors = {
 export type StartGithubLoginError = StartGithubLoginErrors[keyof StartGithubLoginErrors];
 
 export type MobileTokenData = {
-    body: {
-        code: string;
-        codeVerifier: string;
-        redirectUri: string;
-    };
+    body: MobileTokenRequest;
     path?: never;
     query?: never;
     url: '/api/v1/auth/mobile/token';
@@ -4803,27 +7425,13 @@ export type MobileTokenResponses = {
     /**
      * OK
      */
-    200: {
-        token: string;
-        user: AuthUser;
-        expiresAt?: string;
-        /**
-         * Kept by the app behind the phone's biometrics (keychain item that requires them), presented to `unlockMobileApp` before a yes; never sent anywhere else
-         */
-        unlockKey?: string;
-    };
+    200: MobileToken;
 };
 
 export type MobileTokenResponse = MobileTokenResponses[keyof MobileTokenResponses];
 
 export type UnlockMobileAppData = {
-    body: {
-        unlockKey: string;
-        /**
-         * The approval this unlock is for: the `id` of the `Approval`, as in the path of `answerApproval`. A yes from the app to a high-risk action is taken only with an unlock bound to its own approval, less than 60 seconds old, and only once; otherwise 403 `step_up_required` with `error.requestBound` true. High risk is every action whose `risk` is not `low`, an approval without an `action` included (no yes is low today: the server measures no risk). The first yes sent after the unlock uses it, whatever its outcome (a 409, another 403 or a 5xx included): a yes sent again unlocks again. A token holds one binding: a new unlock replaces the last one, so an app unlocks just before each yes. Every unlock, bound or not, also opens the 5-minute window, which a low-risk yes and every no are given with. The server does not check the id: one that names no approval the caller may answer serves no yes. The binding limits one unlock to one yes; it does not prove to the server a biometric per unlock (the `unlockKey` stays the app's). Planned: the server does not read it yet
-         */
-        requestId?: string;
-    };
+    body: MobileUnlockRequest;
     path?: never;
     query?: never;
     url: '/api/v1/auth/mobile/unlock';
@@ -4850,9 +7458,7 @@ export type UnlockMobileAppResponses = {
     /**
      * OK
      */
-    200: {
-        authenticatedAt: string;
-    };
+    200: MobileUnlock;
 };
 
 export type UnlockMobileAppResponse = UnlockMobileAppResponses[keyof UnlockMobileAppResponses];
@@ -4908,6 +7514,10 @@ export type GrantSignUpErrors = {
      * A refusal
      */
     400: ApiError;
+    /**
+     * forbidden: the call does not come from the console (its `Origin` header is missing or another)
+     */
+    403: ApiError;
     /**
      * not_found: the token is unknown, used or expired (ask for a new setup link or invitation)
      */
@@ -5131,9 +7741,7 @@ export type StartDeviceLoginResponses = {
 export type StartDeviceLoginResponse = StartDeviceLoginResponses[keyof StartDeviceLoginResponses];
 
 export type PollDeviceLoginData = {
-    body: {
-        deviceCode: string;
-    };
+    body: DeviceTokenRequest;
     path?: never;
     query?: never;
     url: '/api/v1/auth/device/token';
@@ -6200,7 +8808,7 @@ export type CreateServiceKeyData = {
     body: {
         name: string;
         /**
-         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
+         * What the key may do, from the catalogue below; any other scope, 400. CI scopes (a key acting for the organization, each call audited as `service_key.used`): `sessions:write` (reportCheck, signWorkflowReceipt), `rules:read` (listRules, getRule). Member scopes (the key then acts as the person who created it, within the scope, and never as an admin): `inference:use` (the inference gateway), `mcp:use` (the relayed MCP servers), `usage:read` (the creator's own usage), `cloud:read` and `cloud:write` (the creator's own cloud sessions; write includes read), `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read), `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and `hooks.v1`). Reserved to an owner or an admin, and only while its creator still is one, checked at every call: `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and `hooks:publish` (publish hook versions, which only an administrator pins). The CI scopes cannot be mixed with the others (400). A key stops working as soon as its creator leaves the organization. A server that serves the wide catalogue lists `servicekeys.scopes.v1` in its capabilities; an older one accepts only the CI scopes. A key is refused on every operation its scopes do not open, whatever it holds.
          */
         scopes: Array<string>;
         /**
@@ -6402,12 +9010,7 @@ export type DeleteDeviceResponses = {
 export type DeleteDeviceResponse = DeleteDeviceResponses[keyof DeleteDeviceResponses];
 
 export type RegisterPushDeviceData = {
-    body: {
-        pushToken: string;
-        provider: string;
-        platform: string;
-        locale?: string;
-    };
+    body: RegisterPushDeviceRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -6538,9 +9141,7 @@ export type ListMyOrganizationsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<MyOrganization>;
-    };
+    200: MyOrganizationList;
 };
 
 export type ListMyOrganizationsResponse = ListMyOrganizationsResponses[keyof ListMyOrganizationsResponses];
@@ -6676,10 +9277,7 @@ export type ListActivityResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<ActivityItem>;
-        next?: string;
-    };
+    200: ActivityPage;
 };
 
 export type ListActivityResponse = ListActivityResponses[keyof ListActivityResponses];
@@ -10245,10 +12843,7 @@ export type ListReceiptsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Receipt>;
-        next?: string;
-    };
+    200: ReceiptPage;
 };
 
 export type ListReceiptsResponse = ListReceiptsResponses[keyof ListReceiptsResponses];
@@ -10277,9 +12872,7 @@ export type ListReceiptKeysResponses = {
     /**
      * OK
      */
-    200: {
-        keys: Array<PublicKey>;
-    };
+    200: ReceiptKeyList;
 };
 
 export type ListReceiptKeysResponse = ListReceiptKeysResponses[keyof ListReceiptKeysResponses];
@@ -10438,6 +13031,84 @@ export type GetReceiptBundleResponses = {
 };
 
 export type GetReceiptBundleResponse = GetReceiptBundleResponses[keyof GetReceiptBundleResponses];
+
+export type GetCompilerSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/packages/settings';
+};
+
+export type GetCompilerSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type GetCompilerSettingsError = GetCompilerSettingsErrors[keyof GetCompilerSettingsErrors];
+
+export type GetCompilerSettingsResponses = {
+    /**
+     * OK
+     */
+    200: CompilerSettings;
+};
+
+export type GetCompilerSettingsResponse = GetCompilerSettingsResponses[keyof GetCompilerSettingsResponses];
+
+export type SaveCompilerSettingsData = {
+    body: SaveCompilerSettingsRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/packages/settings';
+};
+
+export type SaveCompilerSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveCompilerSettingsError = SaveCompilerSettingsErrors[keyof SaveCompilerSettingsErrors];
+
+export type SaveCompilerSettingsResponses = {
+    /**
+     * OK
+     */
+    200: CompilerSettings;
+};
+
+export type SaveCompilerSettingsResponse = SaveCompilerSettingsResponses[keyof SaveCompilerSettingsResponses];
 
 export type GetCurrentPackageData = {
     body?: never;
@@ -11044,6 +13715,139 @@ export type SendNotificationResponses = {
 };
 
 export type SendNotificationResponse = SendNotificationResponses[keyof SendNotificationResponses];
+
+export type SendTestPushData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/push/test';
+};
+
+export type SendTestPushErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type SendTestPushError = SendTestPushErrors[keyof SendTestPushErrors];
+
+export type SendTestPushResponses = {
+    /**
+     * OK
+     */
+    200: PushTestResults;
+};
+
+export type SendTestPushResponse = SendTestPushResponses[keyof SendTestPushResponses];
+
+export type GetNotificationSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/settings';
+};
+
+export type GetNotificationSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetNotificationSettingsError = GetNotificationSettingsErrors[keyof GetNotificationSettingsErrors];
+
+export type GetNotificationSettingsResponses = {
+    /**
+     * OK
+     */
+    200: NotificationSettings;
+};
+
+export type GetNotificationSettingsResponse = GetNotificationSettingsResponses[keyof GetNotificationSettingsResponses];
+
+export type SetNotificationSettingData = {
+    body: NotificationSettingChange;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/notifications/settings';
+};
+
+export type SetNotificationSettingErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type SetNotificationSettingError = SetNotificationSettingErrors[keyof SetNotificationSettingErrors];
+
+export type SetNotificationSettingResponses = {
+    /**
+     * OK
+     */
+    200: NotificationSettings;
+};
+
+export type SetNotificationSettingResponse = SetNotificationSettingResponses[keyof SetNotificationSettingResponses];
 
 export type ListRulesData = {
     body?: never;
@@ -11756,12 +14560,20 @@ export type StartWorkflowRunData = {
         inputs?: {
             [key: string]: string;
         };
+        /**
+         * `owner/name`, for the agent nodes that name none (planned)
+         */
+        repository?: string;
     };
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * 1 to 128 characters of `A-Za-z0-9._:-` (planned)
+         */
+        'Idempotency-Key'?: string;
     };
     path: {
         id: string;
@@ -11797,6 +14609,10 @@ export type StartWorkflowRunError = StartWorkflowRunErrors[keyof StartWorkflowRu
 
 export type StartWorkflowRunResponses = {
     /**
+     * The first run of this `Idempotency-Key` (planned)
+     */
+    200: WorkflowRun;
+    /**
      * OK
      */
     201: WorkflowRun;
@@ -11814,6 +14630,14 @@ export type ListRunsData = {
     };
     path?: never;
     query?: {
+        /**
+         * Every member's runs: an administrator (planned; one's own otherwise)
+         */
+        all?: boolean;
+        /**
+         * Only the runs of this workflow (planned; a `limit` of 1 to 100, 50 by default, comes with it once the server bounds the page)
+         */
+        workflow?: string;
         status?: string;
         before?: string;
     };
@@ -11954,6 +14778,278 @@ export type CancelRunResponses = {
 };
 
 export type CancelRunResponse = CancelRunResponses[keyof CancelRunResponses];
+
+export type DeliverRunData = {
+    body: DeliverRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/runs/{id}/deliver';
+};
+
+export type DeliverRunErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeliverRunError = DeliverRunErrors[keyof DeliverRunErrors];
+
+export type DeliverRunResponses = {
+    /**
+     * The run after the delivery
+     */
+    200: WorkflowRun;
+};
+
+export type DeliverRunResponse = DeliverRunResponses[keyof DeliverRunResponses];
+
+export type DeliverWorkflowSessionData = {
+    body: DeliverSessionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflows/session/deliver';
+};
+
+export type DeliverWorkflowSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeliverWorkflowSessionError = DeliverWorkflowSessionErrors[keyof DeliverWorkflowSessionErrors];
+
+export type DeliverWorkflowSessionResponses = {
+    /**
+     * The run after the delivery
+     */
+    200: WorkflowRun;
+};
+
+export type DeliverWorkflowSessionResponse = DeliverWorkflowSessionResponses[keyof DeliverWorkflowSessionResponses];
+
+export type PendingWorkflowSessionData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * Required for a person or a key; an agent token's own session otherwise
+         */
+        sessionId?: string;
+    };
+    url: '/api/v1/workflows/session/pending';
+};
+
+export type PendingWorkflowSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type PendingWorkflowSessionError = PendingWorkflowSessionErrors[keyof PendingWorkflowSessionErrors];
+
+export type PendingWorkflowSessionResponses = {
+    /**
+     * OK
+     */
+    200: WorkflowSessionPending;
+};
+
+export type PendingWorkflowSessionResponse = PendingWorkflowSessionResponses[keyof PendingWorkflowSessionResponses];
+
+export type WorkflowsMcpData = {
+    body: unknown;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * The session, filled by the relay
+         */
+        session?: string;
+    };
+    url: '/api/v1/workflows/mcp';
+};
+
+export type WorkflowsMcpErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type WorkflowsMcpError = WorkflowsMcpErrors[keyof WorkflowsMcpErrors];
+
+export type WorkflowsMcpResponses = {
+    /**
+     * The JSON-RPC answer
+     */
+    200: unknown;
+    /**
+     * A notification, nothing to answer
+     */
+    202: unknown;
+};
+
+export type GetWorkflowSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflows/settings';
+};
+
+export type GetWorkflowSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetWorkflowSettingsError = GetWorkflowSettingsErrors[keyof GetWorkflowSettingsErrors];
+
+export type GetWorkflowSettingsResponses = {
+    /**
+     * OK
+     */
+    200: WorkflowSettings;
+};
+
+export type GetWorkflowSettingsResponse = GetWorkflowSettingsResponses[keyof GetWorkflowSettingsResponses];
+
+export type SaveWorkflowSettingsData = {
+    body: WorkflowEditors;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/workflows/settings';
+};
+
+export type SaveWorkflowSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type SaveWorkflowSettingsError = SaveWorkflowSettingsErrors[keyof SaveWorkflowSettingsErrors];
+
+export type SaveWorkflowSettingsResponses = {
+    /**
+     * OK
+     */
+    200: WorkflowSettings;
+};
+
+export type SaveWorkflowSettingsResponse = SaveWorkflowSettingsResponses[keyof SaveWorkflowSettingsResponses];
 
 export type ListAutomationsData = {
     body?: never;
@@ -12463,6 +15559,103 @@ export type ListAutomationRunsResponses = {
 
 export type ListAutomationRunsResponse = ListAutomationRunsResponses[keyof ListAutomationRunsResponses];
 
+export type CancelAutomationRunData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+        runId: string;
+    };
+    query?: never;
+    url: '/api/v1/automations/{id}/runs/{runId}/cancel';
+};
+
+export type CancelAutomationRunErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CancelAutomationRunError = CancelAutomationRunErrors[keyof CancelAutomationRunErrors];
+
+export type CancelAutomationRunResponses = {
+    /**
+     * The run
+     */
+    200: AutomationRun;
+};
+
+export type CancelAutomationRunResponse = CancelAutomationRunResponses[keyof CancelAutomationRunResponses];
+
+export type TriggerAutomationVersionData = {
+    body: unknown;
+    path: {
+        id: string;
+        /**
+         * A version number, or `latest`
+         */
+        version: string;
+    };
+    query?: never;
+    url: '/api/v1/automations/{id}/v/{version}/trigger';
+};
+
+export type TriggerAutomationVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * Too many attempts lately (`rate_limited`): nothing was done. A sign-in step, an organization's creations, a webhook trigger or a batch of usage events is limited per address, person, organization or automation over a window; wait, then try again
+     */
+    429: ApiError;
+};
+
+export type TriggerAutomationVersionError = TriggerAutomationVersionErrors[keyof TriggerAutomationVersionErrors];
+
+export type TriggerAutomationVersionResponses = {
+    /**
+     * OK
+     */
+    202: {
+        runId?: string;
+        status?: string;
+        deduplicated: boolean;
+    };
+};
+
+export type TriggerAutomationVersionResponse = TriggerAutomationVersionResponses[keyof TriggerAutomationVersionResponses];
+
 export type TriggerAutomationData = {
     body: unknown;
     path: {
@@ -12579,10 +15772,7 @@ export type ListWaitsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Wait>;
-        next?: string;
-    };
+    200: WaitPage;
 };
 
 export type ListWaitsResponse = ListWaitsResponses[keyof ListWaitsResponses];
@@ -12831,12 +16021,7 @@ export type GetWaitResponses = {
 export type GetWaitResponse = GetWaitResponses[keyof GetWaitResponses];
 
 export type AnswerWaitData = {
-    body: {
-        action: string;
-        values?: {
-            [key: string]: unknown;
-        };
-    };
+    body: AnswerWaitRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -12994,7 +16179,7 @@ export type GetSessionTodoData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or the id of one of its segments `~r<n>`); ignored for an agent token
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
          */
         sessionId?: string;
     };
@@ -13400,7 +16585,7 @@ export type ReadTodoContextData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or the id of one of its segments `~r<n>`); ignored for an agent token
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
          */
         sessionId?: string;
     };
@@ -13535,6 +16720,53 @@ export type RecordTodoHookErrorResponses = {
 
 export type RecordTodoHookErrorResponse = RecordTodoHookErrorResponses[keyof RecordTodoHookErrorResponses];
 
+export type ResetTodoData = {
+    body: ResetTodoRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/todos/session/reset';
+};
+
+export type ResetTodoErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ResetTodoError = ResetTodoErrors[keyof ResetTodoErrors];
+
+export type ResetTodoResponses = {
+    /**
+     * OK
+     */
+    200: SessionTodo;
+};
+
+export type ResetTodoResponse = ResetTodoResponses[keyof ResetTodoResponses];
+
 export type ListTodoStopHooksData = {
     body?: never;
     headers?: {
@@ -13634,6 +16866,768 @@ export type SetMemberTodoStopHookResponses = {
 
 export type SetMemberTodoStopHookResponse = SetMemberTodoStopHookResponses[keyof SetMemberTodoStopHookResponses];
 
+export type CreateMemoryData = {
+    body: CreateMemoryRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+        /**
+         * `agent`: set by the CLI's local relay on every memory call it forwards for an agent, whoever's sign-in it carries (`memory.v1`). A team entry such a call writes is a proposal. Any other value is ignored
+         */
+        'x-ostrom-origin'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory';
+};
+
+export type CreateMemoryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type CreateMemoryError = CreateMemoryErrors[keyof CreateMemoryErrors];
+
+export type CreateMemoryResponses = {
+    /**
+     * Created
+     */
+    201: MemoryEntry;
+};
+
+export type CreateMemoryResponse = CreateMemoryResponses[keyof CreateMemoryResponses];
+
+export type ListMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * `team` or `personal`; both when absent (400 `invalid_memory` otherwise)
+         */
+        scope?: string;
+        /**
+         * Comma-separated tags: entries having any of them
+         */
+        tags?: string;
+        /**
+         * The `next` of the previous page (400 `invalid_memory` for any other value)
+         */
+        after?: string;
+        /**
+         * The page size, 1 to 50 (50 by default)
+         */
+        limit?: number;
+    };
+    url: '/api/v1/memory/index';
+};
+
+export type ListMemoryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMemoryError = ListMemoryErrors[keyof ListMemoryErrors];
+
+export type ListMemoryResponses = {
+    /**
+     * OK
+     */
+    200: MemoryIndexPage;
+};
+
+export type ListMemoryResponse = ListMemoryResponses[keyof ListMemoryResponses];
+
+export type SearchMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query: {
+        /**
+         * The words to look for
+         */
+        q: string;
+        /**
+         * Comma-separated tags: entries having any of them
+         */
+        tags?: string;
+        /**
+         * At most this many entries, 1 to 20 (20 by default)
+         */
+        limit?: number;
+    };
+    url: '/api/v1/memory/search';
+};
+
+export type SearchMemoryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SearchMemoryError = SearchMemoryErrors[keyof SearchMemoryErrors];
+
+export type SearchMemoryResponses = {
+    /**
+     * OK
+     */
+    200: MemorySearchResult;
+};
+
+export type SearchMemoryResponse = SearchMemoryResponses[keyof SearchMemoryResponses];
+
+export type ListMemoryProposalsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory/proposals';
+};
+
+export type ListMemoryProposalsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMemoryProposalsError = ListMemoryProposalsErrors[keyof ListMemoryProposalsErrors];
+
+export type ListMemoryProposalsResponses = {
+    /**
+     * OK
+     */
+    200: MemoryProposals;
+};
+
+export type ListMemoryProposalsResponse = ListMemoryProposalsResponses[keyof ListMemoryProposalsResponses];
+
+export type AcceptMemoryProposalData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The proposal's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/proposals/{id}/accept';
+};
+
+export type AcceptMemoryProposalErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AcceptMemoryProposalError = AcceptMemoryProposalErrors[keyof AcceptMemoryProposalErrors];
+
+export type AcceptMemoryProposalResponses = {
+    /**
+     * OK
+     */
+    200: MemoryEntry;
+};
+
+export type AcceptMemoryProposalResponse = AcceptMemoryProposalResponses[keyof AcceptMemoryProposalResponses];
+
+export type RejectMemoryProposalData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The proposal's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/proposals/{id}/reject';
+};
+
+export type RejectMemoryProposalErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RejectMemoryProposalError = RejectMemoryProposalErrors[keyof RejectMemoryProposalErrors];
+
+export type RejectMemoryProposalResponses = {
+    /**
+     * OK
+     */
+    200: MemoryEntry;
+};
+
+export type RejectMemoryProposalResponse = RejectMemoryProposalResponses[keyof RejectMemoryProposalResponses];
+
+export type GetMemoryCurationData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory/curation';
+};
+
+export type GetMemoryCurationErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetMemoryCurationError = GetMemoryCurationErrors[keyof GetMemoryCurationErrors];
+
+export type GetMemoryCurationResponses = {
+    /**
+     * OK
+     */
+    200: MemoryCuration;
+};
+
+export type GetMemoryCurationResponse = GetMemoryCurationResponses[keyof GetMemoryCurationResponses];
+
+export type SetMemoryCurationData = {
+    body: SetMemoryCurationRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory/curation';
+};
+
+export type SetMemoryCurationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetMemoryCurationError = SetMemoryCurationErrors[keyof SetMemoryCurationErrors];
+
+export type SetMemoryCurationResponses = {
+    /**
+     * OK
+     */
+    200: MemoryCuration;
+};
+
+export type SetMemoryCurationResponse = SetMemoryCurationResponses[keyof SetMemoryCurationResponses];
+
+export type ListMemoryReviewsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory/reviews';
+};
+
+export type ListMemoryReviewsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMemoryReviewsError = ListMemoryReviewsErrors[keyof ListMemoryReviewsErrors];
+
+export type ListMemoryReviewsResponses = {
+    /**
+     * OK
+     */
+    200: MemoryReviews;
+};
+
+export type ListMemoryReviewsResponse = ListMemoryReviewsResponses[keyof ListMemoryReviewsResponses];
+
+export type ApplyMemoryReviewData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The review's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/reviews/{id}/apply';
+};
+
+export type ApplyMemoryReviewErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ApplyMemoryReviewError = ApplyMemoryReviewErrors[keyof ApplyMemoryReviewErrors];
+
+export type ApplyMemoryReviewResponses = {
+    /**
+     * OK
+     */
+    200: MemoryReview;
+};
+
+export type ApplyMemoryReviewResponse = ApplyMemoryReviewResponses[keyof ApplyMemoryReviewResponses];
+
+export type DismissMemoryReviewData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The review's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/reviews/{id}/dismiss';
+};
+
+export type DismissMemoryReviewErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DismissMemoryReviewError = DismissMemoryReviewErrors[keyof DismissMemoryReviewErrors];
+
+export type DismissMemoryReviewResponses = {
+    /**
+     * OK
+     */
+    200: MemoryReview;
+};
+
+export type DismissMemoryReviewResponse = DismissMemoryReviewResponses[keyof DismissMemoryReviewResponses];
+
+export type ListSupersededMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/memory/superseded';
+};
+
+export type ListSupersededMemoryErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListSupersededMemoryError = ListSupersededMemoryErrors[keyof ListSupersededMemoryErrors];
+
+export type ListSupersededMemoryResponses = {
+    /**
+     * OK
+     */
+    200: SupersededMemories;
+};
+
+export type ListSupersededMemoryResponse = ListSupersededMemoryResponses[keyof ListSupersededMemoryResponses];
+
+export type ForgetMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The entry's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/{id}';
+};
+
+export type ForgetMemoryErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ForgetMemoryError = ForgetMemoryErrors[keyof ForgetMemoryErrors];
+
+export type ForgetMemoryResponses = {
+    /**
+     * Forgotten
+     */
+    204: void;
+};
+
+export type ForgetMemoryResponse = ForgetMemoryResponses[keyof ForgetMemoryResponses];
+
+export type ReadMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The entry's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/{id}';
+};
+
+export type ReadMemoryErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReadMemoryError = ReadMemoryErrors[keyof ReadMemoryErrors];
+
+export type ReadMemoryResponses = {
+    /**
+     * OK
+     */
+    200: MemoryEntry;
+};
+
+export type ReadMemoryResponse = ReadMemoryResponses[keyof ReadMemoryResponses];
+
+export type UpdateMemoryData = {
+    body: UpdateMemoryRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The entry's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/{id}';
+};
+
+export type UpdateMemoryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type UpdateMemoryError = UpdateMemoryErrors[keyof UpdateMemoryErrors];
+
+export type UpdateMemoryResponses = {
+    /**
+     * OK
+     */
+    200: MemoryEntry;
+};
+
+export type UpdateMemoryResponse = UpdateMemoryResponses[keyof UpdateMemoryResponses];
+
+export type RestoreMemoryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The entry's id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/memory/{id}/restore';
+};
+
+export type RestoreMemoryErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RestoreMemoryError = RestoreMemoryErrors[keyof RestoreMemoryErrors];
+
+export type RestoreMemoryResponses = {
+    /**
+     * OK
+     */
+    200: MemoryEntry;
+};
+
+export type RestoreMemoryResponse = RestoreMemoryResponses[keyof RestoreMemoryResponses];
+
 export type ListMcpServersData = {
     body?: never;
     headers?: {
@@ -13645,9 +17639,13 @@ export type ListMcpServersData = {
     path?: never;
     query?: {
         /**
-         * Only the servers the caller reaches, with their tools and agent names (what `ostrom claude` connects). A member, an agent session or an `mcp:use` token always gets this list, whatever `mine` says; the whole list, with upstream URLs and secret names, is for an admin with `mcp:read` or a browser session
+         * Only the servers the caller reaches, with their tools and agent names (what `ostrom run claude` connects). A member, an agent session or an `mcp:use` token always gets this list, whatever `mine` says; the whole list, with upstream URLs and secret names, is for an admin with `mcp:read` or a browser session
          */
         mine?: boolean;
+        /**
+         * The members' personal MCP servers (`mcp.personal.v1`), by owner, with `owner` and their definition (name, URL, transport, the secret names they use: none of these is secret) for review; never a credential. An admin with `mcp:read`; the personal servers only, in owner order, the first 500, without `next`. Without it, the list is the team's servers only
+         */
+        personal?: boolean;
     };
     url: '/api/v1/mcp/servers';
 };
@@ -13833,6 +17831,55 @@ export type SaveMcpServerResponses = {
 };
 
 export type SaveMcpServerResponse = SaveMcpServerResponses[keyof SaveMcpServerResponses];
+
+export type PromoteMcpServerData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/mcp/servers/{name}/promote';
+};
+
+export type PromoteMcpServerErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again) or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PromoteMcpServerError = PromoteMcpServerErrors[keyof PromoteMcpServerErrors];
+
+export type PromoteMcpServerResponses = {
+    /**
+     * OK
+     */
+    200: McpServer;
+};
+
+export type PromoteMcpServerResponse = PromoteMcpServerResponses[keyof PromoteMcpServerResponses];
 
 export type ListMcpAssignmentsData = {
     body?: never;
@@ -14137,6 +18184,200 @@ export type DeleteMcpArgumentPolicyResponses = {
 
 export type DeleteMcpArgumentPolicyResponse = DeleteMcpArgumentPolicyResponses[keyof DeleteMcpArgumentPolicyResponses];
 
+export type ListMyMcpServersData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/mcp/servers';
+};
+
+export type ListMyMcpServersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMyMcpServersError = ListMyMcpServersErrors[keyof ListMyMcpServersErrors];
+
+export type ListMyMcpServersResponses = {
+    /**
+     * OK
+     */
+    200: {
+        items: Array<McpServer>;
+    };
+};
+
+export type ListMyMcpServersResponse = ListMyMcpServersResponses[keyof ListMyMcpServersResponses];
+
+export type CreateMyMcpServerData = {
+    body: McpServerWritable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/mcp/servers';
+};
+
+export type CreateMyMcpServerErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), hosted_not_allowed, or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateMyMcpServerError = CreateMyMcpServerErrors[keyof CreateMyMcpServerErrors];
+
+export type CreateMyMcpServerResponses = {
+    /**
+     * OK
+     */
+    201: McpServer;
+};
+
+export type CreateMyMcpServerResponse = CreateMyMcpServerResponses[keyof CreateMyMcpServerResponses];
+
+export type DeleteMyMcpServerData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/mcp/servers/{name}';
+};
+
+export type DeleteMyMcpServerErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), hosted_not_allowed, or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteMyMcpServerError = DeleteMyMcpServerErrors[keyof DeleteMyMcpServerErrors];
+
+export type DeleteMyMcpServerResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type DeleteMyMcpServerResponse = DeleteMyMcpServerResponses[keyof DeleteMyMcpServerResponses];
+
+export type SaveMyMcpServerData = {
+    body: McpServerWritable;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/mcp/servers/{name}';
+};
+
+export type SaveMyMcpServerErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), hosted_not_allowed, or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveMyMcpServerError = SaveMyMcpServerErrors[keyof SaveMyMcpServerErrors];
+
+export type SaveMyMcpServerResponses = {
+    /**
+     * OK
+     */
+    200: McpServer;
+};
+
+export type SaveMyMcpServerResponse = SaveMyMcpServerResponses[keyof SaveMyMcpServerResponses];
+
 export type GetMcpSettingsData = {
     body?: never;
     headers?: {
@@ -14407,6 +18648,104 @@ export type GetMcpUsageResponses = {
 
 export type GetMcpUsageResponse = GetMcpUsageResponses[keyof GetMcpUsageResponses];
 
+export type ListMcpHostedProcessesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/mcp/hosted';
+};
+
+export type ListMcpHostedProcessesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMcpHostedProcessesError = ListMcpHostedProcessesErrors[keyof ListMcpHostedProcessesErrors];
+
+export type ListMcpHostedProcessesResponses = {
+    /**
+     * OK
+     */
+    200: McpHostedProcesses;
+};
+
+export type ListMcpHostedProcessesResponse = ListMcpHostedProcessesResponses[keyof ListMcpHostedProcessesResponses];
+
+export type RestartMcpHostedProcessData = {
+    body: McpHostedRestart;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/mcp/hosted/restart';
+};
+
+export type RestartMcpHostedProcessErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type RestartMcpHostedProcessError = RestartMcpHostedProcessErrors[keyof RestartMcpHostedProcessErrors];
+
+export type RestartMcpHostedProcessResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type RestartMcpHostedProcessResponse = RestartMcpHostedProcessResponses[keyof RestartMcpHostedProcessResponses];
+
 export type ListSecretsData = {
     body?: never;
     headers?: {
@@ -14602,6 +18941,872 @@ export type RotateSecretResponses = {
 
 export type RotateSecretResponse = RotateSecretResponses[keyof RotateSecretResponses];
 
+export type GetEnvironmentData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/environment';
+};
+
+export type GetEnvironmentErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetEnvironmentError = GetEnvironmentErrors[keyof GetEnvironmentErrors];
+
+export type GetEnvironmentResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentValues;
+};
+
+export type GetEnvironmentResponse = GetEnvironmentResponses[keyof GetEnvironmentResponses];
+
+export type ListEnvironmentVariantsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/environment/variants';
+};
+
+export type ListEnvironmentVariantsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListEnvironmentVariantsError = ListEnvironmentVariantsErrors[keyof ListEnvironmentVariantsErrors];
+
+export type ListEnvironmentVariantsResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariantsPage;
+};
+
+export type ListEnvironmentVariantsResponse = ListEnvironmentVariantsResponses[keyof ListEnvironmentVariantsResponses];
+
+export type CreateEnvironmentVariantData = {
+    body: EnvironmentVariantCreate;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/environment/variants';
+};
+
+export type CreateEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateEnvironmentVariantError = CreateEnvironmentVariantErrors[keyof CreateEnvironmentVariantErrors];
+
+export type CreateEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    201: EnvironmentVariant;
+};
+
+export type CreateEnvironmentVariantResponse = CreateEnvironmentVariantResponses[keyof CreateEnvironmentVariantResponses];
+
+export type ListPersonalEnvironmentVariantsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/environment/variants/personal';
+};
+
+export type ListPersonalEnvironmentVariantsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListPersonalEnvironmentVariantsError = ListPersonalEnvironmentVariantsErrors[keyof ListPersonalEnvironmentVariantsErrors];
+
+export type ListPersonalEnvironmentVariantsResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariantsPage;
+};
+
+export type ListPersonalEnvironmentVariantsResponse = ListPersonalEnvironmentVariantsResponses[keyof ListPersonalEnvironmentVariantsResponses];
+
+export type DeleteEnvironmentVariantData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/variants/{id}';
+};
+
+export type DeleteEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteEnvironmentVariantError = DeleteEnvironmentVariantErrors[keyof DeleteEnvironmentVariantErrors];
+
+export type DeleteEnvironmentVariantResponses = {
+    /**
+     * Deleted
+     */
+    204: void;
+};
+
+export type DeleteEnvironmentVariantResponse = DeleteEnvironmentVariantResponses[keyof DeleteEnvironmentVariantResponses];
+
+export type UpdateEnvironmentVariantData = {
+    body: EnvironmentVariantUpdate;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/variants/{id}';
+};
+
+export type UpdateEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateEnvironmentVariantError = UpdateEnvironmentVariantErrors[keyof UpdateEnvironmentVariantErrors];
+
+export type UpdateEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariant;
+};
+
+export type UpdateEnvironmentVariantResponse = UpdateEnvironmentVariantResponses[keyof UpdateEnvironmentVariantResponses];
+
+export type BulkAssignEnvironmentVariantData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/variants/{id}/bulk-assign';
+};
+
+export type BulkAssignEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type BulkAssignEnvironmentVariantError = BulkAssignEnvironmentVariantErrors[keyof BulkAssignEnvironmentVariantErrors];
+
+export type BulkAssignEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentBulkAssignment;
+};
+
+export type BulkAssignEnvironmentVariantResponse = BulkAssignEnvironmentVariantResponses[keyof BulkAssignEnvironmentVariantResponses];
+
+export type PromoteEnvironmentVariantData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/variants/{id}/promote';
+};
+
+export type PromoteEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PromoteEnvironmentVariantError = PromoteEnvironmentVariantErrors[keyof PromoteEnvironmentVariantErrors];
+
+export type PromoteEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariant;
+};
+
+export type PromoteEnvironmentVariantResponse = PromoteEnvironmentVariantResponses[keyof PromoteEnvironmentVariantResponses];
+
+export type ListEnvironmentAssignmentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: {
+        /**
+         * A member's id
+         */
+        member?: string;
+    };
+    url: '/api/v1/environment/assignments';
+};
+
+export type ListEnvironmentAssignmentsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListEnvironmentAssignmentsError = ListEnvironmentAssignmentsErrors[keyof ListEnvironmentAssignmentsErrors];
+
+export type ListEnvironmentAssignmentsResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentAssignmentsPage;
+};
+
+export type ListEnvironmentAssignmentsResponse = ListEnvironmentAssignmentsResponses[keyof ListEnvironmentAssignmentsResponses];
+
+export type UnassignEnvironmentVariantData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id (`Member.id`)
+         */
+        member: string;
+        /**
+         * The environment variable name
+         */
+        variable: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/assignments/{member}/{variable}';
+};
+
+export type UnassignEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnassignEnvironmentVariantError = UnassignEnvironmentVariantErrors[keyof UnassignEnvironmentVariantErrors];
+
+export type UnassignEnvironmentVariantResponses = {
+    /**
+     * Removed
+     */
+    204: void;
+};
+
+export type UnassignEnvironmentVariantResponse = UnassignEnvironmentVariantResponses[keyof UnassignEnvironmentVariantResponses];
+
+export type AssignEnvironmentVariantData = {
+    body: EnvironmentAssign;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id (`Member.id`)
+         */
+        member: string;
+        /**
+         * The environment variable name
+         */
+        variable: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/assignments/{member}/{variable}';
+};
+
+export type AssignEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type AssignEnvironmentVariantError = AssignEnvironmentVariantErrors[keyof AssignEnvironmentVariantErrors];
+
+export type AssignEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentAssignment;
+};
+
+export type AssignEnvironmentVariantResponse = AssignEnvironmentVariantResponses[keyof AssignEnvironmentVariantResponses];
+
+export type IncludeEnvironmentVariableData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id (`Member.id`)
+         */
+        member: string;
+        /**
+         * The environment variable name
+         */
+        variable: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/exclusions/{member}/{variable}';
+};
+
+export type IncludeEnvironmentVariableErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type IncludeEnvironmentVariableError = IncludeEnvironmentVariableErrors[keyof IncludeEnvironmentVariableErrors];
+
+export type IncludeEnvironmentVariableResponses = {
+    /**
+     * Removed
+     */
+    204: void;
+};
+
+export type IncludeEnvironmentVariableResponse = IncludeEnvironmentVariableResponses[keyof IncludeEnvironmentVariableResponses];
+
+export type ExcludeEnvironmentVariableData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id (`Member.id`)
+         */
+        member: string;
+        /**
+         * The environment variable name
+         */
+        variable: string;
+    };
+    query?: never;
+    url: '/api/v1/environment/exclusions/{member}/{variable}';
+};
+
+export type ExcludeEnvironmentVariableErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ExcludeEnvironmentVariableError = ExcludeEnvironmentVariableErrors[keyof ExcludeEnvironmentVariableErrors];
+
+export type ExcludeEnvironmentVariableResponses = {
+    /**
+     * Excluded
+     */
+    204: void;
+};
+
+export type ExcludeEnvironmentVariableResponse = ExcludeEnvironmentVariableResponses[keyof ExcludeEnvironmentVariableResponses];
+
+export type ListMyEnvironmentVariantsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/environment/variants';
+};
+
+export type ListMyEnvironmentVariantsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMyEnvironmentVariantsError = ListMyEnvironmentVariantsErrors[keyof ListMyEnvironmentVariantsErrors];
+
+export type ListMyEnvironmentVariantsResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariantsPage;
+};
+
+export type ListMyEnvironmentVariantsResponse = ListMyEnvironmentVariantsResponses[keyof ListMyEnvironmentVariantsResponses];
+
+export type CreateMyEnvironmentVariantData = {
+    body: EnvironmentVariantCreate;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/environment/variants';
+};
+
+export type CreateMyEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateMyEnvironmentVariantError = CreateMyEnvironmentVariantErrors[keyof CreateMyEnvironmentVariantErrors];
+
+export type CreateMyEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    201: EnvironmentVariant;
+};
+
+export type CreateMyEnvironmentVariantResponse = CreateMyEnvironmentVariantResponses[keyof CreateMyEnvironmentVariantResponses];
+
+export type DeleteMyEnvironmentVariantData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/me/environment/variants/{id}';
+};
+
+export type DeleteMyEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteMyEnvironmentVariantError = DeleteMyEnvironmentVariantErrors[keyof DeleteMyEnvironmentVariantErrors];
+
+export type DeleteMyEnvironmentVariantResponses = {
+    /**
+     * Deleted
+     */
+    204: void;
+};
+
+export type DeleteMyEnvironmentVariantResponse = DeleteMyEnvironmentVariantResponses[keyof DeleteMyEnvironmentVariantResponses];
+
+export type UpdateMyEnvironmentVariantData = {
+    body: EnvironmentVariantUpdate;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The variant
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/me/environment/variants/{id}';
+};
+
+export type UpdateMyEnvironmentVariantErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in again, then send it again), or forbidden (the key is `error.type`)
+     */
+    403: StepUpOrForbidden;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateMyEnvironmentVariantError = UpdateMyEnvironmentVariantErrors[keyof UpdateMyEnvironmentVariantErrors];
+
+export type UpdateMyEnvironmentVariantResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentVariant;
+};
+
+export type UpdateMyEnvironmentVariantResponse = UpdateMyEnvironmentVariantResponses[keyof UpdateMyEnvironmentVariantResponses];
+
 export type ImportTeamCodeData = {
     body: TeamCodeImportRequestWritable;
     headers?: {
@@ -14673,6 +19878,14 @@ export type InferenceMessagesData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * The scheduling class of an inference call in the admission queue (`inference.queue.v1`): `interactive` (the default) or `background` (unattended work, `ostrom run --workload background`). A hint the caller sets, not a permission: it changes only the order of waiting calls. Never sent to a provider. Another value, or the header twice, is refused with 400 `invalid_workload`
+         */
+        'x-ostrom-workload'?: 'interactive' | 'background' | (string & {});
+        /**
+         * The caller's own id of an inference call (`inference.cancel.v1`), a lowercase UUID, fresh for each call: `cancelInferenceRequest` with it stops the call on whichever replica runs it, queued or streaming. Never sent to a provider. Not a UUID in lowercase: 400 `invalid_request_id`
+         */
+        'x-ostrom-client-request-id'?: string;
     };
     path?: never;
     query?: never;
@@ -14730,6 +19943,14 @@ export type InferenceResponsesData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * The scheduling class of an inference call in the admission queue (`inference.queue.v1`): `interactive` (the default) or `background` (unattended work, `ostrom run --workload background`). A hint the caller sets, not a permission: it changes only the order of waiting calls. Never sent to a provider. Another value, or the header twice, is refused with 400 `invalid_workload`
+         */
+        'x-ostrom-workload'?: 'interactive' | 'background' | (string & {});
+        /**
+         * The caller's own id of an inference call (`inference.cancel.v1`), a lowercase UUID, fresh for each call: `cancelInferenceRequest` with it stops the call on whichever replica runs it, queued or streaming. Never sent to a provider. Not a UUID in lowercase: 400 `invalid_request_id`
+         */
+        'x-ostrom-client-request-id'?: string;
     };
     path?: never;
     query?: never;
@@ -14787,6 +20008,14 @@ export type InferenceChatCompletionsData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * The scheduling class of an inference call in the admission queue (`inference.queue.v1`): `interactive` (the default) or `background` (unattended work, `ostrom run --workload background`). A hint the caller sets, not a permission: it changes only the order of waiting calls. Never sent to a provider. Another value, or the header twice, is refused with 400 `invalid_workload`
+         */
+        'x-ostrom-workload'?: 'interactive' | 'background' | (string & {});
+        /**
+         * The caller's own id of an inference call (`inference.cancel.v1`), a lowercase UUID, fresh for each call: `cancelInferenceRequest` with it stops the call on whichever replica runs it, queued or streaming. Never sent to a provider. Not a UUID in lowercase: 400 `invalid_request_id`
+         */
+        'x-ostrom-client-request-id'?: string;
     };
     path?: never;
     query?: never;
@@ -14888,6 +20117,106 @@ export type InferenceModelsResponses = {
 };
 
 export type InferenceModelsResponse = InferenceModelsResponses[keyof InferenceModelsResponses];
+
+export type GetInferenceQueueData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/inference/queue';
+};
+
+export type GetInferenceQueueErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetInferenceQueueError = GetInferenceQueueErrors[keyof GetInferenceQueueErrors];
+
+export type GetInferenceQueueResponses = {
+    /**
+     * OK
+     */
+    200: InferenceQueue;
+};
+
+export type GetInferenceQueueResponse = GetInferenceQueueResponses[keyof GetInferenceQueueResponses];
+
+export type CancelInferenceRequestData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/inference/requests/{id}/cancel';
+};
+
+export type CancelInferenceRequestErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type CancelInferenceRequestError = CancelInferenceRequestErrors[keyof CancelInferenceRequestErrors];
+
+export type CancelInferenceRequestResponses = {
+    /**
+     * The marker is stored
+     */
+    204: void;
+};
+
+export type CancelInferenceRequestResponse = CancelInferenceRequestResponses[keyof CancelInferenceRequestResponses];
 
 export type GetInferenceSettingsData = {
     body?: never;
@@ -16232,6 +21561,404 @@ export type RunnerHeartbeatResponses = {
 
 export type RunnerHeartbeatResponse = RunnerHeartbeatResponses[keyof RunnerHeartbeatResponses];
 
+export type GetCloudRuntimeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runtime';
+};
+
+export type GetCloudRuntimeErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type GetCloudRuntimeError = GetCloudRuntimeErrors[keyof GetCloudRuntimeErrors];
+
+export type GetCloudRuntimeResponses = {
+    /**
+     * OK
+     */
+    200: CloudRuntime;
+};
+
+export type GetCloudRuntimeResponse = GetCloudRuntimeResponses[keyof GetCloudRuntimeResponses];
+
+export type SaveCloudRuntimeData = {
+    body: SaveCloudRuntimeRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runtime';
+};
+
+export type SaveCloudRuntimeErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveCloudRuntimeError = SaveCloudRuntimeErrors[keyof SaveCloudRuntimeErrors];
+
+export type SaveCloudRuntimeResponses = {
+    /**
+     * OK
+     */
+    200: CloudRuntime;
+};
+
+export type SaveCloudRuntimeResponse = SaveCloudRuntimeResponses[keyof SaveCloudRuntimeResponses];
+
+export type ListCloudClustersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/clusters';
+};
+
+export type ListCloudClustersErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+};
+
+export type ListCloudClustersError = ListCloudClustersErrors[keyof ListCloudClustersErrors];
+
+export type ListCloudClustersResponses = {
+    /**
+     * OK
+     */
+    200: CloudClusterList;
+};
+
+export type ListCloudClustersResponse = ListCloudClustersResponses[keyof ListCloudClustersResponses];
+
+export type CreateCloudClusterData = {
+    body: SaveCloudClusterRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/clusters';
+};
+
+export type CreateCloudClusterErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type CreateCloudClusterError = CreateCloudClusterErrors[keyof CreateCloudClusterErrors];
+
+export type CreateCloudClusterResponses = {
+    /**
+     * Created
+     */
+    201: CloudCluster;
+};
+
+export type CreateCloudClusterResponse = CreateCloudClusterResponses[keyof CreateCloudClusterResponses];
+
+export type UpdateCloudClusterData = {
+    body: SaveCloudClusterRequest;
+    path: {
+        /**
+         * The cluster
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/clusters/{id}';
+};
+
+export type UpdateCloudClusterErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateCloudClusterError = UpdateCloudClusterErrors[keyof UpdateCloudClusterErrors];
+
+export type UpdateCloudClusterResponses = {
+    /**
+     * OK
+     */
+    200: CloudCluster;
+};
+
+export type UpdateCloudClusterResponse = UpdateCloudClusterResponses[keyof UpdateCloudClusterResponses];
+
+export type ListCloudProfilesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/profiles';
+};
+
+export type ListCloudProfilesErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type ListCloudProfilesError = ListCloudProfilesErrors[keyof ListCloudProfilesErrors];
+
+export type ListCloudProfilesResponses = {
+    /**
+     * OK
+     */
+    200: CloudProfileList;
+};
+
+export type ListCloudProfilesResponse = ListCloudProfilesResponses[keyof ListCloudProfilesResponses];
+
+export type CreateCloudProfileData = {
+    body: SaveCloudProfileRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/profiles';
+};
+
+export type CreateCloudProfileErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type CreateCloudProfileError = CreateCloudProfileErrors[keyof CreateCloudProfileErrors];
+
+export type CreateCloudProfileResponses = {
+    /**
+     * Created
+     */
+    201: CloudProfile;
+};
+
+export type CreateCloudProfileResponse = CreateCloudProfileResponses[keyof CreateCloudProfileResponses];
+
+export type UpdateCloudProfileData = {
+    body: SaveCloudProfileRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The profile
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/profiles/{id}';
+};
+
+export type UpdateCloudProfileErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateCloudProfileError = UpdateCloudProfileErrors[keyof UpdateCloudProfileErrors];
+
+export type UpdateCloudProfileResponses = {
+    /**
+     * OK
+     */
+    200: CloudProfile;
+};
+
+export type UpdateCloudProfileResponse = UpdateCloudProfileResponses[keyof UpdateCloudProfileResponses];
+
+export type GetCloudSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/settings';
+};
+
+export type GetCloudSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetCloudSettingsError = GetCloudSettingsErrors[keyof GetCloudSettingsErrors];
+
+export type GetCloudSettingsResponses = {
+    /**
+     * OK
+     */
+    200: CloudSettings;
+};
+
+export type GetCloudSettingsResponse = GetCloudSettingsResponses[keyof GetCloudSettingsResponses];
+
+export type SaveCloudSettingsData = {
+    body: SaveCloudSettingsRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/settings';
+};
+
+export type SaveCloudSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveCloudSettingsError = SaveCloudSettingsErrors[keyof SaveCloudSettingsErrors];
+
+export type SaveCloudSettingsResponses = {
+    /**
+     * OK
+     */
+    200: CloudSettings;
+};
+
+export type SaveCloudSettingsResponse = SaveCloudSettingsResponses[keyof SaveCloudSettingsResponses];
+
 export type ListCloudSessionsData = {
     body?: never;
     headers?: {
@@ -16303,6 +22030,7 @@ export type CreateCloudSessionData = {
          */
         prompt?: string;
         name?: string;
+        environment?: CloudEnvironment;
     };
     headers?: {
         /**
@@ -16728,6 +22456,10 @@ export type CloudRunnerHeartbeatData = {
         ready?: boolean;
         stopped?: boolean;
         lastModelRequestAt?: string;
+        /**
+         * The agent has background work in flight or scheduled wake-ups (Claude Code's Stop hook lists background_tasks or session_crons). The idle pause counts it as activity up to the organization's backgroundWorkMaxMinutes after the stretch began (TeamCode cloud.sessions.background-work.v1). Absent means false; a server that predates it ignores it.
+         */
+        background?: boolean;
     };
     headers?: {
         /**
@@ -16942,6 +22674,10 @@ export type FetchRunnerGithubTokenErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type FetchRunnerGithubTokenError = FetchRunnerGithubTokenErrors[keyof FetchRunnerGithubTokenErrors];
@@ -16954,6 +22690,335 @@ export type FetchRunnerGithubTokenResponses = {
 };
 
 export type FetchRunnerGithubTokenResponse = FetchRunnerGithubTokenResponses[keyof FetchRunnerGithubTokenResponses];
+
+export type FetchRunnerEnvironmentData = {
+    body: RunnerExecution;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/environment';
+};
+
+export type FetchRunnerEnvironmentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type FetchRunnerEnvironmentError = FetchRunnerEnvironmentErrors[keyof FetchRunnerEnvironmentErrors];
+
+export type FetchRunnerEnvironmentResponses = {
+    /**
+     * OK
+     */
+    200: RunnerEnvironment;
+};
+
+export type FetchRunnerEnvironmentResponse = FetchRunnerEnvironmentResponses[keyof FetchRunnerEnvironmentResponses];
+
+export type ReportRunnerPreparationData = {
+    body: RunnerPreparationReport;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/preparation';
+};
+
+export type ReportRunnerPreparationErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReportRunnerPreparationError = ReportRunnerPreparationErrors[keyof ReportRunnerPreparationErrors];
+
+export type ReportRunnerPreparationResponses = {
+    /**
+     * OK
+     */
+    200: RunnerHeartbeatAnswer;
+};
+
+export type ReportRunnerPreparationResponse = ReportRunnerPreparationResponses[keyof ReportRunnerPreparationResponses];
+
+export type FetchRunnerVariablesData = {
+    body: RunnerExecution;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/variables';
+};
+
+export type FetchRunnerVariablesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type FetchRunnerVariablesError = FetchRunnerVariablesErrors[keyof FetchRunnerVariablesErrors];
+
+export type FetchRunnerVariablesResponses = {
+    /**
+     * OK
+     */
+    200: EnvironmentValues;
+};
+
+export type FetchRunnerVariablesResponse = FetchRunnerVariablesResponses[keyof FetchRunnerVariablesResponses];
+
+export type FetchRunnerSkillsData = {
+    body: RunnerExecution;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/skills';
+};
+
+export type FetchRunnerSkillsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type FetchRunnerSkillsError = FetchRunnerSkillsErrors[keyof FetchRunnerSkillsErrors];
+
+export type FetchRunnerSkillsResponses = {
+    /**
+     * OK
+     */
+    200: SkillManifest;
+};
+
+export type FetchRunnerSkillsResponse = FetchRunnerSkillsResponses[keyof FetchRunnerSkillsResponses];
+
+export type DownloadRunnerSkillData = {
+    body: RunnerArtifactRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/skills/artifact';
+};
+
+export type DownloadRunnerSkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DownloadRunnerSkillError = DownloadRunnerSkillErrors[keyof DownloadRunnerSkillErrors];
+
+export type DownloadRunnerSkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillArtifact;
+};
+
+export type DownloadRunnerSkillResponse = DownloadRunnerSkillResponses[keyof DownloadRunnerSkillResponses];
+
+export type FetchRunnerHooksData = {
+    body: RunnerExecution;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/hooks';
+};
+
+export type FetchRunnerHooksErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type FetchRunnerHooksError = FetchRunnerHooksErrors[keyof FetchRunnerHooksErrors];
+
+export type FetchRunnerHooksResponses = {
+    /**
+     * OK
+     */
+    200: HookManifest;
+};
+
+export type FetchRunnerHooksResponse = FetchRunnerHooksResponses[keyof FetchRunnerHooksResponses];
+
+export type DownloadRunnerHookData = {
+    body: RunnerArtifactRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/hooks/artifact';
+};
+
+export type DownloadRunnerHookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DownloadRunnerHookError = DownloadRunnerHookErrors[keyof DownloadRunnerHookErrors];
+
+export type DownloadRunnerHookResponses = {
+    /**
+     * OK
+     */
+    200: HookArtifact;
+};
+
+export type DownloadRunnerHookResponse = DownloadRunnerHookResponses[keyof DownloadRunnerHookResponses];
 
 export type SendCloudMessageData = {
     body: {
@@ -17105,10 +23170,7 @@ export type ListArtifactsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Artifact>;
-        next?: string;
-    };
+    200: ArtifactPage;
 };
 
 export type ListArtifactsResponse = ListArtifactsResponses[keyof ListArtifactsResponses];
@@ -17151,6 +23213,10 @@ export type PublishArtifactErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an organization and per organization, over a sliding hour
+     */
+    429: ApiError;
 };
 
 export type PublishArtifactError = PublishArtifactErrors[keyof PublishArtifactErrors];
@@ -17212,6 +23278,459 @@ export type ArtifactsMcpResponses = {
      */
     202: unknown;
 };
+
+export type DeleteArtifactStorageData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/storage';
+};
+
+export type DeleteArtifactStorageErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DeleteArtifactStorageError = DeleteArtifactStorageErrors[keyof DeleteArtifactStorageErrors];
+
+export type DeleteArtifactStorageResponses = {
+    /**
+     * Removed
+     */
+    204: void;
+};
+
+export type DeleteArtifactStorageResponse = DeleteArtifactStorageResponses[keyof DeleteArtifactStorageResponses];
+
+export type GetArtifactStorageData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/storage';
+};
+
+export type GetArtifactStorageErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactStorageError = GetArtifactStorageErrors[keyof GetArtifactStorageErrors];
+
+export type GetArtifactStorageResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactStorage;
+};
+
+export type GetArtifactStorageResponse = GetArtifactStorageResponses[keyof GetArtifactStorageResponses];
+
+export type SaveArtifactStorageData = {
+    body: SaveArtifactStorageRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/storage';
+};
+
+export type SaveArtifactStorageErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveArtifactStorageError = SaveArtifactStorageErrors[keyof SaveArtifactStorageErrors];
+
+export type SaveArtifactStorageResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactStorage;
+};
+
+export type SaveArtifactStorageResponse = SaveArtifactStorageResponses[keyof SaveArtifactStorageResponses];
+
+export type TestArtifactStorageData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/storage/test';
+};
+
+export type TestArtifactStorageErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type TestArtifactStorageError = TestArtifactStorageErrors[keyof TestArtifactStorageErrors];
+
+export type TestArtifactStorageResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactStorageTest;
+};
+
+export type TestArtifactStorageResponse = TestArtifactStorageResponses[keyof TestArtifactStorageResponses];
+
+export type GetArtifactSettingsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/settings';
+};
+
+export type GetArtifactSettingsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactSettingsError = GetArtifactSettingsErrors[keyof GetArtifactSettingsErrors];
+
+export type GetArtifactSettingsResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactSettings;
+};
+
+export type GetArtifactSettingsResponse = GetArtifactSettingsResponses[keyof GetArtifactSettingsResponses];
+
+export type SaveArtifactSettingsData = {
+    body: SaveArtifactSettingsRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/settings';
+};
+
+export type SaveArtifactSettingsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SaveArtifactSettingsError = SaveArtifactSettingsErrors[keyof SaveArtifactSettingsErrors];
+
+export type SaveArtifactSettingsResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactSettings;
+};
+
+export type SaveArtifactSettingsResponse = SaveArtifactSettingsResponses[keyof SaveArtifactSettingsResponses];
+
+export type GetArtifactUsageData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/usage';
+};
+
+export type GetArtifactUsageErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactUsageError = GetArtifactUsageErrors[keyof GetArtifactUsageErrors];
+
+export type GetArtifactUsageResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactUsage;
+};
+
+export type GetArtifactUsageResponse = GetArtifactUsageResponses[keyof GetArtifactUsageResponses];
+
+export type GetArtifactPolicyData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/policy';
+};
+
+export type GetArtifactPolicyErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetArtifactPolicyError = GetArtifactPolicyErrors[keyof GetArtifactPolicyErrors];
+
+export type GetArtifactPolicyResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactPolicy;
+};
+
+export type GetArtifactPolicyResponse = GetArtifactPolicyResponses[keyof GetArtifactPolicyResponses];
+
+export type CreateArtifactUploadData = {
+    body: CreateArtifactUploadRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/artifacts/uploads';
+};
+
+export type CreateArtifactUploadErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type CreateArtifactUploadError = CreateArtifactUploadErrors[keyof CreateArtifactUploadErrors];
+
+export type CreateArtifactUploadResponses = {
+    /**
+     * Created
+     */
+    201: ArtifactUpload;
+};
+
+export type CreateArtifactUploadResponse = CreateArtifactUploadResponses[keyof CreateArtifactUploadResponses];
+
+export type PutArtifactUploadChunkData = {
+    body: Blob | File;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        upload: string;
+        sha256: string;
+        /**
+         * The chunk's index, from 0
+         */
+        n: number;
+    };
+    query?: never;
+    url: '/api/v1/artifacts/uploads/{upload}/blobs/{sha256}/{n}';
+};
+
+export type PutArtifactUploadChunkErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type PutArtifactUploadChunkError = PutArtifactUploadChunkErrors[keyof PutArtifactUploadChunkErrors];
+
+export type PutArtifactUploadChunkResponses = {
+    /**
+     * OK
+     */
+    200: ArtifactUploadChunk;
+};
+
+export type PutArtifactUploadChunkResponse = PutArtifactUploadChunkResponses[keyof PutArtifactUploadChunkResponses];
 
 export type GetArtifactContentData = {
     body?: never;
@@ -17470,10 +23989,7 @@ export type ListArtifactVersionsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<ArtifactVersion>;
-        next?: string;
-    };
+    200: ArtifactVersionPage;
 };
 
 export type ListArtifactVersionsResponse = ListArtifactVersionsResponses[keyof ListArtifactVersionsResponses];
@@ -17481,6 +23997,22 @@ export type ListArtifactVersionsResponse = ListArtifactVersionsResponses[keyof L
 export type PublishArtifactVersionData = {
     body: {
         files: Array<ArtifactFile>;
+        /**
+         * The upload whose files this commit uses (each file then by `sha256` and `size`)
+         */
+        uploadId?: string;
+        /**
+         * The page among `files` (`.html`, `.htm` or `.md`)
+         */
+        entry?: string;
+        /**
+         * The version the publisher started from (0 for a draft): any other live version is 409 `artifact_conflict`
+         */
+        baseVersion?: number;
+        title?: string;
+        description?: string;
+        icon?: string;
+        access?: ArtifactAccess;
     };
     headers?: {
         /**
@@ -17513,14 +24045,22 @@ export type PublishArtifactVersionErrors = {
      */
     404: ApiError;
     /**
-     * A refusal
+     * A refusal; for `artifact_conflict`, `current` is the live version, for the publisher to merge
      */
-    409: ApiError;
+    409: ArtifactConflict;
+    /**
+     * Too many requests lately (`rate_limited`): nothing was done. A launch is limited per person in an organization and per organization, over a sliding hour
+     */
+    429: ApiError;
 };
 
 export type PublishArtifactVersionError = PublishArtifactVersionErrors[keyof PublishArtifactVersionErrors];
 
 export type PublishArtifactVersionResponses = {
+    /**
+     * The same commit again within 10 minutes (same credential, base version and manifest digest): the version it made, `replayed` true
+     */
+    200: ArtifactVersion;
     /**
      * OK
      */
@@ -17742,12 +24282,7 @@ export type ShareArtifactResponses = {
 export type ShareArtifactResponse = ShareArtifactResponses[keyof ShareArtifactResponses];
 
 export type CreateArtifactTicketData = {
-    body?: {
-        /**
-         * The version; the latest when absent
-         */
-        version?: number;
-    };
+    body?: ArtifactTicketRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -18604,15 +25139,12 @@ export type ListSkillsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Skill>;
-        next?: string;
-    };
+    200: SkillCatalog;
 };
 
 export type ListSkillsResponse = ListSkillsResponses[keyof ListSkillsResponses];
 
-export type DeleteSkillData = {
+export type RetireSkillData = {
     body?: never;
     headers?: {
         /**
@@ -18621,13 +25153,16 @@ export type DeleteSkillData = {
         'Ostrom-Org'?: string;
     };
     path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
         name: string;
     };
     query?: never;
     url: '/api/v1/skills/{name}';
 };
 
-export type DeleteSkillErrors = {
+export type RetireSkillErrors = {
     /**
      * A refusal
      */
@@ -18650,25 +25185,19 @@ export type DeleteSkillErrors = {
     409: ApiError;
 };
 
-export type DeleteSkillError = DeleteSkillErrors[keyof DeleteSkillErrors];
+export type RetireSkillError = RetireSkillErrors[keyof RetireSkillErrors];
 
-export type DeleteSkillResponses = {
+export type RetireSkillResponses = {
     /**
-     * Done
+     * OK
      */
-    204: void;
+    200: SkillEntry;
 };
 
-export type DeleteSkillResponse = DeleteSkillResponses[keyof DeleteSkillResponses];
+export type RetireSkillResponse = RetireSkillResponses[keyof RetireSkillResponses];
 
-export type PublishSkillData = {
-    body: {
-        version: string;
-        files: Array<{
-            [key: string]: string;
-        }>;
-        description?: string;
-    };
+export type RestoreSkillData = {
+    body?: never;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -18676,13 +25205,16 @@ export type PublishSkillData = {
         'Ostrom-Org'?: string;
     };
     path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
         name: string;
     };
     query?: never;
-    url: '/api/v1/skills/{name}';
+    url: '/api/v1/skills/{name}/restore';
 };
 
-export type PublishSkillErrors = {
+export type RestoreSkillErrors = {
     /**
      * A refusal
      */
@@ -18705,16 +25237,923 @@ export type PublishSkillErrors = {
     409: ApiError;
 };
 
-export type PublishSkillError = PublishSkillErrors[keyof PublishSkillErrors];
+export type RestoreSkillError = RestoreSkillErrors[keyof RestoreSkillErrors];
 
-export type PublishSkillResponses = {
+export type RestoreSkillResponses = {
     /**
      * OK
      */
-    200: Skill;
+    200: SkillEntry;
 };
 
-export type PublishSkillResponse = PublishSkillResponses[keyof PublishSkillResponses];
+export type RestoreSkillResponse = RestoreSkillResponses[keyof RestoreSkillResponses];
+
+export type ListSkillVersionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/versions';
+};
+
+export type ListSkillVersionsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListSkillVersionsError = ListSkillVersionsErrors[keyof ListSkillVersionsErrors];
+
+export type ListSkillVersionsResponses = {
+    /**
+     * OK
+     */
+    200: SkillDetail;
+};
+
+export type ListSkillVersionsResponse = ListSkillVersionsResponses[keyof ListSkillVersionsResponses];
+
+export type PublishSkillVersionData = {
+    body: PublishSkillVersionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/versions';
+};
+
+export type PublishSkillVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+};
+
+export type PublishSkillVersionError = PublishSkillVersionErrors[keyof PublishSkillVersionErrors];
+
+export type PublishSkillVersionResponses = {
+    /**
+     * Already published with the same digest
+     */
+    200: SkillPublication;
+    /**
+     * Published
+     */
+    201: SkillPublication;
+};
+
+export type PublishSkillVersionResponse = PublishSkillVersionResponses[keyof PublishSkillVersionResponses];
+
+export type RetireSkillVersionData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * A version label: 1 to 64 characters `[0-9A-Za-z][0-9A-Za-z.+_-]*`, case-sensitive
+         */
+        version: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/versions/{version}';
+};
+
+export type RetireSkillVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RetireSkillVersionError = RetireSkillVersionErrors[keyof RetireSkillVersionErrors];
+
+export type RetireSkillVersionResponses = {
+    /**
+     * OK
+     */
+    200: SkillVersion;
+};
+
+export type RetireSkillVersionResponse = RetireSkillVersionResponses[keyof RetireSkillVersionResponses];
+
+export type UnpinSkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/pin';
+};
+
+export type UnpinSkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnpinSkillError = UnpinSkillErrors[keyof UnpinSkillErrors];
+
+export type UnpinSkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type UnpinSkillResponse = UnpinSkillResponses[keyof UnpinSkillResponses];
+
+export type PinSkillData = {
+    body: PinSkillRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/pin';
+};
+
+export type PinSkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PinSkillError = PinSkillErrors[keyof PinSkillErrors];
+
+export type PinSkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type PinSkillResponse = PinSkillResponses[keyof PinSkillResponses];
+
+export type SetSkillAudienceData = {
+    body: SetAudienceRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/audience';
+};
+
+export type SetSkillAudienceErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetSkillAudienceError = SetSkillAudienceErrors[keyof SetSkillAudienceErrors];
+
+export type SetSkillAudienceResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type SetSkillAudienceResponse = SetSkillAudienceResponses[keyof SetSkillAudienceResponses];
+
+export type ListSkillAssignmentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/assignments';
+};
+
+export type ListSkillAssignmentsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListSkillAssignmentsError = ListSkillAssignmentsErrors[keyof ListSkillAssignmentsErrors];
+
+export type ListSkillAssignmentsResponses = {
+    /**
+     * OK
+     */
+    200: AssignmentList;
+};
+
+export type ListSkillAssignmentsResponse = ListSkillAssignmentsResponses[keyof ListSkillAssignmentsResponses];
+
+export type ClearSkillAssignmentData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/assignments/{memberId}';
+};
+
+export type ClearSkillAssignmentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ClearSkillAssignmentError = ClearSkillAssignmentErrors[keyof ClearSkillAssignmentErrors];
+
+export type ClearSkillAssignmentResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type ClearSkillAssignmentResponse = ClearSkillAssignmentResponses[keyof ClearSkillAssignmentResponses];
+
+export type SetSkillAssignmentData = {
+    body: SetAssignmentRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/assignments/{memberId}';
+};
+
+export type SetSkillAssignmentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetSkillAssignmentError = SetSkillAssignmentErrors[keyof SetSkillAssignmentErrors];
+
+export type SetSkillAssignmentResponses = {
+    /**
+     * OK
+     */
+    200: Assignment;
+};
+
+export type SetSkillAssignmentResponse = SetSkillAssignmentResponses[keyof SetSkillAssignmentResponses];
+
+export type PromoteSkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/skills/{name}/promote';
+};
+
+export type PromoteSkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PromoteSkillError = PromoteSkillErrors[keyof PromoteSkillErrors];
+
+export type PromoteSkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type PromoteSkillResponse = PromoteSkillResponses[keyof PromoteSkillResponses];
+
+export type ListMySkillsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/me/skills';
+};
+
+export type ListMySkillsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMySkillsError = ListMySkillsErrors[keyof ListMySkillsErrors];
+
+export type ListMySkillsResponses = {
+    /**
+     * OK
+     */
+    200: SkillCatalog;
+};
+
+export type ListMySkillsResponse = ListMySkillsResponses[keyof ListMySkillsResponses];
+
+export type RetireMySkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}';
+};
+
+export type RetireMySkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RetireMySkillError = RetireMySkillErrors[keyof RetireMySkillErrors];
+
+export type RetireMySkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type RetireMySkillResponse = RetireMySkillResponses[keyof RetireMySkillResponses];
+
+export type RestoreMySkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}/restore';
+};
+
+export type RestoreMySkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RestoreMySkillError = RestoreMySkillErrors[keyof RestoreMySkillErrors];
+
+export type RestoreMySkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type RestoreMySkillResponse = RestoreMySkillResponses[keyof RestoreMySkillResponses];
+
+export type ListMySkillVersionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}/versions';
+};
+
+export type ListMySkillVersionsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMySkillVersionsError = ListMySkillVersionsErrors[keyof ListMySkillVersionsErrors];
+
+export type ListMySkillVersionsResponses = {
+    /**
+     * OK
+     */
+    200: SkillDetail;
+};
+
+export type ListMySkillVersionsResponse = ListMySkillVersionsResponses[keyof ListMySkillVersionsResponses];
+
+export type PublishMySkillVersionData = {
+    body: PublishSkillVersionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}/versions';
+};
+
+export type PublishMySkillVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+};
+
+export type PublishMySkillVersionError = PublishMySkillVersionErrors[keyof PublishMySkillVersionErrors];
+
+export type PublishMySkillVersionResponses = {
+    /**
+     * Already published with the same digest
+     */
+    200: SkillPublication;
+    /**
+     * Published
+     */
+    201: SkillPublication;
+};
+
+export type PublishMySkillVersionResponse = PublishMySkillVersionResponses[keyof PublishMySkillVersionResponses];
+
+export type UnpinMySkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}/pin';
+};
+
+export type UnpinMySkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnpinMySkillError = UnpinMySkillErrors[keyof UnpinMySkillErrors];
+
+export type UnpinMySkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type UnpinMySkillResponse = UnpinMySkillResponses[keyof UnpinMySkillResponses];
+
+export type PinMySkillData = {
+    body: PinSkillRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/me/skills/{name}/pin';
+};
+
+export type PinMySkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PinMySkillError = PinMySkillErrors[keyof PinMySkillErrors];
+
+export type PinMySkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillEntry;
+};
+
+export type PinMySkillResponse = PinMySkillResponses[keyof PinMySkillResponses];
 
 export type GetSkillDeliveryData = {
     body?: never;
@@ -18758,12 +26197,264 @@ export type GetSkillDeliveryResponses = {
     /**
      * OK
      */
-    200: {
-        skills: Array<Skill>;
-    };
+    200: SkillManifest;
 };
 
 export type GetSkillDeliveryResponse = GetSkillDeliveryResponses[keyof GetSkillDeliveryResponses];
+
+export type GetMemberSkillDeliveryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{memberId}/skill-delivery';
+};
+
+export type GetMemberSkillDeliveryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetMemberSkillDeliveryError = GetMemberSkillDeliveryErrors[keyof GetMemberSkillDeliveryErrors];
+
+export type GetMemberSkillDeliveryResponses = {
+    /**
+     * OK
+     */
+    200: SkillManifest;
+};
+
+export type GetMemberSkillDeliveryResponse = GetMemberSkillDeliveryResponses[keyof GetMemberSkillDeliveryResponses];
+
+export type DownloadSkillData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The skill's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * A version label: 1 to 64 characters `[0-9A-Za-z][0-9A-Za-z.+_-]*`, case-sensitive
+         */
+        version: string;
+    };
+    query?: never;
+    url: '/api/v1/skill-delivery/{name}/{version}';
+};
+
+export type DownloadSkillErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DownloadSkillError = DownloadSkillErrors[keyof DownloadSkillErrors];
+
+export type DownloadSkillResponses = {
+    /**
+     * OK
+     */
+    200: SkillArtifact;
+};
+
+export type DownloadSkillResponse = DownloadSkillResponses[keyof DownloadSkillResponses];
+
+export type ListMySkillInstallationsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/skill-delivery/installations';
+};
+
+export type ListMySkillInstallationsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMySkillInstallationsError = ListMySkillInstallationsErrors[keyof ListMySkillInstallationsErrors];
+
+export type ListMySkillInstallationsResponses = {
+    /**
+     * OK
+     */
+    200: SkillInstallationList;
+};
+
+export type ListMySkillInstallationsResponse = ListMySkillInstallationsResponses[keyof ListMySkillInstallationsResponses];
+
+export type ReportSkillInstallationsData = {
+    body: ReportSkillInstallationsRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/skill-delivery/installations';
+};
+
+export type ReportSkillInstallationsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReportSkillInstallationsError = ReportSkillInstallationsErrors[keyof ReportSkillInstallationsErrors];
+
+export type ReportSkillInstallationsResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type ReportSkillInstallationsResponse = ReportSkillInstallationsResponses[keyof ReportSkillInstallationsResponses];
+
+export type ListMemberSkillInstallationsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{memberId}/skill-installations';
+};
+
+export type ListMemberSkillInstallationsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListMemberSkillInstallationsError = ListMemberSkillInstallationsErrors[keyof ListMemberSkillInstallationsErrors];
+
+export type ListMemberSkillInstallationsResponses = {
+    /**
+     * OK
+     */
+    200: SkillInstallationList;
+};
+
+export type ListMemberSkillInstallationsResponse = ListMemberSkillInstallationsResponses[keyof ListMemberSkillInstallationsResponses];
 
 export type ListHooksData = {
     body?: never;
@@ -18807,13 +26498,498 @@ export type ListHooksResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Hook>;
-        next?: string;
-    };
+    200: HookCatalog;
 };
 
 export type ListHooksResponse = ListHooksResponses[keyof ListHooksResponses];
+
+export type ListHookVersionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/versions';
+};
+
+export type ListHookVersionsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListHookVersionsError = ListHookVersionsErrors[keyof ListHookVersionsErrors];
+
+export type ListHookVersionsResponses = {
+    /**
+     * OK
+     */
+    200: HookDetail;
+};
+
+export type ListHookVersionsResponse = ListHookVersionsResponses[keyof ListHookVersionsResponses];
+
+export type PublishHookVersionData = {
+    body: PublishHookVersionRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/versions';
+};
+
+export type PublishHookVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
+};
+
+export type PublishHookVersionError = PublishHookVersionErrors[keyof PublishHookVersionErrors];
+
+export type PublishHookVersionResponses = {
+    /**
+     * Already published with the same digest
+     */
+    200: HookPublication;
+    /**
+     * Published
+     */
+    201: HookPublication;
+};
+
+export type PublishHookVersionResponse = PublishHookVersionResponses[keyof PublishHookVersionResponses];
+
+export type ReadHookVersionData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * A version label: 1 to 64 characters `[0-9A-Za-z][0-9A-Za-z.+_-]*`, case-sensitive
+         */
+        version: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/versions/{version}';
+};
+
+export type ReadHookVersionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ReadHookVersionError = ReadHookVersionErrors[keyof ReadHookVersionErrors];
+
+export type ReadHookVersionResponses = {
+    /**
+     * OK
+     */
+    200: HookArtifact;
+};
+
+export type ReadHookVersionResponse = ReadHookVersionResponses[keyof ReadHookVersionResponses];
+
+export type UnpinHookData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/pin';
+};
+
+export type UnpinHookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnpinHookError = UnpinHookErrors[keyof UnpinHookErrors];
+
+export type UnpinHookResponses = {
+    /**
+     * OK
+     */
+    200: HookEntry;
+};
+
+export type UnpinHookResponse = UnpinHookResponses[keyof UnpinHookResponses];
+
+export type PinHookData = {
+    body: PinSkillRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/pin';
+};
+
+export type PinHookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type PinHookError = PinHookErrors[keyof PinHookErrors];
+
+export type PinHookResponses = {
+    /**
+     * OK
+     */
+    200: HookEntry;
+};
+
+export type PinHookResponse = PinHookResponses[keyof PinHookResponses];
+
+export type SetHookAudienceData = {
+    body: SetAudienceRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/audience';
+};
+
+export type SetHookAudienceErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetHookAudienceError = SetHookAudienceErrors[keyof SetHookAudienceErrors];
+
+export type SetHookAudienceResponses = {
+    /**
+     * OK
+     */
+    200: HookEntry;
+};
+
+export type SetHookAudienceResponse = SetHookAudienceResponses[keyof SetHookAudienceResponses];
+
+export type ListHookAssignmentsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/assignments';
+};
+
+export type ListHookAssignmentsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListHookAssignmentsError = ListHookAssignmentsErrors[keyof ListHookAssignmentsErrors];
+
+export type ListHookAssignmentsResponses = {
+    /**
+     * OK
+     */
+    200: AssignmentList;
+};
+
+export type ListHookAssignmentsResponse = ListHookAssignmentsResponses[keyof ListHookAssignmentsResponses];
+
+export type ClearHookAssignmentData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/assignments/{memberId}';
+};
+
+export type ClearHookAssignmentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ClearHookAssignmentError = ClearHookAssignmentErrors[keyof ClearHookAssignmentErrors];
+
+export type ClearHookAssignmentResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type ClearHookAssignmentResponse = ClearHookAssignmentResponses[keyof ClearHookAssignmentResponses];
+
+export type SetHookAssignmentData = {
+    body: SetAssignmentRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/hooks/{name}/assignments/{memberId}';
+};
+
+export type SetHookAssignmentErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetHookAssignmentError = SetHookAssignmentErrors[keyof SetHookAssignmentErrors];
+
+export type SetHookAssignmentResponses = {
+    /**
+     * OK
+     */
+    200: Assignment;
+};
+
+export type SetHookAssignmentResponse = SetHookAssignmentResponses[keyof SetHookAssignmentResponses];
 
 export type GetHookDeliveryData = {
     body?: never;
@@ -18857,12 +27033,118 @@ export type GetHookDeliveryResponses = {
     /**
      * OK
      */
-    200: {
-        hooks: Array<Hook>;
-    };
+    200: HookManifest;
 };
 
 export type GetHookDeliveryResponse = GetHookDeliveryResponses[keyof GetHookDeliveryResponses];
+
+export type GetMemberHookDeliveryData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's id
+         */
+        memberId: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{memberId}/hook-delivery';
+};
+
+export type GetMemberHookDeliveryErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetMemberHookDeliveryError = GetMemberHookDeliveryErrors[keyof GetMemberHookDeliveryErrors];
+
+export type GetMemberHookDeliveryResponses = {
+    /**
+     * OK
+     */
+    200: HookManifest;
+};
+
+export type GetMemberHookDeliveryResponse = GetMemberHookDeliveryResponses[keyof GetMemberHookDeliveryResponses];
+
+export type DownloadHookData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The hook's name: 1 to 64 lowercase letters, digits and single hyphens
+         */
+        name: string;
+        /**
+         * A version label: 1 to 64 characters `[0-9A-Za-z][0-9A-Za-z.+_-]*`, case-sensitive
+         */
+        version: string;
+    };
+    query?: never;
+    url: '/api/v1/hook-delivery/{name}/{version}';
+};
+
+export type DownloadHookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type DownloadHookError = DownloadHookErrors[keyof DownloadHookErrors];
+
+export type DownloadHookResponses = {
+    /**
+     * OK
+     */
+    200: HookArtifact;
+};
+
+export type DownloadHookResponse = DownloadHookResponses[keyof DownloadHookResponses];
 
 export type ListWebhooksData = {
     body?: never;
@@ -18906,19 +27188,13 @@ export type ListWebhooksResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<Webhook>;
-        next?: string;
-    };
+    200: WebhookList;
 };
 
 export type ListWebhooksResponse = ListWebhooksResponses[keyof ListWebhooksResponses];
 
 export type CreateWebhookData = {
-    body: {
-        url: string;
-        events: Array<string>;
-    };
+    body: CreateWebhookRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -18957,9 +27233,9 @@ export type CreateWebhookError = CreateWebhookErrors[keyof CreateWebhookErrors];
 
 export type CreateWebhookResponses = {
     /**
-     * OK
+     * Created
      */
-    201: Webhook;
+    201: CreatedWebhook;
 };
 
 export type CreateWebhookResponse = CreateWebhookResponses[keyof CreateWebhookResponses];
@@ -19013,7 +27289,7 @@ export type DeleteWebhookResponses = {
 
 export type DeleteWebhookResponse = DeleteWebhookResponses[keyof DeleteWebhookResponses];
 
-export type ListWebhookDeliveriesData = {
+export type GetWebhookData = {
     body?: never;
     headers?: {
         /**
@@ -19025,6 +27301,109 @@ export type ListWebhookDeliveriesData = {
         id: string;
     };
     query?: never;
+    url: '/api/v1/webhooks/{id}';
+};
+
+export type GetWebhookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetWebhookError = GetWebhookErrors[keyof GetWebhookErrors];
+
+export type GetWebhookResponses = {
+    /**
+     * OK
+     */
+    200: Webhook;
+};
+
+export type GetWebhookResponse = GetWebhookResponses[keyof GetWebhookResponses];
+
+export type UpdateWebhookData = {
+    body: UpdateWebhookRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/webhooks/{id}';
+};
+
+export type UpdateWebhookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UpdateWebhookError = UpdateWebhookErrors[keyof UpdateWebhookErrors];
+
+export type UpdateWebhookResponses = {
+    /**
+     * OK
+     */
+    200: Webhook;
+};
+
+export type UpdateWebhookResponse = UpdateWebhookResponses[keyof UpdateWebhookResponses];
+
+export type ListWebhookDeliveriesData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: {
+        /**
+         * 1 to 200, 50 by default.
+         */
+        limit?: number;
+    };
     url: '/api/v1/webhooks/{id}/deliveries';
 };
 
@@ -19057,14 +27436,112 @@ export type ListWebhookDeliveriesResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<{
-            [key: string]: unknown;
-        }>;
-    };
+    200: WebhookDeliveryList;
 };
 
 export type ListWebhookDeliveriesResponse = ListWebhookDeliveriesResponses[keyof ListWebhookDeliveriesResponses];
+
+export type TestWebhookData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/webhooks/{id}/test';
+};
+
+export type TestWebhookErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    429: ApiError;
+};
+
+export type TestWebhookError = TestWebhookErrors[keyof TestWebhookErrors];
+
+export type TestWebhookResponses = {
+    /**
+     * Queued
+     */
+    202: WebhookDelivery;
+};
+
+export type TestWebhookResponse = TestWebhookResponses[keyof TestWebhookResponses];
+
+export type RotateWebhookSecretData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/webhooks/{id}/rotate-secret';
+};
+
+export type RotateWebhookSecretErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type RotateWebhookSecretError = RotateWebhookSecretErrors[keyof RotateWebhookSecretErrors];
+
+export type RotateWebhookSecretResponses = {
+    /**
+     * OK
+     */
+    200: CreatedWebhook;
+};
+
+export type RotateWebhookSecretResponse = RotateWebhookSecretResponses[keyof RotateWebhookSecretResponses];
 
 export type ListAuditData = {
     body?: never;
@@ -19140,9 +27617,22 @@ export type StreamEventsData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * The `seq` of the last event handled; wins over `after`.
+         */
+        'Last-Event-ID'?: string;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * The `seq` of the last event handled (0 replays every retained event).
+         */
+        after?: number;
+        /**
+         * Comma-separated event types to keep.
+         */
+        types?: string;
+    };
     url: '/api/v1/events';
 };
 
@@ -19179,59 +27669,6 @@ export type StreamEventsResponses = {
 };
 
 export type StreamEventsResponse = StreamEventsResponses[keyof StreamEventsResponses];
-
-export type ListEventsData = {
-    body?: never;
-    headers?: {
-        /**
-         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
-         */
-        'Ostrom-Org'?: string;
-    };
-    path?: never;
-    query?: {
-        since?: string;
-    };
-    url: '/api/v1/events/history';
-};
-
-export type ListEventsErrors = {
-    /**
-     * A refusal
-     */
-    400: ApiError;
-    /**
-     * A refusal
-     */
-    401: ApiError;
-    /**
-     * A refusal
-     */
-    403: ApiError;
-    /**
-     * A refusal
-     */
-    404: ApiError;
-    /**
-     * A refusal
-     */
-    409: ApiError;
-};
-
-export type ListEventsError = ListEventsErrors[keyof ListEventsErrors];
-
-export type ListEventsResponses = {
-    /**
-     * OK
-     */
-    200: {
-        items: Array<{
-            [key: string]: unknown;
-        }>;
-    };
-};
-
-export type ListEventsResponse = ListEventsResponses[keyof ListEventsResponses];
 
 export type StartAnalysisData = {
     body?: never;
