@@ -160,7 +160,10 @@ jobs:
           # The server's non-root user writes the mails (0644); the journeys, as the runner's user, read them.
           mkdir -p "$RUNNER_TEMP/ostrom-mail" && chmod 0777 "$RUNNER_TEMP/ostrom-mail"
           # Test values only: Stripe is stripe-mock, sign-in mails are written to a directory, the console is
-          # `vite preview` on localhost:4173, which proxies /api to the server.
+          # `vite preview` on localhost:4173, which proxies /api to the server. That proxy, on this runner's loopback, is
+          # trusted for X-Forwarded-For: each person of the journeys signs in from an address of their own
+          # (e2e-real/real.ts), so sixty sign-ins from one machine do not trip the per-source limit; the read limits are
+          # raised for a journey's bursts (the server's own console-journey.yml sets the same).
           docker run -d --name ostrom-server --network host \
             -v "$RUNNER_TEMP/ostrom-mail:/var/lib/ostrom/mail" \
             -e OSTROM_DATABASE_URL="$APP_URL" -e OSTROM_PORT=4600 \
@@ -168,6 +171,9 @@ jobs:
             -e OSTROM_PUBLIC_URL=http://localhost:4173 -e OSTROM_CONSOLE_URL=http://localhost:4173 \
             -e OSTROM_STRIPE_SECRET_KEY=sk_test_web_e2e -e OSTROM_STRIPE_WEBHOOK_SECRET=whsec_web_e2e \
             -e OSTROM_STRIPE_API_BASE=http://127.0.0.1:12111 \
+            -e OSTROM_SIGNUP=open -e OSTROM_WEB_ORIGIN=http://localhost:4173 \
+            -e OSTROM_READS_PER_MINUTE=6000 -e OSTROM_READS_IN_FLIGHT=64 -e OSTROM_READ_WAITS_IN_FLIGHT=256 \
+            -e OSTROM_TRUSTED_PROXIES=127.0.0.1/32,::1/128 \
             "$IMAGE"
           for i in $(seq 1 60); do curl -fsS localhost:4600/ready >/dev/null 2>&1 && exit 0; sleep 1; done
           docker logs ostrom-server; exit 1
