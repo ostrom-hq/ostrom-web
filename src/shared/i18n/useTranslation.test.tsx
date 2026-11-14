@@ -25,6 +25,22 @@ describe('useTranslation', () => {
     expect(screen.getByRole('heading').textContent).toBe(en.app.loading);
   });
 
+  it('does not render again for words of a language that is not shown', () => {
+    let renders = 0;
+    function Counted(): ReactElement {
+      renders += 1;
+      const { t } = useTranslation();
+      return <p>{t('app.loading')}</p>;
+    }
+    const { unmount } = render(<Counted />);
+    const before = renders;
+    act(() => {
+      i18n.addResourceBundle('fr', {});
+    });
+    expect(renders).toBe(before);
+    unmount();
+  });
+
   it('renders again when words are added', () => {
     function Added(): ReactElement {
       const { t } = useTranslation();
