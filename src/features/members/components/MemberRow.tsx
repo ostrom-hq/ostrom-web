@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { OrgMember } from '@gen/api/types.gen';
-import { type ReactElement, useId } from 'react';
+import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { displayName } from '../model';
+import { concurrencyDraft, displayName, MAX_MEMBER_CONCURRENCY } from '../model';
 
 export interface MemberRowProps {
   readonly member: OrgMember;
@@ -19,6 +19,60 @@ export interface MemberRowProps {
   readonly isViewer: boolean;
   /** The member's todo Stop hook switch, for an administrator where the server has todos. */
   readonly stopHook?: StopHookSwitch | undefined;
+  /** The member's concurrent requests, for an administrator where the server has the admission queue. */
+  readonly concurrency?: ConcurrencyField | undefined;
+}
+
+export interface ConcurrencyField {
+  /** 0 for unlimited. */
+  readonly limit: number;
+  readonly saving: boolean;
+  /** The id of the sentence that says what the field does, written once for the list. */
+  readonly hintId: string;
+  readonly onChange: (limit: number) => void;
+}
+
+/**
+ * TeamCode's "Concurrent requests (0 = unlimited)", saved when the field is left (or Enter): a value out of 0 to 32
+ * goes back to the one saved.
+ */
+function ConcurrencyInput({
+  name,
+  field,
+}: {
+  readonly name: string;
+  readonly field: ConcurrencyField;
+}): ReactElement {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(String(field.limit));
+  return (
+    // One label around the field, as the Stop hook's: a hundred people stay within the page's budget of DOM nodes.
+    <label className="o-inline">
+      {t('members.list.concurrency')}
+      <input
+        type="number"
+        className="o-input"
+        min={0}
+        max={MAX_MEMBER_CONCURRENCY}
+        step={1}
+        value={draft}
+        disabled={field.saving}
+        aria-label={t('members.list.concurrencyOf', { name })}
+        aria-describedby={field.hintId}
+        onChange={(event) => {
+          setDraft(event.target.value);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+        }}
+        onBlur={() => {
+          const limit = concurrencyDraft(draft);
+          if (limit !== undefined && limit !== field.limit) field.onChange(limit);
+          else setDraft(String(field.limit));
+        }}
+      />
+    </label>
+  );
 }
 
 export interface StopHookSwitch {
@@ -37,6 +91,7 @@ export function MemberRow({
   saving,
   isViewer,
   stopHook,
+  concurrency,
 }: MemberRowProps): ReactElement {
   const { t } = useTranslation();
   const selectId = useId();
@@ -69,6 +124,10 @@ export function MemberRow({
             />
             {t('members.list.todoHook')}
           </label>
+        )}
+        {concurrency === undefined ? null : (
+          // A saved limit starts the field again from it.
+          <ConcurrencyInput key={concurrency.limit} name={name} field={concurrency} />
         )}
       </span>
       <span className="o-row__end o-inline">

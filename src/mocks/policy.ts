@@ -110,6 +110,10 @@ export function createPolicyHandlers(
           ? {}
           : { openrouterKeySecret: body.data.openrouterKeySecret }),
         useSharedAccounts: body.data.useSharedAccounts,
+        // As the server: the members' limits are written with the rest, absent for none.
+        ...(body.data.memberConcurrency === undefined
+          ? {}
+          : { memberConcurrency: body.data.memberConcurrency }),
       };
       state().inferenceSettings[organization.id] = saved;
       return HttpResponse.json(saved);

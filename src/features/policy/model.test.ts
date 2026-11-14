@@ -115,6 +115,15 @@ describe('the provider keys', () => {
     expect(settingsOf({ anthropic: ' ', openai: '', openrouter: '', shared: true })).toEqual({
       useSharedAccounts: true,
     });
+    // Written whole: the members' concurrent requests read with the keys go back with them.
+    expect(settingsOf(draft, { memberConcurrency: { m1: 4 } })).toEqual({
+      anthropicKeySecret: 'A',
+      openaiKeySecret: 'O',
+      openrouterKeySecret: 'R',
+      useSharedAccounts: false,
+      memberConcurrency: { m1: 4 },
+    });
+    expect(settingsOf(draft, {})).not.toHaveProperty('memberConcurrency');
   });
 
   it('offers the organization’s secrets only, sorted', () => {

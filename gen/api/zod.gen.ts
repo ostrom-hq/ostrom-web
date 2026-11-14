@@ -1419,7 +1419,8 @@ export const zInferenceSettings = z.object({
     anthropicKeySecret: z.optional(z.string()),
     openaiKeySecret: z.optional(z.string()),
     openrouterKeySecret: z.optional(z.string()),
-    useSharedAccounts: z._default(z.optional(z.boolean()), true)
+    useSharedAccounts: z._default(z.optional(z.boolean()), true),
+    memberConcurrency: z.optional(z.record(z.string(), z.int().check(z.gte(0), z.lte(32))))
 });
 
 /**
