@@ -2,9 +2,9 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
-import { setupMockApp, visit } from '@/test/mockApp';
+import { setupMockApp, TEST_API, visit } from '@/test/mockApp';
 
 const { server, db } = setupMockApp();
 
@@ -23,9 +23,9 @@ describe('the hosted commands of the MCP screen', () => {
     expect(shared).toHaveTextContent('3 starts · 0 failures · Cold start 1840 ms · 96 MiB');
     const notes = await findProcess('notes · theo');
     expect(notes).toHaveTextContent('Backing off');
-    expect(notes).toHaveTextContent('Last failure crashed');
+    expect(notes).toHaveTextContent('Last failure it crashed');
     expect(notes).toHaveTextContent('Exit code 1');
-    expect(within(notes).getByLabelText('End of the error output of notes')).toHaveTextContent(
+    expect(within(notes).getByLabelText('End of the error output of notes · theo')).toHaveTextContent(
       'ModuleNotFoundError',
     );
   });
@@ -34,7 +34,7 @@ describe('the hosted commands of the MCP screen', () => {
     const user = userEvent.setup();
     visit('/mcp');
     const notes = await findProcess('notes · theo');
-    await user.click(within(notes).getByRole('button', { name: 'Restart notes' }));
+    await user.click(within(notes).getByRole('button', { name: 'Restart notes · theo' }));
     const after = await findProcess('notes · theo');
     await within(after).findByText('Idle');
     expect(after).not.toHaveTextContent('Last failure');
@@ -46,10 +46,29 @@ describe('the hosted commands of the MCP screen', () => {
     db.signedInAt = 0;
     visit('/mcp');
     const notes = await findProcess('notes · theo');
-    await user.click(within(notes).getByRole('button', { name: 'Restart notes' }));
+    await user.click(within(notes).getByRole('button', { name: 'Restart notes · theo' }));
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('This change needs a sign-in less than five minutes old.');
     expect(within(alert).getByRole('link', { name: 'Sign in again' })).toBeInTheDocument();
+  });
+
+  it('does not show another organization the processes of this one', async () => {
+    db.otherOrganizations = [otherOrganization()];
+    const other = await fetch(`${TEST_API}/api/v1/mcp/hosted`, {
+      headers: { 'Ostrom-Org': otherOrganization().id },
+    });
+    expect(await other.text()).not.toContain('filesystem');
+  });
+
+  it('keeps the section on a 409 that is not "no host"', async () => {
+    server.use(
+      http.get('*/api/v1/mcp/hosted', () =>
+        HttpResponse.json({ error: { type: 'mcp_hosted_too_many', message: 'too many' } }, { status: 409 }),
+      ),
+    );
+    visit('/mcp');
+    const section = await screen.findByRole('region', { name: 'Hosted commands' });
+    expect(await within(section).findByText('too many')).toBeInTheDocument();
   });
 
   it('says when the host did not answer', async () => {
@@ -99,7 +118,7 @@ describe('the hosted commands of the MCP screen', () => {
     const card = (await screen.findByRole('heading', { level: 3, name: 'notes' })).closest('article');
     if (card === null) throw new Error('no card');
     expect(card).toHaveTextContent('Failed');
-    expect(card).toHaveTextContent('Last failure start_failed');
+    expect(card).toHaveTextContent('Last failure it did not start');
     expect(screen.queryByRole('region', { name: 'Hosted commands' })).toBeNull();
   });
 });

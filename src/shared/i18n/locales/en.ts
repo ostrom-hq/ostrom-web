@@ -1047,6 +1047,11 @@ export const en = {
         backoff: 'Backing off',
         unknown: 'Unknown',
       },
+      failureCode: {
+        start_failed: 'it did not start',
+        crashed: 'it crashed',
+        timeout: 'it timed out',
+      },
       failure: 'Last failure {{failure}}',
       starts_one: '{{count}} start',
       starts_other: '{{count}} starts',

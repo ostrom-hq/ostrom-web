@@ -236,6 +236,10 @@ describe('the hosted process states', () => {
   });
 
   it('writes the memory in MiB, then in GiB', () => {
-    expect([formatMemory(96 * 1024 * 1024), formatMemory(1536 * 1024 * 1024)]).toEqual(['96 MiB', '1.5 GiB']);
+    expect([
+      formatMemory(96 * 1024 * 1024),
+      formatMemory(1536 * 1024 * 1024),
+      formatMemory(1073000000),
+    ]).toEqual(['96 MiB', '1.5 GiB', '1023 MiB']);
   });
 });

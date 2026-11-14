@@ -18,7 +18,11 @@ export function HostedState({
     <>
       <Badge tone={hostedTone(known)}>{t(`tools.hosted.state.${known}`)}</Badge>
       {failure === undefined ? null : (
-        <span className="o-row__meta">{t('tools.hosted.failure', { failure })}</span>
+        <span className="o-row__meta">
+          {t('tools.hosted.failure', {
+            failure: t(`tools.hosted.failureCode.${failure}`, { defaultValue: failure }),
+          })}
+        </span>
       )}
     </>
   );

@@ -230,6 +230,6 @@ export function hostedTone(state: HostedState): 'success' | 'danger' | 'warning'
 
 /** Resident memory as a person reads it: 96 MiB, 1.5 GiB. */
 export function formatMemory(bytes: number): string {
-  const mib = bytes / (1024 * 1024);
-  return mib >= 1024 ? `${(mib / 1024).toFixed(1)} GiB` : `${String(Math.round(mib))} MiB`;
+  const mib = Math.round(bytes / (1024 * 1024));
+  return mib >= 1024 ? `${(bytes / 1024 ** 3).toFixed(1)} GiB` : `${String(mib)} MiB`;
 }

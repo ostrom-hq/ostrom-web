@@ -1073,6 +1073,11 @@ export const fr = {
         backoff: 'En attente',
         unknown: 'Inconnu',
       },
+      failureCode: {
+        start_failed: 'il n’a pas démarré',
+        crashed: 'il a planté',
+        timeout: 'délai dépassé',
+      },
       failure: 'Dernier échec {{failure}}',
       starts_one: '{{count}} démarrage',
       starts_other: '{{count}} démarrages',

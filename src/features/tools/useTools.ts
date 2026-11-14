@@ -208,6 +208,9 @@ export function useSecretChange(): SecretChangeViewModel {
   };
 }
 
+/** The host's states move (a start, a backoff): read them again every so often while the screen is open. */
+export const HOSTED_POLL_MS = 15_000;
+
 export interface McpHostedViewModel {
   readonly processes: readonly McpHostedProcess[] | undefined;
   /** False when the MCP host did not answer: the states are then the ones last recorded. */
@@ -217,7 +220,9 @@ export interface McpHostedViewModel {
 
 /** The hosted stdio processes, read live from the host; an administrator's view. */
 export function useMcpHosted(): McpHostedViewModel {
-  const hosted = useQuery(ready(listMcpHostedProcessesOptions(), { retry: false }));
+  const hosted = useQuery(
+    ready(listMcpHostedProcessesOptions(), { retry: false, refetchInterval: HOSTED_POLL_MS }),
+  );
   return {
     processes: hosted.data?.items,
     hostReachable: hosted.data?.hostReachable,
@@ -238,7 +243,7 @@ export function useMcpRestart(): McpRestartViewModel {
   const mutation = useMutation({
     ...restartMcpHostedProcessMutation(),
     onSettled: async () => {
-      await invalidate([listMcpHostedProcessesQueryKey()]);
+      await invalidate([listMcpHostedProcessesQueryKey(), listMcpServersQueryKey()]);
     },
   });
   const { mutate } = mutation;

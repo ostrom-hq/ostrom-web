@@ -53,16 +53,9 @@ export function createMcpHostedHandlers(
       const process = state().mcpHosted[index];
       if (process === undefined) return refusal(404, 'not_found', 'No such hosted process.');
       // A restart lifts the failure: the process is idle until the next call starts it.
-      state().mcpHosted[index] = {
-        server: process.server,
-        launcher: process.launcher,
-        package: process.package,
-        starts: process.starts,
-        failures: process.failures,
-        state: 'idle',
-        ...(process.member === undefined ? {} : { member: process.member }),
-        ...(process.memberName === undefined ? {} : { memberName: process.memberName }),
-      };
+      const lifted: McpHostedProcess = { ...process, state: 'idle' };
+      delete lifted.failure;
+      state().mcpHosted[index] = lifted;
       return new HttpResponse(null, { status: 204 });
     }),
   ];

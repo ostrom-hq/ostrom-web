@@ -40,6 +40,8 @@ export function HostedProcesses(): ReactElement | null {
           ) : (
             <ul className="o-card o-rows">
               {processes.map((process) => {
+                const who = process.memberName ?? process.member;
+                const label = who === undefined ? process.server : `${process.server} · ${who}`;
                 const key = `${process.server}/${process.member ?? ''}`;
                 const busy =
                   restart.pending?.server === process.server && restart.pending.member === process.member;
@@ -70,7 +72,7 @@ export function HostedProcesses(): ReactElement | null {
                       {process.stderr === undefined || process.stderr === '' ? null : (
                         <pre
                           className="tl-stderr o-mono"
-                          aria-label={t('tools.hosted.stderr', { server: process.server })}
+                          aria-label={t('tools.hosted.stderr', { server: label })}
                         >
                           {process.stderr}
                         </pre>
@@ -79,11 +81,11 @@ export function HostedProcesses(): ReactElement | null {
                     <span className="o-inline">
                       <HostedState state={process.state} failure={process.failure} />
                       <Button
-                        disabled={restart.pending !== undefined}
+                        disabled={restart.pending !== undefined || view.hostReachable === false}
                         onClick={() => {
                           restart.restart(process);
                         }}
-                        aria-label={t('tools.hosted.restartOf', { server: process.server })}
+                        aria-label={t('tools.hosted.restartOf', { server: label })}
                       >
                         {busy ? t('tools.hosted.restarting') : t('tools.hosted.restart')}
                       </Button>
@@ -100,5 +102,5 @@ export function HostedProcesses(): ReactElement | null {
 }
 
 function isConflict(failure: Error): boolean {
-  return isApiFailure(failure) && failure.status === 409;
+  return isApiFailure(failure) && failure.status === 409 && failure.code === 'conflict';
 }
