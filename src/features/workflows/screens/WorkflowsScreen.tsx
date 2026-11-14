@@ -34,7 +34,7 @@ export function WorkflowsScreen(): ReactElement {
                 <section className="o-stack" aria-label={t('workflows.list.rejectedTitle')}>
                   <h2 className="o-label">{t('workflows.list.rejectedTitle')}</h2>
                   <p className="o-screen__lead">{t('workflows.list.rejectedLead')}</p>
-                  <WorkflowRows workflows={rejected} grey />
+                  <WorkflowRows workflows={rejected} />
                 </section>
               )}
             </>
@@ -45,20 +45,14 @@ export function WorkflowsScreen(): ReactElement {
   );
 }
 
-/** The workflows as rows; a rejected one is greyed, and leads to its page all the same (to delete it). */
-function WorkflowRows({
-  workflows,
-  grey = false,
-}: {
-  readonly workflows: readonly Workflow[];
-  readonly grey?: boolean;
-}): ReactElement {
+/** The workflows as rows; a rejected one leads to its page all the same (to delete it). */
+function WorkflowRows({ workflows }: { readonly workflows: readonly Workflow[] }): ReactElement {
   const { t } = useTranslation();
   const enumText = useEnumLabel();
   return (
     <ul className="o-card o-rows">
       {workflows.map((workflow) => (
-        <li key={workflow.id} className={grey ? 'wf-rejected' : undefined}>
+        <li key={workflow.id}>
           <Link className="o-row" to="/workflows/$workflowId" params={{ workflowId: workflow.id }}>
             <span className="o-row__main">
               <span className="o-row__title">{workflow.name}</span>
