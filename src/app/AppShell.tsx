@@ -15,8 +15,12 @@ import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
 
 // Analytics is not needed to paint the console: it loads once the first paint is done.
-const AnalyticsLayer = lazy(async () => import('@/app/AnalyticsLayer').then((m) => ({ default: m.AnalyticsLayer })));
-const FooterPrivacy = lazy(async () => import('@/app/AnalyticsLayer').then((m) => ({ default: m.FooterPrivacy })));
+const AnalyticsLayer = lazy(async () =>
+  import('@/app/AnalyticsLayer').then((m) => ({ default: m.AnalyticsLayer })),
+);
+const FooterPrivacy = lazy(async () =>
+  import('@/app/AnalyticsLayer').then((m) => ({ default: m.FooterPrivacy })),
+);
 
 /** True from the first frame after the first paint. */
 function useAfterFirstPaint(): boolean {

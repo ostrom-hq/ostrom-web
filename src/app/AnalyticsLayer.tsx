@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import type { ReactElement } from 'react';
 import {
   analytics,
@@ -13,7 +14,9 @@ import {
 export function AnalyticsLayer({ pathname }: { pathname: string }): ReactElement {
   const consent = useConsentStore((state) => state.status);
   usePageViews(analytics, pathname, consent);
-  return <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />;
+  return (
+    <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />
+  );
 }
 
 /** The footer's privacy choice. */
