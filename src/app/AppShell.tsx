@@ -14,12 +14,18 @@ import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
 
-// Analytics is not needed to paint the console: it loads once the first paint is done.
+// Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
+// (offline, blocked) leaves the console without it: nothing shows, nothing breaks.
+const NOTHING = (): null => null;
 const AnalyticsLayer = lazy(async () =>
-  import('@/app/AnalyticsLayer').then((m) => ({ default: m.AnalyticsLayer })),
+  import('@/app/AnalyticsLayer')
+    .then((m) => ({ default: m.AnalyticsLayer }))
+    .catch(() => ({ default: NOTHING })),
 );
 const FooterPrivacy = lazy(async () =>
-  import('@/app/AnalyticsLayer').then((m) => ({ default: m.FooterPrivacy })),
+  import('@/app/AnalyticsLayer')
+    .then((m) => ({ default: m.FooterPrivacy }))
+    .catch(() => ({ default: NOTHING })),
 );
 
 /** True from the first frame after the first paint. */
