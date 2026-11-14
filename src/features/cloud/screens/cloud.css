@@ -49,3 +49,23 @@
 .cl-access__failure {
   color: var(--danger-text);
 }
+/* The preparation recipe, folded away until someone needs it. */
+.cl-recipe > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.cl-recipe > .o-stack {
+  margin-top: var(--space-3);
+}
+.cl-recipe__lead {
+  margin: 0;
+  color: var(--text-muted);
+}
+.cl-recipe__problem,
+.cl-session__failure {
+  margin: 0;
+  color: var(--danger-text);
+}
+.cl-session__failure {
+  display: block;
+}

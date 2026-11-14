@@ -3450,7 +3450,7 @@ export type McpServer = {
      */
     url?: string;
     /**
-     * http, sse or stdio
+     * http or stdio (a request naming another transport, `sse` included, is a 400)
      */
     transport: string;
     /**
@@ -3802,7 +3802,7 @@ export type OrgEvent = {
      */
     seq: number;
     /**
-     * The event type, also the SSE `event:` field (`cloud.wait.created`); an open list. Planned, until ostrom-server publishes them: the hosted MCP commands (TeamCode's `mcp.stdio.*`, a hosted stdio server's process, see `GET /api/v1/mcp/hosted`) publish, with the subject `mcp`: `mcp.stdio.failed`, a process starts failing (`failed` or `backoff`), once per failure streak (retries, `failed` becoming `backoff` and an expired backoff stay in it until a start succeeds), with `data` `{server, memberId?, state, failure}`; `mcp.stdio.recovered`, the process is `ready` again after a failure, with the same `data`, `failure` naming what it recovered from; and `mcp.unreachable`, the state sweep could not reach the MCP host (or the host refused it) while the organization has hosted servers, at most one every ten minutes, with `data` `{reason}` (`unreachable`, no answer, or `refused`, another token or protocol version). `subjectId` is the server's name, followed by `/` and the member's id for a per-member process, and empty for `mcp.unreachable`. A per-member process's events belong to its member (`memberId`); a shared process's and `mcp.unreachable` belong to nobody (the event's `memberId` is absent, and so is `data.memberId`), so only owners and administrators see them (a webhook receives all of them). None carries a secret, an argument or an output. They follow the transition by up to a minute (the sweep runs once a minute): a failure that recovers between two sweeps is not seen
+     * The event type, also the SSE `event:` field (`cloud.wait.created`); an open list. The hosted MCP commands (TeamCode's `mcp.stdio.*`, a hosted stdio server's process, see `GET /api/v1/mcp/hosted`) publish, with the subject `mcp`: `mcp.stdio.failed`, a process starts failing (`failed` or `backoff`), once per failure streak (retries, `failed` becoming `backoff` and an expired backoff stay in it until a start succeeds), with `data` `{server, memberId?, state, failure}`; `mcp.stdio.recovered`, the process is `ready` again after a failure, with the same `data`, `failure` naming what it recovered from; and `mcp.unreachable`, the state sweep could not reach the MCP host (or the host refused it) while the organization has hosted servers, at most one every ten minutes, with `data` `{reason}` (`unreachable`, no answer, or `refused`, another token or protocol version). `subjectId` is the server's name, followed by `/` and the member's id for a per-member process, and empty for `mcp.unreachable`. A per-member process's events belong to its member (`memberId`); a shared process's and `mcp.unreachable` belong to nobody (the event's `memberId` is absent, and so is `data.memberId`), so only owners and administrators see them (a webhook receives all of them). None carries a secret, an argument or an output. They follow the transition by up to a minute (the sweep runs once a minute): a failure that recovers between two sweeps is not seen
      */
     type: string;
     /**
@@ -7062,7 +7062,7 @@ export type McpServerWritable = {
      */
     url?: string;
     /**
-     * http, sse or stdio
+     * http or stdio (a request naming another transport, `sse` included, is a 400)
      */
     transport: string;
     /**
@@ -16184,7 +16184,7 @@ export type WaitsMcpData = {
     path?: never;
     query?: {
         /**
-         * The session the agent runs in
+         * The session the agent runs in; a cloud session's agent token is confined to its cloud session whatever it names, and needs none (planned)
          */
         session?: string;
         /**
@@ -16242,7 +16242,7 @@ export type WakeWaitsData = {
     path?: never;
     query: {
         /**
-         * The session the agent runs in: any of its segments
+         * The session the agent runs in: any of its segments (planned: a cloud session's agent token needs none)
          */
         session: string;
     };

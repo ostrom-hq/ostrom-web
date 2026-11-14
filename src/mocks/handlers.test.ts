@@ -498,9 +498,9 @@ describe('mock receipts', () => {
 });
 
 describe('mock members', () => {
-  it('still lists the members by id for the screens that share with them', async () => {
-    const members = await listMembers({ throwOnError: true });
-    expect(members.data.items.map((member) => member.login)).toContain('samir');
+  it('does not serve the planned /members, as the server does: the screens read /orgs/{org}/members', async () => {
+    const error = await failureOf(async () => listMembers({ throwOnError: true }));
+    expect(isApiFailure(error) && error.kind).toBe('not-found');
   });
 });
 
@@ -1060,6 +1060,48 @@ describe('mock cloud agents and automations', () => {
       (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
     ).toHaveLength(5);
     expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(8);
+  });
+
+  it('keeps the recipe and the repository of a session, and never takes both', async () => {
+    const environment = {
+      repositories: [{ url: 'https://github.com/acme/web' }],
+      setup: { start: ['make dev'] },
+    };
+    const recipe = await createCloudSession({ body: { agent: 'claude', environment }, throwOnError: true });
+    expect(recipe.data.environment).toEqual(environment);
+    const legacy = await createCloudSession({
+      body: { agent: 'claude', repo: 'https://github.com/acme/web', ref: 'main' },
+      throwOnError: true,
+    });
+    expect(legacy.data).toMatchObject({ repo: 'https://github.com/acme/web', ref: 'main' });
+    expect(legacy.data.environment).toBeUndefined();
+    // A recipe without repositories goes with the older repository.
+    const together = await createCloudSession({
+      body: {
+        agent: 'claude',
+        repo: 'https://github.com/acme/web',
+        environment: { requireGitHub: true, setup: { create: ['make deps'] } },
+      },
+      throwOnError: true,
+    });
+    expect(together.data.environment).toEqual({ requireGitHub: true, setup: { create: ['make deps'] } });
+    const named = await createCloudSession({
+      body: { agent: 'claude', environment: { requiredVariables: ['NPM_TOKEN'] } },
+      throwOnError: true,
+    });
+    expect(named.data.environment).toEqual({ requiredVariables: ['NPM_TOKEN'] });
+    const both = await fetch('http://ostrom.test/api/v1/cloud/sessions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ agent: 'claude', repo: 'https://github.com/acme/api', environment }),
+    });
+    expect(both.status).toBe(400);
+    expect(await both.json()).toEqual({
+      error: {
+        type: 'invalid_request',
+        message: 'Name the repositories in the environment, or repo, not both.',
+      },
+    });
   });
 
   it('stops a live session for its owner or a manager, not an ended one or another member', async () => {

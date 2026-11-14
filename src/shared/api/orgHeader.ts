@@ -22,7 +22,7 @@ const ORG_FREE: readonly RegExp[] = [
   // A link a person follows from GitHub or from a wait's message: the secret in it says the organization.
   /^\/api\/v1\/github\/link\/callback$/,
   /^\/api\/v1\/waits\/[^/]+\/event$/,
-  /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback)$/,
+  /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback|configuration)$/,
   /^\/api\/v1\/automations\/[^/]+(?:\/v\/[^/]+)?\/trigger$/,
   // The cloud runtime and its clusters are the instance's, for a person who administers it.
   /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,

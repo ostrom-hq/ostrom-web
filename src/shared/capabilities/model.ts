@@ -26,6 +26,7 @@ export const FEATURES = [
   'inference.queue.v1',
   'mcp.personal.v1',
   'notifications.push.v1',
+  'runners.cloud.environment.v1',
   'runners.cloud.github.v1',
   'runners.cloud.v1',
   'servicekeys.scopes.v1',

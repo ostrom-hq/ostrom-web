@@ -5,6 +5,8 @@ import { delay, http, HttpResponse } from 'msw';
 import { zCloudAgentKind, zCreateCloudSessionBody } from '@gen/api/zod.gen';
 import { knownValues } from '@/shared/lib/openEnum';
 import { setupMockApp, visit } from '@/test/mockApp';
+import { demoCapabilities } from '@/mocks/capabilities';
+import { FEATURES } from '@/shared/capabilities/model';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const { server, db, traffic } = setupMockApp();
@@ -467,5 +469,165 @@ describe('the automations', () => {
     db.automations = [];
     visit('/automations');
     expect(await screen.findByText('No automation yet.')).toBeInTheDocument();
+  });
+});
+
+describe('the preparation recipe of a cloud session', () => {
+  async function openRecipe(): Promise<HTMLElement> {
+    const user = userEvent.setup();
+    visit('/cloud');
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
+    await user.click(within(form).getByText('Preparation recipe'));
+    return form;
+  }
+
+  it('sends the recipe typed, then clears it with the form', async () => {
+    const user = userEvent.setup();
+    const sent: Promise<string>[] = [];
+    traffic.onRequest((request) => {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/api/v1/cloud/sessions')
+        sent.push(request.clone().text());
+    });
+    const form = await openRecipe();
+    await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Ship it');
+    await user.click(within(form).getByRole('button', { name: 'Add a repository' }));
+    const first = within(form).getByRole('group', { name: 'Repository 1' });
+    await user.type(within(first).getByRole('textbox', { name: 'Clone URL' }), 'https://github.com/acme/web');
+    await user.type(within(first).getByRole('textbox', { name: 'Directory' }), 'web');
+    await user.type(within(first).getByRole('textbox', { name: 'Branch, tag or commit' }), 'main');
+    await user.type(within(first).getByRole('textbox', { name: 'New branch' }), 'agent/ship');
+    await user.click(within(form).getByRole('button', { name: 'Add a repository' }));
+    const second = within(form).getByRole('group', { name: 'Repository 2' });
+    await user.type(
+      within(second).getByRole('textbox', { name: 'Clone URL' }),
+      'https://github.com/acme/api',
+    );
+    await user.type(within(form).getByRole('textbox', { name: 'Working directory' }), 'web');
+    await user.type(within(form).getByRole('textbox', { name: 'Required variables' }), 'NPM_TOKEN');
+    await user.type(
+      within(form).getByRole('textbox', { name: 'Setup commands, once per workspace (one a line)' }),
+      'pnpm install',
+    );
+    await user.type(
+      within(form).getByRole('textbox', { name: 'Setup commands, at every start (one a line)' }),
+      'pnpm dev',
+    );
+    await user.click(within(form).getByRole('checkbox', { name: 'Require a linked GitHub account' }));
+    await user.type(within(form).getByRole('textbox', { name: 'Git e-mail domain' }), 'acme.dev');
+    await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
+    expect(await screen.findByText('claude · cs-104')).toBeInTheDocument();
+    const bodies = await Promise.all(sent);
+    const body: unknown = JSON.parse(bodies.join(''));
+    expect(zCreateCloudSessionBody.parse(body).environment).toEqual({
+      repositories: [
+        { url: 'https://github.com/acme/web', path: 'web', ref: 'main', branch: 'agent/ship' },
+        { url: 'https://github.com/acme/api' },
+      ],
+      workingDirectory: 'web',
+      setup: { create: ['pnpm install'], start: ['pnpm dev'] },
+      requiredVariables: ['NPM_TOKEN'],
+      requireGitHub: true,
+      gitEmailDomain: 'acme.dev',
+    });
+    expect(db.cloudSessions[0]?.environment?.requiredVariables).toEqual(['NPM_TOKEN']);
+    expect(within(form).queryByRole('group', { name: 'Repository 1' })).toBeNull();
+    expect(within(form).getByRole('textbox', { name: 'Working directory' })).toHaveValue('');
+    // Typing a whole recipe takes a while on a loaded machine.
+  }, 30000);
+
+  it('says what the server would refuse before sending it, and the older repository goes alone', async () => {
+    const user = userEvent.setup();
+    const form = await openRecipe();
+    await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Ship it');
+    const start = within(form).getByRole('button', { name: 'Start the agent' });
+    await user.type(within(form).getByRole('textbox', { name: 'Repository' }), 'https://github.com/acme/web');
+    await user.click(within(form).getByRole('button', { name: 'Add a repository' }));
+    const first = within(form).getByRole('group', { name: 'Repository 1' });
+    await user.type(within(first).getByRole('textbox', { name: 'Clone URL' }), 'https://github.com/acme/api');
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      'Name the repositories in the recipe or in Repository above, not both.',
+    );
+    expect(start).toBeDisabled();
+    // Enter submits the form too: nothing is sent while the recipe is wrong.
+    fireEvent.submit(start.closest('form') ?? form);
+    await user.click(within(first).getByRole('button', { name: 'Remove repository 1' }));
+    expect(within(form).queryByRole('alert')).toBeNull();
+    await user.click(within(form).getByRole('button', { name: 'Add a repository' }));
+    await user.type(
+      within(within(form).getByRole('group', { name: 'Repository 1' })).getByRole('textbox', {
+        name: 'Clone URL',
+      }),
+      'git@github.com:acme/api',
+    );
+    await user.clear(within(form).getByRole('textbox', { name: 'Repository' }));
+    // Folded, the recipe still says why the agent cannot start: the message stands beside the button.
+    await user.click(within(form).getByText('Preparation recipe'));
+    expect(within(form).getByRole('textbox', { name: 'Working directory' })).not.toBeVisible();
+    expect(within(form).getByRole('alert')).toHaveTextContent(
+      'Use an https://github.com/<owner>/<name> clone URL',
+    );
+    expect(db.cloudSessions).toHaveLength(4);
+  });
+
+  it('adds at most the repositories the server takes', async () => {
+    const user = userEvent.setup();
+    const form = await openRecipe();
+    const add = within(form).getByRole('button', { name: 'Add a repository' });
+    for (let count = 0; count < 16; count += 1) await user.click(add);
+    expect(within(form).getAllByRole('group', { name: /^Repository / })).toHaveLength(16);
+    expect(add).toBeDisabled();
+  });
+
+  it('is not offered by a server without it, which gets the older single repository only', async () => {
+    server.use(
+      http.get('*/api/v1/capabilities', () =>
+        HttpResponse.json(
+          demoCapabilities(FEATURES.filter((feature) => feature !== 'runners.cloud.environment.v1')),
+        ),
+      ),
+    );
+    visit('/cloud');
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
+    await screen.findByText('Fix the flaky invoice test');
+    expect(within(form).queryByText('Preparation recipe')).toBeNull();
+  });
+
+  it('shows the phase a session is preparing, and what to do about a failed preparation', async () => {
+    db.cloudSessions = [
+      ...db.cloudSessions,
+      {
+        id: 'cs-retry',
+        name: 'Clone again',
+        owner: 'maya',
+        agent: 'claude',
+        status: 'paused',
+        phase: 'cloning_repositories',
+        failure: { code: 'preparation_failed', message: 'Cloning acme/web failed.', retryable: true },
+        createdAt: '2026-10-30T07:00:00.000Z',
+      },
+      {
+        id: 'cs-idle',
+        name: 'Idle',
+        owner: 'maya',
+        agent: 'claude',
+        status: 'paused',
+        phase: 'scheduling',
+        failure: { code: 'idle_timeout', message: 'Paused after 30 minutes without activity.' },
+        createdAt: '2026-10-30T07:00:00.000Z',
+      },
+    ];
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    expect(row('codex · cs-30')).toHaveTextContent('cloning the repositories');
+    expect(row('codex · cs-25')).toHaveTextContent(
+      'The required variable SENTRY_DSN is not assigned to samir. Trying again fails the same way: fix the recipe or your environment variables first.',
+    );
+    expect(row('Clone again')).toHaveTextContent(
+      'Cloning acme/web failed. This may pass on another try: resume the session to try again.',
+    );
+    expect(row('Idle')).toHaveTextContent('Paused after 30 minutes without activity.');
+    expect(row('Idle')).not.toHaveTextContent('scheduling');
+    expect(row('Clone again')).not.toHaveTextContent('cloning the repositories');
+    expect(row('Idle')).not.toHaveTextContent('try');
   });
 });

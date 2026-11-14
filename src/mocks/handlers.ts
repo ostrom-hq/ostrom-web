@@ -82,6 +82,7 @@ import type {
   AutomationDryRun,
   AutomationRun,
   Budget,
+  CloudEnvironment,
   CloudSession,
   Decision,
   McpCall,
@@ -484,6 +485,36 @@ const zBudgetWrite = z
   );
 // The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
 const SENT_CLOUD_SESSION = z.extend(zCreateCloudSessionBody, { agent: z.string() });
+/** A recipe as the server stores it: the fields sent, none left `undefined` (the body's parse keeps them so). */
+function storedRecipe(
+  sent: NonNullable<z.infer<typeof SENT_CLOUD_SESSION>['environment']>,
+): CloudEnvironment {
+  const { repositories, workingDirectory, setup, requiredVariables, requireGitHub, gitEmailDomain } = sent;
+  return {
+    ...(repositories === undefined
+      ? {}
+      : {
+          repositories: repositories.map(({ url, path, ref, branch }) => ({
+            url,
+            ...(path === undefined ? {} : { path }),
+            ...(ref === undefined ? {} : { ref }),
+            ...(branch === undefined ? {} : { branch }),
+          })),
+        }),
+    ...(workingDirectory === undefined ? {} : { workingDirectory }),
+    ...(setup === undefined
+      ? {}
+      : {
+          setup: {
+            ...(setup.create === undefined ? {} : { create: setup.create }),
+            ...(setup.start === undefined ? {} : { start: setup.start }),
+          },
+        }),
+    ...(requiredVariables === undefined ? {} : { requiredVariables }),
+    ...(requireGitHub === undefined ? {} : { requireGitHub }),
+    ...(gitEmailDomain === undefined ? {} : { gitEmailDomain }),
+  };
+}
 /** A session that still holds a runner: it can be stopped. */
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
@@ -934,7 +965,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     // The contract's planned `/org`, kept for the organization tests; the screens read `/orgs/{org}`.
     handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
-    handleListMembers(() => HttpResponse.json({ items: db.members })),
+    // The contract's planned `/members`: the server does not serve it (it serves `/orgs/{org}/members`), so the demo
+    // answers 404 as it does, and a screen that still reads it fails in the tests instead of on a real server.
+    handleListMembers(() =>
+      refusal(404, 'not_found', 'GET /api/v1/members is not served: read /orgs/{org}/members'),
+    ),
     ...createOrgsHandlers(() => db, now),
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
@@ -1183,7 +1218,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createEnvironmentHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
-      memberIds: () => db.members.filter((member) => member.role !== 'invited').map((member) => member.id),
+      // As the server: the organization's members, the ones `/orgs/{org}/members` lists.
+      memberIds: () => membersIn(db, db.organization, now).map((member) => member.id),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       now,
       me: () => MEMBER_IDS.maya,
@@ -1334,6 +1370,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           'invalid_request',
           `Unknown agent ${body.data.agent}: use ${knownValues(zCloudAgentKind).join(', ')}.`,
         );
+      const { repo, ref, environment } = body.data;
+      // The server clones the recipe's repositories or the older single one, never both (ostrom-server
+      // `CreateCloudSessionUseCase`).
+      if (repo !== undefined && (environment?.repositories ?? []).length > 0)
+        return refusal(
+          400,
+          'invalid_request',
+          'Name the repositories in the environment, or repo, not both.',
+        );
       const session: CloudSession = {
         id: `cs-${String(db.cloudSessions.length + 100)}`,
         owner: me.dev.login,
@@ -1344,6 +1389,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           ? {}
           : { name: body.data.name.trim() }),
         ...(body.data.model === undefined ? {} : { model: body.data.model }),
+        ...(repo === undefined ? {} : { repo }),
+        ...(ref === undefined ? {} : { ref }),
+        ...(environment === undefined ? {} : { environment: storedRecipe(environment) }),
       };
       db.cloudSessions.unshift(session);
       return HttpResponse.json(session, { status: 201 });

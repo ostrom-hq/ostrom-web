@@ -2,6 +2,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
+import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -78,7 +79,7 @@ describe('the skill catalog', () => {
   });
 
   it('names a personal skill’s owner by their id when the members cannot be read', async () => {
-    server.use(http.get('*/api/v1/members', refuse(403, 'forbidden', 'no members')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse(403, 'forbidden', 'no members')));
     visit('/skills');
     expect(await screen.findByText(`Personal skill: only ${MEMBER_IDS.maya}`)).toBeInTheDocument();
   });
@@ -251,8 +252,8 @@ describe('who receives a skill', () => {
   it('gives each member Default or Not assigned, Yes or No, and a link to what they receive', async () => {
     visit('/skills/review-pr');
     const members = await screen.findByRole('list', { name: 'Decision of each member' });
-    expect(within(members).getAllByRole('listitem')).toHaveLength(4);
-    expect(within(members).queryByText('jo')).toBeNull();
+    expect(within(members).getAllByRole('listitem')).toHaveLength(5);
+    expect(within(members).getByText('Inès Morel (ines)')).toBeInTheDocument();
     const theo = rowOf(members, 'theo');
     expect(within(theo).getByRole('combobox', { name: 'Decision for theo' })).toHaveValue('deny');
     const maya = rowOf(members, 'Maya Lind (maya)');
@@ -297,11 +298,11 @@ describe('who receives a skill', () => {
     skill('review-pr').allMembers = false;
     visit('/skills/review-pr');
     const members = await screen.findByRole('list', { name: 'Decision of each member' });
-    expect(within(members).getAllByRole('option', { name: 'Not assigned' })).toHaveLength(4);
+    expect(within(members).getAllByRole('option', { name: 'Not assigned' })).toHaveLength(5);
   });
 
   it('says the members cannot be read, and names a publisher by their id, when the server refuses them', async () => {
-    server.use(http.get('*/api/v1/members', refuse(403, 'forbidden', 'no members')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse(403, 'forbidden', 'no members')));
     visit('/skills/review-pr');
     expect(
       await screen.findByText('The members could not be read, so their decisions cannot be shown.'),
@@ -357,4 +358,20 @@ describe('a member’s personal skill', () => {
     expect(router.state.location.pathname).toBe('/skills');
     expect(asked).toBe(false);
   });
+});
+
+describe('a team of more than a hundred people', () => {
+  it('reads every page of members for the decisions, without being asked', async () => {
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    visit('/skills/review-pr');
+    const list = await screen.findByRole('list', { name: 'Decision of each member' });
+    expect(
+      await within(list).findByText(`${far.name} (${far.login})`, {}, { timeout: 10_000 }),
+    ).toBeInTheDocument();
+    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(large.length);
+    expect(screen.queryByRole('button', { name: 'Show more people' })).toBeNull();
+  }, 15_000);
 });

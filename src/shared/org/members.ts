@@ -26,6 +26,10 @@ export interface OrgMembers {
   /** Reads the next page; absent once every page is read. */
   readonly more: (() => void) | undefined;
   readonly loadingMore: boolean;
+  /** A page is on its way: the first, a next one, or the pages read again. */
+  readonly fetching: boolean;
+  /** The last next page asked for failed: the pages read stay, and `more` asks for it again. */
+  readonly moreFailed: boolean;
   readonly error: unknown;
   readonly pending: boolean;
   /** The pages shown are another search's, kept while this one is read. */
@@ -56,7 +60,8 @@ export function useOrgMembers(org: string, tuning: QueryTuning = {}, q?: string)
     () =>
       hasNextPage
         ? () => {
-            void fetchNextPage();
+            // Asked again while it is read (a second screen part, or a second click): the page on its way is kept.
+            void fetchNextPage({ cancelRefetch: false });
           }
         : undefined,
     [hasNextPage, fetchNextPage],
@@ -67,6 +72,8 @@ export function useOrgMembers(org: string, tuning: QueryTuning = {}, q?: string)
     complete: data !== undefined && !hasNextPage,
     more,
     loadingMore: query.isFetchingNextPage,
+    fetching: query.isFetching,
+    moreFailed: query.isFetchNextPageError,
     error: query.error,
     pending: query.isPending,
     stale: query.isPlaceholderData,

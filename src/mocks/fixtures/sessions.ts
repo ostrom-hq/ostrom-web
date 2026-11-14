@@ -16,6 +16,8 @@ const sessions: Session[] = [
     packageDigest: 'sha256:9e1d77c0',
     startedAt: '2026-10-30T07:12:00.000Z',
     lastSeenAt: '2026-10-30T07:58:00.000Z',
+    activity: 'waiting_for_human',
+    activitySince: '2026-10-30T07:57:00.000Z',
     gates: ['apr-merge-412'],
     tools: 214,
     costUsd: 3.42,
@@ -28,6 +30,7 @@ const sessions: Session[] = [
     devVia: 'github',
     repo: 'acme/billing-api',
     startedAt: '2026-10-30T06:40:00.000Z',
+    activity: 'working',
     gates: ['apr-deploy-88'],
   },
   {

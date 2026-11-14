@@ -4,11 +4,10 @@ import {
   getInferenceSettingsQueryKey,
   getModelPolicyOptions,
   getModelPolicyQueryKey,
-  listMembersOptions,
   listSecretsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api/sdk.gen';
-import type { InferenceSettings, Member, ModelPolicy } from '@gen/api/types.gen';
+import type { InferenceSettings, OrgMember, ModelPolicy } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { applied } from '@/shared/api/applied';
@@ -16,6 +15,8 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { keySecrets, readModelPolicy } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
+import type { OrgMembers } from '@/shared/org/members';
 
 export interface SaveViewModel<T> {
   /** Saves; `onSaved` runs once the server took it, so a form shows the saved value then, not before. */
@@ -68,7 +69,9 @@ export interface ModelPolicyViewModel {
   readonly policy: ModelPolicy | undefined;
   readonly failure: Error | undefined;
   /** Who a member's own list may name; undefined while they load or when they cannot be read (a member is then an id). */
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly change: SaveViewModel<ModelPolicy>;
 }
 
@@ -81,7 +84,7 @@ const lenientPolicy = {
 export function useModelPolicy(): ModelPolicyViewModel {
   const policy = useQuery(ready(getModelPolicyOptions(lenientPolicy)));
   // Only names: a refusal is not asked again, a member then reads as their id.
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers({ all: true });
   const change = useSave(
     async (body: ModelPolicy) =>
       applied((await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data),
@@ -90,7 +93,8 @@ export function useModelPolicy(): ModelPolicyViewModel {
   return {
     policy: policy.data,
     failure: failureOf(policy.error),
-    members: members.data?.items,
+    members: members.members,
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     change,
   };
 }

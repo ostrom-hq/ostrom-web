@@ -153,7 +153,7 @@ describe('the mock environment variants, as the server refuses', () => {
     expect((await call('POST', '/variants/env-2/bulk-assign')).type).toBe('variant_not_shared');
     db.environmentExclusions.push({ member: MEMBER_IDS.samir, variable: 'GITHUB_TOKEN' });
     expect((await call('POST', '/variants/env-1/bulk-assign')).body).toEqual({
-      assigned: 1,
+      assigned: 2,
       keptDirect: 2,
       excluded: 1,
     });

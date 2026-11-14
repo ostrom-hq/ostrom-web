@@ -8,6 +8,7 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadState, Screen } from '@/shared/ui/Screen';
+import { ActivityBadge } from '../components/ActivityBadge';
 import { StateBadge } from '../components/StateBadge';
 import { sessionState } from '../model';
 import { useSessionList } from '../useSessions';
@@ -62,6 +63,7 @@ function SessionRows({ sessions }: { readonly sessions: readonly Session[] }): R
         <li key={session.id}>
           <Link to="/sessions/$sessionId" params={{ sessionId: session.id }} className="o-row">
             <StateBadge state={sessionState(session, now)} />
+            <ActivityBadge session={session} now={now} />
             <span className="o-row__main">
               <span className="o-row__title">
                 {[session.agent, session.repo].filter((part) => part !== undefined).join(' · ')}

@@ -6,7 +6,6 @@ import {
   listHooksQueryKey,
   listHookVersionsOptions,
   listHookVersionsQueryKey,
-  listMembersOptions,
   readHookVersionOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import {
@@ -16,13 +15,15 @@ import {
   setHookAudience,
   unpinHook,
 } from '@gen/api/sdk.gen';
-import type { HookArtifact, HookEntry, HookVersion, Member } from '@gen/api/types.gen';
+import type { HookArtifact, HookEntry, HookVersion, OrgMember } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { type Decision, type DecisionChoice, decisionsById } from './model';
 import { type DeliveryChange, useDeliveryChange } from './useDeliveryChange';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
+import type { OrgMembers } from '@/shared/org/members';
 
 export interface HookCatalogViewModel {
   readonly hooks: readonly HookEntry[] | undefined;
@@ -41,7 +42,9 @@ export interface HookViewModel {
   readonly versions: readonly HookVersion[] | undefined;
   /** The explicit decisions by member id; absent until read. */
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
 }
 
@@ -50,7 +53,7 @@ export function useHook(name: string): HookViewModel {
   const path = { name };
   const detail = useQuery(ready(listHookVersionsOptions({ path })));
   const assignments = useQuery(ready(listHookAssignmentsOptions({ path })));
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers({ all: true });
   const decisions = useMemo(
     () => (assignments.data === undefined ? undefined : decisionsById(assignments.data.items)),
     [assignments.data],
@@ -59,7 +62,8 @@ export function useHook(name: string): HookViewModel {
     hook: detail.data?.hook,
     versions: detail.data?.versions,
     decisions,
-    members: members.data?.items,
+    members: members.members,
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     failure: failureOf(detail.error ?? assignments.error),
   };
 }

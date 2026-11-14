@@ -4,22 +4,22 @@ import {
   getMemberHookDeliveryOptions,
   getMemberSkillDeliveryOptions,
   getSkillDeliveryOptions,
-  listMembersOptions,
   listMemberSkillInstallationsOptions,
   listMySkillInstallationsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { EffectiveHook, EffectiveSkill, Member, SkillInstallation } from '@gen/api/types.gen';
+import type { EffectiveHook, EffectiveSkill, OrgMember, SkillInstallation } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 /** Whom the delivered view is of, as the person reading it needs to hear it. */
 export interface DeliveredMember {
   /** The viewer's own view: read as the member themself, with what any member may read. */
   readonly mine: boolean;
   /** The member, when the members are readable; absent for a member who left or when they are not readable. */
-  readonly member: Member | undefined;
+  readonly member: OrgMember | undefined;
   /** Owners and admins also read a member's installations and reach the catalog. */
   readonly canManage: boolean;
 }
@@ -39,7 +39,7 @@ export interface SkillDeliveryViewModel {
  */
 export function useSkillDelivery(memberId: string): SkillDeliveryViewModel {
   const viewer = useViewer();
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers({ all: true });
   // Until the viewer is known, nothing is asked: a member's own view would otherwise be asked as an administrator's.
   const known = viewer.memberId !== undefined;
   const mine = viewer.memberId === memberId;
@@ -59,7 +59,7 @@ export function useSkillDelivery(memberId: string): SkillDeliveryViewModel {
     who: known
       ? {
           mine,
-          member: members.data?.items.find((member) => member.id === memberId),
+          member: members.members?.find((member) => member.id === memberId),
           canManage: viewer.canManage,
         }
       : undefined,
@@ -79,7 +79,7 @@ export interface HookDeliveryViewModel {
 /** The hooks a member receives; asked as for skills. */
 export function useHookDelivery(memberId: string): HookDeliveryViewModel {
   const viewer = useViewer();
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers({ all: true });
   const known = viewer.memberId !== undefined;
   const mine = viewer.memberId === memberId;
   const ownDelivery = useQuery(ready(getHookDeliveryOptions(), { enabled: known && mine }));
@@ -91,7 +91,7 @@ export function useHookDelivery(memberId: string): HookDeliveryViewModel {
     who: known
       ? {
           mine,
-          member: members.data?.items.find((member) => member.id === memberId),
+          member: members.members?.find((member) => member.id === memberId),
           canManage: viewer.canManage,
         }
       : undefined,

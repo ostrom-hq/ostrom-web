@@ -9,7 +9,6 @@ import {
   listMcpArgumentPoliciesQueryKey,
   listMcpAssignmentsOptions,
   listMcpAssignmentsQueryKey,
-  listMembersOptions,
   putMcpSettingsMutation,
   unassignMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -18,7 +17,7 @@ import type {
   McpArgumentPolicyRequest,
   McpAssignment,
   McpAssignmentRequest,
-  Member,
+  OrgMember,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -26,6 +25,8 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { EVERYONE, sortAssignments } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
+import type { OrgMembers } from '@/shared/org/members';
 
 export interface McpSettingsViewModel {
   /** The prefix agents see before each relayed server's name. */
@@ -71,7 +72,9 @@ export interface ServerAccessViewModel {
   readonly assignments: readonly McpAssignment[] | undefined;
   readonly policies: readonly McpArgumentPolicy[] | undefined;
   /** The organization's members, to name an assignment and to pick whom to give the server; absent if unreadable. */
-  readonly members: readonly Member[] | undefined;
+  readonly members: readonly OrgMember[] | undefined;
+  /** The next page of members, read when asked. */
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
 }
 
@@ -81,7 +84,7 @@ export function useServerAccess(server: string): ServerAccessViewModel {
   const assignments = useQuery(ready(listMcpAssignmentsOptions({ path })));
   const policies = useQuery(ready(listMcpArgumentPoliciesOptions({ path })));
   // Only names: a refusal is not asked again, an assignment then reads as its member id.
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
+  const members = useCurrentOrgMembers({ all: true });
   const sorted = useMemo(
     () => (assignments.data === undefined ? undefined : sortAssignments(assignments.data.items)),
     [assignments.data],
@@ -89,7 +92,8 @@ export function useServerAccess(server: string): ServerAccessViewModel {
   return {
     assignments: sorted,
     policies: policies.data?.policies,
-    members: members.data?.items,
+    members: members.members,
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     failure: failureOf(assignments.error ?? policies.error),
   };
 }

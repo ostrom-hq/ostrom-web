@@ -126,7 +126,7 @@ describe('the skills delivered to another member', () => {
   });
 
   it('names the member by their id when the members cannot be read', async () => {
-    server.use(http.get('*/api/v1/members', refuse(403, 'forbidden', 'no members')));
+    server.use(http.get('*/api/v1/orgs/:org/members', refuse(403, 'forbidden', 'no members')));
     visit(`/members/${MEMBER_IDS.theo}/skills`);
     expect(await screen.findByText(`What is delivered to ${MEMBER_IDS.theo}.`)).toBeInTheDocument();
   });
