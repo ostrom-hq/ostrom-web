@@ -1,27 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 // No import: vite.config.ts reads this file too, without the app's `@` alias.
 
-/** A wording's node as a record of its keys, or undefined for a text. */
-function recordOf(node: unknown): Readonly<Record<string, unknown>> | undefined {
-  return typeof node === 'object' && node !== null && !Array.isArray(node)
-    ? (node as Readonly<Record<string, unknown>>)
-    : undefined;
+/** Every key path of a section, its segments joined by dots: `title`, `nav.open`, `events.session.started`. */
+function keyPaths(node: unknown, prefix = ''): string[] {
+  if (typeof node !== 'object' || node === null || Array.isArray(node)) return [prefix];
+  return Object.entries(node).flatMap(([key, value]) =>
+    keyPaths(value, prefix === '' ? key : `${prefix}.${key}`),
+  );
 }
 
-/** Whether `segment` is a key of `node`, or the stem of its plural or context forms (`items` of `items_one`). */
-function keyOf(node: Readonly<Record<string, unknown>>, segment: string): string | undefined {
-  if (segment in node) return segment;
-  return Object.keys(node).some((key) => key.startsWith(`${segment}_`)) ? segment : undefined;
-}
-
-/** Whether the static path of a literal after its section leads into the wording: every segment is one of its keys. */
-function leadsInto(section: unknown, path: string): boolean {
-  let node = recordOf(section);
-  for (const segment of path.split('.').filter((part) => part !== '')) {
-    if (node === undefined || keyOf(node, segment) === undefined) return false;
-    node = recordOf(node[segment]);
-  }
-  return true;
+/**
+ * Whether the static part of a literal after its section leads into it: a key path of the section, the start of one
+ * (a key built from it, `'billing.' + period`), or the stem of a plural or context form (`items` of `items_one`).
+ */
+function leadsInto(paths: readonly string[], path: string): boolean {
+  const stem = path.endsWith('.') ? path : `${path}.`;
+  return (
+    path === '' || paths.some((key) => key === path || key.startsWith(stem) || key.startsWith(`${path}_`))
+  );
 }
 
 /**
@@ -33,11 +29,15 @@ function leadsInto(section: unknown, path: string): boolean {
  * the screen never shows, which only costs a few bytes; a key never escapes it.
  */
 export function sectionsIn(code: string, wording: Readonly<Record<string, unknown>>): Set<string> {
-  const named = new Set<string>();
-  for (const section of Object.keys(wording))
+  const paths = new Map<string, readonly string[]>();
+  for (const [section, node] of Object.entries(wording))
     if (!/^[A-Za-z]\w*$/.test(section)) throw new Error(`a section of the wording is not a name: ${section}`);
-  for (const [, section = '', path = ''] of code.matchAll(/["'`]([A-Za-z]\w*)\.([\w.]*)(?=["'`$])/g))
-    if (Object.hasOwn(wording, section) && leadsInto(wording[section], path)) named.add(section);
+    else paths.set(section, keyPaths(node));
+  const named = new Set<string>();
+  for (const [, section = '', path = ''] of code.matchAll(/["'`]([A-Za-z]\w*)\.([\w.-]*)(?=["'`$])/g)) {
+    const keys = paths.get(section);
+    if (keys !== undefined && leadsInto(keys, path)) named.add(section);
+  }
   return named;
 }
 

@@ -10,6 +10,8 @@ describe('sectionsIn', () => {
     rules: { title: 'Rules' },
     webhooks: { title: 'Webhooks' },
     github: { title: 'GitHub' },
+    waits: { filter: { 'waiting-you': 'Waiting for you' } },
+    audit: { events: { 'session.started': 'Session started' } },
   };
 
   it('finds the sections a key literal starts with, in any quotes', () => {
@@ -20,6 +22,15 @@ describe('sectionsIn', () => {
   it('finds a key by the stem of its plural forms, and a key built from a part of its path', () => {
     expect([...sectionsIn(`t("billing.items",{count})`, wording)]).toEqual(['billing']);
     expect([...sectionsIn(`t("yes.signin."+part)`, wording)]).toEqual(['yes']);
+  });
+
+  it('finds a key with a hyphen, and a key whose own name has a dot', () => {
+    const code = `t("waits.filter.waiting-you");t("audit.events.session.started")`;
+    expect([...sectionsIn(code, wording)]).toEqual(['waits', 'audit']);
+  });
+
+  it('takes no inherited name for a key', () => {
+    expect([...sectionsIn(`"rules.constructor";"spend.toString"`, wording)]).toEqual([]);
   });
 
   it('does not take a word, a longer section or a bare section name for a key', () => {
