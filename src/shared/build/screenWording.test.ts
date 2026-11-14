@@ -47,7 +47,7 @@ describe('sectionsIn', () => {
   });
 
   it('does not take a literal that leads nowhere in its section for a key: a feature, a host', () => {
-    const code = `has("webhooks.v1");open("https://github.com/x");t("yes.signin.offer.more");t("rules.title.x")`;
+    const code = `has("webhooks.v1");open("https://github.com/x");t("yes.signin.offer.more");t("rules.title.x");"rules.ti"`;
     expect([...sectionsIn(code, wording)]).toEqual([]);
   });
 

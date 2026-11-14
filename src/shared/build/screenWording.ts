@@ -10,12 +10,14 @@ function keyPaths(node: unknown, prefix = ''): string[] {
 }
 
 /**
- * Whether the static part of a literal after its section leads into it: the start of a key path of the section, so a
- * whole key, a key built from it (`'billing.' + period`, `` `rules.kind_${kind}` ``) or the stem of a plural or context
- * form (`items` of `items_one`).
+ * Whether the static part of a literal after its section leads into it. A whole literal is a key path of the section or
+ * the stem of a plural or context form (`items` of `items_one`); a literal the code goes on building (`'billing.' +
+ * period`, `` `rules.kind_${kind}` ``) is the start of one.
  */
-function leadsInto(paths: readonly string[], path: string): boolean {
-  return paths.some((key) => key.startsWith(path));
+function leadsInto(paths: readonly string[], path: string, built: boolean): boolean {
+  return paths.some((key) =>
+    built ? key.startsWith(path) : key === path || key.startsWith(`${path}.`) || key.startsWith(`${path}_`),
+  );
 }
 
 /** The key paths of each section of a wording, built once per wording: the build reads every chunk against it. */
@@ -43,9 +45,11 @@ function indexOf(wording: Readonly<Record<string, unknown>>): Map<string, readon
 export function sectionsIn(code: string, wording: Readonly<Record<string, unknown>>): Set<string> {
   const paths = indexOf(wording);
   const named = new Set<string>();
-  for (const [, section = '', path = ''] of code.matchAll(/["'`]([A-Za-z]\w*)\.([\w.-]*)(?=["'`$])/g)) {
+  for (const [, section = '', path = '', end = ''] of code.matchAll(
+    /["'`]([A-Za-z]\w*)\.([\w.-]*)(?=(\$\{|["'`]\s*\+)?)(?=["'`$])/g,
+  )) {
     const keys = paths.get(section);
-    if (keys !== undefined && leadsInto(keys, path)) named.add(section);
+    if (keys !== undefined && leadsInto(keys, path, end !== '')) named.add(section);
   }
   return named;
 }
