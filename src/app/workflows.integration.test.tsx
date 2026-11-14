@@ -559,6 +559,44 @@ describe('changing the workflows', () => {
     ).toBeInTheDocument();
   });
 
+  it('rejects a proposed workflow, kept so the analysis never proposes it again, and says a rejection that came too late', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.put(
+        '*/api/v1/workflows/:id',
+        () =>
+          HttpResponse.json(
+            {
+              error: {
+                type: 'conflict',
+                message: 'workflow_conflict: someone saved this workflow in between.',
+              },
+            },
+            { status: 409 },
+          ),
+        { once: true },
+      ),
+    );
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    expect(
+      await screen.findByText(/in between\. Someone changed it in between: its saved version/),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reject' }));
+    expect(await screen.findByText('Rejected')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reject' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Accept' })).toBeNull();
+    expect(db.workflows.find((workflow) => workflow.id === 'wf-migrations')?.status).toBe('rejected');
+  });
+
+  it('says a rejection is under way', async () => {
+    const user = userEvent.setup();
+    server.use(http.put('*/api/v1/workflows/:id', never));
+    visit('/workflows/wf-migrations');
+    await user.click(await screen.findByRole('button', { name: 'Reject' }));
+    expect(await screen.findByRole('button', { name: 'Rejecting…' })).toBeDisabled();
+  });
+
   it('accepts a proposed workflow saved unchanged as found', async () => {
     const user = userEvent.setup();
     const base = db.workflows.find((workflow) => workflow.id === 'wf-migrations');

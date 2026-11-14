@@ -13,6 +13,7 @@ function conflictHint(change: WorkflowChange['kind'] | undefined, t: TFunction):
     case 'delete':
       return t('workflows.actions.inUse');
     case 'accept':
+    case 'reject':
       return t('workflows.actions.acceptConflict');
     case 'save':
     case undefined:
