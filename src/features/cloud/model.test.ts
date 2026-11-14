@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, CloudSession } from '@gen/api/types.gen';
+import type { Automation, CloudProfile, CloudSession } from '@gen/api/types.gen';
+import { ApiFailure } from '@/shared/api/ApiFailure';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
 import { knownValues } from '@/shared/lib/openEnum';
 import {
+  imageAllowed,
+  startRefusalOf,
   accessOf,
   CLOUD_AGENTS,
   idempotencyKey,
@@ -143,5 +146,44 @@ describe('versionedUrl', () => {
   });
   it('gives nothing for an address that is not a trigger', () => {
     expect(versionedUrl('https://x.io/hook', 'latest', 1)).toBeUndefined();
+
+describe('the image a session may run', () => {
+  const profile = (allowed: string[]): CloudProfile => ({
+    id: 'p',
+    name: 'p',
+    version: 1,
+    spec: { clusterId: 'c', namespace: 'n', image: 'img:1', allowedImageOverrides: allowed },
+    assignedMemberIds: [],
+    createdAt: '2026-11-01T00:00:00Z',
+    updatedAt: '2026-11-01T00:00:00Z',
+  });
+
+  it('is the profile’s own, or one an override matches, with * for any run of characters', () => {
+    const open = profile(['ghcr.io/acme/*:latest', 'a*b*c', 'exact']);
+    expect(imageAllowed('', open)).toBe(true);
+    expect(imageAllowed(' img:1 ', open)).toBe(true);
+    expect(imageAllowed('ghcr.io/acme/web:latest', open)).toBe(true);
+    expect(imageAllowed('exact', open)).toBe(true);
+    expect(imageAllowed('axxbyyc', open)).toBe(true);
+    expect(imageAllowed('abc', open)).toBe(true);
+    expect(imageAllowed('ac', open)).toBe(false);
+    expect(imageAllowed('acb', open)).toBe(false);
+    expect(imageAllowed('ghcr.io/acme/web:1', open)).toBe(false);
+    expect(imageAllowed('exactly', open)).toBe(false);
+    expect(imageAllowed('other', profile([]))).toBe(false);
+    const { allowedImageOverrides, ...plain } = open.spec;
+    expect(allowedImageOverrides).toHaveLength(3);
+    expect(imageAllowed('x', { ...open, spec: plain })).toBe(false);
+  });
+
+  it('knows the refusals of a start that have their own words', () => {
+    expect(startRefusalOf(new ApiFailure('forbidden', 'x', 403, undefined, 'profile_unassigned'))).toBe(
+      'profile_unassigned',
+    );
+    expect(startRefusalOf(new ApiFailure('conflict', 'x', 409, undefined, 'namespace_not_allowed'))).toBe(
+      'namespace_not_allowed',
+    );
+    expect(startRefusalOf(new ApiFailure('server', 'x', 500, undefined, 'internal'))).toBeUndefined();
+    expect(startRefusalOf(new Error('x'))).toBeUndefined();
   });
 });

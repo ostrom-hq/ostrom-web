@@ -84,6 +84,7 @@ import type {
   AutomationRun,
   Budget,
   CloudEnvironment,
+  CloudProfile,
   CloudSession,
   Decision,
   McpCall,
@@ -243,6 +244,7 @@ import { createTeamCodeImportHandlers, type TeamCodeImportState } from '@/mocks/
 import { initialReceipts, initialSessions } from '@/mocks/fixtures/sessions';
 import { initialWorkflowRuns } from '@/mocks/fixtures/runs';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
+import { imageAllowed } from '@/features/cloud/model';
 import { sameValue } from '@/features/workflows/model';
 
 export interface MockDb
@@ -1389,8 +1391,51 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           'invalid_request',
           'Name the repositories in the environment, or repo, not both.',
         );
+      // Sessions on profiles (`runners.cloud.profiles.v1`): the owner's usable profiles, as the server reads them.
+      const mine = membersIn(db, organizationOf(db, request), now).find(
+        (member) => member.login === me.dev.login,
+      )?.id;
+      const usable = db.cloudProfiles.filter(
+        (item) =>
+          managesMembers(demoRoleIn(db, organizationOf(db, request), now)) ||
+          (mine !== undefined && item.assignedMemberIds.includes(mine)),
+      );
+      let chosen: CloudProfile | undefined;
+      if (body.data.profileId === undefined) {
+        if (db.cloudProfiles.length > 0 || usable.length > 0) {
+          if (usable.length !== 1)
+            return refusal(422, 'profile_required', 'Name the profile: you may use none or several.');
+          chosen = usable[0];
+        }
+      } else {
+        chosen = db.cloudProfiles.find((item) => item.id === body.data.profileId);
+        if (chosen === undefined) return refusal(404, 'cloud_profile_not_found', 'No such cloud profile.');
+        if (!usable.includes(chosen))
+          return refusal(403, 'profile_unassigned', 'That profile is not assigned to the session’s owner.');
+      }
+      if (chosen !== undefined && !imageAllowed(body.data.image ?? '', chosen))
+        return refusal(403, 'image_not_allowed', 'The profile does not allow that image.');
+      if (chosen !== undefined) {
+        const target = chosen;
+        const cluster = db.cloudClusters.find((item) => item.id === target.spec.clusterId);
+        if (cluster === undefined)
+          return refusal(409, 'cluster_unavailable', 'The profile’s cluster is gone.');
+        if (!cluster.allowedNamespaces.includes(target.spec.namespace))
+          return refusal(
+            409,
+            'namespace_not_allowed',
+            'The profile’s cluster no longer allows its namespace.',
+          );
+      }
       const session: CloudSession = {
         id: `cs-${String(db.cloudSessions.length + 100)}`,
+        ...(chosen === undefined
+          ? {}
+          : {
+              profile: { id: chosen.id, version: chosen.version },
+              image:
+                body.data.image === undefined || body.data.image === '' ? chosen.spec.image : body.data.image,
+            }),
         owner: me.dev.login,
         agent,
         status: 'queued',
