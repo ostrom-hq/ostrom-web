@@ -7,7 +7,9 @@ import type { I18n, TFunction } from '@/shared/i18n/instance';
 let current: TFunction = i18n.getFixedT(i18n.language);
 const listeners = new Set<() => void>();
 
-function changed(): void {
+function changed(language: string): void {
+  // Words for a language that is not shown change nothing on screen.
+  if (language !== i18n.language) return;
   current = i18n.getFixedT(i18n.language);
   for (const listener of [...listeners]) listener();
 }

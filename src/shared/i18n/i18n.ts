@@ -1,5 +1,5 @@
-import { takeFirstWording, type Wording } from '@/shared/i18n/firstWording';
-import { createI18n, type I18n } from '@/shared/i18n/instance';
+import { takeFirstWording } from '@/shared/i18n/firstWording';
+import { createI18n, type I18n, type Wording } from '@/shared/i18n/instance';
 import { type Language, LANGUAGES, type LocaleShape } from '@/shared/i18n/types';
 
 export function pickLanguage(candidates: readonly string[]): Language {
@@ -87,13 +87,10 @@ export function wordingLoader(
     return early.then(async (wording) => {
       if (wording === undefined) return whole();
       instance.addResourceBundle(known, wording);
-      // The first screen keeps its words; another screen opened without network could not load either.
-      void wordings[known]().then(
-        (all) => {
-          instance.addResourceBundle(known, all);
-        },
-        () => undefined,
-      );
+      // The first screen keeps its words if the rest does not come, even after the retries.
+      void wholeWording(wordings[known], retryDelays).then((all) => {
+        if (all !== undefined) instance.addResourceBundle(known, all);
+      });
       return true;
     });
   };
@@ -104,6 +101,11 @@ export const i18n: I18n = createI18n(pickLanguage(navigator.languages));
 
 const loadWording: LoadWording = wordingLoader(i18n);
 
+/** The loader that fills `instance`: the console's own for the console's instance. */
+function loaderOf(instance: I18n): LoadWording {
+  return instance === i18n ? loadWording : wordingLoader(instance);
+}
+
 /**
  * Shows `language` once its wording is in, and says whether it could. A wording that does not come (a network drop,
  * after the retries) leaves the screen on the words it has; it is asked for anew the next time.
@@ -112,7 +114,7 @@ export async function showLanguage(
   language: Language,
   instance: I18n = i18n,
   stillWanted: () => boolean = () => true,
-  load: LoadWording = loadWording,
+  load: LoadWording = loaderOf(instance),
 ): Promise<boolean> {
   if (!instance.hasResourceBundle(language)) await load(language);
   if (!instance.hasResourceBundle(language)) return false;
@@ -128,7 +130,7 @@ export async function showLanguage(
  */
 export async function englishIfMissing(
   instance: I18n = i18n,
-  load: LoadWording = loadWording,
+  load: LoadWording = loaderOf(instance),
 ): Promise<void> {
   if (instance.hasResourceBundle(instance.language)) return;
   await showLanguage('en', instance, () => true, load);

@@ -41,6 +41,8 @@ function isWording(value: unknown): value is Wording {
 function merged(base: Wording, over: Wording): Wording {
   const result: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(over)) {
+    // JSON can carry an own `__proto__` key: it is a text of its own, never the prototype of the merge.
+    if (key === '__proto__') continue;
     const had = result[key];
     result[key] = isWording(value) && isWording(had) ? merged(had, value) : value;
   }

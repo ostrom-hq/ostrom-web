@@ -56,6 +56,19 @@ describe('a plural text', () => {
 });
 
 describe('the wording added', () => {
+  it('never lets a `__proto__` key of the JSON become the prototype of a section', () => {
+    const instance = createI18n();
+    // As `JSON.parse` makes it: an own key called `__proto__`.
+    const fetched = Object.fromEntries([
+      ['__proto__', { polluted: 'yes' }],
+      ['app', { loading: 'Hi' }],
+    ]);
+    instance.addResourceBundle('en', fetched);
+    expect(instance.t('app.loading')).toBe('Hi');
+    expect(instance.getResource('en', 'polluted')).toBeUndefined();
+    expect(Object.getPrototypeOf(instance.getResource('en', 'app'))).toBe(Object.prototype);
+  });
+
   it('is merged into what a language has, section by section', () => {
     const instance = createI18n();
     instance.addResourceBundle('en', { a: { x: 'x1', y: 'y1' }, b: 'b1' });

@@ -115,9 +115,9 @@ describe('loading only the language shown', () => {
 
 describe("the first screen's own wording", () => {
   /** A console started on these wordings, as it starts: the first screen's words, the whole language after. */
-  async function started(wordings: Wordings, first: First): Promise<I18n> {
+  async function started(wordings: Wordings, first: First, retries: readonly number[] = []): Promise<I18n> {
     const instance = createI18n();
-    await wordingLoader(instance, wordings, first, [])('en');
+    await wordingLoader(instance, wordings, first, retries)('en');
     return instance;
   }
 
@@ -161,6 +161,24 @@ describe("the first screen's own wording", () => {
     expect(await wordingLoader(instance, bothLanguages)('fr')).toBe(true);
     expect(instance.t('app.nav.home')).toBe('app.nav.home');
     expect(instance.getFixedT('fr')('app.nav.home')).toBe(fr.app.nav.home);
+  });
+
+  it('asks the rest of the language again when it does not come the first time', async () => {
+    let tries = 0;
+    const instance = await started(
+      {
+        en: async () => {
+          tries += 1;
+          return tries === 1 ? Promise.reject(new Error('offline')) : Promise.resolve(en);
+        },
+        fr: async () => Promise.resolve(fr),
+      },
+      async () => Promise.resolve({ app: { loading: 'First' } }),
+      [0],
+    );
+    await vi.waitFor(() => {
+      expect(instance.t('app.nav.home')).toBe(en.app.nav.home);
+    });
   });
 
   it('gives way to the whole language when it did not come, or was not fetched', async () => {
@@ -257,6 +275,15 @@ describe('a wording that never comes', () => {
     expect(await showLanguage('fr', instance, () => true, load)).toBe(false);
     expect(await showLanguage('fr', instance, () => true, load)).toBe(true);
     expect(instance.t('app.loading')).toBe(fr.app.loading);
+  });
+});
+
+describe('a language for an instance of its own', () => {
+  it('is loaded into that instance, not into the console', async () => {
+    const instance = createI18n();
+    expect(await showLanguage('en', instance)).toBe(true);
+    expect(instance.hasResourceBundle('en')).toBe(true);
+    await englishIfMissing(createI18n('fr'));
   });
 });
 
