@@ -403,7 +403,7 @@ describe('changing the workflows', () => {
     await user.type(label, 'Unit tests pass');
     await user.click(within(form).getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Unit tests pass')).toBeInTheDocument();
-    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.queryByRole('form', { name: 'Edit the workflow' })).toBeNull();
     expect(screen.getByText('Version').nextSibling).toHaveTextContent('8');
     expect(screen.getByText('Tests fail: The agent fixes the failing tests')).toBeInTheDocument();
     expect(db.decisions[0]).toMatchObject({ action: 'edit', subject: { id: 'wf-backend' } });
@@ -740,12 +740,12 @@ describe('changing the workflows', () => {
     expect(await screen.findByText('refused here')).toBeInTheDocument();
     await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-migrations' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'Database migrations' })).toBeInTheDocument();
-    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.queryByRole('form', { name: 'Edit the workflow' })).toBeNull();
     expect(screen.queryByText('refused here')).toBeNull();
     // Back to the first: it starts again from what the server has, without its old editor.
     await router.navigate({ to: '/workflows/$workflowId', params: { workflowId: 'wf-backend' } });
     expect(await screen.findByRole('heading', { level: 1, name: 'Backend changes' })).toBeInTheDocument();
-    expect(screen.queryByRole('form')).toBeNull();
+    expect(screen.queryByRole('form', { name: 'Edit the workflow' })).toBeNull();
   });
 
   it('accepts as found a proposed workflow the editor spells otherwise but nobody touched', async () => {

@@ -22,7 +22,12 @@ const workflows: Workflow[] = [
         detail: 'pnpm test on the pushed commit',
         ruleIds: ['R-3'],
       },
-      { id: 'n-fix', kind: 'agent', label: 'The agent fixes the failing tests' },
+      {
+        id: 'n-fix',
+        kind: 'agent',
+        label: 'The agent fixes the failing tests',
+        run: { repository: 'acme/billing-api' },
+      },
       {
         id: 'n-merge',
         kind: 'gate',
@@ -103,6 +108,50 @@ const workflows: Workflow[] = [
       },
     ],
     edges: [{ from: 'm-gate', to: 'm-orphan' }],
+  },
+  {
+    id: 'wf-release',
+    name: 'Release notes',
+    domain: 'acme/billing-api',
+    description: 'An agent drafts the release notes and hands in the pull request.',
+    version: 2,
+    status: 'accepted',
+    foundAt: '2026-10-25T10:00:00.000Z',
+    updatedAt: '2026-10-29T09:00:00.000Z',
+    updatedBy: 'maya',
+    start: 'r-start',
+    sessionMode: 'same',
+    limits: { maxNodes: 50, maxVisits: 100 },
+    inputs: [
+      { id: 'tag', label: 'Release tag', required: true, maxLength: 40 },
+      { id: 'audience', label: 'Audience', default: 'customers' },
+    ],
+    nodes: [
+      { id: 'r-start', kind: 'trigger', label: 'A release is cut' },
+      {
+        id: 'r-draft',
+        kind: 'agent',
+        label: 'The agent drafts the notes',
+        run: {
+          instructions: 'Draft the release notes for the tag and open a pull request.',
+          deliverable: { type: 'url', label: 'The pull request', domain: 'github.com' },
+        },
+      },
+    ],
+    edges: [
+      { from: 'r-start', to: 'r-draft' },
+      { from: 'r-draft', to: null },
+    ],
+  },
+  {
+    id: 'wf-legacy',
+    name: 'Legacy hotfix',
+    domain: 'acme/billing-api',
+    version: 1,
+    status: 'rejected',
+    foundAt: '2026-10-10T08:00:00.000Z',
+    nodes: [{ id: 'l-start', kind: 'trigger', label: 'A hotfix is asked' }],
+    edges: [{ from: 'l-start', to: null }],
   },
 ];
 

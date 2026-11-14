@@ -577,7 +577,7 @@ describe('mock workflows and policy', () => {
   it('lists workflows, by status', async () => {
     const all = await listWorkflows({ throwOnError: true });
     const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
-    expect(all.data.items).toHaveLength(2);
+    expect(all.data.items).toHaveLength(4);
     expect(proposed.data.items.map((workflow) => workflow.id)).toEqual(['wf-migrations']);
   });
 

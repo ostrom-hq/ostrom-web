@@ -140,7 +140,7 @@ describe('the runs of a workflow', () => {
     expect(runRows(runs)[0]).toHaveTextContent('Queued');
     expect(runRows(runs)[0]).toHaveTextContent('Started by maya · by hand');
     expect(sent).toEqual([{ inputs: {} }]);
-    expect(db.workflowRuns).toHaveLength(5);
+    expect(db.workflowRuns).toHaveLength(7);
   });
 
   it('holds the button while the run starts', async () => {
@@ -208,14 +208,14 @@ describe('the runs of every workflow', () => {
     visit('/runs');
     const main = await runsScreen();
     const rows = await within(main).findAllByRole('listitem');
-    expect(rows).toHaveLength(4);
-    expect(within(rows[0] ?? main).getByRole('link', { name: 'Backend changes' })).toHaveAttribute(
+    expect(rows).toHaveLength(6);
+    expect(within(rows[1] ?? main).getByRole('link', { name: 'Backend changes' })).toHaveAttribute(
       'href',
       '/workflows/wf-backend',
     );
-    expect(rows[0]).toHaveTextContent('Running');
-    expect(rows[1]).toHaveTextContent('Cancelled');
-    expect(within(rows[1] ?? main).getByRole('link', { name: 'Database migrations' })).toHaveAttribute(
+    expect(rows[1]).toHaveTextContent('Running');
+    expect(rows[2]).toHaveTextContent('Cancelled');
+    expect(within(rows[2] ?? main).getByRole('link', { name: 'Database migrations' })).toHaveAttribute(
       'href',
       '/workflows/wf-migrations',
     );

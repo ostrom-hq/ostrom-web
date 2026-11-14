@@ -63,3 +63,8 @@
   background: var(--warning-tint);
   color: var(--warning-text);
 }
+
+/* A rejected workflow: kept in the list, greyed, never run. */
+.wf-rejected {
+  opacity: 0.6;
+}

@@ -11,6 +11,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { LoadState } from '@/shared/ui/Screen';
 import { RUN_TONES, runSource } from '../model';
+import { RunFailure } from './RunFailure';
 import type { RunListViewModel } from '../useRuns';
 
 /**
@@ -79,7 +80,10 @@ function RunRow({
             </Link>
           ) : (
             t('workflows.runs.version', { version: run.workflowVersion })
-          )}
+          )}{' '}
+          <Link to="/runs/$runId" params={{ runId: run.id }} className="o-row__meta">
+            {t('workflows.runs.details')}
+          </Link>
         </span>
         <span className="o-row__meta">
           {[
@@ -87,7 +91,7 @@ function RunRow({
             t(`workflows.runs.source.${source}`, { source: run.source }),
           ].join(' · ')}
         </span>
-        {run.failure === undefined ? null : <span className="o-row__meta">{run.failure}</span>}
+        <RunFailure run={run} />
         {run.sessionId === undefined ? null : (
           <Link to="/sessions/$sessionId" params={{ sessionId: run.sessionId }} className="o-row__meta">
             {t('workflows.runs.session')}

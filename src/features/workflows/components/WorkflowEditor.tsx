@@ -3,15 +3,20 @@ import type { Workflow } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
+import { useFeature } from '@/shared/capabilities';
 import { Button } from '@/shared/ui/Button';
 import {
   conditionOf,
+  DELIVERABLE_TYPES,
   EDITABLE_KINDS,
+  LIMIT_BOUNDS,
+  LIMIT_KEYS,
   moveStep,
   newStep,
   nobodyApproves,
   repoChoices,
   repoLabel,
+  SESSION_MODES,
   type StepDraft,
   toggleRepo,
   workflowDraftOf,
@@ -32,7 +37,11 @@ type TextKey =
   | 'question'
   | 'questionBody'
   | 'conditionPath'
-  | 'conditionValue';
+  | 'conditionValue'
+  | 'deliverableLabel'
+  | 'deliverableDomain'
+  | 'repository'
+  | 'assignee';
 
 /**
  * A check's condition, typed (core#127): the step it reads among the workflow's others, what it reads of that step's
@@ -194,7 +203,15 @@ function StepFields({
     questionBody: useId(),
     conditionPath: useId(),
     conditionValue: useId(),
+    deliverableLabel: useId(),
+    deliverableDomain: useId(),
+    repository: useId(),
+    assignee: useId(),
   };
+  const deliverId = useId();
+  const schemaId = useId();
+  // What a delivery asks of an agent, and who answers a wait, come with the workflow delivery.
+  const delivery = useFeature('workflows.deliver.v1');
   const field = (key: TextKey, mono = false): ReactElement => (
     <span className="o-stack">
       <label htmlFor={ids[key]} className="o-field-label">
@@ -229,6 +246,52 @@ function StepFields({
         </>
       ) : null}
       {step.kind === 'agent' ? field('instructions') : null}
+      {step.kind === 'agent' && delivery ? (
+        <>
+          {field('repository', true)}
+          <span className="o-stack">
+            <label htmlFor={deliverId} className="o-field-label">
+              <span className="o-visually-hidden">{t('workflows.edit.stepPrefix', { number })}</span>
+              {t('workflows.edit.field.deliverableType')}
+            </label>
+            <select
+              id={deliverId}
+              className="o-input o-select"
+              value={step.deliverableType}
+              onChange={(event) => {
+                const type = DELIVERABLE_TYPES.find((known) => known === event.target.value);
+                if (type !== undefined) onChange({ deliverableType: type });
+              }}
+            >
+              {DELIVERABLE_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(`workflows.deliverable.${type}`)}
+                </option>
+              ))}
+            </select>
+          </span>
+          {step.deliverableType === 'none' ? null : field('deliverableLabel')}
+          {step.deliverableType === 'url' ? field('deliverableDomain', true) : null}
+          {step.deliverableType === 'json' ? (
+            <span className="o-stack">
+              <label htmlFor={schemaId} className="o-field-label">
+                <span className="o-visually-hidden">{t('workflows.edit.stepPrefix', { number })}</span>
+                {t('workflows.edit.field.deliverableSchema')}
+              </label>
+              <textarea
+                id={schemaId}
+                className="o-input o-mono"
+                rows={4}
+                placeholder={t('workflows.edit.placeholder.deliverableSchema')}
+                value={step.deliverableSchema}
+                onChange={(event) => {
+                  onChange({ deliverableSchema: event.target.value });
+                }}
+              />
+            </span>
+          ) : null}
+        </>
+      ) : null}
       {step.kind === 'check' ? (
         <ConditionFields
           step={step}
@@ -243,6 +306,7 @@ function StepFields({
         <>
           {field('question')}
           {field('questionBody')}
+          {delivery ? field('assignee') : null}
         </>
       ) : null}
       {step.kind === 'workflow' ? (
@@ -392,6 +456,71 @@ function RepoPicker({
   );
 }
 
+/** How the agent steps share sessions, and the limits a run keeps to (`sessionMode`, `limits`). */
+function RunSettings({
+  draft,
+  onChange,
+}: {
+  readonly draft: WorkflowDraft;
+  readonly onChange: (next: Partial<WorkflowDraft>) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const modeId = useId();
+  const limitIds = { maxNodes: useId(), maxVisits: useId(), maxDepth: useId() };
+  return (
+    <fieldset className="o-stack">
+      <legend className="o-field-label">{t('workflows.edit.limits')}</legend>
+      <span className="o-stack">
+        <label htmlFor={modeId} className="o-field-label">
+          {t('workflows.edit.sessionMode')}
+        </label>
+        <select
+          id={modeId}
+          className="o-input o-select"
+          value={draft.sessionMode}
+          onChange={(event) => {
+            const mode = SESSION_MODES.find((known) => known === event.target.value);
+            if (mode !== undefined) onChange({ sessionMode: mode });
+          }}
+        >
+          {SESSION_MODES.map((mode) => (
+            <option key={mode} value={mode}>
+              {t(`workflows.sessionMode.${mode}`)}
+            </option>
+          ))}
+        </select>
+      </span>
+      {draft.sessionMode === 'same' ? (
+        <p className="o-screen__lead">{t('workflows.edit.sessionModeSame')}</p>
+      ) : null}
+      <p className="o-screen__lead">
+        {t('workflows.edit.limitsLead', {
+          maxNodes: LIMIT_BOUNDS.maxNodes.default,
+          maxVisits: LIMIT_BOUNDS.maxVisits.default,
+          maxDepth: LIMIT_BOUNDS.maxDepth.default,
+        })}
+      </p>
+      {LIMIT_KEYS.map((key) => (
+        <span key={key} className="o-stack">
+          <label htmlFor={limitIds[key]} className="o-field-label">
+            {t(`workflows.edit.limit.${key}`, { max: LIMIT_BOUNDS[key].max })}
+          </label>
+          <input
+            id={limitIds[key]}
+            className="o-input"
+            inputMode="numeric"
+            placeholder={String(LIMIT_BOUNDS[key].default)}
+            value={draft.limits[key]}
+            onChange={(event) => {
+              onChange({ limits: { ...draft.limits, [key]: event.target.value } });
+            }}
+          />
+        </span>
+      ))}
+    </fieldset>
+  );
+}
+
 export interface WorkflowEditorProps {
   /** The workflow edited, or undefined for a new one. */
   readonly workflow: Workflow | undefined;
@@ -405,6 +534,7 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
   const { t } = useTranslation();
   const [draft, setDraft] = useState<WorkflowDraft>(() => workflowDraftOf(workflow));
   const ids = { name: useId(), domain: useId(), description: useId() };
+  const delivery = useFeature('workflows.deliver.v1');
   const problem = workflowProblem(draft, workflow);
   const setStep = (key: number, next: Partial<StepDraft>): void => {
     setDraft((current) => ({
@@ -469,6 +599,14 @@ export function WorkflowEditor({ workflow, saving, onSave, onCancel }: WorkflowE
           setDraft({ ...draft, repos });
         }}
       />
+      {delivery ? (
+        <RunSettings
+          draft={draft}
+          onChange={(next) => {
+            setDraft({ ...draft, ...next });
+          }}
+        />
+      ) : null}
       <h2 className="o-label">{t('workflows.detail.steps')}</h2>
       {draft.linear ? (
         <p className="o-screen__lead">{t('workflows.edit.linearLead')}</p>
