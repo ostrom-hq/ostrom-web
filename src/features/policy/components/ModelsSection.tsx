@@ -111,7 +111,7 @@ function PolicyForm({
   readonly policy: ModelPolicy;
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly change: SaveViewModel<ModelPolicy>;
   readonly onDone: () => void;
 }): ReactElement {

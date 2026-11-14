@@ -30,8 +30,7 @@ import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
-import { type OrgMembers, useOrgMembers } from '@/shared/org/members';
-import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
+import type { OrgMembers } from '@/shared/org/members';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 export interface ArtifactsViewModel {
@@ -53,9 +52,11 @@ export interface ArtifactDetailViewModel {
   /** The organization's members, to name the readers (ids) and pick a new one: never in the way when missing. */
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   /** The members came back or failed: the readers are named only then, never shown as ids in between. */
   readonly membersSettled: boolean;
+  /** Every page of members is read: a reader none of them is has left (else it may be on a page not read). */
+  readonly membersComplete: boolean;
   /** Why the members could not be read: the owner sees it where the form to add a reader goes. */
   readonly membersFailure: Error | undefined;
   readonly failure: Error | undefined;
@@ -70,7 +71,7 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
   const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
   const readers = useQuery(ready(listArtifactMembersOptions({ path: { id } })));
   // Only names: a refusal is not asked again, the detail opens without them.
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   const sorted = useMemo(
     () => (versions.data === undefined ? undefined : newestFirst(versions.data.items)),
     [versions.data],
@@ -79,8 +80,9 @@ export function useArtifactDetail(id: string): ArtifactDetailViewModel {
     versions: sorted,
     readers: readers.data?.members,
     members: members.members,
-    people: { more: members.more, loadingMore: members.loadingMore },
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     membersSettled: members.settled,
+    membersComplete: members.complete,
     membersFailure: failureOf(members.error),
     failure: failureOf(versions.error ?? readers.error),
   };
@@ -177,7 +179,7 @@ export interface AccountsViewModel {
   /** The organization's members, to lend a subscription to. */
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
   /** Only a subscription's owner changes or removes it. */
   readonly login: string | undefined;
@@ -187,18 +189,16 @@ export function useAccounts(): AccountsViewModel {
   const accounts = useQuery(ready(listSharedAccountsOptions()));
   const secrets = useQuery(ready(listSecretsOptions()));
   // From the organization's own route, which the server serves, once it is known.
-  const current = useCurrentOrg();
-  const { org } = current;
-  const people = useOrgMembers(org?.id ?? '', { enabled: org !== undefined });
+  const people = useCurrentOrgMembers();
   const viewer = useViewer();
   return {
     accounts: accounts.data?.items,
     secrets: secrets.data?.items,
     members: people.members,
-    people: { more: people.more, loadingMore: people.loadingMore },
+    people: { more: people.more, loadingMore: people.loadingMore, moreFailed: people.moreFailed },
     // Without the secrets or the members the form to share a subscription cannot show: say why.
     // Without its organization, the members cannot be asked for: that says why too.
-    failure: failureOf(accounts.error ?? secrets.error ?? people.error) ?? current.failure,
+    failure: failureOf(accounts.error ?? secrets.error ?? people.error),
     login: viewer.login,
   };
 }

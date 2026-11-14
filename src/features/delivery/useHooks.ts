@@ -44,7 +44,7 @@ export interface HookViewModel {
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
 }
 
@@ -63,7 +63,7 @@ export function useHook(name: string): HookViewModel {
     versions: detail.data?.versions,
     decisions,
     members: members.members,
-    people: { more: members.more, loadingMore: members.loadingMore },
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     failure: failureOf(detail.error ?? assignments.error),
   };
 }

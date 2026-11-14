@@ -34,7 +34,7 @@ export interface ApproversViewModel {
 
 export function useApprovers(): ApproversViewModel {
   const workflows = useQuery(ready(listWorkflowsOptions()));
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   // Read again on every visit: a workflow changed elsewhere changes who approves what.
   const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));
   // A server without the route says nothing; any other failure says why. Neither leaves a stale graph on screen.

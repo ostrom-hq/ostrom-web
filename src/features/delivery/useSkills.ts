@@ -45,7 +45,7 @@ export interface SkillCatalogViewModel {
 export function useSkillCatalog(): SkillCatalogViewModel {
   const catalog = useQuery(ready(listSkillsOptions()));
   // Only names: a refusal is not asked again, an owner then reads as their id.
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   return { skills: catalog.data?.items, members: members.members, failure: failureOf(catalog.error) };
 }
 
@@ -57,7 +57,7 @@ export interface SkillViewModel {
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
 }
 
@@ -82,7 +82,7 @@ export function useSkill(name: string): SkillViewModel {
     versions: detail.data?.versions,
     decisions,
     members: members.members,
-    people: { more: members.more, loadingMore: members.loadingMore },
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     failure: failureOf(detail.error ?? assignments.error),
   };
 }

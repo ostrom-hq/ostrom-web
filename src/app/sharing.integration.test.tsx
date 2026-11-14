@@ -526,17 +526,49 @@ describe('the shared subscriptions', () => {
 });
 
 describe('a team of more than a hundred people', () => {
-  it('reads the next page of members to share an artifact with, when asked', async () => {
+  it('names a reader beyond the first hundred, and offers every member to share with', async () => {
     const user = userEvent.setup();
-    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.artifactMembers['art-7'] = [...(db.artifactMembers['art-7'] ?? []), far.id];
     visit('/artifacts');
     const study = await findCard('Billing API: latency study');
     await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
-    const reader = await within(study).findByRole('combobox', { name: 'Add a reader' });
-    const before = within(reader).getAllByRole('option').length;
+    expect(await within(study).findByText(far.login)).toBeInTheDocument();
+    expect(within(study).queryByText('A former member')).toBeNull();
+    const reader = within(study).getByRole('combobox', { name: 'Add a reader' });
+    expect(within(reader).getAllByRole('option').length).toBeGreaterThan(large.length - 1);
+    expect(within(study).queryByRole('button', { name: 'Show more people' })).toBeNull();
+  });
+
+  it('keeps the people read when a next page fails, names the others by id, and asks for it again', async () => {
+    const user = userEvent.setup();
+    const large = largeMembers().slice(0, 150);
+    const far = large[130];
+    if (far === undefined) throw new Error('no member 130');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.artifactMembers['art-7'] = [...(db.artifactMembers['art-7'] ?? []), far.id];
+    let failing = true;
+    server.use(
+      http.get('*/api/v1/orgs/:org/members', ({ request }) =>
+        failing && new URL(request.url).searchParams.has('after')
+          ? refuse('the next page is down')()
+          : undefined,
+      ),
+    );
+    visit('/artifacts');
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('button', { name: 'Versions and readers' }));
+    expect(await within(study).findByText('The next people could not be read.')).toBeInTheDocument();
+    expect(within(study).getByText(far.id)).toBeInTheDocument();
+    expect(within(study).queryByText('A former member')).toBeNull();
+    expect(within(study).queryByText(/the next page is down/)).toBeNull();
+    expect(within(study).getByRole('combobox', { name: 'Add a reader' })).toBeInTheDocument();
+    failing = false;
     await user.click(within(study).getByRole('button', { name: 'Show more people' }));
-    await vi.waitFor(() => {
-      expect(within(reader).getAllByRole('option').length).toBeGreaterThan(before);
-    });
+    expect(await within(study).findByText(far.login)).toBeInTheDocument();
+    expect(within(study).queryByText('The next people could not be read.')).toBeNull();
   });
 });

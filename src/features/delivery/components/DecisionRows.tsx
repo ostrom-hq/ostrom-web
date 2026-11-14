@@ -16,7 +16,7 @@ export interface DecisionRowsProps {
   /** The organization's members; absent if unreadable. */
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly decisions: ReadonlyMap<string, Decision>;
   readonly busy: boolean;
   readonly onDecide: (memberId: string, choice: DecisionChoice) => void;

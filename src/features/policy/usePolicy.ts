@@ -71,7 +71,7 @@ export interface ModelPolicyViewModel {
   /** Who a member's own list may name; undefined while they load or when they cannot be read (a member is then an id). */
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly change: SaveViewModel<ModelPolicy>;
 }
 
@@ -84,7 +84,7 @@ const lenientPolicy = {
 export function useModelPolicy(): ModelPolicyViewModel {
   const policy = useQuery(ready(getModelPolicyOptions(lenientPolicy)));
   // Only names: a refusal is not asked again, a member then reads as their id.
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   const change = useSave(
     async (body: ModelPolicy) =>
       applied((await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data),
@@ -94,7 +94,7 @@ export function useModelPolicy(): ModelPolicyViewModel {
     policy: policy.data,
     failure: failureOf(policy.error),
     members: members.members,
-    people: { more: members.more, loadingMore: members.loadingMore },
+    people: { more: members.more, loadingMore: members.loadingMore, moreFailed: members.moreFailed },
     change,
   };
 }

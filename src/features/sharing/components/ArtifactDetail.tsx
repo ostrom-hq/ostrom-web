@@ -38,11 +38,11 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
     return <p className="o-row__meta">{t('sharing.artifacts.loading')}</p>;
   const readers = detail.readers;
   const members = detail.members;
-  // Without the members, a reader is its id; with them, an id no member has is someone who left.
+  // Without the members, a reader is its id; with every page of them, an id no member has is someone who left. A
+  // page that could not be read may hold them: their id then.
   const nameOf = (id: string): string =>
-    members === undefined
-      ? id
-      : (members.find((member) => member.id === id)?.login ?? t('sharing.artifacts.formerMember'));
+    members?.find((member) => member.id === id)?.login ??
+    (members === undefined || !detail.membersComplete ? id : t('sharing.artifacts.formerMember'));
   // Never its owner, nor someone already reading it, nor an invitation not accepted yet (no account to share with).
   const candidates = (members ?? []).filter(
     (member) => member.login !== artifact.owner && member.role !== 'invited' && !readers.includes(member.id),

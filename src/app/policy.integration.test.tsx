@@ -454,19 +454,27 @@ describe('the launch check', () => {
 });
 
 describe('a team of more than a hundred people', () => {
-  it('reads the next page of members to give a list of models to, when asked', async () => {
+  it('names a member beyond the first hundred, and keeps them in their row when the policy is changed', async () => {
     const user = userEvent.setup();
-    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
-    db.modelPolicies[db.organization.id] = { allowed: [], default: '' };
+    const large = largeMembers().slice(0, 150);
+    const far = large[120];
+    if (far === undefined) throw new Error('no member 120');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.modelPolicies[db.organization.id] = {
+      allowed: [],
+      default: 'claude-haiku',
+      byMember: { [far.id]: ['claude-haiku'] },
+    };
     visit('/policy');
     const models = await section('Models');
-    await user.click(await within(models).findByRole('button', { name: 'Change' }));
-    await user.click(within(models).getByRole('button', { name: 'Add a member' }));
+    expect(await within(models).findByText(`Only for ${far.login}`)).toBeInTheDocument();
+    await user.click(within(models).getByRole('button', { name: 'Change' }));
     const pick = within(models).getByRole('combobox', { name: 'Member 1' });
-    const before = within(pick).getAllByRole('option').length;
-    await user.click(within(models).getByRole('button', { name: 'Show more people' }));
-    await waitFor(() => {
-      expect(within(pick).getAllByRole('option').length).toBeGreaterThan(before);
-    });
+    expect(pick).toHaveValue(far.id);
+    expect(within(pick).getAllByRole('option').length).toBeGreaterThan(large.length);
+    expect(within(models).queryByRole('button', { name: 'Show more people' })).toBeNull();
+    await user.click(within(models).getByRole('button', { name: 'Save' }));
+    expect(await within(models).findByText('Models saved.')).toBeInTheDocument();
+    expect(db.modelPolicies[db.organization.id]?.byMember).toEqual({ [far.id]: ['claude-haiku'] });
   });
 });

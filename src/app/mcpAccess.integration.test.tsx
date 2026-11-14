@@ -430,16 +430,21 @@ describe('another organization', () => {
 });
 
 describe('a team of more than a hundred people', () => {
-  it('reads the next page of members to give a server to, when asked', async () => {
-    const user = userEvent.setup();
-    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...largeMembers()];
+  it('names a member beyond the first hundred, and offers every member to give the server to', async () => {
+    const large = largeMembers().slice(0, 150);
+    const far = large[140];
+    if (far === undefined) throw new Error('no member 140');
+    db.orgMembers[db.organization.id] = [...(db.orgMembers[db.organization.id] ?? []), ...large];
+    db.mcpAssignments['linear'] = [
+      ...(db.mcpAssignments['linear'] ?? []),
+      { server: 'linear', member: far.id, assignedAt: '2026-10-24T09:00:00.000Z' },
+    ];
     visit('/mcp');
     const card = await openAccess('linear');
+    const list = within(card).getByRole('list', { name: 'Who may use linear' });
+    expect(await within(list).findByText(`${far.name} (${far.login})`)).toBeInTheDocument();
     const who = within(card).getByRole('combobox', { name: 'Give it to' });
-    const before = within(who).getAllByRole('option').length;
-    await user.click(within(card).getByRole('button', { name: 'Show more people' }));
-    await waitFor(() => {
-      expect(within(who).getAllByRole('option').length).toBeGreaterThan(before);
-    });
+    expect(within(who).getAllByRole('option').length).toBeGreaterThan(large.length);
+    expect(within(card).queryByRole('button', { name: 'Show more people' })).toBeNull();
   });
 });

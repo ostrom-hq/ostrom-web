@@ -39,7 +39,7 @@ export interface SkillDeliveryViewModel {
  */
 export function useSkillDelivery(memberId: string): SkillDeliveryViewModel {
   const viewer = useViewer();
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   // Until the viewer is known, nothing is asked: a member's own view would otherwise be asked as an administrator's.
   const known = viewer.memberId !== undefined;
   const mine = viewer.memberId === memberId;
@@ -79,7 +79,7 @@ export interface HookDeliveryViewModel {
 /** The hooks a member receives; asked as for skills. */
 export function useHookDelivery(memberId: string): HookDeliveryViewModel {
   const viewer = useViewer();
-  const members = useCurrentOrgMembers();
+  const members = useCurrentOrgMembers({ all: true });
   const known = viewer.memberId !== undefined;
   const mine = viewer.memberId === memberId;
   const ownDelivery = useQuery(ready(getHookDeliveryOptions(), { enabled: known && mine }));

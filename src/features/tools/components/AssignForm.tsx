@@ -17,7 +17,7 @@ export interface AssignFormProps {
   /** The members to pick from; without them, a member is given by id. */
   readonly members: readonly OrgMember[] | undefined;
   /** The next page of members, read when asked. */
-  readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
+  readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly change: ServerAccessChangeViewModel;
 }
 
