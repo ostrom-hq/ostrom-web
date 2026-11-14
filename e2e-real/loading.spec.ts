@@ -42,6 +42,13 @@ const MAX_DEPTH = 2;
  * server serves (`/capabilities`, #139) and the badge of the open waits (#144).
  */
 const MAX_CALLS = 12;
+/**
+ * A screen that holds more distinct things than the rest, each read once and together (depth 2), may ask for more.
+ * `/mcp` reads eight: the hosted commands, the person's own servers, the team's servers, the members (to name who
+ * is given a server), the secrets, the usage, the calls and the relay settings (#163, #173, #177). It is raised for
+ * that screen alone, so a new read anywhere else still counts against the common ceiling.
+ */
+const MAX_CALLS_OF: Readonly<Partial<Record<(typeof screens)[number], number>>> = { '/mcp': 14 };
 /** A screen that asks the server still after this long never settles: a loop, not a load. */
 const SETTLE_LIMIT_MS = 30_000;
 /**
@@ -228,7 +235,8 @@ async function measure(
   if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
   if (again.length > 0) problems.push(`${screen}: asked again once answered ${listed(again, 'name')}`);
   if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
-  if (calls.length > MAX_CALLS) problems.push(`${screen}: ${String(calls.length)} calls`);
+  if (calls.length > (MAX_CALLS_OF[screen] ?? MAX_CALLS))
+    problems.push(`${screen}: ${String(calls.length)} calls`);
   const counted = (some: readonly Call[], key: 'name' | 'asked'): string =>
     some.length === 0 ? '' : `${String(some.length)} ${listed(some, key)}`;
   const cells = [
