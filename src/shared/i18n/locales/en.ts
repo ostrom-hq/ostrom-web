@@ -2350,7 +2350,7 @@ export const en = {
     expires: 'Expires at',
     adminTag: 'Admin sign-in',
     admin:
-      'This terminal asks for the governance writes below. Only an owner or an admin of the organization may approve it.',
+      'This terminal asks for every right below: the governance writes, the handover of shared accounts (accounts:write) and what the CLI reads. Only an owner or an admin of the organization may approve it.',
     scopes: 'Scopes asked',
     approve: 'Sign in this terminal',
     approveAdmin: 'Approve the admin sign-in',

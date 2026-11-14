@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { answerDeviceLogin, getDeviceLogin } from '@gen/api/sdk.gen';
-import { DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
+import { ADMIN_TOKEN_SCOPES, DEMO_ADMIN_DEVICE_CODE, DEMO_DEVICE_CODE } from '@/mocks/fixtures/device';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { FRESH_SIGN_IN_MS, resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
@@ -38,7 +38,7 @@ describe('mock ostrom login', () => {
     expect(login.data).toMatchObject({ userCode: DEMO_DEVICE_CODE, clientName: 'ostrom CLI on ada-laptop' });
     expect(login.data.scopes).toBeUndefined();
     const admin = await getDeviceLogin({ query: { userCode: DEMO_ADMIN_DEVICE_CODE }, throwOnError: true });
-    expect(admin.data.scopes).toEqual(['gates:policy', 'harness:write', 'policy:write']);
+    expect(admin.data.scopes).toEqual(ADMIN_TOKEN_SCOPES);
   });
 
   it('refuses someone signed out, a missing code, and an unknown or expired one', async () => {

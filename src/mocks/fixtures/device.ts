@@ -3,7 +3,7 @@ import type { DeviceAuthorization } from '@gen/api/types.gen';
 
 /** The code of the demo's waiting `ostrom login`: `/device?code=WDJB-MJHT` opens it. */
 export const DEMO_DEVICE_CODE = 'WDJB-MJHT';
-/** The code of the demo's waiting `ostrom login --admin`, which asks for the governance writes. */
+/** The code of the demo's waiting `ostrom login --admin`, which lists every scope its token gets. */
 export const DEMO_ADMIN_DEVICE_CODE = 'KPRT-ZXCV';
 
 /** How long a device login waits for its answer, as on the server. */
@@ -16,6 +16,28 @@ export interface MockDeviceLogin {
   /** The organization an approved admin sign-in's token is bound to, as the server records it. */
   orgId?: string;
 }
+
+/** What the token of `ostrom login --admin` holds, as the server lists it before the yes. */
+export const ADMIN_TOKEN_SCOPES = [
+  'accounts:read',
+  'accounts:write',
+  'cloud:write',
+  'environment:read',
+  'gates:policy',
+  'gates:read',
+  'harness:write',
+  'inference:read',
+  'mcp:read',
+  'orgs:read',
+  'policy:write',
+  'profile:read',
+  'receipts:read',
+  'rules:read',
+  'sessions:write',
+  'skills:read',
+  'skills:write',
+  'workflows:read',
+];
 
 /** Two terminals waiting for their person: an ordinary sign-in, and an admin one. */
 export function initialDeviceLogins(): MockDeviceLogin[] {
@@ -37,7 +59,8 @@ export function initialDeviceLogins(): MockDeviceLogin[] {
       authorization: {
         userCode: DEMO_ADMIN_DEVICE_CODE,
         clientName: 'ostrom CLI on ops-box',
-        scopes: ['gates:policy', 'harness:write', 'policy:write'],
+        // every scope the admin token gets, as the server lists them: the page hides none of them
+        scopes: ADMIN_TOKEN_SCOPES,
         expiresAt,
         requestedAt,
         requestedFrom: '2001:db8:abcd::/48',
