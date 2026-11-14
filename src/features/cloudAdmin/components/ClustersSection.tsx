@@ -40,20 +40,26 @@ export function ClustersSection(): ReactElement {
                       <span className="o-row__meta">{cluster.allowedNamespaces.join(', ')}</span>
                     </span>
                     <span className="o-row__end o-inline">
-                      <Badge tone={cluster.caCertificate.configured ? 'success' : 'warning'}>
-                        {t(
-                          cluster.caCertificate.configured
-                            ? 'cloudAdmin.clusters.caSet'
-                            : 'cloudAdmin.clusters.caNotSet',
-                        )}
-                      </Badge>
-                      <Badge tone={cluster.serviceAccountToken.configured ? 'success' : 'warning'}>
-                        {t(
-                          cluster.serviceAccountToken.configured
-                            ? 'cloudAdmin.clusters.tokenSet'
-                            : 'cloudAdmin.clusters.tokenNotSet',
-                        )}
-                      </Badge>
+                      {cluster.inCluster === true ? (
+                        <Badge tone="success">{t('cloudAdmin.clusters.inCluster')}</Badge>
+                      ) : (
+                        <>
+                          <Badge tone={cluster.caCertificate.configured ? 'success' : 'warning'}>
+                            {t(
+                              cluster.caCertificate.configured
+                                ? 'cloudAdmin.clusters.caSet'
+                                : 'cloudAdmin.clusters.caNotSet',
+                            )}
+                          </Badge>
+                          <Badge tone={cluster.serviceAccountToken.configured ? 'success' : 'warning'}>
+                            {t(
+                              cluster.serviceAccountToken.configured
+                                ? 'cloudAdmin.clusters.tokenSet'
+                                : 'cloudAdmin.clusters.tokenNotSet',
+                            )}
+                          </Badge>
+                        </>
+                      )}
                       <Button
                         variant="ghost"
                         aria-label={t('cloudAdmin.clusters.edit', { name: cluster.name })}

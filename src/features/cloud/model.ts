@@ -4,10 +4,12 @@ import type {
   Automation,
   AutomationDryRun,
   AutomationRun,
+  CloudProfile,
   CloudSession,
 } from '@gen/api/types.gen';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { knownValues, type Known } from '@/shared/lib/openEnum';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
@@ -147,4 +149,57 @@ export function versionedUrl(url: string, which: UrlVersion, version: number): s
   const suffix = '/trigger';
   if (!url.endsWith(suffix)) return undefined;
   return `${url.slice(0, -suffix.length)}/v/${which === 'latest' ? 'latest' : String(version)}${suffix}`;
+}
+
+/** A glob with `*` for any run of characters, as the server matches a profile's `allowedImageOverrides`. */
+function globMatches(pattern: string, text: string): boolean {
+  // The two-pointer match: on a mismatch it resumes after the last `*`, so no pattern backtracks exponentially.
+  let p = 0;
+  let t = 0;
+  let star = -1;
+  let resume = 0;
+  while (t < text.length) {
+    if (pattern[p] === '*') {
+      star = p;
+      p += 1;
+      resume = t;
+    } else if (pattern[p] === text[t]) {
+      p += 1;
+      t += 1;
+    } else if (star >= 0) {
+      p = star + 1;
+      resume += 1;
+      t = resume;
+    } else {
+      return false;
+    }
+  }
+  while (pattern[p] === '*') p += 1;
+  return p === pattern.length;
+}
+
+/** Whether a session may run `image` on `profile`: its own image, or one an override allows (empty: its own). */
+export function imageAllowed(image: string, profile: CloudProfile): boolean {
+  const wanted = image.trim();
+  return (
+    wanted === '' ||
+    wanted === profile.spec.image ||
+    (profile.spec.allowedImageOverrides ?? []).some((pattern) => globMatches(pattern, wanted))
+  );
+}
+
+/** The refusals of a session start that have their own words: the profile and the image asked for, the cluster. */
+export const START_REFUSALS = [
+  'cloud_profile_not_found',
+  'profile_unassigned',
+  'image_not_allowed',
+  'profile_required',
+  'cluster_unavailable',
+  'namespace_not_allowed',
+] as const;
+export type StartRefusal = (typeof START_REFUSALS)[number];
+
+export function startRefusalOf(failure: Error): StartRefusal | undefined {
+  const code = isApiFailure(failure) ? failure.code : undefined;
+  return START_REFUSALS.find((known) => known === code);
 }

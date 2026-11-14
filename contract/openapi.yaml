@@ -2106,7 +2106,7 @@ paths:
   /api/v1/github/app/configuration:
     get:
       operationId: getGithubAppConfiguration
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - github
       summary: The instance's GitHub App, as an administrator entered it or the manifest flow created it
@@ -2127,14 +2127,15 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: saveGithubAppConfiguration
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - github
       summary: Enter the instance's GitHub App by hand, or change it
       description: 'A person who administers the instance, signed in as a person (TeamCode''s `PUT /api/v1/github/app`).
         `version` absent or null creates the App (the private key and the client secret are then required); otherwise
         it must be the stored `version`, else 409 `github_app_conflict`. A null or absent secret keeps the stored one;
-        another `clientId` needs its own `clientSecret`. 400 `invalid_github_app` for an App ID outside
+        another `clientId` needs its own `clientSecret`, another `appId` its own private key (GitHub refuses the former
+        App''s, 422) and keeps no webhook secret. 400 `invalid_github_app` for an App ID outside
         1..999999999999, a client ID that is not a GitHub App''s (`Iv` then 2 to 62 of `[0-9A-Za-z._-]`), a client
         secret outside 20..256 characters or with a space or a control character, or a private key over 16384
         characters or not PEM. The App is checked with GitHub (its JWT signed by the key) before it is stored, which
@@ -3687,6 +3688,8 @@ paths:
       tags:
       - sessions
       summary: Start a session or a segment (hook SessionStart); a resumed session opens a chained segment
+      description: "A session never takes the id of another person's cloud session: 403 `forbidden` (\"This session
+        is not yours.\")"
       requestBody:
         required: true
         content:
@@ -6085,14 +6088,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                workflow:
-                  $ref: '#/components/schemas/Workflow'
-                expectedVersion:
-                  type: integer
-              required:
-              - workflow
+              $ref: '#/components/schemas/SaveWorkflowRequest'
       responses:
         '200':
           description: OK
@@ -6173,15 +6169,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                inputs:
-                  type: object
-                  additionalProperties:
-                    type: string
-                repository:
-                  type: string
-                  description: "`owner/name`, for the agent nodes that name none (planned)"
+              $ref: '#/components/schemas/StartWorkflowRunRequest'
       responses:
         '200':
           description: "The first run of this `Idempotency-Key` (planned)"
@@ -7260,7 +7248,7 @@ paths:
         in: query
         required: false
         description: "The session the agent runs in; a cloud session's agent token is confined to its cloud session
-          whatever it names, and needs none (planned)"
+          whatever it names, and needs none"
         schema:
           type: string
       - name: run
@@ -7303,18 +7291,19 @@ paths:
       tags:
       - waits
       summary: "What the waits of an agent's session have to say, for the Stop hook of its launch"
-      description: "An agent token only, through its launch's local relay (the hooks' capability), in one of its
-        launch's sessions (`?session=`, any segment). Planned: a cloud session's agent token is confined to its cloud
-        session whatever it names, and needs no `session`. Holds the call up to `waitMillis` (0 to 30 000, 25 000 by
-        default) and answers as soon as a wait of the session is answered: each answer is handed over once
-        (`messages`, oldest first, each starting with `[Ostrom wait answered]`). `open` says a wait asked by the
-        session is still open, so the hook keeps holding the agent; a session with no open wait answers at once."
+      description: "An agent token only: a launch on a machine through its local relay (the hooks' capability), in
+        one of its launch's sessions (`?session=`, any segment; 400 `invalid_request` without it); a cloud session's
+        agent token, from its runner, is confined to its cloud session whatever it names, and needs no `session`. Like
+        every route a cloud session's agent token calls, it answers only while the execution its launch was opened in
+        runs (403 otherwise). Holds the call up to `waitMillis` (0 to 30 000, 25 000 by default)
+        and answers as soon as a wait of the session is answered: each answer is handed over once (`messages`, oldest
+        first, each starting with `[Ostrom wait answered]`). `open` says a wait asked by the session is still open, so
+        the hook keeps holding the agent; a session with no open wait answers at once."
       parameters:
       - name: session
         in: query
-        required: true
-        description: "The session the agent runs in: any of its segments (planned: a cloud session's agent token needs
-          none)"
+        required: false
+        description: "The session the agent runs in: any of its segments; a cloud session's agent token needs none"
         schema:
           type: string
       requestBody:
@@ -7509,15 +7498,16 @@ paths:
         for every open drop request): yes drops the item, no or a cancelled wait puts it back to `todo`. Callers: the
         session's agent token (the token of its launch), confined to its own session, which it names in `sessionId`
         (400 `invalid_request` without it; a cloud session's agent token acts on its cloud session whatever it names,
-        and needs none: planned); the session's owner, a person, who names `sessionId` (400 `invalid_request` without
-        it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never
-        writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a
-        session of another organization or an unknown one answers 404 `not_found`."
+        and needs none); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an
+        owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes
+        (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session
+        of another organization or an unknown one answers 404 `not_found`."
       parameters:
       - name: sessionId
         in: query
         required: false
-        description: "The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it"
+        description: "The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it;
+          a cloud session's agent token needs none"
         schema:
           type: string
       responses:
@@ -7553,10 +7543,10 @@ paths:
         `todo_exists` when the session already has one (`resetTodo` clears a closed one). Callers: the session's agent
         token (the token of its launch), confined to its own session, which it names in `sessionId` (400
         `invalid_request` without it; a cloud session's agent token acts on its cloud session whatever it names, and
-        needs none: planned); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it);
-        an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes
-        (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session
-        of another organization or an unknown one answers 404 `not_found`."
+        needs none); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner
+        or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403
+        `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of
+        another organization or an unknown one answers 404 `not_found`."
       requestBody:
         required: true
         content:
@@ -7593,8 +7583,8 @@ paths:
         dependencies. The same 400 keys as the creation; 404 `todo_not_found` without a list; 409 `todo_closed` when
         the list is done or abandoned. Callers: the session's agent token (the token of its launch), confined to its
         own session, which it names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token
-        acts on its cloud session whatever it names, and needs none: planned); the session's owner, a person, who
-        names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
+        acts on its cloud session whatever it names, and needs none); the session's owner, a person, who names
+        `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
         (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets
         403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404
         `not_found`."
@@ -7637,10 +7627,10 @@ paths:
         dropped), `item_closed` (done or dropped), `drop_pending` (a drop waits for the owner). Callers: the session's
         agent token (the token of its launch), confined to its own session, which it names in `sessionId` (400
         `invalid_request` without it; a cloud session's agent token acts on its cloud session whatever it names, and
-        needs none: planned); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it);
-        an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes
-        (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session
-        of another organization or an unknown one answers 404 `not_found`."
+        needs none); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner
+        or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403
+        `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of
+        another organization or an unknown one answers 404 `not_found`."
       parameters:
       - name: item
         in: path
@@ -7685,10 +7675,10 @@ paths:
         100 per item (400 `too_many_notes`). 404 `todo_not_found`, `unknown_item`; 409 `todo_closed`. Callers: the
         session's agent token (the token of its launch), confined to its own session, which it names in `sessionId`
         (400 `invalid_request` without it; a cloud session's agent token acts on its cloud session whatever it names,
-        and needs none: planned); the session's owner, a person, who names `sessionId` (400 `invalid_request` without
-        it); an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never
-        writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a
-        session of another organization or an unknown one answers 404 `not_found`."
+        and needs none); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an
+        owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes
+        (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session
+        of another organization or an unknown one answers 404 `not_found`."
       parameters:
       - name: item
         in: path
@@ -7738,10 +7728,10 @@ paths:
         `unknown_item`; 409 `item_closed` (drop requested or dropped), `todo_closed`. Callers: the session's agent
         token (the token of its launch), confined to its own session, which it names in `sessionId` (400
         `invalid_request` without it; a cloud session's agent token acts on its cloud session whatever it names, and
-        needs none: planned); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it);
-        an owner or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes
-        (403 `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session
-        of another organization or an unknown one answers 404 `not_found`."
+        needs none); the session's owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner
+        or an administrator of the organization reads (`getSessionTodo`, `readTodoContext`) but never writes (403
+        `forbidden`). A service key or a runner token gets 403 `forbidden`. Another person's session, a session of
+        another organization or an unknown one answers 404 `not_found`."
       parameters:
       - name: item
         in: path
@@ -7788,11 +7778,10 @@ paths:
         (`replaceClosed`), which a note records. 400 `invalid_link`; 404 `todo_not_found`, `unknown_item`; 409
         `todo_closed`. Callers: the session's agent token (the token of its launch), confined to its own session,
         which it names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token acts on its
-        cloud session whatever it names, and needs none: planned); the session's owner, a person, who names
-        `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
-        (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets
-        403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404
-        `not_found`."
+        cloud session whatever it names, and needs none); the session's owner, a person, who names `sessionId` (400
+        `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`,
+        `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`.
+        Another person's session, a session of another organization or an unknown one answers 404 `not_found`."
       parameters:
       - name: item
         in: path
@@ -7838,8 +7827,8 @@ paths:
         deleted. 404 `todo_not_found`, `unknown_item`; 409 `item_closed` (done or dropped), `drop_pending` (a drop
         already waits), `todo_closed`. Callers: the session's agent token (the token of its launch), confined to its
         own session, which it names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token
-        acts on its cloud session whatever it names, and needs none: planned); the session's owner, a person, who
-        names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
+        acts on its cloud session whatever it names, and needs none); the session's owner, a person, who names
+        `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
         (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets
         403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404
         `not_found`."
@@ -7888,7 +7877,7 @@ paths:
         todo-context`, matcher `compact|resume`) after a compaction and on resume; `text` is null without an active
         list. Callers: the session's agent token (the token of its launch), confined to its own session, which it
         names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token acts on its cloud
-        session whatever it names, and needs none: planned); the session's owner, a person, who names `sessionId` (400
+        session whatever it names, and needs none); the session's owner, a person, who names `sessionId` (400
         `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`,
         `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`.
         Another person's session, a session of another organization or an unknown one answers 404 `not_found`."
@@ -7896,7 +7885,8 @@ paths:
       - name: sessionId
         in: query
         required: false
-        description: "The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it"
+        description: "The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it;
+          a cloud session's agent token needs none"
         schema:
           type: string
       responses:
@@ -7943,11 +7933,10 @@ paths:
         `invalid_stop` (an unknown phase, an item reported twice, more than 500 items or 5 orphans),
         `invalid_proof`. Callers: the session's agent token (the token of its launch), confined to its own session,
         which it names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token acts on its
-        cloud session whatever it names, and needs none: planned); the session's owner, a person, who names
-        `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
-        (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets
-        403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404
-        `not_found`."
+        cloud session whatever it names, and needs none); the session's owner, a person, who names `sessionId` (400
+        `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`,
+        `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`.
+        Another person's session, a session of another organization or an unknown one answers 404 `not_found`."
       requestBody:
         required: true
         content:
@@ -7984,11 +7973,10 @@ paths:
         `hook_error`, its text kept to 500 characters, joins `hookEvents` (the newest 20). 404 `todo_not_found`
         without a list. Callers: the session's agent token (the token of its launch), confined to its own session,
         which it names in `sessionId` (400 `invalid_request` without it; a cloud session's agent token acts on its
-        cloud session whatever it names, and needs none: planned); the session's owner, a person, who names
-        `sessionId` (400 `invalid_request` without it); an owner or an administrator of the organization reads
-        (`getSessionTodo`, `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets
-        403 `forbidden`. Another person's session, a session of another organization or an unknown one answers 404
-        `not_found`."
+        cloud session whatever it names, and needs none); the session's owner, a person, who names `sessionId` (400
+        `invalid_request` without it); an owner or an administrator of the organization reads (`getSessionTodo`,
+        `readTodoContext`) but never writes (403 `forbidden`). A service key or a runner token gets 403 `forbidden`.
+        Another person's session, a session of another organization or an unknown one answers 404 `not_found`."
       requestBody:
         required: true
         content:
@@ -8027,8 +8015,8 @@ paths:
         of items, not its content). 409 `todo_active` while the list is active: a reset is no way to skip an
         unfinished item. 404 `todo_not_found` without a list. Callers: the session's agent token (the token of its
         launch), confined to its own session, which it names in `sessionId` (400 `invalid_request` without it; a cloud
-        session's agent token acts on its cloud session whatever it names, and needs none: planned); the session's
-        owner, a person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the
+        session's agent token acts on its cloud session whatever it names, and needs none); the session's owner, a
+        person, who names `sessionId` (400 `invalid_request` without it); an owner or an administrator of the
         organization gets 403 `forbidden`. A service key or a runner token gets 403 `forbidden`. Another person's
         session, a session of another organization or an unknown one answers 404 `not_found`."
       requestBody:
@@ -8139,12 +8127,12 @@ paths:
         a person's `human`). A `team` entry written by a person is direct. One written by an agent (an agent token, or
         a call the CLI's local relay forwards with `x-ostrom-origin: agent`, whoever's sign-in it carries) is stored
         `proposed` and the owner of the session it names (`sessionId`, or the agent token's own; a cloud session's
-        agent token proposes from its cloud session whatever it names: planned) is asked through a wait: the answer is
-        the entry with status `proposed`, which joins the organization's memory only once accepted, within about ten
+        agent token proposes from its cloud session whatever it names) is asked through a wait: the answer is the
+        entry with status `proposed`, which joins the organization's memory only once accepted, within about ten
         seconds of the answer. 400 `memory_proposal_session` without a session (a cloud session's agent token needs
-        none: planned), 404 for a session that is not the caller's; a key that is no agent's session cannot propose
-        (403 `memory_team_forbidden`). 400 `invalid_memory` for a field out of bounds: a title of 1 to 160 characters
-        and a summary of 1 to 300 on one line, content of 1 to 16,000 characters, at most 8 distinct tags
+        none), 404 for a session that is not the caller's; a key that is no agent's session cannot propose (403
+        `memory_team_forbidden`). 400 `invalid_memory` for a field out of bounds: a title of 1 to 160 characters and a
+        summary of 1 to 300 on one line, content of 1 to 16,000 characters, at most 8 distinct tags
         `[a-z0-9][a-z0-9._-]*` of at most 40 characters, at most 10 references of 1 to 300 characters, an expiry in
         the future. 422 `memory_secret` when the title, summary, content or a reference looks like a credential
         (provider and Ostrom token prefixes, private keys, bearer headers, `password=value`): nothing is stored. 409
@@ -8751,7 +8739,7 @@ paths:
       - name: personal
         in: query
         required: false
-        x-ostrom-status: planned
+        x-ostrom-status: served
         description: "The members' personal MCP servers (`mcp.personal.v1`), by owner, with `owner` and their definition
           (name, URL, transport, the secret names they use: none of these is secret) for review; never a credential.
           An admin with `mcp:read`; the personal servers only, in owner order, the first 500, without
@@ -9173,14 +9161,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/McpServer'
-                required:
-                - items
+                $ref: '#/components/schemas/McpServerList'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -9816,8 +9797,17 @@ paths:
         `NODE_OPTIONS`, `NODE_PATH`, `JAVA_TOOL_OPTIONS`, `JDK_JAVA_OPTIONS`, `_JAVA_OPTIONS`, `PYTHONPATH`,
         `PYTHONSTARTUP`, `PYTHONHOME`, `PERL5OPT`, `PERL5LIB`, `RUBYOPT`, `RUBYLIB`, `GIT_SSH`, `GIT_SSH_COMMAND`,
         `GIT_EXEC_PATH`, `GIT_CONFIG_GLOBAL`, `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`, `NO_PROXY`, `SSL_CERT_FILE`,
-        `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`, and the prefixes `LD_`, `DYLD_`, `OSTROM_`,
-        `TEAMCODE_`, `ANTHROPIC_`, `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_` (personal variants too). The
+        `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`; what else steers the loader or a runtime
+        (`GLIBC_TUNABLES`, `NODE_TLS_REJECT_UNAUTHORIZED`, `NODE_ICU_DATA`, `ELECTRON_RUN_AS_NODE`, `PYTHONUSERBASE`,
+        `PYTHONEXECUTABLE`, `PYTHONPLATLIBDIR`, `PYTHONBREAKPOINT`, `PERL5DB`, `CLASSPATH`, `DOTNET_STARTUP_HOOKS`,
+        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`), the
+        shell (`OLDPWD`, `SHELLOPTS`, `BASHOPTS`, `CDPATH`, `GLOBIGNORE`, `PS4`, `ZDOTDIR`), Git, SSH and the GitHub CLI
+        (`GIT_TERMINAL_PROMPT`, `GH_CONFIG_DIR`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`,
+        `GIT_PAGER`, `GIT_EDITOR`, `GIT_SEQUENCE_EDITOR`, `GIT_TEMPLATE_DIR`, `GIT_DIR`, `GIT_WORK_TREE`,
+        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`) or an agent's
+        tools (`RIPGREP_CONFIG_PATH`); and the prefixes `LD_`, `DYLD_`, `OSTROM_`, `TEAMCODE_`, `ANTHROPIC_`,
+        `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_`, `BASH_FUNC_` (personal variants too). A variant stored
+        under a name reserved later is never served to an agent, and can still be unassigned or deleted. The
         runner's own commands (clone, fetch, setup) never see a variable named with `GIT_`, `GH_` or `SSH_`, so a
         value cannot redirect the credential socket. At most 500 team variants (409 `variant_limit`). An owner or an admin from
         the console (scope `secrets:write`, step-up). The value is encrypted at rest with the secrets key (AES-256-GCM,
@@ -12116,16 +12106,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/CloudSession'
-                  next:
-                    type: string
-                required:
-                - items
+                $ref: '#/components/schemas/CloudSessionPage'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -12147,49 +12128,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                agent:
-                  $ref: '#/components/schemas/CloudAgentKind'
-                model:
-                  type: string
-                repo:
-                  type: string
-                  description: https://github.com/<owner>/<name>, cloned through the organization's GitHub App
-                ref:
-                  type: string
-                  description: Branch, tag or commit; the default branch when absent
-                prompt:
-                  type: string
-                  description: The agent's first message, up to 20,000 characters; an interactive agent when absent
-                name:
-                  type: string
-                environment:
-                  $ref: '#/components/schemas/CloudEnvironment'
-                profileId:
-                  type: string
-                  format: uuid
-                  x-ostrom-status: planned
-                  description: "The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`,
-                    `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace,
-                    at its current version, which the session keeps (TeamCode's `profileId`). 404
-                    `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned`
-                    when it is not assigned to the session's owner (the member the session is created for); members
-                    with the organization role owner or admin use every profile. Absent: the one profile that owner
-                    may use, 422 `profile_required` when they may use none or several. The create also checks the
-                    profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered
-                    again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler
-                    checks both again at each later start, where they become the session's `failure.code` (a first
-                    start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on
-                    registered runners. Planned: the server does not read it yet"
-                image:
-                  type: string
-                  x-ostrom-status: planned
-                  description: "The session image instead of the profile's: the profile's image, or one matching
-                    its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed`
-                    otherwise. Absent: the profile's image. Planned: the server does not read it yet"
-              required:
-              - agent
+              $ref: '#/components/schemas/CreateCloudSessionRequest'
       responses:
         '201':
           description: OK
@@ -12249,6 +12188,8 @@ paths:
       tags:
       - runners
       summary: Terminate a cloud session; its workspace is deleted
+      description: "Once terminated, the waits its agent asked in it that are still open are cancelled, as when a
+        session on a machine ends"
       parameters:
       - name: id
         in: path
@@ -17669,9 +17610,8 @@ components:
         updatedAt:
           type: string
         origin:
-          x-ostrom-status: planned
           description: "Where it was created, when an agent created it: taken from the agent token, never from the
-            call. Absent for a person's publication. Planned: the server does not send it yet"
+            call. Absent for a person's publication"
           $ref: '#/components/schemas/ArtifactOrigin'
       required:
       - id
@@ -18188,9 +18128,8 @@ components:
           type: boolean
           description: The same commit again within 10 minutes, answered with the version it made
         origin:
-          x-ostrom-status: planned
           description: "Where it was committed, when an agent committed it: taken from the agent token, never from
-            the call. Absent for a person's publication. Planned: the server does not send it yet"
+            the call. Absent for a person's publication"
           $ref: '#/components/schemas/ArtifactOrigin'
       required:
       - number
@@ -19155,7 +19094,7 @@ components:
       x-ostrom-kotlin: pending
     BillingPlanLimits:
       type: object
-      description: 'The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.'
+      description: 'The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster''s `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.'
       properties:
         maxPeople:
           type: [integer, 'null']
@@ -19319,7 +19258,7 @@ components:
         compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core):
         `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`,
         `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`,
-        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
+        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
         `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`,
         `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`,
         `license.v1`. A client
@@ -19570,12 +19509,11 @@ components:
           $ref: '#/components/schemas/InstanceSecretState'
         inCluster:
           type: boolean
-          x-ostrom-status: planned
           description: "Whether the cluster is the server's own, reached with the server pod's mounted service account
             (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet
             rotates them, and nothing is stored. Only the cluster imported once from the former
             `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster.
-            TeamCode has no such mode (it never read the cluster from variables). Absent means false. Planned"
+            TeamCode has no such mode (it never read the cluster from variables). Absent means false"
         createdAt:
           type: string
           format: date-time
@@ -19905,8 +19843,9 @@ components:
           type: [string, 'null']
           minLength: 1
           maxLength: 256
-          description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one. Optional, as an
-            App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)'
+          description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same
+            `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned
+            off: without it every webhook is refused (`webhookSecretSet` false)'
         version:
           type: [integer, 'null']
           description: The stored `version`; null or absent to create the App
@@ -19940,7 +19879,6 @@ components:
       - opencode
       - gemini
       - shell
-      x-ostrom-kotlin: pending
     CloudEnvironment:
       type: object
       description: "The preparation recipe of a cloud session (`runners.cloud.environment.v1`): what the runner does in the
@@ -19976,7 +19914,6 @@ components:
           type: string
           description: The domain of the Git e-mail address for an owner without a GitHub link
             (`users.noreply.ostrom.invalid` when absent); a linked owner commits as `<id>+<login>@users.noreply.github.com`
-      x-ostrom-kotlin: pending
     CloudRepository:
       type: object
       description: A repository the runner clones into the workspace
@@ -19997,7 +19934,6 @@ components:
           description: A local branch created at `ref` after cloning, for example one branch per task
       required:
       - url
-      x-ostrom-kotlin: pending
     CloudSetup:
       type: object
       description: Commands run with `/bin/sh -c` in the working directory, in the agent's container and under its user,
@@ -20017,7 +19953,6 @@ components:
           description: Run on every execution (first start and every resume), in order, after `create`
           items:
             type: string
-      x-ostrom-kotlin: pending
     CloudSession:
       type: object
       description: 'A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses'
@@ -20071,9 +20006,8 @@ components:
           $ref: '#/components/schemas/CloudSessionProfile'
         image:
           type: string
-          x-ostrom-status: planned
           description: "The session image its containers run, the profile's or the override asked at creation
-            (`runners.cloud.profiles.v1`). Absent from a session without a profile. Planned"
+            (`runners.cloud.profiles.v1`). Absent from a session without a profile"
         githubAccess:
           type: string
           enum:
@@ -20097,12 +20031,10 @@ components:
       - agent
       - status
       - createdAt
-      x-ostrom-kotlin: pending
     CloudSessionProfile:
       type: object
-      x-ostrom-status: planned
       description: "The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`,
-        TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned"
+        TeamCode's `profile {id, version}`). Absent from a session without a profile"
       properties:
         id:
           type: string
@@ -20112,15 +20044,70 @@ components:
       required:
       - id
       - version
-      x-ostrom-kotlin: pending
+    CloudSessionPage:
+      type: object
+      description: "A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page"
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudSession'
+        next:
+          type: string
+      required:
+      - items
+    CreateCloudSessionRequest:
+      type: object
+      description: The cloud session to start (`createCloudSession`)
+      properties:
+        agent:
+          $ref: '#/components/schemas/CloudAgentKind'
+        model:
+          type: string
+        repo:
+          type: string
+          description: https://github.com/<owner>/<name>, cloned through the organization's GitHub App
+        ref:
+          type: string
+          description: Branch, tag or commit; the default branch when absent
+        prompt:
+          type: string
+          description: The agent's first message, up to 20,000 characters; an interactive agent when absent
+        name:
+          type: string
+        environment:
+          $ref: '#/components/schemas/CloudEnvironment'
+        profileId:
+          type: string
+          format: uuid
+          description: "The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`,
+            `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace,
+            at its current version, which the session keeps (TeamCode's `profileId`). 404
+            `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned`
+            when it is not assigned to the session's owner (the member the session is created for); members
+            with the organization role owner or admin use every profile. Absent: the one profile that owner
+            may use, 422 `profile_required` when they may use none or several. The create also checks the
+            profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered
+            again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler
+            checks both again at each later start, where they become the session's `failure.code` (a first
+            start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on
+            registered runners"
+        image:
+          type: string
+          description: "The session image instead of the profile's: the profile's image, or one matching
+            its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed`
+            otherwise. Absent: the profile's image"
+      required:
+      - agent
     CloudSessionFailure:
       type: object
       description: Why a cloud session failed or paused on its own
       properties:
         code:
           type: string
-          description: start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed,
-            cluster_unavailable or namespace_not_allowed (the profile's cluster or namespace at a start, planned)
+          description: "start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed,
+            cluster_unavailable, namespace_not_allowed or server_url_missing (a session on a cloud profile whose
+            cluster stopped opening, whose namespace is no longer allowed, or whose runner has no server URL)"
         message:
           type: string
         retryable:
@@ -20129,7 +20116,6 @@ components:
       required:
       - code
       - message
-      x-ostrom-kotlin: pending
     CloudSessionLimits:
       type: object
       description: The bounds a cloud session runs under, from its organization's plan
@@ -20146,7 +20132,6 @@ components:
       - idleTimeoutMinutes
       - maxRunMinutes
       - restrictedEgress
-      x-ostrom-kotlin: pending
     CompiledHook:
       type: object
       description: 'A hook rule: when the agent event fires on a matching tool call, run the check, ask the gate or send the
@@ -20699,7 +20684,6 @@ components:
       required:
       - variables
       - unavailable
-      x-ostrom-kotlin: pending
     EnvironmentVariant:
       type: object
       description: "An environment variant (`environment.v1`): a named value for one environment variable, never with its
@@ -20743,7 +20727,6 @@ components:
       - version
       - createdAt
       - updatedAt
-      x-ostrom-kotlin: pending
     EnvironmentVariantCreate:
       type: object
       description: Creates an environment variant; the variable and the binding never change afterwards
@@ -20767,7 +20750,6 @@ components:
       required:
       - variable
       - name
-      x-ostrom-kotlin: pending
     EnvironmentVariantUpdate:
       type: object
       description: Renames a variant or replaces its shared value
@@ -20785,7 +20767,6 @@ components:
             absent keeps the stored one
       required:
       - expectedVersion
-      x-ostrom-kotlin: pending
     EnvironmentVariantsPage:
       type: object
       description: Environment variants, by variable then name; always one page (at most 500)
@@ -20796,7 +20777,6 @@ components:
             $ref: '#/components/schemas/EnvironmentVariant'
       required:
       - items
-      x-ostrom-kotlin: pending
     Evidence:
       type: object
       description: A line of evidence shown with an approval
@@ -21289,7 +21269,6 @@ components:
       - confirmationId
       - confirmUrl
       - expiresAt
-      x-ostrom-kotlin: pending
     GovernanceConfirmationPerson:
       type: object
       description: A member who asked for or answered a confirmation
@@ -22420,7 +22399,6 @@ components:
       - transport
       - enabled
       - scope
-      x-ostrom-kotlin: pending
     McpHostedProcesses:
       type: object
       description: The org's hosted stdio processes (`GET /api/v1/mcp/hosted`)
@@ -22560,6 +22538,16 @@ components:
       required:
       - agentPrefix
       x-ostrom-kotlin: pending
+    McpServerList:
+      type: object
+      description: "The caller's personal MCP servers (`listMyMcpServers`)"
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/McpServer'
+      required:
+      - items
     McpStdioSpec:
       type: object
       description: A server run by the MCP host from a pinned package
@@ -22586,7 +22574,6 @@ components:
       required:
       - launcher
       - packageName
-      x-ostrom-kotlin: pending
     Me:
       type: object
       description: The caller
@@ -27460,6 +27447,28 @@ components:
             $ref: '#/components/schemas/WebhookDelivery'
       required:
       - items
+    SaveWorkflowRequest:
+      type: object
+      description: "The body of `saveWorkflow`: the workflow, and the version the editor read"
+      properties:
+        workflow:
+          $ref: '#/components/schemas/Workflow'
+        expectedVersion:
+          type: integer
+          description: "A newer stored version answers 409 `workflow_conflict`"
+      required:
+      - workflow
+    StartWorkflowRunRequest:
+      type: object
+      description: "The body of `startWorkflowRun`"
+      properties:
+        inputs:
+          type: object
+          additionalProperties:
+            type: string
+        repository:
+          type: string
+          description: "`owner/name`, for the agent nodes that name none (planned)"
     WorkflowPage:
       type: object
       description: "The workflows; `next` is the cursor of the following page"
