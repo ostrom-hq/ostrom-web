@@ -2,7 +2,6 @@
 import {
   listMcpServersOptions,
   listMcpServersQueryKey,
-  listMembersOptions,
   listMyMcpServersQueryKey,
   promoteMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -11,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
+import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import { memberLabel } from './model';
 
 export interface PersonalMcpReviewViewModel {
@@ -24,9 +24,8 @@ export interface PersonalMcpReviewViewModel {
 /** The members' own MCP servers, for an administrator's review (`GET /api/v1/mcp/servers?personal=true`). */
 export function usePersonalMcpReview(): PersonalMcpReviewViewModel {
   const servers = useQuery(ready(listMcpServersOptions({ query: { personal: true } })));
-  // Only names: a refusal is not asked again, an owner then reads as their member id.
-  const members = useQuery(ready(listMembersOptions(), { staleTime: 60_000, retry: false }));
-  const known = members.data?.items;
+  // Only names: an owner the list cannot name reads as their member id.
+  const known = useCurrentOrgMembers({ all: true }).members;
   const ownerOf = useCallback(
     (id: string) => {
       const member = known?.find((candidate) => candidate.id === id);
