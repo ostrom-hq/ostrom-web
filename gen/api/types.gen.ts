@@ -2019,6 +2019,12 @@ export type InferenceSettings = {
      * Whether members' shared subscription accounts serve before the org's keys
      */
     useSharedAccounts?: boolean;
+    /**
+     * Each member's `maxConcurrent`, by member id (`inference.queue.v1`, TeamCode's member policy): the most inference calls the member runs at once, 0 for unlimited, the default (a member absent is 0). Past a limit, the member's next calls wait in the admission queue (at most 8 of them) until one ends; with 0 a call never waits on a concurrency slot, only while every account is busy or out of quota. At most 1,000 members
+     */
+    memberConcurrency?: {
+        [key: string]: number;
+    };
 };
 
 /**

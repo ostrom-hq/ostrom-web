@@ -37,7 +37,7 @@ function ProvidersForm({
         event.preventDefault();
         const sent = draft;
         // Typed while the save went: what is on screen is not what was saved, so "saved" is not said.
-        view.change.save(settingsOf(sent), () => {
+        view.change.save(settingsOf(sent, settings), () => {
           if (current.current !== sent) view.change.reset();
         });
       }}

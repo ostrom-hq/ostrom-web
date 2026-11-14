@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Invitation, OrgMember } from '@gen/api/types.gen';
+import type { InferenceSettings, Invitation, OrgMember } from '@gen/api/types.gen';
 import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
 /** Owners first, then admins, approvers, members and billing: the people who decide are the first ones read. */
@@ -60,3 +60,30 @@ export function parseInvites(text: string): ParsedInvites {
 /** The most people one invitation link can bring in (`MAX_LINK_USES` of the server), and the default. */
 export const LINK_MAX_USES = 100;
 export const LINK_DEFAULT_USES = 10;
+
+/** The most concurrent requests a member may be given (the contract's `maximum`). */
+export const MAX_MEMBER_CONCURRENCY = 32;
+
+/** A member's concurrent requests in the inference settings: 0, the default, for unlimited (TeamCode's member policy). */
+export function concurrencyOf(settings: InferenceSettings, memberId: string): number {
+  return settings.memberConcurrency?.[memberId] ?? 0;
+}
+
+/** The settings with a member's concurrent requests changed, every other setting kept; 0 drops the member's entry. */
+export function withConcurrency(
+  settings: InferenceSettings,
+  memberId: string,
+  limit: number,
+): InferenceSettings {
+  const others = Object.entries(settings.memberConcurrency ?? {}).filter(([id]) => id !== memberId);
+  return {
+    ...settings,
+    memberConcurrency: Object.fromEntries(limit === 0 ? others : [...others, [memberId, limit]]),
+  };
+}
+
+/** What a draft of the concurrency field says: a whole number from 0 to the maximum, or undefined. */
+export function concurrencyDraft(draft: string): number | undefined {
+  const limit = /^\d{1,2}$/.test(draft.trim()) ? Number(draft.trim()) : MAX_MEMBER_CONCURRENCY + 1;
+  return limit <= MAX_MEMBER_CONCURRENCY ? limit : undefined;
+}

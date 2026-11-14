@@ -531,6 +531,10 @@ export const en = {
       todoHookHint:
         'When on, an agent of this member’s sessions cannot end its turn while its todo has open items. Off: the agent may stop; the todo is still kept.',
       todoHookOf: 'Todo Stop hook for {{name}}',
+      concurrency: 'Concurrent requests (0 = unlimited)',
+      concurrencyHint:
+        'Requests that may run at once; more requests wait in the queue. 0 is unlimited, the default.',
+      concurrencyOf: 'Concurrent requests of {{name}} (0 = unlimited)',
     },
     invite: {
       title: 'Invite people',

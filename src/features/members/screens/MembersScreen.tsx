@@ -12,6 +12,7 @@ import { InvitationRow } from '../components/InvitationRow';
 import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
 import { MemberRow } from '../components/MemberRow';
+import { useMemberConcurrency } from '../useMemberConcurrency';
 import { useTodoStopHook } from '../useTodoStopHook';
 import { useInvite, useInviteLink, useMembers, useRevokeInvitation, useRoleChange } from '../useMembers';
 import { FailureText } from '@/shared/ui/FailureText';
@@ -43,6 +44,8 @@ function MembersPage({
   const link = useInviteLink(org.id);
   const revoke = useRevokeInvitation(org.id);
   const stopHook = useTodoStopHook(role);
+  const concurrency = useMemberConcurrency(role);
+  const { limits } = concurrency;
   const roles = givableRoles(role);
   const manager = managesMembers(role);
   const invitations = view.invitations ?? [];
@@ -50,6 +53,7 @@ function MembersPage({
   const invitationsTrouble = view.invitationsFailure ?? revoke.failure;
   const searchId = useId();
   const hintId = useId();
+  const concurrencyHintId = useId();
   // A large organization is read a hundred people at a time, the next hundred when asked, and searched on the
   // server, beyond the people read (PERF-CONSOLE).
   // A search typed keeps its box, even once the organization is small enough not to need one.
@@ -80,6 +84,11 @@ function MembersPage({
       {stopHook.failure === undefined ? null : (
         <Banner tone="danger" tag={t('members.list.errorTag')} live>
           <FailureText failure={stopHook.failure} />
+        </Banner>
+      )}
+      {concurrency.failure === undefined ? null : (
+        <Banner tone="danger" tag={t('members.list.errorTag')} live>
+          <FailureText failure={concurrency.failure} />
         </Banner>
       )}
       <LoadState data={listed} failure={view.failure}>
@@ -143,6 +152,18 @@ function MembersPage({
                                 },
                               }
                         }
+                        concurrency={
+                          limits === undefined
+                            ? undefined
+                            : {
+                                limit: limits.of(member.id),
+                                saving: concurrency.saving === member.id,
+                                hintId: concurrencyHintId,
+                                onChange: (limit) => {
+                                  limits.set(member.id, limit);
+                                },
+                              }
+                        }
                         roles={editable ? roles : []}
                         onRole={(next) => {
                           changes.change(member.login, next);
@@ -163,6 +184,11 @@ function MembersPage({
             {stopHook.enabled === undefined ? null : (
               <p id={hintId} className="o-row__meta">
                 {t('members.list.todoHookHint')}
+              </p>
+            )}
+            {limits === undefined ? null : (
+              <p id={concurrencyHintId} className="o-row__meta">
+                {t('members.list.concurrencyHint')}
               </p>
             )}
             <MorePeople people={view} />

@@ -542,6 +542,10 @@ export const fr = {
       todoHookHint:
         'Activé, un agent des sessions de ce membre ne peut pas terminer son tour tant que son todo a des points ouverts. Désactivé : l’agent peut s’arrêter ; le todo reste tenu.',
       todoHookOf: 'Hook d’arrêt du todo de {{name}}',
+      concurrency: 'Requêtes simultanées (0 = illimité)',
+      concurrencyHint:
+        'Requêtes qui peuvent tourner en même temps ; les suivantes attendent dans la file. 0 est illimité, la valeur par défaut.',
+      concurrencyOf: 'Requêtes simultanées de {{name}} (0 = illimité)',
     },
     invite: {
       title: 'Inviter des personnes',

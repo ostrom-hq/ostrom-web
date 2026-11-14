@@ -63,8 +63,9 @@ const SCREENS: readonly HeavyScreen[] = [
   {
     path: '/members',
     rows: 'section[aria-labelledby="mb-people"] li',
-    // A hundred people, each with the Todo Stop hook box and its label (1 617 measured by count, 2 elements a line).
-    maxNodes: 1700,
+    // A hundred people, each with the Todo Stop hook box and the concurrency field, each in its label (1 617
+    // measured by count with the Stop hook alone, 2 elements a line; the field adds 2 more a line).
+    maxNodes: 1900,
     filter: {
       label: 'search',
       run: async (page) => {

@@ -138,8 +138,11 @@ export function providersDraftOf(settings: InferenceSettings): ProvidersDraft {
   };
 }
 
-/** The settings a draft says; a key left empty is no key. */
-export function settingsOf(draft: ProvidersDraft): InferenceSettings {
+/**
+ * The settings a draft says; a key left empty is no key. The settings are written whole: the members' concurrent
+ * requests of [read], the settings on screen, are kept as they are.
+ */
+export function settingsOf(draft: ProvidersDraft, read?: InferenceSettings): InferenceSettings {
   const anthropic = draft.anthropic.trim();
   const openai = draft.openai.trim();
   const openrouter = draft.openrouter.trim();
@@ -148,6 +151,7 @@ export function settingsOf(draft: ProvidersDraft): InferenceSettings {
     ...(openai === '' ? {} : { openaiKeySecret: openai }),
     ...(openrouter === '' ? {} : { openrouterKeySecret: openrouter }),
     useSharedAccounts: draft.shared,
+    ...(read?.memberConcurrency === undefined ? {} : { memberConcurrency: read.memberConcurrency }),
   };
 }
 

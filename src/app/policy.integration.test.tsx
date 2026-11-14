@@ -223,6 +223,21 @@ describe('the provider keys', () => {
     });
   });
 
+  it('keeps the members’ concurrent requests, which the settings carry too', async () => {
+    const user = userEvent.setup();
+    db.inferenceSettings[db.organization.id] = {
+      anthropicKeySecret: 'ANTHROPIC_API_KEY',
+      useSharedAccounts: true,
+      memberConcurrency: { [MEMBER_IDS.samir]: 4 },
+    };
+    visit('/policy');
+    const keys = await section('Provider keys');
+    await within(keys).findByRole('combobox', { name: 'Anthropic key' });
+    await user.click(within(keys).getByRole('button', { name: 'Save' }));
+    expect(await within(keys).findByText('Provider keys saved.')).toBeInTheDocument();
+    expect(db.inferenceSettings[db.organization.id]?.memberConcurrency).toEqual({ [MEMBER_IDS.samir]: 4 });
+  });
+
   it('says when the organization has no secret yet, and why a save was refused', async () => {
     const user = userEvent.setup();
     db.secrets = [];
