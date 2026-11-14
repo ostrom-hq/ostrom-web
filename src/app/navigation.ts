@@ -40,6 +40,7 @@ export const NAV_LINKS = [
   { to: '/account', label: 'account' },
   { to: '/tokens', label: 'tokens' },
   { to: '/cloud', label: 'cloud', feature: 'runners.cloud.v1' },
+  { to: '/cloud/admin', label: 'cloudAdmin', feature: 'cloud.admin.v1' },
   { to: '/automations', label: 'automations', feature: 'automations.v1' },
   { to: '/artifacts', label: 'artifacts', feature: 'artifacts.v1' },
   { to: '/webhooks', label: 'webhooks', feature: 'webhooks.v1', adminOnly: true },
@@ -55,5 +56,8 @@ const NEEDS = NAV_LINKS.flatMap((link) => ('feature' in link ? [link] : []));
 export function needOf(
   pathname: string,
 ): { readonly label: (typeof NAV_LINKS)[number]['label']; readonly feature: FeatureKey } | undefined {
-  return NEEDS.find((link) => pathname === link.to || pathname.startsWith(`${link.to}/`));
+  // The longest address that matches: `/cloud/admin` is its own screen, not a part of `/cloud`.
+  return NEEDS.filter((link) => pathname === link.to || pathname.startsWith(`${link.to}/`)).toSorted(
+    (a, b) => b.to.length - a.to.length,
+  )[0];
 }

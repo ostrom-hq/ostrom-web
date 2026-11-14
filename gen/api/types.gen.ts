@@ -1541,6 +1541,10 @@ export type CloudRuntime = {
     maxRunningSessionsPerMember: number;
     maxRetainedSessionsPerMember: number;
     /**
+     * How many sessions of one member's automation runs may work at once (TeamCode's `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps the stored value (2 while nothing is stored)
+     */
+    maxRunningAutomationsPerMember?: number;
+    /**
      * Days transcript events are kept; absent keeps them
      */
     transcriptRetentionDays?: number;
@@ -1567,6 +1571,10 @@ export type SaveCloudRuntimeRequest = {
     failedWorkspaceRetentionDays: number;
     maxRunningSessionsPerMember: number;
     maxRetainedSessionsPerMember: number;
+    /**
+     * How many sessions of one member's automation runs may work at once (TeamCode's `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails `capacity_timeout`). A run of a workflow action does not count. 2 by default; absent in a request keeps the stored value (2 while nothing is stored)
+     */
+    maxRunningAutomationsPerMember?: number;
     transcriptRetentionDays?: number;
     memberTransfers: 'offer' | 'disabled' | (string & {});
     /**

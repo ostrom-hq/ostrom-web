@@ -1096,6 +1096,7 @@ export const zCloudRuntime = z.object({
     failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
+    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
@@ -1111,6 +1112,7 @@ export const zSaveCloudRuntimeRequest = z.object({
     failedWorkspaceRetentionDays: z.int().check(z.gte(1), z.lte(3650)),
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
+    maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))

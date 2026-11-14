@@ -293,6 +293,11 @@ const adminSettingsRoute = createRoute({
   path: '/admin/settings',
   component: lazyRouteComponent(async () => import('@/features/admin'), 'InstanceSettingsScreen'),
 });
+const cloudAdminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cloud/admin',
+  component: lazyRouteComponent(async () => import('@/features/cloudAdmin'), 'CloudAdminScreen'),
+});
 const automationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/automations',
@@ -485,6 +490,7 @@ export const routeTree = rootRoute.addChildren([
   accountRoute,
   tokensRoute,
   cloudRoute,
+  cloudAdminRoute,
   adminRoute,
   adminSettingsRoute,
   automationsRoute,

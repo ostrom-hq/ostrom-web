@@ -25,7 +25,7 @@ export function routesOf(router: string): RouteOfRouter[] {
     .slice(1)
     .map((definition) => {
       const path = /^path: ['"`]([^'"`]+)['"`]/.exec(definition)?.[1];
-      const feature = /import\(['"`]@\/features\/([a-z-]+)['"`]\)/.exec(definition)?.[1];
+      const feature = /import\(['"`]@\/features\/([A-Za-z-]+)['"`]\)/.exec(definition)?.[1];
       if (path !== undefined && feature === undefined && IN_FIRST_DOWNLOAD.has(path)) {
         return { path, feature: undefined };
       }
