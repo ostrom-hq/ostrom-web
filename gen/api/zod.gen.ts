@@ -790,7 +790,8 @@ export const zAutomationAction = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     effort: z.optional(z.string()),
-    maxRuntimeMinutes: z.optional(z.int())
+    maxRuntimeMinutes: z.optional(z.int()),
+    profileId: z.optional(z.uuid())
 });
 
 /**
@@ -930,7 +931,7 @@ export const zBillingPaymentIssue = z.object({
 });
 
 /**
- * The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
+ * The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster's `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
  */
 export const zBillingPlanLimits = z.object({
     maxPeople: z.nullable(z.int()),
@@ -1043,7 +1044,7 @@ export const zBudgetOverride = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1232,7 +1233,7 @@ export const zSaveGitHubAppConfigurationRequest = z.object({
     clientId: z.string().check(z.minLength(4), z.maxLength(64), z.regex(/^Iv[0-9A-Za-z._-]{2,62}$/)),
     clientSecret: z.nullish(z.string().check(z.minLength(20), z.maxLength(256))),
     privateKey: z.nullish(z.string().check(z.maxLength(16384))),
-    webhookSecret: z.nullish(z.string().check(z.minLength(1), z.maxLength(256))),
+    webhookSecret: z.nullish(z.string().check(z.maxLength(256))),
     version: z.nullish(z.int())
 });
 
@@ -1285,11 +1286,26 @@ export const zCloudEnvironment = z.object({
 });
 
 /**
- * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile
  */
 export const zCloudSessionProfile = z.object({
     id: z.uuid(),
     version: z.int()
+});
+
+/**
+ * The cloud session to start (`createCloudSession`)
+ */
+export const zCreateCloudSessionRequest = z.object({
+    agent: zCloudAgentKind,
+    model: z.optional(z.string()),
+    repo: z.optional(z.string()),
+    ref: z.optional(z.string()),
+    prompt: z.optional(z.string()),
+    name: z.optional(z.string()),
+    environment: z.optional(zCloudEnvironment),
+    profileId: z.optional(z.uuid()),
+    image: z.optional(z.string())
 });
 
 /**
@@ -1344,6 +1360,14 @@ export const zCloudSession = z.object({
     automationId: z.optional(z.string()),
     createdAt: z.string(),
     endedAt: z.optional(z.string())
+});
+
+/**
+ * A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page
+ */
+export const zCloudSessionPage = z.object({
+    items: z.array(zCloudSession),
+    next: z.optional(z.string())
 });
 
 /**
@@ -2505,6 +2529,13 @@ export const zMcpServer = z.object({
     owner: z.optional(z.readonly(z.string()))
 });
 
+/**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export const zMcpServerList = z.object({
+    items: z.array(zMcpServer)
+});
+
 export const zAccountEmail = z.object({
     email: z.string(),
     verified: z.boolean()
@@ -3644,7 +3675,8 @@ export const zNodeRun = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     deliverable: z.optional(zDeliverable),
-    repository: z.optional(z.string())
+    repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid())
 });
 
 /**
@@ -3765,6 +3797,16 @@ export const zServiceKey = z.object({
 });
 
 /**
+ * The limits of one launch (`launches.limits.v1`), TeamCode's run policy `{budgetUnits, maxConcurrent, paused}` with the budget in USD millionths as every limit of Ostrom. Each is an additional cap for the model calls the launch's agent token makes, never a substitute for the member's own limits
+ */
+export const zLaunchLimits = z.object({
+    budgetMicros: z.coerce.bigint().check(z.gte(BigInt(0)), z.lte(BigInt(100000000000000))),
+    maxConcurrent: z.int().check(z.gte(0), z.lte(32)),
+    paused: z.boolean(),
+    spentMicros: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
  * What an agent's hook reports (`reportSessionActivity`): only the state, never the prompt, the message, the tool or a path.
  */
 export const zSessionActivityRequest = z.object({
@@ -3828,7 +3870,8 @@ export const zSession = z.object({
     ended: z.optional(z.boolean()),
     lost: z.optional(z.boolean()),
     activity: z.optional(z.union([z.enum(['working', 'waiting_for_human']), z.string()])),
-    activitySince: z.optional(z.iso.datetime({ offset: true }))
+    activitySince: z.optional(z.iso.datetime({ offset: true })),
+    labels: z.optional(z.record(z.string(), z.string()))
 });
 
 /**
@@ -4872,6 +4915,15 @@ export const zWebhookDeliveryList = z.object({
 });
 
 /**
+ * The body of `startWorkflowRun`
+ */
+export const zStartWorkflowRunRequest = z.object({
+    inputs: z.optional(z.record(z.string(), z.string())),
+    repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid())
+});
+
+/**
  * An edge. For a run, [on] is the outcome that follows it (`next`, `delivered`, a wait action id, `true` or `false` out of a check node with a condition, which has no default); [to] null ends
  */
 export const zWorkflowEdge = z.object({
@@ -5000,6 +5052,7 @@ export const zWorkflowRun = z.object({
     parentRunId: z.optional(z.string()),
     sessionId: z.optional(z.string()),
     repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid()),
     visits: z.optional(z.array(zNodeVisit)),
     failure: z.optional(z.string()),
     failureCode: z.optional(z.string()),
@@ -5310,6 +5363,14 @@ export const zAnalysisState = z.object({
 });
 
 /**
+ * The body of `saveWorkflow`: the workflow, and the version the editor read
+ */
+export const zSaveWorkflowRequest = z.object({
+    workflow: zWorkflow,
+    expectedVersion: z.optional(z.int())
+});
+
+/**
  * The workflows; `next` is the cursor of the following page
  */
 export const zWorkflowPage = z.object({
@@ -5330,6 +5391,13 @@ export const zMcpServerWritable = z.object({
     scope: z.string(),
     credentialHeader: z.optional(z.string()),
     stdio: z.optional(zMcpStdioSpec)
+});
+
+/**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export const zMcpServerListWritable = z.object({
+    items: z.array(zMcpServerWritable)
 });
 
 /**
@@ -5642,6 +5710,7 @@ export const zCreateLaunchBody = z.object({
     repo: z.optional(z.string()),
     agent: z.string(),
     model: z.optional(z.string()),
+    labels: z.optional(z.record(z.string(), z.string())),
     workflowId: z.optional(z.string())
 });
 
@@ -5678,6 +5747,34 @@ export const zReportHooksMissingPath = z.object({
  * Recorded
  */
 export const zReportHooksMissingResponse = z.void();
+
+export const zGetLaunchLimitsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetLaunchLimitsPath = z.object({
+    launchId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetLaunchLimitsResponse = zLaunchLimits;
+
+export const zSetLaunchLimitsBody = zLaunchLimits;
+
+export const zSetLaunchLimitsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetLaunchLimitsPath = z.object({
+    launchId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetLaunchLimitsResponse = zLaunchLimits;
 
 export const zCheckAgentPolicyHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -6436,6 +6533,7 @@ export const zListSessionsQuery = z.object({
     dev: z.optional(z.string()),
     open: z.optional(z.boolean()),
     before: z.optional(z.string()),
+    label: z.optional(z.array(z.string())),
     limit: z.optional(z.int().check(z.gte(1), z.lte(100)))
 });
 
@@ -7281,10 +7379,7 @@ export const zGetWorkflowPath = z.object({
  */
 export const zGetWorkflowResponse = zWorkflow;
 
-export const zSaveWorkflowBody = z.object({
-    workflow: zWorkflow,
-    expectedVersion: z.optional(z.int())
-});
+export const zSaveWorkflowBody = zSaveWorkflowRequest;
 
 export const zSaveWorkflowHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -7317,10 +7412,7 @@ export const zListWorkflowRunsQuery = z.object({
  */
 export const zListWorkflowRunsResponse = zWorkflowRunPage;
 
-export const zStartWorkflowRunBody = z.object({
-    inputs: z.optional(z.record(z.string(), z.string())),
-    repository: z.optional(z.string())
-});
+export const zStartWorkflowRunBody = zStartWorkflowRunRequest;
 
 export const zStartWorkflowRunHeaders = z.object({
     'Ostrom-Org': z.optional(z.string()),
@@ -7707,7 +7799,7 @@ export const zWakeWaitsHeaders = z.object({
 });
 
 export const zWakeWaitsQuery = z.object({
-    session: z.string()
+    session: z.optional(z.string())
 });
 
 /**
@@ -7771,7 +7863,7 @@ export const zReceiveWaitEventQuery = z.object({
 });
 
 /**
- * The wait is resolved and its session will be woken
+ * The wait is resolved and its session will be woken (planned: a paused cloud session resumes, as with `answerWait`)
  */
 export const zReceiveWaitEventResponse = zWaitEventReceived;
 
@@ -8312,9 +8404,7 @@ export const zListMyMcpServersHeaders = z.object({
 /**
  * OK
  */
-export const zListMyMcpServersResponse = z.object({
-    items: z.array(zMcpServer)
-});
+export const zListMyMcpServersResponse = zMcpServerList;
 
 export const zCreateMyMcpServerBody = zMcpServerWritable;
 
@@ -9261,22 +9351,9 @@ export const zListCloudSessionsQuery = z.object({
 /**
  * OK
  */
-export const zListCloudSessionsResponse = z.object({
-    items: z.array(zCloudSession),
-    next: z.optional(z.string())
-});
+export const zListCloudSessionsResponse = zCloudSessionPage;
 
-export const zCreateCloudSessionBody = z.object({
-    agent: zCloudAgentKind,
-    model: z.optional(z.string()),
-    repo: z.optional(z.string()),
-    ref: z.optional(z.string()),
-    prompt: z.optional(z.string()),
-    name: z.optional(z.string()),
-    environment: z.optional(zCloudEnvironment),
-    profileId: z.optional(z.uuid()),
-    image: z.optional(z.string())
-});
+export const zCreateCloudSessionBody = zCreateCloudSessionRequest;
 
 export const zCreateCloudSessionHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())

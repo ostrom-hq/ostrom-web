@@ -378,7 +378,7 @@ export type Artifact = {
     createdAt: string;
     updatedAt: string;
     /**
-     * Where it was created, when an agent created it: taken from the agent token, never from the call. Absent for a person's publication. Planned: the server does not send it yet
+     * Where it was created, when an agent created it: taken from the agent token, never from the call. Absent for a person's publication
      */
     origin?: ArtifactOrigin;
 };
@@ -666,7 +666,7 @@ export type ArtifactVersion = {
      */
     replayed?: boolean;
     /**
-     * Where it was committed, when an agent committed it: taken from the agent token, never from the call. Absent for a person's publication. Planned: the server does not send it yet
+     * Where it was committed, when an agent committed it: taken from the agent token, never from the call. Absent for a person's publication
      */
     origin?: ArtifactOrigin;
 };
@@ -1140,6 +1140,10 @@ export type AutomationAction = {
     model?: string;
     effort?: string;
     maxRuntimeMinutes?: number;
+    /**
+     * The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has (400 `invalid_automation` naming `action.profileId`). Absent: the owner's only usable profile, as `createCloudSession` chooses it (`profile_required` when they may use none or several). A run whose session the profile refuses fails with the refusal's key as its `reason`: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`. Ignored by a server whose sessions run on Docker or on registered runners
+     */
+    profileId?: string;
 };
 
 /**
@@ -1166,7 +1170,7 @@ export type AutomationRun = {
      */
     workflowRunId?: string | null;
     /**
-     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
+     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled, and the cloud profile's refusals cloud_profile_not_found, profile_unassigned, profile_required, image_not_allowed, cluster_unavailable, namespace_not_allowed…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
      */
     reason?: string | null;
     problems: Array<AutomationPayloadProblem>;
@@ -1367,7 +1371,7 @@ export type BillingPaymentIssue = {
 };
 
 /**
- * The limits in force; null means unlimited. A request that would go past one (a member, a cloud agent, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
+ * The limits in force; null means unlimited, and so does a `maxConcurrentCloudAgents` of 0, which every plan has since 14/11/2026 (cloud agents are never capped by the plan, as in TeamCode: the cluster's `maxRunningPods` and the per-member cloud settings still apply). A request that would go past one (a member, an agent hour, SSO, policies) is answered 402 `payment_required`, with a message naming the limit and where to upgrade.
  */
 export type BillingPlanLimits = {
     maxPeople: number | null;
@@ -1467,7 +1471,7 @@ export type BudgetOverride = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -1611,7 +1615,7 @@ export type CloudCluster = {
     caCertificate: InstanceSecretState;
     serviceAccountToken: InstanceSecretState;
     /**
-     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false. Planned
+     * Whether the cluster is the server's own, reached with the server pod's mounted service account (`runners.cloud.profiles.v1`): its token and CA are read from the pod's files at each use, as the kubelet rotates them, and nothing is stored. Only the cluster imported once from the former `OSTROM_RUNNERS_KUBERNETES_*` variables is; saving a CA and a token turns it into a stored cluster. TeamCode has no such mode (it never read the cluster from variables). Absent means false
      */
     inCluster?: boolean;
     createdAt: string;
@@ -1834,7 +1838,7 @@ export type SaveGitHubAppConfigurationRequest = {
      */
     privateKey?: string | null;
     /**
-     * The secret GitHub signs the webhooks with; null or absent keeps the stored one. Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
+     * The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same `appId` (another App signs with its own, so none is kept); an empty string clears it (for a first App or another `appId` it leaves none, as null does). Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
      */
     webhookSecret?: string | null;
     /**
@@ -1961,7 +1965,7 @@ export type CloudSession = {
     environment?: CloudEnvironment;
     profile?: CloudSessionProfile;
     /**
-     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile. Planned
+     * The session image its containers run, the profile's or the override asked at creation (`runners.cloud.profiles.v1`). Absent from a session without a profile
      */
     image?: string;
     /**
@@ -1975,7 +1979,7 @@ export type CloudSession = {
 };
 
 /**
- * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile. Planned
+ * The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`, TeamCode's `profile {id, version}`). Absent from a session without a profile
  */
 export type CloudSessionProfile = {
     id: string;
@@ -1983,11 +1987,49 @@ export type CloudSessionProfile = {
 };
 
 /**
+ * A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page
+ */
+export type CloudSessionPage = {
+    items: Array<CloudSession>;
+    next?: string;
+};
+
+/**
+ * The cloud session to start (`createCloudSession`)
+ */
+export type CreateCloudSessionRequest = {
+    agent: CloudAgentKind;
+    model?: string;
+    /**
+     * https://github.com/<owner>/<name>, cloned through the organization's GitHub App
+     */
+    repo?: string;
+    /**
+     * Branch, tag or commit; the default branch when absent
+     */
+    ref?: string;
+    /**
+     * The agent's first message, up to 20,000 characters; an interactive agent when absent
+     */
+    prompt?: string;
+    name?: string;
+    environment?: CloudEnvironment;
+    /**
+     * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners
+     */
+    profileId?: string;
+    /**
+     * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image
+     */
+    image?: string;
+};
+
+/**
  * Why a cloud session failed or paused on its own
  */
 export type CloudSessionFailure = {
     /**
-     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable or namespace_not_allowed (the profile's cluster or namespace at a start, planned)
+     * start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed, cluster_unavailable, namespace_not_allowed or server_url_missing (a session on a cloud profile whose cluster stopped opening, whose namespace is no longer allowed, or whose runner has no server URL)
      */
     code: string;
     message: string;
@@ -3627,6 +3669,13 @@ export type McpSettings = {
 };
 
 /**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export type McpServerList = {
+    items: Array<McpServer>;
+};
+
+/**
  * A server run by the MCP host from a pinned package
  */
 export type McpStdioSpec = {
@@ -4413,6 +4462,10 @@ export type NodeRun = {
      * Agent: the repository (`owner/name`) its session works in, else the run's
      */
     repository?: string;
+    /**
+     * Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`, TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the server runs refuses an id none of the organization's profiles has (400 `invalid_workflow`, naming the node). Ignored by a server whose sessions run on Docker or on registered runners. A session the profile refuses fails the visit, and the run's `failureCode` is the refusal's key: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`
+     */
+    profileId?: string;
 };
 
 /**
@@ -5398,13 +5451,41 @@ export type Session = {
      */
     lost?: boolean;
     /**
-     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer. Planned: the server does not send it yet
+     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer.
      */
     activity?: 'working' | 'waiting_for_human' | (string & {});
     /**
-     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only. Planned: the server does not send it yet
+     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only.
      */
     activitySince?: string;
+    /**
+     * The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them on a run; absent when the launch has none. Planned: the server does not send them yet
+     */
+    labels?: {
+        [key: string]: string;
+    };
+};
+
+/**
+ * The limits of one launch (`launches.limits.v1`), TeamCode's run policy `{budgetUnits, maxConcurrent, paused}` with the budget in USD millionths as every limit of Ostrom. Each is an additional cap for the model calls the launch's agent token makes, never a substitute for the member's own limits
+ */
+export type LaunchLimits = {
+    /**
+     * What the launch may spend over its life, USD millionths; 0, the default, adds no cap
+     */
+    budgetMicros: number;
+    /**
+     * The most calls the launch runs at once; 0, the default, adds no cap. Past it a call waits
+     */
+    maxConcurrent: number;
+    /**
+     * True refuses the launch's next calls (`launch_paused`); the streams in flight finish
+     */
+    paused: boolean;
+    /**
+     * On a read only, what the launch spent so far, USD millionths; ignored on a write
+     */
+    spentMicros?: number;
 };
 
 /**
@@ -6859,6 +6940,34 @@ export type WebhookDeliveryList = {
 };
 
 /**
+ * The body of `saveWorkflow`: the workflow, and the version the editor read
+ */
+export type SaveWorkflowRequest = {
+    workflow: Workflow;
+    /**
+     * A newer stored version answers 409 `workflow_conflict`
+     */
+    expectedVersion?: number;
+};
+
+/**
+ * The body of `startWorkflowRun`
+ */
+export type StartWorkflowRunRequest = {
+    inputs?: {
+        [key: string]: string;
+    };
+    /**
+     * `owner/name`, for the agent nodes that name none (planned)
+     */
+    repository?: string;
+    /**
+     * The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each such node's session runs on the starter's only usable profile
+     */
+    profileId?: string;
+};
+
+/**
  * The workflows; `next` is the cursor of the following page
  */
 export type WorkflowPage = {
@@ -7011,10 +7120,14 @@ export type WorkflowRun = {
      * The repository of the agent nodes that name none
      */
     repository?: string;
+    /**
+     * The cloud profile of the agent nodes that name none: the one given at a manual start, or, for a run an automation started, its workflow action's. Absent when none was named (the profile is then chosen at each session's creation, never written back here)
+     */
+    profileId?: string;
     visits?: Array<NodeVisit>;
     failure?: string;
     /**
-     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried
+     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, the cloud profile's refusal of an agent node's session (`cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable`, `namespace_not_allowed`), or the code of a refusal that cannot be retried
      */
     failureCode?: string;
     output?: string;
@@ -7077,6 +7190,13 @@ export type McpServerWritable = {
      */
     credentialHeader?: string;
     stdio?: McpStdioSpec;
+};
+
+/**
+ * The caller's personal MCP servers (`listMyMcpServers`)
+ */
+export type McpServerListWritable = {
+    items: Array<McpServerWritable>;
 };
 
 /**
@@ -8125,6 +8245,12 @@ export type CreateLaunchData = {
         agent: string;
         model?: string;
         /**
+         * Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label. Planned: the server does not read it yet
+         */
+        labels?: {
+            [key: string]: string;
+        };
+        /**
          * The workflow this launch plays (`Workflow.id` of the organization; 404 otherwise): every model call of its sessions counts under it, for the budgets of scope `workflow` and `Spending.byWorkflow`. Absent, the calls count under no workflow. Planned: the server does not read it yet
          */
         workflowId?: string;
@@ -8251,6 +8377,96 @@ export type ReportHooksMissingResponses = {
 };
 
 export type ReportHooksMissingResponse = ReportHooksMissingResponses[keyof ReportHooksMissingResponses];
+
+export type GetLaunchLimitsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}/limits';
+};
+
+export type GetLaunchLimitsErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+};
+
+export type GetLaunchLimitsError = GetLaunchLimitsErrors[keyof GetLaunchLimitsErrors];
+
+export type GetLaunchLimitsResponses = {
+    /**
+     * OK
+     */
+    200: LaunchLimits;
+};
+
+export type GetLaunchLimitsResponse = GetLaunchLimitsResponses[keyof GetLaunchLimitsResponses];
+
+export type SetLaunchLimitsData = {
+    body: LaunchLimits;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        launchId: string;
+    };
+    query?: never;
+    url: '/api/v1/launches/{launchId}/limits';
+};
+
+export type SetLaunchLimitsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type SetLaunchLimitsError = SetLaunchLimitsErrors[keyof SetLaunchLimitsErrors];
+
+export type SetLaunchLimitsResponses = {
+    /**
+     * OK
+     */
+    200: LaunchLimits;
+};
+
+export type SetLaunchLimitsResponse = SetLaunchLimitsResponses[keyof SetLaunchLimitsResponses];
 
 export type CheckAgentPolicyData = {
     body?: never;
@@ -11604,6 +11820,10 @@ export type ListSessionsData = {
         open?: boolean;
         before?: string;
         /**
+         * `key=value`, repeatable (at most 16): only the sessions whose launch carries every label given (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed one. Planned: the server does not read it yet
+         */
+        label?: Array<string>;
+        /**
          * The page size, 1 to 100 (50 by default); a value outside is brought into it
          */
         limit?: number;
@@ -14756,10 +14976,7 @@ export type GetWorkflowResponses = {
 export type GetWorkflowResponse = GetWorkflowResponses[keyof GetWorkflowResponses];
 
 export type SaveWorkflowData = {
-    body: {
-        workflow: Workflow;
-        expectedVersion?: number;
-    };
+    body: SaveWorkflowRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -14871,15 +15088,7 @@ export type ListWorkflowRunsResponses = {
 export type ListWorkflowRunsResponse = ListWorkflowRunsResponses[keyof ListWorkflowRunsResponses];
 
 export type StartWorkflowRunData = {
-    body: {
-        inputs?: {
-            [key: string]: string;
-        };
-        /**
-         * `owner/name`, for the agent nodes that name none (planned)
-         */
-        repository?: string;
-    };
+    body: StartWorkflowRunRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
@@ -16184,7 +16393,7 @@ export type WaitsMcpData = {
     path?: never;
     query?: {
         /**
-         * The session the agent runs in; a cloud session's agent token is confined to its cloud session whatever it names, and needs none (planned)
+         * The session the agent runs in; a cloud session's agent token is confined to its cloud session whatever it names, and needs none
          */
         session?: string;
         /**
@@ -16240,11 +16449,11 @@ export type WakeWaitsData = {
         'Ostrom-Org'?: string;
     };
     path?: never;
-    query: {
+    query?: {
         /**
-         * The session the agent runs in: any of its segments (planned: a cloud session's agent token needs none)
+         * The session the agent runs in: any of its segments; a cloud session's agent token needs none
          */
-        session: string;
+        session?: string;
     };
     url: '/api/v1/waits/wake';
 };
@@ -16473,7 +16682,7 @@ export type ReceiveWaitEventError = ReceiveWaitEventErrors[keyof ReceiveWaitEven
 
 export type ReceiveWaitEventResponses = {
     /**
-     * The wait is resolved and its session will be woken
+     * The wait is resolved and its session will be woken (planned: a paused cloud session resumes, as with `answerWait`)
      */
     202: WaitEventReceived;
 };
@@ -16491,7 +16700,7 @@ export type GetSessionTodoData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it; a cloud session's agent token needs none
          */
         sessionId?: string;
     };
@@ -16897,7 +17106,7 @@ export type ReadTodoContextData = {
     path?: never;
     query?: {
         /**
-         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it
+         * The session (its id, or one of its segments `~r<n>`), as its owner or its agent token names it; a cloud session's agent token needs none
          */
         sessionId?: string;
     };
@@ -18566,9 +18775,7 @@ export type ListMyMcpServersResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<McpServer>;
-    };
+    200: McpServerList;
 };
 
 export type ListMyMcpServersResponse = ListMyMcpServersResponses[keyof ListMyMcpServersResponses];
@@ -22345,41 +22552,13 @@ export type ListCloudSessionsResponses = {
     /**
      * OK
      */
-    200: {
-        items: Array<CloudSession>;
-        next?: string;
-    };
+    200: CloudSessionPage;
 };
 
 export type ListCloudSessionsResponse = ListCloudSessionsResponses[keyof ListCloudSessionsResponses];
 
 export type CreateCloudSessionData = {
-    body: {
-        agent: CloudAgentKind;
-        model?: string;
-        /**
-         * https://github.com/<owner>/<name>, cloned through the organization's GitHub App
-         */
-        repo?: string;
-        /**
-         * Branch, tag or commit; the default branch when absent
-         */
-        ref?: string;
-        /**
-         * The agent's first message, up to 20,000 characters; an interactive agent when absent
-         */
-        prompt?: string;
-        name?: string;
-        environment?: CloudEnvironment;
-        /**
-         * The organization's cloud profile the session runs on (`runners.cloud.profiles.v1`, `GET /api/v1/cloud/profiles`): its cluster, namespace, image, pull secrets, resources and workspace, at its current version, which the session keeps (TeamCode's `profileId`). 404 `cloud_profile_not_found` when none of the organization's profiles has it, 403 `profile_unassigned` when it is not assigned to the session's owner (the member the session is created for); members with the organization role owner or admin use every profile. Absent: the one profile that owner may use, 422 `profile_required` when they may use none or several. The create also checks the profile's cluster: 409 `cluster_unavailable` when it is gone or its credentials must be entered again, 409 `namespace_not_allowed` when it no longer allows the profile's namespace. The reconciler checks both again at each later start, where they become the session's `failure.code` (a first start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on registered runners. Planned: the server does not read it yet
-         */
-        profileId?: string;
-        /**
-         * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image. Planned: the server does not read it yet
-         */
-        image?: string;
-    };
+    body: CreateCloudSessionRequest;
     headers?: {
         /**
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization

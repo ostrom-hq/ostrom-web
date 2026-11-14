@@ -7,12 +7,14 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute, formatDuration } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { useNow } from '@/shared/lib/useNow';
+import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { type Fact, Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { ActivityBadge } from '../components/ActivityBadge';
+import { LaunchLimitsSection } from '../components/LaunchLimitsSection';
 import { StateBadge } from '../components/StateBadge';
 import { TodoPill } from '../components/TodoPill';
 import { TodoView } from '../components/TodoView';
-import { sessionState } from '../model';
+import { sessionLabels, sessionState } from '../model';
 import { useSessionTodo } from '../useSessionTodo';
 import { useSession } from '../useSessions';
 
@@ -21,6 +23,7 @@ export function SessionScreen(): ReactElement {
   const { sessionId } = useParams({ from: '/sessions/$sessionId' });
   const { session, receipt, failure } = useSession(sessionId);
   const now = useNow();
+  const { role } = useCurrentOrg();
   const { todo } = useSessionTodo(sessionId, session !== undefined && session.endedAt === undefined);
   const [open, setOpen] = useState(false);
   const todoId = useId();
@@ -52,6 +55,7 @@ export function SessionScreen(): ReactElement {
         >
           {todo !== undefined && open ? <TodoView id={todoId} todo={todo} /> : null}
           <SessionDetail session={found} receipt={receipt} />
+          <LaunchLimitsSection launchId={found.launchId} role={role} />
         </Screen>
       )}
     </LoadState>
@@ -96,6 +100,18 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
           ]}
         />
       </Section>
+
+      {sessionLabels(session).length === 0 ? null : (
+        <Section label={t('sessions.detail.labels')}>
+          <ul className="o-inline">
+            {sessionLabels(session).map((label) => (
+              <li key={label}>
+                <Badge tone="neutral">{label}</Badge>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section label={t('sessions.detail.when')}>
         <Facts

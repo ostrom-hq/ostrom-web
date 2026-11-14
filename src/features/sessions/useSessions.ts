@@ -12,6 +12,9 @@ import { useEffect, useMemo, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
+/** No label filter: one array, so that a list without a filter keeps its queries. */
+const NO_LABELS: readonly string[] = [];
+
 /** Open sessions report every few minutes: the list follows them without a reload. */
 export const SESSIONS_POLL_MS = 15_000;
 
@@ -35,11 +38,18 @@ export interface SessionListViewModel {
  * Every open session, a page after the other (`next`, read back as `before`): the server gives 50 at a time, and
  * the list says how many run. Open sessions are the work going on now, a few per person.
  */
-export async function everyOpenSession(signal: AbortSignal): Promise<ListSessionsResponse> {
+export async function everyOpenSession(
+  signal: AbortSignal,
+  label: readonly string[] = [],
+): Promise<ListSessionsResponse> {
   const items: Session[] = [];
   let before: string | undefined;
   do {
-    const query = before === undefined ? { open: true } : { open: true, before };
+    const query = {
+      open: true,
+      ...(label.length === 0 ? {} : { label: [...label] }),
+      ...(before === undefined ? {} : { before }),
+    };
     const { data } = await listSessions({ query, signal, throwOnError: true });
     items.push(...data.items);
     before = data.next;
@@ -57,13 +67,18 @@ export function endedPoll(query: { readonly state: { readonly data?: unknown } }
   return pages > 1 ? false : SESSIONS_POLL_MS;
 }
 
-export function useSessionList(): SessionListViewModel {
+/**
+ * The sessions of the organization, those still open and the ended ones. With `labels` (`key=value`, all of them),
+ * only the sessions whose launch carries every one (`sessions.labels.v1`).
+ */
+export function useSessionList(labels: readonly string[] = NO_LABELS): SessionListViewModel {
   const queryClient = useQueryClient();
+  const label = useMemo(() => (labels.length === 0 ? {} : { label: [...labels] }), [labels]);
   const open = useQuery(
     ready(
       {
-        ...listSessionsOptions({ query: { open: true } }),
-        queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyOpenSession(signal),
+        ...listSessionsOptions({ query: { open: true, ...label } }),
+        queryFn: async ({ signal }: { readonly signal: AbortSignal }) => everyOpenSession(signal, labels),
       },
       { refetchInterval: SESSIONS_POLL_MS },
     ),
@@ -72,7 +87,9 @@ export function useSessionList(): SessionListViewModel {
   // page at a time (`next`, read back as `before`): the older pages come when asked, and are read again only when a
   // session ended, not at every poll.
   const ended = useInfiniteQuery({
-    ...ready(listSessionsInfiniteOptions({ query: { open: false } }), { refetchInterval: endedPoll }),
+    ...ready(listSessionsInfiniteOptions({ query: { open: false, ...label } }), {
+      refetchInterval: endedPoll,
+    }),
     initialPageParam: {},
     getNextPageParam: (last) => last.next,
   });
@@ -82,9 +99,9 @@ export function useSessionList(): SessionListViewModel {
     if (openIds === undefined) return;
     const left = seen.current.some((id) => !openIds.includes(id));
     seen.current = openIds;
-    const endedKey = listSessionsInfiniteQueryKey({ query: { open: false } });
+    const endedKey = listSessionsInfiniteQueryKey({ query: { open: false, ...label } });
     if (left) void queryClient.invalidateQueries({ queryKey: endedKey });
-  }, [openIds, queryClient]);
+  }, [openIds, queryClient, label]);
   const endedItems = useMemo(() => ended.data?.pages.flatMap((page) => page.items), [ended.data]);
   const { fetchNextPage } = ended;
   // Once a page is read, a failure never takes the list away: not even on the next poll, when TanStack forgets that

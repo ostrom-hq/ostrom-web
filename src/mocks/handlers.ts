@@ -26,7 +26,9 @@ import {
   handleGetOrganization,
   handleGetReceipt,
   handleGetReceiptBundle,
+  handleGetLaunchLimits,
   handleGetSession,
+  handleSetLaunchLimits,
   handleCreateWorkflow,
   handleDeleteWorkflow,
   handleGetWorkflow,
@@ -100,6 +102,7 @@ import type {
   Runner,
   Secret,
   SharedAccount,
+  LaunchLimits,
   Session,
   Spending,
   Team,
@@ -121,6 +124,7 @@ import {
   zCreateWorkflowBody,
   zEnrollSharedAccountBody,
   zExchangeSignInLinkBody,
+  zLaunchLimits,
   zMcpServer,
   zRequestSignInEmailBody,
   zSaveWorkflowBody,
@@ -286,6 +290,8 @@ export interface MockDb
    */
   unlinkedAuthors: string[];
   sessions: Session[];
+  /** The limits an administrator gave a launch, by launch id; one never given has none (zeros). */
+  launchLimits: Record<string, LaunchLimits>;
   /** Newest first, as the server lists them; an answer adds its receipt at the top. */
   receipts: Receipt[];
   organization: Organization;
@@ -357,6 +363,7 @@ export function createMockDb(): MockDb {
     approvers: initialApprovers(),
     unlinkedAuthors: ['apr-merge-412'],
     sessions: initialSessions(),
+    launchLimits: {},
     todos: initialTodos(),
     stopHookOff: [],
     receipts: initialReceipts(),
@@ -1729,8 +1736,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListSessions(({ request }) => {
       const query = new URL(request.url).searchParams;
       const open = query.get('open');
+      const labels = query.getAll('label');
       const matching = db.sessions.filter(
-        (session) => open === null || (session.endedAt === undefined) === (open === 'true'),
+        (session) =>
+          (open === null || (session.endedAt === undefined) === (open === 'true')) &&
+          labels.every((label) => {
+            const at = label.indexOf('=');
+            return session.labels?.[label.slice(0, at)] === label.slice(at + 1);
+          }),
       );
       // As the server pages it: a full page carries `next`, its last id, which the next call reads back as `before`.
       const before = query.get('before');
@@ -1740,6 +1753,42 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json(
         items.length === SESSIONS_PAGE && last !== undefined ? { items, next: last.id } : { items },
       );
+    }),
+    handleGetLaunchLimits(({ params }) => {
+      if (!canManage(db)) return refusal(404, 'not_found', 'launch not found');
+      if (!db.sessions.some((session) => session.launchId === params.launchId)) {
+        return refusal(404, 'not_found', 'launch not found');
+      }
+      return HttpResponse.json(
+        db.launchLimits[params.launchId] ?? {
+          budgetMicros: 0,
+          maxConcurrent: 0,
+          paused: false,
+          spentMicros: 0,
+        },
+      );
+    }),
+    handleSetLaunchLimits(async ({ request, params }) => {
+      if (!canManage(db)) return refusal(404, 'not_found', 'launch not found');
+      if (!db.sessions.some((session) => session.launchId === params.launchId)) {
+        return refusal(404, 'not_found', 'launch not found');
+      }
+      const body = zLaunchLimits.safeParse(await readJson(request));
+      if (!body.success) {
+        return refusal(
+          400,
+          'invalid_launch_limits',
+          'budgetMicros 0 to 100000000000000, maxConcurrent 0 to 32',
+        );
+      }
+      const saved = {
+        budgetMicros: Number(body.data.budgetMicros),
+        maxConcurrent: body.data.maxConcurrent,
+        paused: body.data.paused,
+        spentMicros: db.launchLimits[params.launchId]?.spentMicros ?? 0,
+      };
+      db.launchLimits[params.launchId] = saved;
+      return HttpResponse.json(saved);
     }),
     handleGetSession(({ params }) => {
       const session = db.sessions.find((item) => item.id === params.id);
