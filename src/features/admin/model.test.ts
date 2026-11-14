@@ -57,7 +57,7 @@ describe('a settings section', () => {
     });
     expect(
       requestOf(settings, {
-        values: { host: ' ', from: 'a@b.test' },
+        values: { host: ' ', from: ' a@b.test ' },
         secrets: { password: { kind: 'replace', value: 'hunter2' } },
       }),
     ).toEqual({ version: 2, values: { from: 'a@b.test' }, secrets: { password: 'hunter2' } });

@@ -213,9 +213,8 @@ describe('Admin, Administrators', () => {
     );
     visit('/admin');
     await screen.findByText('sam');
-    const removes = screen.getAllByRole('button', { name: 'Remove' });
-    await user.click(removes[0] ?? document.body);
-    await user.click(await screen.findByRole('button', { name: /^Remove maya$/ }));
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    await user.click(await screen.findByRole('button', { name: 'Remove sam' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The last administrator of the instance cannot be removed. Add another one first.',
     );
@@ -238,7 +237,7 @@ describe('Admin, Administrators', () => {
     );
     visit('/admin');
     await screen.findByText('sam');
-    await user.click(screen.getAllByRole('button', { name: 'Remove' })[1] ?? document.body);
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
     await user.click(await screen.findByRole('button', { name: 'Remove sam' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Not an administrator.');
   });

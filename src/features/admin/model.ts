@@ -64,7 +64,12 @@ function secretsOf(draft: SectionDraft): Record<string, string | null> {
 export function requestOf(settings: InstanceSettings, draft: SectionDraft): SaveInstanceSettingsRequest {
   return {
     version: settings.version,
-    values: Object.fromEntries(Object.entries(draft.values).filter(([, value]) => value.trim() !== '')),
+    // Trimmed, as `isChanged` compares them; a blank field is left out, which the server reads as unset.
+    values: Object.fromEntries(
+      Object.entries(draft.values)
+        .map(([name, value]) => [name, value.trim()])
+        .filter(([, value]) => value !== ''),
+    ),
     secrets: secretsOf(draft),
   };
 }

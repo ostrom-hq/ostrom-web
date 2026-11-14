@@ -49,7 +49,8 @@ function Administrators(): ReactElement {
                 <li key={admin.userId}>
                   <AdminRow
                     admin={admin}
-                    removable={list.length > 1}
+                    // Never the last, and never oneself: the console would be left on a screen it can no longer use.
+                    removable={list.length > 1 && admin.login !== viewer}
                     removing={removal.removing === admin.userId}
                     isViewer={admin.login !== undefined && admin.login === viewer}
                     onRemove={() => {
