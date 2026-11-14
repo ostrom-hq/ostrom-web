@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationWrite } from '@gen/api/types.gen';
+import type { Automation, AutomationWrite, Workflow } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFeature } from '@/shared/capabilities';
 import { Button } from '@/shared/ui/Button';
 import {
+  ACTION_KINDS,
   addVariable,
   type AutomationDraft,
   automationDraftOf,
   automationProblem,
   automationWriteOf,
+  isActionKind,
   isOverlap,
   isTriggerKind,
   localTimezone,
@@ -18,6 +21,7 @@ import {
   type VariableDraft,
 } from '../automationDraft';
 import { isCloudAgent, isPromptAgent, PROMPT_AGENTS } from '../model';
+import { useRunnableWorkflows } from '../useCloud';
 
 export interface AutomationFormProps {
   /** The automation being edited; absent, the form writes a new one. */
@@ -125,6 +129,102 @@ function VariableRow({
   );
 }
 
+/**
+ * The workflow an automation runs, the templates of its inputs (rendered like the prompt, from the webhook's variables:
+ * one that renders empty is left out and the workflow's default applies) and the repository of its agent steps.
+ */
+function WorkflowFields({
+  draft,
+  workflows,
+  onChange,
+}: {
+  readonly draft: AutomationDraft;
+  readonly workflows: readonly Workflow[] | undefined;
+  readonly onChange: (next: Partial<AutomationDraft>) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const ids = { workflow: useId(), repository: useId(), inputs: useId() };
+  const chosen = workflows?.find((workflow) => workflow.id === draft.workflowId);
+  const inputs = chosen?.inputs ?? [];
+  return (
+    <>
+      <span className="o-stack">
+        <label htmlFor={ids.workflow} className="o-field-label">
+          {t('automations.form.workflow')}
+        </label>
+        <select
+          id={ids.workflow}
+          className="o-input o-select"
+          value={draft.workflowId}
+          onChange={(event) => {
+            onChange({ workflowId: event.target.value, inputs: {} });
+          }}
+        >
+          <option value="">
+            {workflows === undefined
+              ? t('automations.form.workflowLoading')
+              : t('automations.form.workflowNone')}
+          </option>
+          {(workflows ?? []).map((workflow) => (
+            <option key={workflow.id} value={workflow.id}>
+              {workflow.name}
+            </option>
+          ))}
+          {/* A workflow already chosen that is no longer accepted stays visible, so that a person sees it. */}
+          {draft.workflowId !== '' && chosen === undefined && workflows !== undefined ? (
+            <option value={draft.workflowId}>
+              {t('automations.form.workflowGone', { id: draft.workflowId })}
+            </option>
+          ) : null}
+        </select>
+      </span>
+      {inputs.length === 0 ? null : (
+        <fieldset className="o-stack">
+          <legend className="o-field-label">{t('automations.form.inputs')}</legend>
+          <p className="o-row__meta">
+            {t(
+              draft.kind === 'webhook' ? 'automations.form.inputsHintWebhook' : 'automations.form.inputsHint',
+              {
+                example: '{{issue.title}}',
+              },
+            )}
+          </p>
+          {inputs.map((input) => (
+            <span key={input.id} className="o-stack">
+              <label htmlFor={`${ids.inputs}-${input.id}`} className="o-field-label">
+                {input.label}
+                {input.required === true ? ` ${t('automations.form.required')}` : ''}
+              </label>
+              <input
+                id={`${ids.inputs}-${input.id}`}
+                className="o-input"
+                value={draft.inputs[input.id] ?? ''}
+                onChange={(event) => {
+                  onChange({ inputs: { ...draft.inputs, [input.id]: event.target.value } });
+                }}
+              />
+            </span>
+          ))}
+        </fieldset>
+      )}
+      <span className="o-stack">
+        <label htmlFor={ids.repository} className="o-field-label">
+          {t('automations.form.repository')}
+        </label>
+        <input
+          id={ids.repository}
+          className="o-input o-mono"
+          placeholder="acme/backend"
+          value={draft.repository}
+          onChange={(event) => {
+            onChange({ repository: event.target.value });
+          }}
+        />
+      </span>
+    </>
+  );
+}
+
 /** An automation written or fixed by its owner: what starts it, what it asks of which agent, and its limits. */
 export function AutomationForm({
   automation,
@@ -149,7 +249,11 @@ export function AutomationForm({
     overlap: useId(),
     sample: useId(),
     problem: useId(),
+    action: useId(),
   };
+  // Starting a workflow is offered once the server delivers workflows; an automation that already does keeps it.
+  const delivery = useFeature('workflows.deliver.v1');
+  const workflows = useRunnableWorkflows();
   const change = (next: Partial<AutomationDraft>): void => {
     setDraft((current) => ({ ...current, ...next }));
   };
@@ -157,18 +261,28 @@ export function AutomationForm({
   const setVariables = (next: (variables: readonly VariableDraft[]) => VariableDraft[]): void => {
     setDraft((current) => ({ ...current, variables: next(current.variables) }));
   };
-  const problem = automationProblem(draft);
+  const chosen = workflows?.find((candidate) => candidate.id === draft.workflowId);
+  const problem = automationProblem(
+    draft,
+    (chosen?.inputs ?? []).filter((input) => input.required === true).map((input) => input.id),
+  );
+  const workflowAction = draft.actionKind === 'workflow';
   // An agent this console has no word for is kept, shown as the server wrote it.
   const agents: readonly string[] = isPromptAgent(draft.agent)
     ? PROMPT_AGENTS
     : [...PROMPT_AGENTS, draft.agent];
-  const workflow = automation?.action.workflowId;
   return (
     <form
       className="o-stack cl-form"
       onSubmit={(event) => {
         event.preventDefault();
-        onSave(automationWriteOf(draft, automation));
+        onSave(
+          automationWriteOf(
+            draft,
+            automation,
+            chosen?.inputs?.map((input) => input.id),
+          ),
+        );
       }}
     >
       <label htmlFor={ids.name} className="o-field-label">
@@ -237,77 +351,102 @@ export function AutomationForm({
         ) : null}
       </div>
       {draft.kind === 'webhook' ? <p className="o-row__meta">{t('automations.form.webhookLead')}</p> : null}
-      {workflow === undefined ? null : (
-        <p className="o-row__meta">{t('automations.form.workflowNote', { workflow })}</p>
-      )}
-      <div className="cl-form__grid">
+      {delivery || workflowAction ? (
         <span className="o-stack">
-          <label htmlFor={ids.agent} className="o-field-label">
-            {t('automations.form.agent')}
+          <label htmlFor={ids.action} className="o-field-label">
+            {t('automations.form.action')}
           </label>
           <select
-            id={ids.agent}
+            id={ids.action}
             className="o-input o-select"
-            value={draft.agent}
+            value={draft.actionKind}
             onChange={(event) => {
-              change({ agent: event.target.value });
+              if (isActionKind(event.target.value)) change({ actionKind: event.target.value });
             }}
           >
-            {agents.map((agent) => (
-              <option key={agent} value={agent}>
-                {isCloudAgent(agent) ? t(`cloud.agent.${agent}`) : agent}
+            {ACTION_KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {t(`automations.form.actionKind.${kind}`)}
               </option>
             ))}
           </select>
         </span>
-        <span className="o-stack">
-          <label htmlFor={ids.model} className="o-field-label">
-            {t('automations.form.model')}
+      ) : null}
+      {workflowAction ? <WorkflowFields draft={draft} workflows={workflows} onChange={change} /> : null}
+      {workflowAction ? null : (
+        <div className="cl-form__grid">
+          <span className="o-stack">
+            <label htmlFor={ids.agent} className="o-field-label">
+              {t('automations.form.agent')}
+            </label>
+            <select
+              id={ids.agent}
+              className="o-input o-select"
+              value={draft.agent}
+              onChange={(event) => {
+                change({ agent: event.target.value });
+              }}
+            >
+              {agents.map((agent) => (
+                <option key={agent} value={agent}>
+                  {isCloudAgent(agent) ? t(`cloud.agent.${agent}`) : agent}
+                </option>
+              ))}
+            </select>
+          </span>
+          <span className="o-stack">
+            <label htmlFor={ids.model} className="o-field-label">
+              {t('automations.form.model')}
+            </label>
+            <input
+              id={ids.model}
+              className="o-input"
+              placeholder={t('automations.form.modelPlaceholder')}
+              value={draft.model}
+              onChange={(event) => {
+                change({ model: event.target.value });
+              }}
+            />
+          </span>
+          <span className="o-stack">
+            <label htmlFor={ids.runtime} className="o-field-label">
+              {t('automations.form.runtime')}
+            </label>
+            <input
+              id={ids.runtime}
+              className="o-input"
+              inputMode="numeric"
+              value={draft.runtime}
+              onChange={(event) => {
+                change({ runtime: event.target.value });
+              }}
+            />
+          </span>
+        </div>
+      )}
+      {workflowAction ? null : (
+        <>
+          <label htmlFor={ids.prompt} className="o-field-label">
+            {t('automations.form.prompt')}
           </label>
-          <input
-            id={ids.model}
+          <textarea
+            id={ids.prompt}
             className="o-input"
-            placeholder={t('automations.form.modelPlaceholder')}
-            value={draft.model}
+            rows={5}
+            aria-describedby={ids.promptHint}
+            placeholder={t('automations.form.promptPlaceholder')}
+            value={draft.prompt}
             onChange={(event) => {
-              change({ model: event.target.value });
+              change({ prompt: event.target.value });
             }}
           />
-        </span>
-        <span className="o-stack">
-          <label htmlFor={ids.runtime} className="o-field-label">
-            {t('automations.form.runtime')}
-          </label>
-          <input
-            id={ids.runtime}
-            className="o-input"
-            inputMode="numeric"
-            value={draft.runtime}
-            onChange={(event) => {
-              change({ runtime: event.target.value });
-            }}
-          />
-        </span>
-      </div>
-      <label htmlFor={ids.prompt} className="o-field-label">
-        {t('automations.form.prompt')}
-      </label>
-      <textarea
-        id={ids.prompt}
-        className="o-input"
-        rows={5}
-        aria-describedby={ids.promptHint}
-        placeholder={t('automations.form.promptPlaceholder')}
-        value={draft.prompt}
-        onChange={(event) => {
-          change({ prompt: event.target.value });
-        }}
-      />
-      <p id={ids.promptHint} className="o-row__meta">
-        {draft.kind === 'webhook'
-          ? t('automations.form.promptHintWebhook', { example: '{{issue.title}}' })
-          : t('automations.form.promptHint')}
-      </p>
+          <p id={ids.promptHint} className="o-row__meta">
+            {draft.kind === 'webhook'
+              ? t('automations.form.promptHintWebhook', { example: '{{issue.title}}' })
+              : t('automations.form.promptHint')}
+          </p>
+        </>
+      )}
       <div className="cl-form__grid">
         <span className="o-stack">
           <label htmlFor={ids.runsPerDay} className="o-field-label">

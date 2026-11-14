@@ -105,6 +105,27 @@ const automations: Automation[] = [
 
 const runs: AutomationRun[] = [
   {
+    id: 'run-92',
+    automationId: 'au-sentry',
+    source: 'webhook',
+    status: 'started',
+    version: 1,
+    workflowRunId: 'run-backend-3',
+    problems: [],
+    createdAt: '2026-10-30T06:00:00.000Z',
+    updatedAt: '2026-10-30T06:00:04.000Z',
+  },
+  {
+    id: 'run-91',
+    automationId: 'au-sentry',
+    source: 'webhook',
+    status: 'queued',
+    version: 1,
+    problems: [],
+    createdAt: '2026-10-30T05:30:00.000Z',
+    updatedAt: '2026-10-30T05:30:00.000Z',
+  },
+  {
     id: 'run-88',
     automationId: 'au-nightly',
     source: 'cron',

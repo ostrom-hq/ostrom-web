@@ -285,7 +285,7 @@ describe('the automations', () => {
     ).toBeInTheDocument();
     expect(within(nightly).getByText('Started')).toBeInTheDocument();
     await user.click(within(nightly).getByRole('button', { name: 'Run now' }));
-    expect(await screen.findByText('The run is queued (run-102).')).toBeInTheDocument();
+    expect(await screen.findByText('The run is queued (run-104).')).toBeInTheDocument();
     expect(await within(nightly).findAllByRole('listitem')).toHaveLength(3);
     await user.click(within(nightly).getByRole('button', { name: 'Hide the runs' }));
     expect(within(nightly).queryByRole('listitem')).toBeNull();
@@ -341,6 +341,7 @@ describe('the automations', () => {
 
   it('says when an automation has no run yet', async () => {
     const user = userEvent.setup();
+    db.automationRuns = db.automationRuns.filter((run) => run.automationId !== 'au-sentry');
     visit('/automations');
     const sentry = await card('Triage new Sentry issues');
     await user.click(within(sentry).getByRole('button', { name: 'Show the runs' }));

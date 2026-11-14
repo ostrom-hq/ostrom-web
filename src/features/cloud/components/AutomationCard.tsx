@@ -1,12 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Automation, AutomationWrite } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { isCloudAgent, isKnownRunReason, isKnownRunStatus, isWebhook, RUN_TONES } from '../model';
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
+import { CopyField } from '@/shared/ui/CopyField';
+import {
+  isCancellable,
+  isCloudAgent,
+  isKnownRunReason,
+  isKnownRunStatus,
+  isWebhook,
+  RUN_TONES,
+  type UrlVersion,
+  versionedUrl,
+} from '../model';
 import { useAutomationRuns } from '../useCloud';
 import { AutomationForm } from './AutomationForm';
 import { SecretOnce } from './SecretOnce';
@@ -39,37 +51,109 @@ export interface AutomationCardProps {
     | undefined;
 }
 
-function Runs({ id, now }: { readonly id: string; readonly now: Date }): ReactElement {
+function Runs({
+  id,
+  now,
+  canCancel,
+}: {
+  readonly id: string;
+  readonly now: Date;
+  /** The viewer may change this automation, so may end its runs. */
+  readonly canCancel: boolean;
+}): ReactElement {
   const { t, i18n } = useTranslation();
-  const { runs, failure } = useAutomationRuns(id);
+  const { runs, failure, cancel, cancelling, cancelFailure } = useAutomationRuns(id);
   if (failure !== undefined) return <p className="o-row__meta">{failure.message}</p>;
   if (runs === undefined) return <p className="o-row__meta">{t('automations.runs.loading')}</p>;
   if (runs.length === 0) return <p className="o-row__meta">{t('automations.runs.empty')}</p>;
   return (
-    <ul className="o-rows">
-      {runs.map((run) => (
-        <li key={run.id} className="o-row">
-          <span className="o-row__main">
-            <span className="o-row__title">
-              {t('automations.runs.line', {
-                when: formatRelative(run.createdAt, now, i18n.language),
-                source: run.source,
-              })}
-            </span>
-            {run.reason === undefined || run.reason === null ? null : (
-              <span className="o-row__meta">
-                {isKnownRunReason(run.reason) ? t(`automations.runReason.${run.reason}`) : run.reason}
+    <>
+      {cancelFailure === undefined ? null : (
+        <Banner tone="danger" tag={t('automations.runs.cancelFailedTag')} live>
+          {cancelFailure.message}
+        </Banner>
+      )}
+      <ul className="o-rows">
+        {runs.map((run) => (
+          <li key={run.id} className="o-row">
+            <span className="o-row__main">
+              <span className="o-row__title">
+                {t('automations.runs.line', {
+                  when: formatRelative(run.createdAt, now, i18n.language),
+                  source: run.source,
+                })}
               </span>
+              {run.reason === undefined || run.reason === null ? null : (
+                <span className="o-row__meta">
+                  {isKnownRunReason(run.reason) ? t(`automations.runReason.${run.reason}`) : run.reason}
+                </span>
+              )}
+            </span>
+            {run.workflowRunId === undefined || run.workflowRunId === null ? null : (
+              <Link to="/runs/$runId" params={{ runId: run.workflowRunId }} className="o-row__meta">
+                {t('automations.runs.workflowRun')}
+              </Link>
             )}
-          </span>
-          {isKnownRunStatus(run.status) ? (
-            <Badge tone={RUN_TONES[run.status]}>{t(`automations.runStatus.${run.status}`)}</Badge>
-          ) : (
-            <Badge tone="neutral">{run.status}</Badge>
-          )}
-        </li>
-      ))}
-    </ul>
+            {isKnownRunStatus(run.status) ? (
+              <Badge tone={RUN_TONES[run.status]}>{t(`automations.runStatus.${run.status}`)}</Badge>
+            ) : (
+              <Badge tone="neutral">{run.status}</Badge>
+            )}
+            {canCancel && isCancellable(run.status) ? (
+              <ConfirmButton
+                label={
+                  cancelling === run.id ? t('automations.runs.cancelling') : t('automations.runs.cancel')
+                }
+                confirm={t('automations.runs.cancelConfirm')}
+                keep={t('automations.runs.keep')}
+                disabled={cancelling !== undefined}
+                onConfirm={() => {
+                  cancel(run.id);
+                }}
+              />
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * The address a sender that pins a version calls: the newest version of the automation (`latest`), or the one now
+ * saved. The server serves both with the automations (ostrom-server#406).
+ */
+function VersionedUrl({
+  url,
+  version,
+}: {
+  readonly url: string;
+  readonly version: number;
+}): ReactElement | null {
+  const { t } = useTranslation();
+  const [which, setWhich] = useState<UrlVersion>('latest');
+  const id = useId();
+  const pinned = versionedUrl(url, which, version);
+  if (pinned === undefined) return null;
+  return (
+    <div className="o-stack">
+      <label htmlFor={id} className="o-field-label">
+        {t('automations.versionedUrl.label')}
+      </label>
+      <select
+        id={id}
+        className="o-input o-select"
+        value={which}
+        onChange={(event) => {
+          setWhich(event.target.value === 'current' ? 'current' : 'latest');
+        }}
+      >
+        <option value="latest">{t('automations.versionedUrl.latest')}</option>
+        <option value="current">{t('automations.versionedUrl.current', { version })}</option>
+      </select>
+      <CopyField label={t('automations.versionedUrl.copyLabel')} value={pinned} />
+      <p className="o-row__meta">{t('automations.versionedUrl.lead')}</p>
+    </div>
   );
 }
 
@@ -160,6 +244,9 @@ export function AutomationCard({
       {automation.webhookUrl === undefined ? null : (
         <p className="o-row__meta o-mono cl-url">{automation.webhookUrl}</p>
       )}
+      {automation.webhookUrl === undefined ? null : (
+        <VersionedUrl url={automation.webhookUrl} version={automation.version} />
+      )}
       {secret === undefined ? null : (
         <SecretOnce name={automation.name} value={secret.value} created={secret.created} />
       )}
@@ -215,7 +302,7 @@ export function AutomationCard({
         )}
       </div>
       <div id={runsId} hidden={!open}>
-        {open ? <Runs id={automation.id} now={now} /> : null}
+        {open ? <Runs id={automation.id} now={now} canCancel={actions !== undefined} /> : null}
       </div>
     </article>
   );

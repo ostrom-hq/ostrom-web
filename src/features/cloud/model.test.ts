@@ -6,6 +6,7 @@ import {
   accessOf,
   CLOUD_AGENTS,
   idempotencyKey,
+  isCancellable,
   isCloudAgent,
   isPromptAgent,
   PROMPT_AGENTS,
@@ -17,6 +18,7 @@ import {
   mayChange,
   sessionTitle,
   sessionTone,
+  versionedUrl,
 } from './model';
 
 const session = (parts: Partial<CloudSession>): CloudSession => ({
@@ -114,5 +116,32 @@ describe('the GitHub access of a session', () => {
     expect(accessOf(session({ githubAccess: 'shared' }))).toBe('shared');
     expect(accessOf(session({ githubAccess: 'none' }))).toBe('none');
     expect(accessOf(session({}))).toBe('owner');
+  });
+});
+
+describe('an automation run that can be cancelled', () => {
+  it('is queued or started', () => {
+    expect(['queued', 'started', 'failed', 'succeeded', 'cancelled'].map(isCancellable)).toEqual([
+      true,
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
+
+describe('versionedUrl', () => {
+  const url = 'https://api.ostrom.run/api/v1/automations/au-1/trigger';
+  it('pins the latest version or the current one', () => {
+    expect(versionedUrl(url, 'latest', 4)).toBe(
+      'https://api.ostrom.run/api/v1/automations/au-1/v/latest/trigger',
+    );
+    expect(versionedUrl(url, 'current', 4)).toBe(
+      'https://api.ostrom.run/api/v1/automations/au-1/v/4/trigger',
+    );
+  });
+  it('gives nothing for an address that is not a trigger', () => {
+    expect(versionedUrl('https://x.io/hook', 'latest', 1)).toBeUndefined();
   });
 });

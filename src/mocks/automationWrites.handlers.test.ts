@@ -93,15 +93,14 @@ describe('the mock automation writes, as the server answers them', () => {
   it('refuses what the server refuses, in its words', async () => {
     expect((await send('POST', '', 'nope')).status).toBe(400);
     expect(
-      await send('POST', '', { name: 'W', trigger: { kind: 'cron' }, action: { workflowId: 'wf-1' } }),
+      await send('POST', '', {
+        name: 'W',
+        trigger: { kind: 'cron' },
+        action: { workflowId: 'wf-1', prompt: 'x' },
+      }),
     ).toEqual({
       status: 400,
-      body: {
-        error: {
-          type: 'invalid_request',
-          message: 'Workflow actions are not available yet: give the action a prompt.',
-        },
-      },
+      body: { error: { type: 'invalid_request', message: 'A workflow action has no prompt.' } },
     });
     expect(
       (await send('POST', '', { name: 'P', trigger: { kind: 'cron' }, action: { agent: 'codex' } })).body,
@@ -147,7 +146,7 @@ describe('the mock automation writes, as the server answers them', () => {
         await send('PUT', '/au-sentry', {
           name: 'X',
           trigger: { kind: 'cron' },
-          action: { workflowId: 'w' },
+          action: { workflowId: 'w', prompt: 'x' },
           version: 1,
         })
       ).status,
@@ -179,5 +178,27 @@ describe('the mock automation writes, as the server answers them', () => {
     });
     expect(data.webhookUrl).toBe('https://api.ostrom.run/api/v1/automations/au-sentry/trigger');
     expect(data.owner).toBe(MEMBER_IDS.maya);
+  });
+});
+
+describe('a workflow action', () => {
+  it('is created and saved with its inputs and repository, and no prompt', async () => {
+    const created = await send('POST', '', {
+      name: 'Release',
+      trigger: { kind: 'webhook' },
+      action: { workflowId: 'wf-release', inputs: { tag: '{{tag}}' }, repository: 'acme/api' },
+    });
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({
+      action: { workflowId: 'wf-release', inputs: { tag: '{{tag}}' }, repository: 'acme/api' },
+    });
+    expect(created.body).not.toHaveProperty('action.prompt');
+    const bare = await send('POST', '', {
+      name: 'Bare',
+      trigger: { kind: 'cron' },
+      action: { workflowId: 'wf-release' },
+    });
+    expect(bare.body).toMatchObject({ action: { workflowId: 'wf-release', inputs: {} } });
+    expect(bare.body).not.toHaveProperty('action.repository');
   });
 });
