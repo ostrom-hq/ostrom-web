@@ -121,4 +121,74 @@ describe('the person’s own MCP servers', { timeout: 15_000 }, () => {
     });
     expect(await other.text()).not.toContain('maya-notes');
   });
+
+  it('lets an administrator review the members’ servers and promote one to the team', async () => {
+    const user = userEvent.setup();
+    db.myMcpServers.push({
+      name: 'unowned',
+      transport: 'stdio',
+      enabled: true,
+      scope: 'shared',
+    });
+    db.myMcpServers = db.myMcpServers.map((server) =>
+      server.name === 'maya-notes' ? { ...server, secretNames: ['NOTES_TOKEN'] } : server,
+    );
+    visit('/mcp');
+    const review = await screen.findByRole('list', { name: 'Members’ own MCP servers' }, { timeout: 5_000 });
+    const [notes, unowned] = within(review).getAllByRole('listitem');
+    expect(notes).toHaveTextContent('https://notes.maya.dev/mcp');
+    expect(notes).toHaveTextContent(/Owner Maya/u);
+    expect(notes).toHaveTextContent('Secret NOTES_TOKEN');
+    expect(unowned).not.toHaveTextContent('Secret');
+    expect(unowned).toHaveTextContent('unownedOwner Promote');
+    await user.click(within(review).getAllByRole('button', { name: 'Promote to the team' })[0] ?? review);
+    await user.click(await screen.findByRole('button', { name: 'Make maya-notes a team server' }));
+    expect(await card('maya-notes')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(db.myMcpServers.some((server) => server.name === 'maya-notes')).toBe(false);
+    });
+  });
+
+  it('says why a promotion was refused, and when no member has a server', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/mcp/servers/:name/promote', () =>
+        HttpResponse.json(
+          { error: { type: 'mcp_server_limit', message: 'the team has 64 servers' } },
+          { status: 409 },
+        ),
+      ),
+    );
+    visit('/mcp');
+    const review = await screen.findByRole('list', { name: 'Members’ own MCP servers' }, { timeout: 5_000 });
+    await user.click(within(review).getByRole('button', { name: 'Promote to the team' }));
+    await user.click(await screen.findByRole('button', { name: 'Make maya-notes a team server' }));
+    expect(await screen.findByText('the team has 64 servers')).toBeInTheDocument();
+    db.myMcpServers = [];
+    visit('/mcp');
+    expect(await screen.findByText('No member declared an MCP server of their own.')).toBeInTheDocument();
+  });
+
+  it('holds the promote buttons while one is promoted', async () => {
+    const user = userEvent.setup();
+    server.use(http.post('*/api/v1/mcp/servers/:name/promote', async () => delay('infinite')));
+    visit('/mcp');
+    const review = await screen.findByRole('list', { name: 'Members’ own MCP servers' }, { timeout: 5_000 });
+    await user.click(within(review).getByRole('button', { name: 'Promote to the team' }));
+    await user.click(await screen.findByRole('button', { name: 'Make maya-notes a team server' }));
+    expect(await within(review).findByRole('button', { name: 'Promote to the team' })).toBeDisabled();
+  });
+
+  it('hides the review from a member', async () => {
+    setDemoRole(db, 'member');
+    visit('/mcp');
+    expect(
+      await screen.findByText(
+        'Owners and admins choose who may use each server and which calls it refuses.',
+        undefined,
+        { timeout: 5_000 },
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Members’ own MCP servers' })).toBeNull();
+  });
 });

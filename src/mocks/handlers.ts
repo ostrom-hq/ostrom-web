@@ -1167,11 +1167,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       });
     }),
     // The demo's servers and their calls are Acme's: another organization has none.
-    handleListMcpServers(({ request }) =>
-      HttpResponse.json({
-        items: organizationOf(db, request).id === db.organization.id ? db.mcpServers : [],
-      }),
-    ),
+    // `personal=true`: the members' own servers, for an administrator's review; the demo's only member with some is Maya.
+    handleListMcpServers(({ request }) => {
+      const personal = new URL(request.url).searchParams.get('personal') === 'true';
+      const servers = personal ? db.myMcpServers : db.mcpServers;
+      return HttpResponse.json({
+        items: organizationOf(db, request).id === db.organization.id ? servers : [],
+      });
+    }),
     handleCreateMcpServer(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage MCP servers');
       const body = zMcpServerWrite.safeParse(await readJson(request));
@@ -1225,6 +1228,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       me: () => MEMBER_IDS.maya,
     }),
     ...createPersonalMcpHandlers(() => db, {
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       inDemoOrg: (request) => organizationOf(db, request).id === db.organization.id,
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       me: () => MEMBER_IDS.maya,

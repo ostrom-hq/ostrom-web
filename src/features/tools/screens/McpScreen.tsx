@@ -6,10 +6,12 @@ import { useNow } from '@/shared/lib/useNow';
 import { Banner } from '@/shared/ui/Banner';
 import { managesMembers } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
+import { Feature } from '@/shared/capabilities';
 import { Badge } from '@/shared/ui/Badge';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { AddServerForm } from '../components/AddServerForm';
 import { HostedProcesses } from '../components/HostedProcesses';
+import { PersonalMcpReview } from '../components/PersonalMcpReview';
 import { AgentPrefix } from '../components/AgentPrefix';
 import { ServerAccess } from '../components/ServerAccess';
 import { ServerCard } from '../components/ServerCard';
@@ -87,6 +89,11 @@ function McpServers({ canManage }: { readonly canManage: boolean }): ReactElemen
         }
       </LoadState>
       {canManage ? <HostedProcesses /> : null}
+      {canManage ? (
+        <Feature name="mcp.personal.v1">
+          <PersonalMcpReview />
+        </Feature>
+      ) : null}
       {view.calls === undefined || view.calls.length === 0 ? null : (
         <Section label={t('tools.mcp.recent')}>
           <ul className="o-card o-rows">
