@@ -38,6 +38,8 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/admin\/(?:instance-admins|settings)(?:\/[^/]+)?$/,
   /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,
   /^\/api\/v1\/automations\/[^/]+\/v\/[^/]+\/trigger$/,
+  // The GitHub App the instance is wired to, entered by its administrator: the instance's, in no organization.
+  /^\/api\/v1\/github\/app\/configuration$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */

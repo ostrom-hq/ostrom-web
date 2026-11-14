@@ -15,7 +15,7 @@ import { WorkflowEditor } from '../components/WorkflowEditor';
 import { WorkflowFailure } from '../components/WorkflowFailure';
 import { WorkflowRuns } from '../components/WorkflowRuns';
 import './workflows.css';
-import { readSteps, reposText, STATUS_TONES, type Step, workflowOf } from '../model';
+import { limitsSet, readSteps, reposText, STATUS_TONES, type Step, workflowOf } from '../model';
 import { useWorkflow, useWorkflowChange, type WorkflowChangeViewModel } from '../useWorkflows';
 
 export function WorkflowScreen(): ReactElement {
@@ -89,6 +89,9 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
               ) : (
                 <p className="o-screen__lead">{t('workflows.actions.readOnly')}</p>
               )}
+              {workflow.status === 'rejected' ? (
+                <p className="o-screen__lead">{t('workflows.detail.rejected')}</p>
+              ) : null}
               <WorkflowDetail workflow={workflow} />
               <WorkflowRuns workflow={workflow} />
             </>
@@ -166,6 +169,7 @@ function WorkflowActions({
 
 function WorkflowDetail({ workflow }: { readonly workflow: Workflow }): ReactElement {
   const { t, i18n } = useTranslation();
+  const limits = limitsSet(workflow);
   return (
     <>
       <Facts
@@ -175,6 +179,17 @@ function WorkflowDetail({ workflow }: { readonly workflow: Workflow }): ReactEle
             label: t('workflows.detail.repos'),
             value: reposText(workflow) ?? t('workflows.list.allRepos'),
           },
+          workflow.sessionMode === 'same'
+            ? { label: t('workflows.detail.sessionMode'), value: t('workflows.sessionMode.same') }
+            : undefined,
+          limits.length === 0
+            ? undefined
+            : {
+                label: t('workflows.detail.limits'),
+                value: limits
+                  .map(({ key, value }) => t(`workflows.detail.limit.${key}`, { value }))
+                  .join(' · '),
+              },
           workflow.version === undefined
             ? undefined
             : { label: t('workflows.detail.version'), value: String(workflow.version) },

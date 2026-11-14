@@ -7,12 +7,16 @@ import {
   type EditedNode,
   edgesOf,
   isLinear,
+  limitOf,
+  limitsSet,
   listOf,
   moveStep,
   newStep,
   nobodyApproves,
   nodeOf,
   readSteps,
+  runnable,
+  schemaOf,
   repoChoices,
   repoLabel,
   repoPattern,
@@ -641,5 +645,156 @@ describe('the workflow editor’s model', () => {
 describe('runSource', () => {
   it('names the sources it knows, and keeps any other as the server wrote it', () => {
     expect(['manual', 'automation', 'webhook'].map(runSource)).toEqual(['manual', 'automation', 'other']);
+  });
+});
+
+describe('delivery fields of the editor', () => {
+  const now = '2026-11-02T00:00:00.000Z';
+  const base = workflow({
+    sessionMode: 'same',
+    limits: { maxNodes: 10 },
+    nodes: [
+      {
+        id: 'a',
+        kind: 'agent',
+        label: 'A',
+        run: {
+          repository: 'acme/api',
+          deliverable: { type: 'json', label: 'L', schema: { type: 'object' } },
+        },
+      },
+      { id: 'w', kind: 'wait', label: 'W', wait: { title: 'ok?' }, approvers: ['maya', 'lena'] },
+      { id: 'o', kind: 'agent', label: 'O', run: { deliverable: { type: 'url', domain: 'github.com' } } },
+    ],
+  });
+
+  it('runs an accepted or edited workflow only', () => {
+    expect(
+      ['accepted', 'edited', 'proposed', 'rejected'].map((status) => runnable(workflow({ status }))),
+    ).toEqual([true, true, false, false]);
+  });
+
+  it('reads the limits, the session mode, the deliverable, the repository and the assignee', () => {
+    const draft = workflowDraftOf(base);
+    expect(draft.sessionMode).toBe('same');
+    expect(draft.limits).toEqual({ maxNodes: '10', maxVisits: '', maxDepth: '' });
+    expect(workflowDraftOf(workflow({})).sessionMode).toBe('handoff');
+    expect(workflowDraftOf(undefined)).toMatchObject({ sessionMode: 'handoff' });
+    const [agent, wait, other] = draft.steps;
+    expect(agent).toMatchObject({
+      deliverableType: 'json',
+      deliverableLabel: 'L',
+      deliverableDomain: '',
+      repository: 'acme/api',
+      assignee: '',
+    });
+    expect(agent?.deliverableSchema).toContain('"type": "object"');
+    expect(wait?.assignee).toBe('maya');
+    expect(other).toMatchObject({ deliverableType: 'url', deliverableDomain: 'github.com' });
+    expect(newStep([])).toMatchObject({ deliverableType: 'none', assignee: '', repository: '' });
+    const odd = workflowDraftOf(
+      workflow({ nodes: [{ id: 'a', kind: 'agent', label: 'A', run: { deliverable: { type: 'new' } } }] }),
+    );
+    expect(odd.steps[0]?.deliverableType).toBe('none');
+    const bare = workflowDraftOf(workflow({ nodes: [{ id: 'w', kind: 'wait', label: 'W' }] }));
+    expect(bare.steps[0]?.assignee).toBe('');
+  });
+
+  it('bounds a limit', () => {
+    expect(limitOf(' ', 'maxNodes')).toBeUndefined();
+    expect(limitOf('100', 'maxNodes')).toBe(100);
+    expect(limitOf('101', 'maxNodes')).toBe('invalid');
+    expect(limitOf('0', 'maxVisits')).toBe('invalid');
+    expect(limitOf('1.5', 'maxDepth')).toBe('invalid');
+    expect(limitOf('abc', 'maxDepth')).toBe('invalid');
+    expect(limitsSet(base)).toEqual([{ key: 'maxNodes', value: 10 }]);
+    expect(limitsSet(workflow({}))).toEqual([]);
+  });
+
+  it('reads a schema object only', () => {
+    expect(schemaOf('{"a":1}')).toEqual({ a: 1 });
+    expect(schemaOf('[1]')).toBeUndefined();
+    expect(schemaOf('null')).toBeUndefined();
+    expect(schemaOf('3')).toBeUndefined();
+    expect(schemaOf('{')).toBeUndefined();
+  });
+
+  it('says what cannot be saved', () => {
+    const draft = workflowDraftOf(base);
+    const [agent] = draft.steps;
+    if (agent === undefined) throw new Error('no step');
+    const put = (over: Partial<StepDraft>) => ({ ...draft, steps: [{ ...agent, ...over }] });
+    expect(workflowProblem({ ...draft, limits: { ...draft.limits, maxDepth: '9' } })).toBe('limit');
+    expect(workflowProblem(put({ deliverableType: 'url', deliverableDomain: 'bad domain' }))).toBe(
+      'deliverableDomain',
+    );
+    expect(workflowProblem(put({ deliverableType: 'url', deliverableDomain: '' }))).toBeUndefined();
+    expect(workflowProblem(put({ deliverableSchema: '[' }))).toBe('deliverableSchema');
+    expect(workflowProblem(put({ deliverableSchema: '  ' }))).toBeUndefined();
+    expect(workflowProblem(put({ repository: 'nope' }))).toBe('repository');
+    expect(workflowProblem(put({ repository: '' }))).toBeUndefined();
+    expect(workflowProblem(put({ kind: 'step' }))).toBeUndefined();
+    expect(workflowProblem(put({ label: ' ' }))).toBe('label');
+  });
+
+  it('writes the delivery fields, and a workflow saved untouched stays the same', () => {
+    expect(workflowOf(workflowDraftOf(base), base, 'w', now)).toMatchObject({
+      sessionMode: 'same',
+      limits: { maxNodes: 10 },
+      status: 'accepted',
+    });
+    const draft = workflowDraftOf(workflow({ nodes: [{ id: 'a', kind: 'agent', label: 'A' }] }));
+    const [agent] = draft.steps;
+    if (agent === undefined) throw new Error('no step');
+    const changed = workflowOf(
+      {
+        ...draft,
+        sessionMode: 'handoff',
+        limits: { maxNodes: '20', maxVisits: '30', maxDepth: '2' },
+        steps: [
+          {
+            ...agent,
+            deliverableType: 'url',
+            deliverableLabel: 'PR',
+            deliverableDomain: 'GitHub.com',
+            repository: ' acme/api ',
+          },
+        ],
+      },
+      undefined,
+      'w',
+      now,
+    );
+    expect(changed.limits).toEqual({ maxNodes: 20, maxVisits: 30, maxDepth: 2 });
+    expect(changed).not.toHaveProperty('sessionMode');
+    expect(changed.nodes[0]?.run).toMatchObject({
+      repository: 'acme/api',
+      deliverable: { type: 'url', label: 'PR', domain: 'github.com' },
+    });
+    const json = workflowOf(
+      { ...draft, steps: [{ ...agent, deliverableType: 'json', deliverableSchema: '{"type":"object"}' }] },
+      undefined,
+      'w',
+      now,
+    );
+    expect(json.nodes[0]?.run?.deliverable).toEqual({ type: 'json', schema: { type: 'object' } });
+    const text = workflowOf(
+      { ...draft, steps: [{ ...agent, deliverableType: 'text' }] },
+      undefined,
+      'w',
+      now,
+    );
+    expect(text.nodes[0]?.run?.deliverable).toEqual({ type: 'text' });
+    // an explicit handoff stays, and the assignee of a wait is its first approver
+    const explicit = workflow({
+      sessionMode: 'handoff',
+      nodes: [{ id: 'w', kind: 'wait', label: 'W', wait: { title: 'q' } }],
+    });
+    const wd = workflowDraftOf(explicit);
+    const [wait] = wd.steps;
+    if (wait === undefined) throw new Error('no step');
+    const assigned = workflowOf({ ...wd, steps: [{ ...wait, assignee: ' lena ' }] }, explicit, 'w', now);
+    expect(assigned.sessionMode).toBe('handoff');
+    expect(assigned.nodes[0]?.approvers).toEqual(['lena']);
   });
 });

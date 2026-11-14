@@ -15,12 +15,12 @@ test('an owner reads the runs of every workflow, opens one, and runs it', async 
   await openScreen(page, 'Runs');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Runs');
   const all = page.getByRole('main').getByRole('listitem');
-  await expect(all).toHaveCount(4);
+  await expect(all).toHaveCount(6);
   await expect(all.first()).toContainText('Running');
-  await expect(all.nth(1)).toContainText('Cancelled');
+  await expect(all.nth(2)).toContainText('Cancelled');
   await fitsTheScreen(page);
 
-  await all.first().getByRole('link', { name: 'Backend changes' }).click();
+  await all.nth(1).getByRole('link', { name: 'Backend changes' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Backend changes');
   const runs = page.getByRole('region', { name: 'Runs' });
   await expect(runs.getByRole('listitem')).toHaveCount(3);

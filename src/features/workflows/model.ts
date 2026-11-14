@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
+  Deliverable,
   NodeRun,
   RunStatus,
   WaitSpec,
   Workflow,
   WorkflowEdge,
+  WorkflowLimits,
   WorkflowNode,
   WorkflowNodeKind,
   WorkflowStatus,
@@ -26,6 +28,11 @@ export const STATUS_TONES: Readonly<Record<Known<WorkflowStatus>, BadgeTone>> = 
   edited: 'success',
   rejected: 'danger',
 };
+
+/** A workflow runs once a person accepted it: never while proposed, never once rejected. */
+export function runnable(workflow: Workflow): boolean {
+  return workflow.status === 'accepted' || workflow.status === 'edited';
+}
 
 /** A run under way is the signal colour, one waiting for a person amber, one that failed red. */
 export const RUN_TONES: Readonly<Record<Known<RunStatus>, BadgeTone>> = {
@@ -126,10 +133,38 @@ export interface StepDraft {
   /** The question a `wait` step asks a person (its `WaitSpec`: title and text; its fields and actions are kept). */
   readonly question: string;
   readonly questionBody: string;
+  /** Who answers a `wait` step: a login (`approvers[0]`); empty, the person who started the run. */
+  readonly assignee: string;
+  /** What an agent step hands in when it is done (`run.deliverable`): `none`, or one of the types of the contract. */
+  readonly deliverableType: DeliverableChoice;
+  readonly deliverableLabel: string;
+  /** For a `url` deliverable: the host it must be on. */
+  readonly deliverableDomain: string;
+  /** For a `json` deliverable: its schema, as JSON text. */
+  readonly deliverableSchema: string;
+  /** The repository (`owner/name`) an agent step works in; empty: the run's. */
+  readonly repository: string;
   readonly base: WorkflowNode | undefined;
 }
 
-/** A node as the console reads and writes it: the contract's, with the typed condition of a check. */
+/** What a step can be asked to deliver: nothing (it ends with its session, as before), or one of these types. */
+export const DELIVERABLE_TYPES = ['none', 'artifact', 'url', 'text', 'json'] as const;
+export type DeliverableChoice = (typeof DELIVERABLE_TYPES)[number];
+
+/** How a workflow's agent steps share sessions (`sessionMode`): a session each, or one for all of them. */
+export const SESSION_MODES = ['handoff', 'same'] as const;
+export type SessionModeChoice = (typeof SESSION_MODES)[number];
+
+/** The bounds of a workflow's limits (`limits`): what the server applies when a limit is left out, and its ceiling. */
+export const LIMIT_BOUNDS = {
+  maxNodes: { default: 50, max: 100 },
+  maxVisits: { default: 100, max: 500 },
+  maxDepth: { default: 3, max: 5 },
+} as const;
+export type LimitKey = keyof typeof LIMIT_BOUNDS;
+export const LIMIT_KEYS: readonly LimitKey[] = ['maxNodes', 'maxVisits', 'maxDepth'];
+
+/** A node as the console reads and writes it: with the typed condition of a check (core, decision of 03/11). */
 export type EditedNode = WorkflowNode;
 
 export interface WorkflowDraft {
@@ -138,6 +173,9 @@ export interface WorkflowDraft {
   readonly description: string;
   /** The repositories it is limited to (`repos`), as written; none: every repository of the organization. */
   readonly repos: readonly string[];
+  readonly sessionMode: SessionModeChoice;
+  /** Each limit as written; empty: the server's default applies. */
+  readonly limits: Readonly<Record<LimitKey, string>>;
   readonly steps: readonly StepDraft[];
   /**
    * Whether the steps follow each other in one line. Only then does the editor add, remove and move steps (the line
@@ -161,6 +199,19 @@ export function isLinear(workflow: Workflow): boolean {
   return followed && order.slice(0, -1).every((id) => froms.includes(id));
 }
 
+function deliverableChoice(type: string | undefined): DeliverableChoice {
+  return DELIVERABLE_TYPES.find((known) => known === type) ?? 'none';
+}
+
+function limitsDraftOf(workflow: Workflow | undefined): Readonly<Record<LimitKey, string>> {
+  const text = (value: number | undefined): string => (value === undefined ? '' : String(value));
+  return {
+    maxNodes: text(workflow?.limits?.maxNodes),
+    maxVisits: text(workflow?.limits?.maxVisits),
+    maxDepth: text(workflow?.limits?.maxDepth),
+  };
+}
+
 function stepDraftOf(node: EditedNode, key: number): StepDraft {
   const condition = node.condition;
   return {
@@ -182,6 +233,13 @@ function stepDraftOf(node: EditedNode, key: number): StepDraft {
     calls: node.workflowId ?? '',
     question: node.wait?.title ?? '',
     questionBody: node.wait?.body ?? '',
+    assignee: node.kind === 'wait' ? (node.approvers?.[0] ?? '') : '',
+    deliverableType: deliverableChoice(node.run?.deliverable?.type),
+    deliverableLabel: node.run?.deliverable?.label ?? '',
+    deliverableDomain: node.run?.deliverable?.domain ?? '',
+    deliverableSchema:
+      node.run?.deliverable?.schema === undefined ? '' : JSON.stringify(node.run.deliverable.schema, null, 2),
+    repository: node.run?.repository ?? '',
     base: node,
   };
 }
@@ -210,6 +268,12 @@ export function newStep(steps: readonly StepDraft[], kind: WorkflowNodeKind = 's
     calls: '',
     question: '',
     questionBody: '',
+    assignee: '',
+    deliverableType: 'none',
+    deliverableLabel: '',
+    deliverableDomain: '',
+    deliverableSchema: '',
+    repository: '',
     base: undefined,
   };
 }
@@ -222,6 +286,8 @@ export function workflowDraftOf(workflow: Workflow | undefined): WorkflowDraft {
       domain: '',
       description: '',
       repos: [],
+      sessionMode: 'handoff',
+      limits: limitsDraftOf(undefined),
       steps: [newStep([], 'trigger')],
       linear: true,
     };
@@ -230,6 +296,8 @@ export function workflowDraftOf(workflow: Workflow | undefined): WorkflowDraft {
     domain: workflow.domain,
     description: workflow.description ?? '',
     repos: workflow.repos ?? [],
+    sessionMode: workflow.sessionMode === 'same' ? 'same' : 'handoff',
+    limits: limitsDraftOf(workflow),
     steps: readSteps(workflow).map((step, key) => stepDraftOf(step.node, key)),
     linear: isLinear(workflow),
   };
@@ -260,6 +328,10 @@ export type WorkflowProblem =
   | 'label'
   | 'question'
   | 'call'
+  | 'limit'
+  | 'deliverableDomain'
+  | 'deliverableSchema'
+  | 'repository'
   | `condition.${ConditionProblem}`
   | 'condition.branches';
 
@@ -288,13 +360,60 @@ function branchesSaid(step: StepDraft, base: Workflow | undefined, some = false)
   return (!some || out.length > 0) && out.every((edge) => edge.on === 'true' || edge.on === 'false');
 }
 
+/** A limit as written: its number, undefined when left empty, `invalid` when it is not a whole number in its bounds. */
+export function limitOf(text: string, key: LimitKey): number | undefined | 'invalid' {
+  const written = text.trim();
+  if (written === '') return undefined;
+  const value = Number(written);
+  return /^\d+$/.test(written) && value >= 1 && value <= LIMIT_BOUNDS[key].max ? value : 'invalid';
+}
+
+const DOMAIN = /^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/;
+/** The repository of a step, `owner/name` where `*` stands for any part of a name. */
+const REPOSITORY = /^[A-Za-z0-9_.*-]+\/[A-Za-z0-9_.*-]+$/;
+
+/** The JSON schema a person wrote for a `json` deliverable: an object, or undefined when it is not one. */
+export function schemaOf(text: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+      ? Object.fromEntries(Object.entries(parsed))
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The host a `url` deliverable must be on, as written: lower case, without spaces. */
+function domainOf(step: StepDraft): string | undefined {
+  return step.deliverableType === 'url' ? textOf(step.deliverableDomain.toLowerCase()) : undefined;
+}
+
+function stepProblem(step: StepDraft): WorkflowProblem | undefined {
+  if (step.kind === 'wait' && step.question.trim() === '') return 'question';
+  if (step.kind === 'workflow' && step.calls === '') return 'call';
+  if (step.kind !== 'agent') return undefined;
+  const domain = domainOf(step);
+  if (domain !== undefined && !DOMAIN.test(domain)) return 'deliverableDomain';
+  if (
+    step.deliverableType === 'json' &&
+    step.deliverableSchema.trim() !== '' &&
+    schemaOf(step.deliverableSchema) === undefined
+  )
+    return 'deliverableSchema';
+  const repository = step.repository.trim();
+  return repository !== '' && !REPOSITORY.test(repository) ? 'repository' : undefined;
+}
+
 export function workflowProblem(draft: WorkflowDraft, base?: Workflow): WorkflowProblem | undefined {
   if (draft.name.trim() === '') return 'name';
   if (draft.domain.trim() === '') return 'domain';
   if (draft.steps.length === 0) return 'noSteps';
+  if (LIMIT_KEYS.some((key) => limitOf(draft.limits[key], key) === 'invalid')) return 'limit';
+  // the first step that cannot be saved is the one said, but a label is said before a question or a call
   if (draft.steps.some((step) => step.label.trim() === '')) return 'label';
-  if (draft.steps.some((step) => step.kind === 'wait' && step.question.trim() === '')) return 'question';
-  if (draft.steps.some((step) => step.kind === 'workflow' && step.calls === '')) return 'call';
+  const stepIssue = draft.steps.map(stepProblem).find((problem) => problem !== undefined);
+  if (stepIssue !== undefined) return stepIssue;
   // a check reads any node of the workflow, one after it included (core#127)
   const nodes = draft.steps.map((one) => one.id);
   for (const step of draft.steps) {
@@ -330,6 +449,20 @@ const SHOWN: Readonly<
   workflow: [],
 };
 
+/** What an agent step is asked to deliver; the other fields of the deliverable go with its type. */
+function deliverableOf(step: StepDraft): Deliverable | undefined {
+  if (step.deliverableType === 'none') return undefined;
+  const label = textOf(step.deliverableLabel);
+  const domain = domainOf(step);
+  const schema = step.deliverableType === 'json' ? schemaOf(step.deliverableSchema) : undefined;
+  return {
+    type: step.deliverableType,
+    ...(label === undefined ? {} : { label }),
+    ...(domain === undefined ? {} : { domain }),
+    ...(schema === undefined ? {} : { schema }),
+  };
+}
+
 /**
  * What the step runs, its other settings (where, timeout, network…) kept as they were. A field its kind does not show
  * goes (a step turned into a notification sends no command), except on a kind the editor does not change.
@@ -343,6 +476,9 @@ function runOf(step: StepDraft): NodeRun | undefined {
   const channel = field('channel');
   const message = field('message');
   const instructions = field('instructions');
+  // A step that is not an agent keeps the deliverable it was read with: the editor shows none for it.
+  const deliverable = kind === 'agent' ? deliverableOf(step) : base.deliverable;
+  const repository = kind === 'agent' ? textOf(step.repository) : undefined;
   const run: NodeRun = {
     ...(base.on === undefined ? {} : { on: base.on }),
     ...(base.timeoutSec === undefined ? {} : { timeoutSec: base.timeoutSec }),
@@ -350,7 +486,8 @@ function runOf(step: StepDraft): NodeRun | undefined {
     ...(base.network === undefined ? {} : { network: base.network }),
     ...(base.agent === undefined ? {} : { agent: base.agent }),
     ...(base.model === undefined ? {} : { model: base.model }),
-    ...(base.deliverable === undefined ? {} : { deliverable: base.deliverable }),
+    ...(deliverable === undefined ? {} : { deliverable }),
+    ...(repository === undefined ? {} : { repository }),
     ...(command === undefined ? {} : { command }),
     ...(channel === undefined ? {} : { channel }),
     ...(message === undefined ? {} : { message }),
@@ -381,6 +518,7 @@ export function nodeOf(step: StepDraft): EditedNode {
         }
       : undefined;
   const approvers = listOf(step.approvers);
+  const assignee = textOf(step.assignee);
   const detail = textOf(step.detail);
   const run = runOf(step);
   return {
@@ -389,6 +527,7 @@ export function nodeOf(step: StepDraft): EditedNode {
     label: step.label.trim(),
     ...(detail === undefined ? {} : { detail }),
     ...(gate && approvers.length > 0 ? { approvers } : {}),
+    ...(step.kind === 'wait' && assignee !== undefined ? { approvers: [assignee] } : {}),
     ...(run === undefined ? {} : { run }),
     ...(condition === undefined ? {} : { condition }),
     ...(step.kind === 'workflow' && step.calls !== '' ? { workflowId: step.calls } : {}),
@@ -489,6 +628,24 @@ function statusOf(base: Workflow | undefined, changed: boolean): WorkflowStatus 
   return changed ? 'edited' : 'accepted';
 }
 
+/** `same` as chosen; `handoff` is what the server does when the field is absent, so it is written only if it was. */
+function sessionModeOf(draft: WorkflowDraft, base: Workflow | undefined): string | undefined {
+  if (draft.sessionMode === 'same') return 'same';
+  return base?.sessionMode === 'handoff' ? 'handoff' : undefined;
+}
+
+/** The limits the draft writes: each one that is filled, or the ones read when none was touched; none: all default. */
+function limitsOf(draft: WorkflowDraft, base: Workflow | undefined): WorkflowLimits | undefined {
+  const [maxNodes, maxVisits, maxDepth] = LIMIT_KEYS.map((key) => limitOf(draft.limits[key], key));
+  const limits: WorkflowLimits = {
+    ...(typeof maxNodes === 'number' ? { maxNodes } : {}),
+    ...(typeof maxVisits === 'number' ? { maxVisits } : {}),
+    ...(typeof maxDepth === 'number' ? { maxDepth } : {}),
+  };
+  if (Object.keys(limits).length > 0) return sameValue(limits, base?.limits) ? base?.limits : limits;
+  return undefined;
+}
+
 /**
  * The workflow a draft says. A new one is accepted as it is written (a person in the console decides); a proposed one
  * that a person saves is accepted, with changes when it has some; an accepted one stays as it was called.
@@ -524,14 +681,27 @@ export function workflowOf(
   const edges = edgesOf(draft, base);
   // Repositories left as they were go back as read; none chosen sends no field, which means all of them.
   const repos = sameValue(draft.repos, base?.repos ?? []) ? base?.repos : [...draft.repos];
+  // The session mode and the limits go back as read when untouched; `handoff` and an empty limit are the defaults.
+  const sessionMode = sessionModeOf(draft, base);
+  const limits = limitsOf(draft, base);
   const name = draft.name === base?.name ? base.name : draft.name.trim();
   const domain = draft.domain === base?.domain ? base.domain : draft.domain.trim();
   // What nobody touched goes back as it was read, so a workflow saved untouched is the very same workflow.
   const changed =
     base === undefined ||
     !sameValue(
-      [name, domain, description, repos, start, nodes, edges],
-      [base.name, base.domain, base.description, base.repos, base.start, base.nodes, base.edges],
+      [name, domain, description, repos, start, nodes, edges, sessionMode, limits],
+      [
+        base.name,
+        base.domain,
+        base.description,
+        base.repos,
+        base.start,
+        base.nodes,
+        base.edges,
+        base.sessionMode,
+        base.limits,
+      ],
     );
   const status: WorkflowStatus = statusOf(base, changed);
   return {
@@ -544,11 +714,21 @@ export function workflowOf(
     nodes,
     edges,
     ...(start === undefined ? {} : { start }),
+    ...(sessionMode === undefined ? {} : { sessionMode }),
+    ...(limits === undefined ? {} : { limits }),
     ...(base?.inputs === undefined ? {} : { inputs: base.inputs }),
     ...(base?.sources === undefined ? {} : { sources: base.sources }),
     status,
     foundAt: base?.foundAt ?? now,
   };
+}
+
+/** The limits a workflow sets (`limits`), each with its value; none when it sets none. */
+export function limitsSet(workflow: Workflow): { readonly key: LimitKey; readonly value: number }[] {
+  return LIMIT_KEYS.flatMap((key) => {
+    const value = workflow.limits?.[key];
+    return value === undefined ? [] : [{ key, value }];
+  });
 }
 
 /**
