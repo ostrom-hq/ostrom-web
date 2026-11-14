@@ -34,6 +34,8 @@
     "/admin": 3.9,
     "/admin/settings": 3.9,
     "/artifacts": 11.0,
+    "/webhooks": 5.2,
+    "/webhooks/$webhookId": 5.2,
     "/accounts": 11.0,
     "/accounts/groups": 11.0,
     "/accounts/groups/$groupId": 11.0,
