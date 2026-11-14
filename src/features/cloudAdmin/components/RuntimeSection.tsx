@@ -14,6 +14,7 @@ import {
 } from '../model';
 import { type CloudRuntimeViewModel, useCloudRuntime } from '../useCloudAdmin';
 import { Choice, Field } from './Field';
+import { InvalidHint } from './InvalidHint';
 import { SaveOutcome } from './SaveOutcome';
 
 /** How cloud sessions run on this instance. Only mounted for an administrator of the instance. */
@@ -42,8 +43,10 @@ function RuntimeForm({
   const [draft, setDraft] = useState<RuntimeDraft>(() => runtimeDraftOf(runtime));
   const { write } = view;
   const problem = runtimeProblem(draft);
+  const [touched, setTouched] = useState(false);
   const edit = (change: Partial<RuntimeDraft>): void => {
     write.clear();
+    setTouched(true);
     setDraft({ ...draft, ...change });
   };
   const disabled = write.saving;
@@ -52,6 +55,7 @@ function RuntimeForm({
       className="o-stack"
       onSubmit={(event) => {
         event.preventDefault();
+        setTouched(true);
         if (problem === undefined) view.save(runtimeRequestOf(draft, runtime), () => undefined);
       }}
     >
@@ -158,13 +162,12 @@ function RuntimeForm({
           edit({ memberTransfers });
         }}
       />
-      {problem === undefined ? null : (
-        <p className="o-row__meta" role="status">
-          {t('cloudAdmin.invalidField', { field: problem })}
-        </p>
-      )}
+      <InvalidHint
+        label={problem === undefined ? undefined : t(`cloudAdmin.runtime.${problem}`)}
+        shown={touched}
+      />
       <div className="o-inline">
-        <Button type="submit" disabled={write.saving || problem !== undefined}>
+        <Button type="submit" disabled={write.saving}>
           {write.saving ? t('cloudAdmin.saving') : t('cloudAdmin.save')}
         </Button>
       </div>

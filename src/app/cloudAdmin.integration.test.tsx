@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { CLUSTER_ID, PROFILE_ID } from '@/mocks/cloudAdmin';
 import { demoCapabilities } from '@/mocks/capabilities';
+import { largeLogin, largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { FEATURES } from '@/shared/capabilities/model';
@@ -97,8 +98,11 @@ describe('the organization’s cloud settings', () => {
     const minutes = await within(settings).findByLabelText(/^Background work/);
     await user.clear(minutes);
     await user.type(minutes, '2000');
-    expect(within(settings).getByText('Enter a whole number of minutes, from 0 to 1440.')).toBeVisible();
-    expect(within(settings).getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(
+      within(settings).getByText('Check “Background work, longest hold (minutes)” before saving.'),
+    ).toBeVisible();
+    // Saving it sends nothing.
+    await user.click(within(settings).getByRole('button', { name: 'Save' }));
     // Submitting from the field does nothing either.
     await user.type(minutes, '{Enter}');
     expect(db.cloudSettings.backgroundWorkMaxMinutes).toBe(240);
@@ -188,15 +192,15 @@ describe('the cloud profiles', () => {
       await user.click(await within(profiles).findByRole('button', { name: 'Create a profile' }));
       const form = within(await screen.findByRole('form', { name: 'Create a profile' }));
       const save = form.getByRole('button', { name: 'Save' });
-      expect(save).toBeDisabled();
-      expect(form.getByText('Check name before saving.')).toBeVisible();
+      // An untouched form is not an error: nothing is said until the person edits or submits.
+      expect(form.queryByRole('status')).toBeNull();
       await user.type(form.getByLabelText('Name'), 'big');
-      expect(form.getByText('Check clusterId before saving.')).toBeVisible();
+      expect(form.getByText('Check “Cluster id” before saving.')).toBeVisible();
       await user.type(form.getByLabelText('Cluster id'), CLUSTER_ID);
       await user.type(form.getByLabelText('Namespace'), 'ostrom');
       await user.type(form.getByLabelText('Session image'), 'ghcr.io/acme/big:1');
       await user.type(form.getByLabelText('CPU (millicores)'), '2000');
-      expect(form.getByText('Check memoryMebibytes before saving.')).toBeVisible();
+      expect(form.getByText('Check “Memory (MiB)” before saving.')).toBeVisible();
       await user.type(form.getByLabelText('Memory (MiB)'), '4096');
       await user.click(form.getByRole('checkbox', { name: /Samir/ }));
       await user.click(form.getByRole('checkbox', { name: /Samir/ }));
@@ -331,8 +335,7 @@ describe('the runtime and the clusters, the instance’s own', () => {
     ).toBeVisible();
     const save = within(runtime).getByRole('button', { name: 'Save' });
     await user.clear(within(runtime).getByLabelText('Sessions running per member'));
-    expect(within(runtime).getByText('Check maxRunningSessionsPerMember before saving.')).toBeVisible();
-    expect(save).toBeDisabled();
+    expect(within(runtime).getByText('Check “Sessions running per member” before saving.')).toBeVisible();
     await user.type(within(runtime).getByLabelText('Sessions running per member'), '5');
     await user.click(within(runtime).getByRole('checkbox', { name: 'Cloud sessions are on' }));
     await user.selectOptions(within(runtime).getByLabelText('Workspace access mode'), 'ReadWriteOnce');
@@ -402,9 +405,9 @@ describe('the runtime and the clusters, the instance’s own', () => {
     await user.type(form.getByLabelText('Name'), 'us-east');
     await user.type(form.getByLabelText('API URL'), 'https://k8s.us.acme.test');
     await user.type(form.getByLabelText('Namespaces sessions may use'), 'ostrom, batch');
-    expect(form.getByText('Check caCertificate before saving.')).toBeVisible();
+    expect(form.getByText('Check “CA bundle (PEM)” before saving.')).toBeVisible();
     await user.type(form.getByLabelText('CA bundle (PEM)'), '-----BEGIN CERTIFICATE-----');
-    expect(form.getByText('Check serviceAccountToken before saving.')).toBeVisible();
+    expect(form.getByText('Check “Service-account token” before saving.')).toBeVisible();
     await user.type(form.getByLabelText('Service-account token'), 'tok');
     expect(save).toBeEnabled();
     await user.click(save);
@@ -435,8 +438,9 @@ describe('the runtime and the clusters, the instance’s own', () => {
     expect(
       moved.getByText('Needed: the CA bundle and the token are written, never shown again.'),
     ).toBeVisible();
-    expect(moved.getByText('Check caCertificate before saving.')).toBeVisible();
-    expect(moved.getByRole('button', { name: 'Save' })).toBeDisabled();
+    expect(moved.getByText('Check “CA bundle (PEM)” before saving.')).toBeVisible();
+    await user.click(moved.getByRole('button', { name: 'Save' }));
+    expect(db.cloudClusters[0]?.apiUrl).toBe('https://k8s.acme.test');
     await user.click(moved.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('form', { name: 'eu-west' })).toBeNull();
   });
@@ -475,10 +479,10 @@ describe('the runtime and the clusters, the instance’s own', () => {
     await user.click(within(clusters).getByRole('button', { name: 'Connect a cluster' }));
     const form = within(await screen.findByRole('form', { name: 'Connect a cluster' }));
     await user.type(form.getByLabelText('Namespaces sessions may use'), 'Bad_Name');
-    expect(form.getByText('Check name before saving.')).toBeVisible();
+    expect(form.getByText('Check “Name” before saving.')).toBeVisible();
     await user.type(form.getByLabelText('Name'), 'x');
     await user.type(form.getByLabelText('API URL'), 'https://k.test');
-    expect(form.getByText('Check allowedNamespaces before saving.')).toBeVisible();
+    expect(form.getByText('Check “Namespaces sessions may use” before saving.')).toBeVisible();
     await user.click(form.getByRole('button', { name: 'Cancel' }));
     expect(screen.queryByRole('form', { name: 'Connect a cluster' })).toBeNull();
   });
@@ -567,5 +571,126 @@ describe('what the forms say while they work, and the fields that are seldom tou
     expect(db.cloudProfiles).toHaveLength(1);
     expect(db.cloudClusters).toHaveLength(1);
     expect(db.cloudRuntime.maxRunningSessionsPerMember).toBe(3);
+  });
+
+  it('offers every member of a large organization to a profile, not the first page only', async () => {
+    const user = userEvent.setup();
+    db.orgMembers[db.organization.id] = [
+      ...(db.orgMembers[db.organization.id] ?? []),
+      ...largeMembers().slice(0, 250),
+    ];
+    visit('/cloud/admin');
+    const profiles = await section('Profiles');
+    await user.click(await within(profiles).findByRole('button', { name: 'Create a profile' }));
+    const form = within(await screen.findByRole('form', { name: 'Create a profile' }));
+    const last = largeLogin(249);
+    expect(await form.findByRole('checkbox', { name: new RegExp(last) }, { timeout: 15000 })).toBeVisible();
+  }, 30000);
+
+  it('says what is wrong with a form only once it was edited or submitted, by the label of the field', async () => {
+    const user = userEvent.setup();
+    visit('/cloud/admin');
+    const profiles = await section('Profiles');
+    await user.click(await within(profiles).findByRole('button', { name: 'Create a profile' }));
+    const form = await screen.findByRole('form', { name: 'Create a profile' });
+    expect(within(form).queryByRole('status')).toBeNull();
+    fireEvent.submit(form);
+    expect(await within(form).findByText('Check “Name” before saving.')).toBeVisible();
+  });
+});
+
+describe('the cap of automation sessions per member', () => {
+  it('shows the default of 2, saves a new cap with the minutes, and refuses a cap out of range', async () => {
+    const user = userEvent.setup();
+    visit('/cloud/admin');
+    const settings = await section('Organization settings');
+    const cap = await within(settings).findByLabelText(/^Automation sessions running/);
+    expect(cap).toHaveValue(2);
+    await user.clear(cap);
+    await user.type(cap, '101');
+    expect(
+      within(settings).getByText('Check “Automation sessions running per member” before saving.'),
+    ).toBeVisible();
+    await user.click(within(settings).getByRole('button', { name: 'Save' }));
+    expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(2);
+    await user.clear(cap);
+    await user.type(cap, '5');
+    await user.click(within(settings).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(5);
+    });
+    expect(db.cloudSettings.backgroundWorkMaxMinutes).toBe(240);
+  });
+
+  it('reads a server that sends no cap as the default, and sends the cap with each save', async () => {
+    const user = userEvent.setup();
+    db.cloudSettings = { backgroundWorkMaxMinutes: 90, updatedAt: '2026-11-10T10:00:00Z' };
+    visit('/cloud/admin');
+    const settings = await section('Organization settings');
+    expect(await within(settings).findByLabelText(/^Automation sessions running/)).toHaveValue(2);
+    const minutes = within(settings).getByLabelText(/^Background work/);
+    await user.clear(minutes);
+    await user.type(minutes, '60');
+    await user.click(within(settings).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(2);
+    });
+  });
+
+  it('is read-only for a member', async () => {
+    asMember();
+    visit('/cloud/admin');
+    const settings = await section('Organization settings');
+    expect(await within(settings).findByLabelText(/^Automation sessions running/)).toBeDisabled();
+  });
+});
+
+describe('the settings and the members, when the server says otherwise', () => {
+  it('sends the cap only when it was changed, so another administrator’s cap is not undone', async () => {
+    const user = userEvent.setup();
+    db.cloudSettings = {
+      backgroundWorkMaxMinutes: 90,
+      maxRunningAutomationsPerMember: 5,
+      updatedAt: '2026-11-10T10:00:00Z',
+    };
+    visit('/cloud/admin');
+    const settings = await section('Organization settings');
+    expect(await within(settings).findByLabelText(/^Automation sessions running/)).toHaveValue(5);
+    // Another administrator changes the cap, without touching the date the form read.
+    db.cloudSettings = { ...db.cloudSettings, maxRunningAutomationsPerMember: 9 };
+    const minutes = within(settings).getByLabelText(/^Background work/);
+    await user.clear(minutes);
+    await user.type(minutes, '60');
+    await user.click(within(settings).getByRole('button', { name: 'Save' }));
+    await waitFor(() => {
+      expect(db.cloudSettings.backgroundWorkMaxMinutes).toBe(60);
+    });
+    expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(9);
+  });
+
+  it('stops asking for the next page of members when one fails', async () => {
+    const asked: string[] = [];
+    db.orgMembers[db.organization.id] = [
+      ...(db.orgMembers[db.organization.id] ?? []),
+      ...largeMembers().slice(0, 250),
+    ];
+    server.use(
+      http.get('*/api/v1/orgs/*/members', ({ request }) => {
+        asked.push(request.url);
+        return new URL(request.url).searchParams.has('after')
+          ? refused(500, 'internal', 'The members are unavailable.')
+          : undefined;
+      }),
+    );
+    const user = userEvent.setup();
+    visit('/cloud/admin');
+    const profiles = await section('Profiles');
+    await user.click(await within(profiles).findByRole('button', { name: 'Create a profile' }));
+    await waitFor(() => {
+      expect(asked.some((url) => url.includes('after='))).toBe(true);
+    });
+    const before = asked.length;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(asked.length).toBe(before);
   });
 });

@@ -8,6 +8,7 @@ import { LoadState, Section } from '@/shared/ui/Screen';
 import { EMPTY_PROFILE, type ProfileDraft, profileDraftOf, profileProblem, profileRequestOf } from '../model';
 import { type CloudProfilesViewModel, useAssignableMembers, useCloudProfiles } from '../useCloudAdmin';
 import { Field } from './Field';
+import { InvalidHint } from './InvalidHint';
 import { SaveOutcome } from './SaveOutcome';
 
 /**
@@ -118,8 +119,10 @@ function ProfileForm({
   const people = useAssignableMembers(orgId);
   const { write } = view;
   const problem = profileProblem(draft);
+  const [touched, setTouched] = useState(false);
   const edit = (change: Partial<ProfileDraft>): void => {
     write.clear();
+    setTouched(true);
     setDraft({ ...draft, ...change });
   };
   const text = (name: keyof ProfileDraft, label: string, extra: { hint?: string; rows?: number } = {}) => (
@@ -139,6 +142,7 @@ function ProfileForm({
       aria-label={stored === undefined ? t('cloudAdmin.profiles.add') : stored.name}
       onSubmit={(event) => {
         event.preventDefault();
+        setTouched(true);
         if (problem === undefined) view.save(profileRequestOf(draft, stored), stored?.id, onDone);
       }}
     >
@@ -178,13 +182,12 @@ function ProfileForm({
           </label>
         ))}
       </fieldset>
-      {problem === undefined ? null : (
-        <p className="o-row__meta" role="status">
-          {t('cloudAdmin.invalidField', { field: problem })}
-        </p>
-      )}
+      <InvalidHint
+        label={problem === undefined ? undefined : t(`cloudAdmin.profiles.${problem}`)}
+        shown={touched}
+      />
       <div className="o-inline">
-        <Button type="submit" disabled={write.saving || problem !== undefined}>
+        <Button type="submit" disabled={write.saving}>
           {write.saving ? t('cloudAdmin.saving') : t('cloudAdmin.save')}
         </Button>
         <Button variant="ghost" onClick={onDone}>

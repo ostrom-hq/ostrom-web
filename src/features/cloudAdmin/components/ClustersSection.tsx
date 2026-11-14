@@ -15,6 +15,7 @@ import {
 } from '../model';
 import { type CloudClustersViewModel, useCloudClusters } from '../useCloudAdmin';
 import { Field } from './Field';
+import { InvalidHint } from './InvalidHint';
 import { SaveOutcome } from './SaveOutcome';
 
 /** The Kubernetes clusters sessions run on. Only mounted for an administrator of the instance. */
@@ -121,8 +122,10 @@ function ClusterForm({
   const { write } = view;
   const problem = clusterProblem(draft, stored);
   const credentials = needsCredentials(draft, stored);
+  const [touched, setTouched] = useState(false);
   const edit = (change: Partial<ClusterDraft>): void => {
     write.clear();
+    setTouched(true);
     setDraft({ ...draft, ...change });
   };
   return (
@@ -131,6 +134,7 @@ function ClusterForm({
       aria-label={stored === undefined ? t('cloudAdmin.clusters.add') : stored.name}
       onSubmit={(event) => {
         event.preventDefault();
+        setTouched(true);
         if (problem === undefined) view.save(clusterRequestOf(draft, stored), stored?.id, onDone);
       }}
     >
@@ -204,13 +208,12 @@ function ClusterForm({
           edit({ serviceAccountToken });
         }}
       />
-      {problem === undefined ? null : (
-        <p className="o-row__meta" role="status">
-          {t('cloudAdmin.invalidField', { field: problem })}
-        </p>
-      )}
+      <InvalidHint
+        label={problem === undefined ? undefined : t(`cloudAdmin.clusters.${problem}`)}
+        shown={touched}
+      />
       <div className="o-inline">
-        <Button type="submit" disabled={write.saving || problem !== undefined}>
+        <Button type="submit" disabled={write.saving}>
           {write.saving ? t('cloudAdmin.saving') : t('cloudAdmin.save')}
         </Button>
         <Button variant="ghost" onClick={onDone}>
