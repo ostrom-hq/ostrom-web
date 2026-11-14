@@ -153,8 +153,29 @@ export function versionedUrl(url: string, which: UrlVersion, version: number): s
 
 /** A glob with `*` for any run of characters, as the server matches a profile's `allowedImageOverrides`. */
 function globMatches(pattern: string, text: string): boolean {
-  const escaped = pattern.split('*').map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'));
-  return new RegExp(`^${escaped.join('.*')}$`, 's').test(text);
+  // The two-pointer match: on a mismatch it resumes after the last `*`, so no pattern backtracks exponentially.
+  let p = 0;
+  let t = 0;
+  let star = -1;
+  let resume = 0;
+  while (t < text.length) {
+    if (pattern[p] === '*') {
+      star = p;
+      p += 1;
+      resume = t;
+    } else if (pattern[p] === text[t]) {
+      p += 1;
+      t += 1;
+    } else if (star >= 0) {
+      p = star + 1;
+      resume += 1;
+      t = resume;
+    } else {
+      return false;
+    }
+  }
+  while (pattern[p] === '*') p += 1;
+  return p === pattern.length;
 }
 
 /** Whether a session may run `image` on `profile`: its own image, or one an override allows (empty: its own). */

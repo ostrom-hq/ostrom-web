@@ -26,8 +26,11 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
     profiles.find((item) => item.id === picked) ?? (profiles.length === 1 ? profiles[0] : undefined);
   const overrides = profile?.spec.allowedImageOverrides ?? [];
   const imageProblem = profile !== undefined && !imageAllowed(image, profile);
+  // Profiles that could not be read do not stop a start: the server picks the owner's only profile, or says which one.
   const profileBlocks =
-    start.enabled && (start.profiles === undefined || profile === undefined || imageProblem);
+    start.enabled &&
+    start.failure === undefined &&
+    (start.profiles === undefined || profile === undefined || imageProblem);
   // A server without the recipe is never sent one: the older single repository stays the way to clone.
   const recipes = useFeature('runners.cloud.environment.v1');
   const checked = recipes ? checkRecipe(recipe, repo) : { environment: undefined };

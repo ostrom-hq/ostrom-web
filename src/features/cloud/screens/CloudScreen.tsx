@@ -21,7 +21,7 @@ export function CloudScreen(): ReactElement {
   const change = useSessionChange();
   const github = useGithubAccess();
   const { profiles } = useStartProfiles();
-  const refusal = change.failure === undefined ? undefined : startRefusalOf(change.failure);
+  const refusal = change.startFailure === undefined ? undefined : startRefusalOf(change.startFailure);
   const now = useNow();
   return (
     <Screen title={t('cloud.title')} lead={t('cloud.lead')}>

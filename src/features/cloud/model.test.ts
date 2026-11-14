@@ -169,6 +169,10 @@ describe('the image a session may run', () => {
     expect(imageAllowed('axxbyyc', open)).toBe(true);
     expect(imageAllowed('abc', open)).toBe(true);
     expect(imageAllowed('ac', open)).toBe(false);
+    // Many stars never backtrack without end.
+    expect(imageAllowed(`${'a'.repeat(60)}c`, profile(['a*a*a*a*a*a*a*a*b']))).toBe(false);
+    expect(imageAllowed('x', profile(['*']))).toBe(true);
+    expect(imageAllowed('', profile(['*']))).toBe(true);
     expect(imageAllowed('acb', open)).toBe(false);
     expect(imageAllowed('ghcr.io/acme/web:1', open)).toBe(false);
     expect(imageAllowed('exactly', open)).toBe(false);

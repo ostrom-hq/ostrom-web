@@ -86,6 +86,8 @@ export interface SessionChangeViewModel {
   /** The session being stopped. */
   readonly stopping: string | undefined;
   readonly failure: Error | undefined;
+  /** The failure of the start alone: the stop's own words are not those of a start. */
+  readonly startFailure: Error | undefined;
 }
 
 export function useSessionChange(): SessionChangeViewModel {
@@ -134,6 +136,7 @@ export function useSessionChange(): SessionChangeViewModel {
     starting: create.isPending,
     stopping: halt.isPending ? halt.variables.path.id : undefined,
     failure: failureOf(create.error ?? halt.error),
+    startFailure: failureOf(create.error),
   };
 }
 

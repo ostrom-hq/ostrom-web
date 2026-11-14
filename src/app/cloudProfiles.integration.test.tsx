@@ -141,9 +141,27 @@ describe('starting a cloud agent on a profile', () => {
       ),
     );
     visit('/cloud');
-    expect(
-      await within(await form()).findByText('The profiles are unavailable.', {}, { timeout: 5000 }),
-    ).toBeVisible();
+    const start = within(await form());
+    expect(await start.findByText('The profiles are unavailable.', {}, { timeout: 5000 })).toBeVisible();
+    // The server still decides: a start without a profile is not held back.
+    await userEvent.type(start.getByLabelText('What should it do?'), 'Fix it');
+    expect(start.getByRole('button', { name: 'Start the agent' })).toBeEnabled();
+  });
+
+  it('says a start’s own refusal only for a start, never for a failed stop', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/cloud/sessions/*', () =>
+        HttpResponse.json({ error: { type: 'cluster_unavailable', message: 'raw stop' } }, { status: 409 }),
+      ),
+    );
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    const running = screen.getByText('Fix the flaky invoice test').closest('li');
+    if (running === null) throw new Error('no running session');
+    await user.click(within(running).getByRole('button', { name: 'Stop' }));
+    await user.click(within(running).getByRole('button', { name: 'Stop Fix the flaky invoice test' }));
+    expect(await screen.findByText('raw stop')).toBeVisible();
   });
 
   it.each([
