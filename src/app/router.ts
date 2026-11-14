@@ -270,6 +270,12 @@ const myMcpRoute = createRoute({
   path: '/me/mcp',
   component: lazyRouteComponent(async () => import('@/features/tools'), 'PersonalMcpScreen'),
 });
+/** The person's own notifications: switches per kind and channel, phone preferences, a test (`notifications.v1`). */
+const myNotificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/me/notifications',
+  component: lazyRouteComponent(async () => import('@/features/notifications'), 'NotificationsScreen'),
+});
 const importRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/import',
@@ -502,6 +508,7 @@ export const routeTree = rootRoute.addChildren([
   environmentRoute,
   myEnvironmentRoute,
   myMcpRoute,
+  myNotificationsRoute,
   skillsRoute,
   skillRoute,
   hooksRoute,

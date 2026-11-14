@@ -27,6 +27,7 @@ const SCREENS = [
   '/environment',
   '/me/environment',
   '/me/mcp',
+  '/me/notifications',
   '/skills',
   '/hooks',
   '/import',
