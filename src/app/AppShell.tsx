@@ -1,15 +1,6 @@
 import { Link, Outlet, useMatches, useRouterState } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import {
-  analytics,
-  analyticsConfig,
-  ConsentBanner,
-  PRIVACY_URL,
-  PrivacyChoices,
-  useConsentStore,
-  usePageViews,
-} from '@/shared/analytics';
 import { OrgControls } from '@/features/orgs';
 import { blocks, Feature, useServerStatus } from '@/shared/capabilities';
 import { useOrgStore } from '@/shared/org/orgStore';
@@ -23,6 +14,26 @@ import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
 
+// Analytics is not needed to paint the console: it loads once the first paint is done.
+const AnalyticsLayer = lazy(async () => import('@/app/AnalyticsLayer').then((m) => ({ default: m.AnalyticsLayer })));
+const FooterPrivacy = lazy(async () => import('@/app/AnalyticsLayer').then((m) => ({ default: m.FooterPrivacy })));
+
+/** True from the first frame after the first paint. */
+function useAfterFirstPaint(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setTimeout(() => {
+        setReady(true);
+      }, 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+  return ready;
+}
+
 export function AppShell(): ReactElement {
   const { t } = useTranslation();
   useApplyTheme();
@@ -31,8 +42,7 @@ export function AppShell(): ReactElement {
   const anonymousPage = useMatches({
     select: (matches) => matches.some((match) => match.staticData.anonymous === true),
   });
-  const consent = useConsentStore((state) => state.status);
-  usePageViews(analytics, pathname, consent);
+  const afterPaint = useAfterFirstPaint();
   const server = useServerStatus();
   const links = useNavLinks();
   const need = needOf(pathname);
@@ -76,9 +86,17 @@ export function AppShell(): ReactElement {
         )}
       </main>
       <footer className="o-footer">
-        <PrivacyChoices analytics={analytics} configured={analyticsConfig !== null} />
+        {afterPaint ? (
+          <Suspense fallback={null}>
+            <FooterPrivacy />
+          </Suspense>
+        ) : null}
       </footer>
-      <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />
+      {afterPaint ? (
+        <Suspense fallback={null}>
+          <AnalyticsLayer pathname={pathname} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
