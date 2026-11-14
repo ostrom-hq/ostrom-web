@@ -157,6 +157,26 @@ describe('the mock runs', () => {
     expect(state.workflowRuns).toHaveLength(6);
   });
 
+  it('answers a start repeated under the same Idempotency-Key with the first run, as the server does', async () => {
+    const press = (key: string): RequestInit => ({
+      ...start({ inputs: {} }),
+      headers: { 'content-type': 'application/json', 'Idempotency-Key': key },
+    });
+    const first = await call('/workflows/wf-backend/runs', press('press-1'));
+    expect(first.status).toBe(201);
+    const again = await getResponse(
+      handlers,
+      new Request('http://ostrom.test/api/v1/workflows/wf-backend/runs', press('press-1')),
+    );
+    expect(again?.status).toBe(200);
+    expect(again?.headers.get('Idempotency-Replayed')).toBe('true');
+    expect(await again?.json()).toEqual(first.body);
+    expect(state.workflowRuns).toHaveLength(7);
+    expect((await call('/workflows/wf-backend/runs', press('press-2'))).status).toBe(201);
+    expect(await refused('/workflows/wf-backend/runs', press('not valid'))).toEqual([400, 'invalid_request']);
+    expect(state.workflowRuns).toHaveLength(8);
+  });
+
   it('keeps the repository a run was started with', async () => {
     expect(await started('/workflows/wf-release/runs', { repository: 'acme/api' })).toMatchObject({
       repository: 'acme/api',

@@ -17,8 +17,10 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
+import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { runnable } from './model';
@@ -131,22 +133,48 @@ export interface StartRunViewModel {
   readonly failure: Error | undefined;
 }
 
+/**
+ * Whether the server answered a start with a refusal (400 to 499): no run was started under the key, so the next press
+ * is a new one. A lost answer, a timeout or a server error says nothing, so the key stays: pressing Start again
+ * returns the run the first press may have started, never a second.
+ */
+export function startRefused(error: unknown): boolean {
+  return isApiFailure(error) && error.status !== undefined && error.status >= 400 && error.status < 500;
+}
+
+/** The key of a press whose answer is unknown, with what it started: other inputs are another press. */
+interface PendingStart {
+  readonly key: string;
+  readonly what: string;
+}
+
 export function useStartRun(workflow: Workflow): StartRunViewModel {
   const workflowId = workflow.id;
   const queryClient = useQueryClient();
   const viewer = useViewer();
   const withRepository = useFeature('workflows.deliver.v1');
+  const pending = useRef<PendingStart | undefined>(undefined);
   const mutation = useMutation({
     mutationFn: async (start: RunStart) => {
       const inputs = inputsOf(workflow.inputs ?? [], start.inputs);
       const repository = start.repository.trim();
+      const what = JSON.stringify([workflowId, inputs, withRepository ? repository : '']);
+      // One key per press, kept while its answer is unknown so that pressing again cannot start a second run.
+      pending.current = pending.current?.what === what ? pending.current : { key: idempotencyKey(), what };
       return (
         await startWorkflowRun({
           path: { id: workflowId },
           body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
+          headers: { 'Idempotency-Key': pending.current.key },
           throwOnError: true,
         })
       ).data;
+    },
+    onSuccess: () => {
+      pending.current = undefined;
+    },
+    onError: (error) => {
+      if (startRefused(error)) pending.current = undefined;
     },
     // The new run comes first in both lists: they are read again, whatever the answer.
     onSettled: async () => {
