@@ -18,4 +18,13 @@ type PluralBase<Key extends string> =
   Key extends `${infer Base}_${'zero' | 'one' | 'two' | 'few' | 'many' | 'other'}` ? Base : Key;
 
 /** The keys `t` accepts: those of the English wording, which every language has (LocaleShape). A wrong one fails the typecheck. */
-export type WordingKey = PluralBase<Paths<typeof en>>;
+export type WordingKey = PluralBase<Paths<typeof en & FeatureWording>>;
+
+/**
+ * The words that ship with a feature's own chunk (`registerWording`), not in the wording every screen loads. A feature
+ * declares its keys here by merging into this interface, so `t` accepts them, and only the feature's code asks for them.
+ */
+export interface FeatureWording {
+  /** Nothing: an interface needs a member of its own before the features add theirs. */
+  readonly featureWording: string;
+}

@@ -3,6 +3,7 @@ import {
   i18n,
   i18nReady,
   pickLanguage,
+  registerWording,
   showLanguage,
   wordingLoader,
 } from '@/shared/i18n/i18n';
@@ -365,5 +366,31 @@ describe('a change overtaken by a newer one', () => {
     const load = wordingLoader(instance, bothLanguages, () => undefined);
     expect(await showLanguage('fr', instance, () => false, load)).toBe(false);
     expect(instance.language).toBe('en');
+  });
+});
+
+const words = { en: { feature: { hello: 'Hello' } }, fr: { feature: { hello: 'Bonjour' } } };
+
+describe('the wording that ships with a feature', () => {
+  it('is added to the language shown, once that language has its wording', () => {
+    const instance = createI18n('en');
+    registerWording(words, instance);
+    expect(instance.hasResourceBundle('en')).toBe(false);
+    instance.addResourceBundle('en', { base: 'x' });
+    registerWording(words, instance);
+    expect(instance.getResource('en', 'feature.hello')).toBe('Hello');
+  });
+
+  it('follows the language the person picks, which never has the feature’s words alone', () => {
+    const instance = createI18n('en');
+    instance.addResourceBundle('en', { base: 'x' });
+    registerWording(words, instance);
+    expect(instance.hasResourceBundle('fr')).toBe(false);
+    instance.addResourceBundle('fr', { base: 'y' });
+    instance.changeLanguage('fr');
+    expect(instance.getResource('fr', 'feature.hello')).toBe('Bonjour');
+    // A language the console does not have adds nothing.
+    instance.changeLanguage('de');
+    expect(instance.hasResourceBundle('de')).toBe(false);
   });
 });
