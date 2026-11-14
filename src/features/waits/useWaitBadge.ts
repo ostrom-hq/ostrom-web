@@ -5,7 +5,7 @@ import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useServerStatus } from '@/shared/capabilities';
 import { hasFeature } from '@/shared/capabilities/model';
-import { BADGE_PAGE, countLabel } from './model';
+import { BADGE_PAGE, countLabel } from './badge';
 
 export const BADGE_POLL_MS = 30_000;
 
