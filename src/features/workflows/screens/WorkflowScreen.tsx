@@ -99,7 +99,7 @@ function WorkflowView({ workflowId }: { readonly workflowId: string }): ReactEle
   );
 }
 
-/** Edit, accept a proposed workflow as found, or delete it (two clicks). */
+/** Edit, accept or reject a proposed workflow as found, or delete it (two clicks). */
 function WorkflowActions({
   workflow,
   changes,
@@ -117,21 +117,38 @@ function WorkflowActions({
         {t('workflows.actions.edit')}
       </Button>
       {workflow.status === 'proposed' ? (
-        <Button
-          disabled={busy}
-          onClick={() => {
-            changes.change(
-              {
-                kind: 'accept',
-                workflow: { ...workflow, status: 'accepted' },
-                expectedVersion: workflow.version,
-              },
-              () => undefined,
-            );
-          }}
-        >
-          {changes.pending === 'accept' ? t('workflows.actions.accepting') : t('workflows.actions.accept')}
-        </Button>
+        <>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              changes.change(
+                {
+                  kind: 'accept',
+                  workflow: { ...workflow, status: 'accepted' },
+                  expectedVersion: workflow.version,
+                },
+                () => undefined,
+              );
+            }}
+          >
+            {changes.pending === 'accept' ? t('workflows.actions.accepting') : t('workflows.actions.accept')}
+          </Button>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              changes.change(
+                {
+                  kind: 'reject',
+                  workflow: { ...workflow, status: 'rejected' },
+                  expectedVersion: workflow.version,
+                },
+                () => undefined,
+              );
+            }}
+          >
+            {changes.pending === 'reject' ? t('workflows.actions.rejecting') : t('workflows.actions.reject')}
+          </Button>
+        </>
       ) : null}
       <ConfirmButton
         label={changes.pending === 'delete' ? t('workflows.actions.deleting') : t('workflows.actions.delete')}

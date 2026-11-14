@@ -1008,6 +1008,8 @@ export const en = {
       edit: 'Edit',
       accept: 'Accept',
       accepting: 'Accepting…',
+      reject: 'Reject',
+      rejecting: 'Rejecting…',
       delete: 'Delete',
       deleteConfirm: 'Delete this workflow',
       deleteLead: 'Agents stop following it, and its gates leave the catalogue.',

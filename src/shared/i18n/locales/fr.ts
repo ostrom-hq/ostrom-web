@@ -1033,6 +1033,8 @@ export const fr = {
       edit: 'Modifier',
       accept: 'Accepter',
       accepting: 'Acceptation…',
+      reject: 'Rejeter',
+      rejecting: 'Rejet…',
       delete: 'Supprimer',
       deleteConfirm: 'Supprimer ce workflow',
       deleteLead: 'Les agents cessent de le suivre, et ses portes quittent le catalogue.',

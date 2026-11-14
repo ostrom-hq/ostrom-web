@@ -42,12 +42,17 @@ export function useWorkflow(id: string): WorkflowViewModel {
   return { workflow: query.data, failure: failureOf(query.error), canChange: viewer.canManage };
 }
 
-/** One change to a workflow: a creation, a save (from the version the editor read), an acceptance or a deletion. */
+/**
+ * One change to a workflow: a creation, a save (from the version the editor read), an acceptance, a rejection or a
+ * deletion.
+ */
 export type WorkflowChange =
   | { readonly kind: 'create'; readonly workflow: Workflow }
   | { readonly kind: 'save'; readonly workflow: Workflow; readonly expectedVersion: number | undefined }
   /** A proposed workflow accepted as found: a save of its status alone. */
   | { readonly kind: 'accept'; readonly workflow: Workflow; readonly expectedVersion: number | undefined }
+  /** A proposed workflow turned down: kept `rejected`, so the analysis never proposes it again. */
+  | { readonly kind: 'reject'; readonly workflow: Workflow; readonly expectedVersion: number | undefined }
   | { readonly kind: 'delete'; readonly id: string };
 
 export interface WorkflowChangeViewModel {
@@ -69,6 +74,7 @@ async function send(change: WorkflowChange): Promise<Workflow | undefined> {
       return applied((await createWorkflow({ body: change.workflow, throwOnError: true })).data);
     case 'save':
     case 'accept':
+    case 'reject':
       return applied(
         (
           await saveWorkflow({
