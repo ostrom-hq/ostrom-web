@@ -37,6 +37,7 @@ export const FEATURES = [
   'waits.v1',
   'webhooks.v1',
   'workflows.deliver.v1',
+  'workflows.settings.v1',
 ] as const;
 
 export type FeatureKey = (typeof FEATURES)[number];

@@ -10,7 +10,10 @@ import {
   serviceKeyLifetimeOf,
   sortDevices,
   sortSessions,
+  toggleMember,
   toggleServiceKeyScope,
+  workflowEditorModeOf,
+  workflowEditorsProblem,
 } from './model';
 
 describe('renameProblem', () => {
@@ -123,5 +126,27 @@ describe('personalDevices', () => {
       { id: 'dev-3', name: 'admin', kind: 'admin', orgId: 'org-1' },
     ];
     expect(personalDevices(devices).map((device) => device.id)).toEqual(['dev-1', 'dev-2']);
+  });
+});
+
+describe('who decides workflows', () => {
+  it('reads a mode, the administrators when it is not known', () => {
+    expect(['all', 'admins', 'members', 'novel'].map(workflowEditorModeOf)).toEqual([
+      'all',
+      'admins',
+      'members',
+      'admins',
+    ]);
+  });
+
+  it('asks for a member when the mode is members', () => {
+    expect(workflowEditorsProblem('members', [])).toBe(true);
+    expect(workflowEditorsProblem('members', ['maya'])).toBe(false);
+    expect(workflowEditorsProblem('admins', [])).toBe(false);
+  });
+
+  it('adds or removes a member', () => {
+    expect(toggleMember(['maya'], 'lena')).toEqual(['maya', 'lena']);
+    expect(toggleMember(['maya', 'lena'], 'maya')).toEqual(['lena']);
   });
 });
