@@ -107,6 +107,38 @@ describe('the transfer of a cloud session', () => {
     expect(await within(mine).findByText('No other member can take this session.')).toBeInTheDocument();
   });
 
+  it('says why the members cannot be listed, in the server\u2019s words or ours', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/cloud/transfer-recipients', () =>
+        HttpResponse.json({ error: { type: 'transfer_disabled', message: 'off' } }, { status: 403 }),
+      ),
+    );
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    const mine = row('Fix the flaky invoice test');
+    await user.click(within(mine).getByRole('button', { name: 'Transfer…' }));
+    expect(await within(mine).findByText(/does not allow members to transfer/)).toBeInTheDocument();
+    expect(within(mine).queryByText('No other member can take this session.')).toBeNull();
+  });
+
+  it('shows the server\u2019s message when the members cannot be listed for another reason', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/cloud/transfer-recipients', () =>
+        HttpResponse.json(
+          { error: { type: 'internal_error', message: 'Members are out of reach.' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    const mine = row('Fix the flaky invoice test');
+    await user.click(within(mine).getByRole('button', { name: 'Transfer…' }));
+    expect(await within(mine).findByText('Members are out of reach.')).toBeInTheDocument();
+  });
+
   it('lets the recipient accept an offer, or decline it', async () => {
     const user = userEvent.setup();
     visit('/cloud');

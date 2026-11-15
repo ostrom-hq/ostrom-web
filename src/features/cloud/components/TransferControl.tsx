@@ -3,11 +3,14 @@ import type { CloudSession, CloudTransferRecipient } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
+import { transferRefusalOf } from '../transfer';
 
 export interface TransferControlProps {
   readonly session: CloudSession;
   /** The members the session can be given to; the server refuses the list when transfers are not offered. */
   readonly recipients: readonly CloudTransferRecipient[];
+  /** Why the list could not be read, as the server wrote it: said in place of "no other member". */
+  readonly recipientsFailure?: Error | undefined;
   /** Whether an administrator gives the session (the transfer is then accepted at once), or a member offers it. */
   readonly canManage: boolean;
   readonly busy: boolean;
@@ -18,6 +21,7 @@ export interface TransferControlProps {
 export function TransferControl({
   session,
   recipients,
+  recipientsFailure,
   canManage,
   busy,
   onOffer,
@@ -28,6 +32,7 @@ export function TransferControl({
   const [resume, setResume] = useState(false);
   const pickId = useId();
   const resumeId = useId();
+  const recipientRefusal = recipientsFailure === undefined ? undefined : transferRefusalOf(recipientsFailure);
   const candidates = recipients.filter((recipient) => recipient.login !== session.owner);
   if (!open) {
     return (
@@ -67,7 +72,13 @@ export function TransferControl({
         ))}
       </select>
       {candidates.length === 0 ? (
-        <span className="o-row__meta">{t('cloud.transfer.noRecipient')}</span>
+        <span className="o-row__meta">
+          {recipientsFailure === undefined
+            ? t('cloud.transfer.noRecipient')
+            : recipientRefusal === undefined
+              ? recipientsFailure.message
+              : t(`cloud.transfer.refusal.${recipientRefusal}`)}
+        </span>
       ) : null}
       <label htmlFor={resumeId} className="o-inline">
         <input

@@ -118,8 +118,10 @@ export function useTransferChange(): TransferChangeViewModel {
           path: { id: sessionId },
           body,
           headers: { 'Idempotency-Key': press.key },
-          // The generated client validates a request's headers after merging them into a `Headers`, which a schema with a
-          // required header (this route's `Idempotency-Key`) never matches: the types check the request, the server the key.
+          // The generated client validates a request after merging its headers into a `Headers`, which a schema with a
+          // required header never matches. Every other `Idempotency-Key` in the contract is optional (so the schema
+          // passes vacuously); this route's is required (400 `idempotency_key_required`), hence the one skip: the types
+          // check the request, the server the key.
           requestValidator: skipValidation,
         },
         {

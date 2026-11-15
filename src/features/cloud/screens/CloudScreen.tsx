@@ -73,6 +73,7 @@ export function CloudScreen(): ReactElement {
                         <TransferControl
                           session={session}
                           recipients={transfers.recipients}
+                          recipientsFailure={transfers.recipientsFailure}
                           canManage={view.canManage}
                           busy={transferChange.busy === session.id}
                           onOffer={(to, resume, onDone) => {
