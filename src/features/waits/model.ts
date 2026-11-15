@@ -72,9 +72,10 @@ export const FILE_NAME_LIMIT = 255;
 
 /** Whether a file name holds a character the server refuses: `/`, `\`, a control character (ISO control: C0 and C1). */
 function hasForbiddenChar(name: string): boolean {
-  for (const char of name) {
-    const code = char.codePointAt(0) ?? 0;
-    if (char === '/' || char === '\\' || code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+  for (let at = 0; at < name.length; at += 1) {
+    const code = name.charCodeAt(at);
+    // `/` is 0x2f and `\` is 0x5c; the control characters are C0 and C1 (control characters are never surrogates).
+    if (code === 0x2f || code === 0x5c || code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
   }
   return false;
 }
