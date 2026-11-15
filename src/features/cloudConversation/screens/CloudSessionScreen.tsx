@@ -36,8 +36,13 @@ const LIVE_TONES: Readonly<Record<LiveState, BadgeTone>> = {
 
 /** A cloud session in conversation mode: its transcript, followed live, and the box to message its agent. */
 export function CloudSessionScreen(): ReactElement {
-  const { t } = useTranslation();
   const { sessionId } = useParams({ from: '/cloud/sessions/$sessionId' });
+  // One session's state per screen: another session's address starts afresh, its transcript and messages with it.
+  return <SessionScreen key={sessionId} sessionId={sessionId} />;
+}
+
+function SessionScreen({ sessionId }: { readonly sessionId: string }): ReactElement {
+  const { t } = useTranslation();
   const view = useCloudConversation(sessionId);
   const back = (
     <Link to="/cloud" className="o-back">

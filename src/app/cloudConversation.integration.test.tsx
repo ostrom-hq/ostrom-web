@@ -197,6 +197,25 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
     expect(screen.queryAllByRole('button', { name: 'Discard' })).toHaveLength(0);
   });
 
+  it('starts afresh on another session’s address', async () => {
+    db.cloudSessions.push({
+      id: 'cs-34',
+      owner: 'maya',
+      agent: 'codex',
+      mode: 'conversation',
+      status: 'running',
+      createdAt: AT,
+    });
+    db.cloudEvents['cs-34'] = [
+      { seq: 1, type: 'message.agent', at: AT, epoch: 1, data: { text: 'Another conversation' } },
+    ];
+    const router = visit(PATH);
+    await screen.findByText('Why does the invoice test fail on Mondays?');
+    await router.navigate({ to: '/cloud/sessions/$sessionId', params: { sessionId: 'cs-34' } });
+    expect(await screen.findByText('Another conversation')).toBeInTheDocument();
+    expect(screen.queryByText('Why does the invoice test fail on Mondays?')).toBeNull();
+  });
+
   it('stops reading when the screen closes before the first page', async () => {
     const asked: string[] = [];
     traffic.onRequest((request) => asked.push(new URL(request.url).pathname));

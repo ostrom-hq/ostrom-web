@@ -27,9 +27,11 @@ export const EMPTY_TRANSCRIPT: Transcript = {
 
 function merged(transcript: Transcript, incoming: readonly TranscriptEvent[]): Transcript {
   if (incoming.length === 0) return transcript;
-  const last = Math.max(0, ...transcript.events.map((event) => event.seq));
+  // The events are kept in order: the newest is the last one, never a spread of all of them.
+  const last = transcript.events.at(-1)?.seq ?? 0;
   const sorted = incoming.toSorted((a, b) => a.seq - b.seq);
-  const first = Math.min(...sorted.map((event) => event.seq));
+  const first = sorted.reduce((least, event) => Math.min(least, event.seq), Infinity);
+  const highest = sorted.reduce((most, event) => Math.max(most, event.seq), 0);
   // Known sequences keep the first copy: an event never changes once written.
   const combined =
     first > last
@@ -38,7 +40,7 @@ function merged(transcript: Transcript, incoming: readonly TranscriptEvent[]): T
   return {
     ...transcript,
     events: combined,
-    newestSeq: Math.max(transcript.newestSeq, ...combined.map((event) => event.seq)),
+    newestSeq: Math.max(transcript.newestSeq, last, highest),
   };
 }
 

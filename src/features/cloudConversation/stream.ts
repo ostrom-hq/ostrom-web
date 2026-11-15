@@ -159,7 +159,7 @@ export async function followEvents(
       cursor,
       listener,
       (seq) => {
-        cursor = seq;
+        cursor = Math.max(cursor, seq);
         failures = 0;
       },
       signal,
