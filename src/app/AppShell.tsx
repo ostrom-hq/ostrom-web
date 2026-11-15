@@ -13,20 +13,16 @@ import { needOf } from '@/app/navigation';
 import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
+import type * as AnalyticsModule from '@/app/AnalyticsLayer';
 
 // Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
 // (offline, blocked) leaves the console without it: nothing shows, nothing breaks.
 const NOTHING = (): ReactElement => <></>;
-const AnalyticsLayer = lazy(async () =>
-  import('@/app/AnalyticsLayer')
-    .then((m) => ({ default: m.AnalyticsLayer }))
-    .catch(() => ({ default: NOTHING })),
-);
-const FooterPrivacy = lazy(async () =>
-  import('@/app/AnalyticsLayer')
-    .then((m) => ({ default: m.FooterPrivacy }))
-    .catch(() => ({ default: NOTHING })),
-);
+type AnalyticsChunk = Pick<typeof AnalyticsModule, 'AnalyticsLayer' | 'FooterPrivacy'>;
+const analyticsChunk = async (): Promise<AnalyticsChunk> =>
+  import('@/app/AnalyticsLayer').catch(() => ({ AnalyticsLayer: NOTHING, FooterPrivacy: NOTHING }));
+const AnalyticsLayer = lazy(async () => analyticsChunk().then((m) => ({ default: m.AnalyticsLayer })));
+const FooterPrivacy = lazy(async () => analyticsChunk().then((m) => ({ default: m.FooterPrivacy })));
 
 /** True from the first frame after the first paint. */
 function useAfterFirstPaint(): boolean {
