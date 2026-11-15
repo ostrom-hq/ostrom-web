@@ -790,8 +790,7 @@ export const zAutomationAction = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     effort: z.optional(z.string()),
-    maxRuntimeMinutes: z.optional(z.int()),
-    profileId: z.optional(z.uuid())
+    maxRuntimeMinutes: z.optional(z.int())
 });
 
 /**
@@ -1233,7 +1232,7 @@ export const zSaveGitHubAppConfigurationRequest = z.object({
     clientId: z.string().check(z.minLength(4), z.maxLength(64), z.regex(/^Iv[0-9A-Za-z._-]{2,62}$/)),
     clientSecret: z.nullish(z.string().check(z.minLength(20), z.maxLength(256))),
     privateKey: z.nullish(z.string().check(z.maxLength(16384))),
-    webhookSecret: z.nullish(z.string().check(z.maxLength(256))),
+    webhookSecret: z.nullish(z.string().check(z.minLength(1), z.maxLength(256))),
     version: z.nullish(z.int())
 });
 
@@ -3675,8 +3674,7 @@ export const zNodeRun = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     deliverable: z.optional(zDeliverable),
-    repository: z.optional(z.string()),
-    profileId: z.optional(z.uuid())
+    repository: z.optional(z.string())
 });
 
 /**
@@ -4919,8 +4917,7 @@ export const zWebhookDeliveryList = z.object({
  */
 export const zStartWorkflowRunRequest = z.object({
     inputs: z.optional(z.record(z.string(), z.string())),
-    repository: z.optional(z.string()),
-    profileId: z.optional(z.uuid())
+    repository: z.optional(z.string())
 });
 
 /**
@@ -5052,7 +5049,6 @@ export const zWorkflowRun = z.object({
     parentRunId: z.optional(z.string()),
     sessionId: z.optional(z.string()),
     repository: z.optional(z.string()),
-    profileId: z.optional(z.uuid()),
     visits: z.optional(z.array(zNodeVisit)),
     failure: z.optional(z.string()),
     failureCode: z.optional(z.string()),
@@ -7863,7 +7859,7 @@ export const zReceiveWaitEventQuery = z.object({
 });
 
 /**
- * The wait is resolved and its session will be woken (planned: a paused cloud session resumes, as with `answerWait`)
+ * The wait is resolved and its session will be woken
  */
 export const zReceiveWaitEventResponse = zWaitEventReceived;
 

@@ -1140,10 +1140,6 @@ export type AutomationAction = {
     model?: string;
     effort?: string;
     maxRuntimeMinutes?: number;
-    /**
-     * The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has (400 `invalid_automation` naming `action.profileId`). Absent: the owner's only usable profile, as `createCloudSession` chooses it (`profile_required` when they may use none or several). A run whose session the profile refuses fails with the refusal's key as its `reason`: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`. Ignored by a server whose sessions run on Docker or on registered runners
-     */
-    profileId?: string;
 };
 
 /**
@@ -1170,7 +1166,7 @@ export type AutomationRun = {
      */
     workflowRunId?: string | null;
     /**
-     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled, and the cloud profile's refusals cloud_profile_not_found, profile_unassigned, profile_required, image_not_allowed, cluster_unavailable, namespace_not_allowed…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
+     * A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted, owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20 unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled
      */
     reason?: string | null;
     problems: Array<AutomationPayloadProblem>;
@@ -1838,7 +1834,7 @@ export type SaveGitHubAppConfigurationRequest = {
      */
     privateKey?: string | null;
     /**
-     * The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same `appId` (another App signs with its own, so none is kept); an empty string clears it (for a first App or another `appId` it leaves none, as null does). Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
+     * The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)
      */
     webhookSecret?: string | null;
     /**
@@ -4462,10 +4458,6 @@ export type NodeRun = {
      * Agent: the repository (`owner/name`) its session works in, else the run's
      */
     repository?: string;
-    /**
-     * Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`, TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the server runs refuses an id none of the organization's profiles has (400 `invalid_workflow`, naming the node). Ignored by a server whose sessions run on Docker or on registered runners. A session the profile refuses fails the visit, and the run's `failureCode` is the refusal's key: `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable` or `namespace_not_allowed`
-     */
-    profileId?: string;
 };
 
 /**
@@ -5451,11 +5443,11 @@ export type Session = {
      */
     lost?: boolean;
     /**
-     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer.
+     * Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report, and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with it, since a person still has to answer. Planned: the server does not send it yet
      */
     activity?: 'working' | 'waiting_for_human' | (string & {});
     /**
-     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only.
+     * When `activity` began, by the server's clock: a repeated state keeps its time. Present with `activity` only. Planned: the server does not send it yet
      */
     activitySince?: string;
     /**
@@ -6961,10 +6953,6 @@ export type StartWorkflowRunRequest = {
      * `owner/name`, for the agent nodes that name none (planned)
      */
     repository?: string;
-    /**
-     * The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each such node's session runs on the starter's only usable profile
-     */
-    profileId?: string;
 };
 
 /**
@@ -7120,14 +7108,10 @@ export type WorkflowRun = {
      * The repository of the agent nodes that name none
      */
     repository?: string;
-    /**
-     * The cloud profile of the agent nodes that name none: the one given at a manual start, or, for a run an automation started, its workflow action's. Absent when none was named (the profile is then chosen at each session's creation, never written back here)
-     */
-    profileId?: string;
     visits?: Array<NodeVisit>;
     failure?: string;
     /**
-     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, the cloud profile's refusal of an agent node's session (`cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`, `cluster_unavailable`, `namespace_not_allowed`), or the code of a refusal that cannot be retried
+     * A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`, `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`, `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`, `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried
      */
     failureCode?: string;
     output?: string;
@@ -16682,7 +16666,7 @@ export type ReceiveWaitEventError = ReceiveWaitEventErrors[keyof ReceiveWaitEven
 
 export type ReceiveWaitEventResponses = {
     /**
-     * The wait is resolved and its session will be woken (planned: a paused cloud session resumes, as with `answerWait`)
+     * The wait is resolved and its session will be woken
      */
     202: WaitEventReceived;
 };

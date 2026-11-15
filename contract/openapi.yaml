@@ -3908,7 +3908,7 @@ paths:
       tags:
       - sessions
       summary: Sign of life of the launcher (every 20 s)
-      description: "With `sessions.activity.v1`, a sign of life that ends a silence of the launcher (60 s
+      description: "With `sessions.activity.v1` (planned), a sign of life that ends a silence of the launcher (60 s
         without one) clears a `working` activity reported before the silence, and keeps `waiting_for_human`."
       parameters:
       - name: id
@@ -4026,7 +4026,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: reportSessionActivity
-      x-ostrom-status: served
+      x-ostrom-status: planned
       tags:
       - sessions
       summary: "Whether the agent works or waits for a person (`sessions.activity.v1`), reported by its hooks"
@@ -4038,7 +4038,7 @@ paths:
         one changes nothing (`superseded: true`). A repeated state keeps its time (`since`). 409 `session_ended` once
         the segment ended (a lost one too: its launcher reports to the segment it reopens). 400
         `invalid_session_activity` for another state or an `observedAt` that is not a date-time. Not audited, like a
-        sign of life."
+        sign of life. Planned: the server does not serve it yet"
       parameters:
       - name: id
         in: path
@@ -7392,9 +7392,7 @@ paths:
         runs (403 otherwise). Holds the call up to `waitMillis` (0 to 30 000, 25 000 by default)
         and answers as soon as a wait of the session is answered: each answer is handed over once (`messages`, oldest
         first, each starting with `[Ostrom wait answered]`). `open` says a wait asked by the session is still open, so
-        the hook keeps holding the agent; a session with no open wait answers at once. With `waitMillis` 0 it never
-        holds: a cloud session's runner asks so once an execution has started, and starts the agent with the answers
-        that arrived while the session was paused as its first message."
+        the hook keeps holding the agent; a session with no open wait answers at once."
       parameters:
       - name: session
         in: query
@@ -7466,13 +7464,6 @@ paths:
       tags:
       - waits
       summary: Answer a wait; first answer wins (409 wait_closed)
-      description: "The answer stays on the wait and is handed once to the agent of its session, if any (`POST
-        /api/v1/waits/wake`). Planned: a wait of a cloud session that is paused, not ended, resumes it, on its owner's
-        behalf and within the organization's limits (audited `cloud.session.woken`), and its next execution starts the
-        agent with the answer as its first message; a running one hands it over at the agent's next stop. A session
-        that cannot resume (its organization at its cap or out of hours, its owner gone) stays paused with the answer
-        kept on the wait, and an ended one takes nothing. A wait for a time or an event that resolves by itself
-        (`time_reached`, `event_received`, `timed_out`) wakes its session the same way."
       parameters:
       - name: id
         in: path
@@ -7574,8 +7565,7 @@ paths:
               $ref: '#/components/schemas/WaitEventRequest'
       responses:
         '202':
-          description: "The wait is resolved and its session will be woken (planned: a paused cloud session
-            resumes, as with `answerWait`)"
+          description: The wait is resolved and its session will be woken
           content:
             application/json:
               schema:
@@ -9904,13 +9894,11 @@ paths:
         `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`; what else steers the loader or a runtime
         (`GLIBC_TUNABLES`, `NODE_TLS_REJECT_UNAUTHORIZED`, `NODE_ICU_DATA`, `ELECTRON_RUN_AS_NODE`, `PYTHONUSERBASE`,
         `PYTHONEXECUTABLE`, `PYTHONPLATLIBDIR`, `PYTHONBREAKPOINT`, `PERL5DB`, `CLASSPATH`, `DOTNET_STARTUP_HOOKS`,
-        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`,
-        `GCONV_PATH`), the
+        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`), the
         shell (`OLDPWD`, `SHELLOPTS`, `BASHOPTS`, `CDPATH`, `GLOBIGNORE`, `PS4`, `ZDOTDIR`), Git, SSH and the GitHub CLI
         (`GIT_TERMINAL_PROMPT`, `GH_CONFIG_DIR`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`,
         `GIT_PAGER`, `GIT_EDITOR`, `GIT_SEQUENCE_EDITOR`, `GIT_TEMPLATE_DIR`, `GIT_DIR`, `GIT_WORK_TREE`,
-        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`, and what
-        weakens Git's TLS or protocols: `GIT_SSL_NO_VERIFY`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `GIT_ALLOW_PROTOCOL`) or an agent's
+        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`) or an agent's
         tools (`RIPGREP_CONFIG_PATH`); and the prefixes `LD_`, `DYLD_`, `OSTROM_`, `TEAMCODE_`, `ANTHROPIC_`,
         `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_`, `BASH_FUNC_` (personal variants too). A variant stored
         under a name reserved later is never served to an agent, and can still be unassigned or deleted. The
@@ -18867,19 +18855,6 @@ components:
           type: string
         maxRuntimeMinutes:
           type: integer
-        profileId:
-          type: string
-          format: uuid
-          x-ostrom-status: planned
-          description: "The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's
-            `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name
-            none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has
-            (400 `invalid_automation` naming `action.profileId`). Absent: the owner's only usable profile, as
-            `createCloudSession` chooses it (`profile_required` when they may use none or several). A run
-            whose session the profile refuses fails with the refusal's key as its `reason`:
-            `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
-            `cluster_unavailable` or `namespace_not_allowed`. Ignored by a server whose sessions run on Docker or
-            on registered runners"
     AutomationRun:
       type: object
       description: One trigger of an automation (cron, webhook or test) and the session it started, kept 14 days
@@ -18909,9 +18884,7 @@ components:
         reason:
           type: [string, 'null']
           description: "A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted,
-            owner_unavailable, capacity_timeout, cancelled, and the cloud profile's refusals cloud_profile_not_found,
-            profile_unassigned, profile_required, image_not_allowed, cluster_unavailable, namespace_not_allowed…);
-            for a workflow action also run_limit (the owner has 20
+            owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20
             unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled"
         problems:
           type: array
@@ -19962,11 +19935,11 @@ components:
           description: The PEM private key; null or absent keeps the stored one; required to create the App
         webhookSecret:
           type: [string, 'null']
+          minLength: 1
           maxLength: 256
           description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same
-            `appId` (another App signs with its own, so none is kept); an empty string clears it (for a first App or another
-            `appId` it leaves none, as null does). Optional, as an App
-            may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)'
+            `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned
+            off: without it every webhook is refused (`webhookSecretSet` false)'
         version:
           type: [integer, 'null']
           description: The stored `version`; null or absent to create the App
@@ -23756,17 +23729,6 @@ components:
         repository:
           type: string
           description: "Agent: the repository (`owner/name`) its session works in, else the run's"
-        profileId:
-          type: string
-          format: uuid
-          x-ostrom-status: planned
-          description: "Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`,
-            TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an
-            automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the
-            server runs refuses an id none of the organization's profiles has (400 `invalid_workflow`, naming the
-            node). Ignored by a server whose sessions run on Docker or on registered runners. A session the profile refuses fails the visit, and the run's `failureCode` is the refusal's key:
-            `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
-            `cluster_unavailable` or `namespace_not_allowed`"
     NodeRunOn:
       type: object
       description: What triggers a node
@@ -25370,19 +25332,19 @@ components:
           enum:
           - working
           - waiting_for_human
-          x-ostrom-status: served
+          x-ostrom-status: planned
           description: "Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last
             reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after
             its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report,
             and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported
             before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with
-            it, since a person still has to answer."
+            it, since a person still has to answer. Planned: the server does not send it yet"
         activitySince:
           type: string
           format: date-time
-          x-ostrom-status: served
+          x-ostrom-status: planned
           description: "When `activity` began, by the server's clock: a repeated state keeps its time. Present with
-            `activity` only."
+            `activity` only. Planned: the server does not send it yet"
         labels:
           type: object
           additionalProperties:
@@ -27636,13 +27598,6 @@ components:
         repository:
           type: string
           description: "`owner/name`, for the agent nodes that name none (planned)"
-        profileId:
-          type: string
-          format: uuid
-          x-ostrom-status: planned
-          description: "The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's
-            `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each
-            such node's session runs on the starter's only usable profile"
     WorkflowPage:
       type: object
       description: "The workflows; `next` is the cursor of the following page"
@@ -27905,13 +27860,6 @@ components:
         repository:
           type: string
           description: The repository of the agent nodes that name none
-        profileId:
-          type: string
-          format: uuid
-          x-ostrom-status: planned
-          description: "The cloud profile of the agent nodes that name none: the one given at a manual start, or,
-            for a run an automation started, its workflow action's. Absent when none was named (the profile is then
-            chosen at each session's creation, never written back here)"
         visits:
           type: array
           items:
@@ -27923,9 +27871,7 @@ components:
           description: "A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`,
             `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`,
             `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`,
-            `sub_workflow_cancelled`, `expired`, `no_transition`, the cloud profile's refusal of an agent node's
-            session (`cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
-            `cluster_unavailable`, `namespace_not_allowed`), or the code of a refusal that cannot be retried"
+            `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried"
         output:
           type: string
         receiptId:
