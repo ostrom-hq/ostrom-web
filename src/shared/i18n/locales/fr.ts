@@ -2314,6 +2314,9 @@ export const fr = {
       enabledHint:
         'Désactivé, seules les nouvelles sessions sont refusées : celles en cours vont à leur terme.',
       runnerImage: 'Image du runner',
+      sessionImage: 'Image de session',
+      sessionImageHint:
+        'L’image que lancent les sessions Docker et enregistrées. Les sessions Kubernetes utilisent l’image de leur profil. Vide, c’est {{image}}.',
       runnerBinary: 'Binaire dans l’image du runner',
       serverUrl: 'URL du serveur pour les pods de session',
       serverUrlHint: 'Une origine https sans chemin. Vide, c’est {{url}}.',

@@ -11,6 +11,7 @@ export interface FieldProps {
   readonly rows?: number;
   readonly hint?: string;
   readonly maxLength?: number;
+  readonly placeholder?: string;
 }
 
 /** A labelled text, number or secret field; a field with `rows` is a text area. */
@@ -23,6 +24,7 @@ export function Field({
   rows,
   hint,
   maxLength,
+  placeholder,
 }: FieldProps): ReactElement {
   const id = useId();
   const hintId = `${id}-hint`;
@@ -34,6 +36,7 @@ export function Field({
     autoComplete: 'off',
     'aria-describedby': hint === undefined ? undefined : hintId,
     ...(maxLength === undefined ? {} : { maxLength }),
+    ...(placeholder === undefined ? {} : { placeholder }),
   };
   return (
     <div className="o-stack">

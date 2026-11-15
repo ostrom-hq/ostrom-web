@@ -45,7 +45,7 @@
     "/admin": 10.9,
     "/admin/settings": 10.9,
     "/cloud": 21.2,
-    "/cloud/admin": 14.0,
+    "/cloud/admin": 14.2,
     "/automations": 21.2,
     "/artifacts": 17.7,
     "/webhooks": 12.1,
