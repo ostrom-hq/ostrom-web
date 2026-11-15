@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleAnswerDeviceLogin, handleGetDeviceLogin } from '@gen/api/msw.gen';
-import type { ApiError, Organization } from '@gen/api/types.gen';
-import { zDeviceAnswer } from '@gen/api/zod.gen';
+import type { ApiError, MeOrganizationResponse } from '@gen/api/types.gen';
+import { zAnswerDeviceRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { MockDeviceLogin } from '@/mocks/fixtures/device';
 import { readJson, refusal } from '@/mocks/http';
@@ -20,9 +20,9 @@ export interface DevicePermissions {
    * The organization an approval acts in, as `MembershipOrgResolver` resolves it: the one `Ostrom-Org` names, else the
    * person's only one; a refusal otherwise, of which only 409 `org_required` (a person in several) is said as such.
    */
-  readonly actsIn: (request: Request) => Organization | HttpResponse<ApiError>;
+  readonly actsIn: (request: Request) => MeOrganizationResponse | HttpResponse<ApiError>;
   /** The person owns or administers that organization: only they approve `ostrom login --admin`. */
-  readonly manages: (organization: Organization) => boolean;
+  readonly manages: (organization: MeOrganizationResponse) => boolean;
   /** How long a sign-in may approve an admin sign-in (ms), as for a yes on the server. */
   readonly freshSignInMs: number;
 }
@@ -60,7 +60,7 @@ export function createDeviceHandlers(
     handleAnswerDeviceLogin(async ({ request }) => {
       const s = state();
       if (!s.signedIn) return refusal(401, 'unauthorized', 'nobody is signed in');
-      const body = zDeviceAnswer.safeParse(await readJson(request));
+      const body = zAnswerDeviceRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a user code and an answer are needed');
       const login = pendingOf(body.data.userCode);
       if (login === undefined) return gone();

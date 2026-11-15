@@ -8,16 +8,20 @@ import {
   handleResumeBillingSubscription,
   handleStartBillingCheckout,
 } from '@gen/api/msw.gen';
-import type { ApiError, BillingInvoice, BillingOverview, BillingRedirect } from '@gen/api/types.gen';
-import { zBillingPlanRequest } from '@gen/api/zod.gen';
+import type {
+  ApiError,
+  InvoiceResponse,
+  BillingOverviewResponse,
+  RedirectResponse,
+} from '@gen/api/types.gen';
+import { zPlanRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { PLAN_LIMITS } from '@/mocks/fixtures/billing';
-import { knownValues } from '@/shared/lib/openEnum';
 
 export interface BillingState {
-  billing: BillingOverview;
+  billing: BillingOverviewResponse;
   /** Newest first, as Stripe lists them. */
-  invoices: BillingInvoice[];
+  invoices: InvoiceResponse[];
 }
 
 /** The Stripe test pages the mock sends the browser to. */
@@ -31,14 +35,16 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
   return HttpResponse.json<ApiError>({ error: { type, message } }, { status });
 }
 
-/** A plan request as the server reads it: only a plan on sale and an interval it bills (the contract's enums are open). */
+/** The plans on sale and the intervals the server bills (the contract types both as free text). */
+const SOLD_PLANS = ['team', 'business'] as const;
+const INTERVALS = ['month', 'year'] as const;
+
+/** A plan request as the server reads it: only a plan on sale and an interval it bills. */
 function soldPlan(json: unknown) {
-  const body = zBillingPlanRequest.safeParse(json);
+  const body = zPlanRequest.safeParse(json);
   if (!body.success) return undefined;
-  const plan = knownValues(zBillingPlanRequest.shape.plan).find((known) => known === body.data.plan);
-  const interval = knownValues(zBillingPlanRequest.shape.interval).find(
-    (known) => known === body.data.interval,
-  );
+  const plan = SOLD_PLANS.find((known) => known === body.data.plan);
+  const interval = INTERVALS.find((known) => known === body.data.interval);
   return plan === undefined || interval === undefined ? undefined : { plan, interval };
 }
 
@@ -60,7 +66,7 @@ export function createBillingHandlers(
   canManage: () => boolean,
 ): HttpHandler[] {
   const subscribed = (): boolean => {
-    const { status } = state().billing;
+    const status = state().billing.status ?? null;
     return status !== null && !ENDED.has(status);
   };
   /** The organization, then the right to change its billing: a stranger's organization is not found. */
@@ -69,7 +75,7 @@ export function createBillingHandlers(
     if (manage && !canManage()) return refusal(403, 'forbidden', 'only owners and admins manage billing');
     return undefined;
   };
-  const save = (billing: BillingOverview): HttpResponse<BillingOverview> => {
+  const save = (billing: BillingOverviewResponse): HttpResponse<BillingOverviewResponse> => {
     state().billing = billing;
     return HttpResponse.json(billing);
   };
@@ -84,14 +90,14 @@ export function createBillingHandlers(
       if (!state().billing.purchasable) return refusal(409, 'not_purchasable', 'plans are not sold here');
       if (subscribed())
         return refusal(409, 'already_subscribed', 'change the plan of the subscription instead');
-      const redirect: BillingRedirect = { url: `${STRIPE_CHECKOUT}_${body.plan}_${body.interval}` };
+      const redirect: RedirectResponse = { url: `${STRIPE_CHECKOUT}_${body.plan}_${body.interval}` };
       return HttpResponse.json(redirect);
     }),
     handleOpenBillingPortal(({ params }) => {
       const refused = guard(params.orgId, true);
       if (refused !== undefined) return refused;
-      if (state().billing.status === null) return refusal(409, 'no_customer', 'buy a plan first');
-      const redirect: BillingRedirect = { url: STRIPE_PORTAL };
+      if ((state().billing.status ?? null) === null) return refusal(409, 'no_customer', 'buy a plan first');
+      const redirect: RedirectResponse = { url: STRIPE_PORTAL };
       return HttpResponse.json(redirect);
     }),
     handleChangeBillingPlan(async ({ params, request }) => {

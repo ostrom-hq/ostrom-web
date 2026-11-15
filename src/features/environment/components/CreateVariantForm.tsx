@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentVariantCreate } from '@gen/api/types.gen';
+import type { EnvironmentVariantCreateRequest } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -9,7 +9,7 @@ import { Field } from './Field';
 import { type Binding, BINDINGS, checkVariant, VALUE_MAX, VARIANT_NAME_MAX } from '../model';
 
 export interface CreateVariantFormProps {
-  readonly create: (body: EnvironmentVariantCreate, onDone: () => void) => void;
+  readonly create: (body: EnvironmentVariantCreateRequest, onDone: () => void) => void;
   readonly pending: boolean;
   /** The person's own form: one value, theirs, so no choice of who provides it. */
   readonly personal?: boolean;

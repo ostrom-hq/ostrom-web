@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationAction, AutomationVariable, AutomationWrite } from '@gen/api/types.gen';
+import type {
+  AutomationResponse,
+  AutomationActionRequest,
+  AutomationVariable,
+  AutomationRequest,
+} from '@gen/api/types.gen';
 
 export const TRIGGER_KINDS = ['cron', 'webhook'] as const;
 export type TriggerKind = (typeof TRIGGER_KINDS)[number];
@@ -80,7 +85,7 @@ function variableDraft(variable: AutomationVariable, key: number): VariableDraft
     key,
     name: variable.name,
     path: variable.path,
-    type: variable.type,
+    type: variable.type ?? 'string',
     values: (variable.values ?? []).join(', '),
     // The server's defaults: a variable is required unless it says otherwise.
     required: variable.required ?? true,
@@ -91,7 +96,10 @@ function variableDraft(variable: AutomationVariable, key: number): VariableDraft
 const NEW_CRON = '0 9 * * 1-5';
 
 /** The draft of a new automation (a weekday schedule here), or of `automation` as it stands. */
-export function automationDraftOf(automation: Automation | undefined, timezone: string): AutomationDraft {
+export function automationDraftOf(
+  automation: AutomationResponse | undefined,
+  timezone: string,
+): AutomationDraft {
   if (automation === undefined) {
     return {
       name: '',
@@ -121,14 +129,14 @@ export function automationDraftOf(automation: Automation | undefined, timezone: 
     cron: trigger.cron ?? NEW_CRON,
     timezone: trigger.timezone ?? timezone,
     agent: action.agent ?? 'claude',
-    prompt: action.prompt ?? '',
+    prompt: action.prompt,
     model: action.model ?? '',
     runtime: String(action.maxRuntimeMinutes ?? 60),
-    runsPerDay: String(automation.maxRunsPerDay ?? 24),
+    runsPerDay: String(automation.maxRunsPerDay),
     overlap: automation.overlap === 'allow' ? 'allow' : 'skip',
-    variables: (automation.variables ?? []).map(variableDraft),
-    sample: automation.samplePayload === undefined ? '' : JSON.stringify(automation.samplePayload, null, 2),
-    actionKind: action.workflowId === undefined ? 'prompt' : 'workflow',
+    variables: automation.variables.map(variableDraft),
+    sample: automation.samplePayload ? JSON.stringify(automation.samplePayload, null, 2) : '',
+    actionKind: typeof action.workflowId === 'string' ? 'workflow' : 'prompt',
     workflowId: action.workflowId ?? '',
     inputs: action.inputs ?? {},
     repository: action.repository ?? '',
@@ -241,7 +249,10 @@ function variableOf(draft: VariableDraft, before: AutomationVariable | undefined
  * A webhook has no schedule and a schedule has no payload: switching the trigger drops what the other one had.
  */
 /** A workflow action: the workflow, its inputs as templates (an empty one is left out), the repository; no prompt. */
-function workflowActionOf(draft: AutomationDraft, known: readonly string[] | undefined): AutomationAction {
+function workflowActionOf(
+  draft: AutomationDraft,
+  known: readonly string[] | undefined,
+): AutomationActionRequest {
   const inputs = Object.entries(draft.inputs).filter(
     ([id, template]) => template.trim() !== '' && (known === undefined || known.includes(id)),
   );
@@ -255,12 +266,12 @@ function workflowActionOf(draft: AutomationDraft, known: readonly string[] | und
 
 export function automationWriteOf(
   draft: AutomationDraft,
-  automation?: Automation,
+  automation?: AutomationResponse,
   /** The ids of the chosen workflow's inputs: templates for any other are dropped. */
   known?: readonly string[],
-): AutomationWrite {
+): AutomationRequest {
   const before = automation?.trigger;
-  const effort = automation?.action.effort;
+  const effort = automation?.action.effort ?? undefined;
   const model = draft.model.trim();
   const sample = sampleOf(draft.sample);
   const webhook = draft.kind === 'webhook';
@@ -291,7 +302,7 @@ export function automationWriteOf(
       ? draft.variables.map((variable) =>
           variableOf(
             variable,
-            automation?.variables?.find((known) => known.name === variable.name.trim()),
+            automation?.variables.find((known) => known.name === variable.name.trim()),
           ),
         )
       : [],
@@ -313,7 +324,7 @@ export function addVariable(variables: readonly VariableDraft[]): VariableDraft[
 
 /** Whether the person viewing owns it: the server names an owner by member id, the demo by login. */
 export function ownsAutomation(
-  automation: Automation,
+  automation: AutomationResponse,
   viewer: { readonly login: string | undefined; readonly memberId: string | undefined },
 ): boolean {
   return automation.owner === viewer.login || automation.owner === viewer.memberId;

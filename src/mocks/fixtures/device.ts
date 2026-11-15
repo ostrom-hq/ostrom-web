@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { DeviceAuthorization } from '@gen/api/types.gen';
+import type { DeviceAuthorizationResponse } from '@gen/api/types.gen';
 
 /** The code of the demo's waiting `ostrom login`: `/device?code=WDJB-MJHT` opens it. */
 export const DEMO_DEVICE_CODE = 'WDJB-MJHT';
@@ -11,7 +11,7 @@ const DEVICE_CODE_LIFETIME_MS = 10 * 60_000;
 
 /** A device login as the server keeps it: what the console reads, and whether it was answered. */
 export interface MockDeviceLogin {
-  readonly authorization: DeviceAuthorization;
+  readonly authorization: DeviceAuthorizationResponse;
   status: 'pending' | 'approved' | 'denied';
   /** The organization an approved admin sign-in's token is bound to, as the server records it. */
   orgId?: string;

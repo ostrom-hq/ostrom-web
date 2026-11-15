@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CheckAttestation, ReceiptNode } from '@gen/api/types.gen';
+import type { ReceiptNode } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
+import type { CheckAttestation } from '@/shared/api/vocabulary';
 
 /**
  * Where a check of a receipt ran, or nothing for a step that is not a check. A check signed before receipts said

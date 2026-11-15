@@ -12,5 +12,6 @@ describe('safeHref', () => {
     expect(safeHref('data:text/html,hi')).toBeUndefined();
     expect(safeHref('not a url')).toBeUndefined();
     expect(safeHref(undefined)).toBeUndefined();
+    expect(safeHref(null)).toBeUndefined();
   });
 });

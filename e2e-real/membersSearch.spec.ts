@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, type Page, test } from '@playwright/test';
-import { zOrgMemberList } from '../gen/api/zod.gen';
+import { zMembersResponse } from '../gen/api/zod.gen';
 import { callFromPage, signIn } from './real';
 
 /**
@@ -41,7 +41,7 @@ test('the members search finds people past the first page, of this team only, or
   await box.fill('zoe');
   const answer = await asked;
   expect(answer.status()).toBe(200);
-  const served = zOrgMemberList.parse(await answer.json());
+  const served = zMembersResponse.parse(await answer.json());
   expect(served.items.map((member) => member.login)).toEqual(FOUND);
   await expect(people.getByRole('listitem')).toHaveCount(2);
   // The screen sorts by role, then name: compare who is listed, not in which order.
@@ -52,7 +52,7 @@ test('the members search finds people past the first page, of this team only, or
   expect(await listed(page)).not.toContain(`@${ELSEWHERE}`);
   const direct = await callFromPage(page, 'GET', `/api/v1/orgs/${CROWD}/members?q=${ELSEWHERE}`);
   expect(direct.status).toBe(200);
-  expect(zOrgMemberList.parse(direct.body).items).toEqual([]);
+  expect(zMembersResponse.parse(direct.body).items).toEqual([]);
 
   // Nobody: the screen says so, with what was typed.
   await box.fill('nobody-here');

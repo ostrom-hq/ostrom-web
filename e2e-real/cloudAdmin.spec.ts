@@ -4,7 +4,7 @@
 // organization never sees them. The cap of automation sessions per member (ostrom-server#502) is not asserted here:
 // it is added once the server serves it.
 import { expect, test } from '@playwright/test';
-import { zCloudSettings } from '../gen/api/zod.gen';
+import { zCloudSettingsResponse } from '../gen/api/zod.gen';
 import {
   anotherPerson,
   callFromPage,
@@ -45,7 +45,7 @@ test('an owner saves the organization’s cloud settings and reads them back, a 
   ).toHaveValue('45');
   const read = await callFromPage(page, 'GET', '/api/v1/cloud/settings', undefined, org);
   expect(read.status, shown(read.body)).toBe(200);
-  expect(zCloudSettings.parse(read.body).backgroundWorkMaxMinutes).toBe(45);
+  expect(zCloudSettingsResponse.parse(read.body).backgroundWorkMaxMinutes).toBe(45);
 
   // A member of the organization sees what was saved, and has nothing to change it with.
   const member = await anotherPerson(browser);
@@ -67,7 +67,7 @@ test('an owner saves the organization’s cloud settings and reads them back, a 
   expect(refused.status).toBe(403);
   // And nothing was written: the owner still reads 45.
   const after = await callFromPage(page, 'GET', '/api/v1/cloud/settings', undefined, org);
-  expect(zCloudSettings.parse(after.body).backgroundWorkMaxMinutes).toBe(45);
+  expect(zCloudSettingsResponse.parse(after.body).backgroundWorkMaxMinutes).toBe(45);
 });
 
 test('another organization never sees the first one’s cloud settings', async ({ page, browser }) => {
@@ -90,7 +90,7 @@ test('another organization never sees the first one’s cloud settings', async (
   await expect(settings.getByLabel(/^Background work/)).toHaveValue(String(DEFAULT_MINUTES));
   const own = await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, theirOrg);
   expect(own.status, shown(own.body)).toBe(200);
-  expect(zCloudSettings.parse(own.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
+  expect(zCloudSettingsResponse.parse(own.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
   // Naming the first organization opens nothing either, and writes nothing there.
   expect((await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, org)).status).toBe(404);
   expect(
@@ -98,7 +98,7 @@ test('another organization never sees the first one’s cloud settings', async (
       .status,
   ).toBe(404);
   const first = await callFromPage(page, 'GET', '/api/v1/cloud/settings', undefined, org);
-  expect(zCloudSettings.parse(first.body).backgroundWorkMaxMinutes).toBe(15);
+  expect(zCloudSettingsResponse.parse(first.body).backgroundWorkMaxMinutes).toBe(15);
   const mine = await callFromPage(stranger, 'GET', '/api/v1/cloud/settings', undefined, theirOrg);
-  expect(zCloudSettings.parse(mine.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
+  expect(zCloudSettingsResponse.parse(mine.body).backgroundWorkMaxMinutes).toBe(DEFAULT_MINUTES);
 });

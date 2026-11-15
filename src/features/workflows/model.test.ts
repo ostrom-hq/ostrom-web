@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 import {
   approvalSteps,
   conditionOf,
@@ -30,6 +29,7 @@ import {
   workflowOf,
   workflowProblem,
 } from './model';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 const workflow = (parts: Partial<Workflow>): Workflow => ({
   id: 'w',

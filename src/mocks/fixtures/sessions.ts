@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Receipt, Session } from '@gen/api/types.gen';
+import type { Receipt, SessionDto } from '@gen/api/types.gen';
 
 const SIGNATURE = 'ed25519;kid=4f2a9c1b;sha256=';
 
-const sessions: Session[] = [
+const sessions: SessionDto[] = [
   {
     id: 'ses-7f3a',
     agent: 'claude-code',
     dev: 'theo',
     devVerified: true,
-    devVia: 'github',
     repo: 'acme/billing-api',
     launchId: 'lch-7f3a',
     labels: { env: 'ci', team: 'billing' },
@@ -29,7 +28,6 @@ const sessions: Session[] = [
     agent: 'codex',
     dev: 'maya',
     devVerified: true,
-    devVia: 'github',
     repo: 'acme/billing-api',
     startedAt: '2026-10-30T06:40:00.000Z',
     activity: 'working',
@@ -115,7 +113,7 @@ const receipts: Receipt[] = [
   },
 ];
 
-export function initialSessions(): Session[] {
+export function initialSessions(): SessionDto[] {
   return structuredClone(sessions);
 }
 

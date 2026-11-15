@@ -10,7 +10,7 @@ import {
   renameOrgMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import { revokeAuthSession } from '@gen/api/sdk.gen';
-import type { AuthSession, OrgView } from '@gen/api/types.gen';
+import type { AuthSessionResponse, OrgResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useMemo } from 'react';
@@ -33,7 +33,7 @@ export interface RenameViewModel {
   readonly edited: () => void;
 }
 
-export function useRenameOrg(org: OrgView): RenameViewModel {
+export function useRenameOrg(org: OrgResponse): RenameViewModel {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...renameOrgMutation(),
@@ -73,7 +73,7 @@ export interface DeleteOrgViewModel {
   readonly failure: Error | undefined;
 }
 
-export function useDeleteOrg(org: OrgView): DeleteOrgViewModel {
+export function useDeleteOrg(org: OrgResponse): DeleteOrgViewModel {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const mutation = useMutation({
@@ -104,7 +104,7 @@ export function useDeleteOrg(org: OrgView): DeleteOrgViewModel {
 
 export interface SessionsViewModel {
   /** This browser first; undefined while loading or when the server does not list sessions. */
-  readonly sessions: readonly AuthSession[] | undefined;
+  readonly sessions: readonly AuthSessionResponse[] | undefined;
   /** The server does not serve the list (it is planned in the contract): the section keeps only its actions. */
   readonly unavailable: boolean;
   readonly failure: Error | undefined;
@@ -125,7 +125,7 @@ export type SessionsPage = '/settings' | '/account';
 
 export interface SessionActionsViewModel {
   /** Ends another session; ending this browser's signs it out. */
-  readonly revoke: (session: AuthSession) => void;
+  readonly revoke: (session: AuthSessionResponse) => void;
   readonly revoking: string | undefined;
   /** Ends every browser session of the person, this one included. Tokens keep working. */
   readonly signOutEverywhere: () => void;
@@ -148,7 +148,7 @@ export function useSessionActions(back: SessionsPage): SessionActionsViewModel {
   // A revocation stays pending until the list is read again, so its row never offers it twice. Whether it ends this
   // browser's session is fixed when it is asked: that one signs out, without reading the list with a dead cookie.
   const revocation = useMutation({
-    mutationFn: async ({ session }: { readonly session: AuthSession }) => {
+    mutationFn: async ({ session }: { readonly session: AuthSessionResponse }) => {
       await revokeAuthSession({ path: { id: session.id }, throwOnError: true });
     },
     onSuccess: async (_data, { session }) => {
@@ -160,7 +160,7 @@ export function useSessionActions(back: SessionsPage): SessionActionsViewModel {
   const { mutate: revokeMutate, reset: resetRevocation } = revocation;
   const { mutate: everywhereMutate, reset: resetEverywhere } = everywhere;
   const revoke = useCallback(
-    (session: AuthSession) => {
+    (session: AuthSessionResponse) => {
       resetEverywhere();
       revokeMutate({ session });
     },

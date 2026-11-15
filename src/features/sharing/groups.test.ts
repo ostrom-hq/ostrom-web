@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group, SharedAccount } from '@gen/api/types.gen';
+import type { GroupResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   isGone,
@@ -14,7 +14,7 @@ import {
 
 const now = new Date('2026-11-03T10:00:00.000Z');
 
-const account = (id: string, label: string): SharedAccount => ({
+const account = (id: string, label: string): SharedAccountResponse => ({
   id,
   provider: 'anthropic',
   label,
@@ -22,6 +22,10 @@ const account = (id: string, label: string): SharedAccount => ({
   status: 'active',
   sharedWith: [],
   paused: false,
+  mine: false,
+  priority: 0,
+  limits: {},
+  createdAt: '2026-10-01T00:00:00.000Z',
 });
 
 describe('the groups model', () => {
@@ -40,7 +44,7 @@ describe('the groups model', () => {
   });
 
   it('says until when a member is paused, and nothing for one who is not or a group with no pause', () => {
-    const group: Group = {
+    const group: GroupResponse = {
       id: 'g',
       name: 'Platform',
       members: ['theo', 'samir'],
@@ -49,7 +53,9 @@ describe('the groups model', () => {
     };
     expect(pausedUntil(group, 'theo')).toBe('2026-11-04T10:00:00.000Z');
     expect(pausedUntil(group, 'samir')).toBeUndefined();
-    expect(pausedUntil({ id: 'h', name: 'Bare', members: ['theo'], accounts: [] }, 'theo')).toBeUndefined();
+    expect(
+      pausedUntil({ id: 'h', name: 'Bare', members: ['theo'], accounts: [], paused: [] }, 'theo'),
+    ).toBeUndefined();
   });
 
   it('names the subscriptions lent in their order, leaving out one the person cannot read', () => {

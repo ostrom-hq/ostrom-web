@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession, CloudTransfer } from '@gen/api/types.gen';
+import type { CloudSessionResponse, CloudTransferResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
@@ -9,8 +9,8 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { isTransferState, isOpenTransfer, memberLabel, transferTone } from '../transfer';
 
 export interface TransfersSectionProps {
-  readonly transfers: readonly CloudTransfer[];
-  readonly sessions: readonly CloudSession[];
+  readonly transfers: readonly CloudTransferResponse[];
+  readonly sessions: readonly CloudSessionResponse[];
   readonly logins: ReadonlyMap<string, string>;
   readonly now: Date;
   /** The caller's member id: a transfer made to them is theirs to accept or decline. */
@@ -58,7 +58,7 @@ export function TransfersSection({
                   }),
                   transfer.resume ? t('cloud.transfer.resumes') : undefined,
                   t('cloud.transfer.asked', { when: formatRelative(transfer.createdAt, now, i18n.language) }),
-                  transfer.state === 'offered' && transfer.expiresAt !== undefined
+                  transfer.state === 'offered' && typeof transfer.expiresAt === 'string'
                     ? t('cloud.transfer.expires', {
                         when: formatRelative(transfer.expiresAt, now, i18n.language),
                       })
@@ -67,9 +67,9 @@ export function TransfersSection({
                   .filter((part) => part !== undefined)
                   .join(' · ')}
               </span>
-              {transfer.failure === undefined ? null : (
+              {transfer.failure ? (
                 <span className="cl-session__failure">{transfer.failure.message}</span>
-              )}
+              ) : null}
             </span>
             <span className="o-inline">
               <Badge tone={transferTone(transfer.state)}>

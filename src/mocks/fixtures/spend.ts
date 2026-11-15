@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Budget, Spending, SpendingDay } from '@gen/api/types.gen';
+import type { BudgetDto, SpendingDto, SpendingDayDto } from '@gen/api/types.gen';
 import { MEMBER_IDS } from './organization';
 
 const DAILY = [41.2, 38.75, 12.1, 9.4, 55.3, 61.85, 47.05];
 
-function days(to: string): SpendingDay[] {
+function days(to: string): SpendingDayDto[] {
   const end = Date.parse(to);
   return DAILY.map((usd, index) => ({
     date: new Date(end - (DAILY.length - 1 - index) * 86_400_000).toISOString().slice(0, 10),
@@ -13,7 +13,7 @@ function days(to: string): SpendingDay[] {
 }
 
 /** October so far, then the last seven days: the two periods the console offers. */
-export function spendingFor(period: 'month' | 'week'): Spending {
+export function spendingFor(period: 'month' | 'week'): SpendingDto {
   const month = period === 'month';
   const scale = month ? 4.2 : 1;
   const line = (key: string, label: string, usd: number, sessions: number) => ({
@@ -43,11 +43,11 @@ export function spendingFor(period: 'month' | 'week'): Spending {
   };
 }
 
-const budgets: Budget[] = [
+const budgets: BudgetDto[] = [
   { scope: 'org', usdPerMonth: 1_200, hardStop: false },
   { scope: 'member', subject: MEMBER_IDS.theo, usdPerDay: 25, hardStop: true },
 ];
 
-export function initialBudgets(): Budget[] {
+export function initialBudgets(): BudgetDto[] {
   return structuredClone(budgets);
 }

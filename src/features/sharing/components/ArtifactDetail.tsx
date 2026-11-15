@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact } from '@gen/api/types.gen';
+import type { ArtifactResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -11,7 +11,7 @@ import { isArtifactAccess } from '../model';
 import { useArtifactDetail } from '../useSharing';
 
 export interface ArtifactDetailProps {
-  readonly artifact: Artifact;
+  readonly artifact: ArtifactResponse;
   /** Present when the viewer owns the artifact. */
   readonly change: ArtifactChangeViewModel | undefined;
   /** False on the reading page, which lists the versions itself. */

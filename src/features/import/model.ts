@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  ImportItem,
-  ImportReport,
-  TeamCodeAccountWritable,
-  TeamCodeAssignmentWritable,
-  TeamCodeImportRequestWritable,
-  TeamCodeMcpServerWritable,
-  TeamCodeStdioWritable,
+  ImportReportDto,
+  TeamCodeAccountDto,
+  TeamCodeAssignmentDto,
+  TeamCodeImportRequest,
+  TeamCodeMcpServerDto,
+  TeamCodeStdioDto,
 } from '@gen/api/types.gen';
+import type { ImportAction } from '@/shared/api/vocabulary';
+import type { Known } from '@/shared/lib/openEnum';
 import type {
-  zTeamCodeAccountWritable,
-  zTeamCodeAssignmentWritable,
-  zTeamCodeMcpServerWritable,
-  zTeamCodeStdioWritable,
+  zTeamCodeAccountDto,
+  zTeamCodeAssignmentDto,
+  zTeamCodeMcpServerDto,
+  zTeamCodeStdioDto,
 } from '@gen/api/zod.gen';
-import { zTeamCodeImportRequestWritable } from '@gen/api/zod.gen';
+import { zTeamCodeImportRequest } from '@gen/api/zod.gen';
 import type { z } from 'zod/mini';
 
 /** The three runs, in the order they are made: the plan, the real import, then the cutover once TeamCode stops. */
@@ -41,14 +42,14 @@ export type ExportProblem = 'json' | 'shape';
  */
 export function parseExport(
   text: string,
-): { readonly request: TeamCodeImportRequestWritable } | { readonly problem: ExportProblem } {
+): { readonly request: TeamCodeImportRequest } | { readonly problem: ExportProblem } {
   let json: unknown;
   try {
     json = JSON.parse(text);
   } catch {
     return { problem: 'json' };
   }
-  const parsed = zTeamCodeImportRequestWritable.safeParse(json);
+  const parsed = zTeamCodeImportRequest.safeParse(json);
   return parsed.success ? { request: requestFrom(parsed.data) } : { problem: 'shape' };
 }
 
@@ -56,33 +57,34 @@ export function parseExport(
  * A parsed file as the contract's request: an absent field stays absent, never `undefined` (the request type
  * has exact optional properties).
  */
-function stdioFrom(parsed: z.output<typeof zTeamCodeStdioWritable>): TeamCodeStdioWritable {
-  const stdio: TeamCodeStdioWritable = { launcher: parsed.launcher, packageName: parsed.packageName };
+function stdioFrom(parsed: z.output<typeof zTeamCodeStdioDto>): TeamCodeStdioDto {
+  const stdio: TeamCodeStdioDto = { launcher: parsed.launcher, packageName: parsed.packageName };
   if (parsed.args !== undefined) stdio.args = parsed.args;
   if (parsed.secretEnv !== undefined) stdio.secretEnv = parsed.secretEnv;
   return stdio;
 }
 
-function serverFrom(parsed: z.output<typeof zTeamCodeMcpServerWritable>): TeamCodeMcpServerWritable {
-  const server: TeamCodeMcpServerWritable = { id: parsed.id, target: parsed.target, variant: parsed.variant };
+function serverFrom(parsed: z.output<typeof zTeamCodeMcpServerDto>): TeamCodeMcpServerDto {
+  const server: TeamCodeMcpServerDto = { id: parsed.id, target: parsed.target, variant: parsed.variant };
   if (parsed.perMember !== undefined) server.perMember = parsed.perMember;
   if (parsed.url !== undefined) server.url = parsed.url;
   if (parsed.credentialHeader !== undefined) server.credentialHeader = parsed.credentialHeader;
   if (parsed.sharedSecret !== undefined) server.sharedSecret = parsed.sharedSecret;
-  if (parsed.stdio !== undefined) server.stdio = stdioFrom(parsed.stdio);
+  const stdio = parsed.stdio ?? undefined;
+  if (stdio !== undefined) server.stdio = stdioFrom(stdio);
   if (parsed.toolMode !== undefined) server.toolMode = parsed.toolMode;
   if (parsed.tools !== undefined) server.tools = parsed.tools;
   return server;
 }
 
-function assignmentFrom(parsed: z.output<typeof zTeamCodeAssignmentWritable>): TeamCodeAssignmentWritable {
-  const assignment: TeamCodeAssignmentWritable = { memberId: parsed.memberId, serverId: parsed.serverId };
+function assignmentFrom(parsed: z.output<typeof zTeamCodeAssignmentDto>): TeamCodeAssignmentDto {
+  const assignment: TeamCodeAssignmentDto = { memberId: parsed.memberId, serverId: parsed.serverId };
   if (parsed.memberSecret !== undefined) assignment.memberSecret = parsed.memberSecret;
   return assignment;
 }
 
-function accountFrom(parsed: z.output<typeof zTeamCodeAccountWritable>): TeamCodeAccountWritable {
-  const account: TeamCodeAccountWritable = {
+function accountFrom(parsed: z.output<typeof zTeamCodeAccountDto>): TeamCodeAccountDto {
+  const account: TeamCodeAccountDto = {
     provider: parsed.provider,
     providerAccountId: parsed.providerAccountId,
     label: parsed.label,
@@ -95,8 +97,8 @@ function accountFrom(parsed: z.output<typeof zTeamCodeAccountWritable>): TeamCod
   return account;
 }
 
-function requestFrom(parsed: z.output<typeof zTeamCodeImportRequestWritable>): TeamCodeImportRequestWritable {
-  const request: TeamCodeImportRequestWritable = {};
+function requestFrom(parsed: z.output<typeof zTeamCodeImportRequest>): TeamCodeImportRequest {
+  const request: TeamCodeImportRequest = {};
   if (parsed.members !== undefined) request.members = parsed.members;
   if (parsed.mcpServers !== undefined) request.mcpServers = parsed.mcpServers.map(serverFrom);
   if (parsed.assignments !== undefined) request.assignments = parsed.assignments.map(assignmentFrom);
@@ -115,7 +117,7 @@ export interface ExportSummary {
 }
 
 /** What the file holds, in counts and names only: never a credential. */
-export function summarize(request: TeamCodeImportRequestWritable): ExportSummary {
+export function summarize(request: TeamCodeImportRequest): ExportSummary {
   const members = request.members ?? [];
   const map = request.memberMap ?? {};
   return {
@@ -134,11 +136,11 @@ export const REPORT_ACTIONS = [
   'unchanged',
   'skipped',
   'revive_at_cutover',
-] as const satisfies readonly ImportItem['action'][];
+] as const satisfies readonly Known<ImportAction>[];
 export type ReportAction = (typeof REPORT_ACTIONS)[number];
 
 /** How many lines of each action: the report's own counts, and the planned lines counted from the items. */
-export function countsOf(report: ImportReport): Readonly<Record<ReportAction, number>> {
+export function countsOf(report: ImportReportDto): Readonly<Record<ReportAction, number>> {
   return {
     planned: report.items.filter((item) => item.action === 'planned').length,
     created: report.created,
@@ -150,7 +152,7 @@ export function countsOf(report: ImportReport): Readonly<Record<ReportAction, nu
 }
 
 /** What a run would write or wrote: the lines planned, created or updated. */
-export function changesOf(report: ImportReport): number {
+export function changesOf(report: ImportReportDto): number {
   return report.items.filter(
     (item) => item.action === 'planned' || item.action === 'created' || item.action === 'updated',
   ).length;

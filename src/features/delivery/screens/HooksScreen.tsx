@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { HookEntry } from '@gen/api/types.gen';
+import type { HookEntryDto } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -57,7 +57,7 @@ function HookCatalog(): ReactElement {
   );
 }
 
-function HookRow({ hook }: { readonly hook: HookEntry }): ReactElement {
+function HookRow({ hook }: { readonly hook: HookEntryDto }): ReactElement {
   const { t, i18n } = useTranslation();
   return (
     <li className="o-row">

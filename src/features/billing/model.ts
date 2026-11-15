@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview, BillingPrice } from '@gen/api/types.gen';
+import type { BillingOverviewResponse, PriceResponse } from '@gen/api/types.gen';
 
 /** The plans the console sells; Free has nothing to buy and Enterprise is sold by talking to us. */
-export const PLANS = ['team', 'business'] as const satisfies readonly BillingPrice['plan'][];
+export const PLANS = ['team', 'business'] as const satisfies readonly PriceResponse['plan'][];
 export type SoldPlan = (typeof PLANS)[number];
-export const INTERVALS = ['month', 'year'] as const satisfies readonly BillingPrice['interval'][];
+export const INTERVALS = ['month', 'year'] as const satisfies readonly PriceResponse['interval'][];
 export type Interval = (typeof INTERVALS)[number];
 
 export function isInterval(value: string): value is Interval {
@@ -20,15 +20,16 @@ export function isKnownStatus(status: string): status is KnownStatus {
 }
 
 /** A subscription Stripe still bills; one that ended or never started leaves the organization on Free. */
-export function hasSubscription(billing: BillingOverview): boolean {
-  return billing.status !== null && billing.status !== 'canceled' && billing.status !== 'incomplete_expired';
+export function hasSubscription(billing: BillingOverviewResponse): boolean {
+  const status = billing.status ?? null;
+  return status !== null && status !== 'canceled' && status !== 'incomplete_expired';
 }
 
 export function priceOf(
-  prices: readonly BillingPrice[],
+  prices: readonly PriceResponse[],
   plan: SoldPlan,
   interval: Interval,
-): BillingPrice | undefined {
+): PriceResponse | undefined {
   return prices.find((price) => price.plan === plan && price.interval === interval);
 }
 
@@ -44,7 +45,7 @@ export type PlanOffer = 'current' | 'switch' | 'buy';
  */
 export type PlansState = 'open' | 'enterprise' | 'unpaid';
 
-export function plansState(billing: BillingOverview): PlansState {
+export function plansState(billing: BillingOverviewResponse): PlansState {
   if (billing.plan === 'enterprise') return 'enterprise';
   return billing.status === 'incomplete' ? 'unpaid' : 'open';
 }
@@ -53,7 +54,7 @@ export function plansState(billing: BillingOverview): PlansState {
  * What paying yearly saves on every plan at least, in whole percent, or undefined when it saves nothing: one label
  * stands for all the plan cards, so it never promises more than the least of them.
  */
-export function yearlySaving(prices: readonly BillingPrice[]): number | undefined {
+export function yearlySaving(prices: readonly PriceResponse[]): number | undefined {
   const savings = PLANS.flatMap((plan) => {
     const month = priceOf(prices, plan, 'month');
     const year = priceOf(prices, plan, 'year');
@@ -64,7 +65,7 @@ export function yearlySaving(prices: readonly BillingPrice[]): number | undefine
   return savings.length > 0 && least > 0 ? least : undefined;
 }
 
-export function offerFor(billing: BillingOverview, plan: SoldPlan, interval: Interval): PlanOffer {
+export function offerFor(billing: BillingOverviewResponse, plan: SoldPlan, interval: Interval): PlanOffer {
   if (!hasSubscription(billing)) return 'buy';
   return billing.plan === plan && billing.interval === interval ? 'current' : 'switch';
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait, WaitField } from '@gen/api/types.gen';
+import type { WaitResponse, WaitField } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useFeature } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -22,7 +22,7 @@ import {
 } from '../model';
 
 export interface WaitFormProps {
-  readonly wait: Wait;
+  readonly wait: WaitResponse;
   readonly sending: boolean;
   readonly onAnswer: (answer: Answer) => void;
 }
@@ -266,7 +266,7 @@ function FieldInput({ field, secrets, draft = BLANK, problem, id, onChange }: Fi
       </label>
       {help}
       {type === 'file' ? <p className="wt-help">{t('waits.field.fileHint')}</p> : null}
-      {type === 'text' && (field.maxLength === undefined || field.maxLength > 200) ? (
+      {type === 'text' && (field.maxLength ?? Infinity) > 200 ? (
         <textarea
           {...inputProps}
           rows={4}

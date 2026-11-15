@@ -27,23 +27,26 @@ export function DeliveriesTable({ deliveries }: DeliveriesTableProps): ReactElem
           </tr>
         </thead>
         <tbody>
-          {deliveries.map((delivery) => (
-            <tr key={delivery.id}>
-              <td>{utcTime(delivery.createdAt)}</td>
-              <td className="o-mono">
-                {delivery.eventType}
-                {delivery.eventSeq === undefined ? '' : ` #${String(delivery.eventSeq)}`}
-              </td>
-              <td>{label('webhooks.deliveries.states', delivery.state)}</td>
-              <td>
-                {String(delivery.attempts)}
-                {delivery.state === 'pending' && delivery.nextAttemptAt !== undefined
-                  ? ` · ${t('webhooks.deliveries.next', { at: utcTime(delivery.nextAttemptAt) })}`
-                  : ''}
-              </td>
-              <td className="o-mono">{lastAnswer(delivery)}</td>
-            </tr>
-          ))}
+          {deliveries.map((delivery) => {
+            const next = delivery.nextAttemptAt ?? undefined;
+            return (
+              <tr key={delivery.id}>
+                <td>{utcTime(delivery.createdAt)}</td>
+                <td className="o-mono">
+                  {delivery.eventType}
+                  {delivery.eventSeq === undefined ? '' : ` #${String(delivery.eventSeq)}`}
+                </td>
+                <td>{label('webhooks.deliveries.states', delivery.state)}</td>
+                <td>
+                  {String(delivery.attempts)}
+                  {delivery.state === 'pending' && next !== undefined
+                    ? ` · ${t('webhooks.deliveries.next', { at: utcTime(next) })}`
+                    : ''}
+                </td>
+                <td className="o-mono">{lastAnswer(delivery)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

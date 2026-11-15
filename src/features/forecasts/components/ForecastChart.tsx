@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ForecastWindow } from '@gen/api/types.gen';
+import type { ForecastWindowResponse } from '@gen/api/types.gen';
 import { type PointerEvent, type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
 import { CHART, nearestIndex, type Point, projectionOf, scaleOf, segmentsOf } from '../model';
 
 export interface ForecastChartProps {
-  readonly window: ForecastWindow;
+  readonly window: ForecastWindowResponse;
   /** The snapshot's time: « Now » on the chart. */
   readonly now: string;
   /** The account's ceiling, 0 to 1. */

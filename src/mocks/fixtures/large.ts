@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  ActivityItem,
-  Budget,
-  OrgMember,
-  Rule,
-  Session,
-  Spending,
-  SpendingLine,
+  ActivityItemDto,
+  BudgetDto,
+  MemberResponse,
+  RuleDto,
+  SessionDto,
+  SpendingDto,
+  SpendingLineDto,
 } from '@gen/api/types.gen';
 import { groupId } from '@/mocks/groups';
 import type { MockDb } from '@/mocks/handlers';
@@ -52,7 +52,7 @@ export function largeMemberId(n: number): string {
   return `00000000-0000-4000-8000-${pad(n, 12)}`;
 }
 
-export function largeMembers(): OrgMember[] {
+export function largeMembers(): MemberResponse[] {
   return Array.from({ length: LARGE.members }, (_, n) => ({
     id: largeMemberId(n),
     login: largeLogin(n),
@@ -75,8 +75,8 @@ export function largeGroupMembers(group: number): string[] {
 const RULE_GROUPS = 40;
 
 /** By group then id, as the server lists them: built in that order. */
-export function largeRules(): Rule[] {
-  return Array.from({ length: LARGE.rules }, (_, n): Rule => {
+export function largeRules(): RuleDto[] {
+  return Array.from({ length: LARGE.rules }, (_, n): RuleDto => {
     const repo = largeRepo(n);
     const group = Math.floor(n / (LARGE.rules / RULE_GROUPS));
     return {
@@ -86,6 +86,7 @@ export function largeRules(): Rule[] {
       output: n % 3 === 0 ? 'gate' : n % 3 === 1 ? 'check' : 'note',
       group: `Area ${pad(group, 2)}`,
       scope: [repo],
+      sources: [],
       strength: n % 3 === 0 ? 'required' : 'recommended',
       confidence: 0.5 + (n % 50) / 100,
       status: n % 3 === 0 ? 'proposed' : n % 3 === 1 ? 'accepted' : 'rejected',
@@ -96,8 +97,8 @@ export function largeRules(): Rule[] {
 }
 
 /** Newest first, a line a minute: sessions started and ended, yeses asked for and given. */
-export function largeActivity(): ActivityItem[] {
-  return Array.from({ length: LARGE.activity }, (_, n): ActivityItem => {
+export function largeActivity(): ActivityItemDto[] {
+  return Array.from({ length: LARGE.activity }, (_, n): ActivityItemDto => {
     const dev = largeLogin(n % LARGE.members);
     const repo = largeRepo(n);
     const session = `ses-l${pad(n, 5)}`;
@@ -145,15 +146,14 @@ export function largeActivity(): ActivityItem[] {
 }
 
 /** Newest first; the first 60 still running. */
-export function largeSessions(): Session[] {
-  return Array.from({ length: LARGE.sessions }, (_, n): Session => {
+export function largeSessions(): SessionDto[] {
+  return Array.from({ length: LARGE.sessions }, (_, n): SessionDto => {
     const started = at(10 * n + 5);
     return {
       id: `ses-l${pad(n, 4)}`,
       agent: n % 2 === 0 ? 'claude-code' : 'codex',
       dev: largeLogin(n % LARGE.members),
       devVerified: true,
-      devVia: 'github',
       repo: largeRepo(n),
       model: 'claude-opus-5-5',
       startedAt: started,
@@ -166,7 +166,7 @@ export function largeSessions(): Session[] {
 }
 
 /** A monthly limit for each member. */
-export function largeBudgets(): Budget[] {
+export function largeBudgets(): BudgetDto[] {
   return Array.from({ length: LARGE.members }, (_, n) => ({
     scope: 'member',
     subject: largeLogin(n),
@@ -176,9 +176,9 @@ export function largeBudgets(): Budget[] {
 }
 
 /** Every one of the 500 spent something, in 40 repositories. */
-export function largeSpending(period: 'month' | 'week'): Spending {
+export function largeSpending(period: 'month' | 'week'): SpendingDto {
   const scale = period === 'month' ? 4 : 1;
-  const line = (key: string, label: string, usd: number, sessions: number): SpendingLine => ({
+  const line = (key: string, label: string, usd: number, sessions: number): SpendingLineDto => ({
     key,
     label,
     usd: Math.round(usd * scale * 100) / 100,

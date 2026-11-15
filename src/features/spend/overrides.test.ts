@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BudgetOverride } from '@gen/api/types.gen';
+import type { BudgetOverrideDto } from '@gen/api/types.gen';
 import {
   draftOverride,
   minutesOf,
@@ -10,7 +10,7 @@ import {
   usdOfMicros,
 } from './overrides';
 
-const item: BudgetOverride = {
+const item: BudgetOverrideDto = {
   id: 'o1',
   member: 'theo',
   micros: 25_000_000,

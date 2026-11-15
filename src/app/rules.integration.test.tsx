@@ -24,7 +24,7 @@ function viewerIs(role: 'owner' | 'member'): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya', avatarUrl: '', role },
         capabilities: [],
       }),
     ),
@@ -446,6 +446,15 @@ describe('writing and gating rules', () => {
     expect(await within(newRule()).findByText(/The catalogue has no action yet/)).toBeInTheDocument();
   });
 
+  it('says so when the gate catalogue is not one it can read', async () => {
+    const user = userEvent.setup();
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: 'none' })));
+    visit('/rules');
+    await user.click(await screen.findByRole('button', { name: 'New rule' }));
+    await user.selectOptions(within(newRule()).getByRole('combobox', { name: 'What it does' }), 'gate');
+    expect(await within(newRule()).findByText('The gate catalogue is not readable.')).toBeInTheDocument();
+  });
+
   it('writes the first action of a gate by hand when the catalogue has none', async () => {
     const user = userEvent.setup();
     server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [] })));
@@ -603,6 +612,16 @@ describe('writing and gating rules', () => {
     expect(tests).not.toHaveTextContent('Needs:');
     await user.click(within(tests).getByRole('button', { name: 'Edit' }));
     expect(await within(tests).findByRole('checkbox', { name: 'Push' })).toBeChecked();
+  });
+
+  it('reads a gate that names no approver', async () => {
+    const push = { class: 'push', label: 'Push', patterns: [], repos: [] };
+    server.use(http.get('*/api/v1/gates/catalog', () => HttpResponse.json({ gates: [], actions: [push] })));
+    db.rules = db.rules.map((rule) =>
+      rule.id === 'R-3' ? { ...rule, output: 'gate', gate: { actions: [push] } } : rule,
+    );
+    visit('/rules');
+    expect(await findCard(/Run `pnpm test`/)).toHaveTextContent('Gate: Push');
   });
 
   it('clears the why of a rule, signed as an edit, and shows no empty line', async () => {

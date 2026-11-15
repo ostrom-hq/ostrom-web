@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentVariant } from '@gen/api/types.gen';
+import type { EnvironmentVariantResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -7,7 +7,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { valueState } from '../model';
 
 export interface PersonalReviewRowProps {
-  readonly variant: EnvironmentVariant;
+  readonly variant: EnvironmentVariantResponse;
   /** Who owns it, by name when the member list says. */
   readonly owner: string;
   /** Whether its owner receives it: an administrator's assignment or an exclusion leaves it unassigned. */

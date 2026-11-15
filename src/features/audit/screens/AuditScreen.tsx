@@ -11,7 +11,7 @@ import { useAudit } from '../useAudit';
 function AuditRow({ event }: { readonly event: AuditEvent }): ReactElement {
   const { i18n } = useTranslation();
   // The server's facts, in its order, each a string as it wrote it.
-  const facts = Object.entries(event.meta ?? {}).map(([key, value]) => `${key}: ${value}`);
+  const facts = Object.entries(event.meta).map(([key, value]) => `${key}: ${value}`);
   return (
     <div className="o-row">
       <span className="o-row__main">

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { listOrgsOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -10,7 +10,7 @@ import { type OrgRole, orgRoleOf } from './roles';
 
 export interface CurrentOrg {
   /** The organization the console acts in, as its member sees it: id, short name, name and their role. */
-  readonly org: OrgView | undefined;
+  readonly org: OrgResponse | undefined;
   /** The person's role in it; none for a role the console does not know, which gives no right. */
   readonly role: OrgRole | undefined;
   /** Signed in and a member of no organization yet: the console offers to create one. */

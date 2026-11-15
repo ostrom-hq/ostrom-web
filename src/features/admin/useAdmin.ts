@@ -9,7 +9,11 @@ import {
   removeInstanceAdminMutation,
   saveInstanceSettingsMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { InstanceAdmin, InstanceSettings, SaveInstanceSettingsRequest } from '@gen/api/types.gen';
+import type {
+  InstanceAdminResponse,
+  InstanceSettingsResponse,
+  SaveInstanceSettingsRequest,
+} from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -17,7 +21,7 @@ import { ready } from '@/shared/api/ready';
 import { meOf } from '@/shared/auth/me';
 
 export interface InstanceAdminsViewModel {
-  readonly admins: readonly InstanceAdmin[] | undefined;
+  readonly admins: readonly InstanceAdminResponse[] | undefined;
   /** The login of the person looking: they are marked in the list. */
   readonly viewer: string | undefined;
   readonly failure: Error | undefined;
@@ -85,7 +89,7 @@ export function useRemoveInstanceAdmin(): RemoveAdminViewModel {
 }
 
 export interface InstanceSettingsViewModel {
-  readonly sections: readonly InstanceSettings[] | undefined;
+  readonly sections: readonly InstanceSettingsResponse[] | undefined;
   readonly failure: Error | undefined;
   /** Reads every section again: what a person does after a conflict. */
   readonly reload: () => Promise<void>;

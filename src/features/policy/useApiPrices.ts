@@ -5,7 +5,7 @@ import {
   loadApiPriceDefaultsMutation,
   setApiPricesMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { ApiPrice, ApiPriceTable } from '@gen/api/types.gen';
+import type { ApiPriceDto, ApiPriceTableDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -13,10 +13,10 @@ import { ready } from '@/shared/api/ready';
 
 export interface ApiPricesViewModel {
   /** The organization's table, or the built-in prices when it has none (`defaults`); undefined until read. */
-  readonly table: ApiPriceTable | undefined;
+  readonly table: ApiPriceTableDto | undefined;
   readonly failure: Error | undefined;
   /** Replaces the whole table; `onDone` runs once the server took it. */
-  readonly save: (prices: readonly ApiPrice[], onDone: () => void) => void;
+  readonly save: (prices: readonly ApiPriceDto[], onDone: () => void) => void;
   /** Adds Anthropic's list prices the table lacks. */
   readonly loadDefaults: () => void;
   readonly saving: boolean;
@@ -30,7 +30,7 @@ export interface ApiPricesViewModel {
 export function useApiPrices(enabled: boolean): ApiPricesViewModel {
   const queryClient = useQueryClient();
   const query = useQuery(ready(getApiPricesOptions(), { enabled, retry: false }));
-  const onSuccess = (table: ApiPriceTable): void => {
+  const onSuccess = (table: ApiPriceTableDto): void => {
     queryClient.setQueryData(getApiPricesQueryKey(), table);
   };
   const saving = useMutation({ ...setApiPricesMutation(), onSuccess });
@@ -38,7 +38,7 @@ export function useApiPrices(enabled: boolean): ApiPricesViewModel {
   const { mutate: saveMutate, reset: resetSave } = saving;
   const { mutate: loadMutate, reset: resetLoad } = loading;
   const save = useCallback(
-    (prices: readonly ApiPrice[], onDone: () => void) => {
+    (prices: readonly ApiPriceDto[], onDone: () => void) => {
       resetLoad();
       saveMutate({ body: { prices: [...prices] } }, { onSuccess: onDone });
     },

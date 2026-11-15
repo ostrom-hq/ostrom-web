@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Budget, OrgMember, SpendingLine } from '@gen/api/types.gen';
+import type { BudgetDto, MemberResponse, SpendingLineDto } from '@gen/api/types.gen';
 import { parseUsd } from '@/shared/lib/money';
 
 export const PERIODS = ['month', 'week'] as const;
@@ -29,15 +29,15 @@ export function budgetLevel(spent: number, budget: number): BudgetLevel {
 
 /** Each line with its share of the largest one, for bars drawn to a true scale (0 to 1). */
 export function shares(
-  lines: readonly SpendingLine[],
-): { readonly line: SpendingLine; readonly share: number }[] {
+  lines: readonly SpendingLineDto[],
+): { readonly line: SpendingLineDto; readonly share: number }[] {
   const largest = Math.max(0, ...lines.map((line) => line.usd));
   return lines.map((line) => ({ line, share: largest === 0 ? 0 : line.usd / largest }));
 }
 
 /** The organization's budget first, then every member's, then each member's by subject. */
-export function sortBudgets(budgets: readonly Budget[]): Budget[] {
-  const rank = (budget: Budget): number => {
+export function sortBudgets(budgets: readonly BudgetDto[]): BudgetDto[] {
+  const rank = (budget: BudgetDto): number => {
     const scope = budgetScopeOf(budget.scope);
     const index = scope === undefined ? -1 : BUDGET_SCOPES.indexOf(scope);
     return index === -1 ? BUDGET_SCOPES.length : index;
@@ -53,10 +53,10 @@ export function sortBudgets(budgets: readonly Budget[]): Budget[] {
  * listed (a member who left), and undefined for every member (no subject).
  */
 export function budgetSubjectLabel(
-  subject: string | undefined,
-  members: readonly OrgMember[] | undefined,
+  subject: string | null | undefined,
+  members: readonly MemberResponse[] | undefined,
 ): string | undefined {
-  if (subject === undefined) return undefined;
+  if (subject === undefined || subject === null) return undefined;
   return members?.find((member) => member.id === subject)?.login ?? subject;
 }
 
@@ -70,7 +70,7 @@ export function draftBudget(draft: {
   readonly month: string;
   readonly day: string;
   readonly hardStop: boolean;
-}): Budget | undefined {
+}): BudgetDto | undefined {
   const subject = draft.subject.trim();
   const usdPerMonth = parseUsd(draft.month);
   const usdPerDay = parseUsd(draft.day);

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InstanceAdmin, InstanceSettings, SaveInstanceSettingsRequest } from '@gen/api/types.gen';
+import type {
+  InstanceAdminResponse,
+  InstanceSettingsResponse,
+  SaveInstanceSettingsRequest,
+} from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** What a person does with a write-only secret when the section is saved. */
@@ -18,17 +22,17 @@ export interface SectionDraft {
 }
 
 /** The plain fields of a section, in display order. */
-export function plainFields(settings: InstanceSettings): readonly string[] {
+export function plainFields(settings: InstanceSettingsResponse): readonly string[] {
   return settings.fields.filter((field) => !field.secret).map((field) => field.name);
 }
 
 /** The secret fields of a section, in display order. */
-export function secretFields(settings: InstanceSettings): readonly string[] {
+export function secretFields(settings: InstanceSettingsResponse): readonly string[] {
   return settings.fields.filter((field) => field.secret).map((field) => field.name);
 }
 
 /** Whether the section's secret is set; never its value, which the server never returns. */
-export function isConfigured(settings: InstanceSettings, name: string): boolean {
+export function isConfigured(settings: InstanceSettingsResponse, name: string): boolean {
   return settings.secrets[name]?.configured === true;
 }
 
@@ -43,7 +47,7 @@ export function valueOf(draft: SectionDraft, name: string): string {
 }
 
 /** The form as the stored section fills it: every plain value as stored, every secret kept. */
-export function draftOf(settings: InstanceSettings): SectionDraft {
+export function draftOf(settings: InstanceSettingsResponse): SectionDraft {
   return {
     values: Object.fromEntries(plainFields(settings).map((name) => [name, settings.values[name] ?? ''])),
     secrets: Object.fromEntries(secretFields(settings).map((name) => [name, { kind: 'keep' }])),
@@ -61,7 +65,10 @@ function secretsOf(draft: SectionDraft): Record<string, string | null> {
 }
 
 /** The save the form makes: the version the person read, every plain field with a value, and only secrets changed. */
-export function requestOf(settings: InstanceSettings, draft: SectionDraft): SaveInstanceSettingsRequest {
+export function requestOf(
+  settings: InstanceSettingsResponse,
+  draft: SectionDraft,
+): SaveInstanceSettingsRequest {
   return {
     version: settings.version,
     // Trimmed, as `isChanged` compares them; a blank field is left out, which the server reads as unset.
@@ -75,7 +82,7 @@ export function requestOf(settings: InstanceSettings, draft: SectionDraft): Save
 }
 
 /** Whether the form differs from what is stored: a section nobody changed is not saved. */
-export function isChanged(settings: InstanceSettings, draft: SectionDraft): boolean {
+export function isChanged(settings: InstanceSettingsResponse, draft: SectionDraft): boolean {
   const stored = settings.values;
   const plainChanged = Object.entries(draft.values).some(
     ([name, value]) => value.trim() !== (stored[name] ?? '').trim(),
@@ -94,8 +101,9 @@ export function isLastAdmin(failure: Error | undefined): boolean {
 }
 
 /** The administrators, oldest first as the server lists them, and who they are by name. */
-export function adminName(admin: InstanceAdmin): string {
-  return admin.login === undefined || admin.login === '' ? (admin.email ?? admin.userId) : admin.login;
+export function adminName(admin: InstanceAdminResponse): string {
+  const login = admin.login ?? '';
+  return login === '' ? (admin.email ?? admin.userId) : login;
 }
 
 /** A plain-text input value never goes past what the server reads (`values`: 4096 characters). */

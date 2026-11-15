@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ApiPrice } from '@gen/api/types.gen';
+import type { ApiPriceDto } from '@gen/api/types.gen';
 
 /**
  * TeamCode's API price table (`capacity.apiprices.v1`): what the provider's pay-as-you-go API charges per million
@@ -48,7 +48,7 @@ export interface PriceDraft {
 }
 
 /** A row as the form shows it, to change its prices (or its date, for a new row of the same model). */
-export function priceDraftOf(row: ApiPrice): PriceDraft {
+export function priceDraftOf(row: ApiPriceDto): PriceDraft {
   const dollars = (micros: number): string => String(micros / MICROS);
   return {
     provider: row.provider,
@@ -65,7 +65,7 @@ export function priceDraftOf(row: ApiPrice): PriceDraft {
  * The row the form describes, or undefined while it does not describe one: a known provider, a lowercase model or
  * prefix, a date, four prices with input and output above 0 (a cache price left empty is 0).
  */
-export function draftPrice(draft: PriceDraft): ApiPrice | undefined {
+export function draftPrice(draft: PriceDraft): ApiPriceDto | undefined {
   const model = draft.model.trim().toLowerCase();
   if (model === '' || model.length > MAX_MODEL_LENGTH) return undefined;
   if (!PRICE_PROVIDERS.some((provider) => provider === draft.provider)) return undefined;
@@ -88,7 +88,7 @@ export function draftPrice(draft: PriceDraft): ApiPrice | undefined {
   };
 }
 
-function sameRow(a: ApiPrice, b: ApiPrice): boolean {
+function sameRow(a: ApiPriceDto, b: ApiPriceDto): boolean {
   return a.provider === b.provider && a.model === b.model && a.effectiveFrom === b.effectiveFrom;
 }
 
@@ -97,17 +97,17 @@ function sameRow(a: ApiPrice, b: ApiPrice): boolean {
  * prices apply, the rows shown are those: they are kept as the organization's own, so one new row never leaves every
  * other model unpriced.
  */
-export function withPrice(prices: readonly ApiPrice[], row: ApiPrice): ApiPrice[] {
+export function withPrice(prices: readonly ApiPriceDto[], row: ApiPriceDto): ApiPriceDto[] {
   return sortPrices([...prices.filter((item) => !sameRow(item, row)), row]);
 }
 
 /** The table to send without `row`. */
-export function withoutPrice(prices: readonly ApiPrice[], row: ApiPrice): ApiPrice[] {
+export function withoutPrice(prices: readonly ApiPriceDto[], row: ApiPriceDto): ApiPriceDto[] {
   return prices.filter((item) => !sameRow(item, row));
 }
 
 /** By provider, then model, then the latest date first: a model's rows read from the one in force back. */
-export function sortPrices(prices: readonly ApiPrice[]): ApiPrice[] {
+export function sortPrices(prices: readonly ApiPriceDto[]): ApiPriceDto[] {
   return [...prices].sort((a, b) => {
     const byProvider = a.provider.localeCompare(b.provider);
     if (byProvider !== 0) return byProvider;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getCloudSessionQueryKey } from '@gen/api/@tanstack/react-query.gen';
 import { setCloudPermissionBypass, setCloudSessionEffort, setCloudSessionModel } from '@gen/api/sdk.gen';
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -34,7 +34,7 @@ export interface SessionControlsViewModel {
  * The session's own settings, as TeamCode's companion changes them from its session screen: the standing approval of
  * tool uses, the model and the effort. Each answer is the session as it now is, which the header shows at once.
  */
-export function useSessionControls(session: CloudSession): SessionControlsViewModel {
+export function useSessionControls(session: CloudSessionResponse): SessionControlsViewModel {
   const queryClient = useQueryClient();
   const viewer = useViewer();
   const bypass = useAnnounced('runners.cloud.permissions.bypass.v1');
@@ -46,7 +46,7 @@ export function useSessionControls(session: CloudSession): SessionControlsViewMo
   const { id } = session;
 
   const act = useCallback(
-    async (action: (sessionId: string) => Promise<CloudSession>): Promise<boolean> => {
+    async (action: (sessionId: string) => Promise<CloudSessionResponse>): Promise<boolean> => {
       if (busy.current) return false;
       busy.current = true;
       setActing(true);

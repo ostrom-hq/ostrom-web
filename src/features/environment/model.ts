@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  EnvironmentAssignment,
-  EnvironmentAssignmentsPage,
-  EnvironmentExclusion,
-  EnvironmentVariant,
-  EnvironmentVariantCreate,
-  OrgMember,
+  EnvironmentAssignmentResponse,
+  EnvironmentAssignmentsPageResponse,
+  EnvironmentExclusionResponse,
+  EnvironmentVariantResponse,
+  EnvironmentVariantCreateRequest,
+  MemberResponse,
 } from '@gen/api/types.gen';
 
 /** An environment variable's name, as the server takes it: `[A-Z_][A-Z0-9_]*`, at most 128 characters. */
@@ -35,7 +35,7 @@ export type VariantDraftProblem = 'variable' | 'name' | 'value';
 /** What stops a variant from being created, in the order the form reads, or the body to send. */
 export function checkVariant(
   draft: VariantDraft,
-): { readonly problem: VariantDraftProblem } | { readonly body: EnvironmentVariantCreate } {
+): { readonly problem: VariantDraftProblem } | { readonly body: EnvironmentVariantCreateRequest } {
   const variable = draft.variable.trim();
   if (!ENV_VARIABLE.test(variable)) return { problem: 'variable' };
   const name = draft.name.trim();
@@ -47,7 +47,7 @@ export function checkVariant(
 }
 
 /** How a member is named on the page: their name and login, or the login alone. */
-export function memberLabel(member: OrgMember): string {
+export function memberLabel(member: MemberResponse): string {
   return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 
@@ -61,8 +61,8 @@ export interface MemberEnvironment {
    * keeps their rows on display only.
    */
   readonly listed: boolean;
-  readonly assignments: readonly EnvironmentAssignment[];
-  readonly exclusions: readonly EnvironmentExclusion[];
+  readonly assignments: readonly EnvironmentAssignmentResponse[];
+  readonly exclusions: readonly EnvironmentExclusionResponse[];
 }
 
 /**
@@ -71,8 +71,8 @@ export interface MemberEnvironment {
  * of the list read), a member the list does not name may be on a page not read: they stay pickable.
  */
 export function memberRows(
-  members: readonly OrgMember[] | undefined,
-  page: EnvironmentAssignmentsPage,
+  members: readonly MemberResponse[] | undefined,
+  page: EnvironmentAssignmentsPageResponse,
   complete = true,
 ): MemberEnvironment[] {
   const known = (members ?? []).filter((member) => member.role !== 'invited');
@@ -98,7 +98,7 @@ export function memberRows(
 }
 
 /** Team variants by variable, then name: the order the server lists them in, kept whatever it sends. */
-export function sortVariants(variants: readonly EnvironmentVariant[]): EnvironmentVariant[] {
+export function sortVariants(variants: readonly EnvironmentVariantResponse[]): EnvironmentVariantResponse[] {
   return variants.toSorted((a, b) => {
     const byVariable = a.variable.localeCompare(b.variable);
     return byVariable === 0 ? a.name.localeCompare(b.name) : byVariable;
@@ -106,7 +106,7 @@ export function sortVariants(variants: readonly EnvironmentVariant[]): Environme
 }
 
 /** What a variant says of its value: each member's own, stored once, or none (never the value itself). */
-export function valueState(variant: EnvironmentVariant): 'perMember' | 'stored' | 'none' {
+export function valueState(variant: EnvironmentVariantResponse): 'perMember' | 'stored' | 'none' {
   if (bindingOf(variant.binding) === 'perMember') return 'perMember';
   return variant.hasValue ? 'stored' : 'none';
 }
@@ -120,10 +120,13 @@ export function isNonEmpty<T>(items: readonly T[]): items is NonEmpty<T> {
 
 /** A member's personal variant and its owner's id; one the server sends without an owner is not a personal one. */
 export interface PersonalVariant {
-  readonly variant: EnvironmentVariant;
+  readonly variant: EnvironmentVariantResponse;
   readonly owner: string;
 }
 
-export function personalOf(items: readonly EnvironmentVariant[]): PersonalVariant[] {
-  return items.flatMap((variant) => (variant.owner === undefined ? [] : [{ variant, owner: variant.owner }]));
+export function personalOf(items: readonly EnvironmentVariantResponse[]): PersonalVariant[] {
+  return items.flatMap((variant) => {
+    const owner = variant.owner ?? undefined;
+    return owner === undefined ? [] : [{ variant, owner }];
+  });
 }

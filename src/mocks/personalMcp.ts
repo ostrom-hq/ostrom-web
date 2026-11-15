@@ -6,15 +6,15 @@ import {
   handlePromoteMcpServer,
   handleSaveMyMcpServer,
 } from '@gen/api/msw.gen';
-import type { McpServer } from '@gen/api/types.gen';
-import { zMcpServerWritable } from '@gen/api/zod.gen';
+import type { McpServerDto } from '@gen/api/types.gen';
+import { zMcpServerDto } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from './http';
 
 /** The demo person's own MCP servers (`mcp.personal.v1`), relayed to them alone; the team's share their namespace. */
 export interface PersonalMcpState {
-  myMcpServers: McpServer[];
-  mcpServers: McpServer[];
+  myMcpServers: McpServerDto[];
+  mcpServers: McpServerDto[];
 }
 
 export interface PersonalMcpDeps {
@@ -37,7 +37,7 @@ export function createPersonalMcpHandlers(
 ): HttpHandler[] {
   const check = async (
     request: Request,
-  ): Promise<{ readonly server: McpServer } | { readonly refused: ReturnType<typeof refusal> }> => {
+  ): Promise<{ readonly server: McpServerDto } | { readonly refused: ReturnType<typeof refusal> }> => {
     if (deps.stale())
       return {
         refused: refusal(
@@ -48,18 +48,18 @@ export function createPersonalMcpHandlers(
       };
     if (!deps.inDemoOrg(request))
       return { refused: refusal(403, 'forbidden', 'The demo keeps servers for its own organization only.') };
-    const body = zMcpServerWritable.safeParse(await readJson(request));
+    const body = zMcpServerDto.safeParse(await readJson(request));
     const url = body.success ? (body.data.url ?? '') : '';
     if (!body.success || !NAME.test(body.data.name) || !url.startsWith('https://'))
       return { refused: refusal(400, 'invalid_request', 'A name and an https URL are needed.') };
     if (body.data.transport === 'stdio')
       return { refused: refusal(403, 'hosted_not_allowed', 'Hosted commands are an administrator’s.') };
     // The server sets the owner and keeps every tool: a value sent is ignored.
-    const server: McpServer = {
+    const server: McpServerDto = {
       name: body.data.name,
       url,
       transport: body.data.transport,
-      enabled: body.data.enabled,
+      ...(body.data.enabled === undefined ? {} : { enabled: body.data.enabled }),
       scope: 'per-member',
       secretNames: body.data.secretNames ?? [],
       owner: deps.me(),
@@ -117,7 +117,7 @@ export function createPersonalMcpHandlers(
       if (team !== undefined) return HttpResponse.json(team);
       const own = db.myMcpServers.find((server) => server.name === params.name);
       if (own === undefined) return refusal(404, 'not_found', 'MCP server not found');
-      const promoted: McpServer = { ...own };
+      const promoted: McpServerDto = { ...own };
       Reflect.deleteProperty(promoted, 'owner');
       db.myMcpServers = db.myMcpServers.filter((server) => server.name !== params.name);
       db.mcpServers = [...db.mcpServers, promoted];

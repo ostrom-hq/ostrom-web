@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  McpArgumentCondition,
-  McpArgumentPolicy,
-  McpArgumentPolicyRequest,
-  McpAssignment,
+  ArgumentConditionDto,
+  ArgumentPolicyResponse,
+  ArgumentPolicyRequest,
+  McpAssignmentResponse,
   McpAssignmentRequest,
-  McpServer,
-  OrgMember,
-  Secret,
+  McpServerDto,
+  MemberResponse,
+  SecretResponse,
 } from '@gen/api/types.gen';
 
 /** The name an agent calls the server by: lowercase, digits and dashes, as the server routes it. */
@@ -46,7 +46,7 @@ export type ServerDraftProblem = 'name' | 'url' | 'secret';
 /** What stops the server from being added, in the order the form reads, or the server to send. */
 export function checkServer(
   draft: ServerDraft,
-): { readonly problem: ServerDraftProblem; readonly detail?: string } | { readonly server: McpServer } {
+): { readonly problem: ServerDraftProblem; readonly detail?: string } | { readonly server: McpServerDto } {
   const name = draft.name.trim();
   if (!MCP_SERVER_NAME.test(name)) return { problem: 'name' };
   const url = draft.url.trim();
@@ -59,7 +59,7 @@ export function checkServer(
 }
 
 /** The secrets a server needs that the organization does not have: its calls fail until they exist. */
-export function missingSecrets(server: McpServer, secrets: readonly Secret[]): string[] {
+export function missingSecrets(server: McpServerDto, secrets: readonly SecretResponse[]): string[] {
   return (server.secretNames ?? []).filter((name) => !secrets.some((secret) => secret.name === name));
 }
 
@@ -87,7 +87,7 @@ export const CONDITION_OPERATORS = [
   'CONTAINS',
   'EXISTS',
   'ABSENT',
-] as const satisfies readonly McpArgumentCondition['operator'][];
+] as const satisfies readonly ArgumentConditionDto['operator'][];
 export type ConditionOperator = (typeof CONDITION_OPERATORS)[number];
 
 export function isConditionOperator(value: string): value is ConditionOperator {
@@ -102,7 +102,7 @@ export function takesValue(operator: ConditionOperator): boolean {
 export const POLICY_EFFECTS = [
   'DENY',
   'REQUIRE_APPROVAL',
-] as const satisfies readonly McpArgumentPolicy['effect'][];
+] as const satisfies readonly ArgumentPolicyResponse['effect'][];
 export type PolicyEffect = (typeof POLICY_EFFECTS)[number];
 
 export function isPolicyEffect(value: string): value is PolicyEffect {
@@ -132,12 +132,12 @@ const MAX_VALUE = 1024;
 /** What stops the policy from being sent, in the order the form reads, or the request to send. */
 export function checkPolicy(
   draft: PolicyDraft,
-): { readonly problem: PolicyDraftProblem } | { readonly request: McpArgumentPolicyRequest } {
+): { readonly problem: PolicyDraftProblem } | { readonly request: ArgumentPolicyRequest } {
   const tool = draft.tool.trim();
   if (tool !== ANY_TOOL && !isToolName(tool)) return { problem: 'tool' };
   const message = draft.message.trim();
   if (message === '' || message.length > MAX_MESSAGE) return { problem: 'message' };
-  const conditions: McpArgumentCondition[] = [];
+  const conditions: ArgumentConditionDto[] = [];
   for (const condition of draft.conditions) {
     const path = condition.path.trim();
     if (path === '' || path.length > MAX_PATH) return { problem: 'path' };
@@ -194,12 +194,14 @@ export function checkAssignment(
 }
 
 /** Everyone first, then members as listed. */
-export function sortAssignments(assignments: readonly McpAssignment[]): McpAssignment[] {
-  return [...assignments].sort((a, b) => Number(a.member !== undefined) - Number(b.member !== undefined));
+export function sortAssignments(assignments: readonly McpAssignmentResponse[]): McpAssignmentResponse[] {
+  return [...assignments].sort(
+    (a, b) => Number((a.member ?? undefined) !== undefined) - Number((b.member ?? undefined) !== undefined),
+  );
 }
 
 /** "Maya Lind (maya)", or the login alone. */
-export function memberLabel(member: OrgMember): string {
+export function memberLabel(member: MemberResponse): string {
   return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 

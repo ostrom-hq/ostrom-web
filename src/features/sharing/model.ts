@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact, SharedAccount } from '@gen/api/types.gen';
+import type { ArtifactResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 /**
@@ -18,8 +18,8 @@ export function isArtifactAccess(value: string): value is ArtifactAccess {
  * Whether the viewer owns an artifact: the server says so in `relation`; a server older than the field is read by the
  * owner's name.
  */
-export function ownsArtifact(artifact: Artifact, login: string | undefined): boolean {
-  return artifact.relation === undefined
+export function ownsArtifact(artifact: ArtifactResponse, login: string | undefined): boolean {
+  return artifact.relation === undefined || artifact.relation === null
     ? login !== undefined && artifact.owner === login
     : artifact.relation === 'owner';
 }
@@ -72,8 +72,8 @@ const STATES: ReadonlyMap<string, AccountState> = new Map([
   ['disabled', 'paused'],
 ]);
 
-export function accountState(account: SharedAccount): AccountState {
-  if (account.paused) return 'paused';
+export function accountState(account: SharedAccountResponse): AccountState {
+  if (account.paused === true) return 'paused';
   return STATES.get(account.status) ?? 'unknown';
 }
 
@@ -88,6 +88,6 @@ export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {
 };
 
 /** Whether an account waits for an administrator to hand its refresh over to Ostrom. */
-export function waitsForHandover(account: SharedAccount): boolean {
-  return !account.paused && account.status === 'pending_handover';
+export function waitsForHandover(account: SharedAccountResponse): boolean {
+  return account.paused !== true && account.status === 'pending_handover';
 }

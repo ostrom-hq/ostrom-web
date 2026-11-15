@@ -12,7 +12,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -305,6 +305,8 @@ describe('editing an automation', () => {
         trigger: { kind: 'webhook' },
         action: { agent: 'aider', prompt: 'Go.' },
         variables: [{ name: 'when', path: '$.when', type: 'date' }],
+        overlap: 'skip',
+        maxRunsPerDay: 24,
         version: 3,
         createdAt: '2026-10-01T00:00:00.000Z',
         updatedAt: '2026-10-01T00:00:00.000Z',
@@ -316,6 +318,9 @@ describe('editing an automation', () => {
         enabled: true,
         trigger: { kind: 'cron', cron: '@daily', timezone: 'UTC' },
         action: { prompt: 'Hi.' },
+        variables: [],
+        overlap: 'skip',
+        maxRunsPerDay: 24,
         version: 1,
         createdAt: '2026-10-01T00:00:00.000Z',
         updatedAt: '2026-10-01T00:00:00.000Z',

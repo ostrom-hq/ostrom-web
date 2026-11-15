@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { SharedAccount } from '@gen/api/types.gen';
+import type { SharedAccountResponse } from '@gen/api/types.gen';
+
+/**
+ * A shared account as the card reads it: its `poolId` (TeamCode's `AccountView.poolId`) is not in the server's
+ * document yet; the card names the pool once the server sends it.
+ */
+export type SharedAccountRow = SharedAccountResponse & { readonly poolId?: string | null };
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -9,7 +15,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { ACCOUNT_TONES, accountState, providerOf } from '../model';
 
 export interface AccountCardProps {
-  readonly account: SharedAccount;
+  readonly account: SharedAccountRow;
   readonly busy: boolean;
   /** Present when the viewer owns the subscription. */
   readonly actions:
@@ -27,6 +33,7 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
   const { t, i18n } = useTranslation();
   const headingId = useId();
   const state = accountState(account);
+  const sharedWith = account.sharedWith ?? [];
   const provider = providerOf(account.provider);
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
@@ -42,8 +49,10 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
         {[
           provider === undefined ? account.provider : t(`sharing.provider.${provider}`),
           t('sharing.owner', { owner: account.owner }),
-          account.pool === undefined ? undefined : t('sharing.accounts.pool', { pool: account.pool }),
-          account.dailyAllocationUsd === undefined
+          typeof account.poolId === 'string'
+            ? t('sharing.accounts.pool', { pool: account.poolId })
+            : undefined,
+          account.dailyAllocationUsd === undefined || account.dailyAllocationUsd === null
             ? t('sharing.accounts.noDaily')
             : t('sharing.accounts.daily', { amount: formatUsd(account.dailyAllocationUsd, i18n.language) }),
         ]
@@ -51,9 +60,9 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
           .join(' · ')}
       </p>
       <p className="o-row__meta">
-        {account.sharedWith.length === 0
+        {sharedWith.length === 0
           ? t('sharing.accounts.sharedWithNobody')
-          : t('sharing.accounts.sharedWith', { list: account.sharedWith.join(', ') })}
+          : t('sharing.accounts.sharedWith', { list: sharedWith.join(', ') })}
       </p>
       {state === 'pendingHandover' ? (
         <p className="o-row__meta">{t('sharing.accounts.pendingHint')}</p>
@@ -69,10 +78,10 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
             <Button
               disabled={busy}
               onClick={() => {
-                actions.setPaused(!account.paused);
+                actions.setPaused(account.paused !== true);
               }}
             >
-              {account.paused ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
+              {account.paused === true ? t('sharing.accounts.resume') : t('sharing.accounts.pause')}
             </Button>
           )}
           <ConfirmButton

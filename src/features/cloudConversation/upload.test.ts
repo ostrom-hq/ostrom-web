@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudFile } from '@gen/api/types.gen';
+import type { CloudFileDto } from '@gen/api/types.gen';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -31,7 +31,7 @@ afterAll(() => {
   server.close();
 });
 
-function stored(change: Partial<CloudFile> = {}): CloudFile {
+function stored(change: Partial<CloudFileDto> = {}): CloudFileDto {
   return {
     id: 'file-1',
     sessionId: 'cs-1',

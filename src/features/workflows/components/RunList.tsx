@@ -67,6 +67,8 @@ function RunRow({
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
   const source = runSource(run.source);
+  const sessionId = run.sessionId ?? undefined;
+  const endedAt = run.endedAt ?? undefined;
   return (
     <div className="o-row">
       <Badge tone={knownOr(RUN_TONES, run.status, 'neutral')}>
@@ -92,8 +94,8 @@ function RunRow({
           ].join(' · ')}
         </span>
         <RunFailure run={run} />
-        {run.sessionId === undefined ? null : (
-          <Link to="/sessions/$sessionId" params={{ sessionId: run.sessionId }} className="o-row__meta">
+        {sessionId === undefined ? null : (
+          <Link to="/sessions/$sessionId" params={{ sessionId }} className="o-row__meta">
             {t('workflows.runs.session')}
           </Link>
         )}
@@ -101,7 +103,7 @@ function RunRow({
       {/* When it started, and how long it took once it ended. */}
       <span className="o-row__end">
         <time dateTime={run.startedAt}>{formatAbsolute(run.startedAt, i18n.language)}</time>
-        {run.endedAt === undefined ? null : ` · ${formatDuration(run.startedAt, run.endedAt, i18n.language)}`}
+        {endedAt === undefined ? null : ` · ${formatDuration(run.startedAt, endedAt, i18n.language)}`}
       </span>
     </div>
   );

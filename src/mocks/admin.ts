@@ -7,7 +7,7 @@ import {
   handleRemoveInstanceAdmin,
   handleSaveInstanceSettings,
 } from '@gen/api/msw.gen';
-import type { InstanceAdmin, InstanceSettings } from '@gen/api/types.gen';
+import type { InstanceAdminResponse, InstanceSettingsResponse } from '@gen/api/types.gen';
 import { zAddInstanceAdminRequest, zSaveInstanceSettingsRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from './http';
@@ -17,9 +17,9 @@ export interface AdminState {
   /** The demo person administers the instance: what `Me.instanceAdmin` says. */
   instanceAdmin: boolean;
   /** Oldest first, as the server lists them. */
-  instanceAdmins: InstanceAdmin[];
+  instanceAdmins: InstanceAdminResponse[];
   /** By section name, in name order. */
-  instanceSettings: InstanceSettings[];
+  instanceSettings: InstanceSettingsResponse[];
 }
 
 /** The verified addresses of the instance's accounts, by address: who an administrator can add. */
@@ -32,7 +32,7 @@ export const INSTANCE_ACCOUNTS: Readonly<
 /** The demo person, first administrator of the instance through its setup link. */
 export const DEMO_ADMIN_ID = '2b9c7d1e-4a3f-4c60-8e15-7d0a9b3c5f22';
 
-export function initialInstanceAdmins(): InstanceAdmin[] {
+export function initialInstanceAdmins(): InstanceAdminResponse[] {
   return [
     {
       userId: DEMO_ADMIN_ID,
@@ -45,7 +45,7 @@ export function initialInstanceAdmins(): InstanceAdmin[] {
 }
 
 /** Two sections: mail (one secret, set) and push (one secret, not set, never saved). */
-export function initialInstanceSettings(): InstanceSettings[] {
+export function initialInstanceSettings(): InstanceSettingsResponse[] {
   return [
     {
       section: 'mail',
@@ -79,7 +79,7 @@ const NOT_ADMIN = (): ReturnType<typeof refusal> =>
   refusal(403, 'instance_admin_required', 'Only a person who administers the instance does this.');
 
 export function createAdminHandlers(state: () => AdminState, now: () => Date): HttpHandler[] {
-  const sectionNamed = (name: string): InstanceSettings | undefined =>
+  const sectionNamed = (name: string): InstanceSettingsResponse | undefined =>
     state().instanceSettings.find((section) => section.section === name);
   return [
     handleListInstanceAdmins(() =>
@@ -151,7 +151,7 @@ export function createAdminHandlers(state: () => AdminState, now: () => Date): H
       );
       if (unknown !== undefined)
         return refusal(400, 'invalid_settings', `${unknown}: this section has no such field.`);
-      const saved: InstanceSettings = {
+      const saved: InstanceSettingsResponse = {
         ...section,
         version: section.version + 1,
         values: Object.fromEntries(Object.entries(values).filter(([, value]) => value !== '')),

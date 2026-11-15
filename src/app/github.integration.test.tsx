@@ -84,7 +84,14 @@ describe('the GitHub screen', () => {
   it('shows a few repositories without a filter', async () => {
     // An empty description shows no line; a push date that is not one shows nothing.
     db.repos[ACME] = [
-      { name: 'solo', description: '', defaultBranch: 'main', archived: false, pushedAt: 'not a date' },
+      {
+        name: 'solo',
+        description: '',
+        defaultBranch: 'main',
+        archived: false,
+        pushedAt: 'not a date',
+        owners: [],
+      },
     ];
     visit('/github');
     const list = await repoList();
@@ -95,7 +102,7 @@ describe('the GitHub screen', () => {
   });
 
   it('says when the server holds more, and that the search reads the ones shown only', async () => {
-    db.repos[ACME] = [{ name: 'solo', defaultBranch: 'main', archived: false }];
+    db.repos[ACME] = [{ name: 'solo', defaultBranch: 'main', archived: false, owners: [] }];
     server.use(
       http.get('*/api/v1/repos', () =>
         HttpResponse.json({ items: (db.repos[ACME] ?? []).slice(0, 1), next: 'b' }),

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GovernanceConfirmation } from '@gen/api/types.gen';
+import type { ConfirmationDto } from '@gen/api/types.gen';
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
@@ -21,13 +21,13 @@ const SLOW = { timeout: 4_000 };
 const refused = (status: number, type: string, message: string) =>
   HttpResponse.json({ error: { type, message } }, { status });
 
-function confirmation(id: string): GovernanceConfirmation {
+function confirmation(id: string): ConfirmationDto {
   const found = db.confirmations.find((item) => item.id === id);
   if (found === undefined) throw new Error(`no fixture ${id}`);
   return found;
 }
 
-function replace(id: string, change: (item: GovernanceConfirmation) => GovernanceConfirmation): void {
+function replace(id: string, change: (item: ConfirmationDto) => ConfirmationDto): void {
   db.confirmations = db.confirmations.map((item) => (item.id === id ? change(item) : item));
 }
 
@@ -270,7 +270,7 @@ describe('a governance confirmation', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: DEMO_LOGIN, verified: true, via: 'github' },
-          member: { id: MEMBER_IDS.maya, login: DEMO_LOGIN, avatarUrl: '', role: 'member' },
+          member: { id: MEMBER_IDS.maya, login: DEMO_LOGIN, name: DEMO_LOGIN, avatarUrl: '', role: 'member' },
           capabilities: [],
         }),
       ),

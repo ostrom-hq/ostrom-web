@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group } from '@gen/api/types.gen';
+import type { GroupResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
@@ -9,7 +9,7 @@ import { GROUP_NAME_MAX } from '../groups';
 import type { GroupChangeViewModel } from '../useGroups';
 
 export interface GroupSettingsProps {
-  readonly group: Group;
+  readonly group: GroupResponse;
   readonly change: GroupChangeViewModel;
   /** Once the server deleted it. */
   readonly onDeleted: () => void;

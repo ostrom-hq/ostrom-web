@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Invitation } from '@gen/api/types.gen';
+import type { InvitationResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { orgRoleOf } from '@/shared/org/roles';
@@ -7,7 +7,7 @@ import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
 export interface InvitationRowProps {
-  readonly invitation: Invitation;
+  readonly invitation: InvitationResponse;
   readonly revoking: boolean;
   readonly onRevoke: () => void;
 }

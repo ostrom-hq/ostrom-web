@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview } from '@gen/api/types.gen';
+import type { BillingOverviewResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -9,7 +9,7 @@ import { Section } from '@/shared/ui/Screen';
 import type { BillingActionsViewModel } from '../useBilling';
 
 export interface SubscriptionProps {
-  readonly billing: BillingOverview;
+  readonly billing: BillingOverviewResponse;
   readonly actions: BillingActionsViewModel;
 }
 

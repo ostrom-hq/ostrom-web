@@ -1,29 +1,35 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { AuthSession, Device, ServiceKey, Token } from '@gen/api/types.gen';
+import type { AuthSessionRow } from '@/features/settings/components/SessionRow';
+import type { DeviceResponse, ServiceKeyResponse, TokenResponse } from '@gen/api/types.gen';
 
 /** Maya's sessions: this browser, her phone and a laptop left signed in. */
-export function initialAuthSessions(): AuthSession[] {
+export function initialAuthSessions(): AuthSessionRow[] {
   return [
     {
       id: 'ses-browser',
+      name: 'Firefox on macOS',
       createdAt: '2026-10-30T08:12:00Z',
       lastSeenAt: '2026-10-30T09:40:00Z',
-      device: 'Firefox on macOS',
       current: true,
     },
     {
       id: 'ses-phone',
+      name: 'Ostrom on iPhone',
       createdAt: '2026-10-28T19:03:00Z',
       lastSeenAt: '2026-10-30T07:55:00Z',
-      device: 'Ostrom on iPhone',
       current: false,
     },
-    { id: 'ses-laptop', createdAt: '2026-10-02T10:20:00Z', current: false },
+    {
+      id: 'ses-laptop',
+      createdAt: '2026-10-02T10:20:00Z',
+      lastSeenAt: '2026-10-02T10:20:00Z',
+      current: false,
+    },
   ];
 }
 
 /** Maya's live tokens, newest first: a CI token that expires, and the CLI's own. */
-export function initialTokens(): Token[] {
+export function initialTokens(): TokenResponse[] {
   return [
     {
       id: 'tok-2',
@@ -49,7 +55,7 @@ export function initialTokens(): Token[] {
 }
 
 /** Where the CLI is signed in as Maya: her laptop, used this morning, and a CI box never seen since. */
-export function initialDevices(): Device[] {
+export function initialDevices(): DeviceResponse[] {
   return [
     { id: 'dev-2', name: 'ci-runner-3', kind: 'cli' },
     { id: 'dev-1', name: 'maya-mbp', kind: 'cli', lastSeenAt: '2026-10-30T08:05:00Z' },
@@ -57,7 +63,7 @@ export function initialDevices(): Device[] {
 }
 
 /** Acme's service key: GitHub Actions reports its checks and reads the rules. */
-export function initialServiceKeys(): ServiceKey[] {
+export function initialServiceKeys(): ServiceKeyResponse[] {
   return [
     {
       id: 'key-1',

@@ -9,7 +9,7 @@ import {
   removeGroupMember,
   updateGroup,
 } from '@gen/api/sdk.gen';
-import type { Group } from '@gen/api/types.gen';
+import type { GroupResponse } from '@gen/api/types.gen';
 import { otherOrganization } from '@/mocks/fixtures/organization';
 import { LEFT_MEMBER } from '@/mocks/fixtures/sharing';
 import { groupId } from '@/mocks/groups';
@@ -51,7 +51,7 @@ async function raw(method: string, path: string, body: string): Promise<number> 
 const platform = groupId(1);
 const billing = groupId(2);
 
-async function platformNow(): Promise<Group> {
+async function platformNow(): Promise<GroupResponse> {
   return (await getGroup({ path: { id: platform }, throwOnError: true })).data;
 }
 
@@ -62,7 +62,7 @@ describe('the mock groups, as the server serves them', () => {
     const { items } = (await listGroups({ throwOnError: true })).data;
     expect(items.map((group) => group.name)).toEqual(['Billing', 'Platform']);
     expect(items[1]?.members).toEqual(['theo', 'samir', LEFT_MEMBER]);
-    expect(items[1]?.paused?.map((pause) => pause.login)).toEqual(['samir']);
+    expect(items[1]?.paused.map((pause) => pause.login)).toEqual(['samir']);
   });
 
   it('lets a member read the groups, and refuses them every change', async () => {

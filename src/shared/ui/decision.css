@@ -151,6 +151,13 @@
   font-family: var(--font-mono);
   font-size: var(--fs-12);
 }
+/* A link in the proof is a 24px target at least (WCAG 2.2 target size, axe target-size). */
+.ys-kv dd a {
+  display: inline-block;
+  min-width: 24px;
+  min-height: 24px;
+  line-height: 24px;
+}
 .ys-chip--bad {
   border-color: var(--danger);
   color: var(--danger-text);

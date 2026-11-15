@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
+import type { ApprovalStatus } from '@/shared/api/vocabulary';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
@@ -13,7 +14,7 @@ export interface DecidedLineProps {
   readonly now: Date;
 }
 
-const TONES: Readonly<Record<Known<Approval['status']>, BadgeTone>> = {
+const TONES: Readonly<Record<Known<ApprovalStatus>, BadgeTone>> = {
   pending: 'neutral',
   approved: 'success',
   rejected: 'danger',
@@ -30,8 +31,8 @@ const LABELS = {
 export function DecidedLine({ approval, now }: DecidedLineProps): ReactElement {
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
-  const when =
-    approval.decidedAt === undefined ? undefined : formatRelative(approval.decidedAt, now, i18n.language);
+  const decidedAt = approval.decidedAt ?? undefined;
+  const when = decidedAt === undefined ? undefined : formatRelative(decidedAt, now, i18n.language);
   return (
     <Link to="/yes/$approvalId" params={{ approvalId: approval.id }} className="ys-line">
       <Badge tone={knownOr(TONES, approval.status, 'neutral')}>
@@ -42,7 +43,7 @@ export function DecidedLine({ approval, now }: DecidedLineProps): ReactElement {
         {approval.title}
       </span>
       <span className="ys-meta">
-        {[approval.decidedBy, when].filter((part) => part !== undefined).join(' · ')}
+        {[approval.decidedBy ?? undefined, when].filter((part) => part !== undefined).join(' · ')}
       </span>
     </Link>
   );

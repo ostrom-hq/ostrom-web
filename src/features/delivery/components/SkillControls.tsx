@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { SkillEntry } from '@gen/api/types.gen';
+import type { SkillEntryDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
@@ -11,7 +11,7 @@ export function SkillControls({
   skill,
   change,
 }: {
-  readonly skill: SkillEntry;
+  readonly skill: SkillEntryDto;
   readonly change: SkillChangeViewModel;
 }): ReactElement {
   const { t } = useTranslation();

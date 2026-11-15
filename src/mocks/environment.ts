@@ -18,16 +18,24 @@ import {
   handleUnassignEnvironmentVariant,
   handleUpdateEnvironmentVariant,
 } from '@gen/api/msw.gen';
-import type { EnvironmentAssignment, EnvironmentExclusion, EnvironmentVariant } from '@gen/api/types.gen';
-import { zEnvironmentAssign, zEnvironmentVariantCreate, zEnvironmentVariantUpdate } from '@gen/api/zod.gen';
+import type {
+  EnvironmentAssignmentResponse,
+  EnvironmentExclusionResponse,
+  EnvironmentVariantResponse,
+} from '@gen/api/types.gen';
+import {
+  zEnvironmentAssignRequest,
+  zEnvironmentVariantCreateRequest,
+  zEnvironmentVariantUpdateRequest,
+} from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from './http';
 
 /** Acme's environment variants (team and personal), assignments and exclusions; another organization has none. */
 export interface EnvironmentState {
-  environmentVariants: EnvironmentVariant[];
-  environmentAssignments: EnvironmentAssignment[];
-  environmentExclusions: EnvironmentExclusion[];
+  environmentVariants: EnvironmentVariantResponse[];
+  environmentAssignments: EnvironmentAssignmentResponse[];
+  environmentExclusions: EnvironmentExclusionResponse[];
   nextEnvironmentVariant: number;
   /** Variables assigned to the demo person whose value the server cannot read now: withheld, by name. */
   environmentUnavailable: string[];
@@ -83,7 +91,7 @@ export function createEnvironmentHandlers(
       return refusal(403, 'step_up_required', 'Sign in again: your sign-in is more than five minutes old.');
     return undefined;
   };
-  const find = (request: Request, id: string): EnvironmentVariant | undefined =>
+  const find = (request: Request, id: string): EnvironmentVariantResponse | undefined =>
     deps.inDemoOrg(request) ? state().environmentVariants.find((variant) => variant.id === id) : undefined;
   const notFound = () => refusal(404, 'not_found', 'environment variant not found');
   const knownMember = (request: Request, member: string): boolean =>
@@ -96,7 +104,7 @@ export function createEnvironmentHandlers(
       (item) => !(item.member === member && item.variable === variable),
     );
   };
-  const select = (assignment: EnvironmentAssignment): void => {
+  const select = (assignment: EnvironmentAssignmentResponse): void => {
     dropAssignment(assignment.member, assignment.variable);
     const db = state();
     db.environmentAssignments = [...db.environmentAssignments, assignment];
@@ -107,7 +115,7 @@ export function createEnvironmentHandlers(
         ? state().environmentVariants.filter((variant) => (variant.owner !== undefined) === personal)
         : [],
     });
-  const mine = (request: Request, id: string): EnvironmentVariant | undefined => {
+  const mine = (request: Request, id: string): EnvironmentVariantResponse | undefined => {
     const variant = find(request, id);
     return variant?.owner === deps.me() ? variant : undefined;
   };
@@ -140,7 +148,7 @@ export function createEnvironmentHandlers(
     handleCreateMyEnvironmentVariant(async ({ request }) => {
       const refused = stale();
       if (refused !== undefined) return refused;
-      const body = zEnvironmentVariantCreate.safeParse(await readJson(request));
+      const body = zEnvironmentVariantCreateRequest.safeParse(await readJson(request));
       if (
         !body.success ||
         !VARIABLE.test(body.data.variable) ||
@@ -164,7 +172,7 @@ export function createEnvironmentHandlers(
       if (db.environmentVariants.filter((variant) => variant.owner === me).length >= PERSONAL_LIMIT)
         return refusal(409, 'variant_limit', 'At most 20 personal variants.');
       const at = deps.now().toISOString();
-      const variant: EnvironmentVariant = {
+      const variant: EnvironmentVariantResponse = {
         id: `env-${String(db.nextEnvironmentVariant)}`,
         variable: body.data.variable,
         name: body.data.name.trim(),
@@ -195,11 +203,11 @@ export function createEnvironmentHandlers(
       if (refused !== undefined) return refused;
       const variant = mine(request, params.id);
       if (variant === undefined) return notFound();
-      const body = zEnvironmentVariantUpdate.safeParse(await readJson(request));
+      const body = zEnvironmentVariantUpdateRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_environment_variant', 'expectedVersion is needed.');
       if (body.data.expectedVersion !== variant.version)
         return refusal(409, 'variant_version_conflict', 'This variant changed since you read it: reload it.');
-      const next: EnvironmentVariant = {
+      const next: EnvironmentVariantResponse = {
         ...variant,
         name: body.data.name ?? variant.name,
         version: variant.version + 1,
@@ -223,7 +231,7 @@ export function createEnvironmentHandlers(
     handleCreateEnvironmentVariant(async ({ request }) => {
       const refused = guard(request, true);
       if (refused !== undefined) return refused;
-      const body = zEnvironmentVariantCreate.safeParse(await readJson(request));
+      const body = zEnvironmentVariantCreateRequest.safeParse(await readJson(request));
       if (!body.success || !VARIABLE.test(body.data.variable) || body.data.name.trim() === '')
         return refusal(400, 'invalid_environment_variant', 'A variable name and a variant name are needed.');
       if (reservedVariable(body.data.variable))
@@ -248,7 +256,7 @@ export function createEnvironmentHandlers(
       )
         return refusal(409, 'variant_exists', 'A variant of this name exists for this variable.');
       const at = deps.now().toISOString();
-      const variant: EnvironmentVariant = {
+      const variant: EnvironmentVariantResponse = {
         id: `env-${String(db.nextEnvironmentVariant)}`,
         variable: body.data.variable,
         name: body.data.name.trim(),
@@ -269,13 +277,13 @@ export function createEnvironmentHandlers(
       if (variant === undefined) return notFound();
       if (variant.owner !== undefined)
         return refusal(409, 'variant_personal', 'Only its owner edits a personal variant.');
-      const body = zEnvironmentVariantUpdate.safeParse(await readJson(request));
+      const body = zEnvironmentVariantUpdateRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_environment_variant', 'expectedVersion is needed.');
       if (body.data.expectedVersion !== variant.version)
         return refusal(409, 'variant_version_conflict', 'This variant changed since you read it: reload it.');
       if (body.data.value !== undefined && variant.binding !== 'shared')
         return refusal(400, 'invalid_environment_variant', 'A per-member variant stores no value.');
-      const next: EnvironmentVariant = {
+      const next: EnvironmentVariantResponse = {
         ...variant,
         name: body.data.name ?? variant.name,
         version: variant.version + 1,
@@ -347,7 +355,7 @@ export function createEnvironmentHandlers(
         )
       )
         return refusal(409, 'variant_exists', 'A team variant of this name exists for this variable.');
-      const promoted: EnvironmentVariant = { ...variant, updatedAt: deps.now().toISOString() };
+      const promoted: EnvironmentVariantResponse = { ...variant, updatedAt: deps.now().toISOString() };
       delete promoted.owner;
       db.environmentVariants = db.environmentVariants.map((item) =>
         item.id === variant.id ? promoted : item,
@@ -373,7 +381,7 @@ export function createEnvironmentHandlers(
       const refused = guard(request, true);
       if (refused !== undefined) return refused;
       if (!knownMember(request, params.member)) return refusal(404, 'not_found', 'member not found');
-      const body = zEnvironmentAssign.safeParse(await readJson(request));
+      const body = zEnvironmentAssignRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'variantId is needed.');
       const variant = find(request, body.data.variantId);
       if (variant === undefined) return notFound();
@@ -390,7 +398,7 @@ export function createEnvironmentHandlers(
         );
       if (excluded(params.member, params.variable))
         return refusal(409, 'variant_excluded', 'This member is excluded from this variable.');
-      const assignment: EnvironmentAssignment = {
+      const assignment: EnvironmentAssignmentResponse = {
         member: params.member,
         variable: variant.variable,
         variantId: variant.id,

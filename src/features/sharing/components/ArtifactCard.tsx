@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact } from '@gen/api/types.gen';
+import type { ArtifactResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -14,7 +14,7 @@ import type { ArtifactChangeViewModel } from '../useSharing';
 import { ArtifactDetail } from './ArtifactDetail';
 
 export interface ArtifactCardProps {
-  readonly artifact: Artifact;
+  readonly artifact: ArtifactResponse;
   readonly now: Date;
   /** The tab it is listed in: its origin link keeps it. */
   readonly scope: ArtifactScope;
@@ -81,7 +81,7 @@ function Origin({
   artifact,
   scope,
 }: {
-  readonly artifact: Artifact;
+  readonly artifact: ArtifactResponse;
   readonly scope: ArtifactScope;
 }): ReactElement {
   const { t } = useTranslation();

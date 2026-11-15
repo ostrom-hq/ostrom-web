@@ -21,10 +21,10 @@ import {
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
   DiscordLink,
-  NotificationPreferences,
+  NotificationPreferencesBody,
   NotificationSettingChange,
   NotificationSettings,
-  PushDevice,
+  PushDeviceDto,
   PushTestResults,
   SlackLink,
 } from '@gen/api/types.gen';
@@ -80,12 +80,12 @@ export function useNotificationSwitches(enabled: boolean): NotificationSwitchesV
 
 export interface PhonePreferencesViewModel {
   /** What the person is told on their phone, across their organizations; undefined until it is read. */
-  readonly preferences: NotificationPreferences | undefined;
+  readonly preferences: NotificationPreferencesBody | undefined;
   readonly failure: Error | undefined;
   /** Saves them; `onDone` gets what the server stored. */
   readonly save: (
-    preferences: NotificationPreferences,
-    onDone: (saved: NotificationPreferences) => void,
+    preferences: NotificationPreferencesBody,
+    onDone: (saved: NotificationPreferencesBody) => void,
   ) => void;
   readonly saving: boolean;
   readonly saveFailure: Error | undefined;
@@ -144,10 +144,10 @@ export function useTestPush(): TestPushViewModel {
 
 export interface PushDevicesViewModel {
   /** The caller's phones, the most recently seen first; undefined until they are read. */
-  readonly phones: readonly PushDevice[] | undefined;
+  readonly phones: readonly PushDeviceDto[] | undefined;
   readonly failure: Error | undefined;
   /** Stops notifying one phone; the list is read again once the server did. */
-  readonly remove: (phone: PushDevice) => void;
+  readonly remove: (phone: PushDeviceDto) => void;
   /** The phone on its way out, if any. */
   readonly removing: string | undefined;
   readonly removeFailure: Error | undefined;

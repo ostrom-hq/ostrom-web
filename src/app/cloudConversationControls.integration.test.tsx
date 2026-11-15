@@ -2,8 +2,8 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import type { CloudEvent } from '@gen/api/types.gen';
-import { zAnswerCloudPermissionRequest } from '@gen/api/zod.gen';
+import type { CloudEventDto } from '@gen/api/types.gen';
+import { zAnswerCloudPermissionBody } from '@gen/api/zod.gen';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { CONVERSATION_ID } from '@/mocks/cloudConversation';
 import { FEATURES } from '@/shared/capabilities/model';
@@ -19,7 +19,7 @@ const ANSWER = '*/api/v1/cloud/sessions/:id/permissions';
 
 interface Added {
   readonly type: string;
-  readonly data: unknown;
+  readonly data: Record<string, unknown>;
   readonly feed?: string;
   readonly at?: string;
 }
@@ -27,7 +27,7 @@ interface Added {
 /** Appends events to the demo conversation before the screen opens. */
 function withEvents(...events: Added[]): void {
   const known = db.cloudEvents[CONVERSATION_ID] ?? [];
-  const added: CloudEvent[] = events.map((event, index) => ({
+  const added: CloudEventDto[] = events.map((event, index) => ({
     seq: known.length + index + 1,
     type: event.type,
     at: event.at ?? AT,
@@ -64,13 +64,13 @@ async function opened(): Promise<HTMLElement> {
 }
 
 /** What each answer sent: its body and its idempotency key. */
-function answers(): { body: ReturnType<typeof zAnswerCloudPermissionRequest.parse>; key: string | null }[] {
-  const sent: { body: ReturnType<typeof zAnswerCloudPermissionRequest.parse>; key: string | null }[] = [];
+function answers(): { body: ReturnType<typeof zAnswerCloudPermissionBody.parse>; key: string | null }[] {
+  const sent: { body: ReturnType<typeof zAnswerCloudPermissionBody.parse>; key: string | null }[] = [];
   traffic.onRequest((request) => {
     if (request.method === 'POST' && request.url.endsWith('/permissions')) {
       const key = request.headers.get('Idempotency-Key');
       void request.json().then((body: unknown) => {
-        sent.push({ body: zAnswerCloudPermissionRequest.parse(body), key });
+        sent.push({ body: zAnswerCloudPermissionBody.parse(body), key });
       });
     }
   });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group, OrgMember } from '@gen/api/types.gen';
+import type { GroupResponse, MemberResponse } from '@gen/api/types.gen';
 import { type ReactElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -12,9 +12,9 @@ import { localDay, pauseEndIn, pauseEndOn, pausedUntil, personOf } from '../grou
 import type { GroupChangeViewModel } from '../useGroups';
 
 export interface GroupMembersProps {
-  readonly group: Group;
+  readonly group: GroupResponse;
   /** The organization's members read so far: who can be added, and, once all are read, who of the group left it. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, and whether every page is read: before that, nobody is said to have left. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'complete'>;
   /** Present for an owner or an admin. */
@@ -53,7 +53,7 @@ export function GroupMembers({ group, members, people, change }: GroupMembersPro
 }
 
 interface MemberRowProps {
-  readonly group: Group;
+  readonly group: GroupResponse;
   readonly login: string;
   /** No longer in the organization: the group names them by member id. */
   readonly left: boolean;
@@ -205,8 +205,8 @@ function PauseChoices({ login, busy, onPause, onCancel }: PauseChoicesProps): Re
 }
 
 interface AddMemberProps {
-  readonly group: Group;
-  readonly candidates: readonly OrgMember[];
+  readonly group: GroupResponse;
+  readonly candidates: readonly MemberResponse[];
   readonly change: GroupChangeViewModel;
 }
 

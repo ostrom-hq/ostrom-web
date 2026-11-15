@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import { type ReactElement, useCallback, useMemo } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -76,13 +76,13 @@ function SessionBody({
   view,
   back,
 }: {
-  readonly session: CloudSession;
+  readonly session: CloudSessionResponse;
   readonly view: CloudConversationViewModel;
   readonly back: ReactElement;
 }): ReactElement {
   const { t } = useTranslation();
   const status = knownStatus(session.status);
-  const title = session.name ?? `${session.agent} · ${session.id}`;
+  const title = session.name === '' ? `${session.agent} · ${session.id}` : session.name;
   return (
     <Screen
       top={
@@ -116,7 +116,7 @@ function Conversation({
   session,
   view,
 }: {
-  readonly session: CloudSession;
+  readonly session: CloudSessionResponse;
   readonly view: CloudConversationViewModel;
 }): ReactElement {
   const { t } = useTranslation();

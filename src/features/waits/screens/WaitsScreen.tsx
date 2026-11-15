@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait } from '@gen/api/types.gen';
+import type { WaitResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -89,7 +89,7 @@ function WaitRows({
   waits,
   people,
 }: {
-  readonly waits: readonly Wait[];
+  readonly waits: readonly WaitResponse[];
   readonly people: PeopleViewModel;
 }): ReactElement {
   const { t, i18n } = useTranslation();
@@ -104,10 +104,10 @@ function WaitRows({
               <span className="o-row__title">{wait.question.title}</span>
               <span className="o-row__meta">
                 {[
-                  wait.createdBy === undefined
-                    ? undefined
-                    : t('waits.list.askedBy', { who: people.nameOf(wait.createdBy) }),
-                  wait.sessionId === undefined ? undefined : t('waits.list.session', { id: wait.sessionId }),
+                  t('waits.list.askedBy', { who: people.nameOf(wait.createdBy) }),
+                  typeof wait.sessionId === 'string'
+                    ? t('waits.list.session', { id: wait.sessionId })
+                    : undefined,
                 ]
                   .filter((part) => part !== undefined)
                   .join(' · ')}

@@ -1,12 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type {
-  ApproverGate,
-  ApproverLine,
-  ApproversGraph,
-  GateAction,
-  NodeWhen,
-  Workflow,
-} from '@gen/api/types.gen';
+import type { ApproverGateDto, ApproverDto, ApproversGraphResponse } from '@gen/api/types.gen';
+import type { GateAction, NodeWhen, Workflow } from '@/shared/api/workflowDocument';
 
 /** One place where an agent stops for a person: a gate of a workflow, and who may say yes there. */
 export interface ApprovalPoint {
@@ -43,12 +37,12 @@ export function approvalPoints(workflows: readonly Workflow[]): ApprovalPoint[] 
 }
 
 /** The gates that stop an agent for good: enforced, and naming nobody. A proposed gate is not enforced yet. */
-export function blocking(unanswered: readonly ApproverGate[]): ApproverGate[] {
+export function blocking(unanswered: readonly ApproverGateDto[]): ApproverGateDto[] {
   return unanswered.filter((gate) => gate.enforce);
 }
 
 /** The server's approvers, the busiest first, then by name. */
-export function busiestFirst(lines: readonly ApproverLine[]): ApproverLine[] {
+export function busiestFirst(lines: readonly ApproverDto[]): ApproverDto[] {
   return [...lines].sort((a, b) => {
     const byCount = b.gates.length - a.gates.length;
     return byCount !== 0 ? byCount : a.approver.localeCompare(b.approver, 'en');
@@ -63,7 +57,7 @@ export interface GraphReading {
 }
 
 /** The server's graph read gate by gate, so each step says what the gates decide. */
-export function readGraph(graph: ApproversGraph): GraphReading {
+export function readGraph(graph: ApproversGraphResponse): GraphReading {
   const answeredBy = new Map<string, string[]>();
   for (const line of graph.approvers)
     for (const gate of line.gates) {

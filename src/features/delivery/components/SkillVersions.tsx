@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, SkillEntry, SkillVersion } from '@gen/api/types.gen';
+import type { MemberResponse, SkillEntryDto, SkillVersionDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -11,10 +11,10 @@ import type { SkillChangeViewModel } from '../useSkills';
 import { Content } from './Content';
 
 export interface SkillVersionsProps {
-  readonly skill: SkillEntry;
+  readonly skill: SkillEntryDto;
   /** Newest first. */
-  readonly versions: readonly SkillVersion[];
-  readonly members: readonly OrgMember[] | undefined;
+  readonly versions: readonly SkillVersionDto[];
+  readonly members: readonly MemberResponse[] | undefined;
   /** Pin and retire are for a team skill: a personal one is promoted first. */
   readonly writable: boolean;
   readonly change: SkillChangeViewModel;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { SpendingLine } from '@gen/api/types.gen';
+import type { SpendingLineDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -17,7 +17,7 @@ export function Breakdown({
   lines,
 }: {
   readonly label: string;
-  readonly lines: readonly SpendingLine[];
+  readonly lines: readonly SpendingLineDto[];
 }): ReactElement {
   const { t, i18n } = useTranslation();
   const step = useStep(lines.length, '', BREAKDOWN_STEP);

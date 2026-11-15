@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GitHubLink, Repo } from '@gen/api/types.gen';
+import type { GitHubLinkDto, RepoResponse } from '@gen/api/types.gen';
 import { MEMBER_IDS } from './organization';
 
 /** The repositories Acme gave the GitHub App. */
-export function initialRepos(): Repo[] {
+export function initialRepos(): RepoResponse[] {
   return [
     {
       name: 'api',
@@ -46,6 +46,7 @@ export function initialRepos(): Repo[] {
       language: 'MDX',
       defaultBranch: 'main',
       archived: false,
+      owners: [],
     },
     {
       name: 'legacy-billing',
@@ -54,12 +55,13 @@ export function initialRepos(): Repo[] {
       defaultBranch: 'master',
       archived: true,
       pushedAt: '2025-03-02T09:00:00Z',
+      owners: [],
     },
   ];
 }
 
 /** The GitHub links of Acme's members: Theo's works, Lena's needs reconnecting, nobody else linked. */
-export function initialGithubLinks(): GitHubLink[] {
+export function initialGithubLinks(): GitHubLinkDto[] {
   return [
     {
       memberId: MEMBER_IDS.theo,

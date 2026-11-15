@@ -11,7 +11,7 @@ export function HostedState({
   failure,
 }: {
   readonly state: string;
-  readonly failure?: string | undefined;
+  readonly failure?: string | null | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   const label = useEnumLabel();
@@ -19,7 +19,7 @@ export function HostedState({
   return (
     <>
       <Badge tone={hostedTone(known)}>{t(`tools.hosted.state.${known}`)}</Badge>
-      {failure === undefined ? null : (
+      {failure === undefined || failure === null ? null : (
         <span className="o-row__meta">
           {t('tools.hosted.failure', {
             failure: label('tools.hosted.failureCode', failure),

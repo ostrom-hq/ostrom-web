@@ -3,7 +3,7 @@
 // up by e-mail, in no organization, reads their account and links their GitHub from it (decision Q-GATES-G1: a gate
 // knows a pull request is theirs only through that link). Nothing reaches GitHub.
 import { expect, test } from '@playwright/test';
-import { zAccount } from '../gen/api/zod.gen';
+import { zAccountResponse } from '../gen/api/zod.gen';
 import { FAKE_GITHUB_CONFIGURED, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
 import { callFromPage, freshEmail, signIn } from './real';
 
@@ -44,7 +44,7 @@ test('a person in no organization links their GitHub from their account', async 
 
   const read = await callFromPage(page, 'GET', '/api/v1/auth/me/account');
   expect(read.status, JSON.stringify(read.body)).toBe(200);
-  expect(zAccount.parse(read.body).providers).toEqual(expect.arrayContaining(['github']));
+  expect(zAccountResponse.parse(read.body).providers).toEqual(expect.arrayContaining(['github']));
   expect(github.requests.filter((r) => r.port === SIGN_IN_PORT).map((r) => r.path)).toEqual(
     expect.arrayContaining(['/login/oauth/authorize', '/login/oauth/access_token', '/user']),
   );

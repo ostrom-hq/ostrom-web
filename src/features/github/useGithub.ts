@@ -7,8 +7,8 @@ import {
   restartAnalysisMutation,
   startAnalysisMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { AnalysisState, Repo } from '@gen/api/types.gen';
-import { zAnalysisState } from '@gen/api/zod.gen';
+import type { AnalysisStateDto, RepoResponse } from '@gen/api/types.gen';
+import { zAnalysisStateDto } from '@gen/api/zod.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
@@ -35,7 +35,7 @@ export interface GithubApp {
 }
 
 export interface Analysis {
-  readonly state: AnalysisState;
+  readonly state: AnalysisStateDto;
   readonly stage: AnalysisStage;
   /** Starts a run, or restarts a failed one; none while one runs, nor for anyone but an owner or an admin. */
   readonly run: { readonly from: AnalysisRunStage; readonly go: () => void } | undefined;
@@ -49,13 +49,13 @@ export interface GithubViewModel {
   /** Where an owner or an admin installs the App, or changes its repositories on GitHub; nobody else may. */
   readonly install: string | undefined;
   /** The repositories the App was given: the ones Ostrom governs. Never read before the App is installed. */
-  readonly repos: readonly Repo[] | undefined;
+  readonly repos: readonly RepoResponse[] | undefined;
   /** The server holds more repositories than one page shows. */
   readonly more: boolean;
   readonly reposFailure: Error | undefined;
   readonly query: string;
   readonly setQuery: (query: string) => void;
-  readonly shown: readonly Repo[];
+  readonly shown: readonly RepoResponse[];
   /** The analysis of the rules; undefined until read. */
   readonly analysis: Analysis | undefined;
   readonly analysisFailure: Error | undefined;
@@ -74,7 +74,7 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
       enabled: installed,
       retry: false,
       refetchInterval: (query) => {
-        const read = zAnalysisState.safeParse(query.state.data);
+        const read = zAnalysisStateDto.safeParse(query.state.data);
         return analysisPollDelay(read.success ? read.data : undefined, query.state.error);
       },
     }),
@@ -126,11 +126,15 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     app:
       app.data === undefined
         ? undefined
-        : { installed: app.data.installed, slug: app.data.slug, page: safeAppPage(app.data.htmlUrl) },
+        : {
+            installed: app.data.installed,
+            slug: app.data.slug ?? undefined,
+            page: safeAppPage(app.data.htmlUrl ?? undefined),
+          },
     appFailure: failureOf(app.error),
     install: manager ? installUrl(org) : undefined,
     repos: items,
-    more: repos.data?.next !== undefined,
+    more: typeof repos.data?.next === 'string',
     reposFailure: failureOf(repos.error),
     query,
     setQuery,

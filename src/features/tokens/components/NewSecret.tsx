@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CreatedToken } from '@gen/api/types.gen';
+import type { CreatedTokenResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { CopyField } from '@/shared/ui/CopyField';
 
 export interface NewSecretProps {
-  readonly created: CreatedToken;
+  readonly created: CreatedTokenResponse;
   readonly onDone: () => void;
 }
 

@@ -8,7 +8,7 @@ import {
   listOrgsQueryKey,
   previewInvitationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { InvitationPreview, OrgView } from '@gen/api/types.gen';
+import type { InvitationPreviewResponse, OrgResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -27,7 +27,7 @@ export type InvitationState = 'missing' | 'reading' | 'dead' | 'open';
 
 /** An invitation read and still alive: what it leads to, and the way in. */
 export interface OpenInvitation {
-  readonly preview: InvitationPreview;
+  readonly preview: InvitationPreviewResponse;
   /** Joins; none until someone signed in is known. */
   readonly accept: (() => void) | undefined;
   /** Opens the organization, for a person already in it; none until someone signed in is known. */
@@ -87,7 +87,7 @@ export function useInvitation(): InvitationViewModel {
   const [entering, setEntering] = useState(false);
   /** Once joined: the organization is the person's choice, kept with their login, and the console opens. */
   const joined = useCallback(
-    async (org: OrgView | string, login: string) => {
+    async (org: OrgResponse | string, login: string) => {
       inviteToken.drop();
       // The lists first, as for an organization created: chosen before, the new one would be taken for one left.
       await Promise.all([

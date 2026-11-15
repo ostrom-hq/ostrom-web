@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentVariant, OrgMember } from '@gen/api/types.gen';
+import type { EnvironmentVariantResponse, MemberResponse } from '@gen/api/types.gen';
 import {
   bindingOf,
   checkVariant,
@@ -11,7 +11,7 @@ import {
   valueState,
 } from './model';
 
-const variant = (overrides: Partial<EnvironmentVariant>): EnvironmentVariant => ({
+const variant = (overrides: Partial<EnvironmentVariantResponse>): EnvironmentVariantResponse => ({
   id: 'v',
   variable: 'A',
   name: 'n',
@@ -23,7 +23,7 @@ const variant = (overrides: Partial<EnvironmentVariant>): EnvironmentVariant => 
   ...overrides,
 });
 
-const member = (id: string, login: string, overrides: Partial<OrgMember> = {}): OrgMember => ({
+const member = (id: string, login: string, overrides: Partial<MemberResponse> = {}): MemberResponse => ({
   id,
   login,
   name: '',

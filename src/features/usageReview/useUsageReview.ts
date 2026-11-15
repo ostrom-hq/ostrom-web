@@ -6,7 +6,7 @@ import {
   listUsageReconciliationsInfiniteOptions,
   reconcileUsageMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { PendingUsage, UsageReconciliation, UsageReview } from '@gen/api/types.gen';
+import type { PendingUsageDto, UsageReconciliationDto, UsageReviewDto } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -54,8 +54,8 @@ export function useUsageLists(
   history: boolean,
   member: string | undefined,
 ): {
-  readonly pending: UsagePageViewModel<PendingUsage>;
-  readonly reconciliations: UsagePageViewModel<UsageReconciliation>;
+  readonly pending: UsagePageViewModel<PendingUsageDto>;
+  readonly reconciliations: UsagePageViewModel<UsageReconciliationDto>;
 } {
   const options = member === undefined ? {} : { query: { member } };
   const tuning = { retry: false, staleTime: 0 };
@@ -75,7 +75,7 @@ export function useUsageLists(
 }
 
 export interface UsageReservationViewModel {
-  readonly review: UsageReview | undefined;
+  readonly review: UsageReviewDto | undefined;
   readonly forbidden: boolean;
   /** 404: neither a hold under review nor a correction of this organization. */
   readonly notFound: boolean;

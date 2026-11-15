@@ -4,7 +4,7 @@ import {
   getInferenceSettingsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { setInferenceSettings } from '@gen/api/sdk.gen';
-import type { InferenceSettings } from '@gen/api/types.gen';
+import type { InferenceSettingsDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -32,7 +32,7 @@ export interface MemberConcurrencyViewModel {
 
 interface Change {
   readonly memberId: string;
-  readonly body: InferenceSettings;
+  readonly body: InferenceSettingsDto;
 }
 
 /**

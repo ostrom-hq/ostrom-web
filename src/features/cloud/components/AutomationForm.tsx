@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationWrite, Workflow } from '@gen/api/types.gen';
+import type { AutomationResponse, AutomationRequest } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useFeature } from '@/shared/capabilities';
@@ -22,14 +22,15 @@ import {
 } from '../automationDraft';
 import { isCloudAgent, isPromptAgent, PROMPT_AGENTS } from '../model';
 import { useRunnableWorkflows } from '../useCloud';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 export interface AutomationFormProps {
   /** The automation being edited; absent, the form writes a new one. */
-  readonly automation?: Automation;
+  readonly automation?: AutomationResponse;
   readonly saving: boolean;
   /** The words of the send button: "Create the automation", "Save". */
   readonly submit: string;
-  readonly onSave: (write: AutomationWrite) => void;
+  readonly onSave: (write: AutomationRequest) => void;
   readonly onCancel: () => void;
 }
 

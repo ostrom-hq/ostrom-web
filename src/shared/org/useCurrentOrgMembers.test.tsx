@@ -2,7 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import type { OrgMember } from '@gen/api/types.gen';
+import type { MemberResponse } from '@gen/api/types.gen';
 import type { ReactElement, ReactNode } from 'react';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import { useOrgStore } from '@/shared/org/orgStore';
@@ -11,7 +11,7 @@ import { setupMockApp } from '@/test/mockApp';
 const { server, db } = setupMockApp();
 
 /** 150 more members: a second page after the first hundred. */
-function moreMembers(): OrgMember[] {
+function moreMembers(): MemberResponse[] {
   return Array.from({ length: 150 }, (_, n) => ({
     id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
     login: `dev-${String(n)}`,

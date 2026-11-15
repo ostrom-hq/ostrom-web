@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ArtifactFileContent } from '@gen/api/types.gen';
+import type { ArtifactFileContentDto } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -57,7 +57,7 @@ function HookCode({ name, version }: { readonly name: string; readonly version: 
   );
 }
 
-function FileSection({ file }: { readonly file: ArtifactFileContent }): ReactElement {
+function FileSection({ file }: { readonly file: ArtifactFileContentDto }): ReactElement {
   const { t } = useTranslation();
   const text = printable(file.contentBase64);
   return (

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleCreateToken, handleListTokens, handleRevokeToken, handleRotateToken } from '@gen/api/msw.gen';
-import type { ApiError, CreatedToken, Token } from '@gen/api/types.gen';
-import { zTokenCreate } from '@gen/api/zod.gen';
+import type { ApiError, CreatedTokenResponse, TokenResponse } from '@gen/api/types.gen';
+import { zCreateTokenRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface TokensState {
   /** The person's live tokens, newest first; never their secret. */
-  tokens: Token[];
+  tokens: TokenResponse[];
   /** The next token number; numbers are never reused, even after a revocation. */
   nextToken: number;
 }
@@ -25,12 +25,14 @@ function secretOf(number: number): string {
 }
 
 export function createTokensHandlers(state: () => TokensState, now: () => Date): HttpHandler[] {
-  const issue = (base: Omit<Token, 'id' | 'hint' | 'createdAt' | 'lastUsedAt'>): CreatedToken => {
+  const issue = (
+    base: Omit<TokenResponse, 'id' | 'hint' | 'createdAt' | 'lastUsedAt'>,
+  ): CreatedTokenResponse => {
     const s = state();
     const number = s.nextToken;
     s.nextToken += 1;
     const secret = secretOf(number);
-    const token: Token = {
+    const token: TokenResponse = {
       ...base,
       id: `tok-${String(number)}`,
       hint: secret.slice(0, 8),
@@ -44,7 +46,7 @@ export function createTokensHandlers(state: () => TokensState, now: () => Date):
   return [
     handleListTokens(() => HttpResponse.json({ tokens: state().tokens })),
     handleCreateToken(async ({ request }) => {
-      const body = zTokenCreate.safeParse(await readJson(request));
+      const body = zCreateTokenRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a name and scopes are needed');
       const name = body.data.name.trim();
       if (name === '' || name.length > 100)
@@ -75,7 +77,12 @@ export function createTokensHandlers(state: () => TokensState, now: () => Date):
       if (old === undefined) return notFound();
       s.tokens = s.tokens.filter((token) => token !== old);
       const { name, kind, scopes, expiresAt } = old;
-      return HttpResponse.json(issue({ name, kind, scopes, expiresAt }), { status: 201 });
+      return HttpResponse.json(
+        issue({ name, kind, scopes, ...(typeof expiresAt === 'string' ? { expiresAt } : {}) }),
+        {
+          status: 201,
+        },
+      );
     }),
   ];
 }

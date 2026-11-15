@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudFilePolicy } from '@gen/api/types.gen';
+import type { CloudFilePolicyDto } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /**
@@ -23,10 +23,10 @@ export interface FilePolicy {
 }
 
 /** The policy as the server reads it, its limits as numbers. */
-export function policyOf(policy: CloudFilePolicy): FilePolicy {
+export function policyOf(policy: CloudFilePolicyDto): FilePolicy {
   return {
     available: policy.available,
-    reason: policy.reason,
+    reason: policy.reason ?? undefined,
     maxFileBytes: policy.maxFileBytes,
     maxMessageBytes: policy.maxMessageBytes,
     maxFiles: Math.min(Math.max(policy.maxFilesPerMessage, 1), MAX_FILES),

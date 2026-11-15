@@ -2,14 +2,30 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { zCloudAgentKind, zCreateCloudSessionBody } from '@gen/api/zod.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
+import { zCreateCloudSessionBody } from '@gen/api/zod.gen';
 import { knownValues } from '@/shared/lib/openEnum';
 import { setupMockApp, visit } from '@/test/mockApp';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { FEATURES } from '@/shared/capabilities/model';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { zCloudAgentKind } from '@/shared/api/vocabulary';
 
 const { server, db, traffic } = setupMockApp();
+
+/** A session as the server describes it: what the tests do not set is the plain value of a session just started. */
+const cloudSession = (
+  session: Pick<CloudSessionResponse, 'id' | 'owner' | 'agent' | 'status' | 'createdAt'> &
+    Partial<CloudSessionResponse>,
+): CloudSessionResponse => ({
+  name: '',
+  desiredStatus: 'running',
+  epoch: 1,
+  limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
+  updatedAt: session.createdAt,
+  ...session,
+});
+
 /** A handler that never answers, to hold a screen in its loading state. */
 const never = async (): Promise<undefined> => {
   await delay('infinite');
@@ -22,7 +38,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -65,7 +81,13 @@ describe('the cloud agents', () => {
 
   it('shows an agent and a status it has no words for as is, and a runner never seen', async () => {
     db.cloudSessions = [
-      { id: 'cs-x', owner: 'maya', agent: 'aider', status: 'paused', createdAt: '2026-10-30T07:00:00.000Z' },
+      cloudSession({
+        id: 'cs-x',
+        owner: 'maya',
+        agent: 'aider',
+        status: 'paused',
+        createdAt: '2026-10-30T07:00:00.000Z',
+      }),
     ];
     db.runners = [{ id: 'r', name: 'r', labels: [], status: 'draining' }];
     visit('/cloud');
@@ -88,8 +110,15 @@ describe('the cloud agents', () => {
         problem: { code, message, retryable: false },
       });
       db.cloudSessions = [
-        { id: 'cs-p', owner: 'maya', agent: 'claude', status: 'paused', expiresAt: soon, createdAt: soon },
-        {
+        cloudSession({
+          id: 'cs-p',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'paused',
+          expiresAt: soon,
+          createdAt: soon,
+        }),
+        cloudSession({
           id: 'cs-r',
           owner: 'maya',
           agent: 'claude',
@@ -97,8 +126,8 @@ describe('the cloud agents', () => {
           expiresAt: soon,
           terminatedReason: 'deleted',
           createdAt: soon,
-        },
-        {
+        }),
+        cloudSession({
           id: 'cs-e',
           owner: 'maya',
           agent: 'claude',
@@ -106,8 +135,8 @@ describe('the cloud agents', () => {
           terminatedReason: 'expired',
           workspaceDeletion: blocked('volume_retained', 'raw'),
           createdAt: soon,
-        },
-        {
+        }),
+        cloudSession({
           id: 'cs-d',
           owner: 'maya',
           agent: 'claude',
@@ -115,8 +144,8 @@ describe('the cloud agents', () => {
           terminatedReason: 'deleted',
           workspaceDeletion: blocked('volume_deletion_stalled', 'raw'),
           createdAt: soon,
-        },
-        {
+        }),
+        cloudSession({
           id: 'cs-o',
           owner: 'maya',
           agent: 'claude',
@@ -124,23 +153,23 @@ describe('the cloud agents', () => {
           terminatedReason: 'other',
           workspaceDeletion: blocked('new_problem', 'The provider said no.'),
           createdAt: soon,
-        },
-        {
+        }),
+        cloudSession({
           id: 'cs-n',
           owner: 'maya',
           agent: 'claude',
           status: 'terminated',
           workspaceDeletion: { state: 'blocked' },
           createdAt: soon,
-        },
-        {
+        }),
+        cloudSession({
           id: 'cs-ok',
           owner: 'maya',
           agent: 'claude',
           status: 'terminated',
           workspaceDeletion: { state: 'proven' },
           createdAt: soon,
-        },
+        }),
       ];
       visit('/cloud');
       await screen.findByText('claude · cs-p', {}, { timeout: 10000 });
@@ -356,7 +385,10 @@ describe('the automations', () => {
         owner: 'maya',
         enabled: true,
         trigger: { kind: 'cron' },
-        action: {},
+        action: { prompt: '' },
+        variables: [],
+        overlap: 'skip',
+        maxRunsPerDay: 24,
         version: 1,
         createdAt: '2026-10-01T00:00:00.000Z',
         updatedAt: '2026-10-01T00:00:00.000Z',
@@ -368,7 +400,9 @@ describe('the automations', () => {
         enabled: true,
         trigger: { kind: 'cron', cron: '@hourly' },
         action: { agent: 'gemini', prompt: 'Hi' },
+        variables: [],
         overlap: 'queue',
+        maxRunsPerDay: 24,
         version: 1,
         createdAt: '2026-10-01T00:00:00.000Z',
         updatedAt: '2026-10-01T00:00:00.000Z',
@@ -716,7 +750,7 @@ describe('the preparation recipe of a cloud session', () => {
   it('shows the phase a session is preparing, and what to do about a failed preparation', async () => {
     db.cloudSessions = [
       ...db.cloudSessions,
-      {
+      cloudSession({
         id: 'cs-retry',
         name: 'Clone again',
         owner: 'maya',
@@ -725,8 +759,8 @@ describe('the preparation recipe of a cloud session', () => {
         phase: 'cloning_repositories',
         failure: { code: 'preparation_failed', message: 'Cloning acme/web failed.', retryable: true },
         createdAt: '2026-10-30T07:00:00.000Z',
-      },
-      {
+      }),
+      cloudSession({
         id: 'cs-idle',
         name: 'Idle',
         owner: 'maya',
@@ -735,7 +769,7 @@ describe('the preparation recipe of a cloud session', () => {
         phase: 'scheduling',
         failure: { code: 'idle_timeout', message: 'Paused after 30 minutes without activity.' },
         createdAt: '2026-10-30T07:00:00.000Z',
-      },
+      }),
     ];
     visit('/cloud');
     await screen.findByText('Fix the flaky invoice test');

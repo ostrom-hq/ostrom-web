@@ -16,13 +16,13 @@ import {
 } from '@gen/api/msw.gen';
 import type {
   DiscordLink,
-  NotificationPreferences,
+  NotificationPreferencesBody,
   NotificationSetting,
-  PushDevice,
+  PushDeviceDto,
   PushTestResult,
   SlackLink,
 } from '@gen/api/types.gen';
-import { zNotificationPreferences, zNotificationSettingChange } from '@gen/api/zod.gen';
+import { zNotificationPreferencesBody, zNotificationSettingChange } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { z } from 'zod';
 import { CLOCK_TIME, TIME_ZONE } from '@/features/notifications/model';
@@ -35,11 +35,11 @@ export interface NotificationsState {
   /** Every switch of the demo person, defaults filled. */
   notificationSwitches: NotificationSetting[];
   /** What the demo person's phone tells them (`/me/notifications`). */
-  notificationPreferences: NotificationPreferences;
+  notificationPreferences: NotificationPreferencesBody;
   /** Who sends the pushes (the instance's `push` settings section): `off` sends nothing. */
   pushProvider: string;
   /** The demo person's phones, the most recently seen first (`/push-devices`). */
-  pushDevices: PushDevice[];
+  pushDevices: PushDeviceDto[];
   /** What each of the demo person's phones answers to a test, in order; empty when they have none. */
   pushPhones: PushTestResult[];
   /** When the last test went out, for the server's ten seconds between two. */
@@ -66,15 +66,16 @@ export const DISCORD_AUTHORIZE = 'https://discord.com/oauth2/authorize';
 export const PUSH_TEST_WINDOW_MS = 10_000;
 
 /** The preferences a body says, with its quiet hours only when it has some. */
-function bodyPreferences(body: z.infer<typeof zNotificationPreferences>): NotificationPreferences {
-  const { requests, decisions, spending, quietHours } = body;
+function bodyPreferences(body: z.infer<typeof zNotificationPreferencesBody>): NotificationPreferencesBody {
+  const { requests, decisions, spending } = body;
+  const quietHours = body.quietHours ?? undefined;
   return quietHours === undefined
     ? { requests, decisions, spending }
     : { requests, decisions, spending, quietHours };
 }
 
-function validQuietHours(preferences: NotificationPreferences): boolean {
-  const quiet = preferences.quietHours;
+function validQuietHours(preferences: NotificationPreferencesBody): boolean {
+  const quiet = preferences.quietHours ?? undefined;
   if (quiet === undefined) return true;
   return (
     CLOCK_TIME.test(quiet.start) &&
@@ -123,7 +124,7 @@ export function createNotificationsHandlers(
     }),
     handleGetNotificationPreferences(() => HttpResponse.json(state().notificationPreferences)),
     handleSetNotificationPreferences(async ({ request }) => {
-      const body = zNotificationPreferences.safeParse(await readJson(request));
+      const body = zNotificationPreferencesBody.safeParse(await readJson(request));
       const preferences = body.success ? bodyPreferences(body.data) : undefined;
       if (preferences === undefined || !validQuietHours(preferences))
         return refusal(

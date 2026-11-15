@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NotificationPreferences } from '@gen/api/types.gen';
+import type { NotificationPreferencesBody } from '@gen/api/types.gen';
 import { act, renderHook } from '@testing-library/react';
 import { usePhoneForm } from './usePhoneForm';
 
-const first: NotificationPreferences = { requests: true, decisions: true, spending: false };
-const elsewhere: NotificationPreferences = { requests: false, decisions: true, spending: true };
+const first: NotificationPreferencesBody = { requests: true, decisions: true, spending: false };
+const elsewhere: NotificationPreferencesBody = { requests: false, decisions: true, spending: true };
 
 function render() {
   return renderHook(({ preferences }) => usePhoneForm(preferences, () => 'Europe/Paris'), {
@@ -35,7 +35,7 @@ describe('the phone form', () => {
     expect(view.result.current.dirty).toBe(true);
     view.rerender({ preferences: elsewhere });
     expect(view.result.current.form).toMatchObject({ requests: true, decisions: false, spending: false });
-    const saved: NotificationPreferences = { requests: true, decisions: false, spending: false };
+    const saved: NotificationPreferencesBody = { requests: true, decisions: false, spending: false };
     act(() => {
       view.result.current.adopt(saved);
     });

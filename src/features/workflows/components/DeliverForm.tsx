@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Deliverable, WorkflowRun } from '@gen/api/types.gen';
+import type { WorkflowRun } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -7,6 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
 import type { DeliveryProblem } from '../runs';
 import type { RunActionsViewModel } from '../useRuns';
+import type { Deliverable } from '@/shared/api/workflowDocument';
 
 /**
  * What the agent step the run is at asked to be handed in: the starter writes it here when the agent could not (it is

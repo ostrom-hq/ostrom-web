@@ -4,7 +4,7 @@ import {
   listBudgetOverridesInfiniteOptions,
   revokeBudgetOverrideMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { BudgetOverride } from '@gen/api/types.gen';
+import type { BudgetOverrideDto } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -13,7 +13,7 @@ import type { OverrideGrant } from './overrides';
 
 export interface BudgetOverridesViewModel {
   /** The member's grants, newest first, every page read so far; undefined while the first loads. */
-  readonly overrides: readonly BudgetOverride[] | undefined;
+  readonly overrides: readonly BudgetOverrideDto[] | undefined;
   /** The override in force now, as the server said on its first page. */
   readonly activeId: string | undefined;
   readonly failure: Error | undefined;
@@ -68,7 +68,7 @@ export function useBudgetOverrides(login: string): BudgetOverridesViewModel {
   const { fetchNextPage } = query;
   return {
     overrides,
-    activeId: query.data?.pages[0]?.activeId,
+    activeId: query.data?.pages[0]?.activeId ?? undefined,
     failure: failureOf(query.error),
     more: query.hasNextPage,
     loadingMore: query.isFetchingNextPage,

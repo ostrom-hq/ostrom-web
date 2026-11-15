@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ImportItem, ImportReport } from '@gen/api/types.gen';
+import type { ImportReportDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
+import type { ImportAction } from '@/shared/api/vocabulary';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { countsOf, type ImportMode, REPORT_ACTIONS } from '../model';
 
 /** Green for what was written, amber for what waits or was left out; garnet stays for the yes. */
-const ACTION_TONE: Readonly<Record<Known<ImportItem['action']>, BadgeTone>> = {
+const ACTION_TONE: Readonly<Record<Known<ImportAction>, BadgeTone>> = {
   planned: 'neutral',
   created: 'success',
   updated: 'success',
@@ -19,7 +20,7 @@ const ACTION_TONE: Readonly<Record<Known<ImportItem['action']>, BadgeTone>> = {
 
 export interface ImportReportViewProps {
   readonly mode: ImportMode;
-  readonly report: ImportReport;
+  readonly report: ImportReportDto;
 }
 
 /** A run's report: how many lines of each action, then each line, in the order the server applied them. */
@@ -51,7 +52,7 @@ export function ImportReportView({ mode, report }: ImportReportViewProps): React
               <span className="o-row__main">
                 <span className="o-row__title o-mono">{item.name}</span>
                 <span className="o-row__meta">
-                  {item.reason === undefined
+                  {item.reason === undefined || item.reason === null
                     ? enumText('imports.kind', item.kind)
                     : `${enumText('imports.kind', item.kind)} · ${item.reason}`}
                 </span>

@@ -7,10 +7,11 @@ import {
   handleListWorkflowRuns,
   handleStartWorkflowRun,
 } from '@gen/api/msw.gen';
-import type { Workflow, WorkflowRun } from '@gen/api/types.gen';
+import type { WorkflowRun } from '@gen/api/types.gen';
 import { zDeliverRequest, zStartWorkflowRunBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 /** A page of runs, as the server serves them. */
 export const RUNS_PAGE = 50;
@@ -117,7 +118,7 @@ export function createRunHandlers(
         startedBy: login(),
         source: 'manual',
         inputs: body.data.inputs ?? {},
-        ...(body.data.repository === undefined ? {} : { repository: body.data.repository }),
+        ...(typeof body.data.profileId === 'string' ? { profileId: body.data.profileId } : {}),
         startedAt: now().toISOString(),
       };
       state().workflowRuns.unshift(run);

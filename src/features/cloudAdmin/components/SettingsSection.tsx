@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
-import { automationsOf, DEFAULT_AUTOMATIONS, minutesOf } from '../model';
+import { automationsOf, minutesOf } from '../model';
 import { useCloudSettings } from '../useCloudAdmin';
 import { SaveOutcome } from './SaveOutcome';
 import { Field } from './Field';
@@ -22,8 +22,8 @@ export function SettingsSection(): ReactElement {
             // A settings read again (a save, a reload) starts the form afresh from it.
             key={settings.updatedAt ?? 'stored-nothing'}
             minutes={settings.backgroundWorkMaxMinutes}
-            automations={settings.maxRunningAutomationsPerMember ?? DEFAULT_AUTOMATIONS}
-            updatedAt={settings.updatedAt}
+            automations={settings.maxRunningAutomationsPerMember}
+            updatedAt={settings.updatedAt ?? undefined}
             view={view}
           />
         )}

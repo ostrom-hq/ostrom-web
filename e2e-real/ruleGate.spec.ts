@@ -6,8 +6,8 @@
 // action of the catalogue the server ships (ostrom-server#231 serves it as the contract says, ostrom-core#82).
 import { expect, test } from '@playwright/test';
 import type { z } from 'zod';
-import { zAskGateResponse, zGateCatalog } from '../gen/api/zod.gen';
-import { askingToken, loginOf, requestOf, uniqueRun, withToken } from './gate';
+import { zAskGateResponse } from '../gen/api/zod.gen';
+import { askingToken, catalogActionsOf, loginOf, requestOf, uniqueRun, withToken } from './gate';
 import { callFromPage, ownerOfNewOrganization } from './real';
 
 test('3.2 an owner writes a rule with a gate on the console; once accepted, its action waits for a yes', async ({
@@ -45,7 +45,7 @@ test('3.2 an owner writes a rule with a gate on the console; once accepted, its 
       const catalog = await callFromPage(page, 'GET', '/api/v1/gates/catalog', undefined, org);
       action =
         catalog.status === 200
-          ? zGateCatalog.parse(catalog.body).actions.find((item) => item.label === label)?.class
+          ? catalogActionsOf(catalog.body).find((item) => item.label === label)?.class
           : undefined;
       return action;
     })
@@ -111,7 +111,7 @@ test('3.2 an owner puts a gate on an action of the catalogue; once accepted, ask
       const catalog = await callFromPage(page, 'GET', '/api/v1/gates/catalog', undefined, org);
       const gate =
         catalog.status === 200
-          ? zGateCatalog.parse(catalog.body).actions.find((item) => item.class === 'migration')?.gate
+          ? catalogActionsOf(catalog.body).find((item) => item.class === 'migration')?.gate
           : undefined;
       return gate === undefined || gate === null
         ? null

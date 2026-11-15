@@ -5,7 +5,7 @@ import {
   listMyMcpServersQueryKey,
   promoteMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { McpServer } from '@gen/api/types.gen';
+import type { McpServerDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -15,7 +15,7 @@ import { memberLabel } from './model';
 
 export interface PersonalMcpReviewViewModel {
   /** The members' own servers, by owner, with their definition: never a credential. */
-  readonly servers: readonly McpServer[] | undefined;
+  readonly servers: readonly McpServerDto[] | undefined;
   /** "Maya Lind (maya)" for an owner the member list knows, their id otherwise. */
   readonly ownerOf: (id: string) => string;
   readonly failure: Error | undefined;

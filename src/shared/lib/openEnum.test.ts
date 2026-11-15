@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import { zAnthropicError, zRunStatus } from '@gen/api/zod.gen';
+import { zTodoCheckPrMerged } from '@gen/api/zod.gen';
 import { isKnown, knownOr, knownValues } from '@/shared/lib/openEnum';
+import { zRunStatus } from '@/shared/api/vocabulary';
 
 describe('the generated enums are open (CS-04)', () => {
   it('accepts a value a newer server sends, and still refuses what is not text', () => {
@@ -17,9 +18,8 @@ describe('the generated enums are open (CS-04)', () => {
   });
 
   it('keeps an enum of one value closed: a discriminator is not open', () => {
-    const error = { error: { type: 'overloaded', message: 'busy' } };
-    expect(zAnthropicError.safeParse({ type: 'error', ...error }).success).toBe(true);
-    expect(zAnthropicError.safeParse({ type: 'other', ...error }).success).toBe(false);
+    expect(zTodoCheckPrMerged.safeParse({ type: 'pr_merged', repo: 'acme/app' }).success).toBe(true);
+    expect(zTodoCheckPrMerged.safeParse({ type: 'other', repo: 'acme/app' }).success).toBe(false);
   });
 });
 

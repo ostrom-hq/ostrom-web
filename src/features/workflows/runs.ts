@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type {
-  Deliverable,
-  NodeVisit,
-  RunStatus,
-  Workflow,
-  WorkflowInput,
-  WorkflowRun,
-} from '@gen/api/types.gen';
+import type { NodeVisit, WorkflowRun } from '@gen/api/types.gen';
+import type { RunStatus } from '@/shared/api/vocabulary';
+import type { Deliverable, Workflow, WorkflowInput } from '@/shared/api/workflowDocument';
 
 /** The stable failure codes a run ends with (`failureCode`), each with words of its own in the console. */
 export const FAILURE_CODES = [
@@ -39,8 +34,8 @@ export interface FailureWords {
  * The words for a run's `failureCode`; undefined for a code the console does not know (the code of a refusal that
  * cannot be retried, or one a newer server adds), where the server's own sentence (`failure`) is shown instead.
  */
-export function failureWords(code: string | undefined): FailureWords | undefined {
-  if (code === undefined) return undefined;
+export function failureWords(code: string | null | undefined): FailureWords | undefined {
+  if (typeof code !== 'string') return undefined;
   const known = FAILURE_CODES.find((candidate) => candidate === code);
   if (known !== undefined) return { key: `workflows.runs.failureCode.${known}` as const };
   const visits = /^max_visits:(.+)$/.exec(code);
@@ -63,9 +58,14 @@ export function finished(run: WorkflowRun): boolean {
   return run.status === 'succeeded' || run.status === 'failed' || run.status === 'cancelled';
 }
 
+/** A visit that has not ended: the server leaves its end out, or says null. */
+export function isOpen(visit: NodeVisit): boolean {
+  return (visit.endedAt ?? undefined) === undefined;
+}
+
 /** The visit a run is at: the latest one still open. */
 export function openVisit(run: WorkflowRun): NodeVisit | undefined {
-  return run.visits?.findLast((visit) => visit.endedAt === undefined);
+  return run.visits?.findLast(isOpen);
 }
 
 /**
@@ -237,16 +237,4 @@ export function startProblem(
       return { input: input.id, label: input.label, kind: 'tooLong' };
   }
   return undefined;
-}
-
-/** Whether a repository reads `owner/name`. */
-export function repositoryOk(text: string): boolean {
-  return text === '' || /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(text);
-}
-
-/** Whether a workflow has an agent step that names no repository: the run then needs one. */
-export function needsRepository(workflow: Workflow): boolean {
-  return workflow.nodes.some(
-    (node) => node.kind === 'agent' && (node.run?.repository === undefined || node.run.repository === ''),
-  );
 }

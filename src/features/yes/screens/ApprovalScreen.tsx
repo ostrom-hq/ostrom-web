@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Approval, ApprovalAction, ApprovalCommit, CheckState } from '@gen/api/types.gen';
+import type { Approval } from '@gen/api/types.gen';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { type ReactElement, useEffect } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { knownOr, type Known } from '@/shared/lib/openEnum';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { type Viewer, useViewer } from '@/shared/auth/useViewer';
 import '@/shared/ui/decision.css';
 import { safeHref } from '@/shared/lib/safeHref';
-import { formatAbsolute } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
@@ -19,7 +17,13 @@ import { DecisionCard } from '../components/DecisionCard';
 import { FailureBanner } from '../components/FailureBanner';
 import { SignInNotice } from '../components/SignInNotice';
 import { type ApprovalTone, approvalTone, askedByViewer, shortSha } from '../model';
-import { type AnswerViewModel, useAnswerApproval, useGithubLinkRequired, useShownApproval } from '../useYes';
+import {
+  type AnswerViewModel,
+  useAnswerApproval,
+  useApprovalAction,
+  useGithubLinkRequired,
+  useShownApproval,
+} from '../useYes';
 
 const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   'waiting-you': 'signal',
@@ -28,13 +32,6 @@ const TONES: Readonly<Record<ApprovalTone, BadgeTone>> = {
   refused: 'danger',
   expired: 'neutral',
   unknown: 'neutral',
-};
-
-const CHECK_TONES: Readonly<Record<Known<CheckState>, BadgeTone>> = {
-  success: 'success',
-  failure: 'danger',
-  pending: 'warning',
-  skipped: 'neutral',
 };
 
 export function ApprovalScreen(): ReactElement {
@@ -49,6 +46,7 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
   // The server refused the answer because the request changed: the page shows the new version at once.
   const { approval, failure, newer, readNewer } = useShownApproval(approvalId, answer.changed);
   const linkRequired = useGithubLinkRequired(approvalId);
+  const action = useApprovalAction(approvalId);
   const viewer = useViewer();
   const navigate = useNavigate();
   const shown = approval?.id;
@@ -78,7 +76,13 @@ function ApprovalPage({ approvalId }: { readonly approvalId: string }): ReactEle
           <Skeleton rows={2} />
         ) : null
       ) : (
-        <ApprovalDetail approval={approval} viewer={viewer} answer={answer} linkRequired={linkRequired} />
+        <ApprovalDetail
+          approval={approval}
+          viewer={viewer}
+          answer={answer}
+          action={action}
+          linkRequired={linkRequired}
+        />
       )}
     </div>
   );
@@ -88,20 +92,25 @@ interface ApprovalDetailProps {
   readonly approval: Approval;
   readonly viewer: Viewer;
   readonly answer: AnswerViewModel;
+  readonly action: string | undefined;
   readonly linkRequired: boolean;
 }
 
-/** The proof in a fixed order, before any button: action, changes, checks, who, why, technical details. */
-function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDetailProps): ReactElement {
-  const { t, i18n } = useTranslation();
+/** The proof in a fixed order, before any button: changes, evidence, who, why, technical details. */
+function ApprovalDetail({
+  approval,
+  viewer,
+  answer,
+  action,
+  linkRequired,
+}: ApprovalDetailProps): ReactElement {
+  const { t } = useTranslation();
   const enumText = useEnumLabel();
   const tone = approvalTone(approval, viewer.login);
-  // Details when the server has them; an empty list of details still shows the bare commits.
-  const commits: readonly ApprovalCommit[] =
-    approval.commitDetails !== undefined && approval.commitDetails.length > 0
-      ? approval.commitDetails
-      : (approval.commits ?? []).map((sha) => ({ sha, title: '' }));
-  const checks = approval.checks ?? [];
+  // The server names the commits by their sha only.
+  const commits = approval.commits ?? [];
+  const sha = approval.sha ?? undefined;
+  const workflowId = approval.workflowId ?? undefined;
   const evidence = approval.evidence ?? [];
   const askers = approval.askedBy ?? [];
   return (
@@ -111,39 +120,22 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
           {enumText('yes.tone', tone === 'unknown' ? approval.status : tone)}
         </Badge>
         <h1 className="ys-h1">{approval.title}</h1>
-        <p className="ys-meta">
-          {approval.repo}
-          {approval.repo !== undefined && approval.expiresAt !== undefined ? ' · ' : null}
-          {approval.expiresAt === undefined ? null : (
-            <time dateTime={approval.expiresAt}>
-              {t('yes.detail.expires', { when: formatAbsolute(approval.expiresAt, i18n.language) })}
-            </time>
-          )}
-        </p>
+        <p className="ys-meta">{approval.repo}</p>
       </header>
 
-      {approval.action === undefined ? null : <ActionSection approval={approval} action={approval.action} />}
-
-      {approval.sha === undefined && commits.length === 0 ? null : (
+      {sha === undefined && commits.length === 0 ? null : (
         <section className="o-card ys-section" aria-labelledby="ys-changes">
           <h2 id="ys-changes" className="ys-label">
             {t('yes.detail.changes')}
           </h2>
-          {approval.sha === undefined ? null : (
-            <p className="ys-small ys-meta">{t('yes.detail.commit', { sha: shortSha(approval.sha) })}</p>
+          {sha === undefined ? null : (
+            <p className="ys-small ys-meta">{t('yes.detail.commit', { sha: shortSha(sha) })}</p>
           )}
           {commits.length === 0 ? null : (
             <ul className="ys-commits">
               {commits.map((commit) => (
-                <li key={commit.sha}>
-                  {safeHref(commit.url) === undefined ? (
-                    <code>{shortSha(commit.sha)}</code>
-                  ) : (
-                    <a href={safeHref(commit.url)} target="_blank" rel="noreferrer noopener">
-                      <code>{shortSha(commit.sha)}</code>
-                    </a>
-                  )}{' '}
-                  <span>{commit.title}</span>
+                <li key={commit}>
+                  <code>{shortSha(commit)}</code>
                 </li>
               ))}
             </ul>
@@ -151,47 +143,27 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
         </section>
       )}
 
-      {checks.length === 0 && evidence.length === 0 ? null : (
+      {evidence.length === 0 ? null : (
         <section className="o-card ys-section" aria-labelledby="ys-checks">
           <h2 id="ys-checks" className="ys-label">
             {t('yes.detail.checks')}
           </h2>
-          {checks.length === 0 ? null : (
-            <ul className="ys-checks">
-              {checks.map((check, index) => (
-                <li key={`${String(index)}-${check.name}`} className="ys-row">
-                  <Badge tone={knownOr(CHECK_TONES, check.state, 'neutral')}>
-                    {enumText('yes.check', check.state)}
-                  </Badge>
-                  {safeHref(check.url) === undefined ? (
-                    <span>{check.name}</span>
+          <dl className="ys-kv">
+            {evidence.map((item, index) => (
+              <div key={`${String(index)}-${item.label}`} className="ys-kv__row">
+                <dt>{item.label}</dt>
+                <dd>
+                  {safeHref(item.url) === undefined ? (
+                    item.value
                   ) : (
-                    <a href={safeHref(check.url)} target="_blank" rel="noreferrer noopener">
-                      {check.name}
+                    <a href={safeHref(item.url)} target="_blank" rel="noreferrer noopener">
+                      {item.value}
                     </a>
                   )}
-                </li>
-              ))}
-            </ul>
-          )}
-          {evidence.length === 0 ? null : (
-            <dl className="ys-kv">
-              {evidence.map((item, index) => (
-                <div key={`${String(index)}-${item.label}`} className="ys-kv__row">
-                  <dt>{item.label}</dt>
-                  <dd>
-                    {safeHref(item.url) === undefined ? (
-                      item.value
-                    ) : (
-                      <a href={safeHref(item.url)} target="_blank" rel="noreferrer noopener">
-                        {item.value}
-                      </a>
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
+                </dd>
+              </div>
+            ))}
+          </dl>
         </section>
       )}
 
@@ -216,8 +188,8 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
           {t('yes.detail.why')}
         </h2>
         <p>{t('yes.detail.requestedFrom', { who: approval.requestedFrom })}</p>
-        {approval.workflowId === undefined ? null : (
-          <p className="ys-small ys-meta">{t('yes.detail.workflow', { workflow: approval.workflowId })}</p>
+        {workflowId === undefined ? null : (
+          <p className="ys-small ys-meta">{t('yes.detail.workflow', { workflow: workflowId })}</p>
         )}
       </section>
 
@@ -228,22 +200,16 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
             <dt>{t('yes.detail.requestId')}</dt>
             <dd>{approval.id}</dd>
           </div>
-          {approval.sha === undefined ? null : (
+          {sha === undefined ? null : (
             <div className="ys-kv__row">
               <dt>{t('yes.detail.fullSha')}</dt>
-              <dd>{approval.sha}</dd>
+              <dd>{sha}</dd>
             </div>
           )}
           <div className="ys-kv__row">
             <dt>{t('yes.detail.fingerprint')}</dt>
             <dd>{approval.shownDigest}</dd>
           </div>
-          {approval.taskId === undefined ? null : (
-            <div className="ys-kv__row">
-              <dt>{t('yes.detail.task')}</dt>
-              <dd>{approval.taskId}</dd>
-            </div>
-          )}
         </dl>
       </details>
 
@@ -253,51 +219,12 @@ function ApprovalDetail({ approval, viewer, answer, linkRequired }: ApprovalDeta
           viewer={viewer.login}
           viewerName={viewer.name}
           answer={answer}
+          action={action}
           linkRequired={linkRequired}
         />
       ) : (
         <DecisionCard approval={approval} receipt={answer.receipt} comment={answer.comment} />
       )}
     </>
-  );
-}
-
-/** The typed action first: what a yes lets through, how risky it is and how large the change. */
-function ActionSection({
-  approval,
-  action,
-}: {
-  readonly approval: Approval;
-  readonly action: ApprovalAction;
-}): ReactElement {
-  const { t } = useTranslation();
-  const enumText = useEnumLabel();
-  const head = shortSha(action.headSha);
-  return (
-    <section className="o-card ys-section" aria-labelledby="ys-action">
-      <h2 id="ys-action" className="ys-label">
-        {t('yes.detail.action')}
-      </h2>
-      <p>
-        {enumText('yes.detail.kind', action.kind, { ref: action.ref, repo: action.repo })}{' '}
-        {action.risk === 'high' ? <Badge tone="danger">{t('yes.detail.highRisk')}</Badge> : null}
-      </p>
-      {action.risk === 'high' ? <p className="ys-small">{t('yes.detail.highRiskHint')}</p> : null}
-      <p className="ys-small ys-meta">
-        <code>
-          {action.baseSha === undefined
-            ? head
-            : t('yes.detail.range', { base: shortSha(action.baseSha), head })}
-        </code>
-        {approval.diffStats === undefined
-          ? null
-          : ` · ${t('yes.detail.diff', {
-              count: approval.diffStats.files,
-              additions: approval.diffStats.additions,
-              deletions: approval.diffStats.deletions,
-            })}`}
-      </p>
-      {approval.diffTruncated === true ? <p className="ys-small">{t('yes.detail.truncated')}</p> : null}
-    </section>
   );
 }

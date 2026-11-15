@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { client } from '@gen/api/client.gen';
-import type { CloudEvent } from '@gen/api/types.gen';
-import { zCloudEvent } from '@gen/api/zod.gen';
+import type { CloudEventDto } from '@gen/api/types.gen';
+import { zCloudEventDto } from '@gen/api/zod.gen';
 
 /** How a followed stream ended for good: the session terminated (`end`), or the caller lost access (`denied`). */
 export type StreamEnd = 'ended' | 'denied';
@@ -24,7 +24,7 @@ export class StreamRefused extends Error {
 export interface FollowListener {
   /** A connection was accepted. */
   readonly opened: () => void;
-  readonly event: (event: CloudEvent) => void;
+  readonly event: (event: CloudEventDto) => void;
   /** The connection dropped; the next one starts in `waitMs`. */
   readonly reconnecting: (waitMs: number) => void;
 }
@@ -68,19 +68,12 @@ function transientStatus(status: number | undefined): boolean {
   return status === undefined || status === 408 || status === 429 || status >= 500;
 }
 
-/** The event as the contract types it: its sequence and epoch parse to bigints (int64), read back as numbers. */
-function cloudEventOf(data: unknown): CloudEvent | undefined {
-  const parsed = zCloudEvent.safeParse(data);
+/** The event as the contract types it, or undefined when the frame is not one. */
+function cloudEventOf(data: unknown): CloudEventDto | undefined {
+  const parsed = zCloudEventDto.safeParse(data);
   if (!parsed.success) return undefined;
-  const { seq, epoch, type, at, data: fields, feed } = parsed.data;
-  return {
-    seq: Number(seq),
-    type,
-    at,
-    epoch: Number(epoch),
-    data: fields,
-    ...(feed === undefined ? {} : { feed }),
-  };
+  const { feed, ...event } = parsed.data;
+  return { ...event, ...(feed === undefined ? {} : { feed }) };
 }
 
 async function connect(

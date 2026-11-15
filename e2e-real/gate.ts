@@ -3,15 +3,21 @@
 // accepted workflow whose gate node names the approvers of pushes to main of a repository, and a personal token with
 // `gates:ask` that asks for such a push. Shared by the journeys that read or answer it.
 import { expect, type Page, request, test } from '@playwright/test';
-import { zAskGateResponse, zCreateTokenResponse, zListApprovalsResponse, zMe } from '../gen/api/zod.gen';
+import {
+  zAskGateResponse,
+  zCreateTokenResponse,
+  zListApprovalsResponse,
+  zMeResponse,
+} from '../gen/api/zod.gen';
 import { bodyOf, callFromPage, joinAs, ownerOfNewOrganization } from './real';
+import * as z from 'zod/mini';
 import { pick } from 'zod/mini';
 
 /** The GitHub login the server knows the person signed in on `page` by: what a gate node names. */
 export async function loginOf(page: Page): Promise<string> {
   const me = await callFromPage(page, 'GET', '/api/v1/auth/me');
   expect(me.status).toBe(200);
-  return zMe.parse(me.body).dev.login;
+  return zMeResponse.parse(me.body).dev.login;
 }
 
 /** A name no other journey uses. */
@@ -170,4 +176,31 @@ export async function ownerAndMember(
   const { id } = await ownerOfNewOrganization(page, 'ada');
   await joinAs(page, id, other, 'ben', role);
   return { org: id, owner: await loginOf(page), member: await loginOf(other) };
+}
+
+/**
+ * The gate catalogue, which the server document leaves a free JSON object: its actions, each with the gate that covers
+ * it in the organization (`null` or absent when none does), read with only the fields a journey checks.
+ */
+const zCatalogActions = z.object({
+  actions: z.array(
+    z.object({
+      class: z.string(),
+      label: z.optional(z.string()),
+      gate: z.nullish(
+        z.object({
+          approvers: z.array(z.string()),
+          enforce: z.boolean(),
+          basis: z.string(),
+        }),
+      ),
+    }),
+  ),
+});
+
+export type CatalogAction = z.output<typeof zCatalogActions>['actions'][number];
+
+/** The actions of a catalogue answer; a journey that reads something else fails here, with Zod's message. */
+export function catalogActionsOf(body: unknown): CatalogAction[] {
+  return zCatalogActions.parse(body).actions;
 }

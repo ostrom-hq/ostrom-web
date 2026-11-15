@@ -35,7 +35,7 @@ export function PersonalMcpReview(): ReactElement {
                     <span className="o-row__title o-mono">{server.name}</span>
                     <span className="o-row__meta">
                       {[
-                        server.owner === undefined
+                        server.owner === undefined || server.owner === null
                           ? undefined
                           : t('tools.review.owner', { who: view.ownerOf(server.owner) }),
                         server.url,

@@ -49,7 +49,7 @@ function OwnLink({ own }: { readonly own: ReturnType<typeof useOwnLink> }): Reac
       </h2>
       <LoadState data={own.link} failure={own.failure} rows={2}>
         {(link) => {
-          const date = link.linkedAt === undefined ? undefined : readableDate(link.linkedAt, i18n.language);
+          const date = readableDate(link.linkedAt, i18n.language);
           return (
             <>
               <div className="o-gh__head">
@@ -58,7 +58,7 @@ function OwnLink({ own }: { readonly own: ReturnType<typeof useOwnLink> }): Reac
                 </Badge>
               </div>
               <p className="o-gh__wrap">{enumText('github.link.body', link.state)}</p>
-              {link.login === undefined ? null : (
+              {link.login === undefined || link.login === null ? null : (
                 <Facts
                   facts={[
                     { label: t('github.link.account'), value: link.login, mono: true },

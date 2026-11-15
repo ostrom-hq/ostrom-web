@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleImportTeamCode } from '@gen/api/msw.gen';
-import type { ImportItem, ImportReport, Organization } from '@gen/api/types.gen';
+import type { ImportItemDto, ImportReportDto, MeOrganizationResponse } from '@gen/api/types.gen';
 import { zImportTeamCodeBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
@@ -14,8 +14,8 @@ export interface TeamCodeImportState extends OrgsState {
   cutoverAvailable: boolean;
 }
 
-function reportOf(items: ImportItem[]): ImportReport {
-  const count = (action: ImportItem['action']): number =>
+function reportOf(items: ImportItemDto[]): ImportReportDto {
+  const count = (action: ImportItemDto['action']): number =>
     items.filter((item) => item.action === action).length;
   return {
     items,
@@ -33,7 +33,7 @@ function reportOf(items: ImportItem[]): ImportReport {
  */
 export function createTeamCodeImportHandlers(
   state: () => TeamCodeImportState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   now: () => Date,
 ): HttpHandler[] {
   return [
@@ -60,8 +60,8 @@ export function createTeamCodeImportHandlers(
       if (!body.success)
         return refusal(400, 'invalid_request', 'This is not what `ostrom import teamcode` sends.');
       const done = new Set(s.imported[organization.id] ?? []);
-      const items: ImportItem[] = [];
-      const write = (kind: ImportItem['kind'], name: string): void => {
+      const items: ImportItemDto[] = [];
+      const write = (kind: ImportItemDto['kind'], name: string): void => {
         const key = `${kind}:${name}`;
         if (done.has(key)) items.push({ kind, name, action: 'unchanged' });
         else if (dryRun) items.push({ kind, name, action: 'planned' });

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, Repo } from '@gen/api/types.gen';
+import type { MemberResponse, RepoResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   ANALYSIS_POLL_MS,
@@ -15,8 +15,8 @@ import {
   stageOf,
 } from './model';
 
-function repo(name: string, extra: Partial<Repo> = {}): Repo {
-  return { name, defaultBranch: 'main', archived: false, ...extra };
+function repo(name: string, extra: Partial<RepoResponse> = {}): RepoResponse {
+  return { name, defaultBranch: 'main', archived: false, owners: [], ...extra };
 }
 
 describe('the repositories shown', () => {
@@ -41,10 +41,11 @@ describe('the repositories shown', () => {
         repo('paris', { pushedAt: '2026-10-30T01:00:00+02:00' }),
         repo('utc', { pushedAt: '2026-10-29T23:30:00Z' }),
         repo('garbled', { pushedAt: 'soon' }),
+        repo('unset', { pushedAt: null }),
       ],
       '',
     );
-    expect(shown.map((item) => item.name)).toEqual(['utc', 'paris', 'garbled']);
+    expect(shown.map((item) => item.name)).toEqual(['utc', 'paris', 'garbled', 'unset']);
   });
 
   it('keeps the ones whose name or description holds every word', () => {
@@ -57,6 +58,7 @@ describe('the repositories shown', () => {
 describe('the analysis stage', () => {
   it('reads the phase', () => {
     expect(stageOf({})).toBe('never');
+    expect(stageOf({ phase: null })).toBe('never');
     expect(stageOf({ phase: 'ready' })).toBe('ready');
     expect(stageOf({ phase: 'failed' })).toBe('failed');
     expect(stageOf({ phase: 'connect' })).toBe('running');
@@ -91,6 +93,8 @@ describe('what comes from outside', () => {
   it('reads a date, and nothing from a date that is not one', () => {
     expect(readableDate('2026-10-29T17:42:00Z', 'en')).toBe('Oct 29, 2026');
     expect(readableDate('yesterday', 'en')).toBeUndefined();
+    expect(readableDate(null, 'en')).toBeUndefined();
+    expect(readableDate(undefined, 'en')).toBeUndefined();
   });
 });
 
@@ -143,7 +147,7 @@ describe('the web link', () => {
   });
 
   it('joins members and links in the order the members were read, a member with no link being not linked', () => {
-    const member = (id: string, login: string): OrgMember => ({
+    const member = (id: string, login: string): MemberResponse => ({
       id,
       login,
       name: login,

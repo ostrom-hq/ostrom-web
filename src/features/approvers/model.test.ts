@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ApproverGate, Workflow } from '@gen/api/types.gen';
+import type { ApproverGateDto } from '@gen/api/types.gen';
 import { approvalPoints, blocking, busiestFirst, isSelfApprovalPolicy, readGraph } from './model';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 const workflow = (id: string, nodes: Workflow['nodes']): Workflow => ({
   id,
@@ -37,7 +38,7 @@ describe('approvalPoints', () => {
   });
 });
 
-const gate = (label: string, enforce: boolean): ApproverGate => ({
+const gate = (label: string, enforce: boolean): ApproverGateDto => ({
   workflowId: 'w',
   workflowName: 'W',
   nodeId: label,

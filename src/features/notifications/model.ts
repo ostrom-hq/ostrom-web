@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NotificationPreferences, NotificationSettings, PushTestResults } from '@gen/api/types.gen';
+import type { NotificationPreferencesBody, NotificationSettings, PushTestResults } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** The kinds a member is told about (`NotificationKinds` in ostrom-core), in the order the screen lists them. */
@@ -83,7 +83,7 @@ export type PhoneSwitch = (typeof PHONE_SWITCHES)[number];
 const NIGHT = { start: '22:00', end: '07:00' } as const;
 
 /** The form for the preferences the server holds; `timeZone` is the browser's, for quiet hours not set yet. */
-export function phoneFormOf(preferences: NotificationPreferences, timeZone: string): PhoneForm {
+export function phoneFormOf(preferences: NotificationPreferencesBody, timeZone: string): PhoneForm {
   const quiet = preferences.quietHours;
   return {
     requests: preferences.requests,
@@ -97,7 +97,7 @@ export function phoneFormOf(preferences: NotificationPreferences, timeZone: stri
 }
 
 /** The preferences the form says: without quiet hours when they are off. */
-export function preferencesOf(form: PhoneForm): NotificationPreferences {
+export function preferencesOf(form: PhoneForm): NotificationPreferencesBody {
   const { requests, decisions, spending } = form;
   if (!form.quiet) return { requests, decisions, spending };
   return {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Rule } from '@gen/api/types.gen';
+import type { RuleDto } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
+import type { RuleStatus } from '@/shared/api/vocabulary';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
@@ -13,7 +14,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { editOf, isAccepted, phaseOf, percent, type RuleChange } from '../model';
 import { RuleForm } from './RuleForm';
 
-const STATUS_TONES: Readonly<Record<Known<Rule['status']>, BadgeTone>> = {
+const STATUS_TONES: Readonly<Record<Known<RuleStatus>, BadgeTone>> = {
   proposed: 'neutral',
   accepted: 'success',
   edited: 'success',
@@ -21,7 +22,7 @@ const STATUS_TONES: Readonly<Record<Known<Rule['status']>, BadgeTone>> = {
 };
 
 export interface RuleCardProps {
-  readonly rule: Rule;
+  readonly rule: RuleDto;
   /** Groups already in use, offered when the rule is edited. */
   readonly groups: readonly string[];
   /** Present when the viewer decides rules. */
@@ -38,11 +39,12 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: 
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
   // The rule as it stood when its editor opened: a save sends what changed since then, never an older value.
-  const [editing, setEditing] = useState<Rule | undefined>(undefined);
+  const [editing, setEditing] = useState<RuleDto | undefined>(undefined);
   // Decided elsewhere while the editor was open (accepted, rejected or reopened; a fix keeps it accepted): the editor
   // closes rather than decide it a second time.
   if (editing !== undefined && phaseOf(editing) !== phaseOf(rule)) setEditing(undefined);
   const accepted = isAccepted(rule);
+  const why = rule.why ?? '';
   return (
     // Named by the statement itself, which the editor replaces on screen while it is open.
     <article className="o-card o-stack rl-card" aria-label={rule.statement}>
@@ -77,18 +79,14 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: 
       ) : (
         <p className="rl-statement">{rule.statement}</p>
       )}
-      {rule.why === undefined || rule.why === '' ? null : (
-        <p className="o-row__meta">{t('rules.card.why', { why: rule.why })}</p>
-      )}
-      {rule.scope === undefined || rule.scope.length === 0 ? null : (
-        <p className="o-row__meta o-mono">{rule.scope.join(' · ')}</p>
-      )}
-      {rule.gate === undefined ? null : (
+      {why === '' ? null : <p className="o-row__meta">{t('rules.card.why', { why })}</p>}
+      {rule.scope.length === 0 ? null : <p className="o-row__meta o-mono">{rule.scope.join(' · ')}</p>}
+      {rule.gate === undefined || rule.gate === null ? null : (
         <div className="o-stack rl-gate-read" aria-label={t('rules.form.gate.title')}>
           <p className="o-row__meta">
             {t('rules.card.gate', {
               actions: rule.gate.actions.map((action) => action.label).join(', '),
-              approvers: rule.gate.approvers.join(', '),
+              approvers: (rule.gate.approvers ?? []).join(', '),
             })}
           </p>
           {rule.gate.checks === undefined || rule.gate.checks.length === 0 ? null : (
@@ -104,10 +102,10 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: 
           )}
         </div>
       )}
-      {rule.sources === undefined || rule.sources.length === 0 ? null : (
+      {rule.sources.length === 0 ? null : (
         <ul className="rl-sources" aria-label={t('rules.card.sources')}>
           {rule.sources.map((source) => {
-            const href = safeHref(source.url);
+            const href = safeHref(source.url ?? undefined);
             return (
               <li key={`${source.kind}:${source.ref}`} className="o-mono">
                 {href === undefined ? (
@@ -122,7 +120,10 @@ export function RuleCard({ rule, groups, onDecide, onDelete, saving, failure }: 
           })}
         </ul>
       )}
-      {rule.decidedBy === undefined || rule.decidedAt === undefined ? null : (
+      {rule.decidedBy === undefined ||
+      rule.decidedBy === null ||
+      rule.decidedAt === undefined ||
+      rule.decidedAt === null ? null : (
         <p className="o-row__meta">
           {t(`rules.card.decided.${accepted ? 'accepted' : 'rejected'}`, {
             who: rule.decidedBy,

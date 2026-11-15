@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Receipt, Session, SessionGateAnswer } from '@gen/api/types.gen';
+import type { SessionDto, SessionGateAnswerDto } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import type { TFunction } from '@/shared/i18n/instance';
@@ -16,7 +16,7 @@ import { TodoPill } from '../components/TodoPill';
 import { TodoView } from '../components/TodoView';
 import { sessionLabels, sessionState } from '../model';
 import { useSessionTodo } from '../useSessionTodo';
-import { useSession } from '../useSessions';
+import { type SessionReceipt, useSession } from '../useSessions';
 
 export function SessionScreen(): ReactElement {
   const { t } = useTranslation();
@@ -24,7 +24,7 @@ export function SessionScreen(): ReactElement {
   const { session, receipt, failure } = useSession(sessionId);
   const now = useNow();
   const { role } = useCurrentOrg();
-  const { todo } = useSessionTodo(sessionId, session !== undefined && session.endedAt === undefined);
+  const { todo } = useSessionTodo(sessionId, session !== undefined && typeof session.endedAt !== 'string');
   const [open, setOpen] = useState(false);
   const todoId = useId();
   return (
@@ -50,12 +50,12 @@ export function SessionScreen(): ReactElement {
               )}
             </>
           }
-          title={[found.agent, found.repo].filter((part) => part !== undefined).join(' · ')}
+          title={[found.agent, found.repo].filter((part) => typeof part === 'string').join(' · ')}
           lead={t('sessions.detail.by', { dev: found.dev })}
         >
           {todo !== undefined && open ? <TodoView id={todoId} todo={todo} /> : null}
           <SessionDetail session={found} receipt={receipt} />
-          <LaunchLimitsSection key={found.launchId} launchId={found.launchId} role={role} />
+          <LaunchLimitsSection key={found.launchId} launchId={found.launchId ?? undefined} role={role} />
         </Screen>
       )}
     </LoadState>
@@ -63,22 +63,22 @@ export function SessionScreen(): ReactElement {
 }
 
 interface SessionDetailProps {
-  readonly session: Session;
-  readonly receipt: Receipt | undefined;
+  readonly session: SessionDto;
+  readonly receipt: SessionReceipt | undefined;
 }
 
-function optional(label: string, value: string | number | undefined, mono = false): Fact | undefined {
-  return value === undefined ? undefined : { label, value, mono };
+function optional(label: string, value: string | number | null | undefined, mono = false): Fact | undefined {
+  return value === undefined || value === null ? undefined : { label, value, mono };
 }
 
 function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
-  const at = (iso: string | undefined): string | undefined =>
-    iso === undefined ? undefined : formatAbsolute(iso, i18n.language);
+  const at = (iso: string | null | undefined): string | undefined =>
+    typeof iso === 'string' ? formatAbsolute(iso, i18n.language) : undefined;
   const money = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD' });
   // A single read without `gates` is a session the caller reads the record of only (an owner or an administrator
   // reading another member's, TeamCode #238): what it did is its person's and its approvers'.
-  const recordOnly = session.gates === undefined;
+  const recordOnly = !Array.isArray(session.gates);
   const gates = session.gates ?? [];
   return (
     <>
@@ -92,7 +92,6 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
                   ? t('sessions.detail.verified', { dev: session.dev })
                   : session.dev,
             },
-            optional(t('sessions.detail.via'), session.devVia),
             optional(t('sessions.detail.agent'), session.agent),
             optional(t('sessions.detail.model'), session.model),
             optional(t('sessions.detail.repo'), session.repo),
@@ -118,20 +117,19 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
           facts={[
             { label: t('sessions.detail.started'), value: formatAbsolute(session.startedAt, i18n.language) },
             optional(t('sessions.detail.lastSeen'), at(session.lastSeenAt)),
-            session.endedAt === undefined
-              ? undefined
-              : {
+            typeof session.endedAt === 'string'
+              ? {
                   label: t('sessions.detail.ended'),
                   value: t('sessions.detail.endedValue', {
                     when: formatAbsolute(session.endedAt, i18n.language),
                     duration: formatDuration(session.startedAt, session.endedAt, i18n.language),
                   }),
-                },
+                }
+              : undefined,
             optional(t('sessions.detail.endedBy'), session.endedBy),
             optional(t('sessions.detail.segment'), session.segment),
-            session.resumedFrom === undefined
-              ? undefined
-              : {
+            typeof session.resumedFrom === 'string'
+              ? {
                   label: t('sessions.detail.resumedFrom'),
                   value: (
                     <Link to="/sessions/$sessionId" params={{ sessionId: session.resumedFrom }}>
@@ -139,7 +137,8 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
                     </Link>
                   ),
                   mono: true,
-                },
+                }
+              : undefined,
           ]}
         />
       </Section>
@@ -148,9 +147,9 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
         <Facts
           facts={[
             optional(t('sessions.detail.tools'), session.tools),
-            session.costUsd === undefined
-              ? undefined
-              : { label: t('sessions.detail.cost'), value: money.format(session.costUsd) },
+            typeof session.costUsd === 'number'
+              ? { label: t('sessions.detail.cost'), value: money.format(session.costUsd) }
+              : undefined,
             optional(t('sessions.detail.exitCode'), session.exitCode, true),
             optional(t('sessions.detail.harness'), session.harnessVersion, true),
             optional(t('sessions.detail.package'), session.packageDigest, true),
@@ -168,7 +167,7 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
                   <GateLine
                     gate={gate}
                     answer={session.gateAnswers?.find((item) => item.gateId === gate)}
-                    ended={session.endedAt !== undefined}
+                    ended={typeof session.endedAt === 'string'}
                   />
                 </li>
               ))}
@@ -180,7 +179,7 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
       <Section label={t('sessions.detail.receipt')}>
         {receipt === undefined ? (
           <p className="o-screen__lead">
-            {recordOnly && session.receiptId !== undefined
+            {recordOnly && typeof session.receiptId === 'string'
               ? t('sessions.detail.signedReceipt', { id: session.receiptId })
               : t('sessions.detail.noReceipt')}
           </p>
@@ -197,17 +196,17 @@ function SessionDetail({ session, receipt }: SessionDetailProps): ReactElement {
 interface GateLineProps {
   readonly gate: string;
   /** The server's answer to the gate, once someone said yes or no; nothing while it waits. */
-  readonly answer: SessionGateAnswer | undefined;
+  readonly answer: SessionGateAnswerDto | undefined;
   /** The session ended: a gate nobody answered by then is said not answered, not waiting (it may still be, at /yes). */
   readonly ended: boolean;
 }
 
-function toneOf(answer: SessionGateAnswer | undefined): BadgeTone {
+function toneOf(answer: SessionGateAnswerDto | undefined): BadgeTone {
   if (answer === undefined) return 'neutral';
   return answer.outcome === 'approved' ? 'success' : 'danger';
 }
 
-function labelOf(answer: SessionGateAnswer | undefined, ended: boolean, t: TFunction): string {
+function labelOf(answer: SessionGateAnswerDto | undefined, ended: boolean, t: TFunction): string {
   if (answer === undefined) return ended ? t('sessions.detail.notAnswered') : t('sessions.detail.unanswered');
   return answer.outcome === 'approved' ? t('sessions.detail.approved') : t('sessions.detail.refused');
 }
@@ -231,11 +230,11 @@ function GateLine({ gate, answer, ended }: GateLineProps): ReactElement {
           </span>
         )}
       </span>
-      {answer?.receiptId === undefined ? null : (
+      {typeof answer?.receiptId === 'string' ? (
         <Link to="/receipts/$receiptId" params={{ receiptId: answer.receiptId }} className="o-row__end">
           {t('sessions.detail.answerReceipt')}
         </Link>
-      )}
+      ) : null}
     </span>
   );
 }

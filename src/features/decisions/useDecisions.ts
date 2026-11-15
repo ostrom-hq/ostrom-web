@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { listDecisionsOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { Decision } from '@gen/api/types.gen';
+import type { DecisionDto } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
 export interface DecisionsViewModel {
-  readonly decisions: readonly Decision[] | undefined;
+  readonly decisions: readonly DecisionDto[] | undefined;
   readonly failure: Error | undefined;
 }
 

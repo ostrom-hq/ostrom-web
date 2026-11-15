@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, CloudProfile, CloudSession } from '@gen/api/types.gen';
+import type { AutomationResponse, CloudProfileResponse, CloudSessionResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import { zCloudAgentKind } from '@gen/api/zod.gen';
 import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { knownValues } from '@/shared/lib/openEnum';
 import {
@@ -23,13 +22,19 @@ import {
   sessionTone,
   versionedUrl,
 } from './model';
+import { zCloudAgentKind } from '@/shared/api/vocabulary';
 
-const session = (parts: Partial<CloudSession>): CloudSession => ({
+const session = (parts: Partial<CloudSessionResponse>): CloudSessionResponse => ({
   id: 'cs-1',
+  name: '',
   owner: 'maya',
   agent: 'codex',
   status: 'running',
+  desiredStatus: 'running',
+  epoch: 1,
+  limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
   createdAt: '2026-10-30T00:00:00.000Z',
+  updatedAt: '2026-10-30T00:00:00.000Z',
   ...parts,
 });
 
@@ -82,13 +87,16 @@ describe('cloud sessions', () => {
 
 describe('isWebhook', () => {
   it('tells a webhook trigger from a schedule', () => {
-    const automation = (kind: 'cron' | 'webhook'): Automation => ({
+    const automation = (kind: 'cron' | 'webhook'): AutomationResponse => ({
       id: 'a',
       name: 'A',
       owner: 'maya',
       enabled: true,
       trigger: { kind },
-      action: {},
+      action: { prompt: '' },
+      variables: [],
+      overlap: 'skip',
+      maxRunsPerDay: 24,
       version: 1,
       createdAt: '',
       updatedAt: '',
@@ -150,7 +158,7 @@ describe('versionedUrl', () => {
 });
 
 describe('the image a session may run', () => {
-  const profile = (allowed: string[]): CloudProfile => ({
+  const profile = (allowed: string[]): CloudProfileResponse => ({
     id: 'p',
     name: 'p',
     version: 1,

@@ -20,15 +20,14 @@ import {
   testAutomationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
-  CloudProfile,
-  Automation,
-  AutomationDryRun,
-  AutomationRun,
-  AutomationWrite,
-  CloudEnvironment,
-  CloudSession,
-  Runner,
-  Workflow,
+  CloudProfileResponse,
+  AutomationResponse,
+  DryRunResponse,
+  RunResponse,
+  AutomationRequest,
+  CloudEnvironmentDto,
+  CloudSessionResponse,
+  RunnerDto,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -41,12 +40,13 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { createRefused, type PendingCreate, pressOf } from './createKey';
 import type { CloudAgent, GithubAccess, SessionMode } from './model';
 import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 const POLL_MS = 10_000;
 
 export interface CloudViewModel {
-  readonly sessions: readonly CloudSession[] | undefined;
-  readonly runners: readonly Runner[] | undefined;
+  readonly sessions: readonly CloudSessionResponse[] | undefined;
+  readonly runners: readonly RunnerDto[] | undefined;
   readonly failure: Error | undefined;
   readonly viewer: string | undefined;
   readonly canManage: boolean;
@@ -74,7 +74,7 @@ export interface StartRequest {
   readonly name: string;
   readonly repo: string;
   /** The preparation recipe (`runners.cloud.environment.v1`), never with `repo`'s repository too. */
-  readonly environment?: CloudEnvironment | undefined;
+  readonly environment?: CloudEnvironmentDto | undefined;
   /** The profile the session runs on (`runners.cloud.profiles.v1`), and an image it allows instead of its own. */
   readonly profileId?: string | undefined;
   readonly image?: string | undefined;
@@ -159,7 +159,7 @@ export function useSessionChange(): SessionChangeViewModel {
 }
 
 export interface AutomationsViewModel {
-  readonly automations: readonly Automation[] | undefined;
+  readonly automations: readonly AutomationResponse[] | undefined;
   readonly failure: Error | undefined;
   readonly viewer: string | undefined;
   /** Their member id: the server names an automation's owner by it. */
@@ -181,9 +181,9 @@ export function useAutomations(): AutomationsViewModel {
 
 export interface AutomationEditViewModel {
   /** Writes a new automation; `onDone` runs once the server took it, so the form closes then, not before. */
-  readonly create: (write: AutomationWrite, onDone: () => void) => void;
+  readonly create: (write: AutomationRequest, onDone: () => void) => void;
   /** Saves over the version read; a change made since is refused, and said. */
-  readonly save: (id: string, write: AutomationWrite, onDone: () => void) => void;
+  readonly save: (id: string, write: AutomationRequest, onDone: () => void) => void;
   readonly creating: boolean;
   /** The automation being saved. */
   readonly saving: string | undefined;
@@ -217,13 +217,14 @@ export function useAutomationEdit(): AutomationEditViewModel {
     resetSave();
   }, [resetCreate, resetSave]);
   const create = useCallback(
-    (write: AutomationWrite, onDone: () => void) => {
+    (write: AutomationRequest, onDone: () => void) => {
       resetSave();
       createMutate(
         { body: write },
         {
           onSuccess: (created) => {
-            if (created.secret !== undefined) setSecret({ id: created.id, value: created.secret });
+            const value = created.secret ?? undefined;
+            if (value !== undefined) setSecret({ id: created.id, value });
             onDone();
           },
         },
@@ -232,7 +233,7 @@ export function useAutomationEdit(): AutomationEditViewModel {
     [createMutate, resetSave],
   );
   const save = useCallback(
-    (id: string, write: AutomationWrite, onDone: () => void) => {
+    (id: string, write: AutomationRequest, onDone: () => void) => {
       resetCreate();
       saveMutate({ path: { id }, body: write }, { onSuccess: onDone });
     },
@@ -271,14 +272,14 @@ export function useRunnableWorkflows(): readonly Workflow[] | undefined {
 }
 
 export interface AutomationChangeViewModel {
-  readonly toggle: (automation: Automation) => void;
+  readonly toggle: (automation: AutomationResponse) => void;
   /** Runs it now, or checks the trigger and inputs without running anything (`dry`). */
   readonly run: (id: string, dry: boolean) => void;
   readonly rotate: (id: string) => void;
   /** The automation being changed. */
   readonly pending: string | undefined;
   /** What the last run from here answered: a queued run, or a dry run that started nothing. */
-  readonly started: AutomationRun | AutomationDryRun | undefined;
+  readonly started: RunResponse | DryRunResponse | undefined;
   /** The new webhook secret, shown once, and the automation it belongs to. */
   readonly secret: { readonly id: string; readonly value: string } | undefined;
   readonly failure: Error | undefined;
@@ -312,7 +313,7 @@ export function useAutomationChange(): AutomationChangeViewModel {
     resetRotation();
   }, [resetEnable, resetDisable, resetTest, resetRotation]);
   const toggle = useCallback(
-    (automation: Automation) => {
+    (automation: AutomationResponse) => {
       resetAll();
       (automation.enabled ? disableMutate : enableMutate)({ path: { id: automation.id } });
     },
@@ -358,7 +359,7 @@ export function useAutomationChange(): AutomationChangeViewModel {
 
 /** An automation's runs; the card mounts it only once someone opens them. */
 export function useAutomationRuns(id: string): {
-  readonly runs: readonly AutomationRun[] | undefined;
+  readonly runs: readonly RunResponse[] | undefined;
   readonly failure: Error | undefined;
   /** Ends a queued or started run: a queued one at once, a working one by pausing its session or its workflow run. */
   readonly cancel: (runId: string) => void;
@@ -429,7 +430,7 @@ export interface StartProfilesViewModel {
   /** Whether the server has cloud session profiles: when not, a session is started without one. */
   readonly enabled: boolean;
   /** The profiles the caller may use; undefined while they are read. */
-  readonly profiles: readonly CloudProfile[] | undefined;
+  readonly profiles: readonly CloudProfileResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 

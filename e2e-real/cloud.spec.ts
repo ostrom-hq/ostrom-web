@@ -11,12 +11,12 @@
 import { expect, request, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { extend } from 'zod/mini';
-import { zCloudSession, zRunner } from '../gen/api/zod.gen';
+import { zCloudSessionResponse, zRegisteredRunnerDto } from '../gen/api/zod.gen';
 import { holder, lose, machineImage, online, removeMachines, startMachine, type Machine } from './machines';
 import { anotherPerson, callFromPage, closeOthers, ownerOfNewOrganization } from './real';
 
 // The key is in ostrom-core's `Runner` (shown once, at registration); this repository's contract is older.
-const zRegistered = extend(zRunner, { token: z.string() });
+const zRegistered = extend(zRegisteredRunnerDto, { token: z.string() });
 
 test.afterEach(async () => {
   await closeOthers();
@@ -121,7 +121,7 @@ test('6.2 an owner starts an agent from the Cloud screen, sees it running, stops
   const listed = await callFromPage(page, 'GET', '/api/v1/cloud/sessions', undefined, org);
   expect(listed.status).toBe(200);
   const session = z
-    .object({ items: z.array(zCloudSession) })
+    .object({ items: z.array(zCloudSessionResponse) })
     .parse(listed.body)
     .items.find((item) => item.name === name);
   expect(session?.status).toBe('running');
@@ -155,12 +155,12 @@ async function sessionNamed(page: Page, org: string, name: string): Promise<Clou
   const listed = await callFromPage(page, 'GET', '/api/v1/cloud/sessions', undefined, org);
   expect(listed.status).toBe(200);
   return z
-    .object({ items: z.array(zCloudSession) })
+    .object({ items: z.array(zCloudSessionResponse) })
     .parse(listed.body)
     .items.find((item) => item.name === name);
 }
 
-type CloudSession = z.infer<typeof zCloudSession>;
+type CloudSession = z.infer<typeof zCloudSessionResponse>;
 
 /** The server sees a machine silent after 90 s, then hands its sessions to another runner of the organization. */
 const TAKEOVER_TIMEOUT = 5 * 60_000;
@@ -292,7 +292,7 @@ test('6.2 §16 a conversation session opens on its own screen, and never on anot
     org,
   );
   expect(created.status, JSON.stringify(created.body)).toBe(201);
-  const session = zCloudSession.parse(created.body);
+  const session = zCloudSessionResponse.parse(created.body);
   expect(session.mode).toBe('conversation');
 
   // The owner opens it from its row: its screen, its transcript and its message box.

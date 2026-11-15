@@ -21,12 +21,8 @@ export function startRefused(error: unknown): boolean {
 }
 
 /** The values of a start in a form that does not depend on the order the inputs were written in. */
-function whatOf(workflowId: string, inputs: Readonly<Record<string, string>>, repository: string): string {
-  return JSON.stringify([
-    workflowId,
-    Object.entries(inputs).toSorted(([a], [b]) => a.localeCompare(b)),
-    repository,
-  ]);
+function whatOf(workflowId: string, inputs: Readonly<Record<string, string>>): string {
+  return JSON.stringify([workflowId, Object.entries(inputs).toSorted(([a], [b]) => a.localeCompare(b))]);
 }
 
 /** The press a start belongs to: the pending one when it started the same thing, else a new one with a new key. */
@@ -34,8 +30,7 @@ export function pressOf(
   pending: PendingStart | undefined,
   workflowId: string,
   inputs: Readonly<Record<string, string>>,
-  repository: string,
 ): PendingStart {
-  const what = whatOf(workflowId, inputs, repository);
+  const what = whatOf(workflowId, inputs);
   return pending?.what === what ? pending : { key: idempotencyKey(), what };
 }

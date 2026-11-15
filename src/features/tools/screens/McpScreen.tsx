@@ -105,10 +105,8 @@ function McpServers({ canManage }: { readonly canManage: boolean }): ReactElemen
                     {[
                       call.dev,
                       formatRelative(call.at, now, i18n.language),
-                      call.durationMs === undefined ? undefined : t('tools.mcp.ms', { ms: call.durationMs }),
-                    ]
-                      .filter((part) => part !== undefined)
-                      .join(' · ')}
+                      t('tools.mcp.ms', { ms: call.durationMs }),
+                    ].join(' · ')}
                   </span>
                 </span>
                 <Badge tone={call.ok ? 'success' : 'danger'}>

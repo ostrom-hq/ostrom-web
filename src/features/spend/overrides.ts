@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BudgetOverride, CreateBudgetOverrideData } from '@gen/api/types.gen';
+import type { BudgetOverrideDto, CreateBudgetOverrideData } from '@gen/api/types.gen';
 
 /**
  * TeamCode's temporary quota overrides (`capacity.budgetoverrides.v1`): for a while, at the latest until midnight UTC,
@@ -22,11 +22,11 @@ export type OverrideState = 'active' | 'revoked' | 'ended';
  * longer offered for revocation or replacement (the server would answer 409).
  */
 export function overrideStateOf(
-  item: BudgetOverride,
+  item: BudgetOverrideDto,
   activeId: string | undefined,
   now: Date,
 ): OverrideState {
-  if (item.revokedAt !== undefined) return 'revoked';
+  if ((item.revokedAt ?? undefined) !== undefined) return 'revoked';
   return item.id === activeId && Date.parse(item.expiresAt) > now.getTime() ? 'active' : 'ended';
 }
 

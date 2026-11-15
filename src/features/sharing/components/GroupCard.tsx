@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group, SharedAccount } from '@gen/api/types.gen';
+import type { GroupResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -7,9 +7,9 @@ import { Badge } from '@/shared/ui/Badge';
 import { lentAccounts } from '../groups';
 
 export interface GroupCardProps {
-  readonly group: Group;
+  readonly group: GroupResponse;
   /** The subscriptions the person reads; one they do not is left out of the list. */
-  readonly accounts: readonly SharedAccount[];
+  readonly accounts: readonly SharedAccountResponse[];
 }
 
 /** A group in the list: its name leads to it, then how many people, what it lends, and who is paused now. */
@@ -18,7 +18,7 @@ export function GroupCard({ group, accounts }: GroupCardProps): ReactElement {
   const headingId = useId();
   const lent = lentAccounts(group.accounts, accounts).map((account) => account.label);
   const hidden = group.accounts.length - lent.length;
-  const paused = group.paused?.length ?? 0;
+  const paused = group.paused.length;
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
       <div className="o-inline sh-head">

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GateAction, Rule } from '@gen/api/types.gen';
+import type { GateActionDto, RuleDto } from '@gen/api/types.gen';
 import { type KeyboardEvent, type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -13,6 +13,7 @@ import {
   isOutput,
   isStrength,
   offeredActions,
+  patternsOf,
   RULE_OUTPUTS,
   RULE_STRENGTHS,
   type RuleDraft,
@@ -21,14 +22,14 @@ import { type GateCatalogViewModel, useGateCatalog } from '../useRules';
 
 export interface RuleFormProps {
   /** The rule being edited; absent, the form writes a new one. */
-  readonly rule?: Rule;
+  readonly rule?: RuleDto;
   /** Groups already in use, offered as the group is typed. */
   readonly groups: readonly string[];
   readonly saving: boolean;
   /** The words of the send button: "Save and accept", "Save", "Add the rule". */
   readonly submit: string;
   /** Receives the draft and the actions a gate may pick from. */
-  readonly onSave: (draft: RuleDraft, actions: readonly GateAction[]) => void;
+  readonly onSave: (draft: RuleDraft, actions: readonly GateActionDto[]) => void;
   readonly onCancel: () => void;
 }
 
@@ -40,7 +41,7 @@ function GateFields({
 }: {
   readonly catalog: GateCatalogViewModel;
   /** What the gate may pick from: the catalogue's, the rule's own, those written here. */
-  readonly actions: readonly GateAction[];
+  readonly actions: readonly GateActionDto[];
   readonly draft: RuleDraft;
   readonly onChange: (next: Partial<RuleDraft>) => void;
 }): ReactElement {
@@ -102,8 +103,8 @@ function GateFields({
             />
             <span>
               {action.label}
-              {action.patterns.length === 0 ? null : (
-                <span className="o-row__meta o-mono"> {action.patterns.join(' · ')}</span>
+              {patternsOf(action).length === 0 ? null : (
+                <span className="o-row__meta o-mono"> {patternsOf(action).join(' · ')}</span>
               )}
             </span>
           </label>

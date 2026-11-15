@@ -10,10 +10,17 @@ import {
   handleUnlinkGithub,
   handleUnlinkMemberGithub,
 } from '@gen/api/msw.gen';
-import type { ApiError, GitHubLink, Organization, Repo, Rule, Workflow } from '@gen/api/types.gen';
+import type {
+  ApiError,
+  GitHubLinkDto,
+  MeOrganizationResponse,
+  RepoResponse,
+  RuleDto,
+} from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { DEMO_LOGIN, type OrgsState } from './orgs';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 /** An analysis as the mock runs it: one phase further at each read of its state, as if the engine worked. */
 export interface MockAnalysis {
@@ -25,13 +32,13 @@ export interface MockAnalysis {
 
 export interface GithubState extends OrgsState {
   /** The repositories each organization gave the App, by organization id. */
-  repos: Record<string, Repo[]>;
+  repos: Record<string, RepoResponse[]>;
   /** The last analysis of each organization, by id. */
   analyses: Record<string, MockAnalysis>;
-  rules: Rule[];
+  rules: RuleDto[];
   workflows: Workflow[];
   /** The members' GitHub links by organization id; a member with none is not linked. */
-  githubLinks: Record<string, GitHubLink[]>;
+  githubLinks: Record<string, GitHubLinkDto[]>;
 }
 
 /** The phases a run passes, with how far along each is. */
@@ -47,9 +54,9 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
 
 export function createGithubHandlers(
   state: () => GithubState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
 ): HttpHandler[] {
-  const manages = (organization: Organization): boolean =>
+  const manages = (organization: MeOrganizationResponse): boolean =>
     managesMembers(
       orgRoleOf(state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role),
     );
@@ -69,17 +76,17 @@ export function createGithubHandlers(
     return HttpResponse.json<{ runId: string }>({ runId: `run-${organization.id}` }, { status: 202 });
   };
   /** The demo person's member id in the organization; none, when the demo lists them in none. */
-  const demoMember = (organization: Organization): string =>
+  const demoMember = (organization: MeOrganizationResponse): string =>
     state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.id ?? '';
-  const isMember = (organization: Organization, memberId: string): boolean =>
+  const isMember = (organization: MeOrganizationResponse, memberId: string): boolean =>
     state().orgMembers[organization.id]?.some((member) => member.id === memberId) === true;
-  const linkOf = (organization: Organization, memberId: string): GitHubLink =>
+  const linkOf = (organization: MeOrganizationResponse, memberId: string): GitHubLinkDto =>
     state().githubLinks[organization.id]?.find((link) => link.memberId === memberId) ?? {
       memberId,
       state: 'not_linked',
       appConfigured: true,
     };
-  const unlink = (organization: Organization, memberId: string): HttpResponse<null> => {
+  const unlink = (organization: MeOrganizationResponse, memberId: string): HttpResponse<null> => {
     const s = state();
     s.githubLinks[organization.id] = (s.githubLinks[organization.id] ?? []).filter(
       (link) => link.memberId !== memberId,

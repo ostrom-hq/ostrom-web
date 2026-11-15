@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ApiPrice } from '@gen/api/types.gen';
+import type { ApiPriceDto } from '@gen/api/types.gen';
 import {
   draftPrice,
   formatPrice,
@@ -11,7 +11,7 @@ import {
   withPrice,
 } from './prices';
 
-const row = (model: string, effectiveFrom: string, provider = 'anthropic'): ApiPrice => ({
+const row = (model: string, effectiveFrom: string, provider = 'anthropic'): ApiPriceDto => ({
   provider,
   model,
   effectiveFrom,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview } from '@gen/api/types.gen';
+import type { BillingOverviewResponse } from '@gen/api/types.gen';
 import { setDemoRole } from '@/mocks/orgs';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -28,7 +28,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -41,11 +41,11 @@ function row(rows: readonly HTMLElement[], index: number): HTMLElement {
   return found;
 }
 
-function billingWith(change: Partial<BillingOverview>): void {
+function billingWith(change: Partial<BillingOverviewResponse>): void {
   db.billing = { ...db.billing, ...change };
 }
 
-const FREE: Partial<BillingOverview> = {
+const FREE: Partial<BillingOverviewResponse> = {
   plan: 'free',
   effectivePlan: 'free',
   interval: null,

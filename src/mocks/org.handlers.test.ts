@@ -35,7 +35,6 @@ describe('mock organization of a call', () => {
       status: 200,
       body: { dev: { login: 'maya' }, member: { role: 'admin' }, organization: { name: 'Acme' } },
     });
-    expect((await get('/org')).body).toMatchObject({ name: 'Acme' });
     expect((await get('/artifacts')).status).toBe(200);
   });
 
@@ -48,7 +47,7 @@ describe('mock organization of a call', () => {
 
   it('asks which organization when the person has several, on every route that acts in one, never on /me', async () => {
     db.otherOrganizations = [globex];
-    for (const path of ['/org', '/artifacts', '/automations', '/secrets']) {
+    for (const path of ['/artifacts', '/automations', '/secrets']) {
       expect(await get(path)).toEqual({
         status: 409,
         body: {
@@ -66,7 +65,7 @@ describe('mock organization of a call', () => {
 
   it('acts in the organization named, and answers as for anything else of an organization it does not know', async () => {
     db.otherOrganizations = [globex];
-    expect((await get('/org', globex.id)).body).toMatchObject({ name: 'Globex' });
+    expect((await get('/artifacts', globex.id)).status).toBe(200);
     // `/me` names the organization the header names, among the person's; any other value is ignored, never refused.
     expect((await get('/auth/me', globex.id)).body).toMatchObject({
       member: { login: 'maya' },

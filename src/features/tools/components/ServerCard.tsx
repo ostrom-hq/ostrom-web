@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpServer } from '@gen/api/types.gen';
+import type { McpServerDto } from '@gen/api/types.gen';
 import { type ReactElement, type ReactNode, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
@@ -9,7 +9,7 @@ import { isTransport } from '../model';
 import { HostedState } from './HostedState';
 
 export interface ServerCardProps {
-  readonly server: McpServer;
+  readonly server: McpServerDto;
   readonly calls: number;
   /** Secrets the server needs and the organization does not have. */
   readonly missing: readonly string[];
@@ -30,28 +30,29 @@ export function ServerCard({
 }: ServerCardProps): ReactElement {
   const { t } = useTranslation();
   const headingId = useId();
+  const tools = server.tools ?? [];
   return (
     <article className="o-card o-stack tl-card" aria-labelledby={headingId}>
       <div className="o-inline">
         <h3 id={headingId} className="tl-name o-mono">
           {server.name}
         </h3>
-        <Badge tone={server.enabled ? 'success' : 'neutral'}>
-          {server.enabled ? t('tools.mcp.on') : t('tools.mcp.off')}
+        <Badge tone={server.enabled === true ? 'success' : 'neutral'}>
+          {server.enabled === true ? t('tools.mcp.on') : t('tools.mcp.off')}
         </Badge>
         <Badge>
           {isTransport(server.transport) ? t(`tools.mcp.transport.${server.transport}`) : server.transport}
         </Badge>
-        {server.state === undefined ? null : <HostedState state={server.state} failure={server.failure} />}
+        {server.state === undefined || server.state === null ? null : (
+          <HostedState state={server.state} failure={server.failure} />
+        )}
       </div>
       <p className="o-row__meta o-mono tl-url">{server.url}</p>
       <p className="o-row__meta">
         {[
           t('tools.scope', { scope: server.scope }),
           t('tools.mcp.calls', { count: calls }),
-          server.tools === undefined || server.tools.length === 0
-            ? undefined
-            : t('tools.mcp.tools', { list: server.tools.join(', ') }),
+          tools.length === 0 ? undefined : t('tools.mcp.tools', { list: tools.join(', ') }),
           server.secretNames === undefined || server.secretNames.length === 0
             ? t('tools.mcp.noSecret')
             : t('tools.mcp.uses', { list: server.secretNames.join(', ') }),
@@ -67,7 +68,7 @@ export function ServerCard({
       {actions === undefined ? null : (
         <div className="o-inline">
           <Button disabled={busy} onClick={actions.toggle}>
-            {server.enabled ? t('tools.mcp.turnOff') : t('tools.mcp.turnOn')}
+            {server.enabled === true ? t('tools.mcp.turnOff') : t('tools.mcp.turnOn')}
           </Button>
           <ConfirmButton
             label={t('tools.remove.ask')}

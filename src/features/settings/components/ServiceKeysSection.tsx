@@ -59,7 +59,9 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
   };
   // One change at a time, and one secret: nothing changes while a key is made, deleted or its secret is on screen.
   const created =
-    view.created?.secret === undefined ? undefined : { ...view.created, secret: view.created.secret };
+    view.created?.secret === undefined || view.created.secret === null
+      ? undefined
+      : { ...view.created, secret: view.created.secret };
   const locked = view.creating || created !== undefined || view.removing;
   const problem = serviceKeyDraftProblem(name, scopes);
   const groups: readonly {
@@ -182,10 +184,10 @@ export function ServiceKeysSection({ orgName, manages, view }: ServiceKeysSectio
                     <span className="o-row__meta">
                       {[
                         t('settings.serviceKeys.created', { date: day(key.createdAt) }),
-                        key.expiresAt === undefined
+                        key.expiresAt === undefined || key.expiresAt === null
                           ? t('settings.serviceKeys.noExpiry')
                           : t('settings.serviceKeys.expiresOn', { date: day(key.expiresAt) }),
-                        key.lastUsedAt === undefined
+                        key.lastUsedAt === undefined || key.lastUsedAt === null
                           ? t('settings.serviceKeys.neverUsed')
                           : t('settings.serviceKeys.used', { date: day(key.lastUsedAt) }),
                       ].join(' · ')}

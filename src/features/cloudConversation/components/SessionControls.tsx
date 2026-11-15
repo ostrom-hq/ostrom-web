@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
@@ -110,7 +110,7 @@ export function SessionControls({
   session,
   view,
 }: {
-  readonly session: CloudSession;
+  readonly session: CloudSessionResponse;
   readonly view: SessionControlsViewModel;
 }): ReactElement | null {
   const { t } = useTranslation();
@@ -152,7 +152,7 @@ export function SessionControls({
         <ValuePicker
           label={t('cloudConversation.controls.model')}
           hint={t('cloudConversation.controls.modelHint')}
-          current={session.model}
+          current={session.model ?? undefined}
           suggestions={[]}
           busy={view.acting}
           onApply={view.setModel}
@@ -162,7 +162,7 @@ export function SessionControls({
         <ValuePicker
           label={t('cloudConversation.controls.effort')}
           hint={t('cloudConversation.controls.effortHint')}
-          current={session.effort}
+          current={session.effort ?? undefined}
           suggestions={effortLevels(session.agent)}
           busy={view.acting}
           onApply={view.setEffort}

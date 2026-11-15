@@ -6,7 +6,7 @@ import {
   revokeTokenMutation,
   rotateTokenMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { CreatedToken, Token } from '@gen/api/types.gen';
+import type { CreatedTokenResponse, TokenResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -15,7 +15,7 @@ import type { TokenLifetime } from './model';
 
 export interface TokensViewModel {
   /** The live tokens, newest first, as the server lists them; never a secret. */
-  readonly tokens: readonly Token[] | undefined;
+  readonly tokens: readonly TokenResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -46,7 +46,7 @@ export interface CreateTokenViewModel {
     onCreated: () => void,
   ) => void;
   readonly creating: boolean;
-  readonly created: CreatedToken | undefined;
+  readonly created: CreatedTokenResponse | undefined;
   readonly failure: Error | undefined;
   /** Hides the secret: the person copied it. */
   readonly dismiss: () => void;
@@ -86,7 +86,7 @@ export interface TokenActionsViewModel {
   /** The token being revoked or replaced. */
   readonly busy: string | undefined;
   /** The token a replacement just issued, with its new secret. */
-  readonly rotated: CreatedToken | undefined;
+  readonly rotated: CreatedTokenResponse | undefined;
   readonly failure: Error | undefined;
   readonly dismiss: () => void;
 }

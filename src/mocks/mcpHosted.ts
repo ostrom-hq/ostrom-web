@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleListMcpHostedProcesses, handleRestartMcpHostedProcess } from '@gen/api/msw.gen';
-import type { McpHostedProcess, Organization } from '@gen/api/types.gen';
-import { zMcpHostedRestart } from '@gen/api/zod.gen';
+import type { McpHostedProcessDto, MeOrganizationResponse } from '@gen/api/types.gen';
+import { zMcpHostedRestartDto } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { FRESH_SIGN_IN_MS, readJson, refusal } from './http';
@@ -9,17 +9,17 @@ import { DEMO_LOGIN, type OrgsState } from './orgs';
 
 /** The MCP host's processes, and when the person last signed in (a restart needs a sign-in of under five minutes). */
 export interface McpHostedState extends OrgsState {
-  mcpHosted: McpHostedProcess[];
+  mcpHosted: McpHostedProcessDto[];
   signedInAt: number;
 }
 
 /** `GET /mcp/hosted` and `POST /mcp/hosted/restart`, as the server answers an administrator. */
 export function createMcpHostedHandlers(
   state: () => McpHostedState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   now: () => Date,
 ): HttpHandler[] {
-  const manages = (organization: Organization): boolean =>
+  const manages = (organization: MeOrganizationResponse): boolean =>
     managesMembers(
       orgRoleOf(state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role),
     );
@@ -38,7 +38,7 @@ export function createMcpHostedHandlers(
       const organization = organizationOf(request);
       if (!manages(organization))
         return refusal(403, 'forbidden', 'Only an owner or an admin restarts a hosted process.');
-      const body = zMcpHostedRestart.safeParse(await readJson(request));
+      const body = zMcpHostedRestartDto.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'A server name is needed.');
       if (now().getTime() - state().signedInAt > FRESH_SIGN_IN_MS)
         return refusal(
@@ -51,7 +51,7 @@ export function createMcpHostedHandlers(
       );
       if (process === undefined) return refusal(404, 'not_found', 'No such hosted process.');
       // A restart lifts the failure: the process is idle until the next call starts it.
-      const lifted: McpHostedProcess = { ...process, state: 'idle' };
+      const lifted: McpHostedProcessDto = { ...process, state: 'idle' };
       delete lifted.failure;
       state().mcpHosted = state().mcpHosted.map((candidate) => (candidate === process ? lifted : candidate));
       return new HttpResponse(null, { status: 204 });

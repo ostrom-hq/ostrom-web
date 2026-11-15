@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleAnswerWait, handleCancelWait, handleGetWait, handleListWaits } from '@gen/api/msw.gen';
-import type { Organization, Wait } from '@gen/api/types.gen';
+import type { MeOrganizationResponse, WaitResponse } from '@gen/api/types.gen';
 import { zAnswerWaitBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { answeredThroughSession, PAGE } from '@/features/waits/model';
@@ -10,7 +10,7 @@ import { DEMO_LOGIN, type OrgsState } from './orgs';
 
 /** The demo organization's waits, newest first, as ostrom-server keeps them (`automations_waits`). */
 export interface WaitsState extends OrgsState {
-  waits: Wait[];
+  waits: WaitResponse[];
 }
 
 /** The server's page is at most 100. */
@@ -21,11 +21,11 @@ const isDemoPerson = (who: string | undefined): boolean => who === MEMBER_IDS.ma
 export function createWaitsHandlers(
   state: () => WaitsState,
   now: () => Date,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   manages: () => boolean,
 ): HttpHandler[] {
   /** The wait the caller may read: theirs (asked of them or by them), or any for an administrator. */
-  const find = (request: Request, id: string): Wait | undefined => {
+  const find = (request: Request, id: string): WaitResponse | undefined => {
     const wait = state().waits.find((item) => item.id === id);
     const inOrg = organizationOf(request).id === state().organization.id;
     return inOrg &&
@@ -34,7 +34,7 @@ export function createWaitsHandlers(
       ? wait
       : undefined;
   };
-  const save = (next: Wait): Wait => {
+  const save = (next: WaitResponse): WaitResponse => {
     const db = state();
     db.waits = db.waits.map((item) => (item.id === next.id ? next : item));
     return next;

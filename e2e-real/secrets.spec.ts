@@ -24,7 +24,7 @@ test('an owner writes a secret, never reads its value back, replaces it and remo
   await add.getByLabel('Value').fill(value);
   await add.getByRole('button', { name: 'Save the secret' }).click();
   const row = page.getByRole('listitem').filter({ hasText: 'NOTION_KEY' });
-  await expect(row).toContainText('Not used yet');
+  await expect(row).toContainText('Scope org');
   await expect(page.getByText(value)).toHaveCount(0);
 
   // The server keeps the name, a version and who changed it, never the value.

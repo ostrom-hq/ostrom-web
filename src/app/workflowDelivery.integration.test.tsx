@@ -37,7 +37,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'maya', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -239,7 +239,7 @@ describe('the runs of every workflow, narrowed', () => {
 });
 
 describe('starting a run', () => {
-  it('asks for the inputs and the repository, says what is missing, and starts the run', async () => {
+  it('asks for the inputs, says what is missing, and starts the run', async () => {
     const user = userEvent.setup();
     visit('/workflows/wf-release');
     const form = await screen.findByRole('form', { name: 'Start a run' });
@@ -247,11 +247,7 @@ describe('starting a run', () => {
     expect(start).toBeDisabled();
     expect(within(form).getByText('“Release tag” is required.')).toBeInTheDocument();
     await user.type(field('Release tag (required)'), 'v2');
-    await user.type(field('Repository (required)'), 'nope');
-    expect(within(form).getByText('Write a repository as owner/name.')).toBeInTheDocument();
-    await user.clear(field('Repository (required)'));
-    expect(start).toBeDisabled();
-    await user.type(field('Repository (required)'), 'acme/api');
+    expect(within(form).queryByLabelText(/^Repository/)).toBeNull();
     await user.click(start);
     const runs = screen.getByRole('region', { name: 'Runs' });
     await vi.waitFor(() => {
@@ -260,16 +256,6 @@ describe('starting a run', () => {
     expect(db.workflowRuns[0]).toMatchObject({
       workflowId: 'wf-release',
       inputs: { tag: 'v2', audience: 'customers' },
-      repository: 'acme/api',
-    });
-  });
-
-  it('does not ask for a repository a server that does not announce the delivery would not take', async () => {
-    withoutDelivery();
-    visit('/workflows/wf-release');
-    const form = await screen.findByRole('form', { name: 'Start a run' });
-    await vi.waitFor(() => {
-      expect(within(form).queryByLabelText(/^Repository/)).toBeNull();
     });
   });
 

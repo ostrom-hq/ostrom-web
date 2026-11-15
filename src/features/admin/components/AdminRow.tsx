@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InstanceAdmin } from '@gen/api/types.gen';
+import type { InstanceAdminResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -9,7 +9,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { adminName } from '../model';
 
 export interface AdminRowProps {
-  readonly admin: InstanceAdmin;
+  readonly admin: InstanceAdminResponse;
   /** The last administrator is never removed: the server refuses, so the console does not offer it. */
   readonly removable: boolean;
   readonly removing: boolean;
@@ -30,7 +30,9 @@ export function AdminRow({ admin, removable, removing, isViewer, onRemove }: Adm
           {name}
           {isViewer ? <span className="o-row__meta"> {t('admin.administrators.you')}</span> : null}
         </span>
-        {admin.email === undefined ? null : <span className="o-row__meta">{admin.email}</span>}
+        {admin.email === undefined || admin.email === null ? null : (
+          <span className="o-row__meta">{admin.email}</span>
+        )}
       </span>
       <span className="o-row__end o-inline">
         <Badge>{enumText('admin.administrators.source', admin.source)}</Badge>

@@ -28,7 +28,7 @@ async function list(path: string): Promise<{ ids: string[]; next: string | undef
   const { status, body } = await call(path);
   expect(status).toBe(200);
   const page = zListRunsResponse.parse(body);
-  return { ids: page.items.map((run) => run.id), next: page.next };
+  return { ids: page.items.map((run) => run.id), next: page.next ?? undefined };
 }
 
 /** A refusal's status and type. */
@@ -177,9 +177,9 @@ describe('the mock runs', () => {
     expect(state.workflowRuns).toHaveLength(8);
   });
 
-  it('keeps the repository a run was started with', async () => {
-    expect(await started('/workflows/wf-release/runs', { repository: 'acme/api' })).toMatchObject({
-      repository: 'acme/api',
+  it('keeps the profile a run was started with', async () => {
+    expect(await started('/workflows/wf-release/runs', { profileId: 'profile-1' })).toMatchObject({
+      profileId: 'profile-1',
     });
   });
 

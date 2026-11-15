@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentBulkAssignment, EnvironmentVariant } from '@gen/api/types.gen';
+import type { EnvironmentBulkAssignmentResponse, EnvironmentVariantResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -10,10 +10,10 @@ import { bindingOf, VALUE_MAX, VARIANT_NAME_MAX, valueState } from '../model';
 import { Field } from './Field';
 
 export interface VariantRowProps {
-  readonly variant: EnvironmentVariant;
+  readonly variant: EnvironmentVariantResponse;
   readonly busy: boolean;
   /** What the last bulk assignment of this variant did, if it was the last gesture. */
-  readonly bulkResult: EnvironmentBulkAssignment | undefined;
+  readonly bulkResult: EnvironmentBulkAssignmentResponse | undefined;
   /** `expectedVersion`: the version the edit was opened on, so a change made meanwhile is a conflict, not overwritten. */
   readonly update: (
     change: { readonly name: string; readonly value: string; readonly expectedVersion: number },

@@ -107,7 +107,7 @@ describe('who approves what', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: 'maya', verified: true, via: 'github' },
-          member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+          member: { id: MEMBER_IDS.maya, login: 'maya', name: 'maya', avatarUrl: '', role: 'member' },
           capabilities: [],
         }),
       ),
@@ -122,7 +122,7 @@ describe('who approves what', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: 'lena', verified: true, via: 'github' },
-          member: { id: MEMBER_IDS.lena, login: 'lena', avatarUrl: '', role: 'owner' },
+          member: { id: MEMBER_IDS.lena, login: 'lena', name: 'lena', avatarUrl: '', role: 'owner' },
           capabilities: [],
         }),
       ),

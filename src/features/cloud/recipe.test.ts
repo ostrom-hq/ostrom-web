@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import {
   checkRecipe,
   EMPTY_RECIPE,
@@ -134,7 +134,18 @@ describe('a preparation recipe', () => {
 });
 
 describe('a session being prepared', () => {
-  const session: CloudSession = { id: 'cs', owner: 'maya', agent: 'claude', status: 'queued', createdAt: '' };
+  const session: CloudSessionResponse = {
+    id: 'cs',
+    name: '',
+    owner: 'maya',
+    agent: 'claude',
+    status: 'queued',
+    desiredStatus: 'running',
+    epoch: 1,
+    limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
+    createdAt: '',
+    updatedAt: '',
+  };
 
   it('names the phases of the contract, and only those', () => {
     expect(PREPARATION_PHASES).toEqual([
@@ -158,7 +169,7 @@ describe('a session being prepared', () => {
   });
 
   it('says to try again only when the server says it may pass', () => {
-    const failed = (retryable?: boolean): CloudSession => ({
+    const failed = (retryable?: boolean): CloudSessionResponse => ({
       ...session,
       failure: {
         code: 'preparation_failed',

@@ -7,7 +7,7 @@ import {
   updateArtifactMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import { createArtifactTicket } from '@gen/api/sdk.gen';
-import type { Artifact, ArtifactTicket, ArtifactVersion } from '@gen/api/types.gen';
+import type { ArtifactResponse, ArtifactTicketResponse, ArtifactVersionResponse } from '@gen/api/types.gen';
 import type { ArtifactAccess } from './model';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
@@ -33,12 +33,12 @@ export function livePoll(query: { readonly state: { readonly error: unknown } })
 }
 
 export interface ArtifactViewerViewModel {
-  readonly artifact: Artifact | undefined;
+  readonly artifact: ArtifactResponse | undefined;
   /** The reading ticket of the version shown: its address on the content origin, for the frame. */
-  readonly ticket: ArtifactTicket | undefined;
-  readonly versions: readonly ArtifactVersion[] | undefined;
+  readonly ticket: ArtifactTicketResponse | undefined;
+  readonly versions: readonly ArtifactVersionResponse[] | undefined;
   /** The version the frame shows, once its ticket came back. */
-  readonly shown: ArtifactVersion | undefined;
+  readonly shown: ArtifactVersionResponse | undefined;
   /** A newer version is published than the one shown, which follows the latest (never for a pinned `?v=`). */
   readonly newer: boolean;
   /** Shows the latest version: a new ticket, so the frame reloads only when the reader asks. */

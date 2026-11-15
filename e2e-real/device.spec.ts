@@ -5,7 +5,13 @@
 import { expect, type Page, request, test } from '@playwright/test';
 import { z } from 'zod';
 import { extend, pick } from 'zod/mini';
-import { zApiError, zAuthToken, zDevice, zDeviceAuthorization, zDeviceCode } from '../gen/api/zod.gen';
+import {
+  zApiError,
+  zAuthTokenResponse,
+  zDeviceResponse,
+  zDeviceAuthorizationResponse,
+  zDeviceCodeResponse,
+} from '../gen/api/zod.gen';
 import {
   accept,
   ADMIN_SCOPES,
@@ -24,7 +30,7 @@ import {
  * The server answers `verificationUriComplete` too (`IdentityRoutes`, the page with the code filled in), which the
  * contract's `DeviceCode` does not list yet: read here as the server sends it, until core adds it.
  */
-const zStartedLogin = extend(zDeviceCode, { verificationUriComplete: z.string() });
+const zStartedLogin = extend(zDeviceCodeResponse, { verificationUriComplete: z.string() });
 
 /**
  * The CLI's network, one per test (set before each): the server lets one address start ten logins per ten minutes,
@@ -103,7 +109,7 @@ async function clientNameOf(page: Page, userCode: string): Promise<string> {
     `/api/v1/auth/device?userCode=${encodeURIComponent(userCode)}`,
   );
   expect(read.status).toBe(200);
-  return zDeviceAuthorization.parse(read.body).clientName;
+  return zDeviceAuthorizationResponse.parse(read.body).clientName;
 }
 
 /** The pending login on the page: its code to compare with the terminal's, and what asks. */
@@ -128,7 +134,7 @@ test('5.1 `ostrom login`: the person approves the terminal on /device and the CL
 
   const answered = await poll(login.deviceCode);
   expect(answered.status).toBe(200);
-  const { token } = zAuthToken.parse(answered.body);
+  const { token } = zAuthTokenResponse.parse(answered.body);
   expect((await asTheCli('GET', '/api/v1/auth/me', { token })).status).toBe(200);
 });
 
@@ -168,7 +174,7 @@ async function adminTokensOf(page: Page, org: string): Promise<string[]> {
   const listed = await callFromPage(page, 'GET', '/api/v1/devices', undefined, org);
   expect(listed.status, JSON.stringify(listed.body)).toBe(200);
   return z
-    .object({ items: z.array(pick(zDevice, { kind: true, orgId: true })) })
+    .object({ items: z.array(pick(zDeviceResponse, { kind: true, orgId: true })) })
     .parse(listed.body)
     .items.filter((device) => device.kind === 'admin')
     .map((device) => device.orgId ?? '');

@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleGetApiPrices, handleLoadApiPriceDefaults, handleSetApiPrices } from '@gen/api/msw.gen';
-import type { ApiPrice } from '@gen/api/types.gen';
+import type { ApiPriceDto } from '@gen/api/types.gen';
 import { zSetApiPricesBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface ApiPricesState {
   /** The organization's own rows; none: the built-in prices apply. */
-  apiPrices: ApiPrice[];
+  apiPrices: ApiPriceDto[];
 }
 
 /** A few of the gateway's built-in Anthropic list prices (read on 2026-10-21), micro-dollars a million tokens. */
-export const BUILT_IN_PRICES: readonly ApiPrice[] = [
+export const BUILT_IN_PRICES: readonly ApiPriceDto[] = [
   {
     provider: 'anthropic',
     model: 'claude-opus-4',
@@ -32,7 +32,7 @@ export const BUILT_IN_PRICES: readonly ApiPrice[] = [
   },
 ];
 
-const key = (row: ApiPrice): string => `${row.provider}:${row.model}:${row.effectiveFrom}`;
+const key = (row: ApiPriceDto): string => `${row.provider}:${row.model}:${row.effectiveFrom}`;
 
 /**
  * `/policy/api-prices`, as ostrom-server serves it: any member reads (the built-in rows with `defaults` while the

@@ -11,17 +11,17 @@ import {
   updateRuleMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import { listRules } from '@gen/api/sdk.gen';
-import type { GateAction, ListRulesResponse, NewRule, Rule } from '@gen/api/types.gen';
+import type { GateActionDto, ListRulesResponse, NewRuleRequest, RuleDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useState } from 'react';
 import { appliedMutation } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
-import type { RuleChange } from './model';
+import { catalogActionsOf, type RuleChange } from './model';
 
 export interface RulesViewModel {
-  readonly rules: readonly Rule[] | undefined;
+  readonly rules: readonly RuleDto[] | undefined;
   readonly failure: Error | undefined;
   /** Owners and admins decide; everyone else reads. */
   readonly canDecide: boolean;
@@ -32,13 +32,13 @@ export interface RulesViewModel {
  * as `after`), and the screen counts, filters and accepts them all.
  */
 export async function everyRule(signal: AbortSignal): Promise<ListRulesResponse> {
-  const items: Rule[] = [];
+  const items: RuleDto[] = [];
   let after: string | undefined;
   do {
     const query = after === undefined ? {} : { after };
     const { data } = await listRules({ query, signal, throwOnError: true });
     items.push(...data.items);
-    after = data.next;
+    after = data.next ?? undefined;
   } while (after !== undefined);
   return { items };
 }
@@ -135,7 +135,7 @@ export function useBulkAccept(): BulkViewModel {
 
 export interface CreateRuleViewModel {
   /** Writes the rule; `onSaved` runs once the server signed it, so the form empties then, not before. */
-  readonly create: (rule: NewRule, onSaved: () => void) => void;
+  readonly create: (rule: NewRuleRequest, onSaved: () => void) => void;
   readonly creating: boolean;
   readonly failure: Error | undefined;
 }
@@ -145,7 +145,7 @@ export function useCreateRule(): CreateRuleViewModel {
   const mutation = useMutation({ ...appliedMutation(createRuleMutation()), onSettled: invalidate });
   const { mutate } = mutation;
   const create = useCallback(
-    (rule: NewRule, onSaved: () => void) => {
+    (rule: NewRuleRequest, onSaved: () => void) => {
       mutate({ body: rule }, { onSuccess: onSaved });
     },
     [mutate],
@@ -185,12 +185,18 @@ export function useDeleteRule(): DeleteRuleViewModel {
 }
 
 export interface GateCatalogViewModel {
-  readonly actions: readonly GateAction[] | undefined;
+  readonly actions: readonly GateActionDto[] | undefined;
   readonly failure: Error | undefined;
 }
 
 /** The actions a gate can cover, read from the catalogue the hooks and the gates decide on; only once a gate is drawn. */
 export function useGateCatalog(enabled: boolean): GateCatalogViewModel {
   const catalog = useQuery(ready(getGateCatalogOptions(), { enabled, retry: false }));
-  return { actions: catalog.data?.actions, failure: failureOf(catalog.error) };
+  const actions = catalog.data === undefined ? undefined : catalogActionsOf(catalog.data);
+  const unreadable = catalog.data !== undefined && actions === undefined;
+  return {
+    actions,
+    failure:
+      failureOf(catalog.error) ?? (unreadable ? new Error('The gate catalogue is not readable.') : undefined),
+  };
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, Secret } from '@gen/api/types.gen';
+import type { MemberResponse, SecretResponse } from '@gen/api/types.gen';
 import {
   addMemberRow,
   allows,
@@ -41,6 +41,11 @@ describe('a model policy', () => {
       byMember: { m1: ['x'] },
     });
     expect(policyDraftOf({ allowed: [], default: '' }).byMember).toEqual([]);
+    expect(policyDraftOf({})).toMatchObject({ allowed: '', defaultModel: '' });
+    expect(policyDraftOf({ allowed: ['a', 'b'], default: null })).toMatchObject({
+      allowed: 'a, b',
+      defaultModel: '',
+    });
     // No default set yet: the contract leaves it out.
     expect(policyDraftOf({ allowed: [] }).defaultModel).toBe('');
     expect(addMemberRow(addMemberRow([]))).toEqual([
@@ -65,6 +70,7 @@ describe('a model policy', () => {
   });
 
   it('reads a policy without a default as no default, and refuses what is not a policy', async () => {
+    expect(await readModelPolicy({})).toEqual({ allowed: [], default: '' });
     expect(await readModelPolicy({ allowed: ['claude-'] })).toEqual({ allowed: ['claude-'], default: '' });
     expect(await readModelPolicy({ allowed: [], default: null })).toEqual({ allowed: [], default: '' });
     expect(await readModelPolicy({ allowed: [], default: 'x', byMember: { m1: ['y'] } })).toEqual({
@@ -87,7 +93,7 @@ describe('a model policy', () => {
   });
 
   it('names a member by login when the members are known', () => {
-    const lena: OrgMember = {
+    const lena: MemberResponse = {
       id: 'm1',
       login: 'lena',
       name: '',
@@ -96,7 +102,7 @@ describe('a model policy', () => {
       role: 'owner',
       joinedAt: '2026-09-01T09:00:00Z',
     };
-    const members: OrgMember[] = [lena];
+    const members: MemberResponse[] = [lena];
     expect(memberName('m1', members)).toBe('lena');
     expect(memberName('m2', members)).toBe('m2');
     expect(memberName('m1', undefined)).toBe('m1');
@@ -136,7 +142,7 @@ describe('the provider keys', () => {
   });
 
   it('offers the organization’s secrets only, sorted', () => {
-    const secret = (name: string, owner?: string): Secret => ({
+    const secret = (name: string, owner?: string): SecretResponse => ({
       name,
       scope: 'org',
       createdAt: '',

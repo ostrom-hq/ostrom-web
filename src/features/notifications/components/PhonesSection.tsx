@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { PushDevice } from '@gen/api/types.gen';
+import type { PushDeviceDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useAnnounced } from '@/shared/capabilities';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -56,7 +56,7 @@ function PhoneRow({
   locked,
   onRemove,
 }: {
-  readonly phone: PushDevice;
+  readonly phone: PushDeviceDto;
   readonly locked: boolean;
   readonly onRemove: () => void;
 }): ReactElement {

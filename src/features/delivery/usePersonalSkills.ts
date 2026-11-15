@@ -6,7 +6,7 @@ import {
   listMySkillVersionsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { pinMySkill, restoreMySkill, retireMySkill, unpinMySkill } from '@gen/api/sdk.gen';
-import type { SkillEntry, SkillVersion } from '@gen/api/types.gen';
+import type { SkillEntryDto, SkillVersionDto } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -14,7 +14,7 @@ import { type DeliveryChange, useDeliveryChange } from './useDeliveryChange';
 
 export interface PersonalSkillsViewModel {
   /** The caller's own skills, newest change first. */
-  readonly skills: readonly SkillEntry[] | undefined;
+  readonly skills: readonly SkillEntryDto[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -24,7 +24,7 @@ export function usePersonalSkills(): PersonalSkillsViewModel {
 }
 
 export interface PersonalVersionsViewModel {
-  readonly versions: readonly SkillVersion[] | undefined;
+  readonly versions: readonly SkillVersionDto[] | undefined;
   readonly failure: Error | undefined;
 }
 

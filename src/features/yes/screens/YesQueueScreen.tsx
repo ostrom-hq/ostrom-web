@@ -57,7 +57,6 @@ export function YesQueueScreen(): ReactElement {
                     viewer={viewer.login}
                     fresh={fresh.has(approval.id)}
                     linkRequired={linkRequired.has(approval.id)}
-                    now={now}
                   />
                 </li>
               ))}

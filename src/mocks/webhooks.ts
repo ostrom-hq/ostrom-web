@@ -9,7 +9,7 @@ import {
   handleTestWebhook,
   handleUpdateWebhook,
 } from '@gen/api/msw.gen';
-import type { Organization, Webhook, WebhookDelivery } from '@gen/api/types.gen';
+import type { MeOrganizationResponse, Webhook, WebhookDelivery } from '@gen/api/types.gen';
 import { zCreateWebhookRequest, zUpdateWebhookRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { WEBHOOK_EVENT_TYPES } from '@/features/webhooks/model';
@@ -67,7 +67,7 @@ function targetProblem(url: string): 'invalid' | 'host' | undefined {
 export function createWebhooksHandlers(
   state: () => WebhooksState,
   now: () => Date,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
 ): HttpHandler[] {
   /** As the server: an owner or an admin acts on the demo organization's webhooks, any other caller is refused. */
   const guard = (request: Request): ReturnType<typeof refusal> | undefined =>

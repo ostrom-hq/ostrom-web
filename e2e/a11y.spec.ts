@@ -34,7 +34,7 @@ for (const scheme of ['light', 'dark'] as const) {
 
     test('a request waiting for a yes, its proof shown', async ({ page }) => {
       await page.goto('/yes/apr-merge-412');
-      await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
+      await expect(page.getByText('3fa0d81', { exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: /^Approve/ })).toBeVisible();
       expect(await violationsOn(page)).toEqual([]);
     });
@@ -76,6 +76,9 @@ for (const scheme of ['light', 'dark'] as const) {
       const decision = page.getByRole('region', { name: 'Decision' });
       await decision.getByText('Verify the receipt').click();
       await expect(decision.getByText('ostrom verify rcpt-apr-merge-412', { exact: true })).toBeVisible();
+      // Read with the receipt at the bottom of the screen, as after scrolling to it: the click above
+      // leaves the scroll wherever Playwright brought the summary, a proof link half off the top edge.
+      await page.mouse.wheel(0, 100_000);
       expect(await violationsOn(page)).toEqual([]);
     });
 

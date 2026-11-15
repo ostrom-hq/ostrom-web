@@ -2,8 +2,8 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import type { CloudEvent, CloudInput } from '@gen/api/types.gen';
-import { zCreateCloudSessionBody, zSendCloudMessageRequest } from '@gen/api/zod.gen';
+import type { CloudEventDto, CloudInputDto } from '@gen/api/types.gen';
+import { zCreateCloudSessionBody, zSendCloudMessageBody } from '@gen/api/zod.gen';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { CONVERSATION_ID } from '@/mocks/cloudConversation';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -19,10 +19,10 @@ const ERROR = (status: number, type: string): Response =>
 
 /** Appends events to the demo conversation before the screen opens. */
 function withEvents(
-  ...events: { readonly type: string; readonly data: unknown; readonly feed?: string }[]
+  ...events: { readonly type: string; readonly data: Record<string, unknown>; readonly feed?: string }[]
 ): void {
   const known = db.cloudEvents[CONVERSATION_ID] ?? [];
-  const added: CloudEvent[] = events.map((event, index) => ({
+  const added: CloudEventDto[] = events.map((event, index) => ({
     seq: known.length + index + 1,
     type: event.type,
     at: AT,
@@ -102,7 +102,7 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
     await waitFor(() => {
       expect(sent).toHaveLength(1);
     });
-    expect(zSendCloudMessageRequest.parse(sent[0]).clientMessageId).toMatch(/^[0-9a-f]{32}$/);
+    expect(zSendCloudMessageBody.parse(sent[0]).clientMessageId).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it('sends with Enter, breaks the line with Shift+Enter, and refuses a message the server would', async () => {
@@ -130,10 +130,10 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
     traffic.onRequest((request) => {
       if (request.method === 'POST' && request.url.endsWith('/messages'))
         void request.json().then((body: unknown) => {
-          keys.push(zSendCloudMessageRequest.parse(body).clientMessageId ?? '');
+          keys.push(zSendCloudMessageBody.parse(body).clientMessageId ?? '');
         });
     });
-    const queued = (woke: boolean): CloudInput => ({
+    const queued = (woke: boolean): CloudInputDto => ({
       id: `in-q-${String(woke)}`,
       kind: 'message',
       status: 'queued',
@@ -204,11 +204,16 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
   it('starts afresh on another session’s address', async () => {
     db.cloudSessions.push({
       id: 'cs-34',
+      name: '',
       owner: 'maya',
       agent: 'codex',
       mode: 'conversation',
       status: 'running',
+      desiredStatus: 'running',
+      epoch: 1,
+      limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
       createdAt: AT,
+      updatedAt: AT,
     });
     db.cloudEvents['cs-34'] = [
       { seq: 1, type: 'message.agent', at: AT, epoch: 1, data: { text: 'Another conversation' } },
@@ -416,11 +421,16 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
   it('opens on an empty transcript, named by its agent, with a status it has no words for', async () => {
     db.cloudSessions.push({
       id: 'cs-34',
+      name: '',
       owner: 'maya',
       agent: 'codex',
       mode: 'conversation',
       status: 'paused',
+      desiredStatus: 'running',
+      epoch: 1,
+      limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
       createdAt: AT,
+      updatedAt: AT,
     });
     visit('/cloud/sessions/cs-34');
     expect(await screen.findByText(/^Nothing yet/)).toBeInTheDocument();

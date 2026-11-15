@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InstanceSettings } from '@gen/api/types.gen';
+import type { InstanceSettingsResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { EmptyState, LoadState } from '@/shared/ui/Screen';
@@ -43,7 +43,7 @@ function SectionOf({
   settings,
   onReload,
 }: {
-  readonly settings: InstanceSettings;
+  readonly settings: InstanceSettingsResponse;
   readonly onReload: () => Promise<void>;
 }): ReactElement {
   const save = useSaveInstanceSettings();

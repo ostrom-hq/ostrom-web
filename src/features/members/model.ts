@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InferenceSettings, Invitation, OrgMember } from '@gen/api/types.gen';
+import type { InferenceSettingsDto, InvitationResponse, MemberResponse } from '@gen/api/types.gen';
 import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 
 /** Owners first, then admins, approvers, members and billing: the people who decide are the first ones read. */
@@ -11,12 +11,12 @@ function rank(role: string): number {
   return known === undefined ? Object.keys(ORDER).length : ORDER[known];
 }
 
-export function displayName(member: Pick<OrgMember, 'login' | 'name'>): string {
+export function displayName(member: Pick<MemberResponse, 'login' | 'name'>): string {
   return member.name === '' ? member.login : member.name;
 }
 
 /** By role, then by name. */
-export function sortMembers(members: readonly OrgMember[]): OrgMember[] {
+export function sortMembers(members: readonly MemberResponse[]): MemberResponse[] {
   return [...members].sort((a, b) => {
     const byRole = rank(a.role) - rank(b.role);
     return byRole !== 0 ? byRole : displayName(a).localeCompare(displayName(b), 'en');
@@ -24,11 +24,13 @@ export function sortMembers(members: readonly OrgMember[]): OrgMember[] {
 }
 
 /** Invitations to an address first, by address; then links, newest first. */
-export function sortInvitations(invitations: readonly Invitation[]): Invitation[] {
+export function sortInvitations(invitations: readonly InvitationResponse[]): InvitationResponse[] {
   return [...invitations].sort((a, b) => {
-    if (a.email !== null && b.email !== null) return a.email.localeCompare(b.email, 'en');
-    if (a.email !== null) return -1;
-    if (b.email !== null) return 1;
+    const first = a.email ?? null;
+    const second = b.email ?? null;
+    if (first !== null && second !== null) return first.localeCompare(second, 'en');
+    if (first !== null) return -1;
+    if (second !== null) return 1;
     return b.createdAt.localeCompare(a.createdAt);
   });
 }
@@ -65,16 +67,16 @@ export const LINK_DEFAULT_USES = 10;
 export const MAX_MEMBER_CONCURRENCY = 32;
 
 /** A member's concurrent requests in the inference settings: 0, the default, for unlimited (TeamCode's member policy). */
-export function concurrencyOf(settings: InferenceSettings, memberId: string): number {
+export function concurrencyOf(settings: InferenceSettingsDto, memberId: string): number {
   return settings.memberConcurrency?.[memberId] ?? 0;
 }
 
 /** The settings with a member's concurrent requests changed, every other setting kept; 0 drops the member's entry. */
 export function withConcurrency(
-  settings: InferenceSettings,
+  settings: InferenceSettingsDto,
   memberId: string,
   limit: number,
-): InferenceSettings {
+): InferenceSettingsDto {
   const others = Object.entries(settings.memberConcurrency ?? {}).filter(([id]) => id !== memberId);
   return {
     ...settings,

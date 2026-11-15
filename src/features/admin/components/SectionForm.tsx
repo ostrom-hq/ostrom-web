@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InstanceSettings } from '@gen/api/types.gen';
+import type { InstanceSettingsResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -21,7 +21,7 @@ import type { SaveSectionViewModel } from '../useAdmin';
 import { SecretField } from './SecretField';
 
 export interface SectionFormProps {
-  readonly settings: InstanceSettings;
+  readonly settings: InstanceSettingsResponse;
   readonly save: SaveSectionViewModel;
   /** Reads the section again: what a person does when someone saved it first. */
   readonly onReload: () => void;

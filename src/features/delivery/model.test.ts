@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember } from '@gen/api/types.gen';
+import type { MemberResponse } from '@gen/api/types.gen';
 import {
   candidatesOf,
   choiceOf,
@@ -12,7 +12,7 @@ import {
 } from './model';
 
 const joinedAt = '2026-09-01T09:00:00Z';
-const maya: OrgMember = {
+const maya: MemberResponse = {
   id: 'm-1',
   login: 'maya',
   name: 'Maya Lind',
@@ -21,8 +21,8 @@ const maya: OrgMember = {
   role: 'admin',
   joinedAt,
 };
-const theo: OrgMember = { ...maya, id: 'm-2', login: 'theo', name: '', role: 'member' };
-const jo: OrgMember = { ...maya, id: 'm-3', login: 'jo', name: '', role: 'invited' };
+const theo: MemberResponse = { ...maya, id: 'm-2', login: 'theo', name: '', role: 'member' };
+const jo: MemberResponse = { ...maya, id: 'm-3', login: 'jo', name: '', role: 'invited' };
 
 describe('decisions', () => {
   it('keeps the explicit Yes and No by member, and ignores a decision it does not know', () => {

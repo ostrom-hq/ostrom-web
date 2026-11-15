@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Invitation, OrgMember } from '@gen/api/types.gen';
+import type { InvitationResponse, MemberResponse } from '@gen/api/types.gen';
 import {
   concurrencyDraft,
   concurrencyOf,
@@ -10,7 +10,7 @@ import {
   withConcurrency,
 } from './model';
 
-const member = (login: string, role: string, name = ''): OrgMember => ({
+const member = (login: string, role: string, name = ''): MemberResponse => ({
   id: `id-${login}`,
   login,
   name,
@@ -20,7 +20,7 @@ const member = (login: string, role: string, name = ''): OrgMember => ({
   joinedAt: '2026-10-01T00:00:00Z',
 });
 
-const invitation = (id: string, email: string | null, createdAt: string): Invitation => ({
+const invitation = (id: string, email: string | null, createdAt: string): InvitationResponse => ({
   id,
   email,
   role: 'member',

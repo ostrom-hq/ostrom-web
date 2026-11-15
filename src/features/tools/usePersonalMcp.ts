@@ -7,7 +7,7 @@ import {
   listMyMcpServersQueryKey,
   saveMyMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { McpServer } from '@gen/api/types.gen';
+import type { McpServerDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -16,7 +16,7 @@ import type { McpChangeViewModel } from './useTools';
 
 export interface PersonalMcpViewModel {
   /** The person's own servers, relayed to them alone. */
-  readonly servers: readonly McpServer[] | undefined;
+  readonly servers: readonly McpServerDto[] | undefined;
   readonly callsByServer: Readonly<Record<string, number>> | undefined;
   readonly failure: Error | undefined;
 }
@@ -45,7 +45,7 @@ export function usePersonalMcpChange(): McpChangeViewModel {
   const { mutate: saveMutate, reset: resetSave } = save;
   const { mutate: dropMutate, reset: resetDrop } = drop;
   const add = useCallback(
-    (server: McpServer, onDone: () => void) => {
+    (server: McpServerDto, onDone: () => void) => {
       resetSave();
       resetDrop();
       createMutate({ body: server }, { onSuccess: onDone });
@@ -53,10 +53,10 @@ export function usePersonalMcpChange(): McpChangeViewModel {
     [createMutate, resetSave, resetDrop],
   );
   const toggle = useCallback(
-    (server: McpServer) => {
+    (server: McpServerDto) => {
       resetCreate();
       resetDrop();
-      saveMutate({ path: { name: server.name }, body: { ...server, enabled: !server.enabled } });
+      saveMutate({ path: { name: server.name }, body: { ...server, enabled: server.enabled !== true } });
     },
     [saveMutate, resetCreate, resetDrop],
   );

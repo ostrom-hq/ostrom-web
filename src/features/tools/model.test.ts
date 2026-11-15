@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpAssignment, McpServer, OrgMember, Secret } from '@gen/api/types.gen';
+import type { McpAssignmentResponse, McpServerDto, MemberResponse, SecretResponse } from '@gen/api/types.gen';
 import {
   AGENT_PREFIX,
   agentToolName,
@@ -74,7 +74,7 @@ describe('checkServer', () => {
 
 describe('missingSecrets', () => {
   it('lists what the server needs and the organization lacks', () => {
-    const server: McpServer = {
+    const server: McpServerDto = {
       name: 'a',
       url: 'https://a',
       transport: 'http',
@@ -82,11 +82,11 @@ describe('missingSecrets', () => {
       enabled: true,
       scope: 'shared',
     };
-    const secrets: Secret[] = [
+    const secrets: SecretResponse[] = [
       { name: 'HAVE', scope: 'org', createdAt: '', updatedAt: '', updatedBy: 'maya', version: 1 },
     ];
     expect(missingSecrets(server, secrets)).toEqual(['LACK']);
-    const bare: McpServer = {
+    const bare: McpServerDto = {
       name: 'b',
       url: 'https://b',
       transport: 'http',
@@ -207,13 +207,13 @@ describe('checkAssignment', () => {
 
 describe('sortAssignments and memberLabel', () => {
   it('puts everyone first', () => {
-    const one: McpAssignment = { server: 's', member: 'm', assignedAt: 'x' };
-    const all: McpAssignment = { server: 's', assignedAt: 'y' };
+    const one: McpAssignmentResponse = { server: 's', member: 'm', assignedAt: 'x' };
+    const all: McpAssignmentResponse = { server: 's', assignedAt: 'y' };
     expect(sortAssignments([one, all])).toEqual([all, one]);
   });
 
   it('names a member by name and login, or login alone', () => {
-    const member: OrgMember = {
+    const member: MemberResponse = {
       id: 'm',
       login: 'theo',
       name: '',

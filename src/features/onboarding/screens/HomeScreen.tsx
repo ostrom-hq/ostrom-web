@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -61,7 +61,13 @@ export function HomeScreen(): ReactElement {
   );
 }
 
-function OrgHome({ org, role }: { readonly org: OrgView; readonly role: OrgRole | undefined }): ReactElement {
+function OrgHome({
+  org,
+  role,
+}: {
+  readonly org: OrgResponse;
+  readonly role: OrgRole | undefined;
+}): ReactElement {
   const { t } = useTranslation();
   const setup = useSetup(org.id, role);
   return (

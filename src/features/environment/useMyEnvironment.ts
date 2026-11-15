@@ -9,7 +9,7 @@ import {
   getEnvironment,
   updateMyEnvironmentVariant,
 } from '@gen/api/sdk.gen';
-import type { EnvironmentVariant, EnvironmentVariantCreate } from '@gen/api/types.gen';
+import type { EnvironmentVariantResponse, EnvironmentVariantCreateRequest } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -39,7 +39,7 @@ export interface MyEnvironmentViewModel {
   readonly received: ReceivedNames | undefined;
   readonly receivedFailure: Error | undefined;
   /** The person's own variants, assigned to them alone. */
-  readonly variants: readonly EnvironmentVariant[] | undefined;
+  readonly variants: readonly EnvironmentVariantResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -62,13 +62,13 @@ export function useMyEnvironment(): MyEnvironmentViewModel {
 }
 
 export interface MyEnvironmentChangeViewModel {
-  readonly create: (body: EnvironmentVariantCreate, onDone: () => void) => void;
+  readonly create: (body: EnvironmentVariantCreateRequest, onDone: () => void) => void;
   readonly update: (
-    variant: EnvironmentVariant,
+    variant: EnvironmentVariantResponse,
     change: { readonly name: string; readonly value: string; readonly expectedVersion: number },
     onDone: () => void,
   ) => void;
-  readonly remove: (variant: EnvironmentVariant) => void;
+  readonly remove: (variant: EnvironmentVariantResponse) => void;
   readonly pending: boolean;
   readonly failure: Error | undefined;
 }

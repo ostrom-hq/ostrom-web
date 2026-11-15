@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NodeVisit, Workflow, WorkflowRun } from '@gen/api/types.gen';
+import type { NodeVisit, WorkflowRun } from '@gen/api/types.gen';
 import { describe, expect, it } from 'vitest';
 import {
   deliverableOf,
@@ -8,12 +8,11 @@ import {
   failureWords,
   finished,
   inputsOf,
-  needsRepository,
   openVisit,
-  repositoryOk,
   schemaProblem,
   startProblem,
 } from './runs';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 const visit = (over: Partial<NodeVisit>): NodeVisit => ({
   seq: 1,
@@ -189,22 +188,5 @@ describe('start form', () => {
     expect(startProblem(inputs, { tag: '  ' })).toEqual({ input: 'tag', label: 'Tag', kind: 'required' });
     expect(startProblem(inputs, { tag: 'toolong' })).toEqual({ input: 'tag', label: 'Tag', kind: 'tooLong' });
     expect(startProblem(inputs, { tag: 'ok' })).toBeUndefined();
-  });
-
-  it('reads a repository as owner/name, or nothing', () => {
-    expect(repositoryOk('')).toBe(true);
-    expect(repositoryOk('acme/api')).toBe(true);
-    expect(repositoryOk('acme')).toBe(false);
-  });
-
-  it('needs a repository when an agent step names none', () => {
-    expect(needsRepository(workflow([{ id: 'a', kind: 'agent', label: 'A' }]))).toBe(true);
-    expect(needsRepository(workflow([{ id: 'a', kind: 'agent', label: 'A', run: { repository: '' } }]))).toBe(
-      true,
-    );
-    expect(
-      needsRepository(workflow([{ id: 'a', kind: 'agent', label: 'A', run: { repository: 'a/b' } }])),
-    ).toBe(false);
-    expect(needsRepository(workflow([{ id: 'a', kind: 'step', label: 'A' }]))).toBe(false);
   });
 });

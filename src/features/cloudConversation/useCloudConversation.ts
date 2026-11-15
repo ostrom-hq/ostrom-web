@@ -6,7 +6,7 @@ import {
   listCloudSubagents,
   sendCloudMessage,
 } from '@gen/api/sdk.gen';
-import type { CloudSession, CloudSessionWaiting } from '@gen/api/types.gen';
+import type { CloudSessionResponse, CloudSessionWaitingDto } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -50,7 +50,7 @@ export type ConversationNotice =
   | { readonly kind: 'failure'; readonly error: Error };
 
 export interface CloudConversationViewModel {
-  readonly session: CloudSession | undefined;
+  readonly session: CloudSessionResponse | undefined;
   /** The viewer's member id: a message another member wrote says so. */
   readonly memberId: string | undefined;
   /** Why the header could not be read; with `gone`, the session is gone or no longer visible. */
@@ -73,7 +73,7 @@ export interface CloudConversationViewModel {
   /** A turn is running: the session runs and its last loaded `turn` event is `started`. */
   readonly running: boolean;
   /** The agent waits for a person (`runners.cloud.permissions.v1`): a tool use to allow, or a question. */
-  readonly waiting: CloudSessionWaiting | undefined;
+  readonly waiting: CloudSessionWaitingDto | undefined;
   readonly ended: boolean;
   readonly interrupting: boolean;
   readonly notice: ConversationNotice | undefined;
@@ -122,7 +122,10 @@ function goneBy(error: unknown): boolean {
 }
 
 /** A turn is running: the session runs and the last loaded `turn` event started one. */
-export function runningOf(session: CloudSession | undefined, events: readonly TranscriptEvent[]): boolean {
+export function runningOf(
+  session: CloudSessionResponse | undefined,
+  events: readonly TranscriptEvent[],
+): boolean {
   const last = events.findLast((event) => event.kind === 'turn');
   const started = last?.kind === 'turn' && last.phase === 'started';
   return started && (session === undefined || session.status === 'running');
@@ -495,7 +498,7 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     setDraft,
     canSend: !sessionEnded && files.ready && (draft.trim() !== '' || files.files.length > 0),
     running,
-    waiting: sessionEnded ? undefined : session?.waiting,
+    waiting: sessionEnded ? undefined : (session?.waiting ?? undefined),
     ended: sessionEnded,
     interrupting,
     notice,

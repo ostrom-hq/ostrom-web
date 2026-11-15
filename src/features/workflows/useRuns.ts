@@ -9,7 +9,7 @@ import {
   listWorkflowRunsInfiniteQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { cancelRun, deliverRun, startWorkflowRun } from '@gen/api/sdk.gen';
-import type { Workflow, WorkflowRun } from '@gen/api/types.gen';
+import type { WorkflowRun } from '@gen/api/types.gen';
 import {
   type InfiniteData,
   useInfiniteQuery,
@@ -25,12 +25,12 @@ import { runnable } from './model';
 import { type PendingStart, pressOf, startRefused } from './startKey';
 import { type Delivery, deliveryOf, deliveryVisit, deliverableOf, finished, inputsOf } from './runs';
 import { useViewer } from '@/shared/auth/useViewer';
-import { useFeature } from '@/shared/capabilities';
+import { readWorkflow, type Workflow } from '@/shared/api/workflowDocument';
 
 /** A page of runs as the server serves it: the newest first, `next` while older ones are left. */
 interface RunsPage {
   readonly items: readonly WorkflowRun[];
-  readonly next?: string;
+  readonly next?: string | null;
 }
 
 export interface RunListViewModel {
@@ -111,10 +111,12 @@ export function useOrgRuns(filters: RunFilters = NO_FILTERS): RunListViewModel {
   return useRunList(query);
 }
 
-/** What a person gives to start a run: the workflow's inputs by id, and the repository of its agent steps. */
+/**
+ * What a person gives to start a run: the workflow's inputs by id. The server's `StartRunRequest` takes no repository
+ * (nor does TeamCode's `StartWorkflowRunRequest`): an agent step works in the repository it names.
+ */
 export interface RunStart {
   readonly inputs: Readonly<Record<string, string>>;
-  readonly repository: string;
 }
 
 export interface StartRunViewModel {
@@ -124,8 +126,6 @@ export interface StartRunViewModel {
   readonly acceptFirst: boolean;
   /** A rejected workflow never runs: its page says so, and offers no start. */
   readonly rejected: boolean;
-  /** The server takes the repository of a run (the workflow delivery). */
-  readonly withRepository: boolean;
   readonly start: (start: RunStart) => void;
   readonly starting: boolean;
   /** Why the last run did not start: the server's words. */
@@ -136,20 +136,18 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
   const workflowId = workflow.id;
   const queryClient = useQueryClient();
   const viewer = useViewer();
-  const withRepository = useFeature('workflows.deliver.v1');
   const pending = useRef<PendingStart | undefined>(undefined);
   const mutation = useMutation({
     mutationFn: async (start: RunStart) => {
       const inputs = inputsOf(workflow.inputs ?? [], start.inputs);
-      const repository = start.repository.trim();
       // One key per press, kept while its answer is unknown so that pressing again cannot start a second run.
-      const press = pressOf(pending.current, workflowId, inputs, repository);
+      const press = pressOf(pending.current, workflowId, inputs);
       pending.current = press;
       try {
         const run = (
           await startWorkflowRun({
             path: { id: workflowId },
-            body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
+            body: { inputs },
             headers: { 'Idempotency-Key': press.key },
             throwOnError: true,
           })
@@ -177,7 +175,6 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
     canStart: viewer.canManage && runnable(workflow),
     acceptFirst: viewer.canManage && workflow.status === 'proposed',
     rejected: workflow.status === 'rejected',
-    withRepository,
     start: (start) => {
       mutate(start);
     },
@@ -208,13 +205,14 @@ export function useRun(id: string): RunViewModel {
     }),
   );
   const run = query.data;
-  const workflow = useQuery(
-    ready(getWorkflowOptions({ path: { id: run?.workflowId ?? '' } }), {
+  const workflow = useQuery({
+    ...ready(getWorkflowOptions({ path: { id: run?.workflowId ?? '' } }), {
       enabled: run !== undefined,
       retry: false,
       staleTime: 30_000,
     }),
-  ).data;
+    select: readWorkflow,
+  }).data;
   const viewer = useViewer();
   const isStarter = run !== undefined && viewer.login === run.startedBy;
   return {

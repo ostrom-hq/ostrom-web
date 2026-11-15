@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { McpArgumentCondition, McpArgumentPolicy, McpAssignment, OrgMember } from '@gen/api/types.gen';
+import type {
+  ArgumentConditionDto,
+  ArgumentPolicyResponse,
+  McpAssignmentResponse,
+  MemberResponse,
+} from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -72,7 +77,7 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
                     members={view.members}
                     busy={change.pending}
                     onRemove={() => {
-                      change.unassign(assignment.member);
+                      change.unassign(assignment.member ?? undefined);
                     }}
                   />
                 ))}
@@ -105,15 +110,15 @@ function AccessPanel({ server }: { readonly server: string }): ReactElement {
 }
 
 interface AssignmentRowProps {
-  readonly assignment: McpAssignment;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly assignment: McpAssignmentResponse;
+  readonly members: readonly MemberResponse[] | undefined;
   readonly busy: boolean;
   readonly onRemove: () => void;
 }
 
 function AssignmentRow({ assignment, members, busy, onRemove }: AssignmentRowProps): ReactElement {
   const { t } = useTranslation();
-  const id = assignment.member;
+  const id = assignment.member ?? undefined;
   const known = id === undefined ? undefined : members?.find((member) => member.id === id);
   // Without the members, a member is their id; with them, an id no member has is someone who left.
   const who =
@@ -125,7 +130,7 @@ function AssignmentRow({ assignment, members, busy, onRemove }: AssignmentRowPro
           : t('tools.mcp.access.formerMember', { id })
         : memberLabel(known);
   const tools =
-    assignment.tools === undefined
+    assignment.tools === undefined || assignment.tools === null
       ? t('tools.mcp.access.allTools')
       : assignment.tools.length === 0
         ? t('tools.mcp.access.noTool')
@@ -139,7 +144,7 @@ function AssignmentRow({ assignment, members, busy, onRemove }: AssignmentRowPro
         <span className="o-row__meta">
           {[
             tools,
-            assignment.credentialSecret === undefined
+            assignment.credentialSecret === undefined || assignment.credentialSecret === null
               ? undefined
               : t('tools.mcp.access.credential', { name: assignment.credentialSecret }),
           ]
@@ -160,14 +165,14 @@ function AssignmentRow({ assignment, members, busy, onRemove }: AssignmentRowPro
   );
 }
 
-function conditionText(condition: McpArgumentCondition, operator: string): string {
-  return condition.value === undefined
+function conditionText(condition: ArgumentConditionDto, operator: string): string {
+  return condition.value === undefined || condition.value === null
     ? `${condition.path} ${operator}`
     : `${condition.path} ${operator} ${condition.value}`;
 }
 
 interface PolicyRowProps {
-  readonly policy: McpArgumentPolicy;
+  readonly policy: ArgumentPolicyResponse;
   readonly busy: boolean;
   readonly onRemove: () => void;
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { PoolSize } from '@gen/api/types.gen';
+import type { PoolSizeResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -9,20 +9,25 @@ import { Facts, Section } from '@/shared/ui/Screen';
 import { reasonOf, sourceOf, statusOf, usdOfMicros } from '../model';
 
 /** The daily budget in force, how it was sized, and what each shared account contributes. */
-export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElement {
+export function PoolSizeReport({ size }: { readonly size: PoolSizeResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const usd = (micros: number) => formatUsd(usdOfMicros(micros), i18n.language);
   const source = sourceOf(size);
   const reason = reasonOf(size);
+  const effective = size.effectiveDailyMicros ?? undefined;
+  const manual = size.manualDailyMicros ?? undefined;
+  const automatic = size.automaticDailyMicros ?? undefined;
+  const computedAt = size.automaticComputedAt ?? undefined;
+  const outside = size.outsideWeeklyMicros ?? undefined;
   const automaticStale = size.enabled && source !== 'automatic' && reason === undefined;
   return (
     <>
       <Section label={t('poolSize.status.title')}>
         <p>
-          {size.effectiveDailyMicros === undefined
+          {effective === undefined
             ? t('poolSize.status.none')
             : t('poolSize.status.effective', {
-                amount: usd(size.effectiveDailyMicros),
+                amount: usd(effective),
                 source: t(`poolSize.status.source.${source}`),
               })}
         </p>
@@ -34,19 +39,16 @@ export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElem
           facts={[
             {
               label: t('poolSize.status.manual'),
-              value:
-                size.manualDailyMicros === undefined
-                  ? t('poolSize.status.noneTyped')
-                  : usd(size.manualDailyMicros),
+              value: manual === undefined ? t('poolSize.status.noneTyped') : usd(manual),
             },
             {
               label: t('poolSize.status.automatic'),
               value:
-                size.automaticDailyMicros === undefined || size.automaticComputedAt === undefined
+                automatic === undefined || computedAt === undefined
                   ? t('poolSize.status.noneYet')
                   : t('poolSize.status.automaticAt', {
-                      amount: usd(size.automaticDailyMicros),
-                      when: formatAbsolute(size.automaticComputedAt, i18n.language),
+                      amount: usd(automatic),
+                      when: formatAbsolute(computedAt, i18n.language),
                     }),
             },
             {
@@ -55,7 +57,7 @@ export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElem
             },
             {
               label: t('poolSize.status.capacity'),
-              value: size.accounts.every((account) => account.capacityDailyMicros === undefined)
+              value: size.accounts.every((account) => typeof account.capacityDailyMicros !== 'number')
                 ? t('poolSize.status.capacityUnknown')
                 : size.capacityUnknownAccounts > 0
                   ? t('poolSize.status.capacityAtLeast', {
@@ -66,10 +68,7 @@ export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElem
             },
             {
               label: t('poolSize.status.outside'),
-              value:
-                size.outsideWeeklyMicros === undefined
-                  ? t('poolSize.status.outsideUnknown')
-                  : usd(size.outsideWeeklyMicros),
+              value: outside === undefined ? t('poolSize.status.outsideUnknown') : usd(outside),
             },
           ]}
         />
@@ -92,7 +91,7 @@ export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElem
                     {t(`poolSize.accounts.status.${statusOf(account)}`)}
                     {statusOf(account) === 'counted'
                       ? ` · ${t('poolSize.accounts.daily', { amount: usd(account.dailyMicros) })}${
-                          account.binding === undefined
+                          account.binding === undefined || account.binding === null
                             ? ''
                             : ` · ${t('poolSize.accounts.boundBy', { window: account.binding })}`
                         }`
@@ -120,7 +119,7 @@ export function PoolSizeReport({ size }: { readonly size: PoolSize }): ReactElem
                           model.outputTokens,
                       ),
                       cost:
-                        model.totalMicros === undefined
+                        model.totalMicros === undefined || model.totalMicros === null
                           ? t('poolSize.models.unpriced')
                           : usd(model.totalMicros),
                     })}

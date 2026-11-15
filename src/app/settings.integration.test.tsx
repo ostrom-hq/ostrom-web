@@ -285,7 +285,6 @@ describe('the security settings', () => {
       'Unknown device',
     ]);
     expect(within(rows[0] ?? security).getByText('This browser')).toBeInTheDocument();
-    expect(rows[2]).not.toHaveTextContent('last seen');
     const phone = rows[1] ?? security;
     await user.click(within(phone).getByRole('button', { name: 'Sign out' }));
     await user.click(within(phone).getByRole('button', { name: 'Sign out Ostrom on iPhone' }));

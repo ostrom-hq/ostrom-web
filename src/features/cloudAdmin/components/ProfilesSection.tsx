@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudProfile } from '@gen/api/types.gen';
+import type { CloudProfileResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
@@ -115,7 +115,7 @@ function ProfileForm({
   onDone,
 }: {
   readonly orgId: string;
-  readonly stored: CloudProfile | undefined;
+  readonly stored: CloudProfileResponse | undefined;
   readonly view: CloudProfilesViewModel;
   readonly onDone: () => void;
 }): ReactElement {

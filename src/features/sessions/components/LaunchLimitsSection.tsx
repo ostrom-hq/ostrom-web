@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { LaunchLimits } from '@gen/api/types.gen';
+import type { LaunchLimitsBody } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import type { OrgRole } from '@/shared/org/roles';
@@ -38,11 +38,11 @@ export function LaunchLimitsSection({ launchId, role }: LaunchLimitsSectionProps
 }
 
 interface LimitsFormProps {
-  readonly limits: LaunchLimits;
+  readonly limits: LaunchLimitsBody;
   readonly saving: boolean;
   readonly saved: boolean;
   readonly failure: Error | undefined;
-  readonly onSave: (next: LaunchLimits) => void;
+  readonly onSave: (next: LaunchLimitsBody) => void;
 }
 
 function LimitsForm({ limits, saving, saved, failure, onSave }: LimitsFormProps): ReactElement {
@@ -112,7 +112,7 @@ function LimitsForm({ limits, saving, saved, failure, onSave }: LimitsFormProps)
           />
           {t('sessions.limits.paused')}
         </label>
-        {limits.spentMicros === undefined ? null : (
+        {typeof limits.spentMicros !== 'number' ? null : (
           <p className="o-row__meta">
             {t('sessions.limits.spent', { amount: money.format(limits.spentMicros / 1_000_000) })}
           </p>

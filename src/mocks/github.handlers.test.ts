@@ -46,7 +46,7 @@ const start = async (): Promise<number | undefined> =>
 const restart = async (): Promise<number | undefined> =>
   statusOf(async () => restartAnalysis({ throwOnError: true }));
 const phase = async (): Promise<string | undefined> =>
-  (await getAnalysisState({ throwOnError: true })).data.phase;
+  (await getAnalysisState({ throwOnError: true })).data.phase ?? undefined;
 
 describe('mock GitHub', () => {
   it('lists no repository for an organization that gave none', async () => {

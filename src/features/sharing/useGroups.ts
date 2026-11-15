@@ -12,7 +12,12 @@ import {
   removeGroupMemberMutation,
   updateGroupMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { CreateGroupData, Group, OrgMember, SharedAccount } from '@gen/api/types.gen';
+import type {
+  CreateGroupData,
+  GroupResponse,
+  MemberResponse,
+  SharedAccountResponse,
+} from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -25,9 +30,9 @@ import { isGone } from './groups';
 /** What every group screen reads beside the groups: the names it shows, and whether the person may change them. */
 export interface GroupsContext {
   /** The shared subscriptions the person reads, to name the ones a group lends (by id). */
-  readonly accounts: readonly SharedAccount[] | undefined;
+  readonly accounts: readonly SharedAccountResponse[] | undefined;
   /** The organization's members: the ones to add, and who of a group left (named by id then). */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, and whether every page is read (only then is anyone said to have left). */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'complete'>;
   /** Owners and admins change groups; the server refuses anyone else (403). */
@@ -51,7 +56,7 @@ function useGroupsContext(): GroupsContext {
 }
 
 export interface GroupsViewModel extends GroupsContext {
-  readonly groups: readonly Group[] | undefined;
+  readonly groups: readonly GroupResponse[] | undefined;
 }
 
 export function useGroups(): GroupsViewModel {
@@ -65,7 +70,7 @@ export function useGroups(): GroupsViewModel {
 }
 
 export interface GroupViewModel extends GroupsContext {
-  readonly group: Group | undefined;
+  readonly group: GroupResponse | undefined;
   /** Deleted, or of another organization: the screen goes back to the list and says so. */
   readonly gone: boolean;
 }

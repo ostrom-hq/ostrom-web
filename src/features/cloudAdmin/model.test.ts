@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { ApiFailure } from '@/shared/api/ApiFailure';
-import type { CloudCluster, CloudProfile, CloudRuntime } from '@gen/api/types.gen';
+import type { CloudClusterResponse, CloudProfileResponse, CloudRuntimeResponse } from '@gen/api/types.gen';
 import {
   clusterDraftOf,
   clusterProblem,
@@ -21,7 +21,7 @@ import {
 } from './model';
 
 const CLUSTER_ID = '9d0f5a7e-8102-4de4-9f60-718293a4b5c6';
-const runtime: CloudRuntime = {
+const runtime: CloudRuntimeResponse = {
   enabled: true,
   runnerImage: 'ghcr.io/acme/ostrom-runner:1.4',
   runnerBinary: '/usr/local/bin/ostrom',
@@ -34,7 +34,7 @@ const runtime: CloudRuntime = {
   memberTransfers: 'offer',
   updatedAt: '2026-11-01T09:00:00Z',
 };
-const cluster: CloudCluster = {
+const cluster: CloudClusterResponse = {
   id: CLUSTER_ID,
   name: 'eu-west',
   apiUrl: 'https://k8s.acme.test',
@@ -46,7 +46,7 @@ const cluster: CloudCluster = {
   createdAt: '2026-11-01T09:00:00Z',
   updatedAt: '2026-11-01T09:00:00Z',
 };
-const profile: CloudProfile = {
+const profile: CloudProfileResponse = {
   id: 'ae1a6b8f-9213-4ef5-8071-8293a4b5c6d7',
   name: 'default',
   version: 2,
@@ -94,6 +94,8 @@ describe('the runtime form', () => {
       'ghcr.io/acme/session:3',
     );
     expect(draft.pausedRetentionDays).toBe('');
+    // The server writes an absent value as null: it reads as an empty field, as an absent one does.
+    expect(runtimeDraftOf({ ...runtime, pausedRetentionDays: null }).pausedRetentionDays).toBe('');
     expect(runtimeProblem(draft)).toBeUndefined();
     expect(runtimeRequestOf(draft, runtime)).toEqual({
       enabled: true,

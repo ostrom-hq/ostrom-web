@@ -1,5 +1,5 @@
+import type { Workflow } from '@/shared/api/workflowDocument';
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 
 /**
  * The condition of a `check` step (core#127): a closed type, never an expression. [step] is a node of the workflow

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationRun, CloudSession, Runner } from '@gen/api/types.gen';
+import type { AutomationResponse, RunResponse, RunnerDto } from '@gen/api/types.gen';
+import type { CloudSessionRow } from '@/features/cloud/components/SessionRow';
 
-const sessions: CloudSession[] = [
+/** What every demo session is bounded by (the server's defaults). */
+const LIMITS = { idleTimeoutMinutes: 30, maxRunMinutes: 480, restrictedEgress: false };
+
+const sessions: CloudSessionRow[] = [
   {
     id: 'cs-33',
     name: 'Why the invoice test fails on Mondays',
@@ -12,6 +16,10 @@ const sessions: CloudSession[] = [
     status: 'running',
     runnerId: 'rn-1',
     createdAt: '2026-10-30T08:09:00.000Z',
+    desiredStatus: 'running',
+    epoch: 1,
+    limits: LIMITS,
+    updatedAt: '2026-10-30T08:09:00.000Z',
   },
   {
     id: 'cs-31',
@@ -22,9 +30,14 @@ const sessions: CloudSession[] = [
     status: 'running',
     runnerId: 'rn-1',
     createdAt: '2026-10-30T07:42:00.000Z',
+    desiredStatus: 'running',
+    epoch: 1,
+    limits: LIMITS,
+    updatedAt: '2026-10-30T07:42:00.000Z',
   },
   {
     id: 'cs-30',
+    name: 'codex · cs-30',
     owner: 'theo',
     agent: 'codex',
     status: 'queued',
@@ -36,6 +49,10 @@ const sessions: CloudSession[] = [
     },
     automationId: 'au-nightly',
     createdAt: '2026-10-30T07:55:00.000Z',
+    desiredStatus: 'running',
+    epoch: 1,
+    limits: LIMITS,
+    updatedAt: '2026-10-30T07:55:00.000Z',
   },
   {
     id: 'cs-27',
@@ -46,9 +63,14 @@ const sessions: CloudSession[] = [
     runnerId: 'rn-2',
     createdAt: '2026-10-29T16:10:00.000Z',
     endedAt: '2026-10-29T16:58:00.000Z',
+    desiredStatus: 'terminated',
+    epoch: 1,
+    limits: LIMITS,
+    updatedAt: '2026-10-29T16:58:00.000Z',
   },
   {
     id: 'cs-25',
+    name: 'codex · cs-25',
     owner: 'samir',
     agent: 'codex',
     status: 'failed',
@@ -60,10 +82,14 @@ const sessions: CloudSession[] = [
     environment: { requiredVariables: ['SENTRY_DSN'] },
     createdAt: '2026-10-29T11:00:00.000Z',
     endedAt: '2026-10-29T11:03:00.000Z',
+    desiredStatus: 'terminated',
+    epoch: 1,
+    limits: LIMITS,
+    updatedAt: '2026-10-29T11:03:00.000Z',
   },
 ];
 
-const runners: Runner[] = [
+const runners: RunnerDto[] = [
   {
     id: 'rn-1',
     name: 'eu-west-1a',
@@ -81,7 +107,7 @@ const runners: Runner[] = [
   },
 ];
 
-const automations: Automation[] = [
+const automations: AutomationResponse[] = [
   {
     id: 'au-nightly',
     name: 'Nightly dependency upgrades',
@@ -93,6 +119,7 @@ const automations: Automation[] = [
       agent: 'codex',
       maxRuntimeMinutes: 45,
     },
+    variables: [],
     overlap: 'skip',
     maxRunsPerDay: 1,
     version: 4,
@@ -105,7 +132,10 @@ const automations: Automation[] = [
     owner: 'maya',
     enabled: false,
     trigger: { kind: 'webhook' },
-    action: { workflowId: 'wf-backend' },
+    action: { prompt: '', workflowId: 'wf-backend' },
+    variables: [],
+    overlap: 'skip',
+    maxRunsPerDay: 24,
     samplePayload: { issue: { id: 'SENTRY-1', title: 'TypeError in invoice.ts' } },
     webhookUrl: 'https://api.ostrom.run/api/v1/automations/au-sentry/trigger',
     version: 1,
@@ -114,7 +144,7 @@ const automations: Automation[] = [
   },
 ];
 
-const runs: AutomationRun[] = [
+const runs: RunResponse[] = [
   {
     id: 'run-92',
     automationId: 'au-sentry',
@@ -162,15 +192,15 @@ const runs: AutomationRun[] = [
   },
 ];
 
-export function initialCloudSessions(): CloudSession[] {
+export function initialCloudSessions(): CloudSessionRow[] {
   return structuredClone(sessions);
 }
-export function initialRunners(): Runner[] {
+export function initialRunners(): RunnerDto[] {
   return structuredClone(runners);
 }
-export function initialAutomations(): Automation[] {
+export function initialAutomations(): AutomationResponse[] {
   return structuredClone(automations);
 }
-export function initialAutomationRuns(): AutomationRun[] {
+export function initialAutomationRuns(): RunResponse[] {
   return structuredClone(runs);
 }

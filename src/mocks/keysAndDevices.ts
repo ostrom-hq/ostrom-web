@@ -6,7 +6,7 @@ import {
   handleListDevices,
   handleListServiceKeys,
 } from '@gen/api/msw.gen';
-import type { ApiError, Device, ServiceKey } from '@gen/api/types.gen';
+import type { ApiError, DeviceResponse, ServiceKeyResponse } from '@gen/api/types.gen';
 import { zCreateServiceKeyBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { SERVICE_KEY_NAME_MAX, SERVICE_KEY_SCOPES } from '@/features/settings/model';
@@ -14,9 +14,9 @@ import { readJson, refusal } from '@/mocks/http';
 
 export interface KeysAndDevicesState {
   /** Where the CLI is signed in as the person, newest first. */
-  devices: Device[];
+  devices: DeviceResponse[];
   /** The organization's live service keys, newest first; never their secret. */
-  serviceKeys: ServiceKey[];
+  serviceKeys: ServiceKeyResponse[];
   /** The next key number; numbers are never reused, even after a deletion. */
   nextServiceKey: number;
 }
@@ -73,7 +73,7 @@ export function createKeysAndDevicesHandlers(
       const body = zCreateServiceKeyBody.safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
       const scopes = body.success ? [...new Set(body.data.scopes)].sort() : [];
-      const days = body.success ? body.data.expiresInDays : undefined;
+      const days = body.success ? (body.data.expiresInDays ?? undefined) : undefined;
       if (
         name === '' ||
         name.length > SERVICE_KEY_NAME_MAX ||
@@ -90,7 +90,7 @@ export function createKeysAndDevicesHandlers(
       const number = s.nextServiceKey;
       s.nextServiceKey += 1;
       const at = now();
-      const key: ServiceKey = {
+      const key: ServiceKeyResponse = {
         id: `key-${String(number)}`,
         name,
         scopes,

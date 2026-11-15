@@ -1,16 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import type {
-  Deliverable,
-  NodeRun,
-  RunStatus,
-  WaitSpec,
-  Workflow,
-  WorkflowEdge,
-  WorkflowLimits,
-  WorkflowNode,
-  WorkflowNodeKind,
-  WorkflowStatus,
-} from '@gen/api/types.gen';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
 import type { BadgeTone } from '@/shared/ui/Badge';
 import {
@@ -20,8 +8,18 @@ import {
   conditionProblem,
   type NodeCondition,
 } from './nodes';
+import type { RunStatus, WorkflowNodeKind, WorkflowStatus } from '@/shared/api/vocabulary';
+import type {
+  Deliverable,
+  NodeRun,
+  WaitSpec,
+  Workflow,
+  WorkflowEdge,
+  WorkflowLimits,
+  WorkflowNode,
+} from '@/shared/api/workflowDocument';
 
-/** A proposed workflow waits for an owner: amber until someone accepts it. */
+/** A proposed workflow waits for an owner: amber until someone accepts it; a rejected proposal is grey. */
 export const STATUS_TONES: Readonly<Record<Known<WorkflowStatus>, BadgeTone>> = {
   proposed: 'warning',
   accepted: 'success',

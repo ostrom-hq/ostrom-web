@@ -11,7 +11,9 @@ export const ORG_REQUIRED = 'org_required';
  * (`orgHeader.test.ts` checks this list against the vendored contract).
  */
 const ORG_FREE: readonly RegExp[] = [
-  /^\/api\/v1\/auth\//,
+  // device/answer approves a login in the named organization; every other auth route acts in none. auth/me takes the
+  // header as an option the console never uses: /me without one checks a stale choice.
+  /^\/api\/v1\/auth\/(?!device\/answer$)/,
   /^\/api\/v1\/orgs(?:\/|$)/,
   /^\/api\/v1\/invitations\/(?:preview|accept)$/,
   /^\/api\/v1\/tokens(?:\/|$)/,
@@ -30,6 +32,9 @@ const ORG_FREE: readonly RegExp[] = [
   // launch, no organization is named.
   /^\/api\/v1\/launches\/[^/]+(?:\/hooks-missing)?$/,
   /^\/api\/v1\/cloud\/runner\/terminal$/,
+  // The runner's own calls (and its heartbeat) carry the runner token, which says the launch: no organization is named.
+  /^\/api\/v1\/cloud\/runner\/(?!(?:hooks|skills)(?:\/|$))/,
+  /^\/api\/v1\/runners\/[^/]+\/heartbeat$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */
@@ -38,12 +43,17 @@ export function actsInOrganization(pathname: string): boolean {
 }
 
 /**
- * A call that acts in an organization names the one the console acts in, once there is one. The others are never
+ * A call that acts in an organization names the one the console acts in, once there is one, unless it names one
+ * itself (an admin sign-in approved for another organization the person manages). The others are never
  * given it here: the person's list must answer whatever was chosen before, so a stale choice can be dropped, and
  * `/auth/me` takes it only as an option, named by its caller (`meInOrgOptions`) for the member there.
  */
 export function withOrg(request: Request, orgId: string | undefined): Request {
-  if (orgId !== undefined && actsInOrganization(new URL(request.url).pathname)) {
+  if (
+    orgId !== undefined &&
+    !request.headers.has(ORG_HEADER) &&
+    actsInOrganization(new URL(request.url).pathname)
+  ) {
     request.headers.set(ORG_HEADER, orgId);
   }
   return request;

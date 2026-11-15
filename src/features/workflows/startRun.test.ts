@@ -22,18 +22,14 @@ describe('startRefused', () => {
 
 describe('pressOf', () => {
   it('starts a press with a valid key, and keeps its key for the same start whatever the inputs order', () => {
-    const first = pressOf(undefined, 'wf', { a: '1', b: '2' }, 'acme/api');
+    const first = pressOf(undefined, 'wf', { a: '1', b: '2' });
     expect(first.key).toMatch(/^[0-9a-f]{32}$/);
-    expect(pressOf(first, 'wf', { b: '2', a: '1' }, 'acme/api')).toBe(first);
+    expect(pressOf(first, 'wf', { b: '2', a: '1' })).toBe(first);
   });
 
-  it('is another press, with another key, when the workflow, an input or the repository changes', () => {
-    const first = pressOf(undefined, 'wf', { a: '1' }, '');
-    for (const next of [
-      pressOf(first, 'other', { a: '1' }, ''),
-      pressOf(first, 'wf', { a: '2' }, ''),
-      pressOf(first, 'wf', { a: '1' }, 'acme/api'),
-    ]) {
+  it('is another press, with another key, when the workflow or an input changes', () => {
+    const first = pressOf(undefined, 'wf', { a: '1' });
+    for (const next of [pressOf(first, 'other', { a: '1' }), pressOf(first, 'wf', { a: '2' })]) {
       expect(next).not.toBe(first);
       expect(next.key).not.toBe(first.key);
     }

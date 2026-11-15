@@ -3,7 +3,7 @@
 // assigns it to themself and excludes a member, the value never shows anywhere; a member sees the page is not theirs,
 // and another organization never sees any of it.
 import { expect, test } from '@playwright/test';
-import { zEnvironmentAssignmentsPage, zEnvironmentVariantsPage } from '../gen/api/zod.gen';
+import { zEnvironmentAssignmentsPageResponse, zEnvironmentVariantsPageResponse } from '../gen/api/zod.gen';
 import {
   anotherPerson,
   callFromPage,
@@ -74,11 +74,11 @@ test('an owner creates, assigns and excludes; the value never shows; a member an
   const listed = await callFromPage(page, 'GET', '/api/v1/environment/variants', undefined, org);
   expect(listed.status, shown(listed.body)).toBe(200);
   expect(JSON.stringify(listed.body)).not.toContain(value);
-  expect(zEnvironmentVariantsPage.parse(listed.body).items.map((item) => item.variable)).toEqual([
+  expect(zEnvironmentVariantsPageResponse.parse(listed.body).items.map((item) => item.variable)).toEqual([
     'E2E_TOKEN',
   ]);
   const read = await callFromPage(page, 'GET', '/api/v1/environment/assignments', undefined, org);
-  const page1 = zEnvironmentAssignmentsPage.parse(read.body);
+  const page1 = zEnvironmentAssignmentsPageResponse.parse(read.body);
   expect(page1.items).toHaveLength(1);
   expect(page1.exclusions).toHaveLength(1);
 
@@ -98,7 +98,7 @@ test('an owner creates, assigns and excludes; the value never shows; a member an
   await expect(stranger.getByText('No variants yet.')).toBeVisible();
   await expect(stranger.getByText('E2E_TOKEN')).toHaveCount(0);
   const own = await callFromPage(stranger, 'GET', '/api/v1/environment/variants', undefined, theirs);
-  expect(zEnvironmentVariantsPage.parse(own.body).items).toEqual([]);
+  expect(zEnvironmentVariantsPageResponse.parse(own.body).items).toEqual([]);
   expect((await callFromPage(stranger, 'GET', '/api/v1/environment/variants', undefined, org)).status).toBe(
     404,
   );

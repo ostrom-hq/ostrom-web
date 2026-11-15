@@ -10,7 +10,7 @@ export function StateLabel({ webhook }: { readonly webhook: Webhook }): ReactEle
   const { t } = useTranslation();
   const label = useEnumLabel();
   if (webhook.enabled) return <Badge tone="success">{t('webhooks.state.enabled')}</Badge>;
-  const reason = webhook.disabledReason;
+  const reason = webhook.disabledReason ?? undefined;
   return (
     <Badge tone="warning">
       {reason === undefined

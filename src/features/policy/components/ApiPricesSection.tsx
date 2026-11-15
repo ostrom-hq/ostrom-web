@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ApiPrice, ApiPriceTable } from '@gen/api/types.gen';
+import type { ApiPriceDto, ApiPriceTableDto } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useAnnounced } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -33,7 +33,7 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
   const shown = useAnnounced('capacity.apiprices.v1') && manages;
   const view = useApiPrices(shown);
   // The row whose prices the form was filled with ("Edit"); none: a new row.
-  const [editing, setEditing] = useState<ApiPrice | undefined>(undefined);
+  const [editing, setEditing] = useState<ApiPriceDto | undefined>(undefined);
   if (!shown) return null;
   return (
     <Section label={t('policy.prices.title')}>
@@ -76,7 +76,7 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
   );
 }
 
-function rowKey(row: ApiPrice): string {
+function rowKey(row: ApiPriceDto): string {
   return `${row.provider}:${row.model}:${row.effectiveFrom}`;
 }
 
@@ -85,9 +85,9 @@ function PriceTable({
   view,
   edit,
 }: {
-  readonly table: ApiPriceTable;
+  readonly table: ApiPriceTableDto;
   readonly view: ApiPricesViewModel;
-  readonly edit: (row: ApiPrice) => void;
+  readonly edit: (row: ApiPriceDto) => void;
 }): ReactElement {
   const { t, i18n } = useTranslation();
   if (table.prices.length === 0) return <p className="o-empty">{t('policy.prices.empty')}</p>;
@@ -149,9 +149,9 @@ function PriceForm({
   from,
   onSaved,
 }: {
-  readonly table: ApiPriceTable;
+  readonly table: ApiPriceTableDto;
   readonly view: ApiPricesViewModel;
-  readonly from: ApiPrice | undefined;
+  readonly from: ApiPriceDto | undefined;
   readonly onSaved: () => void;
 }): ReactElement {
   const { t } = useTranslation();
@@ -169,7 +169,7 @@ function PriceForm({
     cacheReadMicros: useId(),
     outputMicros: useId(),
   };
-  const row: ApiPrice | undefined = draftPrice(draft);
+  const row: ApiPriceDto | undefined = draftPrice(draft);
   const set = (field: keyof PriceDraft) => (event: { readonly target: { readonly value: string } }) => {
     setDraft((was) => ({ ...was, [field]: event.target.value }));
   };

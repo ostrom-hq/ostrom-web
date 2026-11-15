@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { AuthSession } from '@gen/api/types.gen';
+import type { AuthSessionResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
+/**
+ * A signed-in session as the row reads it: its `name` (TeamCode's `AuthSessionView.name`, such as "Firefox on
+ * macOS") is not in the server's document yet; the row names the device once the server sends it.
+ */
+export type AuthSessionRow = AuthSessionResponse & { readonly name?: string | null };
+
 export interface SessionRowProps {
-  readonly session: AuthSession;
+  readonly session: AuthSessionRow;
   /** One sign-out at a time: every row waits for the one on its way. */
   readonly locked: boolean;
   readonly onRevoke: () => void;
@@ -22,7 +28,7 @@ export function SessionRow({ session, locked, onRevoke }: SessionRowProps): Reac
       hour: '2-digit',
       minute: '2-digit',
     });
-  const device = session.device ?? t('settings.sessions.unknownDevice');
+  const device = session.name ?? t('settings.sessions.unknownDevice');
   return (
     <div className="o-row">
       <span className="o-row__main">
@@ -30,12 +36,8 @@ export function SessionRow({ session, locked, onRevoke }: SessionRowProps): Reac
         <span className="o-row__meta">
           {[
             t('settings.sessions.since', { date: when(session.createdAt) }),
-            session.lastSeenAt === undefined
-              ? undefined
-              : t('settings.sessions.seen', { date: when(session.lastSeenAt) }),
-          ]
-            .filter((part) => part !== undefined)
-            .join(' · ')}
+            t('settings.sessions.seen', { date: when(session.lastSeenAt) }),
+          ].join(' · ')}
         </span>
       </span>
       <span className="o-row__end o-inline">

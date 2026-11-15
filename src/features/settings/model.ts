@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { AuthSession, Device } from '@gen/api/types.gen';
+import type { AuthSessionResponse, DeviceResponse } from '@gen/api/types.gen';
 import { nameProblem } from '@/shared/org/slug';
 
 /** A name the server takes (`validOrgName`) and not the one it already has. */
@@ -16,8 +16,8 @@ export function deletionConfirmed(typed: string, slug: string): boolean {
 }
 
 /** This browser first, then the most recently seen; a session never seen since sign-in by when it started. */
-export function sortSessions(sessions: readonly AuthSession[]): AuthSession[] {
-  const seen = (session: AuthSession): number => Date.parse(session.lastSeenAt ?? session.createdAt);
+export function sortSessions(sessions: readonly AuthSessionResponse[]): AuthSessionResponse[] {
+  const seen = (session: AuthSessionResponse): number => Date.parse(session.lastSeenAt);
   return [...sessions].sort((a, b) => {
     if (a.current !== b.current) return a.current ? -1 : 1;
     return seen(b) - seen(a);
@@ -30,9 +30,9 @@ export function browserTimeZone(): string {
 }
 
 /** The most recently seen first; a workstation never seen since it signed in last, by name. */
-export function sortDevices(devices: readonly Device[]): Device[] {
-  const seen = (device: Device): number =>
-    device.lastSeenAt === undefined ? 0 : Date.parse(device.lastSeenAt);
+export function sortDevices(devices: readonly DeviceResponse[]): DeviceResponse[] {
+  const seen = (device: DeviceResponse): number =>
+    device.lastSeenAt === undefined || device.lastSeenAt === null ? 0 : Date.parse(device.lastSeenAt);
   return [...devices].sort((a, b) => {
     const byLastSeen = seen(b) - seen(a);
     return byLastSeen === 0 ? a.name.localeCompare(b.name) : byLastSeen;
@@ -44,7 +44,7 @@ export function sortDevices(devices: readonly Device[]): Device[] {
  * organization, and the list read in an organization holds every member's for an owner or an admin: they stay on
  * that organization's settings.
  */
-export function personalDevices(devices: readonly Device[]): Device[] {
+export function personalDevices(devices: readonly DeviceResponse[]): DeviceResponse[] {
   return devices.filter((device) => device.kind !== 'admin');
 }
 

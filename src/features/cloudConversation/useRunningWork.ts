@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { stopCloudTask } from '@gen/api/sdk.gen';
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { useAnnounced } from '@/shared/capabilities';
@@ -54,7 +54,7 @@ function useTicking(active: boolean, setNow: (now: number) => void): void {
  */
 export function useRunningWork(
   sessionId: string,
-  session: CloudSession | undefined,
+  session: CloudSessionResponse | undefined,
   events: readonly TranscriptEvent[],
   agents: readonly KnownAgent[],
 ): RunningWorkViewModel {

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact, ArtifactVersion, SharedAccount } from '@gen/api/types.gen';
+import type { ArtifactResponse, ArtifactVersionResponse } from '@gen/api/types.gen';
+import type { SharedAccountRow } from '@/features/sharing/components/AccountCard';
 import { groupId, type MockGroup } from '../groups';
 import { initialOrganization, MEMBER_IDS } from './organization';
 
-const artifacts: Artifact[] = [
+const artifacts: ArtifactResponse[] = [
   {
     id: 'art-7',
     title: 'Billing API: latency study',
@@ -41,7 +42,7 @@ const artifacts: Artifact[] = [
   },
 ];
 
-const versions: Record<string, ArtifactVersion[]> = {
+const versions: Record<string, ArtifactVersionResponse[]> = {
   'art-7': [
     {
       number: 3,
@@ -75,20 +76,28 @@ const versions: Record<string, ArtifactVersion[]> = {
 /** The members an artifact is shared with, by member id (`Member.id`), as the server lists them. */
 const members: Record<string, string[]> = { 'art-7': [MEMBER_IDS.maya, MEMBER_IDS.theo] };
 
-const accounts: SharedAccount[] = [
+const accounts: SharedAccountRow[] = [
   {
     id: 'acc-1',
+    mine: true,
+    priority: 0,
+    limits: {},
+    createdAt: '2026-10-10T09:00:00.000Z',
     provider: 'claude',
     label: 'Maya’s Claude Max',
     owner: 'maya',
     status: 'ready',
     sharedWith: ['theo', 'samir'],
-    pool: 'billing',
+    poolId: 'billing',
     dailyAllocationUsd: 40,
     paused: false,
   },
   {
     id: 'acc-2',
+    mine: false,
+    priority: 0,
+    limits: {},
+    createdAt: '2026-10-12T09:00:00.000Z',
     provider: 'codex',
     label: 'Theo’s ChatGPT Pro',
     owner: 'theo',
@@ -99,6 +108,10 @@ const accounts: SharedAccount[] = [
   // Brought in by the TeamCode import: TeamCode may still renew its tokens, so it waits for its handover.
   {
     id: 'acc-3',
+    mine: true,
+    priority: 0,
+    limits: {},
+    createdAt: '2026-10-20T09:00:00.000Z',
     provider: 'claude',
     label: 'Team Max (TeamCode)',
     owner: 'maya',
@@ -109,16 +122,16 @@ const accounts: SharedAccount[] = [
   },
 ];
 
-export function initialArtifacts(): Artifact[] {
+export function initialArtifacts(): ArtifactResponse[] {
   return structuredClone(artifacts);
 }
-export function initialArtifactVersions(): Record<string, ArtifactVersion[]> {
+export function initialArtifactVersions(): Record<string, ArtifactVersionResponse[]> {
   return structuredClone(versions);
 }
 export function initialArtifactMembers(): Record<string, string[]> {
   return structuredClone(members);
 }
-export function initialSharedAccounts(): SharedAccount[] {
+export function initialSharedAccounts(): SharedAccountRow[] {
   return structuredClone(accounts);
 }
 

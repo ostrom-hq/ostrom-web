@@ -47,6 +47,11 @@ describe('the transfer handlers of the demo server', () => {
     expect(db.cloudTransfers.map((item) => item.state)).toEqual(['offered', 'declined']);
   });
 
+  it('offers a session to a member, resuming it only when asked to', async () => {
+    expect(await call('POST', '/cloud/sessions/cs-31/transfer', { toMemberId: MEMBER_IDS.theo })).toBe(202);
+    expect(db.cloudTransfers[0]).toMatchObject({ sessionId: 'cs-31', resume: false });
+  });
+
   it('refuses a caller who is not a member of the organization', async () => {
     server.use(
       ...createCloudTransferHandlers(

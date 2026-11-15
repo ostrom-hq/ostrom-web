@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact, ArtifactVersion } from '@gen/api/types.gen';
+import type { ArtifactResponse, ArtifactVersionResponse } from '@gen/api/types.gen';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useViewer } from '@/shared/auth/useViewer';
@@ -102,7 +102,7 @@ export function ArtifactScreen(): ReactElement {
                           when: formatAbsolute(version.createdAt, i18n.language),
                         })}
                       </Link>
-                      {version.fileDetails === undefined ? null : (
+                      {version.fileDetails === undefined || version.fileDetails === null ? null : (
                         <span className="o-row__meta">
                           {' · '}
                           {t('sharing.artifacts.fileCount', { count: version.fileDetails.length })},{' '}
@@ -164,7 +164,7 @@ export function ArtifactScreen(): ReactElement {
 }
 
 /** Who reads it: only me and the people I add, the organization, or anyone with its link (a person's choice). */
-function AccessForm({ artifact }: { readonly artifact: Artifact }): ReactElement {
+function AccessForm({ artifact }: { readonly artifact: ArtifactResponse }): ReactElement {
   const { t } = useTranslation();
   const access = useArtifactAccess(artifact.id);
   const [choice, setChoice] = useState<ArtifactAccess | undefined>(undefined);
@@ -212,7 +212,7 @@ function DeletePanel({
   busy,
   onDelete,
 }: {
-  readonly artifact: Artifact;
+  readonly artifact: ArtifactResponse;
   readonly busy: boolean;
   readonly onDelete: () => void;
 }): ReactElement {
@@ -254,10 +254,10 @@ function DeletePanel({
  * The files of the version shown: TeamCode's table of path, size and type, the page the reader opens first marked. A
  * server that does not tell the sizes lists the paths.
  */
-function FilesPanel({ version }: { readonly version: ArtifactVersion }): ReactElement {
+function FilesPanel({ version }: { readonly version: ArtifactVersionResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const entry = <Badge>{t('sharing.artifacts.entry')}</Badge>;
-  if (version.fileDetails === undefined)
+  if (version.fileDetails === undefined || version.fileDetails === null)
     return (
       <ul className="o-rows">
         {version.files.map((path) => (

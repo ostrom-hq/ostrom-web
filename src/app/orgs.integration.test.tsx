@@ -315,6 +315,7 @@ describe('who the person is in the organization, in the top bar', () => {
                 member: {
                   id: '3d6f9a1e-2b4c-4d8e-9f0a-1b2c3d4e5f60',
                   login: 'maya',
+                  name: '',
                   avatarUrl: '',
                   role: 'invited',
                 },

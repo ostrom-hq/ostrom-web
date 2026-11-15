@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait } from '@gen/api/types.gen';
+import type { WaitResponse } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -40,7 +40,7 @@ export function WaitScreen(): ReactElement {
           }
           title={wait.question.title}
           lead={t('waits.detail.lead', {
-            who: wait.createdBy === undefined ? t('waits.detail.unknown') : people.nameOf(wait.createdBy),
+            who: people.nameOf(wait.createdBy),
             when: formatRelative(wait.createdAt, now, i18n.language),
           })}
         >
@@ -55,7 +55,7 @@ function WaitDetail({
   wait,
   people,
 }: {
-  readonly wait: Wait;
+  readonly wait: WaitResponse;
   readonly people: PeopleViewModel;
 }): ReactElement {
   const { t, i18n } = useTranslation();
@@ -63,6 +63,7 @@ function WaitDetail({
   const open = wait.status === 'open';
   const mayAnswer = isViewer(wait.assignee, people.me) || people.me.canManage;
   const refs = wait.question.refs ?? [];
+  const body = wait.question.body ?? undefined;
   return (
     <>
       {writes.refused === undefined ? null : <Refusal refused={writes.refused} />}
@@ -71,10 +72,8 @@ function WaitDetail({
           facts={[
             { label: t('waits.detail.status'), value: <StatusBadge wait={wait} people={people} /> },
             { label: t('waits.detail.assignee'), value: people.nameOf(wait.assignee) },
-            wait.createdBy === undefined
-              ? undefined
-              : { label: t('waits.detail.askedBy'), value: people.nameOf(wait.createdBy) },
-            wait.sessionId === undefined
+            { label: t('waits.detail.askedBy'), value: people.nameOf(wait.createdBy) },
+            typeof wait.sessionId !== 'string'
               ? undefined
               : {
                   label: t('waits.detail.session'),
@@ -86,15 +85,15 @@ function WaitDetail({
                   mono: true,
                 },
             { label: t('waits.detail.askedAt'), value: formatAbsolute(wait.createdAt, i18n.language) },
-            wait.resolvedAt === undefined
+            typeof wait.resolvedAt !== 'string'
               ? undefined
               : { label: t('waits.detail.closedAt'), value: formatAbsolute(wait.resolvedAt, i18n.language) },
           ]}
         />
       </Section>
-      {wait.question.body === undefined || wait.question.body === '' ? null : (
+      {body === undefined || body === '' ? null : (
         <Section label={t('waits.detail.body')}>
-          <Markdown source={wait.question.body} />
+          <Markdown source={body} />
         </Section>
       )}
       {refs.length === 0 ? null : (
@@ -131,7 +130,7 @@ function WaitDetail({
           {answeredThroughSession(wait) ? (
             <Banner tag={t('waits.detail.throughSessionTag')}>
               {t('waits.detail.throughSession')}{' '}
-              {wait.sessionId === undefined ? null : (
+              {typeof wait.sessionId !== 'string' ? null : (
                 <Link to="/sessions/$sessionId" params={{ sessionId: wait.sessionId }}>
                   {t('waits.detail.openSession')}
                 </Link>
@@ -174,9 +173,15 @@ function Refusal({ refused }: { readonly refused: Refused }): ReactElement {
   );
 }
 
-function Outcome({ wait, people }: { readonly wait: Wait; readonly people: PeopleViewModel }): ReactElement {
+function Outcome({
+  wait,
+  people,
+}: {
+  readonly wait: WaitResponse;
+  readonly people: PeopleViewModel;
+}): ReactElement {
   const { t, i18n } = useTranslation();
-  const { answer } = wait;
+  const answer = wait.answer ?? undefined;
   if (answer === undefined) {
     return (
       <Section label={t('waits.detail.answer')}>
@@ -186,7 +191,7 @@ function Outcome({ wait, people }: { readonly wait: Wait; readonly people: Peopl
   }
   const { fields = [] } = wait.question;
   const actions = actionsOf(wait, t('waits.detail.done'));
-  const values = Object.entries(answer.values ?? {});
+  const values = Object.entries(answer.values);
   return (
     <Section label={t('waits.detail.answer')}>
       <p>

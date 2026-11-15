@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview } from '@gen/api/types.gen';
+import type { BillingOverviewResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -20,10 +20,12 @@ const STATUS_TONES: Readonly<Record<KnownStatus, BadgeTone>> = {
 };
 
 /** The plan, where the subscription stands, and what needs the owner now: a payment, the agent hours. */
-export function PlanSummary({ billing }: { readonly billing: BillingOverview }): ReactElement {
+export function PlanSummary({ billing }: { readonly billing: BillingOverviewResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
-  const { status, paymentIssue } = billing;
+  const status = billing.status ?? null;
+  const paymentIssue = billing.paymentIssue ?? null;
+  const interval = billing.interval ?? null;
   const until = formatAbsolute(billing.periodEnd, i18n.language);
   const alert = topAlert(billing.alerts);
   const invoice = safeHref(paymentIssue?.hostedInvoiceUrl ?? undefined);
@@ -39,9 +41,7 @@ export function PlanSummary({ billing }: { readonly billing: BillingOverview }):
         <span className="o-row__main">
           <span className="bl-plan">{enumText('billing.planName', billing.plan)}</span>
           <span className="o-row__meta">
-            {billing.interval === null
-              ? period
-              : `${enumText('billing.plan.billed', billing.interval)} · ${period}`}
+            {interval === null ? period : `${enumText('billing.plan.billed', interval)} · ${period}`}
           </span>
         </span>
         {status === null ? (

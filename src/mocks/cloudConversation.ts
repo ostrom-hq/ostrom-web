@@ -15,21 +15,21 @@ import {
   handleUploadCloudFile,
 } from '@gen/api/msw.gen';
 import type {
-  CloudEvent,
-  CloudEventPage,
-  CloudFile,
-  CloudFilePolicy,
-  CloudInput,
-  CloudSession,
-  CloudSubagent,
+  CloudEventDto,
+  CloudEventPageDto,
+  CloudFileDto,
+  CloudFilePolicyDto,
+  CloudInputDto,
+  CloudSessionResponse,
+  CloudSubagentDto,
 } from '@gen/api/types.gen';
 import {
-  zAnswerCloudPermissionRequest,
-  zSendCloudMessageRequest,
-  zSetCloudEffortRequest,
-  zSetCloudModelRequest,
-  zSetCloudPermissionBypassRequest,
-  zStopCloudTaskRequest,
+  zAnswerCloudPermissionBody,
+  zSendCloudMessageBody,
+  zSetCloudEffortBody,
+  zSetCloudModelBody,
+  zSetCloudPermissionBypassBody,
+  zStopCloudTaskBody,
 } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -37,20 +37,20 @@ import { readJson, refusal } from './http';
 
 /** The transcripts of the conversation sessions and the inputs sent to them, as `runners` of ostrom-server keeps them. */
 export interface CloudConversationState {
-  cloudSessions: CloudSession[];
+  cloudSessions: CloudSessionResponse[];
   /** Each conversation session's events, oldest first, `seq` from 1 without a gap. */
-  cloudEvents: Record<string, CloudEvent[]>;
+  cloudEvents: Record<string, CloudEventDto[]>;
   /** The inputs accepted, by `session id:clientMessageId`: a replay answers the first one. */
-  cloudInputs: Record<string, CloudInput>;
+  cloudInputs: Record<string, CloudInputDto>;
   /** What the organization allows for files sent to sessions (`runners.cloud.files.v1`). */
-  cloudFilePolicy: CloudFilePolicy;
+  cloudFilePolicy: CloudFilePolicyDto;
   /** The files uploaded, by id, with the key they came under and whether a message carried them. */
   cloudFiles: Record<string, StoredFile>;
 }
 
 /** A file the demo's server stored for a session. */
 export interface StoredFile {
-  readonly file: CloudFile;
+  readonly file: CloudFileDto;
   readonly idempotencyKey: string | undefined;
   readonly sent: boolean;
 }
@@ -58,7 +58,7 @@ export interface StoredFile {
 const MIB = 1024 * 1024;
 
 /** The server's defaults: 20 MiB per file, 25 MiB per message, five files, images, PDFs and text. */
-export function initialCloudFilePolicy(): CloudFilePolicy {
+export function initialCloudFilePolicy(): CloudFilePolicyDto {
   return {
     available: true,
     maxFileBytes: 20 * MIB,
@@ -117,8 +117,8 @@ export const CONVERSATION_ID = 'cs-33';
 
 const AT = '2026-10-30T08:10:00.000Z';
 
-export function initialCloudEvents(): Record<string, CloudEvent[]> {
-  const events: Omit<CloudEvent, 'seq'>[] = [
+export function initialCloudEvents(): Record<string, CloudEventDto[]> {
+  const events: Omit<CloudEventDto, 'seq'>[] = [
     { type: 'status', at: AT, epoch: 1, data: { agent: 'claude', model: 'claude-sonnet-5' } },
     {
       type: 'message.user',
@@ -181,9 +181,11 @@ const AGENT_VALUE = /^[a-zA-Z0-9._:/-]{1,120}$/;
 const TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /** The events of one feed: `main` the main agent's own (no `feed`), another the subagent's. */
-export function feedOf(events: readonly CloudEvent[], feed: string | null): readonly CloudEvent[] {
+export function feedOf(events: readonly CloudEventDto[], feed: string | null): readonly CloudEventDto[] {
   if (feed === null) return events;
-  return events.filter((event) => (feed === 'main' ? event.feed === undefined : event.feed === feed));
+  return events.filter((event) =>
+    feed === 'main' ? (event.feed ?? undefined) === undefined : event.feed === feed,
+  );
 }
 
 function fieldsOf(value: unknown): Readonly<Record<string, unknown>> {
@@ -198,19 +200,20 @@ function textOf(value: unknown): string | undefined {
  * The subagents of a transcript, as the server tracks them: an `Agent` (or `Task`) call starts one, its own tool calls
  * count its steps, its call's result ends it.
  */
-export function subagentsOf(events: readonly CloudEvent[]): CloudSubagent[] {
-  const results = new Map<string, CloudEvent>();
+export function subagentsOf(events: readonly CloudEventDto[]): CloudSubagentDto[] {
+  const results = new Map<string, CloudEventDto>();
   const steps = new Map<string, number>();
   for (const event of events) {
     const data = fieldsOf(event.data);
     if (event.type === 'tool.result') results.set(String(data['id']), event);
-    if (event.type === 'tool.call' && event.feed !== undefined)
-      steps.set(event.feed, (steps.get(event.feed) ?? 0) + 1);
+    const feed = event.feed ?? undefined;
+    if (event.type === 'tool.call' && feed !== undefined) steps.set(feed, (steps.get(feed) ?? 0) + 1);
   }
-  return events.flatMap((event): CloudSubagent[] => {
+  return events.flatMap((event): CloudSubagentDto[] => {
     const data = fieldsOf(event.data);
     const id = textOf(data['id']);
     const name = textOf(data['name']);
+    const parent = event.feed ?? undefined;
     if (event.type !== 'tool.call' || id === undefined || (name !== 'Agent' && name !== 'Task')) return [];
     const input = fieldsOf(data['input']);
     const result = results.get(id);
@@ -229,14 +232,14 @@ export function subagentsOf(events: readonly CloudEvent[]): CloudSubagent[] {
         startedAt: event.at,
         ...(result === undefined ? {} : { endedAt: result.at }),
         steps: steps.get(id) ?? 0,
-        ...(event.feed === undefined ? {} : { parentId: event.feed }),
+        ...(parent === undefined ? {} : { parentId: parent }),
       },
     ];
   });
 }
 
 /** A page in ascending order: after `after`, else before `before`, else from the oldest. */
-export function pageOf(events: readonly CloudEvent[], url: URL): CloudEventPage {
+export function pageOf(events: readonly CloudEventDto[], url: URL): CloudEventPageDto {
   const after = numberOf(url.searchParams.get('after'));
   const before = numberOf(url.searchParams.get('before'));
   const limit = Math.min(numberOf(url.searchParams.get('limit')) ?? PAGE, PAGE);
@@ -263,7 +266,7 @@ export function pageOf(events: readonly CloudEvent[], url: URL): CloudEventPage 
   };
 }
 
-function frame(event: CloudEvent): string {
+function frame(event: CloudEventDto): string {
   return `id: ${String(event.seq)}\nevent: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`;
 }
 
@@ -272,14 +275,14 @@ export function createCloudConversationHandlers(
   now: () => Date,
 ): HttpHandler[] {
   /** The streams open on each session, told of every event appended. */
-  const listeners = new Map<string, Set<(event: CloudEvent) => void>>();
-  const sessionOf = (id: string): CloudSession | undefined =>
+  const listeners = new Map<string, Set<(event: CloudEventDto) => void>>();
+  const sessionOf = (id: string): CloudSessionResponse | undefined =>
     state().cloudSessions.find((session) => session.id === id);
   /** A session never written to has no events yet. */
-  const eventsOf = (id: string): readonly CloudEvent[] => state().cloudEvents[id] ?? [];
-  const append = (id: string, type: string, data: Record<string, unknown>, feed?: string): CloudEvent => {
+  const eventsOf = (id: string): readonly CloudEventDto[] => state().cloudEvents[id] ?? [];
+  const append = (id: string, type: string, data: Record<string, unknown>, feed?: string): CloudEventDto => {
     const events = eventsOf(id);
-    const event: CloudEvent = {
+    const event: CloudEventDto = {
       seq: events.length + 1,
       type,
       at: now().toISOString(),
@@ -295,14 +298,14 @@ export function createCloudConversationHandlers(
     JSON.stringify({ turn: eventsOf(id).findLast((event) => event.type === 'turn') }).includes(
       '"phase":"started"',
     );
-  const replace = (session: CloudSession): void => {
+  const replace = (session: CloudSessionResponse): void => {
     state().cloudSessions = state().cloudSessions.map((item) => (item.id === session.id ? session : item));
   };
   /**
    * A message about a deploy: the demo's agent starts a reviewer subagent, runs the tests in the background, and asks
    * to use Bash for the deploy itself, waiting for the owner.
    */
-  const askToDeploy = (session: CloudSession): void => {
+  const askToDeploy = (session: CloudSessionResponse): void => {
     const id = session.id;
     append(id, 'tool.call', {
       id: 'tu-agent-1',
@@ -355,7 +358,7 @@ export function createCloudConversationHandlers(
       waiting: { reason: 'permission', requestId: 'perm-deploy', since: request.at, eventSeq: request.seq },
     });
   };
-  const requestOf = (id: string, requestId: string): CloudEvent | undefined =>
+  const requestOf = (id: string, requestId: string): CloudEventDto | undefined =>
     eventsOf(id).find(
       (event) => event.type === 'permission.request' && fieldsOf(event.data)['requestId'] === requestId,
     );
@@ -373,15 +376,15 @@ export function createCloudConversationHandlers(
   const ownChange = (
     id: string,
     refused: string,
-    change: (session: CloudSession) => CloudSession,
-  ): ReturnType<typeof refusal> | HttpResponse<CloudSession> => {
+    change: (session: CloudSessionResponse) => CloudSessionResponse,
+  ): ReturnType<typeof refusal> | HttpResponse<CloudSessionResponse> => {
     const session = sessionOf(id);
     if (session === undefined) return NOT_FOUND();
     if (session.owner !== VIEWER) return refusal(403, refused, 'Only the session’s owner may change it.');
     if (ENDED.has(session.status)) return refusal(409, 'session_not_running', 'The session ended.');
     const next = change(session);
     replace(next);
-    return HttpResponse.json<CloudSession>(next);
+    return HttpResponse.json<CloudSessionResponse>(next);
   };
   const upload = async (id: string, request: Request): Promise<Response> => {
     const session = sessionOf(id);
@@ -407,7 +410,7 @@ export function createCloudConversationHandlers(
         ? HttpResponse.json(replayed.file, { status: 200, headers: { 'Idempotency-Replayed': 'true' } })
         : refusal(422, 'idempotency_conflict', 'Other bytes under this key.');
     const created = now();
-    const file: CloudFile = {
+    const file: CloudFileDto = {
       id: `file-${String(Object.keys(state().cloudFiles).length + 1)}`,
       sessionId: id,
       name: cleanName(name),
@@ -424,10 +427,10 @@ export function createCloudConversationHandlers(
   const filesOf = (
     id: string,
     fileIds: readonly string[],
-  ): ReturnType<typeof refusal> | readonly CloudFile[] => {
+  ): ReturnType<typeof refusal> | readonly CloudFileDto[] => {
     if (fileIds.length > 5 || new Set(fileIds).size !== fileIds.length)
       return refusal(400, 'invalid_files', 'Name at most five distinct files.');
-    const files: CloudFile[] = [];
+    const files: CloudFileDto[] = [];
     for (const fileId of fileIds) {
       const stored = state().cloudFiles[fileId];
       if (stored === undefined || stored.sent || stored.file.sessionId !== id)
@@ -448,7 +451,7 @@ export function createCloudConversationHandlers(
     handleAnswerCloudPermission(async ({ params, request }) => {
       const session = sessionOf(params.id);
       if (session === undefined) return NOT_FOUND();
-      const body = zAnswerCloudPermissionRequest.safeParse(await readJson(request));
+      const body = zAnswerCloudPermissionBody.safeParse(await readJson(request));
       if (!body.success || (body.data.behavior !== 'allow' && body.data.behavior !== 'deny'))
         return refusal(400, 'invalid_permission_answer', 'Allow or deny the request.');
       const key = `${session.id}:permission:${request.headers.get('Idempotency-Key') ?? body.data.requestId}`;
@@ -461,7 +464,7 @@ export function createCloudConversationHandlers(
         return refusal(409, 'unknown_permission_request', 'No such permission request.');
       const closed = closedBy(session.id, requestId);
       if (closed !== undefined) return refusal(409, closed, 'This request takes no answer any more.');
-      const input: CloudInput = {
+      const input: CloudInputDto = {
         id: `in-${String(Object.keys(state().cloudInputs).length + 700)}`,
         kind: 'permission',
         status: 'consumed',
@@ -490,7 +493,7 @@ export function createCloudConversationHandlers(
       return HttpResponse.json(input, { status: 202 });
     }),
     handleSetCloudPermissionBypass(async ({ params, request }) => {
-      const body = zSetCloudPermissionBypassRequest.safeParse(await readJson(request));
+      const body = zSetCloudPermissionBypassBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'Say whether it is on.');
       return ownChange(params.id, 'bypass_owner_only', (session) => ({
         ...session,
@@ -498,13 +501,13 @@ export function createCloudConversationHandlers(
       }));
     }),
     handleSetCloudSessionModel(async ({ params, request }) => {
-      const body = zSetCloudModelRequest.safeParse(await readJson(request));
+      const body = zSetCloudModelBody.safeParse(await readJson(request));
       if (!body.success || !AGENT_VALUE.test(body.data.model))
         return refusal(400, 'invalid_agent', 'Use letters, digits and . _ : / -.');
       return ownChange(params.id, 'model_owner_only', (session) => ({ ...session, model: body.data.model }));
     }),
     handleSetCloudSessionEffort(async ({ params, request }) => {
-      const body = zSetCloudEffortRequest.safeParse(await readJson(request));
+      const body = zSetCloudEffortBody.safeParse(await readJson(request));
       if (!body.success || !AGENT_VALUE.test(body.data.effort))
         return refusal(400, 'invalid_agent', 'Use letters, digits and . _ : / -.');
       return ownChange(params.id, 'effort_owner_only', (session) => ({
@@ -515,7 +518,7 @@ export function createCloudConversationHandlers(
     handleStopCloudTask(async ({ params, request }) => {
       const session = sessionOf(params.id);
       if (session === undefined) return NOT_FOUND();
-      const body = zStopCloudTaskRequest.safeParse(await readJson(request));
+      const body = zStopCloudTaskBody.safeParse(await readJson(request));
       if (!body.success || !TASK_ID.test(body.data.taskId))
         return refusal(400, 'invalid_task', 'Name the task to stop.');
       if (session.status !== 'running') return refusal(409, 'nothing_to_interrupt', 'Nothing is running.');
@@ -557,7 +560,7 @@ export function createCloudConversationHandlers(
         numberOf(request.headers.get('Last-Event-ID')) ?? numberOf(url.searchParams.get('after')) ?? 0;
       const encoder = new TextEncoder();
       let target: ReadableStreamDefaultController<Uint8Array> | undefined;
-      const told = (event: CloudEvent): void => {
+      const told = (event: CloudEventDto): void => {
         target?.enqueue(encoder.encode(frame(event)));
       };
       const body = new ReadableStream<Uint8Array>({
@@ -581,16 +584,17 @@ export function createCloudConversationHandlers(
     handleSendCloudMessage(async ({ params, request }) => {
       const session = sessionOf(params.id);
       if (session === undefined) return NOT_FOUND();
-      const body = zSendCloudMessageRequest.safeParse(await readJson(request));
+      const body = zSendCloudMessageBody.safeParse(await readJson(request));
+      const text = body.success ? (body.data.text ?? '') : '';
       const fileIds = body.data?.fileIds ?? [];
       // With files the text may be empty.
-      if (!body.success || (body.data.text.trim() === '' && fileIds.length === 0))
+      if (!body.success || (text.trim() === '' && fileIds.length === 0))
         return refusal(400, 'invalid_message', 'Write a message of 1 to 32,000 characters.');
       if (session.mode !== 'conversation')
         return refusal(409, 'terminal_session', 'A terminal session takes no message.');
       if (ENDED.has(session.status)) return refusal(409, 'session_not_running', 'The session ended.');
       // The console always names its message (`clientMessageId`): a replay answers the first input.
-      const clientMessageId = body.data.clientMessageId;
+      const clientMessageId = body.data.clientMessageId ?? undefined;
       if (clientMessageId === undefined)
         return refusal(400, 'idempotency_key_required', 'Name the message with clientMessageId.');
       const key = `${session.id}:${clientMessageId}`;
@@ -606,12 +610,12 @@ export function createCloudConversationHandlers(
         };
       const woke = session.status === 'paused';
       if (woke) replace({ ...session, status: 'running' });
-      const input: CloudInput = {
+      const input: CloudInputDto = {
         id: `in-${String(Object.keys(state().cloudInputs).length + 100)}`,
         kind: 'message',
         status: 'consumed',
         authorId: MEMBER_IDS.maya,
-        text: body.data.text,
+        text,
         woke,
         createdAt: now().toISOString(),
         clientMessageId,
@@ -619,7 +623,7 @@ export function createCloudConversationHandlers(
       state().cloudInputs[key] = input;
       // The demo's agent answers at once: the message, a turn, and a reply.
       append(session.id, 'message.user', {
-        text: body.data.text,
+        text,
         inputId: input.id,
         authorId: input.authorId,
         ...(files.length === 0
@@ -634,15 +638,12 @@ export function createCloudConversationHandlers(
             }),
       });
       append(session.id, 'turn', { phase: 'started' });
-      if (/deploy/i.test(body.data.text)) {
+      if (/deploy/i.test(text)) {
         askToDeploy(session);
         return HttpResponse.json(input, { status: 202 });
       }
       append(session.id, 'message.agent', {
-        text:
-          files.length === 0
-            ? `On it: ${body.data.text}`
-            : `Read ${files.map((file) => file.name).join(', ')}.`,
+        text: files.length === 0 ? `On it: ${text}` : `Read ${files.map((file) => file.name).join(', ')}.`,
       });
       append(session.id, 'turn', { phase: 'completed', durationMs: 1_000, steps: 0 });
       return HttpResponse.json(input, { status: 202 });

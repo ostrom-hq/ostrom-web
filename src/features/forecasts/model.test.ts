@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ForecastWindow } from '@gen/api/types.gen';
+import type { ForecastWindowResponse } from '@gen/api/types.gen';
 import { CHART, etaOf, nearestIndex, projectionOf, scaleOf, segmentsOf, stateOf } from './model';
 
 const NOW = Date.parse('2026-11-14T12:00:00Z');
 const at = (offsetMs: number): string => new Date(NOW + offsetMs).toISOString();
 
-function windowOf(overrides: Partial<ForecastWindow> = {}): ForecastWindow {
+function windowOf(overrides: Partial<ForecastWindowResponse> = {}): ForecastWindowResponse {
   return {
     window: 'five_hour',
     utilization: 0.1,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudEnvironment, CloudRepository, CloudSession } from '@gen/api/types.gen';
-import { zRunnerPreparationReport } from '@gen/api/zod.gen';
+import type { CloudEnvironmentDto, CloudRepositoryDto, CloudSessionResponse } from '@gen/api/types.gen';
+import { zPreparationPhase } from '@/shared/api/vocabulary';
 import { isKnown, knownValues } from '@/shared/lib/openEnum';
 
 /**
@@ -59,7 +59,7 @@ export type RecipeProblem =
   'both' | 'repositories' | 'url' | 'path' | 'ref' | 'nested' | 'commands' | 'variables' | 'domain';
 
 export type RecipeCheck =
-  { readonly problem: RecipeProblem } | { readonly environment: CloudEnvironment | undefined };
+  { readonly problem: RecipeProblem } | { readonly environment: CloudEnvironmentDto | undefined };
 
 /**
  * One command a line; a line ending with a backslash goes on with the next one, as in a shell, so a long command keeps
@@ -111,7 +111,7 @@ function defaultPath(url: string): string {
   return url.slice(url.lastIndexOf('/') + 1).replace(/\.git$/, '');
 }
 
-function repositoryOf(draft: RepositoryDraft): CloudRepository {
+function repositoryOf(draft: RepositoryDraft): CloudRepositoryDto {
   const path = draft.path.trim();
   const ref = draft.ref.trim();
   const branch = draft.branch.trim();
@@ -123,15 +123,16 @@ function repositoryOf(draft: RepositoryDraft): CloudRepository {
   };
 }
 
-function repositoryProblem(repository: CloudRepository): RecipeProblem | undefined {
+function repositoryProblem(repository: CloudRepositoryDto): RecipeProblem | undefined {
   if (!GITHUB_URL.test(repository.url.replace(/\.git$/, ''))) return 'url';
-  if (repository.path !== undefined && !validPath(repository.path)) return 'path';
-  if ([repository.ref, repository.branch].some((ref) => ref !== undefined && !validRef(ref))) return 'ref';
+  if (typeof repository.path === 'string' && !validPath(repository.path)) return 'path';
+  if ([repository.ref, repository.branch].some((ref) => typeof ref === 'string' && !validRef(ref)))
+    return 'ref';
   return undefined;
 }
 
 /** Each repository in its own directory, never inside another one's. */
-function nested(repositories: readonly CloudRepository[]): boolean {
+function nested(repositories: readonly CloudRepositoryDto[]): boolean {
   const paths = repositories.map((repository) =>
     (repository.path ?? defaultPath(repository.url)).replace(/\/+$/, ''),
   );
@@ -174,7 +175,7 @@ export function checkRecipe(draft: RecipeDraft, repo: string): RecipeCheck {
     return { problem: 'variables' };
   const gitEmailDomain = draft.gitEmailDomain.trim();
   if (gitEmailDomain !== '' && !DOMAIN.test(gitEmailDomain)) return { problem: 'domain' };
-  const environment: CloudEnvironment = {
+  const environment: CloudEnvironmentDto = {
     ...(repositories.length === 0 ? {} : { repositories }),
     ...(workingDirectory === '' ? {} : { workingDirectory }),
     ...(create.length === 0 && start.length === 0
@@ -190,26 +191,26 @@ export function checkRecipe(draft: RecipeDraft, repo: string): RecipeCheck {
 }
 
 /** The preparation phases the runner reports, read from the contract; another phase is not shown. */
-export const PREPARATION_PHASES = knownValues(zRunnerPreparationReport.shape.phase);
+export const PREPARATION_PHASES = knownValues(zPreparationPhase);
 export type PreparationPhase = (typeof PREPARATION_PHASES)[number];
 
 /** The statuses of a session on its way to running (the contract's and the console's older ones). */
 const PREPARING = new Set(['queued', 'starting', 'creating', 'resuming', 'running']);
 
 /** The preparation step a session is in, when it is one the console has words for. */
-export function preparationOf(session: CloudSession): PreparationPhase | undefined {
+export function preparationOf(session: CloudSessionResponse): PreparationPhase | undefined {
   const phase = session.phase;
   // A session that failed, paused or ended may keep the phase it stopped in: it is no longer being prepared.
-  if (session.failure !== undefined || session.endedAt !== undefined || !PREPARING.has(session.status))
+  if (session.failure || typeof session.endedAt === 'string' || !PREPARING.has(session.status))
     return undefined;
-  return phase !== undefined && isKnown(PREPARATION_PHASES, phase) ? phase : undefined;
+  return typeof phase === 'string' && isKnown(PREPARATION_PHASES, phase) ? phase : undefined;
 }
 
 /**
  * What to do about a failed preparation: try again when the server says it may pass (a clone or a fetch), otherwise
  * fix what the session asks for, as trying the same again fails the same way.
  */
-export function preparationAdvice(session: CloudSession): 'retry' | 'fix' | undefined {
+export function preparationAdvice(session: CloudSessionResponse): 'retry' | 'fix' | undefined {
   const failure = session.failure;
   if (failure?.code !== 'preparation_failed') return undefined;
   return failure.retryable === true ? 'retry' : 'fix';

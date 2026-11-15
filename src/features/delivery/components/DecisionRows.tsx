@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember } from '@gen/api/types.gen';
+import type { MemberResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -14,7 +14,7 @@ export interface DecisionRowsProps {
   /** The audience: what a member with no explicit decision gets. */
   readonly allMembers: boolean;
   /** The organization's members; absent if unreadable. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly decisions: ReadonlyMap<string, Decision>;
@@ -60,7 +60,7 @@ export function DecisionRows({
 
 interface DecisionRowProps {
   readonly delivered: 'skills' | 'hooks';
-  readonly member: OrgMember;
+  readonly member: MemberResponse;
   readonly current: DecisionChoice;
   readonly allMembers: boolean;
   readonly busy: boolean;

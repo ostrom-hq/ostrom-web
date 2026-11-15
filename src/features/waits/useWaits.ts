@@ -6,7 +6,7 @@ import {
   getWaitQueryKey,
   listWaitsInfiniteOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { ListWaitsData, Wait } from '@gen/api/types.gen';
+import type { ListWaitsData, WaitResponse } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -45,7 +45,7 @@ export function isWaitList(key: readonly unknown[]): boolean {
 }
 
 export interface WaitListViewModel {
-  readonly waits: readonly Wait[] | undefined;
+  readonly waits: readonly WaitResponse[] | undefined;
   readonly failure: Error | undefined;
   readonly more: boolean;
   readonly loadingMore: boolean;
@@ -89,7 +89,7 @@ export function useWaitList(filter: WaitFilter, scope: WaitScope): WaitListViewM
 }
 
 export interface WaitViewModel {
-  readonly wait: Wait | undefined;
+  readonly wait: WaitResponse | undefined;
   readonly failure: ApiFailure | Error | undefined;
   /** 404: no such wait, or not one this person may read. */
   readonly notFound: boolean;
@@ -141,7 +141,7 @@ export interface WritesViewModel {
 }
 
 function useAfterWrite(id: string): {
-  readonly settle: (wait: Wait) => void;
+  readonly settle: (wait: WaitResponse) => void;
   readonly refresh: () => Promise<void>;
 } {
   const queryClient = useQueryClient();

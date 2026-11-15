@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getForecastsOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { ForecastSnapshot } from '@gen/api/types.gen';
+import type { ForecastSnapshotResponse } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -11,7 +11,7 @@ import { FORECAST_POLL_MS } from './model';
 
 export interface ForecastsViewModel {
   /** The latest snapshot of the account asked for (never the previous account's while the next one loads). */
-  readonly snapshot: ForecastSnapshot | undefined;
+  readonly snapshot: ForecastSnapshotResponse | undefined;
   readonly failure: Error | undefined;
   /** 403: only an owner or an admin reads the forecasts. */
   readonly forbidden: boolean;

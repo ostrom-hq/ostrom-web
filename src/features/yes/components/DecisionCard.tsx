@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Approval, Receipt } from '@gen/api/types.gen';
+import type { Approval } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
+import type { ReadReceipt } from '@/shared/api/readReceipt';
 import { keyIdOf } from '@/shared/lib/signature';
 import { formatAbsolute } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
@@ -10,7 +11,7 @@ import { Badge } from '@/shared/ui/Badge';
 export interface DecisionCardProps {
   readonly approval: Approval;
   /** The receipt signed for the answer given on this page, when there is one. */
-  readonly receipt: Receipt | undefined;
+  readonly receipt: ReadReceipt | undefined;
   /** What the agent was told with a refusal given on this page. */
   readonly comment: string | undefined;
 }
@@ -30,7 +31,7 @@ export function DecisionCard({ approval, receipt, comment }: DecisionCardProps):
           ? t('yes.receipt.approved', sentence)
           : approval.status === 'rejected'
             ? t('yes.receipt.declined', sentence)
-            : t('yes.receipt.expired', { when: stamp(approval.expiresAt) })}
+            : t('yes.receipt.expired', { when: stamp(approval.decidedAt ?? undefined) })}
       </h2>
       {comment === undefined ? null : <p className="ys-small">{t('yes.receipt.note', { note: comment })}</p>}
       {approval.selfApproved === true ? (

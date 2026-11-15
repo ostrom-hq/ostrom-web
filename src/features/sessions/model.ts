@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Session } from '@gen/api/types.gen';
+import type { SessionDto } from '@gen/api/types.gen';
 
 /** An open session that reported within this window is live; longer quiet, it may have been left open. */
 export const LIVE_WINDOW_MS = 5 * 60_000;
 
 export type SessionState = 'live' | 'quiet' | 'ended';
 
-export function sessionState(session: Session, now: Date): SessionState {
-  if (session.endedAt !== undefined) return 'ended';
+export function sessionState(session: SessionDto, now: Date): SessionState {
+  if (typeof session.endedAt === 'string') return 'ended';
   const seen = Date.parse(session.lastSeenAt ?? session.startedAt);
   return now.getTime() - seen <= LIVE_WINDOW_MS ? 'live' : 'quiet';
 }
@@ -23,8 +23,8 @@ const ACTIVITIES: Readonly<Record<string, SessionActivity>> = {
   waiting_for_human: 'waiting',
 };
 
-export function sessionActivity(session: Session): SessionActivity | undefined {
-  if (session.endedAt !== undefined || session.activity === undefined) return undefined;
+export function sessionActivity(session: SessionDto): SessionActivity | undefined {
+  if (typeof session.endedAt === 'string' || typeof session.activity !== 'string') return undefined;
   return Object.hasOwn(ACTIVITIES, session.activity) ? ACTIVITIES[session.activity] : undefined;
 }
 
@@ -35,7 +35,7 @@ const LABEL_KEY = /^[a-z0-9][a-z0-9._/-]{0,62}$/;
 export const MAX_LABELS = 16;
 
 /** The labels of a session's launch as `key=value`, by key. */
-export function sessionLabels(session: Session): readonly string[] {
+export function sessionLabels(session: SessionDto): readonly string[] {
   return Object.entries(session.labels ?? {})
     .sort(([a], [b]) => a.localeCompare(b, 'en'))
     .map(([key, value]) => `${key}=${value}`);

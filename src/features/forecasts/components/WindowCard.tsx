@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ForecastWindow } from '@gen/api/types.gen';
+import type { ForecastWindowResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -8,7 +8,7 @@ import { etaOf, stateOf } from '../model';
 import { ForecastChart } from './ForecastChart';
 
 export interface WindowCardProps {
-  readonly window: ForecastWindow;
+  readonly window: ForecastWindowResponse;
   readonly now: string;
   readonly threshold: number;
 }
@@ -36,7 +36,7 @@ export function WindowCard({ window, now, threshold }: WindowCardProps): ReactEl
       etaText = unknown;
       break;
   }
-  const rate = window.pointsPerHour;
+  const rate = window.pointsPerHour ?? undefined;
   return (
     <section className="o-card fc-card" aria-label={window.window} data-state={state}>
       <h2 className="fc-card__title o-mono">{window.window}</h2>
@@ -81,7 +81,10 @@ export function WindowCard({ window, now, threshold }: WindowCardProps): ReactEl
           },
           {
             label: t('forecasts.card.reset'),
-            value: window.resetsAt === undefined ? unknown : formatAbsolute(window.resetsAt, i18n.language),
+            value:
+              window.resetsAt === undefined || window.resetsAt === null
+                ? unknown
+                : formatAbsolute(window.resetsAt, i18n.language),
           },
           {
             label: t('forecasts.card.speed'),

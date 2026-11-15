@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview } from '@gen/api/types.gen';
+import type { BillingOverviewResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -7,10 +7,10 @@ import { Facts, Section } from '@/shared/ui/Screen';
 import { hoursLevel } from '../model';
 
 /** The period's cloud agent hours against the plan, then who counts: active people are what Team and Business bill. */
-export function Usage({ billing }: { readonly billing: BillingOverview }): ReactElement {
+export function Usage({ billing }: { readonly billing: BillingOverviewResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const { usage, limits } = billing;
-  const max = limits.agentHoursPerPeriod;
+  const max = limits.agentHoursPerPeriod ?? null;
   // The server gives the share with an hour limit, and null without one.
   const percent = usage.percentOfHours ?? 0;
   return (

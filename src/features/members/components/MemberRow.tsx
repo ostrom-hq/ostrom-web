@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember } from '@gen/api/types.gen';
+import type { MemberResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
@@ -9,7 +9,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { concurrencyDraft, displayName, MAX_MEMBER_CONCURRENCY } from '../model';
 
 export interface MemberRowProps {
-  readonly member: OrgMember;
+  readonly member: MemberResponse;
   /** The roles the viewer can give this member; empty when they cannot change it. */
   readonly roles: readonly OrgRole[];
   readonly onRole: (role: OrgRole) => void;

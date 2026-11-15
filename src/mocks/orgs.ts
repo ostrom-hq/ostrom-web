@@ -17,17 +17,22 @@ import {
   handleRevokeInvitation,
   handleUpdateOrgMember,
 } from '@gen/api/msw.gen';
-import type { ApiError, Invitation, Organization, OrgMember, OrgView } from '@gen/api/types.gen';
+import type {
+  ApiError,
+  InvitationResponse,
+  MeOrganizationResponse,
+  MemberResponse,
+  OrgResponse,
+} from '@gen/api/types.gen';
 import {
-  zInvitationLinkCreate,
+  zCreateLinkRequest,
   zSignUpGrantRequest,
-  zInvitationToken,
-  zOrgCreate,
-  zOrgInvites,
-  zOrgMemberUpdate,
-  zOrgRename,
+  zInvitationTokenRequest,
+  zCreateOrgRequest,
+  zInviteRequestBody,
+  zUpdateMemberRequest,
+  zUpdateOrgRequest,
 } from '@gen/api/zod.gen';
-import { required } from 'zod/mini';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { DEMO_SETUP_TOKEN, MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { nameProblem, slugOf, slugProblem } from '@/shared/org/slug';
@@ -42,27 +47,32 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const DEMO_LOGIN = 'maya';
 export const DEMO_EMAIL = 'maya@acme.dev';
 
+/** An organization as the demo keeps it: the sign-in answer, and the date it was created when the demo knows it. */
+export type MockOrganization = MeOrganizationResponse & { createdAt?: string | undefined };
+
 /** An invitation as the server keeps it: with the organization it leads to and its link's secret. */
-export interface MockInvitation extends Invitation {
+export interface MockInvitation extends Omit<InvitationResponse, 'email' | 'maxUses'> {
+  readonly email: string | null;
+  readonly maxUses: number | null;
   readonly orgId: string;
   readonly token: string;
 }
 
 export interface OrgsState {
   /** The demo's own organization: every other slice of the mock reads its data. */
-  organization: Organization;
+  organization: MockOrganization;
   /** The person's other memberships. */
-  otherOrganizations: Organization[];
+  otherOrganizations: MockOrganization[];
   /** A fresh account: a member of no organization until they create one or accept an invitation. */
   noOrganization: boolean;
   /** The members of each organization by id, as `/orgs/{org}/members` serves them. */
-  orgMembers: Record<string, OrgMember[]>;
+  orgMembers: Record<string, MemberResponse[]>;
   /** The short name of each organization by id. */
   slugs: Record<string, string>;
   /** Live invitations of every organization, the ones that lead elsewhere included. */
   invitations: MockInvitation[];
   /** Organizations the person is not in yet, that an invitation leads to. */
-  elsewhere: Organization[];
+  elsewhere: MockOrganization[];
   /** The next invitation number; numbers are never reused. */
   nextInvitation: number;
   /** Whether the GitHub App is installed, by organization id: a new organization has it not. */
@@ -76,7 +86,7 @@ export interface OrgsState {
 }
 
 /** The person's organizations: the demo's own first; none for a fresh account. */
-export function membershipsOf(state: OrgsState): Organization[] {
+export function membershipsOf(state: OrgsState): MockOrganization[] {
   return state.noOrganization ? [] : [state.organization, ...state.otherOrganizations];
 }
 
@@ -110,7 +120,7 @@ export function freeSlug(base: string, used: ReadonlySet<string>): string {
 }
 
 /** The person as the owner of an organization they made. */
-function owner(at: string): OrgMember {
+function owner(at: string): MemberResponse {
   return {
     id: MEMBER_IDS.maya,
     login: DEMO_LOGIN,
@@ -123,7 +133,11 @@ function owner(at: string): OrgMember {
 }
 
 /** The members of an organization; one the demo knows nothing about is the person's own, and is kept so. */
-export function membersIn(state: OrgsState, organization: Organization, now: () => Date): OrgMember[] {
+export function membersIn(
+  state: OrgsState,
+  organization: MockOrganization,
+  now: () => Date,
+): MemberResponse[] {
   const known = state.orgMembers[organization.id];
   if (known !== undefined) return known;
   const created = [owner(organization.createdAt ?? now().toISOString())];
@@ -134,20 +148,22 @@ export function membersIn(state: OrgsState, organization: Organization, now: () 
 /** The demo person's role in an organization, as every mock that checks a role reads it; none if not listed. */
 export function demoRoleIn(
   state: OrgsState,
-  organization: Organization,
+  organization: MockOrganization,
   now: () => Date,
 ): OrgRole | undefined {
   return orgRoleOf(membersIn(state, organization, now).find((member) => member.login === DEMO_LOGIN)?.role);
 }
 
 export function createOrgsHandlers(state: () => OrgsState, now: () => Date): HttpHandler[] {
-  const shortNameOf = (organization: Organization): string =>
+  const shortNameOf = (organization: MockOrganization): string =>
     state().slugs[organization.id] ?? slugOf(organization.name);
-  const membersOf = (organization: Organization): OrgMember[] => membersIn(state(), organization, now);
-  const roleIn = (organization: Organization): OrgRole | undefined => demoRoleIn(state(), organization, now);
+  const membersOf = (organization: MockOrganization): MemberResponse[] =>
+    membersIn(state(), organization, now);
+  const roleIn = (organization: MockOrganization): OrgRole | undefined =>
+    demoRoleIn(state(), organization, now);
   // A person the demo lists in no role reads as a member.
-  const roleOf = (organization: Organization): OrgRole => roleIn(organization) ?? 'member';
-  const view = (organization: Organization): OrgView => ({
+  const roleOf = (organization: MockOrganization): OrgRole => roleIn(organization) ?? 'member';
+  const view = (organization: MockOrganization): OrgResponse => ({
     id: organization.id,
     slug: shortNameOf(organization),
     name: organization.name,
@@ -157,7 +173,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     timeZone: 'UTC',
   });
   /** `{org}` is an id or a short name; an organization the person is not in is not found. */
-  const find = (key: string): Organization | undefined =>
+  const find = (key: string): MockOrganization | undefined =>
     membershipsOf(state()).find(
       (organization) => organization.id === key || shortNameOf(organization) === key,
     );
@@ -194,7 +210,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     return invitation;
   };
   /** What the server lists of an invitation: never its organization nor its secret. */
-  const listed = (invitation: MockInvitation): Invitation => ({
+  const listed = (invitation: MockInvitation): InvitationResponse => ({
     id: invitation.id,
     email: invitation.email,
     role: invitation.role,
@@ -218,7 +234,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
     ),
     handleListOrgs(() => HttpResponse.json({ items: membershipsOf(state()).map(view) })),
     handleCreateOrg(async ({ request }) => {
-      const body = zOrgCreate.safeParse(await readJson(request));
+      const body = zCreateOrgRequest.safeParse(await readJson(request));
       const name = body.success ? body.data.name.trim() : '';
       if (!body.success || nameProblem(name) !== undefined)
         return refusal(
@@ -229,7 +245,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const s = state();
       /** Short names in use, those of organizations the person is not in included; `acme-corp` stands for a stranger's. */
       const used = new Set(['acme-corp', ...[...membershipsOf(s), ...s.elsewhere].map(shortNameOf)]);
-      const chosen = body.data.slug;
+      const chosen = body.data.slug ?? undefined;
       if (chosen !== undefined) {
         if (slugProblem(chosen) !== undefined)
           return refusal(
@@ -243,7 +259,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       // else a random suffix; cut to stay within 39 characters (`freeSlug` in the server's `Rules.kt`).
       const slug = chosen ?? freeSlug(slugOf(name), used);
       const at = now().toISOString();
-      const created: Organization = {
+      const created: MockOrganization = {
         id: `org-${slug}`,
         name,
         avatarUrl: '',
@@ -269,8 +285,8 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       if (!managesMembers(roleIn(organization)))
         return refusal(403, 'forbidden', 'only an owner or an admin renames the organization');
       // The console always sends a name; the demo refuses a rename without one, as it did before the other settings.
-      const body = required(zOrgRename, { name: true }).safeParse(await readJson(request));
-      const name = body.success ? body.data.name.trim() : '';
+      const body = zUpdateOrgRequest.safeParse(await readJson(request));
+      const name = body.success ? (body.data.name?.trim() ?? '') : '';
       if (name === '' || name.length > 100) return refusal(400, 'invalid_request', 'a name is needed');
       organization.name = name;
       return HttpResponse.json(view(organization));
@@ -311,7 +327,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const index = members.findIndex((member) => member.login === params.login);
       const target = members[index];
       if (target === undefined) return refusal(404, 'not_found', 'member not found');
-      const body = zOrgMemberUpdate.safeParse(await readJson(request));
+      const body = zUpdateMemberRequest.safeParse(await readJson(request));
       const role = orgRoleOf(body.success ? body.data.role : undefined);
       if (role === undefined) return refusal(400, 'invalid_request', 'unknown role');
       const caller = roleIn(organization);
@@ -323,7 +339,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
         !givableRoles(caller).includes(role)
       )
         return refusal(403, 'forbidden', 'Your role does not allow this change.');
-      const updated: OrgMember = { ...target, role };
+      const updated: MemberResponse = { ...target, role };
       members[index] = updated;
       return HttpResponse.json(updated);
     }),
@@ -345,12 +361,16 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const caller = roleIn(organization);
       if (!managesMembers(caller))
         return refusal(403, 'forbidden', 'Only an owner or an admin can invite people.');
-      const body = zOrgInvites.safeParse(await readJson(request));
-      if (!body.success || body.data.invites.length === 0)
+      const body = zInviteRequestBody.safeParse(await readJson(request));
+      // An invitation names an address: one without it is no request.
+      const invites = body.success
+        ? body.data.invites.flatMap(({ email, role }) => (email === undefined ? [] : [{ email, role }]))
+        : [];
+      if (!body.success || invites.length === 0 || invites.length !== body.data.invites.length)
         return refusal(400, 'invalid_request', 'at least one address is needed');
       const present = new Set(membersOf(organization).map((member) => member.email?.toLowerCase()));
       const invited: string[] = [];
-      for (const { email, role } of body.data.invites) {
+      for (const { email, role } of invites) {
         const given = orgRoleOf(role ?? 'member');
         if (given === undefined || !givableRoles(caller).includes(given))
           return refusal(403, 'forbidden', `Your role does not allow inviting someone as ${String(role)}.`);
@@ -378,7 +398,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       const caller = roleIn(organization);
       if (!managesMembers(caller))
         return refusal(403, 'forbidden', 'Only an owner or an admin can invite people.');
-      const body = zInvitationLinkCreate.safeParse(await readJson(request));
+      const body = zCreateLinkRequest.safeParse(await readJson(request));
       const role = orgRoleOf(body.success ? (body.data.role ?? 'member') : undefined);
       const maxUses = body.success ? (body.data.maxUses ?? 10) : 0;
       if (role === undefined || maxUses < 1 || maxUses > 100)
@@ -422,7 +442,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       });
     }),
     handlePreviewInvitation(async ({ request }) => {
-      const body = zInvitationToken.safeParse(await readJson(request));
+      const body = zInvitationTokenRequest.safeParse(await readJson(request));
       const invitation = body.success ? liveInvitation(body.data.token) : undefined;
       const s = state();
       const organization = [...membershipsOf(s), ...s.elsewhere].find(
@@ -439,7 +459,7 @@ export function createOrgsHandlers(state: () => OrgsState, now: () => Date): Htt
       });
     }),
     handleAcceptInvitation(async ({ request }) => {
-      const body = zInvitationToken.safeParse(await readJson(request));
+      const body = zInvitationTokenRequest.safeParse(await readJson(request));
       const invitation = body.success ? liveInvitation(body.data.token) : undefined;
       const s = state();
       const organization = s.elsewhere.find((item) => item.id === invitation?.orgId);

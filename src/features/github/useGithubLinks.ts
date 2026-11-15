@@ -7,7 +7,7 @@ import {
   unlinkGithubMutation,
   unlinkMemberGithubMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { GitHubLink } from '@gen/api/types.gen';
+import type { GitHubLinkDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -17,7 +17,7 @@ import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { linkRows, linkUrl, type MemberLinkRow, memberLinkUrl } from './model';
 
 export interface OwnLinkViewModel {
-  readonly link: GitHubLink | undefined;
+  readonly link: GitHubLinkDto | undefined;
   readonly failure: Error | undefined;
   /** Where the browser goes to link, or to link again; undefined while the server cannot (no App configured). */
   readonly start: string | undefined;

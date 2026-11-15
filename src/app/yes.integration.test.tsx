@@ -51,18 +51,13 @@ const bare: Approval = {
   shownDigest: 'sha256:bare',
 };
 
-/** Commits without their details, checks and evidence without links, a task and a decided request. */
+/** Commits by their sha alone and evidence without links. */
 const plain: Approval = {
   ...bare,
   id: 'apr-plain',
   title: 'Push 1 commit to main',
   commits: ['abcdef1234567'],
-  checks: [
-    { name: 'unit', state: 'failure' },
-    { name: 'docs', state: 'skipped' },
-  ],
   evidence: [{ label: 'Log', value: 'clean' }],
-  taskId: 'task-9',
   askedBy: ['theo'],
 };
 
@@ -101,13 +96,10 @@ describe('the queue', () => {
     expect(within(merge).getByText('Waiting for you')).toBeInTheDocument();
     expect(within(merge).getByText('acme/billing-api · 9c1e4b2')).toBeInTheDocument();
     expect(within(merge).getByText('2 commits')).toBeInTheDocument();
-    expect(within(merge).getByText('2/3 checks passed')).toBeInTheDocument();
-    expect(merge.querySelector('time')).toHaveAttribute('title', expect.stringMatching(/2026/));
     expect(within(merge).queryByRole('button')).toBeNull();
 
     const deploy = screen.getByRole('link', { name: /Deploy billing-api/ });
     expect(within(deploy).getByText('You asked')).toBeInTheDocument();
-    expect(within(deploy).getByText('0/1 checks passed')).toHaveClass('ys-chip--bad');
 
     const decided = await screen.findByRole('link', { name: /Run migration/ });
     expect(within(decided).getByText('Approved')).toBeInTheDocument();
@@ -383,46 +375,20 @@ describe('a request', () => {
       expect(router.state.location.pathname).toBe('/yes/apr-merge-412');
     });
     expect(await screen.findByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'What it lets through' })).toHaveTextContent(
-      'Merge into main on acme/billing-api',
-    );
-  });
-
-  it('says what a yes lets through: the action, its commits, the size of the change', async () => {
-    visit('/yes/apr-merge-412');
-    const action = await screen.findByRole('region', { name: 'What it lets through' });
-    expect(action).toHaveTextContent('Merge into main on acme/billing-api');
-    expect(action).toHaveTextContent('1b2c3d4 → 9c1e4b2 · 3 files · +42 −7');
-    expect(within(action).queryByText('High risk')).toBeNull();
-    expect(within(action).queryByText(/too large/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Approve merge' })).toBeInTheDocument();
-  });
-
-  it('marks a high-risk action and a diff too large to show', async () => {
-    visit('/yes/apr-deploy-88');
-    const action = await screen.findByRole('region', { name: 'What it lets through' });
-    expect(action).toHaveTextContent('Deploy production of acme/billing-api');
-    expect(action).toHaveTextContent('a91d0e4 · 1 file · +1 −1');
-    expect(within(action).getByText('High risk')).toBeInTheDocument();
-    expect(within(action).getByText(/costliest to undo/)).toBeInTheDocument();
-    expect(within(action).getByText(/too large to show in full/)).toBeInTheDocument();
   });
 
   it.each([
-    ['push', 'Push to main on acme/api', 'Approve push'],
-    ['tool', 'A tool call on acme/api', 'Approve tool call'],
-    ['other', 'main on acme/api', 'Approve'],
-  ] as const)('names a %s action and its verb, without a diff size', async (kind, line, verb) => {
-    addApproval({
-      ...bare,
-      id: `apr-${kind}`,
-      action: { kind, repo: 'acme/api', ref: 'main', headSha: 'f00dfeed00', risk: 'low' },
-    });
-    visit(`/yes/apr-${kind}`);
-    const action = await screen.findByRole('region', { name: 'What it lets through' });
-    expect(action).toHaveTextContent(line);
-    expect(action).not.toHaveTextContent('file');
+    ['apr-merge-412', 'Approve merge'],
+    ['apr-deploy-88', 'Approve deployment'],
+  ] as const)('says the action a yes lets through in the verb of %s', async (id, verb) => {
+    visit(`/yes/${id}`);
     expect(await screen.findByRole('button', { name: verb })).toBeInTheDocument();
+  });
+
+  it('keeps the plain verb for an action the console has no name for', async () => {
+    addApproval({ ...bare, id: 'apr-gate' });
+    visit('/yes/apr-gate');
+    expect(await screen.findByRole('button', { name: 'Approve' })).toBeInTheDocument();
   });
 
   it('signs in from a link to one request after a yes, wipes the token and shows that request', async () => {
@@ -459,9 +425,9 @@ describe('a request', () => {
     expect(screen.queryByText(/changed while you were reading it/)).toBeNull();
   });
 
-  it('shows the bare commits when the server sends an empty list of details, in the list and the request', async () => {
+  it('shows the commits by their sha, in the list and the request', async () => {
     const user = userEvent.setup();
-    addApproval({ ...bare, id: 'apr-nodetails', commits: ['abc1234def', 'fed4321cba'], commitDetails: [] });
+    addApproval({ ...bare, id: 'apr-nodetails', commits: ['abc1234def', 'fed4321cba'] });
     visit('/yes');
     const card = await screen.findByRole('link', { name: /Run a script/ });
     expect(card).toHaveTextContent('2 commits');
@@ -484,16 +450,7 @@ describe('a request', () => {
       'data-approval',
       'waiting',
     );
-    expect(screen.getByText(/Expires/).closest('time')).toHaveAttribute(
-      'dateTime',
-      '2026-10-30T18:00:00.000Z',
-    );
-    expect(screen.getByText('fix(invoices): round VAT per line')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '3fa0d81' })).toHaveAttribute(
-      'href',
-      'https://github.com/acme/billing-api/commit/3fa0d81c55',
-    );
-    expect(screen.getByRole('link', { name: 'test' })).toHaveAttribute('target', '_blank');
+    expect(screen.getByText('3fa0d81')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '#412' })).toBeInTheDocument();
     expect(screen.getByText('Ostrom asks billing-owners to approve this.')).toBeInTheDocument();
     expect(screen.getByText('Workflow wf-backend')).toBeInTheDocument();
@@ -528,7 +485,6 @@ describe('a request', () => {
     visit('/yes/apr-deploy-88');
     expect(await screen.findByText('You asked for this yourself.')).toBeInTheDocument();
     expect(screen.getByText(/If someone else can approve it, Ostrom will ask them/)).toBeInTheDocument();
-    expect(screen.getByText('failed')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^Approve/ }));
     const alert = await screen.findByRole('alert');
@@ -715,15 +671,12 @@ describe('a request', () => {
     expect(screen.getByText('sha256:bare')).toBeInTheDocument();
   });
 
-  it('reads commits without details, checks and evidence without links, and the task', async () => {
+  it('reads commits by their sha and evidence without links', async () => {
     addApproval(plain);
     visit('/yes/apr-plain');
     expect(await screen.findByText('abcdef1')).toBeInTheDocument();
     expect(screen.queryByText(/^Commit abcdef1/)).toBeNull();
-    expect(screen.getByText('unit')).not.toHaveAttribute('href');
-    expect(screen.getByText('skipped')).toBeInTheDocument();
     expect(screen.getByText('clean')).toBeInTheDocument();
-    expect(screen.getByText('task-9')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /^Approve/ })).toBeInTheDocument();
   });
 
@@ -756,7 +709,7 @@ describe('a request', () => {
     ['apr-expired', /Expired without an answer · .*2026/],
     ['apr-lapsed', /^DecisionExpired without an answer$/],
   ] as const)('reads the expired request %s', async (id, text) => {
-    addApproval({ ...bare, id: 'apr-expired', status: 'expired', expiresAt: '2026-10-29T10:00:00.000Z' });
+    addApproval({ ...bare, id: 'apr-expired', status: 'expired', decidedAt: '2026-10-29T10:00:00.000Z' });
     addApproval({ ...bare, id: 'apr-lapsed', status: 'expired' });
     visit(`/yes/${id}`);
     expect(await screen.findByRole('region', { name: 'Decision' })).toHaveTextContent(text);
@@ -785,6 +738,9 @@ describe('a request', () => {
         db.approvals = db.approvals.map((item) => (item.id === approved.id ? approved : item));
         return HttpResponse.json({
           approval: approved,
+          who: {},
+          what: { action: 'gate' },
+          askedVia: [],
           receipt: {
             id: 'rcpt-x',
             subject: { kind: 'gate', id: 'apr-merge-412', digest: 'sha256:x' },
@@ -873,14 +829,11 @@ describe('safety of what the server and links bring', () => {
       ...bare,
       id: 'apr-js',
       evidence: [{ label: 'Proof', value: 'click me', url: 'javascript:alert(1)' }],
-      checks: [{ name: 'ci', state: 'success', url: 'data:text/html,hi' }],
-      commitDetails: [{ sha: 'abcdef1234567', title: 'x', url: 'javascript:alert(2)' }],
       commits: ['abcdef1234567'],
     });
     visit('/yes/apr-js');
     expect(await screen.findByText('click me')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'click me' })).toBeNull();
-    expect(screen.queryByRole('link', { name: 'ci' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'abcdef1' })).toBeNull();
   });
 

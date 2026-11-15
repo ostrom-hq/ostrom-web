@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession, CloudTransferRecipient } from '@gen/api/types.gen';
+import type { CloudSessionResponse, CloudTransferRecipientResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { transferRefusalOf } from '../transfer';
 
 export interface TransferControlProps {
-  readonly session: CloudSession;
+  readonly session: CloudSessionResponse;
   /** The members the session can be given to; the server refuses the list when transfers are not offered. */
-  readonly recipients: readonly CloudTransferRecipient[];
+  readonly recipients: readonly CloudTransferRecipientResponse[];
   /** Why the list could not be read, as the server wrote it: said in place of "no other member". */
   readonly recipientsFailure?: Error | undefined;
   /** Whether an administrator gives the session (the transfer is then accepted at once), or a member offers it. */

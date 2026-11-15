@@ -9,7 +9,7 @@ import {
   listOrgsQueryKey,
   listSharedAccountsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -62,7 +62,7 @@ export function useCreateOrg(): CreateOrgViewModel {
   const login = meOf(me.data)?.dev.login;
   const mutation = useMutation({
     ...createOrgMutation(),
-    onSuccess: async (org: OrgView) => {
+    onSuccess: async (org: OrgResponse) => {
       // The lists are read again first: chosen while the picker's list lacks it, the new organization would be taken
       // for one the person left, and dropped.
       await Promise.all([

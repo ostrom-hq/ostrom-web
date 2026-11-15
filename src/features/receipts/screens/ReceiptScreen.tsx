@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Receipt, Verification } from '@gen/api/types.gen';
+import type { Receipt, VerificationResponse } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -50,6 +50,11 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
   const money = new Intl.NumberFormat(i18n.language, { style: 'currency', currency: 'USD' });
+  const agent = receipt.agent ?? undefined;
+  const model = receipt.model ?? undefined;
+  const pkg = receipt.package ?? undefined;
+  const costUsd = receipt.costUsd ?? undefined;
+  const nodes = receipt.nodes ?? [];
   return (
     <>
       <Section label={t('receipts.detail.signature')}>
@@ -71,22 +76,18 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
         <Facts
           facts={[
             { label: t('receipts.detail.initiator'), value: receipt.initiator },
-            receipt.agent === undefined
-              ? undefined
-              : { label: t('receipts.detail.agent'), value: receipt.agent },
-            receipt.model === undefined
-              ? undefined
-              : { label: t('receipts.detail.model'), value: receipt.model },
-            receipt.package === undefined
+            agent === undefined ? undefined : { label: t('receipts.detail.agent'), value: agent },
+            model === undefined ? undefined : { label: t('receipts.detail.model'), value: model },
+            pkg === undefined
               ? undefined
               : {
                   label: t('receipts.detail.package'),
-                  value: `${receipt.package.version} · ${receipt.package.digest}`,
+                  value: `${pkg.version} · ${pkg.digest}`,
                   mono: true,
                 },
-            receipt.costUsd === undefined
+            costUsd === undefined
               ? undefined
-              : { label: t('receipts.detail.cost'), value: money.format(receipt.costUsd) },
+              : { label: t('receipts.detail.cost'), value: money.format(costUsd) },
           ]}
         />
       </Section>
@@ -131,16 +132,17 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
         </Section>
       )}
 
-      {receipt.nodes === undefined || receipt.nodes.length === 0 ? null : (
+      {nodes.length === 0 ? null : (
         <Section label={t('receipts.detail.steps')}>
           <ul className="o-rows">
-            {receipt.nodes.map((node) => {
+            {nodes.map((node) => {
               const attestation = attestationOf(node);
+              const detail = node.detail ?? undefined;
               return (
                 <li key={node.id} className="o-row">
                   <span className="o-row__main">
                     <span className="o-row__title">{node.label}</span>
-                    {node.detail === undefined ? null : <span className="o-row__meta">{node.detail}</span>}
+                    {detail === undefined ? null : <span className="o-row__meta">{detail}</span>}
                   </span>
                   <span className="o-row__end o-inline">
                     {attestation === undefined ? null : (
@@ -176,7 +178,7 @@ function ReceiptDetail({ receipt, view }: ReceiptDetailProps): ReactElement {
 }
 
 interface VerificationLineProps {
-  readonly verification: Verification | undefined;
+  readonly verification: VerificationResponse | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -185,10 +187,11 @@ function VerificationLine({ verification, failure }: VerificationLineProps): Rea
   const { t } = useTranslation();
   if (failure !== undefined) return <p className="o-screen__lead">{failure.message}</p>;
   if (verification === undefined) return <Skeleton rows={1} />;
+  const kid = verification.kid ?? undefined;
   return verification.ok ? (
     <p>
       <Badge tone="success">{t('receipts.detail.verified')}</Badge>{' '}
-      {verification.kid === undefined ? null : t('receipts.detail.verifiedWith', { kid: verification.kid })}
+      {kid === undefined ? null : t('receipts.detail.verifiedWith', { kid })}
     </p>
   ) : (
     <p role="alert">

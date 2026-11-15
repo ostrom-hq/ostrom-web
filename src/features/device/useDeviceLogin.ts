@@ -4,7 +4,7 @@ import {
   getDeviceLoginOptions,
   listOrgsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { DeviceAuthorization, OrgView } from '@gen/api/types.gen';
+import type { DeviceAuthorizationResponse, OrgResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
@@ -20,7 +20,7 @@ import { isUserCode, normalizeCode } from './model';
 /** A pending `ostrom login`, read and still waiting for the person's answer. */
 export interface OpenDeviceLogin {
   readonly stage: 'open';
-  readonly login: DeviceAuthorization;
+  readonly login: DeviceAuthorizationResponse;
   /** The answer is on its way: neither button may be pressed again. */
   readonly answering: boolean;
   /** An admin sign-in whose organizations are still being read: it cannot be approved yet, only denied. */
@@ -36,9 +36,9 @@ export interface OpenDeviceLogin {
    * For an admin sign-in: the organizations the person owns or administers, where its token may act. Empty for the
    * ordinary sign-in, and until their list is read.
    */
-  readonly orgs: readonly OrgView[];
+  readonly orgs: readonly OrgResponse[];
   /** The organization an approved admin sign-in acts in (`Ostrom-Org`), if one can be named. */
-  readonly org: OrgView | undefined;
+  readonly org: OrgResponse | undefined;
   /** Chooses, among [orgs], the organization the admin sign-in acts in. */
   readonly pick: (id: string) => void;
   /** Why the last answer did not go through (a sign-in too old to approve, the network…), if it did not. */
@@ -92,7 +92,7 @@ export function useDeviceLogin(): DeviceLoginViewModel {
   // An admin sign-in acts in one organization, named by `Ostrom-Org` (ostrom-core#87): one the person owns or
   // administers, the console's own first, else their first such one. A person who manages none still names one, so
   // the server answers why it refuses (403), never which organization (409).
-  const admin = pending.data?.scopes !== undefined;
+  const admin = (pending.data?.scopes ?? undefined) !== undefined;
   const listed = useQuery(ready(listOrgsOptions(), { staleTime: 60_000, enabled: admin }));
   const orgs = listed.data?.items;
   const current = useOrgStore((state) => state.current);
@@ -125,7 +125,7 @@ export function useDeviceLogin(): DeviceLoginViewModel {
   // On an admin sign-in, a 403 that signing in again lifts is said with its way back; any other one means the role is
   // missing. An ordinary sign-in asks for no role: its 403 is said as it came.
   const forbidden =
-    login.scopes !== undefined &&
+    (login.scopes ?? undefined) !== undefined &&
     isApiFailure(answerFailure) &&
     answerFailure.kind === 'forbidden' &&
     !stepUpOf(answerFailure);
@@ -170,7 +170,7 @@ export function useDeviceLogin(): DeviceLoginViewModel {
 }
 
 /** Whether the person owns or administers an organization: only they approve an admin sign-in there. */
-function manages(org: OrgView): boolean {
+function manages(org: OrgResponse): boolean {
   const role = orgRoleOf(org.role);
   return role === 'owner' || role === 'admin';
 }
