@@ -6,6 +6,7 @@ import { Markdown } from '@/shared/ui/Markdown';
 import type { TranscriptEvent } from '../events';
 import { keyOf, nestedOf, type SystemEvent, type ToolItem, type TranscriptItem } from '../items';
 import type { Subagent } from '../subagents';
+import { MessageFiles } from './FileComponents';
 import { SubagentStateBadge } from './RunningPanel';
 
 /** With feeds, a subagent's card opens its own thread; `subagents` gives each its type, description and state. */
@@ -49,7 +50,8 @@ function ItemBody({
           {item.event.authorId !== undefined && item.event.authorId !== memberId ? (
             <span className="cc-meta">{t('cloudConversation.from')}</span>
           ) : null}
-          <p className="cc-bubble">{item.event.text}</p>
+          {item.event.text === '' ? null : <p className="cc-bubble">{item.event.text}</p>}
+          <MessageFiles files={item.event.files} />
         </div>
       );
     case 'agent':

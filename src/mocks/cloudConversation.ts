@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   handleAnswerCloudPermission,
+  handleGetCloudFilePolicy,
   handleGetCloudSession,
   handleInterruptCloudSession,
   handleListCloudEvents,
@@ -11,8 +12,17 @@ import {
   handleSetCloudSessionModel,
   handleStopCloudTask,
   handleStreamCloudSession,
+  handleUploadCloudFile,
 } from '@gen/api/msw.gen';
-import type { CloudEvent, CloudEventPage, CloudInput, CloudSession, CloudSubagent } from '@gen/api/types.gen';
+import type {
+  CloudEvent,
+  CloudEventPage,
+  CloudFile,
+  CloudFilePolicy,
+  CloudInput,
+  CloudSession,
+  CloudSubagent,
+} from '@gen/api/types.gen';
 import {
   zAnswerCloudPermissionRequest,
   zSendCloudMessageRequest,
@@ -32,6 +42,74 @@ export interface CloudConversationState {
   cloudEvents: Record<string, CloudEvent[]>;
   /** The inputs accepted, by `session id:clientMessageId`: a replay answers the first one. */
   cloudInputs: Record<string, CloudInput>;
+  /** What the organization allows for files sent to sessions (`runners.cloud.files.v1`). */
+  cloudFilePolicy: CloudFilePolicy;
+  /** The files uploaded, by id, with the key they came under and whether a message carried them. */
+  cloudFiles: Record<string, StoredFile>;
+}
+
+/** A file the demo's server stored for a session. */
+export interface StoredFile {
+  readonly file: CloudFile;
+  readonly idempotencyKey: string | undefined;
+  readonly sent: boolean;
+}
+
+const MIB = 1024 * 1024;
+
+/** The server's defaults: 20 MiB per file, 25 MiB per message, five files, images, PDFs and text. */
+export function initialCloudFilePolicy(): CloudFilePolicy {
+  return {
+    available: true,
+    maxFileBytes: 20 * MIB,
+    maxMessageBytes: 25 * MIB,
+    maxFilesPerMessage: 5,
+    types: [
+      'image/png',
+      'image/jpeg',
+      'image/webp',
+      'image/gif',
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'text/csv',
+      'application/json',
+    ],
+  };
+}
+
+/** The signatures the server recognizes a binary file by. */
+const SIGNATURES: readonly (readonly [string, readonly number[]])[] = [
+  ['image/png', [0x89, 0x50, 0x4e, 0x47]],
+  ['image/jpeg', [0xff, 0xd8, 0xff]],
+  ['image/gif', [0x47, 0x49, 0x46, 0x38]],
+  ['application/pdf', [0x25, 0x50, 0x44, 0x46]],
+];
+
+/** The type of `bytes` as the server reads it: a signature, else UTF-8 text without NUL, else none. */
+export function recognizedType(bytes: Uint8Array): string | undefined {
+  for (const [type, signature] of SIGNATURES)
+    if (signature.every((byte, index) => bytes[index] === byte)) return type;
+  const riff = [0x52, 0x49, 0x46, 0x46].every((byte, index) => bytes[index] === byte);
+  if (riff && String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP') return 'image/webp';
+  if (bytes.includes(0)) return undefined;
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return 'text/plain';
+  } catch {
+    return undefined;
+  }
+}
+
+async function sha256Of(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/** The name as a label: its last segment, `file` when nothing is left. */
+function cleanName(name: string): string {
+  const last = name.replace(/^.*[/\\]/s, '').trim();
+  return last === '' ? 'file' : last;
 }
 
 /** The demo's conversation session: Claude Code, running, one turn done. */
@@ -305,7 +383,64 @@ export function createCloudConversationHandlers(
     replace(next);
     return HttpResponse.json<CloudSession>(next);
   };
+  const upload = async (id: string, request: Request): Promise<Response> => {
+    const session = sessionOf(id);
+    if (session === undefined) return NOT_FOUND();
+    const policy = state().cloudFilePolicy;
+    if (!policy.available)
+      return refusal(409, 'file_storage_not_configured', 'The organization has no tested artifact storage.');
+    const name = new URL(request.url).searchParams.get('name') ?? '';
+    if (name.trim() === '') return refusal(400, 'invalid_file_name', 'Name the file.');
+    const bytes = new Uint8Array(await request.arrayBuffer());
+    if (bytes.length === 0) return refusal(400, 'empty_file', 'The file is empty.');
+    if (bytes.length > policy.maxFileBytes) return refusal(413, 'file_too_large', 'The file is too large.');
+    const contentType = recognizedType(bytes);
+    if (contentType === undefined || !policy.types.includes(contentType))
+      return refusal(415, 'file_type_not_allowed', 'This type of file is not taken.');
+    const sha256 = await sha256Of(bytes);
+    const key = request.headers.get('Idempotency-Key') ?? undefined;
+    const replayed = Object.values(state().cloudFiles).find(
+      (stored) => key !== undefined && stored.idempotencyKey === key && stored.file.sessionId === id,
+    );
+    if (replayed !== undefined)
+      return replayed.file.sha256 === sha256
+        ? HttpResponse.json(replayed.file, { status: 200, headers: { 'Idempotency-Replayed': 'true' } })
+        : refusal(422, 'idempotency_conflict', 'Other bytes under this key.');
+    const created = now();
+    const file: CloudFile = {
+      id: `file-${String(Object.keys(state().cloudFiles).length + 1)}`,
+      sessionId: id,
+      name: cleanName(name),
+      size: bytes.length,
+      contentType,
+      sha256,
+      createdAt: created.toISOString(),
+      expiresAt: new Date(created.getTime() + 24 * 3_600_000).toISOString(),
+    };
+    state().cloudFiles[file.id] = { file, idempotencyKey: key, sent: false };
+    return HttpResponse.json(file, { status: 201 });
+  };
+  /** Why the files a message names cannot go with it, or the files. */
+  const filesOf = (
+    id: string,
+    fileIds: readonly string[],
+  ): ReturnType<typeof refusal> | readonly CloudFile[] => {
+    if (fileIds.length > 5 || new Set(fileIds).size !== fileIds.length)
+      return refusal(400, 'invalid_files', 'Name at most five distinct files.');
+    const files: CloudFile[] = [];
+    for (const fileId of fileIds) {
+      const stored = state().cloudFiles[fileId];
+      if (stored === undefined || stored.sent || stored.file.sessionId !== id)
+        return refusal(409, 'file_unavailable', 'A file is no longer available.');
+      files.push(stored.file);
+    }
+    if (files.reduce((sum, file) => sum + file.size, 0) > state().cloudFilePolicy.maxMessageBytes)
+      return refusal(413, 'files_too_large', 'The files exceed the limit per message.');
+    return files;
+  };
   return [
+    handleGetCloudFilePolicy(() => HttpResponse.json(state().cloudFilePolicy)),
+    handleUploadCloudFile(async ({ params, request }) => upload(params.id, request)),
     handleListCloudSubagents(({ params }) => {
       if (sessionOf(params.id) === undefined) return NOT_FOUND();
       return HttpResponse.json({ agents: subagentsOf(eventsOf(params.id)) });
@@ -447,7 +582,9 @@ export function createCloudConversationHandlers(
       const session = sessionOf(params.id);
       if (session === undefined) return NOT_FOUND();
       const body = zSendCloudMessageRequest.safeParse(await readJson(request));
-      if (!body.success || body.data.text.trim() === '')
+      const fileIds = body.data?.fileIds ?? [];
+      // With files the text may be empty.
+      if (!body.success || (body.data.text.trim() === '' && fileIds.length === 0))
         return refusal(400, 'invalid_message', 'Write a message of 1 to 32,000 characters.');
       if (session.mode !== 'conversation')
         return refusal(409, 'terminal_session', 'A terminal session takes no message.');
@@ -459,6 +596,14 @@ export function createCloudConversationHandlers(
       const key = `${session.id}:${clientMessageId}`;
       const replayed = state().cloudInputs[key];
       if (replayed !== undefined) return HttpResponse.json(replayed, { status: 202 });
+      const files = filesOf(session.id, fileIds);
+      if (files instanceof Response) return files;
+      for (const file of files)
+        state().cloudFiles[file.id] = {
+          file,
+          idempotencyKey: state().cloudFiles[file.id]?.idempotencyKey,
+          sent: true,
+        };
       const woke = session.status === 'paused';
       if (woke) replace({ ...session, status: 'running' });
       const input: CloudInput = {
@@ -477,13 +622,28 @@ export function createCloudConversationHandlers(
         text: body.data.text,
         inputId: input.id,
         authorId: input.authorId,
+        ...(files.length === 0
+          ? {}
+          : {
+              files: files.map((file) => ({
+                id: file.id,
+                name: file.name,
+                size: file.size,
+                contentType: file.contentType,
+              })),
+            }),
       });
       append(session.id, 'turn', { phase: 'started' });
       if (/deploy/i.test(body.data.text)) {
         askToDeploy(session);
         return HttpResponse.json(input, { status: 202 });
       }
-      append(session.id, 'message.agent', { text: `On it: ${body.data.text}` });
+      append(session.id, 'message.agent', {
+        text:
+          files.length === 0
+            ? `On it: ${body.data.text}`
+            : `Read ${files.map((file) => file.name).join(', ')}.`,
+      });
       append(session.id, 'turn', { phase: 'completed', durationMs: 1_000, steps: 0 });
       return HttpResponse.json(input, { status: 202 });
     }),

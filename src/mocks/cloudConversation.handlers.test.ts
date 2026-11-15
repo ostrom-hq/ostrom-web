@@ -340,3 +340,129 @@ describe('the mock conversation controls', () => {
     expect(feedOf(events, 'a').map((item) => item.seq)).toEqual([2, 3]);
   });
 });
+
+describe('the mock files of a conversation (runners.cloud.files.v1)', () => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2]);
+
+  async function upload(
+    name: string,
+    bytes: Uint8Array<ArrayBuffer>,
+    key?: string,
+    session = CONVERSATION_ID,
+  ): Promise<{ status: number; json: unknown; replayed: string | null }> {
+    const response = await fetch(`${BASE}/${session}/files?name=${encodeURIComponent(name)}`, {
+      method: 'POST',
+      headers: key === undefined ? {} : { 'Idempotency-Key': key },
+      body: bytes,
+    });
+    return {
+      status: response.status,
+      json: await response.json(),
+      replayed: response.headers.get('Idempotency-Replayed'),
+    };
+  }
+
+  it('reads the policy, and stores a file under its key', async () => {
+    const policy = await fetch('http://ostrom.test/api/v1/cloud/files/policy');
+    expect(await policy.json()).toMatchObject({ available: true, maxFilesPerMessage: 5 });
+    const first = await upload('../shots/a.png', PNG, 'k1');
+    expect(first).toMatchObject({
+      status: 201,
+      json: { id: 'file-1', name: 'a.png', size: 6, contentType: 'image/png' },
+    });
+    expect(await upload('a.png', PNG, 'k1')).toMatchObject({ status: 200, replayed: 'true' });
+    expect(await upload('a.png', new Uint8Array([0x89, 0x50, 0x4e, 0x47, 9]), 'k1')).toMatchObject({
+      status: 422,
+    });
+    expect(await upload('/', new TextEncoder().encode('text'))).toMatchObject({
+      status: 201,
+      json: { name: 'file', contentType: 'text/plain' },
+    });
+  });
+
+  it('recognizes each type by its bytes', async () => {
+    const of = async (bytes: number[]): Promise<unknown> =>
+      ((await upload('f', new Uint8Array(bytes))).json as { contentType?: string }).contentType;
+    expect(await of([0xff, 0xd8, 0xff, 0])).toBe('image/jpeg');
+    expect(await of([0x47, 0x49, 0x46, 0x38])).toBe('image/gif');
+    expect(await of([0x25, 0x50, 0x44, 0x46])).toBe('application/pdf');
+    expect(await of([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])).toBe('image/webp');
+    expect(await of([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x41, 0x56, 0x49, 0x20])).toBeUndefined();
+    expect(await of([0xc3, 0x28])).toBeUndefined();
+  });
+
+  it('refuses what the server would', async () => {
+    expect((await upload('a.png', PNG, undefined, 'cs-none')).status).toBe(404);
+    expect((await upload('', PNG)).status).toBe(400);
+    const nameless = await fetch(`${BASE}/${CONVERSATION_ID}/files`, { method: 'POST', body: PNG });
+    expect(nameless.status).toBe(400);
+    expect((await upload('a', new Uint8Array([]))).json).toMatchObject({ error: { type: 'empty_file' } });
+    expect((await upload('a', new Uint8Array([1, 0, 2]))).status).toBe(415);
+    db.cloudFilePolicy = { ...db.cloudFilePolicy, maxFileBytes: 2 };
+    expect((await upload('a.png', PNG)).status).toBe(413);
+    db.cloudFilePolicy = { ...db.cloudFilePolicy, available: false };
+    expect((await upload('a.png', PNG)).json).toMatchObject({
+      error: { type: 'file_storage_not_configured' },
+    });
+  });
+
+  it('sends files with a message once, alone or with text, and lists them in its event', async () => {
+    await upload('a.png', PNG);
+    await upload('b.png', PNG);
+    const sent = await call('POST', `/${CONVERSATION_ID}/messages`, {
+      text: '',
+      clientMessageId: 'm1',
+      fileIds: ['file-1', 'file-2'],
+    });
+    expect(sent.status).toBe(202);
+    const message = db.cloudEvents[CONVERSATION_ID]?.find(
+      (event) => event.type === 'message.user' && JSON.stringify(event.data).includes('file-1'),
+    );
+    expect(message?.data).toMatchObject({
+      files: [
+        { id: 'file-1', name: 'a.png', size: 6, contentType: 'image/png' },
+        { id: 'file-2', name: 'b.png' },
+      ],
+    });
+    // Sent: no other message may carry them.
+    const again = await call('POST', `/${CONVERSATION_ID}/messages`, {
+      text: 'again',
+      clientMessageId: 'm2',
+      fileIds: ['file-1'],
+    });
+    expect(again).toMatchObject({ status: 409, json: { error: { type: 'file_unavailable' } } });
+    expect(
+      (
+        await call('POST', `/${CONVERSATION_ID}/messages`, {
+          text: 'x',
+          clientMessageId: 'm3',
+          fileIds: ['none'],
+        })
+      ).status,
+    ).toBe(409);
+    expect(
+      (
+        await call('POST', `/${CONVERSATION_ID}/messages`, {
+          text: 'x',
+          clientMessageId: 'm4',
+          fileIds: ['a', 'a'],
+        })
+      ).json,
+    ).toMatchObject({ error: { type: 'invalid_files' } });
+    await upload('c.png', PNG);
+    db.cloudFilePolicy = { ...db.cloudFilePolicy, maxMessageBytes: 2 };
+    expect(
+      (
+        await call('POST', `/${CONVERSATION_ID}/messages`, {
+          text: 'x',
+          clientMessageId: 'm5',
+          fileIds: ['file-3'],
+        })
+      ).json,
+    ).toMatchObject({ error: { type: 'files_too_large' } });
+    expect(
+      (await call('POST', `/${CONVERSATION_ID}/messages`, { text: ' ', clientMessageId: 'm6', fileIds: [] }))
+        .status,
+    ).toBe(400);
+  });
+});

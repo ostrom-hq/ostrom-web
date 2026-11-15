@@ -1,6 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudEvent, CloudEventPage, CloudSubagent } from '@gen/api/types.gen';
 
+/** A file a `message.user` carried, as the server recorded it. */
+export interface MessageFile {
+  readonly id: string;
+  readonly name: string;
+  readonly size: number;
+  readonly contentType: string;
+}
+
 /**
  * One transcript event of a conversation session, already bounded and masked by the server (TeamCode's companion
  * `TranscriptEvent`). `seq` is the session's own sequence, gap-free from 1: events are told apart and ordered by it
@@ -14,6 +22,8 @@ export type TranscriptEvent =
       readonly text: string;
       readonly inputId: string | undefined;
       readonly authorId: string | undefined;
+      /** The files the message carried (`runners.cloud.files.v1`): names, sizes and types, never a host path. */
+      readonly files: readonly MessageFile[];
     }
   | {
       readonly kind: 'agent';
@@ -305,6 +315,17 @@ function permissionRequest(seq: number, at: string, data: Fields): PermissionReq
   };
 }
 
+/** The files of a `message.user`: one without an id or a name is left out. */
+function filesOf(value: unknown): MessageFile[] {
+  return list(value).flatMap((element) => {
+    if (!isFields(element)) return [];
+    const id = text(element, 'id');
+    const name = text(element, 'name');
+    if (id === undefined || name === undefined) return [];
+    return [{ id, name, size: int(element['size']) ?? 0, contentType: text(element, 'contentType') ?? '' }];
+  });
+}
+
 function tasksOf(value: unknown): BackgroundTask[] {
   return list(value).flatMap((element) => {
     if (!isFields(element)) return [];
@@ -344,6 +365,7 @@ export function eventOf(event: CloudEvent): TranscriptEvent {
         text: text(data, 'text') ?? '',
         inputId: text(data, 'inputId'),
         authorId: text(data, 'authorId'),
+        files: filesOf(data['files']),
       };
     case 'message.agent':
       return {

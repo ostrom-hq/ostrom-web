@@ -20,6 +20,7 @@ import { eventOf, finished, type KnownAgent, knownAgentOf, pageOf, type Transcri
 import { AGENT_TOOLS, liveTextOf, type TranscriptItem, transcriptItems } from './items';
 import { draftOf, errorOf, failed, type PendingMessage, received, reconciled, validMessage } from './pending';
 import { followEvents, StreamRefused } from './stream';
+import { type SessionFilesViewModel, useSessionFiles } from './useSessionFiles';
 import { threadEvents } from './subagents';
 import { EMPTY_TRANSCRIPT, type Transcript, withFeed, withLatest, withLive } from './transcript';
 
@@ -44,6 +45,8 @@ export type LiveState = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'stop
 export type ConversationNotice =
   | { readonly kind: 'nothingRunning' }
   | { readonly kind: 'invalidMessage' }
+  /** A file of the message still uploads, or failed: retry or remove it first. */
+  | { readonly kind: 'filesNotReady' }
   | { readonly kind: 'failure'; readonly error: Error };
 
 export interface CloudConversationViewModel {
@@ -91,6 +94,8 @@ export interface CloudConversationViewModel {
   readonly thread: string | undefined;
   readonly openThread: (id: string) => void;
   readonly backToMain: () => void;
+  /** The files of the next message (`runners.cloud.files.v1`). */
+  readonly files: SessionFilesViewModel;
 }
 
 interface FollowState {
@@ -130,6 +135,7 @@ export function runningOf(session: CloudSession | undefined, events: readonly Tr
  */
 export function useCloudConversation(sessionId: string): CloudConversationViewModel {
   const queryClient = useQueryClient();
+  const files = useSessionFiles(sessionId);
   const announced = useAnnounced('runners.cloud.conversation.v1');
   const header = useQuery({
     ...ready(getCloudSessionOptions({ path: { id: sessionId } }), { retry: false }),
@@ -367,7 +373,14 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
       try {
         const { data } = await sendCloudMessage({
           path: { id: sessionId },
-          body: { text: message.text, clientMessageId: message.clientMessageId },
+          body:
+            message.files.length === 0
+              ? { text: message.text, clientMessageId: message.clientMessageId }
+              : {
+                  text: message.text,
+                  clientMessageId: message.clientMessageId,
+                  fileIds: message.files.map((file) => file.id),
+                },
           throwOnError: true,
         });
         next = received(message, data);
@@ -386,19 +399,30 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     [sessionId, refreshHeader],
   );
 
+  const { uploaded, clear: clearFiles } = files;
+  /**
+   * Shows the message at once, then sends it with the uploaded files; the draft and the files are cleared only once it
+   * is on its way. While a file still uploads or failed, nothing is sent.
+   */
   const send = useCallback(() => {
+    const attached = uploaded();
+    if (attached === undefined) {
+      setNotice({ kind: 'filesNotReady' });
+      return;
+    }
     const text = draft.trim();
-    if (!validMessage(text)) {
+    if (!validMessage(text, attached.length > 0)) {
       setNotice({ kind: 'invalidMessage' });
       return;
     }
-    const message = draftOf(text, idempotencyKey());
+    const message = draftOf(text, idempotencyKey(), attached);
     // A new message replaces what the last action said.
     setNotice(undefined);
     setDraft('');
     setPending((current) => [...current, message]);
+    if (attached.length > 0) clearFiles();
     void deliver(message);
-  }, [draft, deliver]);
+  }, [draft, deliver, uploaded, clearFiles]);
 
   const retryMessage = useCallback(
     (message: PendingMessage) => {
@@ -469,7 +493,7 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     pending,
     draft,
     setDraft,
-    canSend: !sessionEnded && draft.trim() !== '',
+    canSend: !sessionEnded && files.ready && (draft.trim() !== '' || files.files.length > 0),
     running,
     waiting: sessionEnded ? undefined : session?.waiting,
     ended: sessionEnded,
@@ -486,5 +510,6 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     thread: shown,
     openThread,
     backToMain,
+    files,
   };
 }

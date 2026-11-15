@@ -242,6 +242,7 @@ import {
   type CloudConversationState,
   createCloudConversationHandlers,
   initialCloudEvents,
+  initialCloudFilePolicy,
 } from '@/mocks/cloudConversation';
 import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
 import { createEnvironmentHandlers, type EnvironmentState } from '@/mocks/environment';
@@ -485,6 +486,8 @@ export function createMockDb(): MockDb {
     cloudSessions: initialCloudSessions(),
     cloudEvents: initialCloudEvents(),
     cloudInputs: {},
+    cloudFilePolicy: initialCloudFilePolicy(),
+    cloudFiles: {},
     runners: initialRunners(),
     automations: initialAutomations(),
     automationRuns: initialAutomationRuns(),
