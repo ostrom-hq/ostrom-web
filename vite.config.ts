@@ -345,8 +345,9 @@ function reportModules(): Plugin {
 
 /**
  * The console image's security headers (docker/security-headers.conf), sent by `vite preview` too: the
- * Playwright journeys run under the very policy the image ships (audit S2-09). The image's one variable, the
- * analytics origin of connect-src, is empty here, as in an image without analytics.
+ * Playwright journeys run under the very policy the image ships (audit S2-09). The analytics origin of connect-src is
+ * empty here, as in an image without analytics; frame-src is the artifacts' content origin when the environment names
+ * one (OSTROM_ARTIFACTS_CONTENT_ORIGIN, as the image reads it), 'none' otherwise.
  */
 function imageSecurityHeaders(): Record<string, string> {
   const path = fileURLToPath(new URL('./docker/security-headers.conf', import.meta.url));
@@ -354,7 +355,9 @@ function imageSecurityHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   for (const [, name, value] of conf.matchAll(/^add_header\s+(\S+)\s+"([^"]*)"\s+always;$/gm)) {
     if (name !== undefined && value !== undefined) {
-      headers[name] = value.replace(' $ostrom_csp_connect_extra', '');
+      headers[name] = value
+        .replace(' $ostrom_csp_connect_extra', '')
+        .replace('$ostrom_csp_frame', process.env['OSTROM_ARTIFACTS_CONTENT_ORIGIN'] ?? "'none'");
     }
   }
   if (headers['Content-Security-Policy'] === undefined) {

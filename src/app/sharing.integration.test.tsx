@@ -18,13 +18,13 @@ async function findCard(name: string): Promise<HTMLElement> {
 }
 
 describe('the artifacts', () => {
-  it('lists each artifact with who reads it, opens only a web link, and lets only the owner delete', async () => {
+  it('lists each artifact with who reads it, opens its reading page, and lets only the owner delete', async () => {
     visit('/artifacts');
     expect(await screen.findByRole('heading', { level: 1, name: 'Artifacts' })).toBeInTheDocument();
     const study = await findCard('Billing API: latency study');
     expect(within(study).getByRole('link', { name: 'Billing API: latency study' })).toHaveAttribute(
       'href',
-      'https://app.ostrom.run/a/art-7',
+      '/artifacts/art-7',
     );
     expect(study).toHaveTextContent('Its owner and chosen people');
     expect(study).toHaveTextContent(/by maya · version 3 · updated /);
@@ -32,8 +32,12 @@ describe('the artifacts', () => {
     const checklist = await findCard('Release checklist');
     expect(checklist).toHaveTextContent('Whole organization');
     expect(within(checklist).queryByRole('button', { name: 'Delete' })).toBeNull();
+    // Its reading page, whatever address the server gave it (never a `javascript:` URL).
     const draft = await findCard('Draft: pricing page');
-    expect(within(draft).queryByRole('link')).toBeNull();
+    expect(within(draft).getByRole('link', { name: 'Draft: pricing page' })).toHaveAttribute(
+      'href',
+      '/artifacts/art-2',
+    );
     expect(draft).toHaveTextContent('Its owner and chosen people');
   });
 

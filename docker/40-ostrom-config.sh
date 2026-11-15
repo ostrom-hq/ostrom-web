@@ -1,7 +1,8 @@
 #!/bin/sh
 # Writes /var/run/ostrom/config.js: window.__OSTROM_CONFIG__ from the public OSTROM_* settings (never secrets).
 # Writes /var/run/ostrom/csp.conf: the one origin the Content-Security-Policy adds to connect-src (audit S2-09), the
-# PostHog origin when analytics are on (a key is set), nothing otherwise.
+# PostHog origin when analytics are on (a key is set), nothing otherwise; and its frame-src, the artifacts' content
+# origin when OSTROM_ARTIFACTS_CONTENT_ORIGIN is set, 'none' otherwise.
 # Writes /var/run/ostrom/proxies.conf: the proxies whose X-Forwarded-Proto nginx passes to the server
 # (OSTROM_TRUSTED_PROXIES, comma-separated addresses or CIDRs, as the server reads it); from anyone else, nginx sends
 # its own scheme (web audit 2, B5).
@@ -33,7 +34,21 @@ if [ -n "${OSTROM_POSTHOG_API_KEY:-}" ]; then
     exit 1
   fi
 fi
-printf 'map $host $ostrom_csp_connect_extra {\n    default "%s";\n}\n' "$connect_extra" > /var/run/ostrom/csp.conf
+
+# The artifacts' content origin (OSTROM_ARTIFACTS_CONTENT_ORIGIN, as the server reads it): the only origin the reading
+# page may frame. A bare http(s) origin or nothing ('none'); anything else stops the start.
+frame="'none'"
+if [ -n "${OSTROM_ARTIFACTS_CONTENT_ORIGIN:-}" ]; then
+  frame=$(printf '%s\n' "${OSTROM_ARTIFACTS_CONTENT_ORIGIN%/}" | sed -n -E 's#^(https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?)$#\1#p')
+  if [ -z "$frame" ] || [ "$(printf '%s\n' "$OSTROM_ARTIFACTS_CONTENT_ORIGIN" | wc -l)" -ne 1 ]; then
+    echo "40-ostrom-config.sh: OSTROM_ARTIFACTS_CONTENT_ORIGIN must be an http(s) origin, got an invalid value" >&2
+    exit 1
+  fi
+fi
+{
+  printf 'map $host $ostrom_csp_connect_extra {\n    default "%s";\n}\n' "$connect_extra"
+  printf 'map $host $ostrom_csp_frame {\n    default "%s";\n}\n' "$frame"
+} > /var/run/ostrom/csp.conf
 
 # Each entry must be an IPv4 or IPv6 address, with or without a prefix length: anything else stops the start, so that a
 # typo never trusts the wrong clients nor writes into the nginx configuration. No globbing of the list.

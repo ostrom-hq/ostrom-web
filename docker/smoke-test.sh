@@ -16,6 +16,7 @@ docker run -d --name web --network "$net" -p 18080:8080 --read-only --cap-drop A
   --tmpfs /tmp:uid=101,gid=101 --tmpfs /var/run/ostrom:uid=101,gid=101 --tmpfs /etc/nginx/conf.d:uid=101,gid=101 \
   -e OSTROM_API_UPSTREAM=http://api:8080 -e OSTROM_API_URL=https://api.example.com -e 'OSTROM_APP_URL=https://app.example.com/"x' \
   -e OSTROM_POSTHOG_HOST=https://ph.example.com:8443/ingest/ -e OSTROM_POSTHOG_API_KEY=phc_smoke \
+  -e OSTROM_ARTIFACTS_CONTENT_ORIGIN=https://artifacts.example.com/ \
   "$image" >/dev/null
 get() { curl -fsS --retry 20 --retry-all-errors --retry-delay 1 "http://127.0.0.1:18080$1"; }
 
@@ -31,7 +32,7 @@ cfg=$(get /config.js)
 echo "$cfg" | grep -q '^window.__OSTROM_CONFIG__={"OSTROM_API_URL":"https://api.example.com","OSTROM_APP_URL":"https://app.example.com/\\"x","OSTROM_POSTHOG_HOST":"https://ph.example.com:8443/ingest/","OSTROM_POSTHOG_API_KEY":"phc_smoke"};$' \
   || fail "config.js: $cfg"
 # S2-09: the same security headers on the page, the runtime settings, a deep route, a script, the API and /healthz.
-csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'"
+csp="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self' https://ph.example.com:8443; frame-src https://artifacts.example.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; require-trusted-types-for 'script'"
 header() { printf '%s\n' "$1" | tr -d '\r' | sed -n "s/^$2: //Ip"; }
 for path in / /config.js /some/route /theme.js /boot.js /api/v1/health /healthz; do
   h=$(curl -fsSI --retry 5 --retry-all-errors "http://127.0.0.1:18080$path")

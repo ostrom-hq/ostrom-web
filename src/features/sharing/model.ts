@@ -24,6 +24,14 @@ export function ownsArtifact(artifact: Artifact, login: string | undefined): boo
     : artifact.relation === 'owner';
 }
 
+/** Phones and tablets, where the Ostrom app opens the artifact in its own web view (TeamCode's `MOBILE_AGENT`). */
+const MOBILE_AGENT = /iPhone|iPad|Android/;
+
+/** The app's link for this page (`ostrom://open?url=<this page>`), which the app turns into its own ticket. */
+export function appLinkOf(href: string, userAgent: string): string | undefined {
+  return MOBILE_AGENT.test(userAgent) ? `ostrom://open?url=${encodeURIComponent(href)}` : undefined;
+}
+
 /** The subscriptions a member can lend to the organization's agents. */
 export const PROVIDERS = ['anthropic', 'openai'] as const;
 export type Provider = (typeof PROVIDERS)[number];
