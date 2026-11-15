@@ -39,7 +39,7 @@ export function DiscordSection(): ReactElement | null {
             <>
               <p className="o-inline">
                 <Badge tone="success">{t('discord.linkedTag')}</Badge>{' '}
-                {link.discordUsername === undefined
+                {link.discordUsername === undefined || link.discordUsername === null
                   ? t('discord.linkedUnnamed')
                   : t('discord.linked', { name: link.discordUsername })}
               </p>

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InstanceSettings } from '@gen/api/types.gen';
+import type { InstanceSettingsResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   adminName,
@@ -15,7 +15,7 @@ import {
   valueOf,
 } from './model';
 
-function mail(): InstanceSettings {
+function mail(): InstanceSettingsResponse {
   return {
     section: 'mail',
     version: 2,

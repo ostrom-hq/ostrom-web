@@ -36,7 +36,6 @@ import {
   listDecisions,
   listMcpCalls,
   listMcpServers,
-  listMembers,
   listReceipts,
   listRules,
   listRunners,
@@ -57,9 +56,12 @@ import {
   verifySignInEmail,
 } from '@gen/api/sdk.gen';
 import type { Approval } from '@gen/api/types.gen';
+import { zPublicKeyResponse, zReceipt } from '@gen/api/zod.gen';
+import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
+import { readWorkflow, type Workflow } from '@/shared/api/workflowDocument';
 import { configureApiClient } from '@/shared/api/apiClient';
-import { initialApprovals } from '@/mocks/fixtures/approvals';
+import { approvalContext, initialApprovals } from '@/mocks/fixtures/approvals';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import {
   callerViewOf,
@@ -97,6 +99,22 @@ async function failureOf(call: () => Promise<unknown>): Promise<unknown> {
   throw new Error('the call did not fail');
 }
 
+const zKeys = z.array(zPublicKeyResponse);
+const zCatalogue = z.object({ actions: z.array(z.object({ class: z.string() })) });
+const zItems = z.object({ items: z.array(z.unknown()) });
+
+/** The receipt a free JSON field holds, read with the generated schema. */
+function receiptOf(document: unknown): z.infer<typeof zReceipt> | undefined {
+  return document === undefined || document === null ? undefined : zReceipt.parse(document);
+}
+
+/** The workflow a free JSON document holds. */
+function workflowOf(document: unknown): Workflow {
+  const workflow = readWorkflow(document);
+  if (workflow === undefined) throw new Error('not a workflow');
+  return workflow;
+}
+
 function fixture(id: string): Approval {
   const found = initialApprovals().find((approval) => approval.id === id);
   if (found === undefined) throw new Error(`no fixture ${id}`);
@@ -106,6 +124,30 @@ function fixture(id: string): Approval {
 const merge = { path: { id: 'apr-merge-412' } };
 const deploy = { path: { id: 'apr-deploy-88' } };
 
+describe('the context of an approval view', () => {
+  it('names the action and the pull request of a demo approval, and falls back for one it does not know', () => {
+    expect(approvalContext(fixture('apr-merge-412'))).toMatchObject({
+      who: { dev: 'theo' },
+      what: { action: 'merge', repo: 'acme/billing-api' },
+      pr: { number: '412' },
+      askedVia: ['console'],
+    });
+    const unknown = {
+      id: 'apr-x',
+      title: 'Something',
+      requestedFrom: 'owners',
+      channel: 'slack',
+      status: 'pending',
+      shownDigest: 'sha256:x',
+    };
+    expect(approvalContext(unknown)).toEqual({
+      who: { dev: null },
+      what: { action: 'gate', repo: null },
+      askedVia: ['slack'],
+    });
+  });
+});
+
 describe('mock API', () => {
   it('says who is signed in', async () => {
     const { data } = await getMe({ throwOnError: true });
@@ -114,7 +156,7 @@ describe('mock API', () => {
 
   it('lists what waits for the caller, by status, or everything', async () => {
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
-    const approved = await listApprovals({ query: { status: ['approved'] }, throwOnError: true });
+    const approved = await listApprovals({ query: { status: 'approved' }, throwOnError: true });
     const decided = await fetch('http://ostrom.test/api/v1/approvals?status=approved,rejected,expired');
     const body: unknown = await decided.json();
     expect(body).toMatchObject({ items: [{ id: 'apr-migration-7' }] });
@@ -162,12 +204,12 @@ describe('mock API', () => {
       throwOnError: true,
     });
     expect([data.approval.status, data.approval.decidedBy]).toEqual(['approved', 'maya']);
-    expect(data.receipt?.decisions[0]).toMatchObject({
+    expect(receiptOf(data.receipt)?.decisions[0]).toMatchObject({
       approvalId: 'apr-merge-412',
       by: 'maya',
       result: 'approved',
     });
-    expect(data.receipt?.subject.digest).toBe('sha256:5b0c2f8e');
+    expect(receiptOf(data.receipt)?.subject.digest).toBe('sha256:5b0c2f8e');
     const mine = await listApprovals({ query: { mine: true }, throwOnError: true });
     expect(mine.data.items.map((approval) => approval.id)).toEqual(['apr-deploy-88']);
   });
@@ -176,7 +218,7 @@ describe('mock API', () => {
     server.use(...createHandlers(db, () => NOW));
     const { data } = await answerApproval({
       ...merge,
-      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e', note: 'Wait for the migration.' },
+      body: { answer: 'reject', shownDigest: 'sha256:5b0c2f8e', comment: 'Wait for the migration.' },
       throwOnError: true,
     });
     expect([data.approval.status, data.approval.decidedAt]).toEqual(['rejected', NOW.toISOString()]);
@@ -242,7 +284,10 @@ describe('mock API', () => {
       body: { answer: 'approve', shownDigest: 'sha256:a91d0e44' },
       throwOnError: true,
     });
-    expect([data.approval.selfApproved, data.receipt?.decisions[0]?.selfApproved]).toEqual([true, true]);
+    expect([data.approval.selfApproved, receiptOf(data.receipt)?.decisions[0]?.selfApproved]).toEqual([
+      true,
+      true,
+    ]);
   });
 
   it('refuses someone who is not an approver', async () => {
@@ -300,7 +345,7 @@ describe('mock API', () => {
       body: { answer: 'approve', shownDigest: 'sha256:5b0c2f8e' },
       throwOnError: true,
     });
-    expect([data.receipt?.initiator, data.approval.selfApproved]).toEqual(['maya', undefined]);
+    expect([receiptOf(data.receipt)?.initiator, data.approval.selfApproved]).toEqual(['maya', undefined]);
   });
 
   it('answers 404 to an unknown approval and 400 to a body that is not an answer', async () => {
@@ -447,7 +492,7 @@ describe('mock sessions', () => {
   it('returns a session with its receipt once it has one, or 404', async () => {
     const ended = await getSession({ path: { id: 'ses-2b9e' }, throwOnError: true });
     const open = await getSession({ path: { id: 'ses-7f3a' }, throwOnError: true });
-    expect(ended.data.receipt?.id).toBe('rcpt-ses-2b9e');
+    expect(ended.data.receipt?.['id']).toBe('rcpt-ses-2b9e');
     expect(open.data).not.toHaveProperty('receipt');
     const error = await failureOf(async () => getSession({ path: { id: 'nope' }, throwOnError: true }));
     expect(isApiFailure(error) && error.message).toBe('session not found');
@@ -456,10 +501,17 @@ describe('mock sessions', () => {
 
 describe('mock labels and launch limits', () => {
   it('lists the sessions whose launch carries every label asked for', async () => {
-    const both = await listSessions({ query: { label: ['team=billing', 'env=ci'] }, throwOnError: true });
-    const none = await listSessions({ query: { label: ['team=billing', 'env=prod'] }, throwOnError: true });
-    expect(both.data.items.map((session) => session.id)).toEqual(['ses-7f3a']);
-    expect(none.data.items).toEqual([]);
+    // The label is repeatable on the wire; the generated client takes one, so the repeated ones go by hand.
+    const labelled = async (...labels: string[]): Promise<unknown> =>
+      (
+        await fetch(
+          `http://ostrom.test/api/v1/sessions?${labels.map((label) => `label=${encodeURIComponent(label)}`).join('&')}`,
+        )
+      ).json();
+    expect(await labelled('team=billing', 'env=ci')).toMatchObject({ items: [{ id: 'ses-7f3a' }] });
+    expect(await labelled('team=billing', 'env=prod')).toEqual({ items: [] });
+    const one = await listSessions({ query: { label: ['team=billing'] }, throwOnError: true });
+    expect(one.data.items.map((session) => session.id)).toEqual(['ses-7f3a']);
   });
 
   it('reads the limits of a launch, zeros until given, and writes them', async () => {
@@ -530,7 +582,10 @@ describe('mock receipts', () => {
     expect(good.data).toEqual({ ok: true, digest: 'sha256:7d01e5b2', kid: '4f2a9c1b' });
     expect(bad.data.ok).toBe(false);
     expect(bad.data.reason).toMatch(/does not match/);
-    expect([bundle.data.receipt.id, bundle.data.keys[0]?.kid]).toEqual(['rcpt-ses-2b9e', '4f2a9c1b']);
+    expect([receiptOf(bundle.data['receipt'])?.id, zKeys.parse(bundle.data['keys'])[0]?.kid]).toEqual([
+      'rcpt-ses-2b9e',
+      '4f2a9c1b',
+    ]);
   });
 
   const calls: readonly (readonly [string, (id: string) => Promise<unknown>])[] = [
@@ -545,24 +600,17 @@ describe('mock receipts', () => {
   });
 });
 
-describe('mock members', () => {
-  it('does not serve the planned /members, as the server does: the screens read /orgs/{org}/members', async () => {
-    const error = await failureOf(async () => listMembers({ throwOnError: true }));
-    expect(isApiFailure(error) && error.kind).toBe('not-found');
-  });
-});
-
 describe('mock workflows and policy', () => {
   it('serves one workflow, or says it does not exist', async () => {
-    expect((await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data.name).toBe(
-      'Backend changes',
-    );
+    expect(
+      workflowOf((await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data).name,
+    ).toBe('Backend changes');
     const missing = await failureOf(async () => getWorkflow({ path: { id: 'nope' }, throwOnError: true }));
     expect(isApiFailure(missing) && missing.status).toBe(404);
   });
 
   it('writes workflows as the server does: owners and admins, a schema, one id, the version read', async () => {
-    const base = (await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data;
+    const base = workflowOf((await getWorkflow({ path: { id: 'wf-backend' }, throwOnError: true })).data);
     const status = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
       const failure = await failureOf(call);
       return isApiFailure(failure) && failure.status;
@@ -575,6 +623,7 @@ describe('mock workflows and policy', () => {
       });
     expect((await raw('POST', 'workflows', { id: 'x' })).status).toBe(400);
     expect((await raw('PUT', 'workflows/wf-backend', { workflow: { id: 'x' } })).status).toBe(400);
+    expect((await raw('PUT', 'workflows/wf-backend', {})).status).toBe(400);
     expect(await status(async () => createWorkflow({ body: base, throwOnError: true }))).toBe(409);
     expect(
       await status(async () =>
@@ -600,13 +649,15 @@ describe('mock workflows and policy', () => {
       ),
     ).toBe(409);
     // Without a version read, the save goes through; a workflow without a version gets its first.
-    const migrations = (await getWorkflow({ path: { id: 'wf-migrations' }, throwOnError: true })).data;
+    const migrations = workflowOf(
+      (await getWorkflow({ path: { id: 'wf-migrations' }, throwOnError: true })).data,
+    );
     const saved = await saveWorkflow({
       path: { id: 'wf-migrations' },
       body: { workflow: migrations },
       throwOnError: true,
     });
-    expect(applied(saved.data).version).toBe(1);
+    expect(workflowOf(saved.data).version).toBe(1);
     expect(await status(async () => deleteWorkflow({ path: { id: 'nope' }, throwOnError: true }))).toBe(404);
     db.members = db.members.map((member) =>
       member.login === 'maya' ? { ...member, role: 'member' } : member,
@@ -627,17 +678,17 @@ describe('mock workflows and policy', () => {
     const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
     expect(all.data.items).toHaveLength(4);
     expect(all.data.next).toBeUndefined();
-    expect(proposed.data.items.map((workflow) => workflow.id)).toEqual(['wf-migrations']);
+    expect(proposed.data.items.map((workflow) => workflowOf(workflow).id)).toEqual(['wf-migrations']);
   });
 
   it('pages workflows as the server does: after, limit and next', async () => {
     const ids = db.workflows.map((workflow) => workflow.id);
     const first = await listWorkflows({ query: { limit: 2 }, throwOnError: true });
-    expect(first.data.items.map((workflow) => workflow.id)).toEqual(ids.slice(0, 2));
+    expect(first.data.items.map((workflow) => workflowOf(workflow).id)).toEqual(ids.slice(0, 2));
     expect(first.data.next).toBe(ids[1]);
     const after = first.data.next ?? '';
     const second = await listWorkflows({ query: { limit: 100, after }, throwOnError: true });
-    expect(second.data.items.map((workflow) => workflow.id)).toEqual(ids.slice(2));
+    expect(second.data.items.map((workflow) => workflowOf(workflow).id)).toEqual(ids.slice(2));
     const refused = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
       const failure = await failureOf(call);
       return isApiFailure(failure) && failure.status;
@@ -785,7 +836,6 @@ describe('mock rules and decisions', () => {
         gate: {
           // No `repos`: the contract leaves it out for every repository of the organization.
           actions: [{ class: 'x', label: 'X', patterns: [], tools: ['Bash'] }],
-          approvers: [],
           reason: 'because',
           checks: [{ check: 'n-a' }, { check: 'n-b', attested: true }],
         },
@@ -865,7 +915,7 @@ describe('mock rules and decisions', () => {
     // An accepted rule without a gate adds nothing.
     db.rules = db.rules.map((rule) => (rule.id === 'R-12' ? { ...rule, status: 'accepted' } : rule));
     const { data } = await getGateCatalog({ throwOnError: true });
-    expect(data.actions.map((action) => action.class)).toEqual([
+    expect(zCatalogue.parse(data).actions.map((action) => action.class)).toEqual([
       'merge-main',
       'deploy',
       'migrate',
@@ -933,6 +983,11 @@ describe('mock MCP servers and secrets', () => {
       throwOnError: true,
     });
     expect(plain.data).not.toHaveProperty('secretNames');
+    const bare = await createMcpServer({
+      body: { name: 'bare', url: notion.url, transport: 'http', scope: 'per-member' },
+      throwOnError: true,
+    });
+    expect(bare.data).not.toHaveProperty('enabled');
     const listed = await saveMcpServer({
       path: { name: 'notion' },
       body: { ...notion, tools: ['search'] },
@@ -962,14 +1017,32 @@ describe('mock MCP servers and secrets', () => {
 
   it('lists the calls, by server, and counts them by server and tool', async () => {
     expect((await listMcpCalls({ throwOnError: true })).data.items).toHaveLength(3);
-    db.mcpCalls = db.mcpCalls.map((call) => (call.id === 'call-3' ? { ...call, server: 'sentry' } : call));
+    db.mcpCalls = db.mcpCalls.map((call) => {
+      if (call.id === 'call-1') return { ...call, ok: false, outcome: 'denied' };
+      return call.id === 'call-3' ? { ...call, server: 'sentry' } : call;
+    });
     expect((await listMcpCalls({ query: { server: 'sentry' }, throwOnError: true })).data.items).toHaveLength(
       1,
     );
-    expect((await getMcpUsage({ throwOnError: true })).data).toEqual({
+    const usage = (await getMcpUsage({ throwOnError: true })).data;
+    expect(usage).toMatchObject({
       byServer: { sentry: 1, linear: 2 },
-      byTool: { create_issue: 1, list_issues: 2 },
+      byTool: { 'sentry/create_issue': 1, 'linear/list_issues': 2 },
     });
+    expect(usage.rows).toEqual([
+      {
+        dev: 'theo',
+        server: 'sentry',
+        calls: 1,
+        lists: 0,
+        errors: 0,
+        denied: 0,
+        bytes: 2048,
+        durationMs: 412,
+      },
+      { dev: 'maya', server: 'linear', calls: 1, lists: 0, errors: 1, denied: 0, bytes: 0, durationMs: 0 },
+      { dev: 'theo', server: 'linear', calls: 1, lists: 0, errors: 0, denied: 1, bytes: 512, durationMs: 98 },
+    ]);
   });
 
   it('creates and rotates a secret without ever giving its value back', async () => {
@@ -1103,7 +1176,7 @@ describe('mock cloud agents and automations', () => {
       body: { agent: 'claude', prompt: 'x', name: ' ' },
       throwOnError: true,
     });
-    expect(bare.data.name).toBeUndefined();
+    expect(bare.data.name).toMatch(/^claude · cs-\d+$/);
     const interactive = await createCloudSession({ body: { agent: 'codex' }, throwOnError: true });
     expect(interactive.data.status).toBe('queued');
     const bad = await fetch('http://ostrom.test/api/v1/cloud/sessions', { method: 'POST', body: '{}' });
@@ -1124,9 +1197,11 @@ describe('mock cloud agents and automations', () => {
     expect((await createCloudSession({ body: { agent: 'shell' }, throwOnError: true })).data.agent).toBe(
       'shell',
     );
-    expect(
-      (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
-    ).toHaveLength(5);
+    // The document has no status filter; the demo still honours it, for a console that sends it.
+    const queued = zItems.parse(
+      await (await fetch('http://ostrom.test/api/v1/cloud/sessions?status=queued')).json(),
+    );
+    expect(queued.items).toHaveLength(5);
     expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(9);
   });
 
@@ -1350,5 +1425,21 @@ describe('mock cloud agents and automations', () => {
     expect(
       await statusOf(async () => rotateAutomationSecret({ path: { id: 'au-nightly' }, throwOnError: true })),
     ).toBe(403);
+  });
+});
+
+describe('the optional parts of a write, left out as sent', () => {
+  it('keeps a gate with a bare action as it was written', async () => {
+    const { data } = await createRule({
+      body: { statement: 'Bare gate.', group: 'Ops', gate: { actions: [{ class: 'bare' }] } },
+      throwOnError: true,
+    });
+    expect(applied(data).gate).toEqual({ actions: [{ class: 'bare' }] });
+    expect(applied(data).scope).toEqual([]);
+  });
+
+  it('stores a budget without a hard stop as sent', async () => {
+    const { data } = await setBudget({ body: { scope: 'org', usdPerMonth: 10 }, throwOnError: true });
+    expect(data).toEqual({ scope: 'org', usdPerMonth: 10 });
   });
 });

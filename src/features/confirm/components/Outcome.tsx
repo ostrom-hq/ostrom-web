@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GovernanceConfirmation } from '@gen/api/types.gen';
+import type { ConfirmationDto } from '@gen/api/types.gen';
+import type { ConfirmationStatus } from '@/shared/api/vocabulary';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -7,16 +8,19 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { personName } from '../model';
 
 export interface OutcomeProps {
-  readonly confirmation: GovernanceConfirmation;
+  readonly confirmation: ConfirmationDto;
   /** `expired` for a pending one past its time, before the server says so. */
-  readonly status: Exclude<GovernanceConfirmation['status'], 'pending'>;
+  readonly status: Exclude<ConfirmationStatus, 'pending'>;
 }
 
 /** How it ended: who answered and when, what the write returned, or why nothing was written. */
 export function Outcome({ confirmation, status }: OutcomeProps): ReactElement {
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
-  const { answeredBy, answeredAt, result, error } = confirmation;
+  const { result } = confirmation;
+  const answeredBy = confirmation.answeredBy ?? undefined;
+  const answeredAt = confirmation.answeredAt ?? undefined;
+  const error = confirmation.error ?? undefined;
   const who = answeredBy === undefined ? t('confirm.outcome.someone') : personName(answeredBy);
   const when =
     answeredAt === undefined

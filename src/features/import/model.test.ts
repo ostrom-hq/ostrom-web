@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ImportReport } from '@gen/api/types.gen';
+import type { ImportReportDto } from '@gen/api/types.gen';
 import { changesOf, countsOf, parseExport, queryOf, summarize } from './model';
 
 const full = {
@@ -91,7 +91,7 @@ describe('the runs', () => {
   });
 
   it('counts each action, and the changes a run writes', () => {
-    const report: ImportReport = {
+    const report: ImportReportDto = {
       items: [
         { kind: 'server', name: 'a', action: 'planned' },
         { kind: 'server', name: 'b', action: 'created' },

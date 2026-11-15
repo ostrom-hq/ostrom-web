@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Session } from '@gen/api/types.gen';
+import type { SessionDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
@@ -16,7 +16,7 @@ export function ActivityBadge({
   session,
   now,
 }: {
-  readonly session: Session;
+  readonly session: SessionDto;
   readonly now: Date;
 }): ReactElement | null {
   const { t, i18n } = useTranslation();
@@ -24,7 +24,7 @@ export function ActivityBadge({
   if (activity === undefined) return null;
   const since = session.activitySince;
   return (
-    <span title={since === undefined ? undefined : formatRelative(since, now, i18n.language)}>
+    <span title={typeof since === 'string' ? formatRelative(since, now, i18n.language) : undefined}>
       <Badge tone={TONES[activity]}>{t(`sessions.activity.${activity}`)}</Badge>
     </span>
   );

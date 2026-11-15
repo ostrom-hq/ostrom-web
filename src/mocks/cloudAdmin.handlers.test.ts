@@ -87,6 +87,13 @@ describe('the mock cloud administration, as the server keeps it', () => {
     expect(db.cloudRuntime.effectiveServerUrl).toBe('https://ostrom.acme.test');
   });
 
+  it('takes a runtime never saved as the one a first save without a date edits', async () => {
+    db.instanceAdmin = true;
+    delete db.cloudRuntime.updatedAt;
+    const first = Object.fromEntries(Object.entries(runtime()).filter(([key]) => key !== 'updatedAt'));
+    expect((await call('PUT', '/cloud/runtime', first)).status).toBe(200);
+  });
+
   it('keeps the stored session image when none is sent, and the default when a blank one is', async () => {
     db.instanceAdmin = true;
     const save = async (extra: object) => {
@@ -165,6 +172,9 @@ describe('the mock cloud administration, as the server keeps it', () => {
     const created = await call('POST', '/cloud/profiles', profile({ assignedMemberIds: [MEMBER_IDS.theo] }));
     expect(created.status).toBe(201);
     expect((await call('POST', '/cloud/profiles', profile())).status).toBe(201);
+    const sized = await call('POST', '/cloud/profiles', profile({}, { resources: { cpuMillis: 500 } }));
+    expect(sized.json).toMatchObject({ spec: { resources: { cpuMillis: 500 } } });
+    expect(sized.json).not.toHaveProperty('spec.resources.memoryMebibytes');
     expect((await call('PUT', `/cloud/profiles/${none}`, profile({ version: 1 }))).status).toBe(404);
     expect((await call('PUT', `/cloud/profiles/${PROFILE_ID}`, {})).status).toBe(400);
     expect((await call('PUT', `/cloud/profiles/${PROFILE_ID}`, profile({ version: 9 }))).status).toBe(409);
@@ -191,14 +201,6 @@ describe('the mock cloud administration, as the server keeps it', () => {
     ).toBe(409);
     expect((await call('PUT', '/cloud/settings', { backgroundWorkMaxMinutes: 5 })).status).toBe(200);
     expect(db.cloudSettings.maxRunningAutomationsPerMember).toBe(2);
-    const { maxRunningAutomationsPerMember: _cap, ...bare } = db.cloudSettings;
-    expect(_cap).toBe(2);
-    db.cloudSettings = bare;
-    const saved = await call('PUT', '/cloud/settings', {
-      backgroundWorkMaxMinutes: 5,
-      updatedAt: bare.updatedAt,
-    });
-    expect(saved.json).toMatchObject({ maxRunningAutomationsPerMember: 2 });
     const set = await call('PUT', '/cloud/settings', {
       backgroundWorkMaxMinutes: 5,
       maxRunningAutomationsPerMember: 7,

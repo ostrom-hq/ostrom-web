@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -7,7 +7,7 @@ import { FailureText } from '@/shared/ui/FailureText';
 import { accessOf, GITHUB_ACCESS, type GithubAccess } from '../model';
 
 export interface GithubAccessControlProps {
-  readonly session: CloudSession;
+  readonly session: CloudSessionResponse;
   /** Only the owner, signed in, changes it; everyone else reads it. */
   readonly mine: boolean;
   readonly busy: boolean;

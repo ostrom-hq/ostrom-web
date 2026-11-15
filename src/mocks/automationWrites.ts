@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleCreateAutomation, handleSaveAutomation } from '@gen/api/msw.gen';
-import type { ApiError, Automation } from '@gen/api/types.gen';
-import { zAutomationWrite } from '@gen/api/zod.gen';
+import type { ApiError, AutomationResponse } from '@gen/api/types.gen';
+import { zAutomationRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { z } from 'zod/mini';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface AutomationWritesState {
-  automations: Automation[];
+  automations: AutomationResponse[];
 }
 
 /** A body as the contract's schema read it. */
-type Write = z.infer<typeof zAutomationWrite>;
+type Write = z.infer<typeof zAutomationRequest>;
 
 /** The demo's webhook address, as the server builds it from its public URL. */
 const WEBHOOK_BASE = 'https://api.ostrom.run/api/v1/automations';
@@ -22,18 +22,19 @@ const WEBHOOK_BASE = 'https://api.ostrom.run/api/v1/automations';
  * its own words. Gives the prompt it checked, or the refusal.
  */
 function promptOrRefusal(write: Write): string | HttpResponse<ApiError> {
-  const { workflowId } = write.action;
+  const workflowId = write.action.workflowId ?? undefined;
+  const given = write.action.prompt ?? undefined;
   // A workflow action has no prompt: the workflow is what runs, and its inputs are the action's.
-  if (workflowId !== undefined && write.action.prompt !== undefined)
+  if (workflowId !== undefined && given !== undefined)
     return refusal(400, 'invalid_request', 'A workflow action has no prompt.');
-  const prompt = workflowId === undefined ? write.action.prompt : '';
+  const prompt = workflowId === undefined ? given : '';
   if (prompt === undefined || (workflowId === undefined && prompt.trim() === ''))
     return refusal(400, 'invalid_request', 'The prompt has 1 to 32000 characters.');
   if (write.overlap !== undefined && write.overlap !== 'skip' && write.overlap !== 'allow')
     return refusal(400, 'invalid_request', 'overlap is skip or allow.');
   if (
     write.trigger.kind === 'webhook' &&
-    (write.trigger.cron !== undefined || write.trigger.timezone !== undefined)
+    ((write.trigger.cron ?? undefined) !== undefined || (write.trigger.timezone ?? undefined) !== undefined)
   )
     return refusal(400, 'invalid_request', 'A webhook trigger has no cron nor timezone.');
   return prompt;
@@ -43,10 +44,12 @@ function promptOrRefusal(write: Write): string | HttpResponse<ApiError> {
 function definitionOf(
   write: Write,
   prompt: string,
-): Pick<Automation, 'name' | 'trigger' | 'action' | 'variables' | 'overlap' | 'maxRunsPerDay'> & {
-  samplePayload?: unknown;
-} {
+): Pick<
+  AutomationResponse,
+  'name' | 'trigger' | 'action' | 'variables' | 'overlap' | 'maxRunsPerDay' | 'samplePayload'
+> {
   const { trigger, action } = write;
+  const workflowId = action.workflowId ?? undefined;
   return {
     name: write.name.trim(),
     trigger: {
@@ -56,7 +59,7 @@ function definitionOf(
       ...(trigger.kind === 'cron' ? { catchup: trigger.catchup ?? 'once' } : {}),
     },
     action:
-      action.workflowId === undefined
+      workflowId === undefined
         ? {
             agent: action.agent ?? 'claude',
             prompt,
@@ -64,14 +67,15 @@ function definitionOf(
             maxRuntimeMinutes: action.maxRuntimeMinutes ?? 60,
           }
         : {
-            workflowId: action.workflowId,
+            prompt,
+            workflowId,
             inputs: action.inputs ?? {},
             ...(action.repository === undefined ? {} : { repository: action.repository }),
           },
     variables: (write.variables ?? []).map((variable) => ({
       name: variable.name,
       path: variable.path,
-      type: variable.type,
+      ...(variable.type === undefined ? {} : { type: variable.type }),
       values: variable.values ?? [],
       required: variable.required ?? true,
       sensitive: variable.sensitive ?? false,
@@ -95,7 +99,7 @@ export function createAutomationWriteHandlers(
   const [owner] = caller;
   return [
     handleCreateAutomation(async ({ request }) => {
-      const body = zAutomationWrite.safeParse(await readJson(request));
+      const body = zAutomationRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a name, a trigger and an action are needed');
       const prompt = promptOrRefusal(body.data);
       if (typeof prompt !== 'string') return prompt;
@@ -103,7 +107,7 @@ export function createAutomationWriteHandlers(
       const at = now().toISOString();
       const id = `au-${String(s.automations.length + 100)}`;
       const webhook = body.data.trigger.kind === 'webhook';
-      const automation: Automation = {
+      const automation: AutomationResponse = {
         id,
         owner,
         enabled: false,
@@ -126,7 +130,7 @@ export function createAutomationWriteHandlers(
       if (current === undefined) return refusal(404, 'not_found', 'Automation not found.');
       if (!caller.includes(current.owner))
         return refusal(403, 'forbidden', 'Only the owner of an automation does this.');
-      const body = zAutomationWrite.safeParse(await readJson(request));
+      const body = zAutomationRequest.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a name, a trigger and an action are needed');
       if (body.data.version === undefined)
         return refusal(400, 'invalid_request', 'A change gives the version it read.');
@@ -136,10 +140,10 @@ export function createAutomationWriteHandlers(
       if (typeof prompt !== 'string') return prompt;
       const webhook = body.data.trigger.kind === 'webhook';
       // A sample or a webhook address the new definition does not have is gone with the old one.
-      const kept: Automation = { ...current };
+      const kept: AutomationResponse = { ...current };
       delete kept.samplePayload;
       delete kept.webhookUrl;
-      const saved: Automation = {
+      const saved: AutomationResponse = {
         ...kept,
         ...definitionOf(body.data, prompt),
         ...(webhook ? { webhookUrl: `${WEBHOOK_BASE}/${current.id}/trigger` } : {}),

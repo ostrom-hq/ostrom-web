@@ -11,7 +11,9 @@ export const ORG_REQUIRED = 'org_required';
  * (`orgHeader.test.ts` checks this list against the vendored contract).
  */
 const ORG_FREE: readonly RegExp[] = [
-  /^\/api\/v1\/auth\//,
+  // device/answer approves a login in the named organization; every other auth route acts in none. auth/me takes the
+  // header as an option the console never uses: /me without one checks a stale choice.
+  /^\/api\/v1\/auth\/(?!device\/answer$)/,
   /^\/api\/v1\/orgs(?:\/|$)/,
   /^\/api\/v1\/invitations\/(?:preview|accept)$/,
   /^\/api\/v1\/tokens(?:\/|$)/,
@@ -30,6 +32,9 @@ const ORG_FREE: readonly RegExp[] = [
   // launch, no organization is named.
   /^\/api\/v1\/launches\/[^/]+(?:\/hooks-missing)?$/,
   /^\/api\/v1\/cloud\/runner\/terminal$/,
+  // The runner's own calls (and its heartbeat) carry the runner token, which says the launch: no organization is named.
+  /^\/api\/v1\/cloud\/runner\/(?!(?:hooks|skills)(?:\/|$))/,
+  /^\/api\/v1\/runners\/[^/]+\/heartbeat$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */

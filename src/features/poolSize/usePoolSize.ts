@@ -6,14 +6,14 @@ import {
   getPoolSizeQueryKey,
   setPacingSettingsMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { PacingSettings, PoolSize } from '@gen/api/types.gen';
+import type { PacingSettingsDto, PoolSizeResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
 /** `GET /pools/size`: the automatic daily budget and the estimate behind it (owners and admins). */
 export function usePoolSize(enabled: boolean): {
-  readonly size: PoolSize | undefined;
+  readonly size: PoolSizeResponse | undefined;
   readonly failure: Error | undefined;
 } {
   const query = useQuery(ready(getPoolSizeOptions(), { enabled, retry: false }));
@@ -21,10 +21,10 @@ export function usePoolSize(enabled: boolean): {
 }
 
 export interface PacingSettingsViewModel {
-  readonly settings: PacingSettings | undefined;
+  readonly settings: PacingSettingsDto | undefined;
   readonly failure: Error | undefined;
   /** Sends only the fields given (the others keep their stored value); `onDone` runs once the server took it. */
-  readonly save: (change: PacingSettings, onDone: () => void) => void;
+  readonly save: (change: PacingSettingsDto, onDone: () => void) => void;
   readonly saving: boolean;
   readonly saveFailure: Error | undefined;
 }

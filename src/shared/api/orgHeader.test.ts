@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
-// The vendored contract, from the project root (Vite resolves a path that starts with a slash there).
-import contract from '/contract/openapi.yaml?raw';
+// The generated types of every operation, from the project root (Vite resolves a path that starts with a slash there).
+import types from '/gen/api/types.gen.ts?raw';
 import { actsInOrganization, namesOrganization, ORG_HEADER, withOrg } from '@/shared/api/orgHeader';
 
-/** Each path of the vendored contract, and whether it takes `Ostrom-Org`. */
+/** Routes where `Ostrom-Org` is an option the console never sends (`/me` without one checks a stale choice). */
+const OPTIONAL_ORG = new Set(['/api/v1/auth/me']);
+
+/** Each operation of the API document (its generated `XxxData` type), and whether it takes `Ostrom-Org`. */
 function contractPaths(): { readonly path: string; readonly takesOrg: boolean }[] {
-  const paths = contract.split('\npaths:\n')[1]?.split('\ncomponents:\n')[0] ?? '';
-  return paths.split(/\n(?= {2}\/)/).flatMap((block) => {
-    const path = /^ {2}(\/[^:]*):/.exec(block)?.[1];
-    return path === undefined
+  return types.split(/\nexport type \w+Data = \{\n/).flatMap((block) => {
+    const operation = block.split('\n};\n')[0] ?? '';
+    const path = /\n {4}url: '([^']+)';/.exec(`\n${operation}`)?.[1];
+    return path === undefined || OPTIONAL_ORG.has(path)
       ? []
-      : [{ path, takesOrg: block.includes('#/components/parameters/OstromOrg') }];
+      : [{ path, takesOrg: operation.includes("'Ostrom-Org'") }];
   });
 }
 

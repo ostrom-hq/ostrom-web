@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Budget } from '@gen/api/types.gen';
+import type { BudgetDto } from '@gen/api/types.gen';
 import {
   budgetLevel,
   budgetScopeOf,
@@ -81,8 +81,8 @@ describe('sortBudgets', () => {
   });
 
   it('puts a budget without a subject before named ones of its scope, whichever comes first', () => {
-    const bare: Budget = { scope: 'member', hardStop: false };
-    const named: Budget = { scope: 'member', subject: 'ana', hardStop: false };
+    const bare: BudgetDto = { scope: 'member', hardStop: false };
+    const named: BudgetDto = { scope: 'member', subject: 'ana', hardStop: false };
     expect(sortBudgets([bare, named])).toEqual([bare, named]);
     expect(sortBudgets([named, bare])).toEqual([bare, named]);
   });

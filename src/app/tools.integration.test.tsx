@@ -20,7 +20,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -62,7 +62,7 @@ describe('the MCP servers', () => {
     expect(recent[0]).toHaveTextContent(/theo · .* · 412 ms/);
     expect(recent[0]).toHaveTextContent('OK');
     expect(recent[1]).toHaveTextContent('Failed');
-    expect(recent[1]).not.toHaveTextContent(' ms');
+    expect(recent[1]).toHaveTextContent(' · 0 ms');
   });
 
   it('says which secret a server lacks, and shows a transport it has no word for as is', async () => {
@@ -230,12 +230,8 @@ describe('the secrets', () => {
     expect(await screen.findByText('LINEAR_TOKEN')).toBeInTheDocument();
     // Read once the screen is in: the title of its waiting state is another node, replaced by this one.
     expect(screen.getByRole('heading', { level: 1, name: 'Secrets' })).toBeInTheDocument();
-    expect(secretRow('LINEAR_TOKEN')).toHaveTextContent(
-      /Scope org · Changed by maya · .* · Used by mcp:linear/,
-    );
-    expect(secretRow('STRIPE_TEST_KEY')).toHaveTextContent(
-      /Scope team:billing · Changed by samir · .* · Not used yet/,
-    );
+    expect(secretRow('LINEAR_TOKEN')).toHaveTextContent(/Scope org · Changed by maya · .*/);
+    expect(secretRow('STRIPE_TEST_KEY')).toHaveTextContent(/Scope team:billing · Changed by samir · .*/);
   });
 
   it('saves a new secret only with a right name and a value, and empties the value', async () => {

@@ -6,7 +6,7 @@
 // through. Needs a server that serves `ApprovalCallerView.reasonType` (ostrom-core#112), started by ostrom-server's
 // `console-journey.yml` with the fake GitHub's ports and webhook secret. Nothing reaches GitHub.
 import { expect, test } from '@playwright/test';
-import { zApprovalView, zListApprovalsResponse } from '../gen/api/zod.gen';
+import { zApprovalViewResponse, zListApprovalsResponse } from '../gen/api/zod.gen';
 import { FAKE_GITHUB_CONFIGURED, FakeGitHub } from './fakeGithub';
 import { acceptedWorkflow, loginOf, uniqueRun } from './gate';
 import { callFromPage, ownerOfNewOrganization } from './real';
@@ -74,9 +74,7 @@ test('G1 an approver who linked no GitHub account reads why a yes waits, links i
       );
       request =
         mine.status === 200
-          ? zListApprovalsResponse
-              .parse(mine.body)
-              .items.find((item) => item.repo === repo || item.action?.repo === repo)?.id
+          ? zListApprovalsResponse.parse(mine.body).items.find((item) => item.repo === repo)?.id
           : undefined;
       return request;
     })
@@ -86,7 +84,7 @@ test('G1 an approver who linked no GitHub account reads why a yes waits, links i
   // The server says why: a yes waits for the approver's GitHub link.
   const view = await callFromPage(page, 'GET', `/api/v1/approvals/${id}/view`, undefined, org);
   expect(view.status, JSON.stringify(view.body)).toBe(200);
-  expect(zApprovalView.parse(view.body).you).toMatchObject({
+  expect(zApprovalViewResponse.parse(view.body).you).toMatchObject({
     canApprove: false,
     reasonType: 'github_link_required',
   });

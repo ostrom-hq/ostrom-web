@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NotificationPreferences } from '@gen/api/types.gen';
+import type { NotificationPreferencesBody } from '@gen/api/types.gen';
 import { useState } from 'react';
 import { browserTimeZone, type PhoneForm, phoneFormOf, samePhoneForm } from './model';
 
@@ -9,7 +9,7 @@ export interface PhoneFormState {
   readonly dirty: boolean;
   readonly change: (next: Partial<PhoneForm>) => void;
   /** Starts over from what the server answered to this form's own save. */
-  readonly adopt: (saved: NotificationPreferences) => void;
+  readonly adopt: (saved: NotificationPreferencesBody) => void;
 }
 
 /**
@@ -18,7 +18,7 @@ export interface PhoneFormState {
  * dropped by a refetch.
  */
 export function usePhoneForm(
-  preferences: NotificationPreferences,
+  preferences: NotificationPreferencesBody,
   timeZone: () => string = browserTimeZone,
 ): PhoneFormState {
   const [zone] = useState(timeZone);

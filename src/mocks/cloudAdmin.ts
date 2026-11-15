@@ -12,21 +12,23 @@ import {
   handleUpdateCloudProfile,
 } from '@gen/api/msw.gen';
 import type {
-  CloudCluster,
-  CloudProfile,
+  CloudClusterResponse,
+  CloudProfileResponse,
   CloudProfileSpec,
-  CloudRuntime,
-  CloudSettings,
+  CloudResources,
+  CloudRuntimeResponse,
+  CloudSettingsResponse,
 } from '@gen/api/types.gen';
 import {
   type zCloudProfileSpec,
+  type zCloudResources,
   zSaveCloudClusterRequest,
   zSaveCloudProfileRequest,
   zSaveCloudRuntimeRequest,
   zSaveCloudSettingsRequest,
 } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
-import type { z } from 'zod/mini';
+import { z } from 'zod/mini';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { DEFAULT_SESSION_IMAGE } from '@/features/cloudAdmin/model';
 import { readJson, refusal } from './http';
@@ -34,12 +36,12 @@ import { readJson, refusal } from './http';
 /** The cloud runtime, clusters, profiles and organization settings, as `runners` of ostrom-server keeps them. */
 export interface CloudAdminState {
   /** The instance's runtime; the stored one always has a date, as the server's seed does. */
-  cloudRuntime: CloudRuntime;
-  cloudClusters: CloudCluster[];
+  cloudRuntime: CloudRuntimeResponse;
+  cloudClusters: CloudClusterResponse[];
   /** The demo organization's profiles. */
-  cloudProfiles: CloudProfile[];
+  cloudProfiles: CloudProfileResponse[];
   /** The demo organization's settings: the defaults while nothing is stored. */
-  cloudSettings: CloudSettings;
+  cloudSettings: CloudSettingsResponse;
 }
 
 export const CLUSTER_ID = '9d0f5a7e-8102-4de4-9f60-718293a4b5c6';
@@ -91,10 +93,18 @@ export function initialCloudAdmin(): CloudAdminState {
 }
 
 /** `{ [key]: value }` when there is one, nothing when there is none: an absent part stays absent, as stored. */
-function part<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
+function part<K extends string, V>(key: K, value: V | null | undefined): Partial<Record<K, V>> {
   const out: Partial<Record<K, V>> = {};
-  if (value !== undefined) out[key] = value;
+  if (value !== undefined && value !== null) out[key] = value;
   return out;
+}
+
+/** The resources as stored: an absent part left out. */
+function resourcesOf(resources: z.output<typeof zCloudResources>): CloudResources {
+  return {
+    ...part('cpuMillis', resources.cpuMillis),
+    ...part('memoryMebibytes', resources.memoryMebibytes),
+  };
 }
 
 /** The spec as stored: what the server read, an absent part left out (the parsed body spells absent as undefined). */
@@ -105,7 +115,7 @@ function specOf(spec: z.output<typeof zCloudProfileSpec>): CloudProfileSpec {
     image: spec.image,
     ...part('allowedImageOverrides', spec.allowedImageOverrides),
     ...part('imagePullSecrets', spec.imagePullSecrets),
-    ...part('resources', spec.resources),
+    ...part('resources', spec.resources === undefined ? undefined : resourcesOf(spec.resources)),
     ...part('workspaceSizeGibibytes', spec.workspaceSizeGibibytes),
     ...part('storageClass', spec.storageClass),
     ...part('agentKind', spec.agentKind),
@@ -125,6 +135,13 @@ export interface CloudAdminAccess {
   readonly instanceAdmin: () => boolean;
 }
 
+/** The organization settings as the server bounds them (the document keeps the numbers unbounded). */
+const zSettingsWrite = z.extend(zSaveCloudSettingsRequest, {
+  backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
+  maxRunningAutomationsPerMember: z.nullish(z.int().check(z.gte(1), z.lte(100))),
+  remoteIdleTimeoutMinutes: z.nullish(z.int().check(z.gte(0), z.lte(1440))),
+});
+
 const NOT_INSTANCE_ADMIN = (): ReturnType<typeof refusal> =>
   refusal(403, 'instance_admin_required', 'Only a person who administers the instance does this.');
 const NOT_MANAGER = (): ReturnType<typeof refusal> =>
@@ -142,17 +159,15 @@ export function createCloudAdminHandlers(
     handleGetCloudSettings(() => HttpResponse.json(state().cloudSettings)),
     handleSaveCloudSettings(async ({ request }) => {
       if (!access.manages(request)) return NOT_MANAGER();
-      const body = zSaveCloudSettingsRequest.safeParse(await readJson(request));
+      const body = zSettingsWrite.safeParse(await readJson(request));
       if (!body.success)
         return invalid('invalid_cloud_settings', 'backgroundWorkMaxMinutes: a number from 0 to 1440.');
-      if (body.data.updatedAt !== state().cloudSettings.updatedAt)
+      if ((body.data.updatedAt ?? undefined) !== (state().cloudSettings.updatedAt ?? undefined))
         return refusal(409, 'cloud_settings_conflict', 'The settings were saved by someone else.');
       state().cloudSettings = {
         backgroundWorkMaxMinutes: body.data.backgroundWorkMaxMinutes,
         maxRunningAutomationsPerMember:
-          body.data.maxRunningAutomationsPerMember ??
-          state().cloudSettings.maxRunningAutomationsPerMember ??
-          2,
+          body.data.maxRunningAutomationsPerMember ?? state().cloudSettings.maxRunningAutomationsPerMember,
         updatedAt: now().toISOString(),
         updatedBy: 'maya',
       };
@@ -165,24 +180,26 @@ export function createCloudAdminHandlers(
       if (!access.instanceAdmin()) return NOT_INSTANCE_ADMIN();
       const body = zSaveCloudRuntimeRequest.safeParse(await readJson(request));
       if (!body.success) return invalid('invalid_cloud_runtime', 'The runtime is not valid.');
-      if (body.data.serverUrl !== undefined && !HTTPS_PUBLIC.test(body.data.serverUrl))
+      const serverUrl = body.data.serverUrl ?? undefined;
+      if (serverUrl !== undefined && !HTTPS_PUBLIC.test(serverUrl))
         return invalid('invalid_cloud_runtime', 'serverUrl: an https origin that is not a private address.');
-      if (body.data.updatedAt !== state().cloudRuntime.updatedAt)
+      if ((body.data.updatedAt ?? undefined) !== (state().cloudRuntime.updatedAt ?? undefined))
         return refusal(409, 'cloud_runtime_conflict', 'The runtime was saved by someone else.');
       const sent = body.data;
+      const sentImage = sent.sessionImage?.trim();
       state().cloudRuntime = {
         enabled: sent.enabled,
         ...part('runnerImage', sent.runnerImage),
         // Absent keeps the stored image, blank stores the default (core#282).
         sessionImage:
-          sent.sessionImage === undefined
+          sentImage === undefined
             ? state().cloudRuntime.sessionImage
-            : sent.sessionImage.trim() === ''
+            : sentImage === ''
               ? DEFAULT_SESSION_IMAGE
-              : sent.sessionImage.trim(),
+              : sentImage,
         runnerBinary: sent.runnerBinary,
         ...part('serverUrl', sent.serverUrl),
-        effectiveServerUrl: sent.serverUrl ?? 'https://ostrom.acme.test',
+        effectiveServerUrl: serverUrl ?? 'https://ostrom.acme.test',
         workspaceAccessMode: sent.workspaceAccessMode,
         ...part('pausedRetentionDays', sent.pausedRetentionDays),
         failedWorkspaceRetentionDays: sent.failedWorkspaceRetentionDays,
@@ -206,7 +223,7 @@ export function createCloudAdminHandlers(
       if (body.data.caCertificate === undefined || body.data.serviceAccountToken === undefined)
         return invalid('invalid_cloud_cluster', 'A new cluster needs its CA bundle and its token.');
       const at = now().toISOString();
-      const cluster: CloudCluster = {
+      const cluster: CloudClusterResponse = {
         id: `00000000-0000-4000-8000-${String(state().cloudClusters.length + 1).padStart(12, '0')}`,
         name: body.data.name,
         apiUrl: body.data.apiUrl,
@@ -238,7 +255,7 @@ export function createCloudAdminHandlers(
         (body.data.caCertificate === undefined || body.data.serviceAccountToken === undefined)
       )
         return invalid('invalid_cloud_cluster', 'A new apiUrl needs the CA bundle and the token again.');
-      const saved: CloudCluster = {
+      const saved: CloudClusterResponse = {
         ...stored,
         name: body.data.name,
         apiUrl: body.data.apiUrl,
@@ -269,7 +286,7 @@ export function createCloudAdminHandlers(
       if (!cluster.allowedNamespaces.includes(body.data.spec.namespace))
         return invalid('invalid_cloud_profile', 'namespace: the cluster does not allow it.');
       const at = now().toISOString();
-      const profile: CloudProfile = {
+      const profile: CloudProfileResponse = {
         id: `10000000-0000-4000-8000-${String(state().cloudProfiles.length + 1).padStart(12, '0')}`,
         name: body.data.name,
         version: 1,
@@ -294,7 +311,7 @@ export function createCloudAdminHandlers(
       if (cluster === undefined) return invalid('invalid_cloud_profile', 'clusterId: no such cluster.');
       if (!cluster.allowedNamespaces.includes(body.data.spec.namespace))
         return invalid('invalid_cloud_profile', 'namespace: the cluster does not allow it.');
-      const saved: CloudProfile = {
+      const saved: CloudProfileResponse = {
         ...stored,
         name: body.data.name,
         version: stored.version + 1,

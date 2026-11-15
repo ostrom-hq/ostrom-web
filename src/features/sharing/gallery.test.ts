@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact } from '@gen/api/types.gen';
+import type { ArtifactResponse } from '@gen/api/types.gen';
 import {
   everyOrigin,
   formatBytes,
@@ -13,7 +13,7 @@ import {
 } from './gallery';
 import { artifactsSearchSchema } from './route';
 
-const artifact: Artifact = {
+const artifact: ArtifactResponse = {
   id: 'a1',
   title: 'T',
   owner: 'maya',

@@ -16,10 +16,10 @@ import {
   updateCloudProfileMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
-  CloudCluster,
-  CloudProfile,
-  CloudRuntime,
-  CloudSettings,
+  CloudClusterResponse,
+  CloudProfileResponse,
+  CloudRuntimeResponse,
+  CloudSettingsResponse,
   SaveCloudClusterRequest,
   SaveCloudProfileRequest,
   SaveCloudRuntimeRequest,
@@ -43,7 +43,7 @@ export interface Saving {
 // ---- The organization's settings: read by members, written by owners and admins ---------------------------------
 
 export interface CloudSettingsViewModel {
-  readonly settings: CloudSettings | undefined;
+  readonly settings: CloudSettingsResponse | undefined;
   readonly failure: Error | undefined;
   readonly canEdit: boolean;
   readonly reload: () => Promise<void>;
@@ -98,7 +98,7 @@ export function useCloudSettings(): CloudSettingsViewModel {
 // ---- The instance's runtime: instance administrators only ------------------------------------------------------
 
 export interface CloudRuntimeViewModel {
-  readonly runtime: CloudRuntime | undefined;
+  readonly runtime: CloudRuntimeResponse | undefined;
   readonly failure: Error | undefined;
   readonly reload: () => Promise<void>;
   readonly save: (body: SaveCloudRuntimeRequest, onSaved: () => void) => void;
@@ -143,7 +143,7 @@ export function useCloudRuntime(): CloudRuntimeViewModel {
 // ---- The clusters ------------------------------------------------------------------------------------------------
 
 export interface CloudClustersViewModel {
-  readonly clusters: readonly CloudCluster[] | undefined;
+  readonly clusters: readonly CloudClusterResponse[] | undefined;
   readonly failure: Error | undefined;
   readonly reload: () => Promise<void>;
   /** Creates the cluster, or updates the one given; the lists is read again after. */
@@ -191,7 +191,7 @@ export function useCloudClusters(): CloudClustersViewModel {
 
 export interface CloudProfilesViewModel {
   /** An owner or an admin sees every profile, a member the ones assigned to them. */
-  readonly profiles: readonly CloudProfile[] | undefined;
+  readonly profiles: readonly CloudProfileResponse[] | undefined;
   readonly failure: Error | undefined;
   readonly canEdit: boolean;
   readonly reload: () => Promise<void>;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { PendingUsage, UsageReconciliation } from '@gen/api/types.gen';
+import type { PendingUsageDto, UsageReconciliationDto } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -50,21 +50,23 @@ function Reservation(): ReactElement {
         <EmptyState title={t('usageReview.notFoundTitle')}>{t('usageReview.notFound')}</EmptyState>
       ) : (
         <LoadState data={view.review} failure={view.failure}>
-          {(review) =>
-            review.pending === undefined ? (
-              review.reconciliation === undefined ? (
+          {(review) => {
+            const pending = review.pending ?? undefined;
+            const reconciliation = review.reconciliation ?? undefined;
+            return pending === undefined ? (
+              reconciliation === undefined ? (
                 <EmptyState title={t('usageReview.notFoundTitle')}>{t('usageReview.notFound')}</EmptyState>
               ) : (
-                <Reconciled item={review.reconciliation} />
+                <Reconciled item={reconciliation} />
               )
             ) : (
               <Pending
-                key={`${review.pending.id}:${String(review.pending.micros)}:${review.pending.providerRequestId ?? ''}`}
-                item={review.pending}
+                key={`${pending.id}:${String(pending.micros)}:${pending.providerRequestId ?? ''}`}
+                item={pending}
                 view={view}
               />
-            )
-          }
+            );
+          }}
         </LoadState>
       )}
     </Screen>
@@ -75,7 +77,7 @@ function Pending({
   item,
   view,
 }: {
-  readonly item: PendingUsage;
+  readonly item: PendingUsageDto;
   readonly view: UsageReservationViewModel;
 }): ReactElement {
   const { t, i18n } = useTranslation();
@@ -86,7 +88,7 @@ function Pending({
   const ids = { amount: useId(), source: useId(), reference: useId(), reason: useId() };
   const body = draftReconciliation({
     expectedMicros: item.micros,
-    expectedProviderRequestId: item.providerRequestId,
+    expectedProviderRequestId: item.providerRequestId ?? undefined,
     amount,
     source,
     reference,
@@ -210,7 +212,7 @@ function Pending({
   );
 }
 
-function Reconciled({ item }: { readonly item: UsageReconciliation }): ReactElement {
+function Reconciled({ item }: { readonly item: UsageReconciliationDto }): ReactElement {
   const { t, i18n } = useTranslation();
   return (
     <Section label={t('usageReview.reconciled')}>

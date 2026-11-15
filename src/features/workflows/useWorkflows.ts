@@ -8,7 +8,6 @@ import {
   listWorkflowsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { createWorkflow, deleteWorkflow, saveWorkflow } from '@gen/api/sdk.gen';
-import type { Workflow } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { applied } from '@/shared/api/applied';
@@ -16,6 +15,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
+import { readWorkflow, type Workflow } from '@/shared/api/workflowDocument';
 
 export interface WorkflowsViewModel {
   readonly workflows: readonly Workflow[] | undefined;
@@ -37,7 +37,7 @@ export interface WorkflowViewModel {
 }
 
 export function useWorkflow(id: string): WorkflowViewModel {
-  const query = useQuery(ready(getWorkflowOptions({ path: { id } })));
+  const query = useQuery({ ...ready(getWorkflowOptions({ path: { id } })), select: readWorkflow });
   const viewer = useViewer();
   return { workflow: query.data, failure: failureOf(query.error), canChange: viewer.canManage };
 }
@@ -71,21 +71,25 @@ export interface WorkflowChangeViewModel {
 async function send(change: WorkflowChange): Promise<Workflow | undefined> {
   switch (change.kind) {
     case 'create':
-      return applied((await createWorkflow({ body: change.workflow, throwOnError: true })).data);
+      return readWorkflow(
+        applied((await createWorkflow({ body: change.workflow, throwOnError: true })).data),
+      );
     case 'save':
     case 'accept':
     case 'reject':
-      return applied(
-        (
-          await saveWorkflow({
-            path: { id: change.workflow.id },
-            body: {
-              workflow: change.workflow,
-              ...(change.expectedVersion === undefined ? {} : { expectedVersion: change.expectedVersion }),
-            },
-            throwOnError: true,
-          })
-        ).data,
+      return readWorkflow(
+        applied(
+          (
+            await saveWorkflow({
+              path: { id: change.workflow.id },
+              body: {
+                workflow: change.workflow,
+                ...(change.expectedVersion === undefined ? {} : { expectedVersion: change.expectedVersion }),
+              },
+              throwOnError: true,
+            })
+          ).data,
+        ),
       );
     case 'delete':
       applied((await deleteWorkflow({ path: { id: change.id }, throwOnError: true })).data);

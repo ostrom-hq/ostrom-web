@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Approval, ApprovalCallerView, ApprovalQueue } from '@gen/api/types.gen';
+import type { Approval, ApprovalCallerView, ApprovalQueue, ApprovalViewResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   changedOf,
@@ -27,7 +27,7 @@ describe('refusalOf and changedOf', () => {
 });
 
 describe('combineDecided', () => {
-  const at = (id: string, decidedAt?: string, expiresAt?: string): Approval => ({
+  const at = (id: string, decidedAt?: string): Approval => ({
     id,
     title: id,
     requestedFrom: 'owners',
@@ -35,7 +35,6 @@ describe('combineDecided', () => {
     status: 'approved',
     shownDigest: 'sha256:x',
     ...(decidedAt === undefined ? {} : { decidedAt }),
-    ...(expiresAt === undefined ? {} : { expiresAt }),
   });
 
   it('waits until a page is loaded', () => {
@@ -45,11 +44,11 @@ describe('combineDecided', () => {
     });
   });
 
-  it('merges the pages, latest decision (or expiry) first, and passes the first error on', () => {
+  it('merges the pages, latest decision first, and passes the first error on', () => {
     const boom = new Error('boom');
     const result = combineDecided([
       { data: { items: [at('a', '2026-10-30T08:00:00Z'), at('b')] }, error: null },
-      { data: { items: [at('c', undefined, '2026-10-30T09:00:00Z')] }, error: null },
+      { data: { items: [at('c', '2026-10-30T09:00:00Z')] }, error: null },
       { data: undefined, error: boom },
     ]);
     expect(result.decided?.map((approval) => approval.id)).toEqual(['c', 'a', 'b']);
@@ -71,6 +70,12 @@ describe('the GitHub link a yes waits for (Q-GATES-G1 a)', () => {
     channel: 'console',
     status: 'pending',
     shownDigest: 'sha256:x',
+  });
+  const view = (id: string): Omit<ApprovalViewResponse, 'you'> => ({
+    approval: approval(id),
+    who: {},
+    what: { action: 'push' },
+    askedVia: [],
   });
 
   it('reads a yes held for the link from the rights, and nothing else', () => {
@@ -97,11 +102,12 @@ describe('the GitHub link a yes waits for (Q-GATES-G1 a)', () => {
       operator: 'maya',
       you: { login: 'maya', via: 'console' },
       pending: [
-        { approval: approval('a'), you: you({ reasonType: 'github_link_required' }) },
-        { approval: approval('b'), you: you({ canApprove: true }) },
+        { ...view('a'), you: you({ reasonType: 'github_link_required' }) },
+        { ...view('b'), you: you({ canApprove: true }) },
       ],
       recent: [
         {
+          ...view('c'),
           approval: { ...approval('c'), status: 'approved' },
           you: you({ reasonType: 'github_link_required' }),
         },

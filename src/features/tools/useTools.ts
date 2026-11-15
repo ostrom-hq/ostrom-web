@@ -17,18 +17,18 @@ import {
   rotateSecretMutation,
   saveMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { McpCall, McpHostedProcess, McpServer, Secret } from '@gen/api/types.gen';
+import type { McpCallDto, McpHostedProcessDto, McpServerDto, SecretResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 
 export interface McpViewModel {
-  readonly servers: readonly McpServer[] | undefined;
+  readonly servers: readonly McpServerDto[] | undefined;
   /** The organization's secrets, to say which ones a server still lacks. */
-  readonly secrets: readonly Secret[] | undefined;
+  readonly secrets: readonly SecretResponse[] | undefined;
   readonly callsByServer: Readonly<Record<string, number>> | undefined;
-  readonly calls: readonly McpCall[] | undefined;
+  readonly calls: readonly McpCallDto[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -63,8 +63,8 @@ function useInvalidate(): (keys: readonly (readonly unknown[])[]) => Promise<voi
 
 export interface McpChangeViewModel {
   /** `onDone` runs once the server took it: the form clears then, not before. */
-  readonly add: (server: McpServer, onDone: () => void) => void;
-  readonly toggle: (server: McpServer) => void;
+  readonly add: (server: McpServerDto, onDone: () => void) => void;
+  readonly toggle: (server: McpServerDto) => void;
   readonly remove: (name: string) => void;
   /** The server being saved, or `true` while one is added. */
   readonly pending: string | true | undefined;
@@ -83,7 +83,7 @@ export function useMcpChange(): McpChangeViewModel {
   const { mutate: saveMutate, reset: resetSave } = save;
   const { mutate: dropMutate, reset: resetDrop } = drop;
   const add = useCallback(
-    (server: McpServer, onDone: () => void) => {
+    (server: McpServerDto, onDone: () => void) => {
       resetSave();
       resetDrop();
       createMutate({ body: server }, { onSuccess: onDone });
@@ -91,10 +91,10 @@ export function useMcpChange(): McpChangeViewModel {
     [createMutate, resetSave, resetDrop],
   );
   const toggle = useCallback(
-    (server: McpServer) => {
+    (server: McpServerDto) => {
       resetCreate();
       resetDrop();
-      saveMutate({ path: { name: server.name }, body: { ...server, enabled: !server.enabled } });
+      saveMutate({ path: { name: server.name }, body: { ...server, enabled: server.enabled !== true } });
     },
     [saveMutate, resetCreate, resetDrop],
   );
@@ -122,7 +122,7 @@ export function useMcpChange(): McpChangeViewModel {
 }
 
 export interface SecretsViewModel {
-  readonly secrets: readonly Secret[] | undefined;
+  readonly secrets: readonly SecretResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -212,7 +212,7 @@ export function useSecretChange(): SecretChangeViewModel {
 export const HOSTED_POLL_MS = 15_000;
 
 export interface McpHostedViewModel {
-  readonly processes: readonly McpHostedProcess[] | undefined;
+  readonly processes: readonly McpHostedProcessDto[] | undefined;
   /** False when the MCP host did not answer: the states are then the ones last recorded. */
   readonly hostReachable: boolean | undefined;
   readonly failure: Error | undefined;
@@ -232,7 +232,7 @@ export function useMcpHosted(): McpHostedViewModel {
 
 export interface McpRestartViewModel {
   /** Stops the process and lifts its backoff; the next call starts it again. */
-  readonly restart: (process: McpHostedProcess) => void;
+  readonly restart: (process: McpHostedProcessDto) => void;
   /** The process being restarted: its server, and its member for a per-member one. */
   readonly pending: { readonly server: string; readonly member: string | undefined } | undefined;
   readonly failure: Error | undefined;
@@ -248,10 +248,10 @@ export function useMcpRestart(): McpRestartViewModel {
   });
   const { mutate } = mutation;
   const restart = useCallback(
-    (process: McpHostedProcess) => {
+    (process: McpHostedProcessDto) => {
       mutate({
         body:
-          process.member === undefined
+          process.member === undefined || process.member === null
             ? { server: process.server }
             : { server: process.server, member: process.member },
       });
@@ -261,7 +261,7 @@ export function useMcpRestart(): McpRestartViewModel {
   return {
     restart,
     pending: mutation.isPending
-      ? { server: mutation.variables.body.server, member: mutation.variables.body.member }
+      ? { server: mutation.variables.body.server, member: mutation.variables.body.member ?? undefined }
       : undefined,
     failure: failureOf(mutation.error),
   };

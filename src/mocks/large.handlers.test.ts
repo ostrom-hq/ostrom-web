@@ -48,7 +48,7 @@ async function rules(
       throwOnError: true,
       ...(requestValidator && { requestValidator }),
     });
-    return { status: 200, ids: data.items.map((rule) => rule.id), next: data.next };
+    return { status: 200, ids: data.items.map((rule) => rule.id), next: data.next ?? undefined };
   } catch (error) {
     if (isApiFailure(error)) return { status: error.status, ids: [], next: undefined };
     throw error;
@@ -123,11 +123,11 @@ describe('GET /rules, a page at a time', () => {
     expect(second.next).toBeUndefined();
   });
 
-  it('brings the limit into 1 to 1 000, past the client that keeps it there', async () => {
+  it('brings a larger limit down to 1 000 and refuses one under 1, past the client that keeps it in bounds', async () => {
     expect((await rules({ limit: 5 })).ids).toHaveLength(5);
     expect((await rules({ limit: 5000 })).ids).toEqual([]);
     expect((await rules({ limit: 5000 }, unchecked)).ids).toHaveLength(1000);
-    expect((await rules({ limit: 0 }, unchecked)).ids).toHaveLength(1);
+    expect((await rules({ limit: 0 }, unchecked)).status).toBe(400);
   });
 
   it('filters before the page', async () => {

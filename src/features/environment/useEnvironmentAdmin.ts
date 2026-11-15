@@ -19,10 +19,10 @@ import {
   updateEnvironmentVariant,
 } from '@gen/api/sdk.gen';
 import type {
-  EnvironmentBulkAssignment,
-  EnvironmentVariant,
-  EnvironmentVariantCreate,
-  OrgMember,
+  EnvironmentBulkAssignmentResponse,
+  EnvironmentVariantResponse,
+  EnvironmentVariantCreateRequest,
+  MemberResponse,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -34,13 +34,13 @@ import { type MemberEnvironment, memberRows, type PersonalVariant, personalOf, s
 
 export interface EnvironmentAdminViewModel {
   /** The team's variants, by variable then name. */
-  readonly variants: readonly EnvironmentVariant[] | undefined;
+  readonly variants: readonly EnvironmentVariantResponse[] | undefined;
   /** The members' personal variants and their owners, for review; never a value. */
   readonly personal: readonly PersonalVariant[] | undefined;
   /** Every member with what they receive and what they are excluded from. */
   readonly members: readonly MemberEnvironment[] | undefined;
   /** The member list, to pick whom to assign or exclude; absent if it could not be read. */
-  readonly directory: readonly OrgMember[] | undefined;
+  readonly directory: readonly MemberResponse[] | undefined;
   /** A next page of members that could not be read, to ask for again. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   /** Why the variants cannot be read. */
@@ -87,23 +87,29 @@ export function useEnvironmentAdmin(): EnvironmentAdminViewModel {
 
 export interface EnvironmentChangeViewModel {
   /** `onDone` runs once the server took it: the form clears then, and the value it held is gone. */
-  readonly create: (body: EnvironmentVariantCreate, onDone: () => void) => void;
+  readonly create: (body: EnvironmentVariantCreateRequest, onDone: () => void) => void;
   /** A new name, or a new shared value (absent keeps the stored one), against the version read. */
   readonly update: (
-    variant: EnvironmentVariant,
+    variant: EnvironmentVariantResponse,
     change: { readonly name: string; readonly value: string; readonly expectedVersion: number },
     onDone: () => void,
   ) => void;
-  readonly remove: (variant: EnvironmentVariant) => void;
-  readonly bulkAssign: (variant: EnvironmentVariant) => void;
-  readonly promote: (variant: EnvironmentVariant) => void;
+  readonly remove: (variant: EnvironmentVariantResponse) => void;
+  readonly bulkAssign: (variant: EnvironmentVariantResponse) => void;
+  readonly promote: (variant: EnvironmentVariantResponse) => void;
   /** `value`: the member's own, for a per-member variant only. */
-  readonly assign: (member: string, variant: EnvironmentVariant, value: string, onDone: () => void) => void;
+  readonly assign: (
+    member: string,
+    variant: EnvironmentVariantResponse,
+    value: string,
+    onDone: () => void,
+  ) => void;
   readonly unassign: (member: string, variable: string) => void;
   readonly exclude: (member: string, variable: string, onDone: () => void) => void;
   readonly include: (member: string, variable: string) => void;
   /** What the last bulk assignment did, and for which variant. */
-  readonly bulkResult: { readonly variantId: string; readonly result: EnvironmentBulkAssignment } | undefined;
+  readonly bulkResult:
+    { readonly variantId: string; readonly result: EnvironmentBulkAssignmentResponse } | undefined;
   readonly pending: boolean;
   readonly failure: Error | undefined;
 }
@@ -148,7 +154,7 @@ export function useEnvironmentChange(orgId: string): EnvironmentChangeViewModel 
     [mutate, reset, resetBulk],
   );
   const bulkAssign = useCallback(
-    (variant: EnvironmentVariant) => {
+    (variant: EnvironmentVariantResponse) => {
       reset();
       bulkMutate({ path: { id: variant.id } });
     },

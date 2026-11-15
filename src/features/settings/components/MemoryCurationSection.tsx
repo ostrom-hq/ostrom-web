@@ -52,13 +52,14 @@ export function MemoryCurationSection({ manages }: { readonly manages: boolean }
 
 function LastRun({ curation }: { readonly curation: MemoryCuration }): ReactElement {
   const { t, i18n } = useTranslation();
-  if (curation.lastRunAt === undefined) {
+  const lastRunAt = curation.lastRunAt ?? undefined;
+  if (lastRunAt === undefined) {
     return <p className="o-row__meta">{t('settings.memoryCuration.neverRun')}</p>;
   }
   return (
     <p className="o-row__meta">
       {t('settings.memoryCuration.lastRun', {
-        when: formatAbsolute(curation.lastRunAt, i18n.language),
+        when: formatAbsolute(lastRunAt, i18n.language),
         superseded: curation.lastSuperseded ?? 0,
         queued: curation.lastQueued ?? 0,
       })}

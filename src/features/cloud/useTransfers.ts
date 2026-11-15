@@ -9,7 +9,7 @@ import {
   listCloudTransfersQueryKey,
   transferCloudSessionMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { CloudTransfer, CloudTransferRecipient } from '@gen/api/types.gen';
+import type { CloudTransferResponse, CloudTransferRecipientResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -21,16 +21,11 @@ import { createRefused, type PendingCreate, pressOf } from './createKey';
 
 const POLL_MS = 10_000;
 
-async function skipValidation(): Promise<undefined> {
-  await Promise.resolve();
-  return undefined;
-}
-
 export interface TransfersViewModel {
   /** The caller's transfers, incoming and outgoing, newest first; undefined while they are read. */
-  readonly transfers: readonly CloudTransfer[] | undefined;
+  readonly transfers: readonly CloudTransferResponse[] | undefined;
   /** The members a session can be given to; empty when the server refuses the list (transfers are not offered). */
-  readonly recipients: readonly CloudTransferRecipient[];
+  readonly recipients: readonly CloudTransferRecipientResponse[];
   /** The login of each member the server named, to say who gives and who receives. */
   readonly logins: ReadonlyMap<string, string>;
   /** Why the recipients could not be read, as the server wrote it: said in the picker. */
@@ -118,11 +113,6 @@ export function useTransferChange(): TransferChangeViewModel {
           path: { id: sessionId },
           body,
           headers: { 'Idempotency-Key': press.key },
-          // The generated client validates a request after merging its headers into a `Headers`, which a schema with a
-          // required header never matches. Every other `Idempotency-Key` in the contract is optional (so the schema
-          // passes vacuously); this route's is required (400 `idempotency_key_required`), hence the one skip: the types
-          // check the request, the server the key.
-          requestValidator: skipValidation,
         },
         {
           onSuccess: () => {

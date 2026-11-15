@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ActivityItem } from '@gen/api/types.gen';
+import type { ActivityItemDto } from '@gen/api/types.gen';
 import { ACTIVITY_KINDS, flatten, knownKind, linkOf, toneOf } from './model';
 
-function item(over: Partial<ActivityItem> = {}): ActivityItem {
+function item(over: Partial<ActivityItemDto> = {}): ActivityItemDto {
   return {
     id: 'i',
     at: '2026-10-30T07:00:00.000Z',
@@ -28,7 +28,7 @@ describe('the activity model', () => {
   });
 
   it('leads to the request first, then the session, else nowhere', () => {
-    expect(linkOf(item({ approvalId: 'apr-1', sessionId: 'ses-1' }))).toEqual({
+    expect(linkOf(item({ gateId: 'apr-1', sessionId: 'ses-1' }))).toEqual({
       to: '/yes/$approvalId',
       params: { approvalId: 'apr-1' },
     });

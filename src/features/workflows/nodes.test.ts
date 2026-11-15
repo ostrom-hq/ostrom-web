@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 import { callChoices, conditionProblem, type NodeCondition } from './nodes';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 const workflow = (id: string, calls: readonly string[] = []): Workflow => ({
   id,

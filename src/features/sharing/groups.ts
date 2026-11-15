@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group, OrgMember, SharedAccount } from '@gen/api/types.gen';
+import type { GroupResponse, MemberResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** A group's name, trimmed, as the server takes it: 1 to 120 characters. */
@@ -34,12 +34,15 @@ export function localDay(now: Date): string {
 }
 
 /** Until when a member of the group is paused, if they are now. */
-export function pausedUntil(group: Group, login: string): string | undefined {
-  return group.paused?.find((pause) => pause.login === login)?.until;
+export function pausedUntil(group: GroupResponse, login: string): string | undefined {
+  return group.paused.find((pause) => pause.login === login)?.until;
 }
 
 /** The subscriptions a group lends, in its order; one the person cannot read is left out, never shown as an id. */
-export function lentAccounts(ids: readonly string[], accounts: readonly SharedAccount[]): SharedAccount[] {
+export function lentAccounts(
+  ids: readonly string[],
+  accounts: readonly SharedAccountResponse[],
+): SharedAccountResponse[] {
   return ids.flatMap((id) => {
     const account = accounts.find((item) => item.id === id);
     return account === undefined ? [] : [account];
@@ -47,7 +50,7 @@ export function lentAccounts(ids: readonly string[], accounts: readonly SharedAc
 }
 
 /** A member by name and login; a name the server has not been given is empty, or the login again: the login alone. */
-export function personOf(member: OrgMember): string {
+export function personOf(member: MemberResponse): string {
   return member.name === '' || member.name === member.login
     ? member.login
     : `${member.name} (${member.login})`;

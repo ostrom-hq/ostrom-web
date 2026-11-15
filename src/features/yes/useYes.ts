@@ -11,15 +11,7 @@ import {
   listApprovalsOptions,
   listApprovalsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
-import type {
-  Approval,
-  ApprovalAnswer,
-  ApprovalCallerView,
-  ApprovalQueue,
-  ApprovalStatus,
-  ListApprovalsResponse,
-  Receipt,
-} from '@gen/api/types.gen';
+import type { Approval, ApprovalCallerView, ApprovalQueue, ListApprovalsResponse } from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
@@ -29,9 +21,11 @@ import { ready } from '@/shared/api/ready';
 import { stepUpOf } from '@/shared/api/stepUp';
 import { useAuthStore } from '@/shared/auth/authStore';
 import { meOf } from '@/shared/auth/me';
+import { type ReadReceipt, readReceipt } from '@/shared/api/readReceipt';
 import { stillOpen } from './model';
 import { useArrivals } from './useArrivals';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
+import type { ApprovalAnswer, ApprovalStatus } from '@/shared/api/vocabulary';
 
 /** The queue polls like the prototype: a request must show up on the phone within seconds. */
 export const POLL_MS = 2_000;
@@ -80,7 +74,7 @@ interface DecidedPages {
 }
 
 function decidedAt(approval: Approval): string {
-  return approval.decidedAt ?? approval.expiresAt ?? '';
+  return approval.decidedAt ?? '';
 }
 
 /** The latest decisions first. Stable (module level), so TanStack keeps the result while nothing changes. */
@@ -106,7 +100,7 @@ export function useApprovalsQueue(): QueueViewModel {
   );
   const decided = useQueries({
     queries: DECIDED_STATUSES.map((status) =>
-      ready(listApprovalsOptions({ query: { status: [status] } }), {
+      ready(listApprovalsOptions({ query: { status } }), {
         refetchInterval: pollUnlessRefused(DECIDED_POLL_MS),
       }),
     ),
@@ -149,6 +143,15 @@ export function useApproval(id: string): ApprovalViewModel {
 export function useGithubLinkRequired(id: string): boolean {
   const view = useQuery(ready(getApprovalViewOptions({ path: { id } }), RIGHTS));
   return githubLinkRequired(view.data?.you);
+}
+
+/**
+ * What a yes lets through, as the view names it (`what.action`: `push`, `merge`, `deploy`, `tool`, or a gate class of
+ * the organization's own). Read with the rights, from the same request.
+ */
+export function useApprovalAction(id: string): string | undefined {
+  const view = useQuery(ready(getApprovalViewOptions({ path: { id } }), RIGHTS));
+  return view.data?.what.action;
 }
 
 export interface ShownApprovalViewModel extends ApprovalViewModel {
@@ -269,7 +272,7 @@ export interface AnswerViewModel {
   readonly changed: boolean;
   readonly failure: ApiFailure | Error | undefined;
   /** The receipt the server signed for this answer, and what the agent was told. */
-  readonly receipt: Receipt | undefined;
+  readonly receipt: ReadReceipt | undefined;
   readonly comment: string | undefined;
 }
 
@@ -296,7 +299,7 @@ export function useAnswerApproval(id: string): AnswerViewModel {
   const answer = useCallback(
     (approval: Approval, value: ApprovalAnswer, comment?: string) => {
       const body = { answer: value, shownDigest: approval.shownDigest };
-      mutate({ path: { id }, body: comment === undefined ? body : { ...body, note: comment } });
+      mutate({ path: { id }, body: comment === undefined ? body : { ...body, comment } });
     },
     [id, mutate],
   );
@@ -310,7 +313,7 @@ export function useAnswerApproval(id: string): AnswerViewModel {
     githubLink: githubLinkOf(mutation.error),
     changed,
     failure: refusal === undefined && !changed ? failureOf(mutation.error) : undefined,
-    receipt: mutation.data?.receipt,
-    comment: mutation.isSuccess ? mutation.variables.body.note : undefined,
+    receipt: readReceipt(mutation.data?.receipt),
+    comment: mutation.isSuccess ? (mutation.variables.body.comment ?? undefined) : undefined,
   };
 }

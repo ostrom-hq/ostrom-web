@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait, WaitAction, WaitField, WaitRef, WaitStatus } from '@gen/api/types.gen';
+import type { WaitResponse, WaitAction, WaitField, WaitRef } from '@gen/api/types.gen';
 import { safeHref } from '@/shared/lib/safeHref';
+import type { WaitStatus } from '@/shared/api/vocabulary';
 
 /** The three states the list filters by (`status=`); the server's `all` is not offered. */
 export const FILTERS = ['open', 'resolved', 'cancelled'] as const satisfies readonly WaitStatus[];
@@ -17,12 +18,12 @@ export { BADGE_PAGE } from './badge';
 /** The kinds a cloud session answers itself: `POST /waits/{id}/answer` refuses them (409 `answer_through_session`). */
 const THROUGH_SESSION: readonly string[] = ['permission', 'question'];
 
-export function answeredThroughSession(wait: Wait): boolean {
+export function answeredThroughSession(wait: WaitResponse): boolean {
   return THROUGH_SESSION.includes(wait.kind);
 }
 
 /** A wait that resolves by itself (`resolver` `time` or `event`): nobody answers it (`409 resolves_by_itself`). */
-export function resolvesByItself(wait: Wait): boolean {
+export function resolvesByItself(wait: WaitResponse): boolean {
   return wait.resolver !== undefined && wait.resolver !== 'human';
 }
 
@@ -39,7 +40,7 @@ export function styleOf(action: WaitAction): ActionStyle {
 }
 
 /** The actions to show: those the wait asks for, else the single `done` one (the server's rule), labelled `doneLabel`. */
-export function actionsOf(wait: Wait, doneLabel: string): readonly WaitAction[] {
+export function actionsOf(wait: WaitResponse, doneLabel: string): readonly WaitAction[] {
   const actions = wait.question.actions ?? [];
   return actions.length === 0 ? [{ id: 'done', label: doneLabel, style: 'primary' }] : actions;
 }
@@ -252,7 +253,7 @@ export type RefTarget =
   | { readonly kind: 'external'; readonly href: string };
 
 export function targetOf(ref: WaitRef): RefTarget | undefined {
-  if ((ref.kind === 'artifact' || ref.kind === 'session') && ref.id !== undefined) {
+  if ((ref.kind === 'artifact' || ref.kind === 'session') && typeof ref.id === 'string') {
     return { kind: ref.kind, id: ref.id };
   }
   const href = safeHref(ref.url);

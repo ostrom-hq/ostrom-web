@@ -88,6 +88,7 @@ function WebhookDetail({
 }): ReactElement {
   const { t } = useTranslation();
   const label = useEnumLabel();
+  const reason = webhook.disabledReason ?? undefined;
   const navigate = useNavigate();
   const update = useUpdateWebhook(id);
   const actions = useWebhookActions(id);
@@ -105,8 +106,8 @@ function WebhookDetail({
             {t('webhooks.detail.created', { at: utcTime(webhook.createdAt) })}
           </span>
         </p>
-        {webhook.enabled || webhook.disabledReason === undefined ? null : (
-          <p className="o-row__meta">{label('webhooks.state.reasonAbout', webhook.disabledReason)}</p>
+        {webhook.enabled || reason === undefined ? null : (
+          <p className="o-row__meta">{label('webhooks.state.reasonAbout', reason)}</p>
         )}
       </Section>
       <Section label={t('webhooks.settings.title')}>

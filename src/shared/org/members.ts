@@ -3,7 +3,7 @@ import {
   listOrgMembersInfiniteOptions,
   listOrgMembersInfiniteQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { OrgMember, OrgMemberList } from '@gen/api/types.gen';
+import type { MemberResponse, MembersResponse } from '@gen/api/types.gen';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { type QueryTuning, ready } from '@/shared/api/ready';
@@ -18,9 +18,9 @@ export function orgMembersKey(org: string): ReturnType<typeof listOrgMembersInfi
 
 export interface OrgMembers {
   /** Each page read, in the order read. */
-  readonly pages: readonly (readonly OrgMember[])[] | undefined;
+  readonly pages: readonly (readonly MemberResponse[])[] | undefined;
   /** The members read so far, oldest first: the first page, then each page asked for. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** Every page is read: a login missing from `members` is then someone who left. */
   readonly complete: boolean;
   /** Reads the next page; absent once every page is read. */
@@ -51,7 +51,7 @@ export function useOrgMembers(org: string, tuning: QueryTuning = {}, q?: string)
     ),
     // The first page asks for nothing more than the query's own `limit`; each next one adds `after`.
     initialPageParam: { path: { org } },
-    getNextPageParam: (last: OrgMemberList) => last.next,
+    getNextPageParam: (last: MembersResponse) => last.next,
   });
   const { data, hasNextPage, fetchNextPage } = query;
   const pages = useMemo(() => data?.pages.map((page) => page.items), [data]);

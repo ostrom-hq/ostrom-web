@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { listActivityInfiniteOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { ActivityItem } from '@gen/api/types.gen';
+import type { ActivityItemDto } from '@gen/api/types.gen';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -10,7 +10,7 @@ import { flatten } from './model';
 
 export interface ActivityViewModel {
   /** Newest first, every page read so far; undefined while the first loads. */
-  readonly items: readonly ActivityItem[] | undefined;
+  readonly items: readonly ActivityItemDto[] | undefined;
   /** The server does not serve the feed (it is planned in the contract): the screen says so, nothing else. */
   readonly unavailable: boolean;
   /** Why the first page did not come. */

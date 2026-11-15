@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleListActivity } from '@gen/api/msw.gen';
-import type { ActivityItem, ApiError } from '@gen/api/types.gen';
+import type { ActivityItemDto, ApiError } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 
 export interface ActivityState {
   /** Newest first, as the server lists them. */
-  activity: ActivityItem[];
+  activity: ActivityItemDto[];
   /** The page's size: the demo's small one by default, the server's (50) for the large organization. */
   activityPage?: number;
 }
@@ -14,14 +14,14 @@ export interface ActivityState {
 export const ACTIVITY_PAGE = 5;
 
 /** The server's opaque cursor, `<ISO instant>~<id>`: the items strictly older than that one. */
-function cursorOf(item: ActivityItem): string {
+function cursorOf(item: ActivityItemDto): string {
   return `${item.at}~${item.id}`;
 }
 
 /** An instant as the server writes it; anything else is a cursor no page gave. */
 const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
 
-function olderThan(cursor: string): ((item: ActivityItem) => boolean) | undefined {
+function olderThan(cursor: string): ((item: ActivityItemDto) => boolean) | undefined {
   const at = cursor.slice(0, cursor.indexOf('~'));
   const id = cursor.slice(cursor.indexOf('~') + 1);
   if (!cursor.includes('~') || id === '' || !INSTANT.test(at)) return undefined;

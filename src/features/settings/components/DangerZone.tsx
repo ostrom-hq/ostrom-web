@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -9,7 +9,7 @@ import { deletionConfirmed } from '../model';
 import type { DeleteOrgViewModel } from '../useSettings';
 
 export interface DangerZoneProps {
-  readonly org: OrgView;
+  readonly org: OrgResponse;
   /** Only the owner deletes the organization. */
   readonly isOwner: boolean;
   readonly deletion: DeleteOrgViewModel;

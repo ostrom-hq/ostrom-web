@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ActivityItem } from '@gen/api/types.gen';
+import type { ActivityItemDto } from '@gen/api/types.gen';
 
 /** What happened in Acme, newest first, worded as the server words its summaries (server#72). */
-const items: ActivityItem[] = [
+const items: ActivityItemDto[] = [
   {
     id: 'gate.requested:apr-merge-412',
     at: '2026-10-30T07:55:00.000Z',
     kind: 'gate.requested',
     actor: { kind: 'agent', name: 'claude-code' },
     summary: 'claude-code asked for a yes: Merge PR #412 into main',
-    approvalId: 'apr-merge-412',
     gateId: 'apr-merge-412',
   },
   {
@@ -53,7 +52,6 @@ const items: ActivityItem[] = [
     kind: 'gate.decided',
     actor: { kind: 'person', name: 'maya' },
     summary: 'maya said yes to: Deploy billing-api 2.14.0 to production',
-    approvalId: 'apr-deploy-88',
     gateId: 'apr-deploy-88',
   },
   {
@@ -71,11 +69,10 @@ const items: ActivityItem[] = [
     kind: 'gate.decided',
     actor: { kind: 'person', name: 'theo' },
     summary: 'theo said no to: Run migration 0042_add_credit_notes',
-    approvalId: 'apr-migration-7',
     gateId: 'apr-migration-7',
   },
 ];
 
-export function initialActivity(): ActivityItem[] {
+export function initialActivity(): ActivityItemDto[] {
   return items.map((item) => ({ ...item, actor: { ...item.actor } }));
 }

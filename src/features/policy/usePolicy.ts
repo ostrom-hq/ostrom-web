@@ -7,13 +7,13 @@ import {
   listSecretsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import { checkAgentPolicy, setInferenceSettings, setModelPolicy } from '@gen/api/sdk.gen';
-import type { InferenceSettings, OrgMember, ModelPolicy } from '@gen/api/types.gen';
+import type { InferenceSettingsDto, MemberResponse, ModelPolicyDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef } from 'react';
 import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
-import { keySecrets, readModelPolicy } from './model';
+import { defaultModelOf, keySecrets, readModelPolicy } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import type { OrgMembers } from '@/shared/org/members';
@@ -66,13 +66,13 @@ function useSave<T>(send: (body: T) => Promise<T>, queryKey: readonly unknown[])
 }
 
 export interface ModelPolicyViewModel {
-  readonly policy: ModelPolicy | undefined;
+  readonly policy: ModelPolicyDto | undefined;
   readonly failure: Error | undefined;
   /** Who a member's own list may name; undefined while they load or when they cannot be read (a member is then an id). */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
-  readonly change: SaveViewModel<ModelPolicy>;
+  readonly change: SaveViewModel<ModelPolicyDto>;
 }
 
 // A new organization's policy has no `default` yet: read leniently, with Zod still (`readModelPolicy`).
@@ -86,7 +86,7 @@ export function useModelPolicy(): ModelPolicyViewModel {
   // Only names: a refusal is not asked again, a member then reads as their id.
   const members = useCurrentOrgMembers({ all: true });
   const change = useSave(
-    async (body: ModelPolicy) =>
+    async (body: ModelPolicyDto) =>
       applied((await setModelPolicy({ body, ...lenientPolicy, throwOnError: true })).data),
     getModelPolicyQueryKey(),
   );
@@ -100,11 +100,11 @@ export function useModelPolicy(): ModelPolicyViewModel {
 }
 
 export interface ProvidersViewModel {
-  readonly settings: InferenceSettings | undefined;
+  readonly settings: InferenceSettingsDto | undefined;
   readonly failure: Error | undefined;
   /** The organization's secrets a key may name; undefined while they load or when they cannot be read. */
   readonly secrets: readonly string[] | undefined;
-  readonly change: SaveViewModel<InferenceSettings>;
+  readonly change: SaveViewModel<InferenceSettingsDto>;
 }
 
 /** The providers' keys: only owners and admins read them (`inference:admin`), so the read waits for `enabled`. */
@@ -112,7 +112,7 @@ export function useProviders(enabled: boolean): ProvidersViewModel {
   const settings = useQuery(ready(getInferenceSettingsOptions(), { enabled }));
   const secrets = useQuery(ready(listSecretsOptions(), { enabled, retry: false }));
   const change = useSave(
-    async (body: InferenceSettings) => (await setInferenceSettings({ body, throwOnError: true })).data,
+    async (body: InferenceSettingsDto) => (await setInferenceSettings({ body, throwOnError: true })).data,
     getInferenceSettingsQueryKey(),
   );
   return {
@@ -133,8 +133,8 @@ export interface LaunchQuestion {
 
 export interface LaunchAnswer {
   readonly allowed: boolean;
-  readonly reason?: string;
-  readonly note?: string;
+  readonly reason?: string | null;
+  readonly note?: string | null;
 }
 
 export interface LaunchCheckViewModel {
@@ -153,7 +153,7 @@ export interface LaunchCheckViewModel {
  * @param policy The policy the answer is about: once it changes (a save), the last question is asked again, its default
  *   model read anew, so no answer speaks of a policy that is no longer the organization's.
  */
-export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckViewModel {
+export function useLaunchCheck(policy: ModelPolicyDto | undefined): LaunchCheckViewModel {
   // A question asked, not a state kept fresh: a mutation never asks again on its own (a focus, a remount).
   const mutation = useMutation({
     mutationFn: async (question: LaunchQuestion): Promise<LaunchAnswer> =>
@@ -178,7 +178,7 @@ export function useLaunchCheck(policy: ModelPolicy | undefined): LaunchCheckView
     const question = last.current;
     if (question === undefined || policy === undefined) return;
     // No default set (ostrom-core#48) asks as `ostrom <agent>` does then: with no model.
-    const { default: model = '' } = policy;
+    const model = defaultModelOf(policy);
     mutate(question.named ? question : { ...question, model });
   }, [policy, mutate]);
   return {

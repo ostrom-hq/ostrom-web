@@ -17,12 +17,12 @@ import {
   updateSharedAccountMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
-  Artifact,
-  ArtifactVersion,
+  ArtifactResponse,
+  ArtifactVersionResponse,
   EnrollSharedAccountData,
-  OrgMember,
-  Secret,
-  SharedAccount,
+  MemberResponse,
+  SecretResponse,
+  SharedAccountResponse,
   UpdateSharedAccountData,
 } from '@gen/api/types.gen';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -37,7 +37,7 @@ import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 export interface ArtifactsViewModel {
   /** Newest first, every page read so far; undefined while the first loads. */
-  readonly artifacts: readonly Artifact[] | undefined;
+  readonly artifacts: readonly ArtifactResponse[] | undefined;
   readonly failure: Error | undefined;
   /** Only an artifact's owner shares or deletes it. */
   readonly login: string | undefined;
@@ -73,10 +73,10 @@ export function useArtifacts(filters: GalleryFilters): ArtifactsViewModel {
 }
 
 export interface ArtifactDetailViewModel {
-  readonly versions: readonly ArtifactVersion[] | undefined;
+  readonly versions: readonly ArtifactVersionResponse[] | undefined;
   readonly readers: readonly string[] | undefined;
   /** The organization's members, to name the readers (ids) and pick a new one: never in the way when missing. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   /** The first page of members came back, or they failed: the readers are named from then on, not as ids before. */
@@ -89,7 +89,7 @@ export interface ArtifactDetailViewModel {
 }
 
 /** Newest first, whatever order the server sends. */
-export function newestFirst(versions: readonly ArtifactVersion[]): ArtifactVersion[] {
+export function newestFirst(versions: readonly ArtifactVersionResponse[]): ArtifactVersionResponse[] {
   return [...versions].sort((a, b) => b.number - a.number);
 }
 
@@ -201,11 +201,11 @@ export function useArtifactChange(): ArtifactChangeViewModel {
 }
 
 export interface AccountsViewModel {
-  readonly accounts: readonly SharedAccount[] | undefined;
+  readonly accounts: readonly SharedAccountResponse[] | undefined;
   /** The secrets a new subscription's credential can come from. */
-  readonly secrets: readonly Secret[] | undefined;
+  readonly secrets: readonly SecretResponse[] | undefined;
   /** The organization's members, to lend a subscription to. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;

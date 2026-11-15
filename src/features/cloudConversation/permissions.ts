@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudInput, CloudQuestionAnswer } from '@gen/api/types.gen';
+import type { CloudInputDto, CloudQuestionAnswerDto } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { type AgentQuestion, finished, type PermissionRequest, type TranscriptEvent } from './events';
 
@@ -16,7 +16,7 @@ export const NO_CHOICE: QuestionChoice = { options: [], other: false, otherText:
 export interface PermissionAnswer {
   readonly requestId: string;
   readonly allow: boolean;
-  readonly answers: readonly CloudQuestionAnswer[];
+  readonly answers: readonly CloudQuestionAnswerDto[];
 }
 
 /** How the server took an answer (TeamCode's `AnswerOutcome`). Only `retry` is worth sending again, under the same key. */
@@ -56,7 +56,7 @@ export function validText(text: string): boolean {
 export function answerOf(
   question: AgentQuestion,
   choice: QuestionChoice | undefined,
-): CloudQuestionAnswer | undefined {
+): CloudQuestionAnswerDto | undefined {
   if (choice === undefined) return undefined;
   const other = choice.otherText.trim();
   if (choice.other && !validText(other)) return undefined;
@@ -82,8 +82,8 @@ export function answerOf(
 export function answersOf(
   questions: readonly AgentQuestion[],
   choices: ReadonlyMap<number, QuestionChoice>,
-): CloudQuestionAnswer[] | undefined {
-  const answers: CloudQuestionAnswer[] = [];
+): CloudQuestionAnswerDto[] | undefined {
+  const answers: CloudQuestionAnswerDto[] = [];
   for (const question of questions) {
     const answer = answerOf(question, choices.get(question.index));
     if (answer === undefined) return undefined;
@@ -116,9 +116,9 @@ export function openPermissionRequests(events: readonly TranscriptEvent[]): Perm
  * How the server took an answer (TeamCode's `AnswerPermissionUseCase`): a replayed acknowledgement of an answer that was
  * then refused is final like a refusal.
  */
-export function acceptedOutcome(input: CloudInput): AnswerOutcome {
+export function acceptedOutcome(input: CloudInputDto): AnswerOutcome {
   return input.status === 'rejected' || input.status === 'cancelled'
-    ? { kind: 'refused', code: input.reason, reason: undefined }
+    ? { kind: 'refused', code: input.reason ?? undefined, reason: undefined }
     : { kind: 'accepted', inputId: input.id };
 }
 

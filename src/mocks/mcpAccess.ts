@@ -10,14 +10,14 @@ import {
   handleUnassignMcpServer,
 } from '@gen/api/msw.gen';
 import type {
-  McpArgumentCondition,
-  McpArgumentPolicy,
-  McpAssignment,
-  McpServer,
-  Member,
-  Organization,
+  ArgumentConditionDto,
+  ArgumentPolicyResponse,
+  McpAssignmentResponse,
+  McpServerDto,
+  MemberResponse,
+  MeOrganizationResponse,
 } from '@gen/api/types.gen';
-import { zMcpArgumentPolicyRequest, zMcpAssignmentRequest, zMcpSettings } from '@gen/api/zod.gen';
+import { zArgumentPolicyRequest, zMcpAssignmentRequest, zMcpSettingsDto } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { readJson, refusal } from './http';
@@ -26,12 +26,12 @@ import { DEMO_LOGIN, type OrgsState } from './orgs';
 /** Who reaches each relayed server, and the calls it refuses or holds; the relay's prefix of each organization. */
 export interface McpAccessState extends OrgsState {
   /** The demo organization's servers; another organization has none. */
-  mcpServers: McpServer[];
-  members: Member[];
+  mcpServers: McpServerDto[];
+  members: MemberResponse[];
   /** By server name. */
-  mcpAssignments: Record<string, McpAssignment[]>;
+  mcpAssignments: Record<string, McpAssignmentResponse[]>;
   /** By server name. */
-  mcpPolicies: Record<string, McpArgumentPolicy[]>;
+  mcpPolicies: Record<string, ArgumentPolicyResponse[]>;
   /** By organization id; `ostrom` when never set. */
   mcpPrefixes: Record<string, string>;
   nextPolicyId: number;
@@ -43,15 +43,15 @@ const VALUELESS = new Set(['EXISTS', 'ABSENT']);
 
 export function createMcpAccessHandlers(
   state: () => McpAccessState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   now: () => Date,
 ): HttpHandler[] {
-  const manages = (organization: Organization): boolean =>
+  const manages = (organization: MeOrganizationResponse): boolean =>
     managesMembers(
       orgRoleOf(state().orgMembers[organization.id]?.find((member) => member.login === DEMO_LOGIN)?.role),
     );
   /** The server named in the path, in the organization the call acts in. */
-  const serverOf = (request: Request, name: string): McpServer | undefined =>
+  const serverOf = (request: Request, name: string): McpServerDto | undefined =>
     organizationOf(request).id === state().organization.id
       ? state().mcpServers.find((server) => server.name === name)
       : undefined;
@@ -70,7 +70,7 @@ export function createMcpAccessHandlers(
       const organization = organizationOf(request);
       if (!manages(organization))
         return refusal(403, 'forbidden', 'Only an owner or an admin changes the prefix.');
-      const body = zMcpSettings.safeParse(await readJson(request));
+      const body = zMcpSettingsDto.safeParse(await readJson(request));
       if (!body.success || !PREFIX.test(body.data.agentPrefix))
         return refusal(400, 'invalid_request', 'The prefix is 1 to 32 characters of a-z 0-9 _ -.');
       state().mcpPrefixes[organization.id] = body.data.agentPrefix;
@@ -91,7 +91,7 @@ export function createMcpAccessHandlers(
         return refusal(404, 'not_found', 'member not found');
       if (everyone && body.data.credentialSecret !== undefined)
         return refusal(400, 'invalid_request', 'A credential is assigned to one member, not to all.');
-      const assignment: McpAssignment = { server: params.name, assignedAt: now().toISOString() };
+      const assignment: McpAssignmentResponse = { server: params.name, assignedAt: now().toISOString() };
       if (!everyone) assignment.member = params.member;
       if (body.data.tools !== undefined) assignment.tools = body.data.tools;
       if (body.data.credentialSecret !== undefined) assignment.credentialSecret = body.data.credentialSecret;
@@ -119,18 +119,18 @@ export function createMcpAccessHandlers(
     handleCreateMcpArgumentPolicy(async ({ request, params }) => {
       const refused = guard(request, params.name);
       if (refused !== undefined) return refused;
-      const body = zMcpArgumentPolicyRequest.safeParse(await readJson(request));
+      const body = zArgumentPolicyRequest.safeParse(await readJson(request));
       if (!body.success || !TOOL.test(body.data.tool) || body.data.message.trim() === '')
         return refusal(400, 'invalid_request', 'The policy names an invalid tool or says nothing.');
       const conditions = body.data.conditions ?? [];
       if (conditions.some((condition) => !VALUELESS.has(condition.operator) && condition.value === undefined))
         return refusal(400, 'invalid_request', 'This condition needs a value of at most 1024 characters.');
       const s = state();
-      const policy: McpArgumentPolicy = {
+      const policy: ArgumentPolicyResponse = {
         id: `pol-${String(s.nextPolicyId)}`,
         tool: body.data.tool,
         conditions: conditions.map((condition) => {
-          const kept: McpArgumentCondition = { path: condition.path, operator: condition.operator };
+          const kept: ArgumentConditionDto = { path: condition.path, operator: condition.operator };
           if (condition.value !== undefined) kept.value = condition.value;
           return kept;
         }),

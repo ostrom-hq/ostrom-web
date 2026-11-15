@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BudgetOverride } from '@gen/api/types.gen';
+import type { BudgetOverrideDto } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useAnnounced } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -123,7 +123,7 @@ function GrantForm({
   active,
 }: {
   readonly view: BudgetOverridesViewModel;
-  readonly active: BudgetOverride | undefined;
+  readonly active: BudgetOverrideDto | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   const [amount, setAmount] = useState(active === undefined ? '' : overrideDraftOf(active.micros));
@@ -211,7 +211,7 @@ function OverrideRow({
   state,
   view,
 }: {
-  readonly item: BudgetOverride;
+  readonly item: BudgetOverrideDto;
   readonly state: OverrideState;
   readonly view: BudgetOverridesViewModel;
 }): ReactElement {
@@ -228,13 +228,15 @@ function OverrideRow({
           {t('spend.overrides.until', { when: when(item.expiresAt) })}
         </span>
         <span className="o-row__meta">{item.reason}</span>
-        {item.replacesId === undefined ? null : (
+        {item.replacesId === undefined || item.replacesId === null ? null : (
           <span className="o-row__meta">{t('spend.overrides.replaces', { id: item.replacesId })}</span>
         )}
-        {item.revokedAt === undefined ? null : (
+        {item.revokedAt === undefined || item.revokedAt === null ? null : (
           <span className="o-row__meta">
             {t('spend.overrides.revoked', { when: when(item.revokedAt), by: item.revokedBy ?? '' })}
-            {item.revocationReason === undefined ? null : ` · ${item.revocationReason}`}
+            {item.revocationReason === undefined || item.revocationReason === null
+              ? null
+              : ` · ${item.revocationReason}`}
           </span>
         )}
         {state === 'active' ? <RevokeForm id={item.id} view={view} /> : null}

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  CloudCluster,
-  CloudProfile,
-  CloudRuntime,
+  CloudClusterResponse,
+  CloudProfileResponse,
+  CloudRuntimeResponse,
   SaveCloudClusterRequest,
   SaveCloudProfileRequest,
   SaveCloudRuntimeRequest,
@@ -43,8 +43,6 @@ export function minutesOf(text: string): number | undefined {
 }
 
 export const AUTOMATIONS_MAX = 100;
-/** What the server holds while nothing is stored. */
-export const DEFAULT_AUTOMATIONS = 2;
 
 /** The cap of running automation sessions per member typed, when it is a number the server reads. */
 export function automationsOf(text: string): number | undefined {
@@ -75,11 +73,11 @@ export interface RuntimeDraft {
   readonly memberTransfers: string;
 }
 
-function text(value: number | string | undefined): string {
-  return value === undefined ? '' : String(value);
+function text(value: number | string | null | undefined): string {
+  return value === undefined || value === null ? '' : String(value);
 }
 
-export function runtimeDraftOf(runtime: CloudRuntime): RuntimeDraft {
+export function runtimeDraftOf(runtime: CloudRuntimeResponse): RuntimeDraft {
   return {
     enabled: runtime.enabled,
     runnerImage: text(runtime.runnerImage),
@@ -151,7 +149,7 @@ function transfers(value: string): SaveCloudRuntimeRequest['memberTransfers'] {
 }
 
 /** The save the form makes: the whole runtime, an optional value blank is left out, `updatedAt` as read. */
-export function runtimeRequestOf(draft: RuntimeDraft, stored: CloudRuntime): SaveCloudRuntimeRequest {
+export function runtimeRequestOf(draft: RuntimeDraft, stored: CloudRuntimeResponse): SaveCloudRuntimeRequest {
   const optional = (value: string): string | undefined => (value.trim() === '' ? undefined : value.trim());
   const optionalNumber = (value: string): number | undefined => {
     const typed = optional(value);
@@ -203,7 +201,7 @@ export const EMPTY_CLUSTER: ClusterDraft = {
   serviceAccountToken: '',
 };
 
-export function clusterDraftOf(cluster: CloudCluster): ClusterDraft {
+export function clusterDraftOf(cluster: CloudClusterResponse): ClusterDraft {
   return {
     name: cluster.name,
     apiUrl: cluster.apiUrl,
@@ -223,7 +221,7 @@ const NAMESPACE = /^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$/;
  */
 export function clusterProblem(
   draft: ClusterDraft,
-  stored: CloudCluster | undefined,
+  stored: CloudClusterResponse | undefined,
 ): ClusterField | undefined {
   if (draft.name.trim() === '') return 'name';
   if (!draft.apiUrl.trim().startsWith('https://')) return 'apiUrl';
@@ -239,7 +237,7 @@ export function clusterProblem(
 }
 
 /** A new cluster, one whose address changed, or one missing a secret: its CA bundle and token are written again. */
-export function needsCredentials(draft: ClusterDraft, stored: CloudCluster | undefined): boolean {
+export function needsCredentials(draft: ClusterDraft, stored: CloudClusterResponse | undefined): boolean {
   return (
     stored?.apiUrl !== draft.apiUrl.trim() ||
     // The server's own cluster reads its credentials from its pod: none is missing.
@@ -250,7 +248,7 @@ export function needsCredentials(draft: ClusterDraft, stored: CloudCluster | und
 
 export function clusterRequestOf(
   draft: ClusterDraft,
-  stored: CloudCluster | undefined,
+  stored: CloudClusterResponse | undefined,
 ): SaveCloudClusterRequest {
   const ca = draft.caCertificate.trim();
   const token = draft.serviceAccountToken.trim();
@@ -303,7 +301,7 @@ export const EMPTY_PROFILE: ProfileDraft = {
   assignedMemberIds: [],
 };
 
-export function profileDraftOf(profile: CloudProfile): ProfileDraft {
+export function profileDraftOf(profile: CloudProfileResponse): ProfileDraft {
   const { spec } = profile;
   return {
     name: profile.name,
@@ -345,7 +343,7 @@ export function profileProblem(draft: ProfileDraft): ProfileField | undefined {
 
 export function profileRequestOf(
   draft: ProfileDraft,
-  stored: CloudProfile | undefined,
+  stored: CloudProfileResponse | undefined,
 ): SaveCloudProfileRequest {
   const optional = (value: string): string | undefined => (value.trim() === '' ? undefined : value.trim());
   const overrides = linesOf(draft.allowedImageOverrides);

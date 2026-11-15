@@ -1,5 +1,5 @@
+import type { Workflow } from '@/shared/api/workflowDocument';
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 
 const workflows: Workflow[] = [
   {

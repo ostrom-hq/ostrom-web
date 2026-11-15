@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleAnswerGovernanceConfirmation, handleGetGovernanceConfirmation } from '@gen/api/msw.gen';
-import type { ErrorDetail, GovernanceConfirmation, Organization } from '@gen/api/types.gen';
-import { zGovernanceConfirmationAnswer, zGovernanceConfirmationAnswerRequest } from '@gen/api/zod.gen';
+import type { ErrorDetail, ConfirmationDto, MeOrganizationResponse } from '@gen/api/types.gen';
+import { zAnswerConfirmationRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { isKnown, knownValues } from '@/shared/lib/openEnum';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
 import { MAYA } from './fixtures/confirmations';
 import { FRESH_SIGN_IN_MS, readJson, refusal } from './http';
 import { DEMO_LOGIN, type OrgsState } from './orgs';
+import { zGovernanceConfirmationAnswer } from '@/shared/api/vocabulary';
 
 /** The demo organization's governance confirmations, as ostrom-server keeps them (core#57). */
 export interface ConfirmationsState extends OrgsState {
-  confirmations: GovernanceConfirmation[];
+  confirmations: ConfirmationDto[];
   /** Confirmations whose `before` is no longer what they change: a confirm writes nothing (`confirmation_stale`). */
   staleConfirmations: string[];
   /** Confirmations whose write is refused once confirmed, with the write's own error. */
@@ -23,17 +24,17 @@ export interface ConfirmationsState extends OrgsState {
 export function createConfirmationHandlers(
   state: () => ConfirmationsState,
   now: () => Date,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
 ): HttpHandler[] {
   /** The confirmation in the caller's organization, past its time read as expired; another organization has none. */
-  const find = (request: Request, id: string): GovernanceConfirmation | undefined => {
+  const find = (request: Request, id: string): ConfirmationDto | undefined => {
     const db = state();
     if (organizationOf(request).id !== db.organization.id) return undefined;
     const found = db.confirmations.find((item) => item.id === id);
     if (found?.status !== 'pending' || Date.parse(found.expiresAt) > now().getTime()) return found;
     return save({ ...found, status: 'expired' });
   };
-  const save = (next: GovernanceConfirmation): GovernanceConfirmation => {
+  const save = (next: ConfirmationDto): ConfirmationDto => {
     const db = state();
     db.confirmations = db.confirmations.map((item) => (item.id === next.id ? next : item));
     return next;
@@ -48,7 +49,7 @@ export function createConfirmationHandlers(
       const db = state();
       const confirmation = find(request, params.id);
       if (confirmation === undefined) return notFound();
-      const body = zGovernanceConfirmationAnswerRequest.safeParse(await readJson(request));
+      const body = zAnswerConfirmationRequest.safeParse(await readJson(request));
       if (!body.success || !isKnown(knownValues(zGovernanceConfirmationAnswer), body.data.answer))
         return refusal(400, 'invalid_request', 'answer must be confirm or refuse');
       const role = orgRoleOf(
@@ -76,7 +77,7 @@ export function createConfirmationHandlers(
         save({ ...confirmation, ...answered, status: 'failed', error });
         return refusal(409, error.type, error.message);
       }
-      const confirmed: GovernanceConfirmation = { ...confirmation, ...answered, status: 'confirmed' };
+      const confirmed: ConfirmationDto = { ...confirmation, ...answered, status: 'confirmed' };
       // A deletion returns nothing; anything else returns what it wrote, as the read routes show it.
       if (confirmation.after !== null) confirmed.result = confirmation.after;
       return HttpResponse.json(save(confirmed));

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GovernanceConfirmation } from '@gen/api/types.gen';
+import type { ConfirmationDto } from '@gen/api/types.gen';
+import type { ConfirmationStatus } from '@/shared/api/vocabulary';
 import { Link, useParams } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -24,7 +25,7 @@ import { Countdown } from '../components/Countdown';
 import { memberChangeOf, personName } from '../model';
 import { type AnswerViewModel, useAnswerConfirmation, useConfirmation } from '../useConfirmation';
 
-const TONES: Readonly<Record<Known<GovernanceConfirmation['status']>, BadgeTone>> = {
+const TONES: Readonly<Record<Known<ConfirmationStatus>, BadgeTone>> = {
   pending: 'signal',
   confirmed: 'success',
   refused: 'danger',
@@ -33,7 +34,7 @@ const TONES: Readonly<Record<Known<GovernanceConfirmation['status']>, BadgeTone>
 };
 
 /** The command each kind of CLI token comes from, as the person typed it. A personal API token has none. */
-const COMMANDS: Readonly<Record<Exclude<GovernanceConfirmation['credential'], 'api_token'>, string>> = {
+const COMMANDS: Readonly<Record<Exclude<ConfirmationDto['credential'], 'api_token'>, string>> = {
   admin: 'ostrom login --admin',
   device: 'ostrom login',
 };
@@ -82,7 +83,7 @@ function ConfirmPage({ id }: { readonly id: string }): ReactElement {
 }
 
 interface DetailProps {
-  readonly confirmation: GovernanceConfirmation;
+  readonly confirmation: ConfirmationDto;
   readonly answer: AnswerViewModel;
   /** Reads it again: its time ran out on this device, and only the server says whether it expired. */
   readonly refresh: () => void;
@@ -94,6 +95,7 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
   const enumText = useEnumLabel();
   const viewer = useViewer();
   const { requestedBy, credential, status } = confirmation;
+  const token = confirmation.token ?? undefined;
   // A change of the organization's people reads in words; any other change as its JSON before and after.
   const member = memberChangeOf(confirmation);
   return (
@@ -151,7 +153,7 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
           {t('confirm.who.title')}
         </h2>
         <div className="ys-row">
-          <Avatar login={requestedBy.login ?? requestedBy.name} size={36} />
+          <Avatar login={requestedBy.login ?? requestedBy.name ?? undefined} size={36} />
           <div className="ys-col">
             <b>{personName(requestedBy)}</b>
             <span className="ys-meta">
@@ -159,10 +161,10 @@ function ConfirmationDetail({ confirmation, answer, refresh }: DetailProps): Rea
                 // The kind first, then the name its owner chose, quoted: a name is never an identity.
                 <>
                   {t('confirm.who.withApiToken')}
-                  {confirmation.token === undefined ? null : (
+                  {token === undefined ? null : (
                     <>
                       {' '}
-                      <q>{confirmation.token.name}</q>
+                      <q>{token.name}</q>
                     </>
                   )}
                 </>

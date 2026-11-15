@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember } from '@gen/api/types.gen';
+import type { MemberResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -15,7 +15,7 @@ const BY_ID = 'by-id';
 export interface AssignFormProps {
   readonly server: string;
   /** The members to pick from; without them, a member is given by id. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly change: ServerAccessChangeViewModel;

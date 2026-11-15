@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement, ReactNode } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -15,7 +15,7 @@ export interface WithOrgProps {
   readonly title: string;
   readonly rows?: number;
   /** The screen, once the organization is known. */
-  readonly children: (org: OrgView, role: OrgRole | undefined) => ReactNode;
+  readonly children: (org: OrgResponse, role: OrgRole | undefined) => ReactNode;
 }
 
 /**

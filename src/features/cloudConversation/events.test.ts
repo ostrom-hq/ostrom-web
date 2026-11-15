@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudEvent } from '@gen/api/types.gen';
-import { eventOf, finished, isSubagentTask, knownAgentOf, pageOf, parentOf, toolSummary } from './events';
+import {
+  eventOf,
+  finished,
+  type RawEvent,
+  isSubagentTask,
+  knownAgentOf,
+  pageOf,
+  parentOf,
+  toolSummary,
+} from './events';
 import { EMPTY_TRANSCRIPT, withFeed, withLatest, withLive, withOlder } from './transcript';
 
 const AT = '2026-11-15T10:00:00.000Z';
 
-function cloud(seq: number, type: string, data: unknown, feed?: string): CloudEvent {
+function cloud(seq: number, type: string, data: unknown, feed?: string): RawEvent {
   return { seq, type, at: AT, epoch: 1, data, ...(feed === undefined ? {} : { feed }) };
 }
 

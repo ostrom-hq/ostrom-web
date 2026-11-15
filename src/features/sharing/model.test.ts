@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact, SharedAccount } from '@gen/api/types.gen';
+import type { ArtifactResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import {
   accountState,
   isArtifactAccess,
@@ -9,7 +9,7 @@ import {
   waitsForHandover,
 } from './model';
 
-const account: SharedAccount = {
+const account: SharedAccountResponse = {
   id: 'acc-1',
   provider: 'anthropic',
   label: 'x',
@@ -17,6 +17,10 @@ const account: SharedAccount = {
   status: 'ready',
   sharedWith: [],
   paused: false,
+  mine: false,
+  priority: 0,
+  limits: {},
+  createdAt: '2026-10-01T00:00:00.000Z',
 };
 
 describe('sharing model', () => {
@@ -59,7 +63,7 @@ describe('sharing model', () => {
 });
 
 describe('ownsArtifact', () => {
-  const artifact: Artifact = {
+  const artifact: ArtifactResponse = {
     id: 'a',
     title: 'Plan',
     owner: 'maya',

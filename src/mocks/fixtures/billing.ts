@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingInvoice, BillingOverview, BillingPlanLimits } from '@gen/api/types.gen';
-import type { Known } from '@/shared/lib/openEnum';
+import type { InvoiceResponse, BillingOverviewResponse, PlanLimitsResponse } from '@gen/api/types.gen';
 
 /** What each plan allows, as the server's catalog says; null is unlimited, and so are 0 cloud agents at once. */
-export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, BillingPlanLimits>> = {
+export const PLAN_LIMITS = {
   free: {
     maxPeople: 3,
     maxConcurrentCloudAgents: 0,
@@ -36,9 +35,9 @@ export const PLAN_LIMITS: Readonly<Record<Known<BillingOverview['plan']>, Billin
     policies: true,
     receiptRetentionDays: null,
   },
-};
+} as const satisfies Readonly<Record<string, PlanLimitsResponse>>;
 
-const overview: BillingOverview = {
+const overview: BillingOverviewResponse = {
   orgId: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
   plan: 'team',
   effectivePlan: 'team',
@@ -62,7 +61,7 @@ const overview: BillingOverview = {
   ],
 };
 
-const invoices: BillingInvoice[] = [
+const invoices: InvoiceResponse[] = [
   {
     id: 'in_1Q3c',
     number: 'ACME-0003',
@@ -98,10 +97,10 @@ const invoices: BillingInvoice[] = [
   },
 ];
 
-export function initialBilling(): BillingOverview {
+export function initialBilling(): BillingOverviewResponse {
   return structuredClone(overview);
 }
 
-export function initialInvoices(): BillingInvoice[] {
+export function initialInvoices(): InvoiceResponse[] {
   return structuredClone(invoices);
 }

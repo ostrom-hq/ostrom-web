@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { AuthSession, Device } from '@gen/api/types.gen';
+import type { AuthSessionResponse, DeviceResponse } from '@gen/api/types.gen';
 import {
   browserTimeZone,
   deletionConfirmed,
@@ -36,13 +36,17 @@ describe('deletionConfirmed', () => {
 
 describe('sortSessions', () => {
   it('puts this browser first, then the most recently seen', () => {
-    const at = (id: string, createdAt: string, lastSeenAt?: string, current = false): AuthSession =>
-      lastSeenAt === undefined ? { id, createdAt, current } : { id, createdAt, lastSeenAt, current };
+    const at = (id: string, createdAt: string, lastSeenAt: string, current = false): AuthSessionResponse => ({
+      id,
+      createdAt,
+      lastSeenAt,
+      current,
+    });
     const sorted = sortSessions([
-      at('old', '2026-10-01T00:00:00Z'),
+      at('old', '2026-10-01T00:00:00Z', '2026-10-01T00:00:00Z'),
       at('phone', '2026-10-02T00:00:00Z', '2026-10-29T00:00:00Z'),
       at('here', '2026-10-30T00:00:00Z', '2026-10-30T00:00:00Z', true),
-      at('fresh', '2026-10-29T12:00:00Z'),
+      at('fresh', '2026-10-29T12:00:00Z', '2026-10-29T12:00:00Z'),
     ]);
     expect(sorted.map((session) => session.id)).toEqual(['here', 'fresh', 'phone', 'old']);
   });
@@ -56,7 +60,7 @@ describe('browserTimeZone', () => {
 
 describe('sortDevices', () => {
   it('puts the most recently seen first, then the ones never seen by name', () => {
-    const devices: Device[] = [
+    const devices: DeviceResponse[] = [
       { id: 'a', name: 'zeta' },
       { id: 'b', name: 'old', lastSeenAt: '2026-10-01T00:00:00Z' },
       { id: 'c', name: 'alpha' },
@@ -120,7 +124,7 @@ describe('toggleServiceKeyScope', () => {
 
 describe('personalDevices', () => {
   it('keeps the workstations of ostrom login, never an elevated token of an organization', () => {
-    const devices: Device[] = [
+    const devices: DeviceResponse[] = [
       { id: 'dev-1', name: 'laptop' },
       { id: 'dev-2', name: 'runner', kind: 'cli' },
       { id: 'dev-3', name: 'admin', kind: 'admin', orgId: 'org-1' },

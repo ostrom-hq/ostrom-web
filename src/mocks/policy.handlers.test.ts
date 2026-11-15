@@ -7,6 +7,7 @@ import {
   setInferenceSettings,
   setModelPolicy,
 } from '@gen/api/sdk.gen';
+import type { AgentPolicyResponse } from '@gen/api/types.gen';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
@@ -41,10 +42,7 @@ async function statusOf(call: () => Promise<unknown>): Promise<number | undefine
 const raw = async (method: string, path: string, body: string): Promise<number> =>
   (await fetch(`http://ostrom.test/api/v1${path}`, { method, body })).status;
 
-async function verdict(query: {
-  agent?: string;
-  model?: string;
-}): Promise<{ allowed: boolean; reason?: string }> {
+async function verdict(query: { agent?: string; model?: string }): Promise<AgentPolicyResponse> {
   return (await checkAgentPolicy({ query, throwOnError: true })).data;
 }
 
@@ -89,6 +87,11 @@ describe('the mock agent policy, as the gateway keeps it', () => {
     ).toBe(400);
     expect(await raw('PUT', '/policy/models', '{"allowed":["claude opus"],"default":"x"}')).toBe(400);
     expect(await raw('PUT', '/policy/models', '{"allowed":[],"default":""}')).toBe(400);
+    expect(await raw('PUT', '/policy/models', '{"allowed":[]}')).toBe(400);
+    expect((await setModelPolicy({ body: { default: 'x' }, throwOnError: true })).data).toEqual({
+      allowed: [],
+      default: 'x',
+    });
     expect(await raw('PUT', '/policy/models', '{"allowed":1}')).toBe(400);
     const keys = await setInferenceSettings({
       body: { openaiKeySecret: 'OPENAI_KEY', openrouterKeySecret: 'ROUTER', useSharedAccounts: false },

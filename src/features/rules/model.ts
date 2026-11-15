@@ -1,17 +1,42 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GateAction, NewRule, Rule, RuleGate, RuleStrength, UpdateRuleData } from '@gen/api/types.gen';
+import type { GateActionDto, NewRuleRequest, RuleDto, RuleGateDto, UpdateRuleData } from '@gen/api/types.gen';
+import { zGateActionDto } from '@gen/api/zod.gen';
+import * as z from 'zod/mini';
+import type { RuleStrength } from '@/shared/api/vocabulary';
+
+const zGateCatalogActions = z.object({ actions: z.array(zGateActionDto) });
+
+/** The actions of the gate catalogue, which the server document leaves a free JSON object: read, never assumed. */
+export function catalogActionsOf(catalog: unknown): GateActionDto[] | undefined {
+  const read = zGateCatalogActions.safeParse(catalog);
+  return read.success ? read.data.actions.map(actionFrom) : undefined;
+}
+
+function actionFrom(parsed: z.output<typeof zGateActionDto>): GateActionDto {
+  const action: GateActionDto = { class: parsed.class };
+  if (parsed.label !== undefined) action.label = parsed.label;
+  if (parsed.patterns !== undefined) action.patterns = parsed.patterns;
+  if (parsed.repos !== undefined) action.repos = parsed.repos;
+  if (parsed.tools !== undefined) action.tools = parsed.tools;
+  return action;
+}
+
+/** The commands an action matches; none listed matches nothing. */
+export function patternsOf(action: GateActionDto): readonly string[] {
+  return action.patterns ?? [];
+}
 
 /** What an owner looks at: what is left to decide first, then what was decided. */
 export const RULE_FILTERS = ['todo', 'accepted', 'rejected', 'all'] as const;
 export type RuleFilter = (typeof RULE_FILTERS)[number];
 
 /** An edited rule was accepted with a fix: it counts as accepted. */
-export function isAccepted(rule: Rule): boolean {
+export function isAccepted(rule: RuleDto): boolean {
   return rule.status === 'accepted' || rule.status === 'edited';
 }
 
 /** Where a rule stands: still to decide, accepted (as is or fixed), or rejected. */
-export function phaseOf(rule: Rule): 'proposed' | 'accepted' | 'rejected' | 'other' {
+export function phaseOf(rule: RuleDto): 'proposed' | 'accepted' | 'rejected' | 'other' {
   switch (rule.status) {
     case 'proposed':
       return 'proposed';
@@ -26,7 +51,7 @@ export function phaseOf(rule: Rule): 'proposed' | 'accepted' | 'rejected' | 'oth
   }
 }
 
-export function matches(rule: Rule, filter: RuleFilter): boolean {
+export function matches(rule: RuleDto, filter: RuleFilter): boolean {
   switch (filter) {
     case 'todo':
       return rule.status === 'proposed';
@@ -41,7 +66,7 @@ export function matches(rule: Rule, filter: RuleFilter): boolean {
 
 export type RuleCounts = Readonly<Record<RuleFilter, number>>;
 
-export function countRules(rules: readonly Rule[]): RuleCounts {
+export function countRules(rules: readonly RuleDto[]): RuleCounts {
   return {
     todo: rules.filter((rule) => matches(rule, 'todo')).length,
     accepted: rules.filter((rule) => matches(rule, 'accepted')).length,
@@ -52,12 +77,12 @@ export function countRules(rules: readonly Rule[]): RuleCounts {
 
 export interface RuleGroup {
   readonly name: string;
-  readonly rules: readonly Rule[];
+  readonly rules: readonly RuleDto[];
 }
 
 /** Groups in alphabetical order; in a group, the surest rule first. */
-export function groupRules(rules: readonly Rule[]): RuleGroup[] {
-  const groups = new Map<string, Rule[]>();
+export function groupRules(rules: readonly RuleDto[]): RuleGroup[] {
+  const groups = new Map<string, RuleDto[]>();
   for (const rule of rules) groups.set(rule.group, [...(groups.get(rule.group) ?? []), rule]);
   return [...groups.entries()]
     .sort(([a], [b]) => a.localeCompare(b, 'en'))
@@ -79,7 +104,7 @@ export function firstOfGroups(groups: readonly RuleGroup[], count: number): Rule
 /** Rules sure enough to accept in one gesture: proposed, and at 90 % confidence or more. */
 export const SURE = 0.9;
 
-export function sureProposals(rules: readonly Rule[]): Rule[] {
+export function sureProposals(rules: readonly RuleDto[]): RuleDto[] {
   return rules.filter((rule) => rule.status === 'proposed' && rule.confidence >= SURE);
 }
 
@@ -125,11 +150,11 @@ export interface RuleDraft {
   readonly reason: string;
   readonly checks: readonly CheckDraft[];
   /** Actions written here because the catalogue does not have them yet: the first gate of an organization. */
-  readonly extra: readonly GateAction[];
+  readonly extra: readonly GateActionDto[];
 }
 
 /** The draft of a new rule, or of `rule` as it stands. */
-export function draftOf(rule?: Rule): RuleDraft {
+export function draftOf(rule?: RuleDto): RuleDraft {
   const gate = rule?.gate;
   return {
     statement: rule?.statement ?? '',
@@ -156,7 +181,7 @@ export function listOf(text: string): string[] {
 }
 
 /** The actions a gate may cover: the catalogue's, then those the rule already gates that the catalogue lost. */
-export function gateActions(catalog: readonly GateAction[], rule?: Rule): GateAction[] {
+export function gateActions(catalog: readonly GateActionDto[], rule?: RuleDto): GateActionDto[] {
   const known = new Set(catalog.map((action) => action.class));
   return [...catalog, ...(rule?.gate?.actions ?? []).filter((action) => !known.has(action.class))];
 }
@@ -165,7 +190,7 @@ export function gateActions(catalog: readonly GateAction[], rule?: Rule): GateAc
 export type DraftProblem = 'statement' | 'group' | 'actions' | 'approvers' | 'check';
 
 /** `actions` are those the gate may pick from: a picked one that left them counts for nothing. */
-export function draftProblem(draft: RuleDraft, actions: readonly GateAction[]): DraftProblem | undefined {
+export function draftProblem(draft: RuleDraft, actions: readonly GateActionDto[]): DraftProblem | undefined {
   if (draft.statement.trim() === '') return 'statement';
   if (draft.group.trim() === '') return 'group';
   if (draft.output !== 'gate') return undefined;
@@ -176,7 +201,7 @@ export function draftProblem(draft: RuleDraft, actions: readonly GateAction[]): 
 }
 
 /** The gate a draft puts, with the actions picked from `actions`; none unless the rule is a gate. */
-export function gateOf(draft: RuleDraft, actions: readonly GateAction[]): RuleGate | undefined {
+export function gateOf(draft: RuleDraft, actions: readonly GateActionDto[]): RuleGateDto | undefined {
   if (draft.output !== 'gate') return undefined;
   const reason = draft.reason.trim();
   return {
@@ -190,7 +215,7 @@ export function gateOf(draft: RuleDraft, actions: readonly GateAction[]): RuleGa
 }
 
 /** A new rule from its draft: accepted at once, as the server does by default. */
-export function newRuleOf(draft: RuleDraft, actions: readonly GateAction[]): NewRule {
+export function newRuleOf(draft: RuleDraft, actions: readonly GateActionDto[]): NewRuleRequest {
   const why = draft.why.trim();
   const scope = listOf(draft.scope);
   const gate = gateOf(draft, actions);
@@ -212,18 +237,18 @@ function sameList(a: readonly string[], b: readonly string[]): boolean {
 }
 
 /** A gate as a person reads it: which actions, who answers, why, which checks; not how the server spelled it. */
-function gateKey(gate: RuleGate | undefined): string {
-  if (gate === undefined) return '';
+function gateKey(gate: RuleGateDto | null | undefined): string {
+  if (gate === undefined || gate === null) return '';
   return JSON.stringify([
     gate.actions.map((action) => action.class),
-    gate.approvers,
+    gate.approvers ?? [],
     gate.reason ?? '',
     (gate.checks ?? []).map((check) => [check.check, check.attested ?? false]),
   ]);
 }
 
 /** Only what the draft changed in `rule`; a gate taken off is sent as `null`, which removes it. */
-export function changeOf(rule: Rule, draft: RuleDraft, actions: readonly GateAction[]): RuleChange {
+export function changeOf(rule: RuleDto, draft: RuleDraft, actions: readonly GateActionDto[]): RuleChange {
   const statement = draft.statement.trim();
   const group = draft.group.trim();
   const why = draft.why.trim();
@@ -233,7 +258,7 @@ export function changeOf(rule: Rule, draft: RuleDraft, actions: readonly GateAct
     ...(statement === rule.statement ? {} : { statement }),
     ...(group === rule.group ? {} : { group }),
     ...(why === (rule.why ?? '') ? {} : { why }),
-    ...(sameList(scope, rule.scope ?? []) ? {} : { scope }),
+    ...(sameList(scope, rule.scope) ? {} : { scope }),
     ...(draft.strength === rule.strength ? {} : { strength: draft.strength }),
     ...(draft.output === rule.output ? {} : { output: draft.output }),
     ...(gateKey(gate) === gateKey(rule.gate) ? {} : { gate: gate ?? null }),
@@ -273,7 +298,7 @@ export function actionClass(label: string): string {
  * An action written by hand; undefined until it has a label and a command, since an action without a command matches
  * nothing and would hold nothing. Its repositories are the rule's, read again when the rule is saved.
  */
-export function customAction(label: string, commands: string): GateAction | undefined {
+export function customAction(label: string, commands: string): GateActionDto | undefined {
   const cls = actionClass(label);
   const patterns = listOfCommands(commands);
   if (cls === '' || patterns.length === 0) return undefined;
@@ -297,16 +322,16 @@ export function listOfCommands(text: string): string[] {
  * the commands the person typed; when the catalogue or the rule brings the same class, their commands are kept too.
  */
 export function offeredActions(
-  catalog: readonly GateAction[],
-  rule: Rule | undefined,
+  catalog: readonly GateActionDto[],
+  rule: RuleDto | undefined,
   draft: RuleDraft,
-): GateAction[] {
+): GateActionDto[] {
   const repos = listOf(draft.scope);
   const written = new Map(draft.extra.map((action) => [action.class, { ...action, repos }]));
   const offered = gateActions(catalog, rule).map((action) => {
     const typed = written.get(action.class);
     if (typed === undefined) return action;
-    return { ...typed, patterns: Array.from(new Set([...typed.patterns, ...action.patterns])) };
+    return { ...typed, patterns: Array.from(new Set([...patternsOf(typed), ...patternsOf(action)])) };
   });
   const known = new Set(offered.map((action) => action.class));
   return [...offered, ...[...written.values()].filter((action) => !known.has(action.class))];
@@ -316,7 +341,11 @@ export function offeredActions(
  * What saving an editor sends. A proposed rule is accepted as it saves ("Save and accept"): fixed when something
  * changed, as it was otherwise. A decided rule keeps its decision, and nothing changed sends nothing.
  */
-export function editOf(rule: Rule, draft: RuleDraft, actions: readonly GateAction[]): RuleChange | undefined {
+export function editOf(
+  rule: RuleDto,
+  draft: RuleDraft,
+  actions: readonly GateActionDto[],
+): RuleChange | undefined {
   const change = changeOf(rule, draft, actions);
   const changed = Object.keys(change).length > 0;
   if (rule.status === 'proposed') return changed ? { ...change, status: 'edited' } : { status: 'accepted' };

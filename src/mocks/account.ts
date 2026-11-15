@@ -6,14 +6,14 @@ import {
   handleLogoutEverywhere,
   handleRevokeAuthSession,
 } from '@gen/api/msw.gen';
-import type { Account, AuthSession, LinkStarted } from '@gen/api/types.gen';
+import type { AccountResponse, AuthSessionResponse, LinkStartedResponse } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { refusal } from '@/mocks/http';
 
 export interface AccountState {
   /** The person's signed-in sessions, the current one first. */
-  authSessions: AuthSession[];
+  authSessions: AuthSessionResponse[];
   /** The session cookie holds an account: a sign-out empties it. */
   signedIn: boolean;
   /** How the person signs in (`github`, `google`, `email`): Maya signed up with GitHub. */
@@ -28,7 +28,7 @@ export const DEMO_GITHUB_CONSENT =
   'https://github.com/login/oauth/authorize?client_id=ostrom-demo&state=demo';
 
 /** Maya's account, as `GET /auth/me/account` reads it. */
-function accountOf(s: AccountState): Account {
+function accountOf(s: AccountState): AccountResponse {
   return {
     id: MEMBER_IDS.maya,
     login: 'maya',
@@ -58,7 +58,7 @@ export function createAccountHandlers(state: () => AccountState, now: () => Date
     handleLinkSignInProvider(({ params }) => {
       if (!state().signedIn) return refusal(401, 'unauthorized', 'nobody is signed in');
       if (!LINKABLE.has(params.provider)) return refusal(404, 'not_found', 'no such provider');
-      return HttpResponse.json<LinkStarted>({ authorizationUrl: DEMO_GITHUB_CONSENT });
+      return HttpResponse.json<LinkStartedResponse>({ authorizationUrl: DEMO_GITHUB_CONSENT });
     }),
     handleListAuthSessions(() => {
       const s = state();
@@ -71,7 +71,6 @@ export function createAccountHandlers(state: () => AccountState, now: () => Date
             id: `ses-${String(now().getTime())}`,
             createdAt: at,
             lastSeenAt: at,
-            device: 'This browser',
             current: true,
           },
           ...s.authSessions,

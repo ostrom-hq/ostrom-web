@@ -25,7 +25,6 @@ import {
   handleGetGatePolicy,
   handleExchangeSignInLink,
   handleGetMe,
-  handleGetOrganization,
   handleGetReceipt,
   handleGetReceiptBundle,
   handleGetLaunchLimits,
@@ -46,7 +45,6 @@ import {
   handleListDecisions,
   handleListMcpCalls,
   handleListMcpServers,
-  handleListMembers,
   handleListReceipts,
   handleListRules,
   handleListRunners,
@@ -78,66 +76,58 @@ import {
 import type {
   ApiError,
   Approval,
-  ApprovalView,
-  ApprovalAnswer,
+  ApprovalViewResponse,
   ApprovalCallerView,
   ApprovalQueue,
-  Artifact,
-  ArtifactVersion,
-  Automation,
-  AutomationDryRun,
-  AutomationRun,
-  Budget,
-  CloudEnvironment,
-  CloudProfile,
-  CloudSession,
-  Decision,
-  McpCall,
-  McpHostedProcess,
-  McpServer,
-  Member,
-  Organization,
-  PublicKey,
+  ArtifactResponse,
+  ArtifactVersionResponse,
+  AutomationResponse,
+  DryRunResponse,
+  RunResponse,
+  BudgetDto,
+  CloudEnvironmentDto,
+  CloudProfileResponse,
+  CloudSessionResponse,
+  DecisionDto,
+  McpCallDto,
+  McpHostedProcessDto,
+  McpServerDto,
+  McpUsageRow,
+  MemberResponse,
+  MeOrganizationResponse,
+  PublicKeyResponse,
   Receipt,
-  Rule,
-  RuleStatus,
-  GateAction,
-  RuleGate,
-  Runner,
-  Secret,
-  SharedAccount,
-  LaunchLimits,
-  Session,
-  Spending,
-  Team,
-  Workflow,
+  RuleDto,
+  RuleGateDto,
+  RunnerDto,
+  SecretResponse,
+  SharedAccountResponse,
+  LaunchLimitsBody,
+  SessionDto,
+  SpendingDto,
+  TeamResponse,
   MemoryCuration,
   WorkflowEditors,
   WorkflowRun,
 } from '@gen/api/types.gen';
 import {
-  type zRuleGate,
   zAnswerApprovalRequest,
-  zBudget,
+  zBudgetDto,
   zBulkUpdateRulesBody,
-  zCloudAgentKind,
   zCreateArtifactTicketBody,
   zCreateCloudSessionBody,
-  zRuleStatus,
-  zRuleStrength,
   zSetCloudSessionGithubAccessBody,
   zCreateRuleBody,
-  zCreateWorkflowBody,
   zEnrollSharedAccountBody,
   zExchangeSignInLinkBody,
-  zLaunchLimits,
-  zMcpServer,
+  zLaunchLimitsBody,
+  zMcpServerDto,
+  zRuleGateDto,
   zRequestSignInEmailBody,
   zSaveWorkflowBody,
   zUpdateArtifactBody,
-  zSecretWrite,
+  zSecretWriteRequest,
   zTestAutomationBody,
-  zUpdateRuleBody,
   zUpdateSharedAccountBody,
   zVerifySignInEmailBody,
 } from '@gen/api/zod.gen';
@@ -176,7 +166,7 @@ import {
   type OrgsState,
 } from '@/mocks/orgs';
 import { z } from 'zod/mini';
-import { initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
+import { approvalContext, initialApprovals, initialApprovers, me } from '@/mocks/fixtures/approvals';
 import {
   initialInvitations,
   initialMembers,
@@ -280,6 +270,14 @@ import { initialWorkflowRuns } from '@/mocks/fixtures/runs';
 import { initialWorkflows } from '@/mocks/fixtures/workflows';
 import { imageAllowed } from '@/features/cloud/model';
 import { sameValue } from '@/features/workflows/model';
+import {
+  type ApprovalAnswer,
+  type RuleStatus,
+  zCloudAgentKind,
+  zRuleStatus,
+  zRuleStrength,
+} from '@/shared/api/vocabulary';
+import { readWorkflow, type Workflow } from '@/shared/api/workflowDocument';
 
 export interface MockDb
   extends
@@ -323,20 +321,20 @@ export interface MockDb
    * an approver who linked a GitHub account, as the server's `GateRules.needsLink` says.
    */
   unlinkedAuthors: string[];
-  sessions: Session[];
+  sessions: SessionDto[];
   /** The limits an administrator gave a launch, by launch id; one never given has none (zeros). */
-  launchLimits: Record<string, LaunchLimits>;
+  launchLimits: Record<string, LaunchLimitsBody>;
   /** Newest first, as the server lists them; an answer adds its receipt at the top. */
   receipts: Receipt[];
-  organization: Organization;
+  organization: MeOrganizationResponse;
   /**
    * The person's other active memberships. With none, a call that names no organization acts in `organization`; with
    * any, it must name one with `Ostrom-Org` or is refused with 409 `org_required`, as `MembershipOrgResolver` does.
    * The demo keeps one set of data, Acme's; another organization reads none of its artifacts.
    */
-  otherOrganizations: Organization[];
-  members: Member[];
-  teams: Team[];
+  otherOrganizations: MeOrganizationResponse[];
+  members: MemberResponse[];
+  teams: TeamResponse[];
   workflows: Workflow[];
   /** The organization's workflow runs, newest first. */
   workflowRuns: WorkflowRun[];
@@ -349,29 +347,29 @@ export interface MockDb
    * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
    */
   selfApproval: string;
-  rules: Rule[];
+  rules: RuleDto[];
   /** Signed decisions on rules, workflows, owners and policies; newest first. */
-  decisions: Decision[];
-  mcpServers: McpServer[];
+  decisions: DecisionDto[];
+  mcpServers: McpServerDto[];
   /** Secrets as the server lists them: names and metadata, never a value. */
-  secrets: Secret[];
-  mcpCalls: McpCall[];
+  secrets: SecretResponse[];
+  mcpCalls: McpCallDto[];
   /** The MCP host's processes; a restart clears a failure and a backoff. */
-  mcpHosted: McpHostedProcess[];
-  budgets: Budget[];
+  mcpHosted: McpHostedProcessDto[];
+  budgets: BudgetDto[];
   /** The spending served instead of the fixture's: the large organization's (PERF-CONSOLE). */
-  spending?: (period: 'month' | 'week') => Spending;
-  cloudSessions: CloudSession[];
-  runners: Runner[];
-  automations: Automation[];
-  automationRuns: AutomationRun[];
-  artifacts: Artifact[];
-  artifactVersions: Record<string, ArtifactVersion[]>;
+  spending?: (period: 'month' | 'week') => SpendingDto;
+  cloudSessions: CloudSessionResponse[];
+  runners: RunnerDto[];
+  automations: AutomationResponse[];
+  automationRuns: RunResponse[];
+  artifacts: ArtifactResponse[];
+  artifactVersions: Record<string, ArtifactVersionResponse[]>;
   /** Who reads an artifact shared with people, by artifact. */
   artifactMembers: Record<string, string[]>;
-  sharedAccounts: SharedAccount[];
+  sharedAccounts: SharedAccountResponse[];
   /** The run each idempotency key queued, by `automation id:key`: a replay answers it, never a second run. */
-  runsByKey: Record<string, AutomationRun>;
+  runsByKey: Record<string, RunResponse>;
   /** The next shared account id; ids are never reused, even after a removal. */
   nextAccountId: number;
   /**
@@ -529,21 +527,21 @@ export function createMockDb(): MockDb {
 }
 
 /** The server's own checks on top of the contract's shape: a name it can route to, an https URL. */
-const zMcpServerWrite = z.extend(zMcpServer, {
+const zMcpServerWrite = z.extend(zMcpServerDto, {
   name: z.string().check(z.regex(/^[a-z][a-z0-9-]{0,39}$/)),
   url: z.url({ protocol: /^https$/ }),
   // The relay's two scopes (`McpRules`): one shared credential, or each member's own.
   scope: z.enum(['shared', 'per-member']),
 });
 /** A parsed write as the contract's server: an absent list stays absent, never `undefined`. */
-function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServer {
-  const server: McpServer = {
+function serverFrom(write: z.infer<typeof zMcpServerWrite>): McpServerDto {
+  const server: McpServerDto = {
     name: write.name,
     url: write.url,
     transport: write.transport,
-    enabled: write.enabled,
     scope: write.scope,
   };
+  if (write.enabled !== undefined) server.enabled = write.enabled;
   if (write.secretNames !== undefined) server.secretNames = write.secretNames;
   if (write.tools !== undefined) server.tools = write.tools;
   return server;
@@ -555,13 +553,13 @@ const SECRET_NAME = /^[A-Z][A-Z0-9_]{0,63}$/;
  * member) and at least one positive amount. As the server, no workflow budget.
  */
 const zBudgetWrite = z
-  .extend(zBudget, {
+  .extend(zBudgetDto, {
     scope: z.enum(['org', 'member']),
     usdPerMonth: z.optional(z.number().check(z.positive())),
     usdPerDay: z.optional(z.number().check(z.positive())),
   })
   .check(
-    z.refine((budget) => budget.scope === 'member' || budget.subject === undefined),
+    z.refine((budget) => budget.scope === 'member' || (budget.subject ?? undefined) === undefined),
     z.refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined),
   );
 // The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
@@ -569,7 +567,7 @@ const SENT_CLOUD_SESSION = z.extend(zCreateCloudSessionBody, { agent: z.string()
 /** A recipe as the server stores it: the fields sent, none left `undefined` (the body's parse keeps them so). */
 function storedRecipe(
   sent: NonNullable<z.infer<typeof SENT_CLOUD_SESSION>['environment']>,
-): CloudEnvironment {
+): CloudEnvironmentDto {
   const { repositories, workingDirectory, setup, requiredVariables, requireGitHub, gitEmailDomain } = sent;
   return {
     ...(repositories === undefined
@@ -625,6 +623,28 @@ const PROVIDERS = new Map([
   ['openai', 'codex'],
   ['codex', 'codex'],
 ]);
+/**
+ * A rule change as the server reads it: the document types the body as a free object, so the mock reads the fields
+ * its description lists (statement, status, strength, reviewBy, scope, group, why, output, gate).
+ */
+const zRuleChange = z.object({
+  statement: z.optional(z.string()),
+  status: z.optional(zRuleStatus),
+  strength: z.optional(zRuleStrength),
+  reviewBy: z.optional(z.string()),
+  scope: z.optional(z.array(z.string())),
+  group: z.optional(z.string()),
+  why: z.optional(z.string()),
+  output: z.optional(z.string()),
+  gate: z.nullish(zRuleGateDto),
+});
+/** The GitHub access a session can have (the document types it as free text). */
+const GITHUB_ACCESS = ['owner', 'shared', 'none'] as const;
+/** A launch's limits as the server bounds them (the document keeps the numbers unbounded). */
+const zLaunchLimitsWrite = z.extend(zLaunchLimitsBody, {
+  budgetMicros: z.int().check(z.gte(0), z.lte(100_000_000_000_000)),
+  maxConcurrent: z.int().check(z.gte(0), z.lte(32)),
+});
 const zPolicy = z.object({ selfApproval: z.enum(['sole-approver', 'never']) });
 
 /** Owners and admins manage the members, as the server's `orgs:write` scope does. */
@@ -638,7 +658,7 @@ function canManage(db: MockDb): boolean {
  * kind (none is `api`, a launch with a cloud session `cloud_session`, a launch alone `local_run`), the access, and the
  * cloud session or launch that published it.
  */
-function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams): boolean {
+function artifactMatches(db: MockDb, artifact: ArtifactResponse, query: URLSearchParams): boolean {
   const scope = query.get('scope');
   if (scope === 'mine' && artifact.owner !== me.dev.login) return false;
   if (
@@ -647,10 +667,11 @@ function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams)
   )
     return false;
   const origin = query.get('origin');
+  const published = artifact.origin ?? undefined;
   const kind =
-    artifact.origin === undefined
+    published === undefined
       ? 'api'
-      : artifact.origin.cloudSessionId === undefined
+      : (published.cloudSessionId ?? undefined) === undefined
         ? 'local_run'
         : 'cloud_session';
   if (origin !== null && origin !== kind) return false;
@@ -663,7 +684,7 @@ function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams)
 }
 
 /** An automation changes by its owner, or by an owner or an admin of the organization. */
-function mayChange(db: MockDb, automation: Automation): boolean {
+function mayChange(db: MockDb, automation: AutomationResponse): boolean {
   return automation.owner === me.dev.login || canManage(db);
 }
 
@@ -672,18 +693,18 @@ function switchAutomation(
   id: string,
   enabled: boolean,
   at: string,
-): HttpResponse<Automation | ApiError> {
+): HttpResponse<AutomationResponse | ApiError> {
   const index = db.automations.findIndex((item) => item.id === id);
   const automation = db.automations[index];
   if (automation === undefined) return refusal(404, 'not_found', 'automation not found');
   if (!mayChange(db, automation)) return refusal(403, 'forbidden', 'only its owner, an owner or an admin');
-  const switched: Automation = { ...automation, enabled, updatedAt: at };
+  const switched: AutomationResponse = { ...automation, enabled, updatedAt: at };
   db.automations[index] = switched;
   return HttpResponse.json(switched);
 }
 
 /** The mock's stand-in for the server's check: a receipt whose signature names no key does not verify. */
-export const MOCK_KEY: PublicKey = {
+export const MOCK_KEY: PublicKeyResponse = {
   kid: '4f2a9c1b',
   alg: 'ed25519',
   publicKeyPem: '-----BEGIN PUBLIC KEY-----\nmock\n-----END PUBLIC KEY-----',
@@ -709,13 +730,13 @@ function refusal(status: number, type: string, message: string): HttpResponse<Ap
 const WITH_ORG_IF_NAMED = /^\/api\/v1\/devices(?:\/[^/]+)?$/;
 
 /** The organization a call acts in, once the first handler let it through. */
-function organizationOf(db: MockDb, request: Request): Organization {
+function organizationOf(db: MockDb, request: Request): MeOrganizationResponse {
   const named = request.headers.get(ORG_HEADER);
   return membershipsOf(db).find((organization) => organization.id === named) ?? db.organization;
 }
 
 /** The organization a call acts in, as `MembershipOrgResolver` resolves it; a refusal when it cannot. */
-function resolveOrganization(db: MockDb, request: Request): Organization | HttpResponse<ApiError> {
+function resolveOrganization(db: MockDb, request: Request): MeOrganizationResponse | HttpResponse<ApiError> {
   const named = request.headers.get(ORG_HEADER);
   if (membershipsOf(db).length === 0)
     return refusal(404, 'not_found', 'You are not a member of any organization yet.');
@@ -823,7 +844,7 @@ async function readJson(request: Request): Promise<unknown> {
 
 /** The approvals slice of the contract, served from memory with the server's rules. */
 /** A rule decision is signed like any other: a decision line and its receipt, newest first. */
-function recordRuleDecision(db: MockDb, rule: Rule, action: RuleStatus | 'deleted', at: string): void {
+function recordRuleDecision(db: MockDb, rule: RuleDto, action: RuleStatus | 'deleted', at: string): void {
   const id = `dec-${String(db.decisions.length + 1)}`;
   db.decisions.unshift({
     id,
@@ -872,17 +893,17 @@ function savedWorkflow(workflow: Workflow, version: number, at: string): Workflo
 }
 
 /** A gate as the zod schema reads it, with the optional fields it left out really absent. */
-function ruleGateOf(gate: z.infer<typeof zRuleGate>): RuleGate {
+function ruleGateOf(gate: z.infer<typeof zRuleGateDto>): RuleGateDto {
   return {
     // `keywords` and `gate` are the catalogue's, never a rule's: a rule gate keeps its own fields only.
     actions: gate.actions.map(({ class: actionClass, label, patterns, repos, tools }) => ({
       class: actionClass,
-      label,
-      patterns,
+      ...(label === undefined ? {} : { label }),
+      ...(patterns === undefined ? {} : { patterns }),
       ...(repos === undefined ? {} : { repos }),
       ...(tools === undefined ? {} : { tools }),
     })),
-    approvers: gate.approvers,
+    ...(gate.approvers === undefined ? {} : { approvers: gate.approvers }),
     ...(gate.reason === undefined ? {} : { reason: gate.reason }),
     ...(gate.checks === undefined
       ? {}
@@ -896,9 +917,9 @@ function ruleGateOf(gate: z.infer<typeof zRuleGate>): RuleGate {
 }
 
 /** What a rule becomes after a decision: decided by the caller, or back to proposed with no decider. */
-function decided(rule: Rule, status: RuleStatus, at: string): Rule {
+function decided(rule: RuleDto, status: RuleStatus, at: string): RuleDto {
   if (status !== 'proposed') return { ...rule, status, decidedBy: me.dev.login, decidedAt: at };
-  const open: Rule = { ...rule, status };
+  const open: RuleDto = { ...rule, status };
   delete open.decidedBy;
   delete open.decidedAt;
   return open;
@@ -909,6 +930,8 @@ export const DEMO_EMAIL_TOKEN = 'ml_demo';
 /** A sign-in e-mail's token opened in another browser than the one that asked for it: refused with 403. */
 export const OTHER_BROWSER_EMAIL_TOKEN = 'ml_other_browser';
 
+const DEVICE_ANSWER = /^\/api\/v1\/auth\/device\/answer$/;
+
 export { FRESH_SIGN_IN_MS };
 
 export function createHandlers(db: MockDb, now: () => Date = () => new Date()): HttpHandler[] {
@@ -916,13 +939,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
   const notFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'approval not found');
   const findReceipt = (id: string): Receipt | undefined => db.receipts.find((receipt) => receipt.id === id);
   const receiptNotFound = (): HttpResponse<ApiError> => refusal(404, 'not_found', 'receipt not found');
-  const callsOf = (request: Request): McpCall[] =>
+  const callsOf = (request: Request): McpCallDto[] =>
     organizationOf(db, request).id === db.organization.id ? db.mcpCalls : [];
   return [
     // First: a call that acts in the caller's organization is refused before any handler when it cannot be resolved.
     http.all('*/api/v1/*', ({ request }) => {
       const { pathname } = new URL(request.url);
       if (!actsInOrganization(pathname)) return undefined;
+      // The device answer resolves its organization itself, and only for an admin sign-in: an ordinary one names none.
+      if (DEVICE_ANSWER.test(pathname)) return undefined;
       // The workstations are the person's: `/devices` reads an organization only when the call names one.
       if (WITH_ORG_IF_NAMED.test(pathname) && !request.headers.has(ORG_HEADER)) return undefined;
       const organization = resolveOrganization(db, request);
@@ -1010,7 +1035,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     // Before `/approvals/{id}`, which would read `queue` as an id.
     handleGetApprovalQueue(() => {
-      const viewOf = (approval: Approval): ApprovalView => ({ approval, you: callerViewOf(db, approval) });
+      const viewOf = (approval: Approval): ApprovalViewResponse => ({
+        approval,
+        ...approvalContext(approval),
+        you: callerViewOf(db, approval),
+      });
       const queue: ApprovalQueue = {
         operator: me.dev.login,
         you: { login: me.dev.login, via: 'console' },
@@ -1027,7 +1056,11 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetApprovalView(({ params }) => {
       const approval = find(params.id) ?? db.approvals.find((item) => item.group === params.id);
       if (approval === undefined) return notFound();
-      const view: ApprovalView = { approval, you: callerViewOf(db, approval) };
+      const view: ApprovalViewResponse = {
+        approval,
+        ...approvalContext(approval),
+        you: callerViewOf(db, approval),
+      };
       return HttpResponse.json(view);
     }),
     handleGetApproval(({ params }) => {
@@ -1070,20 +1103,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       db.approvals = db.approvals.map((item) => (item.id === next.id ? next : item));
       const receipt = receiptOf(next, at);
       db.receipts = [receipt, ...db.receipts];
-      const view: ApprovalView = {
+      const view: ApprovalViewResponse = {
         approval: next,
+        ...approvalContext(next),
         receipt,
         you: callerViewOf(db, next),
       };
       return HttpResponse.json(view);
     }),
-    // The contract's planned `/org`, kept for the organization tests; the screens read `/orgs/{org}`.
-    handleGetOrganization(({ request }) => HttpResponse.json(organizationOf(db, request))),
-    // The contract's planned `/members`: the server does not serve it (it serves `/orgs/{org}/members`), so the demo
-    // answers 404 as it does, and a screen that still reads it fails in the tests instead of on a real server.
-    handleListMembers(() =>
-      refusal(404, 'not_found', 'GET /api/v1/members is not served: read /orgs/{org}/members'),
-    ),
     ...createOrgsHandlers(() => db, now),
     ...createOrgDeletionHandlers(() => db),
     ...createTokensHandlers(() => db, now),
@@ -1141,12 +1168,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const matching = db.rules.filter(
         (rule) => (status === null || rule.status === status) && (group === null || rule.group === group),
       );
-      // As the server pages them (`RulesApi`): `limit` brought into 1 to 1000, `after` the previous page's `next`.
+      // As the server pages them (`RulesApi`, `Pages.size`): a `limit` under 1 refused, above 1000 brought down to it,
+      // `after` the previous page's `next`.
       const after = params.get('after');
       const from = after === null ? 0 : matching.findIndex((rule) => rule.id === after) + 1;
       if (from === 0 && after !== null)
         return refusal(400, 'invalid_request', 'The cursor is not one a previous page gave.');
-      const limit = Math.min(Math.max(Number(params.get('limit') ?? RULES_PAGE), 1), RULES_PAGE);
+      const asked = Number(params.get('limit') ?? RULES_PAGE);
+      if (asked < 1) return refusal(400, 'invalid_request', 'The page size is under 1.');
+      const limit = Math.min(asked, RULES_PAGE);
       const items = matching.slice(from, from + limit);
       const last = items.at(-1);
       return HttpResponse.json(
@@ -1158,7 +1188,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const rule = db.rules[index];
       if (rule === undefined) return refusal(404, 'not_found', 'rule not found');
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins decide rules');
-      const body = zUpdateRuleBody.safeParse(await readJson(request));
+      const body = zRuleChange.safeParse(await readJson(request));
       // The server refuses a status or a strength it does not know, though the contract keeps both open for readers.
       if (
         !body.success ||
@@ -1169,7 +1199,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const at = now().toISOString();
       // The mock applies what the console sends; a gate sent as null is taken off, as on the server.
       const { statement, strength, group, why, output, scope, gate } = body.data;
-      const edits: Rule = {
+      const edits: RuleDto = {
         ...rule,
         ...(statement === undefined ? {} : { statement }),
         ...(strength === undefined ? {} : { strength }),
@@ -1202,32 +1232,24 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins write rules');
       const body = zCreateRuleBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a rule needs a statement and a group');
-      const {
-        status = 'accepted',
-        statement,
-        group,
-        output,
-        strength,
-        why,
-        scope,
-        reviewBy,
-        gate,
-      } = body.data;
+      const { status: asked, statement, group, output, strength, why, scope, reviewBy, gate } = body.data;
+      const status = asked ?? 'accepted';
       if (status !== 'accepted' && status !== 'proposed')
         return refusal(400, 'invalid_request', 'a new rule is proposed or accepted');
       const at = now().toISOString();
       // Ids are R- and digits: the next one follows the highest.
       const last = db.rules.reduce((max, rule) => Math.max(max, Number(rule.id.replace(/\D/g, ''))), 0);
-      const written: Rule = {
+      const written: RuleDto = {
         id: `R-${String(last + 1)}`,
         statement,
         group,
+        sources: [],
         output: output ?? 'note',
         strength: strength ?? 'required',
+        scope: scope ?? [],
         ...(why === undefined ? {} : { why }),
-        ...(scope === undefined ? {} : { scope }),
         ...(reviewBy === undefined ? {} : { reviewBy }),
-        ...(gate === undefined ? {} : { gate: ruleGateOf(gate) }),
+        ...(gate === undefined || gate === null ? {} : { gate: ruleGateOf(gate) }),
         confidence: 1,
         status: 'proposed',
         foundBy: me.dev.login,
@@ -1249,7 +1271,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     // The catalogue the gates decide on: the actions of the workflows' gates and of the accepted rules' gates.
     handleGetGateCatalog(() => {
-      const actions = new Map<string, GateAction>();
+      const actions = new Map<string, unknown>();
       for (const workflow of db.workflows)
         for (const node of workflow.nodes)
           for (const action of node.actions ?? []) actions.set(action.class, action);
@@ -1331,11 +1353,32 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleGetMcpUsage(({ request }) => {
       const byServer: Record<string, number> = {};
       const byTool: Record<string, number> = {};
+      const rows = new Map<string, McpUsageRow>();
       for (const call of callsOf(request)) {
         byServer[call.server] = (byServer[call.server] ?? 0) + 1;
-        byTool[call.tool] = (byTool[call.tool] ?? 0) + 1;
+        const tool = `${call.server}/${call.tool}`;
+        byTool[tool] = (byTool[tool] ?? 0) + 1;
+        const key = `${call.dev}/${call.server}`;
+        const row = rows.get(key) ?? {
+          dev: call.dev,
+          server: call.server,
+          calls: 0,
+          lists: 0,
+          errors: 0,
+          denied: 0,
+          bytes: 0,
+          durationMs: 0,
+        };
+        rows.set(key, {
+          ...row,
+          calls: row.calls + 1,
+          errors: row.errors + (call.outcome === 'error' ? 1 : 0),
+          denied: row.denied + (call.outcome === 'denied' ? 1 : 0),
+          bytes: row.bytes + call.responseBytes,
+          durationMs: row.durationMs + call.durationMs,
+        });
       }
-      return HttpResponse.json({ byServer, byTool });
+      return HttpResponse.json({ byServer, byTool, rows: [...rows.values()] });
     }),
     ...createEnvironmentHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
@@ -1405,13 +1448,13 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListSecrets(() => HttpResponse.json({ items: db.secrets })),
     handleCreateSecret(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
-      const body = zSecretWrite.safeParse(await readJson(request));
+      const body = zSecretWriteRequest.safeParse(await readJson(request));
       if (!body.success || !SECRET_NAME.test(body.data.name) || body.data.value === '')
         return refusal(400, 'invalid_request', 'a name in CAPITALS and a value are needed');
       if (db.secrets.some((secret) => secret.name === body.data.name))
         return refusal(409, 'already_exists', `a secret named ${body.data.name} exists`);
       const at = now().toISOString();
-      const secret: Secret = {
+      const secret: SecretResponse = {
         name: body.data.name,
         scope: body.data.scope ?? 'org',
         version: 1,
@@ -1427,10 +1470,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const secret = db.secrets[index];
       if (secret === undefined) return refusal(404, 'not_found', 'secret not found');
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins manage secrets');
-      const body = zSecretWrite.safeParse(await readJson(request));
+      const body = zSecretWriteRequest.safeParse(await readJson(request));
       if (!body.success || body.data.value === '')
         return refusal(400, 'invalid_request', 'a new value is needed');
-      const rotated: Secret = {
+      const rotated: SecretResponse = {
         ...secret,
         version: secret.version + 1,
         updatedAt: now().toISOString(),
@@ -1473,14 +1516,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = zBudgetWrite.safeParse(await readJson(request));
       if (!body.success)
         return refusal(400, 'invalid_request', 'a scope, a subject outside the organization, and an amount');
-      const budget: Budget = {
+      const budget: BudgetDto = {
         scope: body.data.scope,
-        hardStop: body.data.hardStop,
+        ...(body.data.hardStop === undefined ? {} : { hardStop: body.data.hardStop }),
         ...(body.data.subject === undefined ? {} : { subject: body.data.subject }),
         ...(body.data.usdPerMonth === undefined ? {} : { usdPerMonth: body.data.usdPerMonth }),
         ...(body.data.usdPerDay === undefined ? {} : { usdPerDay: body.data.usdPerDay }),
       };
-      const same = (item: Budget): boolean => item.scope === budget.scope && item.subject === budget.subject;
+      const same = (item: BudgetDto): boolean =>
+        item.scope === budget.scope && item.subject === budget.subject;
       db.budgets = db.budgets.some(same)
         ? db.budgets.map((item) => (same(item) ? budget : item))
         : [...db.budgets, budget];
@@ -1503,7 +1547,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           'invalid_request',
           `Unknown agent ${body.data.agent}: use ${knownValues(zCloudAgentKind).join(', ')}.`,
         );
-      const { repo, ref, environment, mode } = body.data;
+      const sent = body.data;
+      const repo = sent.repo ?? undefined;
+      const ref = sent.ref ?? undefined;
+      const environment = sent.environment ?? undefined;
+      const mode = sent.mode ?? undefined;
+      const profileId = sent.profileId ?? undefined;
+      const image = sent.image ?? undefined;
+      const name = sent.name?.trim();
+      const model = sent.model ?? undefined;
       // A conversation runs Claude Code or Codex headless; any other mode is refused, as the server does.
       if (
         mode !== undefined &&
@@ -1532,20 +1584,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           managesMembers(demoRoleIn(db, organizationOf(db, request), now)) ||
           (mine !== undefined && item.assignedMemberIds.includes(mine)),
       );
-      let chosen: CloudProfile | undefined;
-      if (body.data.profileId === undefined) {
+      let chosen: CloudProfileResponse | undefined;
+      if (profileId === undefined) {
         if (db.cloudProfiles.length > 0 || usable.length > 0) {
           if (usable.length !== 1)
             return refusal(422, 'profile_required', 'Name the profile: you may use none or several.');
           chosen = usable[0];
         }
       } else {
-        chosen = db.cloudProfiles.find((item) => item.id === body.data.profileId);
+        chosen = db.cloudProfiles.find((item) => item.id === profileId);
         if (chosen === undefined) return refusal(404, 'cloud_profile_not_found', 'No such cloud profile.');
         if (!usable.includes(chosen))
           return refusal(403, 'profile_unassigned', 'That profile is not assigned to the session’s owner.');
       }
-      if (chosen !== undefined && !imageAllowed(body.data.image ?? '', chosen))
+      if (chosen !== undefined && !imageAllowed(image ?? '', chosen))
         return refusal(403, 'image_not_allowed', 'The profile does not allow that image.');
       if (chosen !== undefined) {
         const target = chosen;
@@ -1559,23 +1611,26 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
             'The profile’s cluster no longer allows its namespace.',
           );
       }
-      const session: CloudSession = {
-        id: `cs-${String(db.cloudSessions.length + 100)}`,
+      const id = `cs-${String(db.cloudSessions.length + 100)}`;
+      const at = now().toISOString();
+      const session: CloudSessionResponse = {
+        id,
+        name: name === undefined || name === '' ? `${agent} · ${id}` : name,
         ...(chosen === undefined
           ? {}
           : {
               profile: { id: chosen.id, version: chosen.version },
-              image:
-                body.data.image === undefined || body.data.image === '' ? chosen.spec.image : body.data.image,
+              image: image === undefined || image === '' ? chosen.spec.image : image,
             }),
         owner: me.dev.login,
         agent,
         status: 'queued',
-        createdAt: now().toISOString(),
-        ...(body.data.name === undefined || body.data.name.trim() === ''
-          ? {}
-          : { name: body.data.name.trim() }),
-        ...(body.data.model === undefined ? {} : { model: body.data.model }),
+        desiredStatus: 'running',
+        epoch: 0,
+        limits: { idleTimeoutMinutes: 30, maxRunMinutes: 480, restrictedEgress: false },
+        createdAt: at,
+        updatedAt: at,
+        ...(model === undefined ? {} : { model }),
         ...(repo === undefined ? {} : { repo }),
         ...(ref === undefined ? {} : { ref }),
         ...(environment === undefined ? {} : { environment: storedRecipe(environment) }),
@@ -1600,15 +1655,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       // Anyone but the owner (an owner or an admin included) does not see the session as theirs: 404.
       if (session?.owner !== me.dev.login) return refusal(404, 'not_found', 'cloud session not found');
       const body = zSetCloudSessionGithubAccessBody.safeParse(await readJson(request));
-      if (
-        !body.success ||
-        !isKnown(knownValues(zSetCloudSessionGithubAccessBody.shape.access), body.data.access)
-      )
+      if (!body.success || !GITHUB_ACCESS.some((known) => known === body.data.access))
         return refusal(400, 'invalid_request', 'access is owner, shared or none');
       // Turning access off waits for a pause: a running agent keeps the token it already received.
       if (body.data.access === 'none' && session.status !== 'paused')
         return refusal(409, 'session_not_paused', 'Pause the session before turning its GitHub access off.');
-      const changed: CloudSession = { ...session, githubAccess: body.data.access };
+      const changed: CloudSessionResponse = { ...session, githubAccess: body.data.access };
       db.cloudSessions[index] = changed;
       return HttpResponse.json(changed);
     }),
@@ -1632,7 +1684,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(403, 'forbidden', 'only its owner, an owner or an admin ends it');
       if (run.status !== 'queued' && run.status !== 'started')
         return refusal(409, 'run_finished', 'The run is already over.');
-      const cancelled: AutomationRun = {
+      const cancelled: RunResponse = {
         ...run,
         status: 'cancelled',
         reason: 'cancelled',
@@ -1649,8 +1701,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const body = zTestAutomationBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'payload and dryRun');
       if (body.data.dryRun === true) {
-        const dryRun: AutomationDryRun = {
-          renderedPrompt: automation.action.prompt ?? '',
+        const dryRun: DryRunResponse = {
+          renderedPrompt: automation.action.prompt,
           variables: [],
           problems: body.data.payload === undefined ? [] : [{ path: '$', rule: 'not_scalar' }],
           nextRuns: [],
@@ -1663,7 +1715,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const replayed = db.runsByKey[`${automation.id}:${key}`];
       if (replayed !== undefined) return HttpResponse.json(replayed, { status: 202 });
       const at = now().toISOString();
-      const run: AutomationRun = {
+      const run: RunResponse = {
         id: `run-${String(db.automationRuns.length + 100)}`,
         automationId: automation.id,
         source: 'test',
@@ -1720,10 +1772,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(403, 'forbidden', 'only its owner changes an artifact');
       const body = zUpdateArtifactBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'a title or an access');
-      const updated: Artifact = {
+      const title = body.data.title ?? undefined;
+      const access = body.data.access ?? undefined;
+      const updated: ArtifactResponse = {
         ...artifact,
-        ...(body.data.title === undefined ? {} : { title: body.data.title }),
-        ...(body.data.access === undefined ? {} : { access: body.data.access }),
+        ...(title === undefined ? {} : { title }),
+        ...(access === undefined ? {} : { access }),
       };
       db.artifacts = db.artifacts.map((item) => (item.id === params.id ? updated : item));
       return HttpResponse.json(updated);
@@ -1789,11 +1843,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(400, 'invalid_request', 'a provider, a label and a credential');
       if (!db.secrets.some((secret) => secret.name === body.data.credentialSecret))
         return refusal(400, 'invalid_request', `no secret named ${body.data.credentialSecret}`);
-      const account: SharedAccount = {
+      const account: SharedAccountResponse = {
         id: `acc-${String(db.nextAccountId++)}`,
         provider,
         label: body.data.label.trim(),
         owner: me.dev.login,
+        mine: true,
+        priority: 0,
+        limits: {},
+        createdAt: now().toISOString(),
         status: 'ready',
         sharedWith: body.data.sharedWith ?? [],
         paused: false,
@@ -1812,16 +1870,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         return refusal(403, 'forbidden', 'only its owner changes a subscription');
       const body = zUpdateSharedAccountBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'sharedWith, dailyAllocationUsd or paused');
-      const updated: SharedAccount = {
+      const sharedWith = body.data.sharedWith ?? undefined;
+      const paused = body.data.paused ?? undefined;
+      const updated: SharedAccountResponse = {
         ...account,
-        ...(body.data.sharedWith === undefined ? {} : { sharedWith: body.data.sharedWith }),
+        ...(sharedWith === undefined ? {} : { sharedWith }),
         ...(body.data.dailyAllocationUsd === undefined
           ? {}
           : { dailyAllocationUsd: body.data.dailyAllocationUsd }),
         // A pause writes `disabled`, a resume `ready` again (ostrom-server); one waiting for a sign-in stays so.
-        ...(body.data.paused === undefined
-          ? {}
-          : pausedAs(statusAfterPause(account.status, body.data.paused))),
+        ...(paused === undefined ? {} : pausedAs(statusAfterPause(account.status, paused))),
       };
       db.sharedAccounts[index] = updated;
       return HttpResponse.json(updated);
@@ -1833,7 +1891,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (account === undefined) return refusal(404, 'not_found', 'shared account not found');
       if (!canManage(db))
         return refusal(403, 'account_handover_forbidden', 'only an administrator hands it over');
-      const handed: SharedAccount = {
+      const handed: SharedAccountResponse = {
         ...account,
         refreshOwnership: 'ostrom',
         status: account.status === 'pending_handover' ? 'ready' : account.status,
@@ -1929,10 +1987,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     // Writes, as the server takes them: a person decides; a version saved in between is a conflict; a deletion signs.
     handleCreateWorkflow(async ({ request }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change workflows');
-      // Checked by the contract's schema, then read with its optional fields really absent.
-      if (!zCreateWorkflowBody.safeParse(await readJson(request.clone())).success)
-        return refusal(400, 'invalid_request', 'not a workflow');
-      const sent = await request.json();
+      // The document types a workflow as a free object: the console's own reader checks it.
+      const sent = readWorkflow(await readJson(request));
+      if (sent === undefined) return refusal(400, 'invalid_request', 'not a workflow');
       if (db.workflows.some((item) => item.id === sent.id))
         return refusal(409, 'conflict', 'A workflow with this id exists.');
       const at = new Date().toISOString();
@@ -1944,17 +2001,18 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     }),
     handleSaveWorkflow(async ({ request, params }) => {
       if (!canManage(db)) return refusal(403, 'forbidden', 'only owners and admins change workflows');
-      if (!zSaveWorkflowBody.safeParse(await readJson(request.clone())).success)
-        return refusal(400, 'invalid_request', 'not a workflow');
-      const body = { data: await request.json() };
-      if (body.data.workflow.id !== params.id)
+      const body = zSaveWorkflowBody.safeParse(await readJson(request));
+      const proposed = body.success ? readWorkflow(body.data.workflow) : undefined;
+      if (!body.success || proposed === undefined) return refusal(400, 'invalid_request', 'not a workflow');
+      const expectedVersion = body.data.expectedVersion ?? undefined;
+      if (proposed.id !== params.id)
         return refusal(400, 'invalid_request', 'the workflow id is not the path id');
       const at = new Date().toISOString();
       const current = db.workflows.find((item) => item.id === params.id);
       if (current === undefined) return refusal(404, 'not_found', 'workflow not found');
-      if (body.data.expectedVersion !== undefined && body.data.expectedVersion !== current.version)
+      if (expectedVersion !== undefined && expectedVersion !== current.version)
         return refusal(409, 'conflict', 'workflow_conflict: someone saved this workflow in between.');
-      const workflow = savedWorkflow(body.data.workflow, (current.version ?? 0) + 1, at);
+      const workflow = savedWorkflow(proposed, (current.version ?? 0) + 1, at);
       db.workflows = db.workflows.map((item) => (item.id === workflow.id ? workflow : item));
       // As the server: a decision is signed only when something decided changed (steps, paths, status, name, the
       // repositories it is limited to).
@@ -2033,7 +2091,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       if (!db.sessions.some((session) => session.launchId === params.launchId)) {
         return refusal(404, 'not_found', 'launch not found');
       }
-      const body = zLaunchLimits.safeParse(await readJson(request));
+      const body = zLaunchLimitsWrite.safeParse(await readJson(request));
       if (!body.success) {
         return refusal(
           400,
@@ -2042,7 +2100,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         );
       }
       const saved = {
-        budgetMicros: Number(body.data.budgetMicros),
+        budgetMicros: body.data.budgetMicros,
         maxConcurrent: body.data.maxConcurrent,
         paused: body.data.paused,
         spentMicros: db.launchLimits[params.launchId]?.spentMicros ?? 0,

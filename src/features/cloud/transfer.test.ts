@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession, CloudTransfer } from '@gen/api/types.gen';
+import type { CloudSessionResponse, CloudTransferResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
   isOpenTransfer,
@@ -10,14 +10,19 @@ import {
   transferTone,
 } from './transfer';
 
-const session = (status: string, owner = 'maya'): CloudSession => ({
+const session = (status: string, owner = 'maya'): CloudSessionResponse => ({
   id: 's',
+  name: '',
   owner,
   agent: 'claude',
   status,
+  desiredStatus: 'running',
+  epoch: 1,
+  limits: { idleTimeoutMinutes: 30, maxRunMinutes: 60, restrictedEgress: false },
   createdAt: '2026-10-30T07:00:00.000Z',
+  updatedAt: '2026-10-30T07:00:00.000Z',
 });
-const transfer = (state: string): CloudTransfer => ({
+const transfer = (state: string): CloudTransferResponse => ({
   id: 't',
   sessionId: 's',
   fromMemberId: 'a',

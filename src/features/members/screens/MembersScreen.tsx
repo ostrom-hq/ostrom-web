@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, OrgView } from '@gen/api/types.gen';
+import type { MemberResponse, OrgResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { givableRoles, managesMembers, mayManage, type OrgRole, orgRoleOf } from '@/shared/org/roles';
@@ -25,7 +25,7 @@ export function MembersScreen(): ReactElement {
 }
 
 /** The list a failed search leaves: nobody, under the box and the reason. */
-const NOBODY: readonly OrgMember[] = [];
+const NOBODY: readonly MemberResponse[] = [];
 /** The longest search the server reads (`q`, 1 to 100 characters). */
 const SEARCH_MAX = 100;
 
@@ -33,7 +33,7 @@ function MembersPage({
   org,
   role,
 }: {
-  readonly org: OrgView;
+  readonly org: OrgResponse;
   readonly role: OrgRole | undefined;
 }): ReactElement {
   const { t } = useTranslation();

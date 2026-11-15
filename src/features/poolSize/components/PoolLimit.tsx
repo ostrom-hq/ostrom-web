@@ -15,8 +15,9 @@ import { usePoolSize } from '../usePoolSize';
 export function PoolLimit(): ReactElement | null {
   const { t, i18n } = useTranslation();
   const { size } = usePoolSize(true);
-  if (size?.effectiveDailyMicros === undefined) return null;
-  const amount = formatUsd(usdOfMicros(size.effectiveDailyMicros), i18n.language);
+  const effective = size?.effectiveDailyMicros ?? undefined;
+  if (size === undefined || effective === undefined) return null;
+  const amount = formatUsd(usdOfMicros(effective), i18n.language);
   return (
     <Section label={t('poolLimit.title')}>
       <p>

@@ -67,6 +67,7 @@ describe('the mock automation writes, as the server answers them', () => {
         variables: [
           { name: 'level', path: '$.level', type: 'enum', values: ['a'], required: false, sensitive: true },
           { name: 'id', path: '$.id', type: 'string' },
+          { name: 'bare', path: '$.bare' },
         ],
         samplePayload: { level: 'a' },
         overlap: 'allow',
@@ -80,6 +81,7 @@ describe('the mock automation writes, as the server answers them', () => {
       variables: [
         { name: 'level', path: '$.level', type: 'enum', values: ['a'], required: false, sensitive: true },
         { name: 'id', path: '$.id', type: 'string', values: [], required: true, sensitive: false },
+        { name: 'bare', path: '$.bare', values: [], required: true, sensitive: false },
       ],
       samplePayload: { level: 'a' },
       overlap: 'allow',
@@ -192,7 +194,7 @@ describe('a workflow action', () => {
     expect(created.body).toMatchObject({
       action: { workflowId: 'wf-release', inputs: { tag: '{{tag}}' }, repository: 'acme/api' },
     });
-    expect(created.body).not.toHaveProperty('action.prompt');
+    expect(created.body).toHaveProperty('action.prompt', '');
     const bare = await send('POST', '', {
       name: 'Bare',
       trigger: { kind: 'cron' },

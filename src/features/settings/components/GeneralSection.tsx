@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgView } from '@gen/api/types.gen';
+import type { OrgResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -10,7 +10,7 @@ import { browserTimeZone, renameProblem } from '../model';
 import type { RenameViewModel } from '../useSettings';
 
 export interface GeneralSectionProps {
-  readonly org: OrgView;
+  readonly org: OrgResponse;
   /** Owners and admins rename it; everyone else reads it. */
   readonly canRename: boolean;
   readonly rename: RenameViewModel;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingPlanLimits } from '@gen/api/types.gen';
+import type { PlanLimitsResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Facts, Section } from '@/shared/ui/Screen';
@@ -8,9 +8,10 @@ import { Facts, Section } from '@/shared/ui/Screen';
  * What the plan in force allows; going past a limit is refused by the server, which names it. Cloud agents at once are
  * unlimited on every plan, which the server writes 0 (as TeamCode's concurrency settings); null is unlimited too.
  */
-export function Limits({ limits }: { readonly limits: BillingPlanLimits }): ReactElement {
+export function Limits({ limits }: { readonly limits: PlanLimitsResponse }): ReactElement {
   const { t } = useTranslation();
-  const amount = (value: number | null): string | number => value ?? t('billing.limits.unlimited');
+  const amount = (value: number | null | undefined): string | number =>
+    value ?? t('billing.limits.unlimited');
   return (
     <Section label={t('billing.limits.label')}>
       <Facts

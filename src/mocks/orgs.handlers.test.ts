@@ -17,7 +17,7 @@ import {
 import { DEMO_INVITATION_TOKEN, DEMO_SETUP_TOKEN, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
-import { freeSlug, setDemoRole } from '@/mocks/orgs';
+import { freeSlug, type MockOrganization, setDemoRole } from '@/mocks/orgs';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { appliedOf } from '@/shared/api/held';
 import { configureApiClient } from '@/shared/api/apiClient';
@@ -59,7 +59,7 @@ const ACME = '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c';
 
 describe('mock organizations', () => {
   it('lists the person’s organizations with their role, none for a fresh account', async () => {
-    const globex = otherOrganization();
+    const globex: MockOrganization = otherOrganization();
     // An organization without a creation date still lists, dated now.
     delete globex.createdAt;
     db.otherOrganizations = [globex];
@@ -137,6 +137,7 @@ describe('mock organizations', () => {
     ).toBe('Acme Inc');
     expect(await raw('PATCH', `/orgs/${org}`, '{"name":""}')).toBe(400);
     expect(await raw('PATCH', `/orgs/${org}`, JSON.stringify({ name: 'x'.repeat(101) }))).toBe(400);
+    expect(await raw('PATCH', `/orgs/${org}`, '{}')).toBe(400);
     expect(await raw('PATCH', `/orgs/${org}`, 'nope')).toBe(400);
     expect(await raw('PATCH', '/orgs/nowhere', '{"name":"x"}')).toBe(404);
     setDemoRole(db, 'member');
@@ -200,11 +201,14 @@ describe('mock members of an organization', () => {
   });
 
   it('pages the members as the server does: `limit` from 1 to 1000, `after` the previous `next`', async () => {
-    const page = async (limit?: number, after?: string) =>
+    const page = async (limit?: number, after?: string | null) =>
       (
         await listOrgMembers({
           path: { org },
-          query: { ...(limit === undefined ? {} : { limit }), ...(after === undefined ? {} : { after }) },
+          query: {
+            ...(limit === undefined ? {} : { limit }),
+            ...(typeof after === 'string' ? { after } : {}),
+          },
           throwOnError: true,
         })
       ).data;
@@ -225,11 +229,15 @@ describe('mock members of an organization', () => {
   });
 
   it('finds the members whose login or name starts with `q`, whatever the case, a page at a time', async () => {
-    const found = async (q: string, limit?: number, after?: string) =>
+    const found = async (q: string, limit?: number, after?: string | null) =>
       (
         await listOrgMembers({
           path: { org },
-          query: { q, ...(limit === undefined ? {} : { limit }), ...(after === undefined ? {} : { after }) },
+          query: {
+            q,
+            ...(limit === undefined ? {} : { limit }),
+            ...(typeof after === 'string' ? { after } : {}),
+          },
           throwOnError: true,
         })
       ).data;
@@ -250,6 +258,12 @@ describe('mock members of an organization', () => {
 });
 
 describe('mock invitations', () => {
+  it('refuses an invitation that names no address', async () => {
+    const answer = await inviteOrgMembers({ path: { org }, body: { invites: [{ role: 'approver' }] } });
+    expect(answer.error).toBeDefined();
+    expect(await raw('POST', `/orgs/${org}/members/invites`, '{}')).toBe(400);
+  });
+
   it('invites each new address once, as a role the caller can give', async () => {
     const { data } = await inviteOrgMembers({
       path: { org },
@@ -282,6 +296,7 @@ describe('mock invitations', () => {
     );
     expect(owner.status).toBe(403);
     expect(await raw('POST', `/orgs/${org}/members/invites`, '{"invites":[]}')).toBe(400);
+    expect(await raw('POST', `/orgs/${org}/members/invites`, '{"invites":[{"role":"member"}]}')).toBe(400);
     expect(await raw('POST', '/orgs/nowhere/members/invites', '{"invites":[]}')).toBe(404);
   });
 

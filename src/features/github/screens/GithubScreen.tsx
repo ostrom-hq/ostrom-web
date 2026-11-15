@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgView, Repo } from '@gen/api/types.gen';
+import type { OrgResponse, RepoResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -32,7 +32,7 @@ function GithubPage({
   org,
   role,
 }: {
-  readonly org: OrgView;
+  readonly org: OrgResponse;
   readonly role: OrgRole | undefined;
 }): ReactElement {
   const { t } = useTranslation();
@@ -176,22 +176,19 @@ function Repositories({ view }: { readonly view: GithubViewModel }): ReactElemen
   );
 }
 
-function RepoRow({ repo }: { readonly repo: Repo }): ReactElement {
+function RepoRow({ repo }: { readonly repo: RepoResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const facts: string[] = [];
-  if (repo.language !== undefined) facts.push(repo.language);
+  if (repo.language !== undefined && repo.language !== null) facts.push(repo.language);
   facts.push(t('github.repos.branch', { branch: repo.defaultBranch }));
-  const pushed = repo.pushedAt === undefined ? undefined : readableDate(repo.pushedAt, i18n.language);
+  const pushed = readableDate(repo.pushedAt, i18n.language);
   if (pushed !== undefined) facts.push(t('github.repos.pushed', { date: pushed }));
-  if (repo.owners !== undefined && repo.owners.length > 0)
-    facts.push(t('github.repos.owners', { teams: repo.owners.join(', ') }));
+  if (repo.owners.length > 0) facts.push(t('github.repos.owners', { teams: repo.owners.join(', ') }));
   return (
     <div className="o-row">
       <span className="o-row__main">
         <span className="o-row__title o-mono">{repo.name}</span>
-        {repo.description === undefined || repo.description === '' ? null : (
-          <span className="o-row__meta">{repo.description}</span>
-        )}
+        {(repo.description ?? '') === '' ? null : <span className="o-row__meta">{repo.description}</span>}
         <span className="o-row__meta">{facts.join(' · ')}</span>
       </span>
       {repo.archived ? (

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getMeOptions, listMyOrganizationsOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { Organization } from '@gen/api/types.gen';
+import type { MeOrganizationResponse } from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
@@ -12,7 +12,7 @@ import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { nextStep } from './model';
 
 export interface OrgOption {
-  readonly organization: Organization;
+  readonly organization: MeOrganizationResponse;
   /** The organization the console acts in now. */
   readonly current: boolean;
   readonly choose: () => void;
@@ -28,7 +28,7 @@ export interface OrgViewer {
 
 export interface OrgPickerViewModel {
   /** The organization the console acts in, once the list named it. */
-  readonly current: Organization | undefined;
+  readonly current: MeOrganizationResponse | undefined;
   /** The person in it, once `/auth/me` answered with it named. */
   readonly viewer: OrgViewer | undefined;
   readonly options: readonly OrgOption[];
@@ -82,7 +82,7 @@ export function useOrgPicker({ anonymousPage }: { readonly anonymousPage: boolea
     }),
   );
   const meInOrg = current === undefined ? undefined : meOf(inOrg.data);
-  const member = meInOrg?.member;
+  const member = meInOrg?.member ?? undefined;
   useEffect(() => {
     if (login === undefined || organizations === undefined) return;
     const step = nextStep({ current, owner, login, organizations });

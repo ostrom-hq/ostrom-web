@@ -6,7 +6,7 @@ import {
   listBudgetsQueryKey,
   setBudgetMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Budget, Spending } from '@gen/api/types.gen';
+import type { BudgetDto, SpendingDto } from '@gen/api/types.gen';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -17,11 +17,11 @@ import { useCurrentOrg } from '@/shared/org/useCurrentOrg';
 import { type Period, sortBudgets } from './model';
 
 export interface SpendViewModel {
-  readonly spending: Spending | undefined;
+  readonly spending: SpendingDto | undefined;
   /** The previous period stays on screen while the next one loads. */
   readonly switching: boolean;
   readonly failure: Error | undefined;
-  readonly budgets: readonly Budget[] | undefined;
+  readonly budgets: readonly BudgetDto[] | undefined;
   /**
    * The organization's members read so far, a page at a time: a member budget names them by id, people choose and
    * read them by login.
@@ -55,7 +55,7 @@ export function useSpend(period: Period): SpendViewModel {
 
 export interface BudgetChangeViewModel {
   /** `onDone` runs once the server took it: the form clears then, not before. */
-  readonly save: (budget: Budget, onDone: () => void) => void;
+  readonly save: (budget: BudgetDto, onDone: () => void) => void;
   readonly saving: boolean;
   readonly failure: Error | undefined;
 }
@@ -74,7 +74,7 @@ export function useBudgetChange(): BudgetChangeViewModel {
   });
   const { mutate } = mutation;
   const save = useCallback(
-    (budget: Budget, onDone: () => void) => {
+    (budget: BudgetDto, onDone: () => void) => {
       mutate({ body: budget }, { onSuccess: onDone });
     },
     [mutate],

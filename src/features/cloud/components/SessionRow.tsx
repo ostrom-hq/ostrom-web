@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useAnnounced } from '@/shared/capabilities';
@@ -17,8 +17,14 @@ import {
 } from '../model';
 import { preparationAdvice, preparationOf } from '../recipe';
 
+/**
+ * A cloud session as the row reads it: `automationId` (TeamCode's, the automation that started it) is not in the
+ * server's document yet; the badge shows once the server sends it.
+ */
+export type CloudSessionRow = CloudSessionResponse & { readonly automationId?: string | null };
+
 export interface SessionRowProps {
-  readonly session: CloudSession;
+  readonly session: CloudSessionRow;
   readonly now: Date;
   readonly busy: boolean;
   /** The name of the profile the session runs on, when the profiles are known. */
@@ -51,36 +57,36 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             session.owner,
             isCloudAgent(session.agent) ? t(`cloud.agent.${session.agent}`) : session.agent,
             session.model,
-            session.profile === undefined
-              ? undefined
-              : t('cloud.session.profile', {
+            session.profile
+              ? t('cloud.session.profile', {
                   name: profileName ?? session.profile.id,
                   version: session.profile.version,
-                }),
+                })
+              : undefined,
             session.image,
             phase === undefined ? undefined : t(`cloud.phase.${phase}`),
-            session.automationId === undefined ? undefined : t('cloud.session.byAutomation'),
             t('cloud.session.started', { when: formatRelative(session.createdAt, now, i18n.language) }),
-            session.endedAt === undefined
-              ? undefined
-              : t('cloud.session.ended', { when: formatRelative(session.endedAt, now, i18n.language) }),
-            session.status !== 'paused' || session.expiresAt === undefined
-              ? undefined
-              : t('cloud.session.expires', { when: formatRelative(session.expiresAt, now, i18n.language) }),
+            typeof session.automationId === 'string' ? t('cloud.session.byAutomation') : undefined,
+            typeof session.endedAt === 'string'
+              ? t('cloud.session.ended', { when: formatRelative(session.endedAt, now, i18n.language) })
+              : undefined,
+            session.status === 'paused' && typeof session.expiresAt === 'string'
+              ? t('cloud.session.expires', { when: formatRelative(session.expiresAt, now, i18n.language) })
+              : undefined,
             session.status !== 'terminated' || reason === undefined
               ? undefined
               : t(`cloud.session.terminated.${reason}`),
           ]
-            .filter((part) => part !== undefined)
+            .filter((part) => typeof part === 'string')
             .join(' · ')}
         </span>
-        {session.failure === undefined ? null : (
+        {session.failure ? (
           <span className="cl-session__failure">
             {[session.failure.message, advice === undefined ? undefined : t(`cloud.preparation.${advice}`)]
               .filter((part) => part !== undefined)
               .join(' ')}
           </span>
-        )}
+        ) : null}
         {blocked === undefined ? null : (
           <span className="cl-session__failure">
             {t('cloud.session.deletionBlocked', {

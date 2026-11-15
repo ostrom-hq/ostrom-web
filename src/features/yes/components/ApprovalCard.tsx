@@ -3,10 +3,9 @@ import type { Approval } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { formatAbsolute, formatRelative } from '@/shared/lib/time';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
-import { approvalTone, checksSummary, shortSha } from '../model';
+import { approvalTone, shortSha } from '../model';
 
 export interface ApprovalCardProps {
   readonly approval: Approval;
@@ -14,21 +13,14 @@ export interface ApprovalCardProps {
   readonly fresh: boolean;
   /** A yes waits for the person's GitHub link. */
   readonly linkRequired: boolean;
-  readonly now: Date;
 }
 
 /** A row only opens the request: nobody approves from a list. */
-export function ApprovalCard({
-  approval,
-  viewer,
-  fresh,
-  linkRequired,
-  now,
-}: ApprovalCardProps): ReactElement {
-  const { t, i18n } = useTranslation();
+export function ApprovalCard({ approval, viewer, fresh, linkRequired }: ApprovalCardProps): ReactElement {
+  const { t } = useTranslation();
   const asker = approval.askedBy?.[0];
-  const checks = checksSummary(approval.checks ?? []);
-  const commits = Math.max(approval.commitDetails?.length ?? 0, approval.commits?.length ?? 0);
+  const sha = approval.sha ?? undefined;
+  const commits = approval.commits?.length ?? 0;
   return (
     <Link
       to="/yes/$approvalId"
@@ -40,7 +32,7 @@ export function ApprovalCard({
         <span className="ys-col ys-grow">
           <span className="ys-ellipsis">{t('yes.asks', { who: asker ?? t('yes.someone') })}</span>
           <span className="ys-meta ys-ellipsis">
-            {[approval.repo, approval.sha === undefined ? undefined : shortSha(approval.sha)]
+            {[approval.repo ?? undefined, sha === undefined ? undefined : shortSha(sha)]
               .filter((part) => part !== undefined)
               .join(' · ')}
           </span>
@@ -60,31 +52,11 @@ export function ApprovalCard({
       <span className="ys-action">{approval.title}</span>
       <span className="ys-row ys-wrap ys-small">
         {commits === 0 ? null : <Chip value={t('yes.chip.commits', { count: commits })} />}
-        {checks.total === 0 ? null : (
-          <Chip
-            value={t('yes.chip.checks', { passed: checks.passed, total: checks.total })}
-            tone={checks.failed > 0 ? 'bad' : 'plain'}
-          />
-        )}
-        {approval.expiresAt === undefined ? null : (
-          <time
-            className="ys-chip"
-            dateTime={approval.expiresAt}
-            title={formatAbsolute(approval.expiresAt, i18n.language)}
-          >
-            {t('yes.chip.expires', { when: formatRelative(approval.expiresAt, now, i18n.language) })}
-          </time>
-        )}
       </span>
     </Link>
   );
 }
 
-interface ChipProps {
-  readonly value: string;
-  readonly tone?: 'plain' | 'bad';
-}
-
-function Chip({ value, tone = 'plain' }: ChipProps): ReactElement {
-  return <span className={tone === 'bad' ? 'ys-chip ys-chip--bad' : 'ys-chip'}>{value}</span>;
+function Chip({ value }: { readonly value: string }): ReactElement {
+  return <span className="ys-chip">{value}</span>;
 }

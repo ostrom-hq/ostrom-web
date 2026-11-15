@@ -5,11 +5,11 @@
 // asks for such a push. The yes, the refusal and the receipt are then read and given in the console.
 import { expect, type Page, test } from '@playwright/test';
 import {
-  zAnswerApprovalResponse,
   zAskGateResponse,
   zCreateLaunchResponse,
   zGetCurrentPackageResponse,
   zGetGatePolicyResponse,
+  zReceipt,
   zSignWorkflowReceiptResponse,
   zVerifyReceiptResponse,
 } from '../gen/api/zod.gen';
@@ -24,12 +24,13 @@ import {
   withToken,
 } from './gate';
 import { anotherPerson, callFromPage, closeOthers, joinAs, ownerOfNewOrganization } from './real';
-import { pick, required } from 'zod/mini';
+import * as z from 'zod/mini';
+import { pick } from 'zod/mini';
 
 test.afterEach(closeOthers);
 
-/** The answer to a yes: the contract's `ApprovalView`, which then always carries its signed receipt. */
-const zSignedAnswer = required(zAnswerApprovalResponse, { receipt: true });
+/** The answer to a yes: the contract's `ApprovalView`, whose receipt is a free JSON object, read as the receipt it is. */
+const zSignedAnswer = z.object({ receipt: zReceipt });
 
 /** Opens the request from the queue, as a person does: the queue, then its line. */
 async function openFromQueue(page: Page, approval: { id: string; title: string }): Promise<void> {
@@ -211,7 +212,9 @@ test('5.7 the signed receipt of a session shows the attestation of each check, a
     agent: 'claude',
   });
   expect(signed.status, JSON.stringify(signed.body)).toBe(200);
-  const { receipt, verification } = zSignWorkflowReceiptResponse.parse(signed.body);
+  const answer = zSignWorkflowReceiptResponse.parse(signed.body);
+  const { verification } = answer;
+  const receipt = zReceipt.parse(answer.receipt);
   expect(verification.ok).toBe(true);
   const checks = receipt.nodes?.filter((node) => node.kind === 'check').map((node) => node.id);
   expect(

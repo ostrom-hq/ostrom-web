@@ -57,31 +57,18 @@ describe('the other screens that name an enum', () => {
   });
 
   it('shows an approval whose status the console does not know, in the queue and open', async () => {
-    db.approvals = db.approvals.map((approval) => ({
-      ...approval,
-      status: NEW,
-      ...(approval.checks === undefined
-        ? {}
-        : { checks: approval.checks.map((check) => ({ ...check, state: 'flaky' })) }),
-      ...(approval.action === undefined ? {} : { action: { ...approval.action, kind: 'novel_action' } }),
-    }));
+    db.approvals = db.approvals.map((approval) => ({ ...approval, status: NEW }));
     visit('/yes/apr-merge-412');
     expect((await screen.findAllByText(NEW, undefined, SLOW)).length).toBeGreaterThan(0);
-    expect(screen.getAllByText('flaky').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/novel_action/).length).toBeGreaterThan(0);
   });
 
   it('shows the kind of a receipt, and where a check of it ran', async () => {
     db.receipts = db.receipts.map((receipt) => ({
       ...receipt,
       subject: { ...receipt.subject, kind: 'novel_subject' },
-      ...(receipt.nodes === undefined
-        ? {}
-        : {
-            nodes: receipt.nodes.map((node) =>
-              node.kind === 'check' ? { ...node, attestation: 'mars' } : node,
-            ),
-          }),
+      nodes: (receipt.nodes ?? []).map((node) =>
+        node.kind === 'check' ? { ...node, attestation: 'mars' } : node,
+      ),
     }));
     visit('/receipts/rcpt-ses-2b9e');
     expect((await screen.findAllByText('mars', undefined, SLOW)).length).toBeGreaterThan(0);

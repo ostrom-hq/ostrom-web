@@ -32,7 +32,7 @@ export function DevicesSection({ view }: { readonly view: DevicesViewModel }): R
                   <span className="o-row__main">
                     <span className="o-row__title">{device.name}</span>
                     <span className="o-row__meta">
-                      {device.lastSeenAt === undefined
+                      {device.lastSeenAt === undefined || device.lastSeenAt === null
                         ? t('settings.devices.neverSeen')
                         : t('settings.devices.seen', { date: when(device.lastSeenAt) })}
                     </span>

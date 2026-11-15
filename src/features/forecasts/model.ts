@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ForecastAccount, ForecastSample, ForecastWindow } from '@gen/api/types.gen';
+import type {
+  ForecastAccountResponse,
+  ForecastSampleResponse,
+  ForecastWindowResponse,
+} from '@gen/api/types.gen';
 import { z } from 'zod/mini';
 
 /** `?account=`: the shared account shown, kept in the address so Back and a shared link keep it. */
@@ -22,7 +26,7 @@ const KNOWN_STATES: readonly ForecastState[] = [
   'exhausts_first',
 ];
 
-export function stateOf(window: Pick<ForecastWindow, 'state'>): ForecastState {
+export function stateOf(window: Pick<ForecastWindowResponse, 'state'>): ForecastState {
   return KNOWN_STATES.find((state) => state === window.state) ?? 'unknown';
 }
 
@@ -33,14 +37,14 @@ export type Eta =
   | { readonly kind: 'at'; readonly at: string }
   | { readonly kind: 'unknown' };
 
-export function etaOf(window: Pick<ForecastWindow, 'state' | 'reachesThresholdAt'>): Eta {
+export function etaOf(window: Pick<ForecastWindowResponse, 'state' | 'reachesThresholdAt'>): Eta {
   switch (stateOf(window)) {
     case 'reset_first':
       return { kind: 'reset-first' };
     case 'exhausted':
       return { kind: 'already' };
     case 'exhausts_first':
-      return window.reachesThresholdAt === undefined
+      return window.reachesThresholdAt === undefined || window.reachesThresholdAt === null
         ? { kind: 'unknown' }
         : { kind: 'at', at: window.reachesThresholdAt };
     case 'unknown':
@@ -81,11 +85,11 @@ export function scaleOf(now: number): ChartScale {
 export interface Point {
   readonly x: number;
   readonly y: number;
-  readonly sample: ForecastSample;
+  readonly sample: ForecastSampleResponse;
 }
 
 /** Each segment as its own list of points: a reset, a drop or a gap starts a new line, never joined to the last. */
-export function segmentsOf(window: Pick<ForecastWindow, 'segments'>, scale: ChartScale): Point[][] {
+export function segmentsOf(window: Pick<ForecastWindowResponse, 'segments'>, scale: ChartScale): Point[][] {
   return window.segments
     .filter((segment) => segment.length > 0)
     .map((segment) =>
@@ -109,13 +113,13 @@ export interface Projection {
  * threshold, resets, fills the window or leaves the chart, whichever comes first. Only where a rate is learned and the window fills up
  * before or after its reset; never for an unknown, stale, idle or exhausted window.
  */
-export function projectionOf(window: ForecastWindow, scale: ChartScale): Projection | undefined {
+export function projectionOf(window: ForecastWindowResponse, scale: ChartScale): Projection | undefined {
   const state = stateOf(window);
   if (state !== 'reset_first' && state !== 'exhausts_first') return undefined;
   const rate = window.pointsPerHour;
-  if (rate === undefined || !Number.isFinite(rate) || rate <= 0) return undefined;
+  if (rate === undefined || rate === null || !Number.isFinite(rate) || rate <= 0) return undefined;
   const ends = [window.reachesThresholdAt, window.resetsAt]
-    .filter((at) => at !== undefined)
+    .filter((at): at is string => typeof at === 'string')
     .map((at) => Date.parse(at))
     .filter((at) => Number.isFinite(at));
   if (ends.length === 0) return undefined;
@@ -144,10 +148,8 @@ export function nearestIndex(points: readonly Point[], x: number): number {
 }
 
 /** TeamCode's account option: « label (e-mail) · provider ». */
-export function accountOptionOf(account: ForecastAccount): string {
-  const name =
-    account.email === undefined || account.email === ''
-      ? account.label
-      : `${account.label} (${account.email})`;
+export function accountOptionOf(account: ForecastAccountResponse): string {
+  const email = account.email ?? '';
+  const name = email === '' ? account.label : `${account.label} (${email})`;
   return `${name} · ${account.provider}`;
 }

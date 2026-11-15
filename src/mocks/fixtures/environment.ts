@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentAssignment, EnvironmentExclusion, EnvironmentVariant } from '@gen/api/types.gen';
+import type {
+  EnvironmentAssignmentResponse,
+  EnvironmentExclusionResponse,
+  EnvironmentVariantResponse,
+} from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const at = '2026-10-02T09:00:00.000Z';
 const later = '2026-10-20T14:30:00.000Z';
 
 /** Acme's variants: two for GITHUB_TOKEN (one shared, one per member), one for NPM_TOKEN, and two personal ones. */
-const variants: EnvironmentVariant[] = [
+const variants: EnvironmentVariantResponse[] = [
   {
     id: 'env-1',
     variable: 'GITHUB_TOKEN',
@@ -62,7 +66,7 @@ const variants: EnvironmentVariant[] = [
   },
 ];
 
-const assignments: EnvironmentAssignment[] = [
+const assignments: EnvironmentAssignmentResponse[] = [
   {
     member: MEMBER_IDS.maya,
     variable: 'GITHUB_TOKEN',
@@ -109,16 +113,16 @@ const assignments: EnvironmentAssignment[] = [
   },
 ];
 
-const exclusions: EnvironmentExclusion[] = [{ member: MEMBER_IDS.samir, variable: 'SENTRY_DSN' }];
+const exclusions: EnvironmentExclusionResponse[] = [{ member: MEMBER_IDS.samir, variable: 'SENTRY_DSN' }];
 
-export function initialEnvironmentVariants(): EnvironmentVariant[] {
+export function initialEnvironmentVariants(): EnvironmentVariantResponse[] {
   return structuredClone(variants);
 }
 
-export function initialEnvironmentAssignments(): EnvironmentAssignment[] {
+export function initialEnvironmentAssignments(): EnvironmentAssignmentResponse[] {
   return structuredClone(assignments);
 }
 
-export function initialEnvironmentExclusions(): EnvironmentExclusion[] {
+export function initialEnvironmentExclusions(): EnvironmentExclusionResponse[] {
   return structuredClone(exclusions);
 }

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Rule } from '@gen/api/types.gen';
+import type { RuleDto } from '@gen/api/types.gen';
 import {
   actionClass,
   addCheck,
   customAction,
   editOf,
   offeredActions,
+  patternsOf,
+  catalogActionsOf,
   changeOf,
   countRules,
   firstOfGroups,
@@ -26,11 +28,13 @@ import {
   sureProposals,
 } from './model';
 
-const rule = (id: string, status: Rule['status'], group: string, confidence: number): Rule => ({
+const rule = (id: string, status: RuleDto['status'], group: string, confidence: number): RuleDto => ({
   id,
   statement: id,
   output: 'note',
   group,
+  scope: [],
+  sources: [],
   strength: 'recommended',
   confidence,
   status,
@@ -101,12 +105,13 @@ describe('sure proposals and percent', () => {
 describe('a rule draft', () => {
   const deploy = { class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: [] };
   const merge = { class: 'merge-main', label: 'Merge into main', patterns: [], repos: [] };
-  const rule: Rule = {
+  const rule: RuleDto = {
     id: 'R-1',
     statement: 'Deploys wait for a yes.',
     output: 'gate',
     group: 'Releases',
     scope: ['acme/api'],
+    sources: [],
     why: 'Two outages.',
     strength: 'required',
     confidence: 1,
@@ -216,7 +221,7 @@ describe('a rule draft', () => {
   });
 
   it('accepts a proposed rule as it saves, fixed or not, and sends nothing for an unchanged decided one', () => {
-    const proposed: Rule = { ...rule, status: 'proposed' };
+    const proposed: RuleDto = { ...rule, status: 'proposed' };
     const actions = gateActions([], rule);
     expect(editOf(proposed, draftOf(proposed), actions)).toEqual({ status: 'accepted' });
     expect(editOf(proposed, { ...draftOf(proposed), group: 'Ops' }, actions)).toEqual({
@@ -289,10 +294,9 @@ describe('a rule draft', () => {
         checks: [{ check: 'n-tests', attested: false }],
       },
     });
-    const plain: Rule = { ...rule, output: 'note' };
+    const plain: RuleDto = { ...rule, output: 'note', scope: [] };
     delete plain.gate;
     delete plain.why;
-    delete plain.scope;
     expect(changeOf(plain, draftOf(plain), [])).toEqual({});
     expect(
       changeOf(plain, { ...draftOf(plain), output: 'gate', actions: ['deploy'], approvers: 'samir' }, [
@@ -304,10 +308,45 @@ describe('a rule draft', () => {
     });
   });
 
+  it('reads a gate stored without approvers as one that names none', () => {
+    const bare: RuleDto = { ...rule, output: 'gate', gate: { actions: [deploy] } };
+    expect(changeOf(bare, draftOf(bare), [deploy])).toEqual({});
+  });
+
   it('knows its outputs and strengths', () => {
     expect(isOutput('gate')).toBe(true);
     expect(isOutput('banner')).toBe(false);
     expect(isStrength('required')).toBe(true);
     expect(isStrength('mandatory')).toBe(false);
+  });
+});
+
+describe('the gate catalogue', () => {
+  it('reads the actions of the free JSON object the server answers, and nothing else', () => {
+    expect(
+      catalogActionsOf({
+        gates: [],
+        actions: [
+          {
+            class: 'deploy',
+            label: 'Deploy',
+            patterns: ['helm upgrade'],
+            repos: ['acme/api'],
+            tools: ['Bash'],
+          },
+          { class: 'merge' },
+        ],
+      }),
+    ).toEqual([
+      { class: 'deploy', label: 'Deploy', patterns: ['helm upgrade'], repos: ['acme/api'], tools: ['Bash'] },
+      { class: 'merge' },
+    ]);
+    expect(catalogActionsOf({ gates: [] })).toBeUndefined();
+    expect(catalogActionsOf('nope')).toBeUndefined();
+  });
+
+  it('says an action without patterns matches nothing', () => {
+    expect(patternsOf({ class: 'merge' })).toEqual([]);
+    expect(patternsOf({ class: 'deploy', patterns: ['helm'] })).toEqual(['helm']);
   });
 });

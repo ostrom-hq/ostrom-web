@@ -82,7 +82,7 @@ export function CloudScreen(): ReactElement {
                         />
                       </Feature>
                     ) : null}
-                    {session.endedAt === undefined ? (
+                    {typeof session.endedAt !== 'string' ? (
                       <Feature name="runners.cloud.github.v1">
                         <GithubAccessControl
                           session={session}
@@ -126,31 +126,33 @@ export function CloudScreen(): ReactElement {
             <p className="o-empty">{t('cloud.runners.empty')}</p>
           ) : (
             <ul className="o-card o-rows">
-              {view.runners.map((runner) => (
-                <li key={runner.id} className="o-row">
-                  <span className="o-row__main">
-                    <span className="o-row__title o-mono">{runner.name}</span>
-                    <span className="o-row__meta">
-                      {[
-                        runner.labels.join(', '),
-                        runner.version === undefined
-                          ? undefined
-                          : t('cloud.runners.version', { version: runner.version }),
-                        runner.lastSeenAt === undefined
-                          ? t('cloud.runners.never')
-                          : t('cloud.runners.seen', {
-                              when: formatRelative(runner.lastSeenAt, now, i18n.language),
-                            }),
-                      ]
-                        .filter((part) => part !== undefined && part !== '')
-                        .join(' · ')}
+              {view.runners.map((runner) => {
+                const version = runner.version ?? undefined;
+                const lastSeenAt = runner.lastSeenAt ?? undefined;
+                return (
+                  <li key={runner.id} className="o-row">
+                    <span className="o-row__main">
+                      <span className="o-row__title o-mono">{runner.name}</span>
+                      <span className="o-row__meta">
+                        {[
+                          runner.labels.join(', '),
+                          version === undefined ? undefined : t('cloud.runners.version', { version }),
+                          lastSeenAt === undefined
+                            ? t('cloud.runners.never')
+                            : t('cloud.runners.seen', {
+                                when: formatRelative(lastSeenAt, now, i18n.language),
+                              }),
+                        ]
+                          .filter((part) => part !== undefined && part !== '')
+                          .join(' · ')}
+                      </span>
                     </span>
-                  </span>
-                  <Badge tone={runner.status === 'online' ? 'success' : 'neutral'}>
-                    {runner.status === 'online' ? t('cloud.runners.online') : t('cloud.runners.offline')}
-                  </Badge>
-                </li>
-              ))}
+                    <Badge tone={runner.status === 'online' ? 'success' : 'neutral'}>
+                      {runner.status === 'online' ? t('cloud.runners.online') : t('cloud.runners.offline')}
+                    </Badge>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Section>

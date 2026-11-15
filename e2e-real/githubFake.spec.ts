@@ -3,7 +3,7 @@
 // (e2e-real/fakeGithub.ts) on the ports ostrom-server's `console-journey.yml` points the server at: a person signs in
 // with GitHub, and an owner installs the GitHub App and reads the repositories given to it. Nothing reaches GitHub.
 import { expect, test } from '@playwright/test';
-import { zMe } from '../gen/api/zod.gen';
+import { zMeResponse } from '../gen/api/zod.gen';
 import { FAKE_GITHUB_CONFIGURED, FakeGitHub, SIGN_IN_PORT } from './fakeGithub';
 import { callFromPage, ownerOfNewOrganization } from './real';
 
@@ -34,7 +34,7 @@ test('1.2 someone signs in with GitHub and is signed in as their GitHub login', 
   await expect
     .poll(async () => {
       const me = await callFromPage(page, 'GET', '/api/v1/auth/me');
-      return me.status === 200 ? zMe.parse(me.body).dev.login : `status ${String(me.status)}`;
+      return me.status === 200 ? zMeResponse.parse(me.body).dev.login : `status ${String(me.status)}`;
     })
     .toBe(login);
   // The server exchanged GitHub's code itself, with the PKCE verifier, and read who the token is.

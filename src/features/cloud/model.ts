@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  CloudAgentKind,
-  Automation,
-  AutomationDryRun,
-  AutomationRun,
-  CloudProfile,
-  CloudSession,
+  AutomationResponse,
+  DryRunResponse,
+  RunResponse,
+  CloudProfileResponse,
+  CloudSessionResponse,
 } from '@gen/api/types.gen';
-import { zCloudAgentKind } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { knownValues, type Known } from '@/shared/lib/openEnum';
 import type { BadgeTone } from '@/shared/ui/Badge';
+import { type CloudAgentKind, zCloudAgentKind } from '@/shared/api/vocabulary';
 
 /**
  * The agents a cloud session starts, read from the contract (`CloudAgentKind`): the console never offers, and so never sends,
@@ -56,12 +55,12 @@ export function conversesHeadless(agent: CloudAgent): boolean {
 
 /** What a session's `githubAccess` may be: the owner only (the default), everyone who may use the session, or no token. */
 export const GITHUB_ACCESS = ['owner', 'shared', 'none'] as const satisfies readonly NonNullable<
-  CloudSession['githubAccess']
+  CloudSessionResponse['githubAccess']
 >[];
 export type GithubAccess = (typeof GITHUB_ACCESS)[number];
 
 /** The session's access as the server says it; a server without the feature sends none, which reads as the default. */
-export function accessOf(session: CloudSession): GithubAccess {
+export function accessOf(session: CloudSessionResponse): GithubAccess {
   const access = session.githubAccess ?? 'owner';
   return GITHUB_ACCESS.find((known) => known === access) ?? 'owner';
 }
@@ -83,7 +82,7 @@ export function isCloudStatus(value: string): value is CloudStatus {
 }
 
 /** A session that still holds a runner, and so can be stopped. */
-export function isLive(session: CloudSession): boolean {
+export function isLive(session: CloudSessionResponse): boolean {
   return session.status === 'queued' || session.status === 'starting' || session.status === 'running';
 }
 
@@ -132,7 +131,7 @@ export function isKnownRunReason(value: string): value is KnownRunReason {
 }
 
 /** A dry run answers what it would do; a real run answers with the run it queued. */
-export function isDryRun(answer: AutomationRun | AutomationDryRun): answer is AutomationDryRun {
+export function isDryRun(answer: RunResponse | DryRunResponse): answer is DryRunResponse {
   return 'renderedPrompt' in answer;
 }
 
@@ -142,11 +141,11 @@ export function mayChange(owner: string, viewer: string | undefined, canManage: 
 }
 
 /** A session is named by its name, else by its agent and its id. */
-export function sessionTitle(session: CloudSession): string {
-  return session.name ?? `${session.agent} · ${session.id}`;
+export function sessionTitle(session: CloudSessionResponse): string {
+  return session.name === '' ? `${session.agent} · ${session.id}` : session.name;
 }
 
-export function isWebhook(automation: Automation): boolean {
+export function isWebhook(automation: AutomationResponse): boolean {
   return automation.trigger.kind === 'webhook';
 }
 
@@ -197,7 +196,7 @@ function globMatches(pattern: string, text: string): boolean {
 }
 
 /** Whether a session may run `image` on `profile`: its own image, or one an override allows (empty: its own). */
-export function imageAllowed(image: string, profile: CloudProfile): boolean {
+export function imageAllowed(image: string, profile: CloudProfileResponse): boolean {
   const wanted = image.trim();
   return (
     wanted === '' ||
@@ -226,7 +225,7 @@ export function startRefusalOf(failure: Error): StartRefusal | undefined {
 export const TERMINATED_REASONS = ['deleted', 'expired'] as const;
 export type TerminatedReason = (typeof TERMINATED_REASONS)[number];
 
-export function terminatedReasonOf(session: CloudSession): TerminatedReason | undefined {
+export function terminatedReasonOf(session: CloudSessionResponse): TerminatedReason | undefined {
   return TERMINATED_REASONS.find((known) => known === session.terminatedReason);
 }
 
@@ -236,7 +235,7 @@ export type DeletionProblem = (typeof DELETION_PROBLEMS)[number];
 
 /** The blocked deletion of a session's workspace: its known reason, else the server's message. Undefined unless blocked. */
 export function blockedDeletionOf(
-  session: CloudSession,
+  session: CloudSessionResponse,
 ): { readonly code: DeletionProblem | undefined; readonly message: string } | undefined {
   const deletion = session.workspaceDeletion;
   if (deletion?.state !== 'blocked') return undefined;

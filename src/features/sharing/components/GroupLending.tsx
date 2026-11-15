@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Group, SharedAccount } from '@gen/api/types.gen';
+import type { GroupResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
@@ -8,9 +8,9 @@ import { lentAccounts, toggled } from '../groups';
 import type { GroupChangeViewModel } from '../useGroups';
 
 export interface GroupLendingProps {
-  readonly group: Group;
+  readonly group: GroupResponse;
   /** The subscriptions the person reads; nothing is said until they are known. */
-  readonly accounts: readonly SharedAccount[] | undefined;
+  readonly accounts: readonly SharedAccountResponse[] | undefined;
   /** Present for an owner or an admin. */
   readonly change: GroupChangeViewModel | undefined;
 }
@@ -30,8 +30,8 @@ export function GroupLending({ group, accounts, change }: GroupLendingProps): Re
 }
 
 interface LentListProps {
-  readonly group: Group;
-  readonly accounts: readonly SharedAccount[];
+  readonly group: GroupResponse;
+  readonly accounts: readonly SharedAccountResponse[];
 }
 
 function LentList({ group, accounts }: LentListProps): ReactElement {
@@ -54,8 +54,8 @@ function LentList({ group, accounts }: LentListProps): ReactElement {
 }
 
 interface LendFormProps {
-  readonly group: Group;
-  readonly accounts: readonly SharedAccount[];
+  readonly group: GroupResponse;
+  readonly accounts: readonly SharedAccountResponse[];
   readonly change: GroupChangeViewModel;
 }
 

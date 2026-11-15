@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { zForecastSnapshot } from '@gen/api/zod.gen';
+import { zForecastSnapshotResponse } from '@gen/api/zod.gen';
 import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
@@ -29,7 +29,7 @@ describe('the mock forecasts, as the server answers', () => {
   it('shows the first account by id, every account in the picker, within the contract', async () => {
     const answer = await call('');
     expect(answer.status).toBe(200);
-    const snapshot = zForecastSnapshot.parse(answer.body);
+    const snapshot = zForecastSnapshotResponse.parse(answer.body);
     expect(snapshot.accounts.map((account) => account.id)).toEqual(['acc-1', 'acc-2', 'acc-3']);
     expect(snapshot.account?.id).toBe('acc-1');
     expect(snapshot.windows.map((window) => window.window)).toEqual(['five_hour', 'seven_day', 'model:opus']);
@@ -41,15 +41,25 @@ describe('the mock forecasts, as the server answers', () => {
     db.sharedAccounts = db.sharedAccounts.map((account) =>
       account.id === 'acc-3' ? { ...account, email: 'team@acme.dev' } : account,
     );
-    const team = zForecastSnapshot.parse((await call('?account=acc-3')).body);
+    const team = zForecastSnapshotResponse.parse((await call('?account=acc-3')).body);
     expect(team.account).toMatchObject({ id: 'acc-3', email: 'team@acme.dev' });
     expect(team.windows).toEqual([]);
-    expect(zForecastSnapshot.parse((await call('?account=acc-2')).body).windows).toHaveLength(2);
+    expect(zForecastSnapshotResponse.parse((await call('?account=acc-2')).body).windows).toHaveLength(2);
+  });
+
+  it('reads an account that never said it was paused as running', async () => {
+    db.sharedAccounts = db.sharedAccounts.map((account) => {
+      const running = { ...account };
+      delete running.paused;
+      return running;
+    });
+    const snapshot = zForecastSnapshotResponse.parse((await call('')).body);
+    expect(snapshot.accounts.every((account) => !account.paused)).toBe(true);
   });
 
   it('lists nothing when the organization has no shared account', async () => {
     db.sharedAccounts = [];
-    const snapshot = zForecastSnapshot.parse((await call('')).body);
+    const snapshot = zForecastSnapshotResponse.parse((await call('')).body);
     expect(snapshot.accounts).toEqual([]);
     expect(snapshot.account).toBeUndefined();
     expect(snapshot.windows).toEqual([]);
@@ -76,7 +86,7 @@ describe('the mock forecasts, as the server answers', () => {
         joinedAt: '2026-09-01T09:00:00.000Z',
       },
     ];
-    const theirs = zForecastSnapshot.parse((await call('', globex.id)).body);
+    const theirs = zForecastSnapshotResponse.parse((await call('', globex.id)).body);
     expect(theirs.accounts).toEqual([]);
     expect(theirs.windows).toEqual([]);
     expect((await call('?account=acc-1', globex.id)).status).toBe(404);

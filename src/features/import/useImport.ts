@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { importTeamCodeMutation } from '@gen/api/@tanstack/react-query.gen';
-import type { ImportReport, TeamCodeImportRequestWritable } from '@gen/api/types.gen';
+import type { ImportReportDto, TeamCodeImportRequest } from '@gen/api/types.gen';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -31,7 +31,7 @@ export interface TeamCodeImportViewModel {
   /** Why the chosen file cannot be imported. */
   readonly fileProblem: ExportProblem | 'read' | undefined;
   /** The last report of each run, since the file was chosen. */
-  readonly reports: Readonly<Partial<Record<ImportMode, ImportReport>>>;
+  readonly reports: Readonly<Partial<Record<ImportMode, ImportReportDto>>>;
   /** The run on its way. */
   readonly running: ImportMode | undefined;
   readonly failure: ImportFailure | undefined;
@@ -48,7 +48,7 @@ export interface ChosenExport {
 
 interface Loaded {
   readonly name: string;
-  readonly request: TeamCodeImportRequestWritable;
+  readonly request: TeamCodeImportRequest;
   readonly summary: ExportSummary;
 }
 
@@ -111,7 +111,7 @@ export function useTeamCodeImport(): TeamCodeImportViewModel {
   const queryClient = useQueryClient();
   const [loaded, setLoaded] = useState<Loaded | undefined>(undefined);
   const [fileProblem, setFileProblem] = useState<ExportProblem | 'read' | undefined>(undefined);
-  const [reports, setReports] = useState<Partial<Record<ImportMode, ImportReport>>>({});
+  const [reports, setReports] = useState<Partial<Record<ImportMode, ImportReportDto>>>({});
   // The body carries credentials in clear: the mutation is never cached beyond this screen.
   const mutation = useMutation({ ...importTeamCodeMutation(), gcTime: 0 });
   const { mutate, reset } = mutation;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudTransfer } from '@gen/api/types.gen';
+import type { CloudTransferResponse } from '@gen/api/types.gen';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
@@ -18,7 +18,7 @@ function row(text: string | RegExp): HTMLElement {
   return found;
 }
 
-function offer(): CloudTransfer {
+function offer(): CloudTransferResponse {
   const [first] = db.cloudTransfers;
   if (first === undefined) throw new Error('no transfer');
   return first;
@@ -33,7 +33,7 @@ function asMember(login: string, id: string): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login, verified: true, via: 'github' },
-        member: { id, login, avatarUrl: '', role: 'member' },
+        member: { id, login, name: login, avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),

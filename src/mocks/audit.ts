@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleListAudit } from '@gen/api/msw.gen';
-import type { ApiError, AuditEvent } from '@gen/api/types.gen';
+import type { ApiError, OrgAuditEventResponse } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 
 export interface AuditState {
   /** Newest first, as the server lists them. */
-  audit: AuditEvent[];
+  audit: OrgAuditEventResponse[];
 }
 
 /** Small, so the demo shows the next page; the server's pages hold 50 lines. */

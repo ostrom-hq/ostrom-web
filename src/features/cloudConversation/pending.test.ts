@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudInput } from '@gen/api/types.gen';
+import type { CloudInputDto } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import type { TranscriptEvent } from './events';
 import { draftOf, errorOf, failed, MAX_MESSAGE_CHARS, received, reconciled, validMessage } from './pending';
 
 const AT = '2026-11-15T10:00:00.000Z';
 
-function input(status: string, extra: Partial<CloudInput> = {}): CloudInput {
+function input(status: string, extra: Partial<CloudInputDto> = {}): CloudInputDto {
   return { id: 'in-1', kind: 'message', status, authorId: 'm', createdAt: AT, ...extra };
 }
 

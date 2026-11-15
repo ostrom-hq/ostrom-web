@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ActivityItem } from '@gen/api/types.gen';
+import type { ActivityItemDto } from '@gen/api/types.gen';
 import { z } from 'zod/mini';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
@@ -46,19 +46,22 @@ export type ActivityLink =
   | { readonly to: '/yes/$approvalId'; readonly params: { readonly approvalId: string } }
   | { readonly to: '/sessions/$sessionId'; readonly params: { readonly sessionId: string } };
 
-/** Where a line leads: the request it is about, else its session; a workflow change leads nowhere yet. */
-export function linkOf(item: ActivityItem): ActivityLink | undefined {
-  if (item.approvalId !== undefined)
-    return { to: '/yes/$approvalId', params: { approvalId: item.approvalId } };
-  if (item.sessionId !== undefined)
-    return { to: '/sessions/$sessionId', params: { sessionId: item.sessionId } };
+/**
+ * Where a line leads: the gate it is about (the request page opens by the gate's id), else its session; a workflow
+ * change leads nowhere yet.
+ */
+export function linkOf(item: ActivityItemDto): ActivityLink | undefined {
+  const gateId = item.gateId ?? undefined;
+  if (gateId !== undefined) return { to: '/yes/$approvalId', params: { approvalId: gateId } };
+  const sessionId = item.sessionId ?? undefined;
+  if (sessionId !== undefined) return { to: '/sessions/$sessionId', params: { sessionId } };
   return undefined;
 }
 
 /** The pages put together, each line once: a line that moved between two reads is not shown twice. */
-export function flatten(pages: readonly { readonly items: readonly ActivityItem[] }[]): ActivityItem[] {
+export function flatten(pages: readonly { readonly items: readonly ActivityItemDto[] }[]): ActivityItemDto[] {
   const seen = new Set<string>();
-  const items: ActivityItem[] = [];
+  const items: ActivityItemDto[] = [];
   for (const page of pages)
     for (const item of page.items) {
       if (seen.has(item.id)) continue;

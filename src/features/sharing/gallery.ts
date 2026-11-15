@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact, ListArtifactsData } from '@gen/api/types.gen';
+import type { ArtifactResponse, ListArtifactsData } from '@gen/api/types.gen';
 import type { ArtifactScope, GalleryFilters } from './route';
 /** The address of a tab and its filters: only what is set, so the plain gallery keeps its plain address. */
 export function searchOf(filters: GalleryFilters): GalleryFilters {
@@ -54,10 +54,10 @@ export type ArtifactOriginView =
   | { readonly kind: 'local_run'; readonly launch: string }
   | { readonly kind: 'cloud_session'; readonly launch: string; readonly session: string };
 
-export function originOf(artifact: Artifact): ArtifactOriginView {
+export function originOf(artifact: ArtifactResponse): ArtifactOriginView {
   const origin = artifact.origin;
-  if (origin === undefined) return { kind: 'api' };
-  return origin.cloudSessionId === undefined
+  if (origin === undefined || origin === null) return { kind: 'api' };
+  return origin.cloudSessionId === undefined || origin.cloudSessionId === null
     ? { kind: 'local_run', launch: origin.launchId }
     : { kind: 'cloud_session', launch: origin.launchId, session: origin.cloudSessionId };
 }

@@ -35,17 +35,17 @@ import {
   handleUnpinSkill,
 } from '@gen/api/msw.gen';
 import type {
-  ArtifactFileContent,
-  Assignment,
-  EffectiveHook,
-  EffectiveSkill,
-  HookEntry,
-  HookVersion,
-  Member,
-  Organization,
-  SkillEntry,
-  SkillInstallation,
-  SkillVersion,
+  ArtifactFileContentDto,
+  AssignmentDto,
+  EffectiveHookDto,
+  EffectiveSkillDto,
+  HookEntryDto,
+  HookVersionDto,
+  MemberResponse,
+  MeOrganizationResponse,
+  SkillEntryDto,
+  SkillInstallationDto,
+  SkillVersionDto,
 } from '@gen/api/types.gen';
 import { zPinSkillRequest, zSetAssignmentRequest, zSetAudienceRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
@@ -57,22 +57,22 @@ import { DEMO_LOGIN, type OrgsState } from './orgs';
 /** The team's skills and hooks, what each member decided about them, and what workstations reported. */
 export interface DeliveryState extends OrgsState {
   /** The demo organization's members: a decision names one of them. */
-  members: Member[];
+  members: MemberResponse[];
   /** Every skill, team and personal. */
-  skills: SkillEntry[];
+  skills: SkillEntryDto[];
   /** By skill name, newest first. */
-  skillVersions: Record<string, SkillVersion[]>;
+  skillVersions: Record<string, SkillVersionDto[]>;
   /** By skill name. */
-  skillAssignments: Record<string, Assignment[]>;
+  skillAssignments: Record<string, AssignmentDto[]>;
   /** What each member's workstations reported, by member id. */
-  skillInstallations: Record<string, SkillInstallation[]>;
-  hooks: HookEntry[];
+  skillInstallations: Record<string, SkillInstallationDto[]>;
+  hooks: HookEntryDto[];
   /** By hook name, newest first. */
-  hookVersions: Record<string, HookVersion[]>;
+  hookVersions: Record<string, HookVersionDto[]>;
   /** By hook name. */
-  hookAssignments: Record<string, Assignment[]>;
+  hookAssignments: Record<string, AssignmentDto[]>;
   /** The files of each hook version, by `name@version`. */
-  hookFiles: Record<string, ArtifactFileContent[]>;
+  hookFiles: Record<string, ArtifactFileContentDto[]>;
 }
 
 /** The demo person, whom every call that names no member acts as. */
@@ -102,12 +102,12 @@ interface Lane<E extends Entry, V extends Version = Version> {
   readonly kind: 'skill' | 'hook';
   readonly entries: () => E[];
   readonly versions: () => Record<string, V[]>;
-  readonly assignments: () => Record<string, Assignment[]>;
+  readonly assignments: () => Record<string, AssignmentDto[]>;
 }
 
 export function createDeliveryHandlers(
   state: () => DeliveryState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   now: () => Date,
 ): HttpHandler[] {
   const inDemoOrg = (request: Request): boolean => organizationOf(request).id === state().organization.id;
@@ -123,13 +123,13 @@ export function createDeliveryHandlers(
       ? undefined
       : refusal(403, 'forbidden', 'Only an owner or an admin manages the catalog.');
 
-  const skills: Lane<SkillEntry, SkillVersion> = {
+  const skills: Lane<SkillEntryDto, SkillVersionDto> = {
     kind: 'skill',
     entries: () => state().skills,
     versions: () => state().skillVersions,
     assignments: () => state().skillAssignments,
   };
-  const hooks: Lane<HookEntry, HookVersion> = {
+  const hooks: Lane<HookEntryDto, HookVersionDto> = {
     kind: 'hook',
     entries: () => state().hooks,
     versions: () => state().hookVersions,
@@ -204,7 +204,11 @@ export function createDeliveryHandlers(
       if (!body.success || (body.data.decision !== 'allow' && body.data.decision !== 'deny'))
         return refusal(400, 'invalid_request', 'allow or deny is expected.');
       if (!state().members.some((member) => member.id === memberId)) return notFound('member');
-      const decision: Assignment = { memberId, decision: body.data.decision, updatedAt: now().toISOString() };
+      const decision: AssignmentDto = {
+        memberId,
+        decision: body.data.decision,
+        updatedAt: now().toISOString(),
+      };
       const others = (lane.assignments()[name] ?? []).filter((item) => item.memberId !== memberId);
       lane.assignments()[name] = [...others, decision];
       return HttpResponse.json(decision);
@@ -235,7 +239,7 @@ export function createDeliveryHandlers(
     if (decision === 'deny') return undefined;
     return decision === 'allow' || entry.allMembers ? version : undefined;
   };
-  const effectiveSkills = (memberId: string): EffectiveSkill[] =>
+  const effectiveSkills = (memberId: string): EffectiveSkillDto[] =>
     state()
       .skills.flatMap((skill) => {
         const version = receives(skills, skill, memberId);
@@ -252,7 +256,7 @@ export function createDeliveryHandlers(
             ];
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  const effectiveHooks = (memberId: string): EffectiveHook[] =>
+  const effectiveHooks = (memberId: string): EffectiveHookDto[] =>
     state()
       .hooks.flatMap((hook) => {
         const version = receives(hooks, hook, memberId);
@@ -286,14 +290,14 @@ export function createDeliveryHandlers(
   };
 
   /** The caller's personal skills: their own, as the member themself (never an administrator's view of others'). */
-  const mine = (request: Request, name: string): SkillEntry | Response => {
+  const mine = (request: Request, name: string): SkillEntryDto | Response => {
     const skill = state().skills.find((item) => item.name === name && item.ownerId === CALLER);
     return skill === undefined || !inDemoOrg(request) ? notFound('skill') : skill;
   };
   const onMine = async (
     request: Request,
     name: string,
-    then: (skill: SkillEntry) => Response | Promise<Response>,
+    then: (skill: SkillEntryDto) => Response | Promise<Response>,
   ): Promise<Response> => {
     const skill = mine(request, name);
     return skill instanceof Response ? skill : then(skill);

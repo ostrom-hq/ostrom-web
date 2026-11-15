@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudCluster } from '@gen/api/types.gen';
+import type { CloudClusterResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
@@ -41,16 +41,16 @@ export function ClustersSection(): ReactElement {
                       <span className="o-row__title">{cluster.name}</span>
                       <span className="o-row__meta">{cluster.apiUrl}</span>
                       <span className="o-row__meta">{cluster.allowedNamespaces.join(', ')}</span>
-                      {cluster.lastGarbageCollectionAt === undefined ? null : (
+                      {typeof cluster.lastGarbageCollectionAt === 'string' ? (
                         <span className="o-row__meta">
                           {t('cloudAdmin.clusters.gcLast', {
                             when: formatRelative(cluster.lastGarbageCollectionAt, now, i18n.language),
                           })}
                         </span>
-                      )}
+                      ) : null}
                     </span>
                     <span className="o-row__end o-inline">
-                      {cluster.orphanedVolumes === undefined || cluster.orphanedVolumes === 0 ? null : (
+                      {typeof cluster.orphanedVolumes !== 'number' || cluster.orphanedVolumes === 0 ? null : (
                         <Badge tone="warning">
                           {t('cloudAdmin.clusters.orphanedVolumes', { count: cluster.orphanedVolumes })}
                         </Badge>
@@ -132,7 +132,7 @@ function ClusterForm({
   view,
   onDone,
 }: {
-  readonly stored: CloudCluster | undefined;
+  readonly stored: CloudClusterResponse | undefined;
   readonly view: CloudClustersViewModel;
   readonly onDone: () => void;
 }): ReactElement {

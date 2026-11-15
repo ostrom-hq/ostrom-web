@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Budget, OrgMember } from '@gen/api/types.gen';
+import type { BudgetDto, MemberResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -14,8 +14,8 @@ export function BudgetList({
   budgets,
   members,
 }: {
-  readonly budgets: readonly Budget[];
-  readonly members: readonly OrgMember[] | undefined;
+  readonly budgets: readonly BudgetDto[];
+  readonly members: readonly MemberResponse[] | undefined;
 }): ReactElement {
   const { t, i18n } = useTranslation();
   // One budget a member makes hundreds of lines: a hundred at a time (PERF-CONSOLE).
@@ -33,7 +33,7 @@ export function BudgetList({
             const title =
               scope === 'member'
                 ? (budgetSubjectLabel(budget.subject, members) ?? t('spend.budgets.everyMember'))
-                : budget.subject === undefined
+                : budget.subject === undefined || budget.subject === null
                   ? who
                   : `${who} · ${budget.subject}`;
             return (
@@ -42,10 +42,10 @@ export function BudgetList({
                   <span className="o-row__title">{title}</span>
                   <span className="o-row__meta">
                     {[
-                      budget.usdPerMonth === undefined
+                      budget.usdPerMonth === undefined || budget.usdPerMonth === null
                         ? undefined
                         : t('spend.budgets.monthly', { usd: formatUsd(budget.usdPerMonth, i18n.language) }),
-                      budget.usdPerDay === undefined
+                      budget.usdPerDay === undefined || budget.usdPerDay === null
                         ? undefined
                         : t('spend.budgets.daily', { usd: formatUsd(budget.usdPerDay, i18n.language) }),
                     ]
@@ -53,8 +53,8 @@ export function BudgetList({
                       .join(' · ')}
                   </span>
                 </span>
-                <Badge tone={budget.hardStop ? 'danger' : 'warning'}>
-                  {budget.hardStop ? t('spend.budgets.stops') : t('spend.budgets.warns')}
+                <Badge tone={budget.hardStop === true ? 'danger' : 'warning'}>
+                  {budget.hardStop === true ? t('spend.budgets.stops') : t('spend.budgets.warns')}
                 </Badge>
               </li>
             );

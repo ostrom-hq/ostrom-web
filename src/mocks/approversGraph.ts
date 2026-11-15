@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleGetApproversGraph } from '@gen/api/msw.gen';
-import type { ApproverGate, ApproverLine, Workflow } from '@gen/api/types.gen';
+import type { ApproverGateDto, ApproverDto } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 export interface ApproversGraphState {
   workflows: Workflow[];
@@ -25,7 +26,7 @@ export function createApproversGraphHandlers(state: () => ApproversGraphState): 
           workflow.nodes.flatMap((node) => {
             const actions = [...new Set((node.actions ?? []).map((action) => action.class))].sort();
             if (node.kind !== 'gate' || actions.length === 0) return [];
-            const gate: ApproverGate = {
+            const gate: ApproverGateDto = {
               workflowId: workflow.id,
               workflowName: workflow.name,
               nodeId: node.id,
@@ -40,11 +41,11 @@ export function createApproversGraphHandlers(state: () => ApproversGraphState): 
           const byWorkflow = a.gate.workflowId.localeCompare(b.gate.workflowId, 'en');
           return byWorkflow !== 0 ? byWorkflow : a.gate.nodeId.localeCompare(b.gate.nodeId, 'en');
         });
-      const byApprover = new Map<string, ApproverGate[]>();
+      const byApprover = new Map<string, ApproverGateDto[]>();
       for (const { gate, approvers } of gates)
         for (const approver of approvers)
           byApprover.set(approver, [...(byApprover.get(approver) ?? []), gate]);
-      const approvers: ApproverLine[] = [...byApprover.entries()]
+      const approvers: ApproverDto[] = [...byApprover.entries()]
         .map(([approver, list]) => ({ approver, gates: list }))
         .sort((a, b) => a.approver.localeCompare(b.approver, 'en'));
       // As the server: a class a gate covers is not "ungated", even while its workflow is only proposed.

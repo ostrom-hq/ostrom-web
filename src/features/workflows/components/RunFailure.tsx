@@ -11,14 +11,13 @@ import { failureWords } from '../runs';
 export function RunFailure({ run }: { readonly run: WorkflowRun }): ReactElement | null {
   const { t } = useTranslation();
   const words = failureWords(run.failureCode);
+  const failure = run.failure ?? undefined;
   const said = words === undefined ? undefined : t(words.key, { node: words.node ?? '' });
-  if (said === undefined && run.failure === undefined) return null;
+  if (said === undefined && failure === undefined) return null;
   return (
     <>
       {said === undefined ? null : <span className="o-row__meta">{said}</span>}
-      {run.failure === undefined || run.failure === said ? null : (
-        <span className="o-row__meta">{run.failure}</span>
-      )}
+      {failure === undefined || failure === said ? null : <span className="o-row__meta">{failure}</span>}
     </>
   );
 }

@@ -5,7 +5,7 @@ import {
   getGatePolicyQueryKey,
   setGatePolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { ApproversGraph } from '@gen/api/types.gen';
+import type { ApproversGraphResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -22,7 +22,7 @@ export interface ApproversViewModel {
   /** The steps, as soon as the workflows come: a slow graph never holds them. */
   readonly points: readonly ApprovalPoint[] | undefined;
   /** Who approves what, as the gates decide it on the server: by person, the gates naming nobody, what no gate covers. */
-  readonly graph: ApproversGraph | undefined;
+  readonly graph: ApproversGraphResponse | undefined;
   /** The server does not serve it (an older server): the steps of the workflows still show. */
   readonly graphUnavailable: boolean;
   /** Why the graph did not come; the steps still show, with this in place of the notes and the people. */

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Session } from '@gen/api/types.gen';
+import type { SessionDto } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useMemo, useState } from 'react';
 import { Feature } from '@/shared/capabilities/Feature';
@@ -79,7 +79,7 @@ export function SessionsScreen(): ReactElement {
   );
 }
 
-function SessionRows({ sessions }: { readonly sessions: readonly Session[] }): ReactElement {
+function SessionRows({ sessions }: { readonly sessions: readonly SessionDto[] }): ReactElement {
   const { t, i18n } = useTranslation();
   const now = useNow();
   return (
@@ -105,9 +105,9 @@ function SessionRows({ sessions }: { readonly sessions: readonly Session[] }): R
               dateTime={session.endedAt ?? session.startedAt}
               title={formatAbsolute(session.startedAt, i18n.language)}
             >
-              {session.endedAt === undefined
-                ? t('sessions.list.since', { when: formatRelative(session.startedAt, now, i18n.language) })
-                : formatDuration(session.startedAt, session.endedAt, i18n.language)}
+              {typeof session.endedAt === 'string'
+                ? formatDuration(session.startedAt, session.endedAt, i18n.language)
+                : t('sessions.list.since', { when: formatRelative(session.startedAt, now, i18n.language) })}
             </time>
           </Link>
         </li>

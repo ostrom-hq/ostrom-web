@@ -57,6 +57,7 @@ describe('an automation that starts a workflow', () => {
     const created = await card('Release on tag');
     expect(created).toHaveTextContent('Runs the workflow wf-release');
     expect(db.automations[0]?.action).toEqual({
+      prompt: '',
       workflowId: 'wf-release',
       inputs: { tag: '{{tag}}' },
       repository: 'acme/api',
@@ -78,7 +79,7 @@ describe('an automation that starts a workflow', () => {
     expect(within(form).queryByRole('textbox', { name: 'Release tag (required)' })).toBeNull();
     await user.click(within(form).getByRole('button', { name: 'Create the automation' }));
     await card('Switch');
-    expect(db.automations[0]?.action).toEqual({ workflowId: 'wf-backend', inputs: {} });
+    expect(db.automations[0]?.action).toEqual({ prompt: '', workflowId: 'wf-backend', inputs: {} });
   });
 
   it('ignores an action the form does not offer', async () => {

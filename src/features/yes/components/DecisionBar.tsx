@@ -3,10 +3,11 @@ import type { Approval } from '@gen/api/types.gen';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
-import { askedByViewer } from '../model';
+import { useEnumLabel } from '@/shared/i18n/enumLabel';
+import { isKnown } from '@/shared/lib/openEnum';
+import { APPROVE_ACTIONS, askedByViewer } from '../model';
 import type { AnswerViewModel } from '../useYes';
 import { GithubLinkAction, GithubLinkNotice } from './GithubLinkNotice';
 
@@ -15,6 +16,8 @@ export interface DecisionBarProps {
   readonly viewer: string | undefined;
   readonly viewerName: string | undefined;
   readonly answer: AnswerViewModel;
+  /** What the yes lets through (`merge`...), when the view names it. */
+  readonly action: string | undefined;
   /** A yes waits for the person's GitHub link: Approve is off, Decline stays open. */
   readonly linkRequired: boolean;
 }
@@ -25,6 +28,7 @@ export function DecisionBar({
   viewer,
   viewerName,
   answer,
+  action,
   linkRequired,
 }: DecisionBarProps): ReactElement {
   const { t } = useTranslation();
@@ -138,9 +142,9 @@ export function DecisionBar({
             >
               {sending === 'approve'
                 ? t('yes.act.approving')
-                : approval.action === undefined
-                  ? t('yes.act.approve')
-                  : enumText('yes.act.approveKind', approval.action.kind)}
+                : action !== undefined && isKnown(APPROVE_ACTIONS, action)
+                  ? enumText('yes.act.approveKind', action)
+                  : t('yes.act.approve')}
             </Button>
           </div>
         </>

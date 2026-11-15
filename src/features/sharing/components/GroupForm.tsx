@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, SharedAccount } from '@gen/api/types.gen';
+import type { MemberResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useMemo, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useStep } from '@/shared/lib/useStep';
@@ -18,9 +18,9 @@ export const PEOPLE_STEP = 20;
 export interface GroupFormProps {
   readonly change: GroupChangeViewModel;
   /** The members read so far: twenty are offered at a time, then the next page is read when asked. */
-  readonly members: readonly OrgMember[];
+  readonly members: readonly MemberResponse[];
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
-  readonly accounts: readonly SharedAccount[];
+  readonly accounts: readonly SharedAccountResponse[];
 }
 
 /** A new group: a name, the people in it and the subscriptions it lends. The server says what it refuses. */

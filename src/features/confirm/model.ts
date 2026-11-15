@@ -1,21 +1,24 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
-import { zInvitationLinkCreate, zOrgInvites, zOrgMember } from '@gen/api/zod.gen';
+import type { ConfirmationDto, ConfirmationPersonDto } from '@gen/api/types.gen';
+import { zCreateLinkRequest, zMemberResponse } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
 /** "Theo Martin (theo)", the login or the name alone, else the member id: never an empty requester. */
-export function personName(person: GovernanceConfirmationPerson): string {
-  const { name, login, memberId } = person;
+export function personName(person: ConfirmationPersonDto): string {
+  const { memberId } = person;
+  const name = person.name ?? undefined;
+  const login = person.login ?? undefined;
   if (name !== undefined && login !== undefined) return `${name} (${login})`;
   return name ?? login ?? memberId;
 }
 
 // How the server shows a member in a role change or a removal (`OrgsGovernanceChange`): the membership, the login and
 // the role, never the name nor the address. The page says the login and the role; the membership is not read.
-const zShownMember = z.pick(zOrgMember, { login: true, role: true });
-// How it shows invitations: the list the write sent, not the body around it.
-const zShownInvites = zOrgInvites.shape.invites;
+const zShownMember = z.pick(zMemberResponse, { login: true, role: true });
+// How it shows invitations: the list the write sent, not the body around it. The document leaves each invitation a
+// free map of text, so the console reads the two words it says.
+const zShownInvites = z.array(z.object({ email: z.string(), role: z.optional(z.string()) }));
 
 /** A change of the organization's people, as the page says it in words rather than JSON. */
 export type MemberChange =
@@ -37,7 +40,7 @@ const DEFAULT_LINK_USES = 10;
  * invited, a link's role. Anything of another shape, or another kind, is left to the JSON before and after.
  */
 export function memberChangeOf(
-  confirmation: Pick<GovernanceConfirmation, 'kind' | 'before' | 'after'>,
+  confirmation: Pick<ConfirmationDto, 'kind' | 'before' | 'after'>,
 ): MemberChange | undefined {
   const { kind, before, after } = confirmation;
   if (kind === 'members.role') {
@@ -66,7 +69,7 @@ export function memberChangeOf(
     return invites.size === 0 ? undefined : { kind: 'invite', invites: [...invites.values()] };
   }
   if (kind === 'members.link') {
-    const is = zInvitationLinkCreate.safeParse(after);
+    const is = zCreateLinkRequest.safeParse(after);
     return is.success
       ? { kind: 'link', role: is.data.role ?? DEFAULT_ROLE, maxUses: is.data.maxUses ?? DEFAULT_LINK_USES }
       : undefined;

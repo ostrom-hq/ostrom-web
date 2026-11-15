@@ -125,6 +125,10 @@ function clockTime(iso: string, language: string): string {
 function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElement {
   const { t, i18n } = useTranslation();
   const { login } = open;
+  const { requestedFrom, scopes } = {
+    requestedFrom: login.requestedFrom ?? undefined,
+    scopes: login.scopes ?? undefined,
+  };
   return (
     <Screen title={t('device.title')} lead={t('device.lead')}>
       <div className="o-stack">
@@ -134,20 +138,20 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
             facts={[
               { label: t('device.client'), value: login.clientName },
               { label: t('device.requestedAt'), value: clockTime(login.requestedAt, i18n.language) },
-              login.requestedFrom === undefined
+              requestedFrom === undefined
                 ? undefined
-                : { label: t('device.requestedFrom'), value: login.requestedFrom, mono: true },
+                : { label: t('device.requestedFrom'), value: requestedFrom, mono: true },
               { label: t('device.expires'), value: clockTime(login.expiresAt, i18n.language) },
             ]}
           />
         </Section>
-        {login.scopes === undefined ? null : (
+        {scopes === undefined ? null : (
           <div className="o-stack">
             <Banner tone="warning" tag={t('device.adminTag')}>
               {t('device.admin')}
             </Banner>
             <ul className="o-device__scopes" aria-label={t('device.scopes')}>
-              {login.scopes.map((scope) => (
+              {scopes.map((scope) => (
                 <li key={scope} className="o-mono">
                   {scope}
                 </li>
@@ -173,7 +177,7 @@ function LoginRequest({ open }: { readonly open: OpenDeviceLogin }): ReactElemen
         )}
         <div className="o-device__actions">
           <Button variant="primary" onClick={open.approve} disabled={open.answering || open.choosing}>
-            {login.scopes === undefined ? t('device.approve') : t('device.approveAdmin')}
+            {scopes === undefined ? t('device.approve') : t('device.approveAdmin')}
           </Button>
           <Button onClick={open.deny} disabled={open.answering}>
             {t('device.deny')}

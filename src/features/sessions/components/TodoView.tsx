@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Todo, TodoItem, TodoItemStatus } from '@gen/api/types.gen';
+import type { Todo, TodoItem } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { knownOr, type Known } from '@/shared/lib/openEnum';
@@ -10,6 +10,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { Section } from '@/shared/ui/Screen';
 import { checkText, currentItem, hookErrors, mostlyAttested, todoCount } from '../todo';
 import './todo.css';
+import type { TodoItemStatus } from '@/shared/api/vocabulary';
 
 const TONES: Readonly<Record<Known<TodoItemStatus>, BadgeTone>> = {
   todo: 'neutral',
@@ -109,17 +110,17 @@ function TodoRow({ item, locale }: { readonly item: TodoItem; readonly locale: s
             <li key={index}>{checkText(check, t)}</li>
           ))}
         </ul>
-        {item.dropReason === undefined ? null : (
+        {typeof item.dropReason === 'string' ? (
           <span className="st-todo-text">{t('sessions.todo.dropReason', { reason: item.dropReason })}</span>
-        )}
-        {item.proof === undefined ? null : (
+        ) : null}
+        {item.proof ? (
           <span className="st-todo-text">
             {t('sessions.todo.lastProof', {
               when: formatAbsolute(item.proof.at, locale),
               text: item.proof.text,
             })}
           </span>
-        )}
+        ) : null}
         {item.origin === 'discovered' || item.unverified === true ? (
           <span className="st-todo-chips">
             {item.origin === 'discovered' ? <Badge>{t('sessions.todo.addedAlong')}</Badge> : null}

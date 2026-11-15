@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-import { zGovernanceChangeKind } from '@gen/api/zod.gen';
 import { knownValues } from '@/shared/lib/openEnum';
 import { en } from '@/shared/i18n/locales/en';
 import { fr } from '@/shared/i18n/locales/fr';
+import { zGovernanceChangeKind } from '@/shared/api/vocabulary';
 
 /** The value at `path` in a wording tree, or undefined where a step is missing. */
 function at(tree: unknown, path: readonly string[]): unknown {

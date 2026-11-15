@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation, AutomationWrite } from '@gen/api/types.gen';
+import type { AutomationResponse, AutomationRequest } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -24,7 +24,7 @@ import { AutomationForm } from './AutomationForm';
 import { SecretOnce } from './SecretOnce';
 
 export interface AutomationCardProps {
-  readonly automation: Automation;
+  readonly automation: AutomationResponse;
   readonly now: Date;
   readonly busy: boolean;
   /** A webhook secret just made (`created`) or rotated, shown here once. */
@@ -44,7 +44,7 @@ export interface AutomationCardProps {
         /** Why the server refused the last change, as it wrote it: said above the editor. */
         readonly failure: Error | undefined;
         /** `onSaved` runs once the server took the change: the editor closes then, not before. */
-        readonly save: (write: AutomationWrite, onSaved: () => void) => void;
+        readonly save: (write: AutomationRequest, onSaved: () => void) => void;
         /** Runs as the editor opens: the last answer of another gesture is forgotten. */
         readonly onOpen: () => void;
       }
@@ -169,7 +169,7 @@ export function AutomationCard({
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   // The automation as it stood when its editor opened: a save sends the version read then, never a newer one.
-  const [editing, setEditing] = useState<Automation | undefined>(undefined);
+  const [editing, setEditing] = useState<AutomationResponse | undefined>(undefined);
   const headingId = useId();
   const runsId = useId();
   const { trigger, action } = automation;
@@ -215,24 +215,24 @@ export function AutomationCard({
         {isWebhook(automation)
           ? t('automations.trigger.webhook')
           : t('automations.trigger.cron', {
-              schedule: [trigger.cron, trigger.timezone].filter((part) => part !== undefined).join(' · '),
+              schedule: [trigger.cron, trigger.timezone]
+                .filter((part) => typeof part === 'string')
+                .join(' · '),
             })}
       </p>
       <p className="cl-action">
-        {action.workflowId !== undefined
+        {typeof action.workflowId === 'string'
           ? t('automations.action.workflow', { workflow: action.workflowId })
           : t('automations.action.prompt', {
               agent: agent ?? t('automations.action.defaultAgent'),
-              prompt: action.prompt ?? '',
+              prompt: action.prompt,
             })}
       </p>
       <p className="o-row__meta">
         {[
           t('automations.owner', { owner: automation.owner }),
           t('automations.version', { version: automation.version }),
-          automation.maxRunsPerDay === undefined
-            ? undefined
-            : t('automations.perDay', { count: automation.maxRunsPerDay }),
+          t('automations.perDay', { count: automation.maxRunsPerDay }),
           action.maxRuntimeMinutes === undefined
             ? undefined
             : t('automations.runtime', { minutes: action.maxRuntimeMinutes }),
@@ -241,12 +241,12 @@ export function AutomationCard({
           .filter((part) => part !== undefined)
           .join(' · ')}
       </p>
-      {automation.webhookUrl === undefined ? null : (
+      {typeof automation.webhookUrl === 'string' ? (
         <p className="o-row__meta o-mono cl-url">{automation.webhookUrl}</p>
-      )}
-      {automation.webhookUrl === undefined ? null : (
+      ) : null}
+      {typeof automation.webhookUrl === 'string' ? (
         <VersionedUrl url={automation.webhookUrl} version={automation.version} />
-      )}
+      ) : null}
       {secret === undefined ? null : (
         <SecretOnce name={automation.name} value={secret.value} created={secret.created} />
       )}

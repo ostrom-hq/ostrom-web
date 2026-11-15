@@ -425,6 +425,10 @@ describe('the shared subscriptions', () => {
         status: 'revoked',
         sharedWith: [],
         paused: false,
+        mine: false,
+        priority: 0,
+        limits: {},
+        createdAt: '2026-10-01T00:00:00.000Z',
       },
       {
         id: 'b',
@@ -434,6 +438,10 @@ describe('the shared subscriptions', () => {
         status: 'reconnect_required',
         sharedWith: [],
         paused: false,
+        mine: false,
+        priority: 0,
+        limits: {},
+        createdAt: '2026-10-01T00:00:00.000Z',
       },
       {
         id: 'c',
@@ -443,6 +451,10 @@ describe('the shared subscriptions', () => {
         status: 'wrong_account',
         sharedWith: [],
         paused: false,
+        mine: false,
+        priority: 0,
+        limits: {},
+        createdAt: '2026-10-01T00:00:00.000Z',
       },
     ];
     visit('/accounts');
@@ -470,8 +482,11 @@ describe('the shared subscriptions', () => {
       owner: 'maya',
       status: 'access_only',
       refreshOwnership: 'access_only',
-      sharedWith: [],
       paused: false,
+      mine: false,
+      priority: 0,
+      limits: {},
+      createdAt: '2026-10-01T00:00:00.000Z',
     });
     visit('/accounts');
     expect(

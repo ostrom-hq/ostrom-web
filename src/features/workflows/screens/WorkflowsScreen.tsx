@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -11,6 +10,7 @@ import { LoadState, Screen } from '@/shared/ui/Screen';
 import { approvalSteps, reposText, STATUS_TONES } from '../model';
 import { useWorkflows } from '../useWorkflows';
 import './workflows.css';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 export function WorkflowsScreen(): ReactElement {
   const { t } = useTranslation();

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Decision, Rule } from '@gen/api/types.gen';
+import type { DecisionDto, RuleDto } from '@gen/api/types.gen';
 
-const rules: Rule[] = [
+const rules: RuleDto[] = [
   {
     id: 'R-12',
     statement: 'A pull request into main needs one review from an owner of the repository.',
@@ -25,6 +25,8 @@ const rules: Rule[] = [
     statement: 'Run `pnpm test` before pushing.',
     output: 'check',
     group: 'Tests',
+    scope: [],
+    sources: [],
     strength: 'recommended',
     confidence: 0.71,
     status: 'proposed',
@@ -37,6 +39,7 @@ const rules: Rule[] = [
     output: 'gate',
     group: 'Releases',
     scope: ['acme/billing-api'],
+    sources: [],
     strength: 'required',
     confidence: 0.92,
     status: 'accepted',
@@ -63,6 +66,8 @@ const rules: Rule[] = [
     statement: 'Commit messages are in French.',
     output: 'note',
     group: 'Style',
+    scope: [],
+    sources: [],
     strength: 'recommended',
     confidence: 0.4,
     status: 'rejected',
@@ -73,7 +78,7 @@ const rules: Rule[] = [
   },
 ];
 
-const decisions: Decision[] = [
+const decisions: DecisionDto[] = [
   {
     id: 'dec-2',
     at: '2026-10-28T16:05:00.000Z',
@@ -92,11 +97,11 @@ const decisions: Decision[] = [
   },
 ];
 
-export function initialRules(): Rule[] {
+export function initialRules(): RuleDto[] {
   return structuredClone(rules);
 }
 
 /** Newest first, as the server lists them. */
-export function initialDecisions(): Decision[] {
+export function initialDecisions(): DecisionDto[] {
   return structuredClone(decisions);
 }

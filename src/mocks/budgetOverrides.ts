@@ -4,14 +4,14 @@ import {
   handleListBudgetOverrides,
   handleRevokeBudgetOverride,
 } from '@gen/api/msw.gen';
-import type { BudgetOverride } from '@gen/api/types.gen';
+import type { BudgetOverrideDto } from '@gen/api/types.gen';
 import { zCreateBudgetOverrideBody, zRevokeBudgetOverrideBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface BudgetOverridesState {
   /** Every grant, of every member, oldest first. */
-  budgetOverrides: BudgetOverride[];
+  budgetOverrides: BudgetOverrideDto[];
 }
 
 const PAGE = 50;
@@ -43,7 +43,7 @@ export function createBudgetOverridesHandlers(
       'stale_budget_override',
       'The override in force changed: read it again before replacing it.',
     );
-  const activeOf = (login: string): BudgetOverride | undefined => {
+  const activeOf = (login: string): BudgetOverrideDto | undefined => {
     const at = now().getTime();
     return state()
       .budgetOverrides.filter((item) => item.member === login)
@@ -89,7 +89,7 @@ export function createBudgetOverridesHandlers(
           item.id === active.id ? { ...item, expiresAt: at.toISOString() } : item,
         );
       }
-      const granted: BudgetOverride = {
+      const granted: BudgetOverrideDto = {
         id: crypto.randomUUID(),
         member: params.login,
         micros: body.data.micros,
@@ -113,7 +113,7 @@ export function createBudgetOverridesHandlers(
       if (item === undefined) return refusal(404, 'not_found', 'No such override.');
       if (item.revokedAt !== undefined) return HttpResponse.json(item);
       if (Date.parse(item.expiresAt) <= now().getTime()) return stale();
-      const revoked: BudgetOverride = {
+      const revoked: BudgetOverrideDto = {
         ...item,
         revokedAt: now().toISOString(),
         revokedBy: access.me(),

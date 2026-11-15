@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { EnvironmentVariant } from '@gen/api/types.gen';
+import type { EnvironmentVariantResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -10,9 +10,14 @@ import { Choice, Field } from './Field';
 
 export interface AssignFormProps {
   readonly members: readonly MemberEnvironment[];
-  readonly variants: readonly EnvironmentVariant[];
+  readonly variants: readonly EnvironmentVariantResponse[];
   readonly busy: boolean;
-  readonly assign: (member: string, variant: EnvironmentVariant, value: string, onDone: () => void) => void;
+  readonly assign: (
+    member: string,
+    variant: EnvironmentVariantResponse,
+    value: string,
+    onDone: () => void,
+  ) => void;
 }
 
 /** Selects a team variant for one member; a per-member variant takes that member's own value, written once. */
@@ -36,7 +41,7 @@ function AssignFields({
   assign,
 }: Pick<AssignFormProps, 'busy' | 'assign'> & {
   readonly members: NonEmpty<MemberEnvironment>;
-  readonly variants: NonEmpty<EnvironmentVariant>;
+  readonly variants: NonEmpty<EnvironmentVariantResponse>;
 }): ReactElement {
   const { t } = useTranslation();
   const [pickedMember, setMember] = useState(members[0].id);

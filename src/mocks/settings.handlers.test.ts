@@ -95,6 +95,15 @@ describe('mock tokens', () => {
     expect(await bad({ name: 'CI', scopes: many })).toMatchObject({ status: 400 });
   });
 
+  it('replaces a token that never expires by one that never expires', async () => {
+    const forever = await createToken({
+      body: { name: 'Forever', scopes: ['orgs:read'] },
+      throwOnError: true,
+    });
+    const again = await rotateToken({ path: { id: forever.data.token.id }, throwOnError: true });
+    expect(again.data.token.expiresAt ?? null).toBeNull();
+  });
+
   it('replaces a secret: a new token takes the old one’s place, with its name, scopes and expiry', async () => {
     const rotated = await rotateToken({ path: { id: 'tok-2' }, throwOnError: true });
     expect(rotated.data.token).toMatchObject({
@@ -148,7 +157,7 @@ describe('mock sessions', () => {
     expect(db.authSessions).toEqual([]);
     db.signedIn = true;
     const { data } = await listAuthSessions({ throwOnError: true });
-    expect(data.items).toMatchObject([{ current: true, device: 'This browser' }]);
+    expect(data.items).toMatchObject([{ current: true }]);
   });
 });
 

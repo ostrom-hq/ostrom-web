@@ -64,8 +64,12 @@ test('6.1 the thread of a session shows who said yes or no to each gate it asked
   await expect(ben.getByRole('region', { name: 'Decision' })).toBeVisible();
 
   // What the server says of the thread, read as the console reads it.
-  let answers: readonly { gateId: string; outcome: string; by: string; receiptId?: string | undefined }[] =
-    [];
+  let answers: readonly {
+    gateId: string;
+    outcome: string;
+    by: string;
+    receiptId?: string | null | undefined;
+  }[] = [];
   await expect
     .poll(async () => {
       const read = await callFromPage(page, 'GET', `/api/v1/sessions/${session.id}`, undefined, org);
@@ -74,7 +78,7 @@ test('6.1 the thread of a session shows who said yes or no to each gate it asked
     })
     .toEqual([`${no}:refused:${member}`, `${yes}:approved:${member}`].toSorted());
   const receiptOf = (gate: string): string | undefined =>
-    answers.find((answer) => answer.gateId === gate)?.receiptId;
+    answers.find((answer) => answer.gateId === gate)?.receiptId ?? undefined;
 
   // The owner finds the session in the list, opens it, and reads the thread.
   await page.goto('/sessions');

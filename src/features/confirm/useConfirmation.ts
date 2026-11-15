@@ -4,7 +4,7 @@ import {
   getGovernanceConfirmationOptions,
   getGovernanceConfirmationQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { GovernanceConfirmation, GovernanceConfirmationAnswer } from '@gen/api/types.gen';
+import type { ConfirmationDto } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { type ApiFailure, isApiFailure } from '@/shared/api/ApiFailure';
@@ -12,6 +12,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { type AnswerNotice, answerNoticeOf } from './model';
+import type { GovernanceConfirmationAnswer } from '@/shared/api/vocabulary';
 
 /** Someone else may answer it meanwhile (another admin, the CLI's expiry): the page reads it again this often. */
 export const POLL_MS = 5_000;
@@ -23,7 +24,7 @@ export function stillPending(data: unknown): boolean {
 }
 
 export interface ConfirmationViewModel {
-  readonly confirmation: GovernanceConfirmation | undefined;
+  readonly confirmation: ConfirmationDto | undefined;
   readonly failure: ApiFailure | Error | undefined;
   /** 404: no such confirmation in this organization, or not one this person may read. */
   readonly notFound: boolean;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Automation } from '@gen/api/types.gen';
+import type { AutomationResponse } from '@gen/api/types.gen';
 import {
   addVariable,
   isActionKind,
@@ -17,7 +17,7 @@ import {
   wholeNumber,
 } from './automationDraft';
 
-const automation = (parts: Partial<Automation>): Automation => ({
+const automation = (parts: Partial<AutomationResponse>): AutomationResponse => ({
   id: 'au-1',
   name: 'Nightly',
   owner: 'theo',
@@ -32,6 +32,7 @@ const automation = (parts: Partial<Automation>): Automation => ({
   action: { prompt: 'Upgrade.', agent: 'codex', model: 'gpt-6', effort: 'high', maxRuntimeMinutes: 45 },
   overlap: 'allow',
   maxRunsPerDay: 2,
+  variables: [],
   version: 4,
   createdAt: '2026-10-01T00:00:00.000Z',
   updatedAt: '2026-10-01T00:00:00.000Z',
@@ -95,10 +96,11 @@ describe('the automation form', () => {
     const bare = automationDraftOf(
       automation({
         trigger: { kind: 'webhook' },
-        action: {},
+        action: { prompt: '' },
         variables: [
           { name: 'level', path: '$.level', type: 'enum', values: ['low', 'high'] },
           { name: 'token', path: '$.token', type: 'string', required: false, sensitive: true },
+          { name: 'plain', path: '$.plain' },
         ],
         samplePayload: { level: 'low' },
       }),
@@ -108,9 +110,7 @@ describe('the automation form', () => {
     expect(automationDraftOf(automation({ trigger: { kind: 'on_push' } }), 'UTC')).toMatchObject({
       kind: 'cron',
     });
-    const unbounded = automation({});
-    delete unbounded.maxRunsPerDay;
-    delete unbounded.overlap;
+    const unbounded = automation({ maxRunsPerDay: 24, overlap: 'queue' });
     expect(bare).toMatchObject({
       kind: 'webhook',
       cron: '0 9 * * 1-5',
@@ -139,6 +139,15 @@ describe('the automation form', () => {
         values: '',
         required: false,
         sensitive: true,
+      },
+      {
+        key: 2,
+        name: 'plain',
+        path: '$.plain',
+        type: 'string',
+        values: '',
+        required: true,
+        sensitive: false,
       },
     ]);
     expect(automationDraftOf(unbounded, 'UTC')).toMatchObject({ runsPerDay: '24', overlap: 'skip' });
@@ -323,7 +332,7 @@ describe('a workflow action', () => {
   const action = { workflowId: 'wf-1', inputs: { tag: '{{tag}}' }, repository: 'acme/api' };
 
   it('reads as a draft and writes back without a prompt', () => {
-    const draft = automationDraftOf(automation({ action }), 'Europe/Paris');
+    const draft = automationDraftOf(automation({ action: { prompt: '', ...action } }), 'Europe/Paris');
     expect(draft).toMatchObject({ actionKind: 'workflow', workflowId: 'wf-1', repository: 'acme/api' });
     expect(automationDraftOf(undefined, 'Europe/Paris')).toMatchObject({
       actionKind: 'prompt',
@@ -331,7 +340,9 @@ describe('a workflow action', () => {
       inputs: {},
       repository: '',
     });
-    expect(automationDraftOf(automation({ action: { workflowId: 'w' } }), 'Europe/Paris')).toMatchObject({
+    expect(
+      automationDraftOf(automation({ action: { prompt: '', workflowId: 'w' } }), 'Europe/Paris'),
+    ).toMatchObject({
       inputs: {},
       repository: '',
     });

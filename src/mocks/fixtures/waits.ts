@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait } from '@gen/api/types.gen';
+import type { WaitResponse } from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const at = (ms: number): string => new Date(ms).toISOString();
@@ -30,7 +30,7 @@ make migrate ENV=prod
  * teammate's agent (one with every field type), one asked of Theo by her own agent, a cloud session's permission
  * request, and one of each end (answered, cancelled, ended without an answer). `now` is in ms.
  */
-export function initialWaits(now: number): Wait[] {
+export function initialWaits(now: number): WaitResponse[] {
   return [
     {
       id: '0b9d3a52-7c41-4e0a-9d63-5a1f0c7e8a01',
@@ -152,6 +152,7 @@ export function initialWaits(now: number): Wait[] {
       kind: 'time',
       status: 'resolved',
       assignee: MEMBER_IDS.maya,
+      createdBy: MEMBER_IDS.maya,
       createdAt: at(now - 48 * 3_600_000),
       resolvedAt: at(now - 47 * 3_600_000),
       question: { title: 'Wake me in an hour' },

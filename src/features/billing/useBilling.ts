@@ -10,7 +10,7 @@ import {
   resumeBillingSubscriptionMutation,
   startBillingCheckoutMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { BillingInvoice, BillingOverview, BillingRedirect } from '@gen/api/types.gen';
+import type { InvoiceResponse, BillingOverviewResponse, RedirectResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -19,7 +19,7 @@ import { leaveFor } from '@/shared/lib/leave';
 import type { Interval, SoldPlan } from './model';
 
 export interface BillingViewModel {
-  readonly billing: BillingOverview | undefined;
+  readonly billing: BillingOverviewResponse | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -29,7 +29,7 @@ export function useBilling(orgId: string): BillingViewModel {
 }
 
 export interface InvoicesViewModel {
-  readonly invoices: readonly BillingInvoice[] | undefined;
+  readonly invoices: readonly InvoiceResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -69,13 +69,13 @@ export function useBillingActions(orgId: string): BillingActionsViewModel {
   const [unsafeRedirect, setUnsafeRedirect] = useState(false);
   // The new state of the subscription is in the answer; a change or a cancellation may also issue an invoice.
   const settle = useCallback(
-    async (billing: BillingOverview) => {
+    async (billing: BillingOverviewResponse) => {
       queryClient.setQueryData(getBillingQueryKey({ path: { orgId } }), billing);
       await queryClient.invalidateQueries({ queryKey: listBillingInvoicesQueryKey({ path: { orgId } }) });
     },
     [queryClient, orgId],
   );
-  const leave = useCallback((redirect: BillingRedirect) => {
+  const leave = useCallback((redirect: RedirectResponse) => {
     setUnsafeRedirect(!leaveFor(redirect.url));
   }, []);
   const checkout = useMutation({ ...startBillingCheckoutMutation(), onSuccess: leave });

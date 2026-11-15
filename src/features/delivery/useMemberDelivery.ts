@@ -7,7 +7,12 @@ import {
   listMemberSkillInstallationsOptions,
   listMySkillInstallationsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { EffectiveHook, EffectiveSkill, OrgMember, SkillInstallation } from '@gen/api/types.gen';
+import type {
+  EffectiveHookDto,
+  EffectiveSkillDto,
+  MemberResponse,
+  SkillInstallationDto,
+} from '@gen/api/types.gen';
 import { useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -19,7 +24,7 @@ export interface DeliveredMember {
   /** The viewer's own view: read as the member themself, with what any member may read. */
   readonly mine: boolean;
   /** The member, when the members are readable; absent for a member who left or when they are not readable. */
-  readonly member: OrgMember | undefined;
+  readonly member: MemberResponse | undefined;
   /** Owners and admins also read a member's installations and reach the catalog. */
   readonly canManage: boolean;
 }
@@ -27,9 +32,9 @@ export interface DeliveredMember {
 export interface SkillDeliveryViewModel {
   readonly who: DeliveredMember | undefined;
   /** The pinned versions the member is allowed to install, sorted by name. */
-  readonly skills: readonly EffectiveSkill[] | undefined;
+  readonly skills: readonly EffectiveSkillDto[] | undefined;
   /** What each workstation last reported, newest first. */
-  readonly installations: readonly SkillInstallation[] | undefined;
+  readonly installations: readonly SkillInstallationDto[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -72,7 +77,7 @@ export function useSkillDelivery(memberId: string): SkillDeliveryViewModel {
 export interface HookDeliveryViewModel {
   readonly who: DeliveredMember | undefined;
   /** The pinned versions the member is allowed to install, sorted by name. */
-  readonly hooks: readonly EffectiveHook[] | undefined;
+  readonly hooks: readonly EffectiveHookDto[] | undefined;
   readonly failure: Error | undefined;
 }
 

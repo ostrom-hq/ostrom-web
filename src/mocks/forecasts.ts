@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleGetForecasts } from '@gen/api/msw.gen';
 import type {
-  ForecastAccount,
-  ForecastSample,
-  ForecastSnapshot,
-  ForecastWindow,
-  Organization,
-  SharedAccount,
+  ForecastAccountResponse,
+  ForecastSampleResponse,
+  ForecastSnapshotResponse,
+  ForecastWindowResponse,
+  MeOrganizationResponse,
+  SharedAccountResponse,
 } from '@gen/api/types.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers } from '@/shared/org/roles';
@@ -15,8 +15,8 @@ import { demoRoleIn, type OrgsState } from './orgs';
 
 /** The forecasts the demo shows: each shared account's windows, by account id; another organization has none. */
 export interface ForecastsState extends OrgsState {
-  sharedAccounts: SharedAccount[];
-  forecastWindows: Record<string, ForecastWindow[]>;
+  sharedAccounts: SharedAccountResponse[];
+  forecastWindows: Record<string, ForecastWindowResponse[]>;
   /** The accounts' ceiling (TeamCode's 95 % by default). */
   forecastThreshold: number;
   /** The server cut the answer at one of its bounds. */
@@ -36,7 +36,7 @@ function readings(
   count: number,
   first: number,
   step: number,
-): ForecastSample[] {
+): ForecastSampleResponse[] {
   return Array.from({ length: count }, (_, index) => ({
     utilization: first + index * step,
     observedAt: iso(opened - (start - index) * MINUTE),
@@ -48,7 +48,7 @@ function readings(
  * weekly window resets first; a model window has no rate yet. Theo's ChatGPT Pro is idle on one window and exhausted
  * on another. The imported Team Max has no reading yet.
  */
-export function initialForecastWindows(opened: number): Record<string, ForecastWindow[]> {
+export function initialForecastWindows(opened: number): Record<string, ForecastWindowResponse[]> {
   return {
     'acc-1': [
       {
@@ -111,13 +111,13 @@ export function initialForecastWindows(opened: number): Record<string, ForecastW
   };
 }
 
-function forecastAccountOf(account: SharedAccount): ForecastAccount {
+function forecastAccountOf(account: SharedAccountResponse): ForecastAccountResponse {
   return {
     id: account.id,
     provider: account.provider,
     label: account.label,
     status: account.status,
-    paused: account.paused,
+    paused: account.paused ?? false,
     ...(account.email === undefined ? {} : { email: account.email }),
   };
 }
@@ -125,7 +125,7 @@ function forecastAccountOf(account: SharedAccount): ForecastAccount {
 export function createForecastsHandlers(
   state: () => ForecastsState,
   now: () => Date,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
 ): HttpHandler[] {
   return [
     handleGetForecasts(({ request }) => {
@@ -144,7 +144,7 @@ export function createForecastsHandlers(
       const account = wanted === undefined ? accounts[0] : accounts.find((item) => item.id === wanted);
       if (wanted !== undefined && account === undefined)
         return refusal(404, 'not_found', 'No such account in this organization.');
-      const snapshot: ForecastSnapshot = {
+      const snapshot: ForecastSnapshotResponse = {
         generatedAt: now().toISOString(),
         accounts,
         ...(account === undefined ? {} : { account }),

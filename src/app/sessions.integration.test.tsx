@@ -240,7 +240,6 @@ describe('a session', () => {
 
     const who = screen.getByRole('region', { name: 'Who and where' });
     expect(who).toHaveTextContent('Developertheo, verified');
-    expect(who).toHaveTextContent('Signed in withgithub');
     const when = screen.getByRole('region', { name: 'When' });
     expect(when).toHaveTextContent(/Last report.*2026/);
     expect(when).not.toHaveTextContent('Ended');

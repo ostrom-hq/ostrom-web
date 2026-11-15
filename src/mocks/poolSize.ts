@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { handleGetPacingSettings, handleGetPoolSize, handleSetPacingSettings } from '@gen/api/msw.gen';
-import type { PoolSize } from '@gen/api/types.gen';
+import type { PoolSizeResponse } from '@gen/api/types.gen';
 import { zSetPacingSettingsBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
@@ -60,7 +60,7 @@ export function createPoolSizeHandlers(
         automaticDaily !== undefined &&
         access.now().getTime() - new Date(automaticDaily.computedAt).getTime() < 3_600_000;
       const inForce = settings().autoPoolSize && fresh ? automaticDaily : undefined;
-      const size: PoolSize = {
+      const size: PoolSizeResponse = {
         enabled: settings().autoPoolSize,
         manualDailyMicros: TYPED_DAILY_MICROS,
         ...(automaticDaily === undefined

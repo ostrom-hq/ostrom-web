@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait } from '@gen/api/types.gen';
+import type { WaitResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
 import { Badge } from '@/shared/ui/Badge';
@@ -11,7 +11,7 @@ export function StatusBadge({
   wait,
   people,
 }: {
-  readonly wait: Wait;
+  readonly wait: WaitResponse;
   readonly people: PeopleViewModel;
 }): ReactElement {
   const enumText = useEnumLabel();

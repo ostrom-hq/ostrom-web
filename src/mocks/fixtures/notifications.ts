@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  NotificationPreferences,
+  NotificationPreferencesBody,
   NotificationSetting,
-  PushDevice,
+  PushDeviceDto,
   PushTestResult,
 } from '@gen/api/types.gen';
 
@@ -24,7 +24,7 @@ export function initialNotificationSwitches(): NotificationSetting[] {
 }
 
 /** The server's defaults for a person who never set any: told of requests and answers, not of spending. */
-export function initialNotificationPreferences(): NotificationPreferences {
+export function initialNotificationPreferences(): NotificationPreferencesBody {
   return { requests: true, decisions: true, spending: false };
 }
 
@@ -34,7 +34,7 @@ export function initialPushPhones(): PushTestResult[] {
 }
 
 /** Maya's two phones, the most recently seen first, in the order a test reaches them (`initialPushPhones`). */
-export function initialPushDevices(): PushDevice[] {
+export function initialPushDevices(): PushDeviceDto[] {
   return [
     { id: 'pd_ios', provider: 'fcm', platform: 'ios', locale: 'fr', createdAt: '2026-11-10T08:30:00Z' },
     { id: 'pd_android', provider: 'fcm', platform: 'android', createdAt: '2026-10-02T17:05:00Z' },

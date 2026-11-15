@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudSession, CloudTransfer } from '@gen/api/types.gen';
+import type { CloudSessionResponse, CloudTransferResponse } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
@@ -20,7 +20,7 @@ export function isTransferState(value: string): value is TransferState {
 }
 
 /** A transfer that may still change the owner: offered and waiting for the recipient, or accepted and moving. */
-export function isOpenTransfer(transfer: CloudTransfer): boolean {
+export function isOpenTransfer(transfer: CloudTransferResponse): boolean {
   return transfer.state === 'offered' || transfer.state === 'accepted';
 }
 
@@ -36,7 +36,11 @@ export function transferTone(state: string): BadgeTone {
  * Who may give a session away: its owner, or an owner or an admin of the organization, while it runs or is paused (the
  * server refuses a session being prepared, being transferred or over).
  */
-export function mayTransfer(session: CloudSession, viewer: string | undefined, canManage: boolean): boolean {
+export function mayTransfer(
+  session: CloudSessionResponse,
+  viewer: string | undefined,
+  canManage: boolean,
+): boolean {
   return (
     (session.status === 'running' || session.status === 'paused') && (canManage || session.owner === viewer)
   );

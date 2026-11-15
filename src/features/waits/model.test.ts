@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait, WaitField } from '@gen/api/types.gen';
+import type { WaitResponse, WaitField } from '@gen/api/types.gen';
 import {
   actionsOf,
   answeredThroughSession,
@@ -27,12 +27,13 @@ const field = (extra: Partial<WaitField> & { readonly type: string }): WaitField
   ...extra,
 });
 
-function waitWith(question: Partial<Wait['question']>, kind = 'human_request'): Wait {
+function waitWith(question: Partial<WaitResponse['question']>, kind = 'human_request'): WaitResponse {
   return {
     id: 'w',
     kind,
     status: 'open',
     assignee: 'a',
+    createdBy: 'a',
     createdAt: '2026-11-13T08:00:00.000Z',
     question: { title: 'T', ...question },
   };

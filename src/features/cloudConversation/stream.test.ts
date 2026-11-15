@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import { client } from '@gen/api/client.gen';
-import type { CloudEvent } from '@gen/api/types.gen';
+import type { CloudEventDto } from '@gen/api/types.gen';
 import { followEvents, reconnectDelay, StreamRefused } from './stream';
 
 const AT = '2026-11-15T10:00:00.000Z';
 
 function frame(seq: number, type = 'message.agent'): string {
-  const event: CloudEvent = { seq, type, at: AT, epoch: 1, data: { text: `e${String(seq)}` } };
+  const event: CloudEventDto = { seq, type, at: AT, epoch: 1, data: { text: `e${String(seq)}` } };
   return `id: ${String(seq)}\nevent: ${type}\ndata: ${JSON.stringify(event)}\n\n`;
 }
 
@@ -137,11 +137,11 @@ describe('following a conversation’s events (TeamCode RemoteTranscriptReposito
   });
 
   it('carries the feed an event belongs to', async () => {
-    const event: CloudEvent = { seq: 1, type: 'tool.call', at: AT, epoch: 2, data: {}, feed: 'tu-9' };
+    const event: CloudEventDto = { seq: 1, type: 'tool.call', at: AT, epoch: 2, data: {}, feed: 'tu-9' };
     serve([
       () => stream(`id: 1\nevent: tool.call\ndata: ${JSON.stringify(event)}\n\nevent: end\ndata: {}\n\n`),
     ]);
-    const events: CloudEvent[] = [];
+    const events: CloudEventDto[] = [];
     await followEvents(
       'cs-1',
       0,

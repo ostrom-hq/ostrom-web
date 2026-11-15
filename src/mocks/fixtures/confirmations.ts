@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ErrorDetail, GovernanceConfirmation, GovernanceConfirmationPerson } from '@gen/api/types.gen';
+import type { ErrorDetail, ConfirmationDto, ConfirmationPersonDto } from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 /** A confirmation waits 15 minutes for its answer (core#57). */
 export const CONFIRMATION_MS = 15 * 60_000;
 
-export const MAYA: GovernanceConfirmationPerson = {
+export const MAYA: ConfirmationPersonDto = {
   memberId: MEMBER_IDS.maya,
   login: 'maya',
   name: 'Maya Lind',
 };
-const LENA: GovernanceConfirmationPerson = { memberId: MEMBER_IDS.lena, login: 'lena' };
+const LENA: ConfirmationPersonDto = { memberId: MEMBER_IDS.lena, login: 'lena' };
 
 const at = (ms: number): string => new Date(ms).toISOString();
 
@@ -22,7 +22,7 @@ const THEO = { id: MEMBER_IDS.theo, login: 'theo', role: 'member' };
  * The demo's governance confirmations, opened `now` (ms) by `ostrom` with a CLI token: three waiting (a policy, a new
  * rule, a deleted workflow), two that fail once confirmed (stale, refused by the write), and one of each end.
  */
-export function initialConfirmations(now: number): GovernanceConfirmation[] {
+export function initialConfirmations(now: number): ConfirmationDto[] {
   const open = { createdAt: at(now - 60_000), expiresAt: at(now - 60_000 + CONFIRMATION_MS) };
   const answered = { createdAt: at(now - 3_600_000), expiresAt: at(now - 3_600_000 + CONFIRMATION_MS) };
   return [

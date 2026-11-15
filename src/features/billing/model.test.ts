@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BillingOverview, BillingPrice } from '@gen/api/types.gen';
+import type { BillingOverviewResponse, PriceResponse } from '@gen/api/types.gen';
 import {
   hasSubscription,
   hoursLevel,
@@ -14,7 +14,7 @@ import {
 } from './model';
 
 // Built here: features/ never imports the mocks, not even in a test.
-const team: BillingOverview = {
+const team: BillingOverviewResponse = {
   orgId: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
   plan: 'team',
   effectivePlan: 'team',
@@ -98,10 +98,10 @@ describe('plansState', () => {
 
 describe('yearlySaving', () => {
   const price = (
-    plan: BillingPrice['plan'],
-    interval: BillingPrice['interval'],
+    plan: PriceResponse['plan'],
+    interval: PriceResponse['interval'],
     unitAmount: number,
-  ): BillingPrice => ({
+  ): PriceResponse => ({
     plan,
     interval,
     unitAmount,

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Approval, ApprovalCheck } from '@gen/api/types.gen';
+import type { Approval } from '@gen/api/types.gen';
 
 /** Where a request stands for the person looking at it. */
 export type ApprovalTone = 'waiting-you' | 'asked-by-you' | 'approved' | 'refused' | 'expired' | 'unknown';
@@ -26,24 +26,13 @@ export function approvalTone(approval: Approval, viewer: string | undefined): Ap
   }
 }
 
-export interface ChecksSummary {
-  readonly passed: number;
-  readonly failed: number;
-  readonly total: number;
-}
-
-export function checksSummary(checks: readonly ApprovalCheck[]): ChecksSummary {
-  return {
-    passed: checks.filter((check) => check.state === 'success').length,
-    failed: checks.filter((check) => check.state === 'failure').length,
-    total: checks.length,
-  };
-}
-
 /** A request that can still change: pending, or not loaded yet. A decided one is final, so nobody polls it. */
 export function stillOpen(data: unknown): boolean {
   return !(typeof data === 'object' && data !== null && 'status' in data && data.status !== 'pending');
 }
+
+/** The actions whose name the Approve button says (`Approve merge`); any other leaves it plain. */
+export const APPROVE_ACTIONS = ['push', 'merge', 'deploy', 'tool'] as const;
 
 export function shortSha(sha: string): string {
   return sha.slice(0, 7);

@@ -84,6 +84,16 @@ describe('the files of a message (TeamCode SessionFilesUseCase)', () => {
       policyOf({ available: true, maxFileBytes: 1, maxMessageBytes: 1, maxFilesPerMessage: 0, types: [] })
         .maxFiles,
     ).toBe(1);
+    expect(
+      policyOf({
+        available: true,
+        reason: null,
+        maxFileBytes: 1,
+        maxMessageBytes: 1,
+        maxFilesPerMessage: 1,
+        types: [],
+      }).reason,
+    ).toBeUndefined();
     expect(check(picked('a.png'), pending(5), policy({ maxFiles: 5 }))).toEqual({ kind: 'tooMany', max: 5 });
     expect(check(picked('a.png'), pending(4), policy())).toBeUndefined();
     expect(check(picked('a.png'), pending(2), policy({ maxFiles: 2 }))).toEqual({ kind: 'tooMany', max: 2 });

@@ -5,7 +5,7 @@ import {
   verifyReceiptOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import { client } from '@gen/api/client.gen';
-import type { GetReceiptBundleData, Receipt, Verification } from '@gen/api/types.gen';
+import type { GetReceiptBundleData, Receipt, VerificationResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -25,7 +25,7 @@ export interface ReceiptViewModel {
   readonly receipt: Receipt | undefined;
   readonly failure: Error | undefined;
   /** The server's check of the signature with its own keys; `undefined` while it runs. */
-  readonly verification: Verification | undefined;
+  readonly verification: VerificationResponse | undefined;
   readonly verificationFailure: Error | undefined;
   /** Downloads the receipt with every signed piece it cites, for `ostrom verify` offline. */
   readonly download: () => void;

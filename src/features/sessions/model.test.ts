@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Session } from '@gen/api/types.gen';
+import type { SessionDto } from '@gen/api/types.gen';
 import {
   budgetDraftOf,
   budgetMicrosOf,
@@ -12,7 +12,7 @@ import {
   sessionState,
 } from './model';
 
-const base: Session = { id: 's', agent: 'codex', dev: 'maya', startedAt: '2026-10-30T08:00:00.000Z' };
+const base: SessionDto = { id: 's', agent: 'codex', dev: 'maya', startedAt: '2026-10-30T08:00:00.000Z' };
 const at = (iso: string): Date => new Date(iso);
 
 describe('sessionState', () => {

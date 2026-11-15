@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import type { McpHostedProcessDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { isApiFailure } from '@/shared/api/ApiFailure';
@@ -9,6 +10,12 @@ import { LoadState, Section } from '@/shared/ui/Screen';
 import { formatMemory } from '../model';
 import { useMcpHosted, useMcpRestart } from '../useTools';
 import { HostedState } from './HostedState';
+
+/**
+ * A hosted process as the list reads it: the member's login (`username`, TeamCode's name) is not in the server's
+ * document yet; the list shows it, else the member id, once the server sends it.
+ */
+export type HostedProcessRow = McpHostedProcessDto & { readonly username?: string | null };
 
 /**
  * The stdio commands Ostrom hosts, one line per process (a shared server once, a per-member server once per member),
@@ -40,7 +47,8 @@ export function HostedProcesses(): ReactElement | null {
           ) : (
             <ul className="o-card o-rows">
               {processes.map((process) => {
-                const who = process.memberName ?? process.member;
+                const row: HostedProcessRow = process;
+                const who = row.username ?? process.member ?? undefined;
                 const label = who === undefined ? process.server : `${process.server} · ${who}`;
                 const key = `${process.server}/${process.member ?? ''}`;
                 const busy =
@@ -49,27 +57,27 @@ export function HostedProcesses(): ReactElement | null {
                   <li key={key} className="o-row tl-hosted">
                     <span className="o-row__main">
                       <span className="o-row__title o-mono">
-                        {[process.server, process.memberName ?? process.member]
-                          .filter((part) => part !== undefined)
-                          .join(' · ')}
+                        {[process.server, who].filter((part) => part !== undefined).join(' · ')}
                       </span>
                       <span className="o-row__meta o-mono">{`${process.launcher}:${process.package}`}</span>
                       <span className="o-row__meta">
                         {[
                           t('tools.hosted.starts', { count: process.starts }),
                           t('tools.hosted.failures', { count: process.failures }),
-                          process.coldStartMs === undefined
+                          process.coldStartMs === undefined || process.coldStartMs === null
                             ? undefined
                             : t('tools.hosted.coldStart', { ms: process.coldStartMs }),
-                          process.memoryBytes === undefined ? undefined : formatMemory(process.memoryBytes),
-                          process.lastExitCode === undefined
+                          process.memoryBytes === undefined || process.memoryBytes === null
+                            ? undefined
+                            : formatMemory(process.memoryBytes),
+                          process.lastExitCode === undefined || process.lastExitCode === null
                             ? undefined
                             : t('tools.hosted.exit', { code: process.lastExitCode }),
                         ]
                           .filter((part) => part !== undefined)
                           .join(' · ')}
                       </span>
-                      {process.stderr === undefined || process.stderr === '' ? null : (
+                      {(process.stderr ?? '') === '' ? null : (
                         <pre
                           className="tl-stderr o-mono"
                           aria-label={t('tools.hosted.stderr', { server: label })}

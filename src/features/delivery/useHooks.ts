@@ -15,7 +15,7 @@ import {
   setHookAudience,
   unpinHook,
 } from '@gen/api/sdk.gen';
-import type { HookArtifact, HookEntry, HookVersion, OrgMember } from '@gen/api/types.gen';
+import type { HookArtifactDto, HookEntryDto, HookVersionDto, MemberResponse } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -26,7 +26,7 @@ import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import type { OrgMembers } from '@/shared/org/members';
 
 export interface HookCatalogViewModel {
-  readonly hooks: readonly HookEntry[] | undefined;
+  readonly hooks: readonly HookEntryDto[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -37,12 +37,12 @@ export function useHookCatalog(): HookCatalogViewModel {
 }
 
 export interface HookViewModel {
-  readonly hook: HookEntry | undefined;
+  readonly hook: HookEntryDto | undefined;
   /** Newest first. */
-  readonly versions: readonly HookVersion[] | undefined;
+  readonly versions: readonly HookVersionDto[] | undefined;
   /** The explicit decisions by member id; absent until read. */
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
@@ -110,7 +110,7 @@ export function useHookChange(name: string): HookChangeViewModel {
 }
 
 export interface HookCodeViewModel {
-  readonly artifact: HookArtifact | undefined;
+  readonly artifact: HookArtifactDto | undefined;
   readonly failure: Error | undefined;
 }
 

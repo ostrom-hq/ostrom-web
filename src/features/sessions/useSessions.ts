@@ -6,7 +6,8 @@ import {
   listSessionsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import { listSessions } from '@gen/api/sdk.gen';
-import type { ListSessionsResponse, Receipt, Session } from '@gen/api/types.gen';
+import type { ListSessionsResponse, SessionDto } from '@gen/api/types.gen';
+import { zReceipt } from '@gen/api/zod.gen';
 import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -15,13 +16,18 @@ import { ready } from '@/shared/api/ready';
 /** No label filter: one array, so that a list without a filter keeps its queries. */
 const NO_LABELS: readonly string[] = [];
 
+/** The repeatable `label` filter (`label=a&label=b`, every one must match); none without labels. */
+function labelQuery(labels: readonly string[]): { label?: string[] } {
+  return labels.length === 0 ? {} : { label: [...labels] };
+}
+
 /** Open sessions report every few minutes: the list follows them without a reload. */
 export const SESSIONS_POLL_MS = 15_000;
 
 export interface SessionListViewModel {
-  readonly open: readonly Session[] | undefined;
+  readonly open: readonly SessionDto[] | undefined;
   /** Newest first, every page read so far. */
-  readonly ended: readonly Session[] | undefined;
+  readonly ended: readonly SessionDto[] | undefined;
   readonly failure: Error | undefined;
   /** There are older ended sessions than the ones read. */
   readonly more: boolean;
@@ -42,17 +48,17 @@ export async function everyOpenSession(
   signal: AbortSignal,
   label: readonly string[] = [],
 ): Promise<ListSessionsResponse> {
-  const items: Session[] = [];
+  const items: SessionDto[] = [];
   let before: string | undefined;
   do {
-    const query = {
-      open: true,
-      ...(label.length === 0 ? {} : { label: [...label] }),
-      ...(before === undefined ? {} : { before }),
-    };
-    const { data } = await listSessions({ query, signal, throwOnError: true });
+    const query = { open: true, ...labelQuery(label), ...(before === undefined ? {} : { before }) };
+    const { data } = await listSessions({
+      query,
+      signal,
+      throwOnError: true,
+    });
     items.push(...data.items);
-    before = data.next;
+    before = data.next ?? undefined;
   } while (before !== undefined);
   return { items };
 }
@@ -73,7 +79,7 @@ export function endedPoll(query: { readonly state: { readonly data?: unknown } }
  */
 export function useSessionList(labels: readonly string[] = NO_LABELS): SessionListViewModel {
   const queryClient = useQueryClient();
-  const label = useMemo(() => (labels.length === 0 ? {} : { label: [...labels] }), [labels]);
+  const label = useMemo(() => labelQuery(labels), [labels]);
   const open = useQuery(
     ready(
       {
@@ -90,8 +96,17 @@ export function useSessionList(labels: readonly string[] = NO_LABELS): SessionLi
     ...ready(listSessionsInfiniteOptions({ query: { open: false, ...label } }), {
       refetchInterval: endedPoll,
     }),
+    // The server's cursor is the last page's `next`, sent back as `before`.
+    queryFn: async ({ pageParam, signal }) => {
+      const { data } = await listSessions({
+        query: { open: false, ...label, ...(typeof pageParam === 'string' ? { before: pageParam } : {}) },
+        signal,
+        throwOnError: true,
+      });
+      return data;
+    },
     initialPageParam: {},
-    getNextPageParam: (last) => last.next,
+    getNextPageParam: (last) => last.next ?? undefined,
   });
   const openIds = useMemo(() => open.data?.items.map((session) => session.id), [open.data]);
   const seen = useRef<readonly string[]>([]);
@@ -121,9 +136,12 @@ export function useSessionList(labels: readonly string[] = NO_LABELS): SessionLi
   };
 }
 
+/** A receipt as the document describes it (`zReceipt`). */
+export type SessionReceipt = ReturnType<typeof zReceipt.parse>;
+
 export interface SessionViewModel {
-  readonly session: Session | undefined;
-  readonly receipt: Receipt | undefined;
+  readonly session: SessionDto | undefined;
+  readonly receipt: SessionReceipt | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -135,8 +153,14 @@ export function stillRunning(data: unknown): boolean {
     typeof session === 'object' &&
     session !== null &&
     'endedAt' in session &&
-    session.endedAt !== undefined
+    typeof session.endedAt === 'string'
   );
+}
+
+/** The receipt of a session read, which the document types as free JSON: undefined when there is none or it is no receipt. */
+export function receiptOf(document: unknown): SessionReceipt | undefined {
+  const parsed = zReceipt.safeParse(document);
+  return parsed.success ? parsed.data : undefined;
 }
 
 export function useSession(id: string): SessionViewModel {
@@ -145,5 +169,9 @@ export function useSession(id: string): SessionViewModel {
       refetchInterval: (polled) => (stillRunning(polled.state.data) ? SESSIONS_POLL_MS : false),
     }),
   );
-  return { session: query.data?.session, receipt: query.data?.receipt, failure: failureOf(query.error) };
+  return {
+    session: query.data?.session,
+    receipt: receiptOf(query.data?.receipt),
+    failure: failureOf(query.error),
+  };
 }

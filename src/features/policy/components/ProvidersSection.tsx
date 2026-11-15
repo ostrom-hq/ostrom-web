@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InferenceSettings } from '@gen/api/types.gen';
+import type { InferenceSettingsDto } from '@gen/api/types.gen';
 import { type ReactElement, useId, useRef, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -14,7 +14,7 @@ function ProvidersForm({
   secrets,
   view,
 }: {
-  readonly settings: InferenceSettings;
+  readonly settings: InferenceSettingsDto;
   readonly secrets: readonly string[] | undefined;
   readonly view: ProvidersViewModel;
 }): ReactElement {

@@ -9,7 +9,13 @@ import {
   handleRemoveGroupMember,
   handleUpdateGroup,
 } from '@gen/api/msw.gen';
-import type { ApiError, Group, Organization, OrgMember, SharedAccount } from '@gen/api/types.gen';
+import type {
+  ApiError,
+  GroupResponse,
+  MeOrganizationResponse,
+  MemberResponse,
+  SharedAccountResponse,
+} from '@gen/api/types.gen';
 import { zCreateGroupBody, zPauseGroupMemberBody, zUpdateGroupBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { managesMembers, orgRoleOf } from '@/shared/org/roles';
@@ -28,7 +34,7 @@ export interface MockGroup {
 }
 
 export interface GroupsState extends OrgsState {
-  sharedAccounts: SharedAccount[];
+  sharedAccounts: SharedAccountResponse[];
   groups: MockGroup[];
   /** The next group number; numbers are never reused, even after a deletion. */
   nextGroup: number;
@@ -45,19 +51,20 @@ export function groupId(number: number): string {
 
 export function createGroupsHandlers(
   state: () => GroupsState,
-  organizationOf: (request: Request) => Organization,
+  organizationOf: (request: Request) => MeOrganizationResponse,
   now: () => Date,
 ): HttpHandler[] {
-  const membersIn = (organization: Organization): OrgMember[] => state().orgMembers[organization.id] ?? [];
-  const roleIn = (organization: Organization) =>
+  const membersIn = (organization: MeOrganizationResponse): MemberResponse[] =>
+    state().orgMembers[organization.id] ?? [];
+  const roleIn = (organization: MeOrganizationResponse) =>
     orgRoleOf(membersIn(organization).find((member) => member.login === DEMO_LOGIN)?.role);
-  const loginsIn = (organization: Organization): string[] =>
+  const loginsIn = (organization: MeOrganizationResponse): string[] =>
     membersIn(organization).map((member) => member.login);
-  const groupsIn = (organization: Organization): MockGroup[] =>
+  const groupsIn = (organization: MeOrganizationResponse): MockGroup[] =>
     state().groups.filter((group) => group.orgId === organization.id);
   const find = (request: Request, id: string): MockGroup | undefined =>
     groupsIn(organizationOf(request)).find((group) => group.id === id);
-  const viewOf = (group: MockGroup): Group => ({
+  const viewOf = (group: MockGroup): GroupResponse => ({
     id: group.id,
     name: group.name,
     members: [...group.members],
@@ -73,7 +80,7 @@ export function createGroupsHandlers(
       : refusal(403, 'forbidden', 'Only an owner or an admin changes a group.');
   const nameRefusal = (
     name: string,
-    organization: Organization,
+    organization: MeOrganizationResponse,
     except?: string,
   ): HttpResponse<ApiError> | undefined => {
     if (name === '' || name.length > NAME_MAX)
@@ -137,7 +144,7 @@ export function createGroupsHandlers(
       const body = zUpdateGroupBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'A name or the accounts lent.');
       const name = body.data.name?.trim();
-      const { accounts } = body.data;
+      const accounts = body.data.accounts ?? undefined;
       const wrong =
         (name === undefined ? undefined : nameRefusal(name, organizationOf(request), group.id)) ??
         (accounts === undefined ? undefined : accountsRefusal(accounts));
@@ -183,7 +190,7 @@ export function createGroupsHandlers(
       const group = find(request, params.id);
       if (group === undefined) return notFound();
       const body = zPauseGroupMemberBody.safeParse(await readJson(request));
-      const until = body.success ? body.data.until : undefined;
+      const until = body.success ? (body.data.until ?? undefined) : undefined;
       if (until === undefined || Number.isNaN(Date.parse(until)))
         return refusal(400, 'invalid_request', '`until` is an ISO 8601 instant.');
       if (!group.members.includes(params.login))

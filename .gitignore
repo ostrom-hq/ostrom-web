@@ -9,3 +9,5 @@ test-results
 dist-real
 playwright-report-real
 dist-budget
+# The API document, fetched from @ostrom-hq/openapi by `pnpm openapi:fetch`
+.ostrom/

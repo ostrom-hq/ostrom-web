@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  McpArgumentPolicy,
-  McpAssignment,
-  McpCall,
-  McpHostedProcess,
-  McpServer,
-  Secret,
+  ArgumentPolicyResponse,
+  McpAssignmentResponse,
+  McpCallDto,
+  McpServerDto,
+  SecretResponse,
 } from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import type { HostedProcessRow } from '@/features/tools/components/HostedProcesses';
 
-const servers: McpServer[] = [
+const servers: McpServerDto[] = [
   {
     name: 'linear',
     url: 'https://mcp.linear.app/mcp',
@@ -28,7 +28,7 @@ const servers: McpServer[] = [
   },
 ];
 
-const secrets: Secret[] = [
+const secrets: SecretResponse[] = [
   {
     name: 'LINEAR_TOKEN',
     scope: 'org',
@@ -36,7 +36,6 @@ const secrets: Secret[] = [
     updatedAt: '2026-10-27T14:30:00.000Z',
     updatedBy: 'maya',
     version: 3,
-    usedBy: ['mcp:linear'],
   },
   {
     name: 'ANTHROPIC_API_KEY',
@@ -45,7 +44,6 @@ const secrets: Secret[] = [
     updatedAt: '2026-10-21T08:00:00.000Z',
     updatedBy: 'lena',
     version: 1,
-    usedBy: ['inference:anthropic'],
   },
   {
     name: 'STRIPE_TEST_KEY',
@@ -57,16 +55,17 @@ const secrets: Secret[] = [
   },
 ];
 
-const calls: McpCall[] = [
+const calls: McpCallDto[] = [
   {
     id: 'call-3',
     at: '2026-10-30T07:58:00.000Z',
     server: 'linear',
     tool: 'create_issue',
     dev: 'theo',
-    sessionId: 'ses-7f3a',
     durationMs: 412,
     ok: true,
+    outcome: 'ok',
+    responseBytes: 2048,
   },
   {
     id: 'call-2',
@@ -74,7 +73,10 @@ const calls: McpCall[] = [
     server: 'linear',
     tool: 'list_issues',
     dev: 'maya',
+    durationMs: 0,
     ok: false,
+    outcome: 'error',
+    responseBytes: 0,
   },
   {
     id: 'call-1',
@@ -84,24 +86,26 @@ const calls: McpCall[] = [
     dev: 'theo',
     durationMs: 98,
     ok: true,
+    outcome: 'ok',
+    responseBytes: 512,
   },
 ];
 
-export function initialMcpServers(): McpServer[] {
+export function initialMcpServers(): McpServerDto[] {
   return structuredClone(servers);
 }
 
-export function initialSecrets(): Secret[] {
+export function initialSecrets(): SecretResponse[] {
   return structuredClone(secrets);
 }
 
 /** Newest first. */
-export function initialMcpCalls(): McpCall[] {
+export function initialMcpCalls(): McpCallDto[] {
   return structuredClone(calls);
 }
 
 /** linear: everyone with every tool, and theo with two tools only; sentry: nobody yet. */
-export function initialMcpAssignments(): Record<string, McpAssignment[]> {
+export function initialMcpAssignments(): Record<string, McpAssignmentResponse[]> {
   return {
     linear: [
       {
@@ -116,7 +120,7 @@ export function initialMcpAssignments(): Record<string, McpAssignment[]> {
 }
 
 /** linear refuses a new issue in the security team, and holds any deletion for a yes. */
-export function initialMcpPolicies(): Record<string, McpArgumentPolicy[]> {
+export function initialMcpPolicies(): Record<string, ArgumentPolicyResponse[]> {
   return {
     linear: [
       {
@@ -140,7 +144,7 @@ export function initialMcpPolicies(): Record<string, McpArgumentPolicy[]> {
 }
 
 /** The hosted stdio processes of the demo organization: a shared one running, a member's in backoff. */
-export function initialMcpHosted(): McpHostedProcess[] {
+export function initialMcpHosted(): HostedProcessRow[] {
   return [
     {
       server: 'filesystem',
@@ -155,7 +159,7 @@ export function initialMcpHosted(): McpHostedProcess[] {
     {
       server: 'notes',
       member: MEMBER_IDS.theo,
-      memberName: 'theo',
+      username: 'theo',
       launcher: 'pypi',
       package: 'mcp-notes==0.4.2',
       state: 'backoff',

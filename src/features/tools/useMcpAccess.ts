@@ -13,11 +13,11 @@ import {
   unassignMcpServerMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
-  McpArgumentPolicy,
-  McpArgumentPolicyRequest,
-  McpAssignment,
+  ArgumentPolicyResponse,
+  ArgumentPolicyRequest,
+  McpAssignmentResponse,
   McpAssignmentRequest,
-  OrgMember,
+  MemberResponse,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -69,10 +69,10 @@ export function useMcpSettings(): McpSettingsViewModel {
 
 export interface ServerAccessViewModel {
   /** Everyone first, then each member given the server. */
-  readonly assignments: readonly McpAssignment[] | undefined;
-  readonly policies: readonly McpArgumentPolicy[] | undefined;
+  readonly assignments: readonly McpAssignmentResponse[] | undefined;
+  readonly policies: readonly ArgumentPolicyResponse[] | undefined;
   /** The organization's members, to name an assignment and to pick whom to give the server; absent if unreadable. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;
@@ -102,7 +102,7 @@ export interface ServerAccessChangeViewModel {
   /** `member` is a member id or `all`; `onDone` runs once the server took it. */
   readonly assign: (member: string, request: McpAssignmentRequest, onDone: () => void) => void;
   readonly unassign: (member: string | undefined) => void;
-  readonly addPolicy: (request: McpArgumentPolicyRequest, onDone: () => void) => void;
+  readonly addPolicy: (request: ArgumentPolicyRequest, onDone: () => void) => void;
   readonly removePolicy: (id: string) => void;
   /** Something of this server is being saved. */
   readonly pending: boolean;
@@ -149,7 +149,7 @@ export function useServerAccessChange(server: string): ServerAccessChangeViewMod
     [unassignMutate, resetAll, server],
   );
   const addPolicy = useCallback(
-    (request: McpArgumentPolicyRequest, onDone: () => void) => {
+    (request: ArgumentPolicyRequest, onDone: () => void) => {
       resetAll();
       createMutate({ path: { name: server }, body: request }, { onSuccess: onDone });
     },

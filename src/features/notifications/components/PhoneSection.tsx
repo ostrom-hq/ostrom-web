@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { NotificationPreferences } from '@gen/api/types.gen';
+import type { NotificationPreferencesBody } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useAnnounced } from '@/shared/capabilities';
@@ -40,7 +40,7 @@ function PhoneFormOf({
   saved,
   onSaved,
 }: {
-  readonly preferences: NotificationPreferences;
+  readonly preferences: NotificationPreferencesBody;
   readonly view: PhonePreferencesViewModel;
   readonly saved: boolean;
   readonly onSaved: (saved: boolean) => void;

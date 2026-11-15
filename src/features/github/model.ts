@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { GitHubLink, OrgMember, Repo } from '@gen/api/types.gen';
+import type { GitHubLinkDto, MemberResponse, RepoResponse } from '@gen/api/types.gen';
 import { z } from 'zod/mini';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { apiUrl } from '@/shared/api/apiClient';
+import type { LinkState } from '@/shared/api/vocabulary';
 import { safeHref } from '@/shared/lib/safeHref';
 
 /** The error types of GitHub's web link callback (`githubLinkCallback`), which the console puts in words. */
@@ -54,13 +55,13 @@ export interface InstallOutcome {
 export type InstallError = NonNullable<GithubSearch['error']>;
 
 /** When a repository was last pushed, for sorting: never pushed, or not a date, sorts last. */
-function pushedTime(repo: Repo): number {
-  const time = repo.pushedAt === undefined ? Number.NaN : Date.parse(repo.pushedAt);
+function pushedTime(repo: RepoResponse): number {
+  const time = repo.pushedAt === undefined || repo.pushedAt === null ? Number.NaN : Date.parse(repo.pushedAt);
   return Number.isNaN(time) ? Number.NEGATIVE_INFINITY : time;
 }
 
 /** The repositories whose name or description holds every word typed: live ones first, then the latest pushed. */
-export function reposShown(repos: readonly Repo[], query: string): Repo[] {
+export function reposShown(repos: readonly RepoResponse[], query: string): RepoResponse[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   return repos
     .filter((repo) => {
@@ -84,8 +85,8 @@ export type AnalysisStage = 'never' | 'running' | 'ready' | 'failed';
 /** The stages a run can start from: none while one runs. */
 export type AnalysisRunStage = Exclude<AnalysisStage, 'running'>;
 
-export function stageOf(state: { readonly phase?: string | undefined }): AnalysisStage {
-  switch (state.phase) {
+export function stageOf(state: { readonly phase?: string | null | undefined }): AnalysisStage {
+  switch (state.phase ?? undefined) {
     case undefined:
       return 'never';
     case 'ready':
@@ -116,7 +117,7 @@ function passes(status: number | undefined): boolean {
  * one slows the poll down, so a blip never freezes a run the server finishes, and any other refusal stops it.
  */
 export function analysisPollDelay(
-  state: { readonly phase?: string | undefined } | undefined,
+  state: { readonly phase?: string | null | undefined } | undefined,
   error: unknown,
 ): number | false {
   if (state === undefined || stageOf(state) !== 'running') return false;
@@ -140,7 +141,8 @@ export function safeAppPage(url: string | undefined): string | undefined {
 }
 
 /** A date people read ("Oct 29, 2026"), or nothing when the server sent no valid date. */
-export function readableDate(iso: string, language: string): string | undefined {
+export function readableDate(iso: string | null | undefined, language: string): string | undefined {
+  if (iso === undefined || iso === null) return undefined;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return undefined;
   return date.toLocaleDateString(language, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -156,26 +158,29 @@ export function memberLinkUrl(org: string, memberId: string): string {
   return `${apiUrl(`/api/v1/github/links/${encodeURIComponent(memberId)}/start`)}?${new URLSearchParams({ org }).toString()}`;
 }
 
-export type LinkState = GitHubLink['state'];
+export type { LinkState };
 
 /** One line of the members' links table: a member and what is known of their link. */
 export interface MemberLinkRow {
-  readonly member: OrgMember;
+  readonly member: MemberResponse;
   readonly state: LinkState;
   readonly login: string | undefined;
   readonly linkedAt: string | undefined;
 }
 
 /** Every member with their link, in the order read (a next page comes under the rows shown); no link is `not_linked`. */
-export function linkRows(members: readonly OrgMember[], links: readonly GitHubLink[]): MemberLinkRow[] {
+export function linkRows(
+  members: readonly MemberResponse[],
+  links: readonly GitHubLinkDto[],
+): MemberLinkRow[] {
   const byMember = new Map(links.map((link) => [link.memberId, link]));
   return members.map((member) => {
     const link = byMember.get(member.id);
     return {
       member,
       state: link?.state ?? 'not_linked',
-      login: link?.login,
-      linkedAt: link?.linkedAt,
+      login: link?.login ?? undefined,
+      linkedAt: link?.linkedAt ?? undefined,
     } satisfies MemberLinkRow;
   });
 }

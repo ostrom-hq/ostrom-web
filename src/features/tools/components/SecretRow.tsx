@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Secret } from '@gen/api/types.gen';
+import type { SecretResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -7,7 +7,7 @@ import { Button } from '@/shared/ui/Button';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
 export interface SecretRowProps {
-  readonly secret: Secret;
+  readonly secret: SecretResponse;
   readonly busy: boolean;
   /** Present when the viewer manages the secrets. */
   readonly actions:
@@ -35,9 +35,6 @@ export function SecretRow({ secret, busy, actions }: SecretRowProps): ReactEleme
               who: secret.updatedBy,
               when: formatAbsolute(secret.updatedAt, i18n.language),
             }),
-            secret.usedBy === undefined || secret.usedBy.length === 0
-              ? t('tools.secrets.unused')
-              : t('tools.secrets.usedBy', { list: secret.usedBy.join(', ') }),
           ].join(' · ')}
         </span>
         {actions !== undefined && rotating ? (

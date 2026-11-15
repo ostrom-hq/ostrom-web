@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Token } from '@gen/api/types.gen';
+import type { TokenResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 
 export interface TokenRowProps {
-  readonly token: Token;
+  readonly token: TokenResponse;
   readonly busy: boolean;
   /** A secret is on its way or on screen: nothing is replaced or revoked until it is copied. */
   readonly locked: boolean;
@@ -30,10 +30,10 @@ export function TokenRow({ token, busy, locked, onRevoke, onRotate }: TokenRowPr
           {[
             t('tokens.list.hint', { hint: token.hint }),
             t('tokens.list.created', { date: day(token.createdAt) }),
-            token.expiresAt === null
+            token.expiresAt === undefined || token.expiresAt === null
               ? t('tokens.list.noExpiry')
               : t('tokens.list.expires', { date: day(token.expiresAt) }),
-            token.lastUsedAt === null
+            token.lastUsedAt === undefined || token.lastUsedAt === null
               ? t('tokens.list.neverUsed')
               : t('tokens.list.used', { date: day(token.lastUsedAt) }),
           ].join(' · ')}

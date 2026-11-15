@@ -14,7 +14,7 @@ import { Facts, LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { DeliverForm } from '../components/DeliverForm';
 import { RunFailure } from '../components/RunFailure';
 import { RUN_TONES, runSource } from '../model';
-import { deliverableOf, deliveryVisit, finished } from '../runs';
+import { deliverableOf, deliveryVisit, finished, isOpen } from '../runs';
 import { useRun, useRunActions } from '../useRuns';
 
 export function RunScreen(): ReactElement {
@@ -64,6 +64,12 @@ function RunDetail({
   const deliverable = visit === undefined ? undefined : deliverableOf(view.workflow, visit);
   const source = runSource(run.source);
   const inputs = Object.entries(run.inputs ?? {});
+  const repository = run.repository ?? undefined;
+  const currentNodeId = run.currentNodeId ?? undefined;
+  const endedAt = run.endedAt ?? undefined;
+  const sessionId = run.sessionId ?? undefined;
+  const parentRunId = run.parentRunId ?? undefined;
+  const output = run.output ?? undefined;
   return (
     <>
       <RunBanners run={run} />
@@ -110,39 +116,39 @@ function RunDetail({
             label: t('workflows.runs.sourceLabel'),
             value: t(`workflows.runs.source.${source}`, { source: run.source }),
           },
-          run.repository === undefined
+          repository === undefined
             ? undefined
-            : { label: t('workflows.runs.repository'), value: run.repository, mono: true },
-          run.currentNodeId === undefined || finished(run)
+            : { label: t('workflows.runs.repository'), value: repository, mono: true },
+          currentNodeId === undefined || finished(run)
             ? undefined
-            : { label: t('workflows.runs.current'), value: currentTitle(run, run.currentNodeId) },
+            : { label: t('workflows.runs.current'), value: currentTitle(run, currentNodeId) },
           {
             label: t('workflows.runs.started'),
             value: formatAbsolute(run.startedAt, i18n.language),
           },
-          run.endedAt === undefined
+          endedAt === undefined
             ? undefined
             : {
                 label: t('workflows.runs.took'),
-                value: formatDuration(run.startedAt, run.endedAt, i18n.language),
+                value: formatDuration(run.startedAt, endedAt, i18n.language),
               },
-          run.sessionId === undefined
+          sessionId === undefined
             ? undefined
             : {
                 label: t('workflows.runs.session'),
                 value: (
-                  <Link to="/sessions/$sessionId" params={{ sessionId: run.sessionId }}>
-                    {run.sessionId}
+                  <Link to="/sessions/$sessionId" params={{ sessionId }}>
+                    {sessionId}
                   </Link>
                 ),
               },
-          run.parentRunId === undefined
+          parentRunId === undefined
             ? undefined
             : {
                 label: t('workflows.runs.parent'),
                 value: (
-                  <Link to="/runs/$runId" params={{ runId: run.parentRunId }}>
-                    {run.parentRunId}
+                  <Link to="/runs/$runId" params={{ runId: parentRunId }}>
+                    {parentRunId}
                   </Link>
                 ),
               },
@@ -153,9 +159,9 @@ function RunDetail({
           <Facts facts={inputs.map(([name, value]) => ({ label: name, value, mono: true }))} />
         </Section>
       )}
-      {run.output === undefined ? null : (
+      {output === undefined ? null : (
         <Section label={t('workflows.runs.output')}>
-          <pre className="o-mono wf-output">{run.output}</pre>
+          <pre className="o-mono wf-output">{output}</pre>
         </Section>
       )}
       <Section label={t('workflows.runs.visits')}>
@@ -180,15 +186,16 @@ function RunBanners({ run }: { readonly run: WorkflowRun }): ReactElement | null
   const { t } = useTranslation();
   const enumText = useEnumLabel();
   if (run.status === 'waiting') {
-    const waiting = run.visits?.findLast((visit) => visit.kind === 'wait' && visit.endedAt === undefined);
+    const waiting = run.visits?.findLast((visit) => visit.kind === 'wait' && isOpen(visit));
+    const waitId = waiting?.waitId ?? undefined;
     return (
       <Banner tone="warning" tag={t('workflows.runs.status.waiting')}>
-        {waiting?.waitId === undefined ? (
+        {waitId === undefined ? (
           t('workflows.runs.waitingLead')
         ) : (
           <>
             {t('workflows.runs.waitingLead')}{' '}
-            <Link to="/waits/$waitId" params={{ waitId: waiting.waitId }}>
+            <Link to="/waits/$waitId" params={{ waitId }}>
               {t('workflows.runs.answerWait')}
             </Link>
           </>
@@ -211,16 +218,19 @@ function RunBanners({ run }: { readonly run: WorkflowRun }): ReactElement | null
 
 /** The step a run is at: the title of its open visit, else the id of its current node. */
 function currentTitle(run: WorkflowRun, nodeId: string): string {
-  const open = run.visits?.findLast((visit) => visit.endedAt === undefined);
+  const open = run.visits?.findLast(isOpen);
   return open?.nodeTitle ?? nodeId;
 }
 
 function VisitRow({ visit }: { readonly visit: NodeVisit }): ReactElement {
   const { t, i18n } = useTranslation();
   const enumText = useEnumLabel();
+  const outcome = visit.outcome ?? undefined;
+  const sessionId = visit.sessionId ?? undefined;
+  const childRunId = visit.childRunId ?? undefined;
   const lines = [
-    visit.outcome === undefined ? undefined : t('workflows.runs.outcome', { outcome: visit.outcome }),
-    visit.output,
+    outcome === undefined ? undefined : t('workflows.runs.outcome', { outcome }),
+    visit.output ?? undefined,
   ].filter((line) => line !== undefined);
   return (
     <div className="o-row">
@@ -231,13 +241,13 @@ function VisitRow({ visit }: { readonly visit: NodeVisit }): ReactElement {
             {line}
           </span>
         ))}
-        {visit.sessionId === undefined ? null : (
-          <Link to="/sessions/$sessionId" params={{ sessionId: visit.sessionId }} className="o-row__meta">
+        {sessionId === undefined ? null : (
+          <Link to="/sessions/$sessionId" params={{ sessionId }} className="o-row__meta">
             {t('workflows.runs.session')}
           </Link>
         )}
-        {visit.childRunId === undefined ? null : (
-          <Link to="/runs/$runId" params={{ runId: visit.childRunId }} className="o-row__meta">
+        {childRunId === undefined ? null : (
+          <Link to="/runs/$runId" params={{ runId: childRunId }} className="o-row__meta">
             {t('workflows.runs.child')}
           </Link>
         )}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getMyAccountOptions, linkSignInProviderMutation } from '@gen/api/@tanstack/react-query.gen';
-import type { Account, LinkStarted } from '@gen/api/types.gen';
+import type { AccountResponse, LinkStartedResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -10,7 +10,7 @@ import { GITHUB } from './model';
 
 export interface GithubLinkViewModel {
   /** Who is signed in and how they sign in; undefined while it loads. */
-  readonly account: Account | undefined;
+  readonly account: AccountResponse | undefined;
   readonly failure: Error | undefined;
   /** The account signs in with GitHub: its pull requests are known to be theirs. */
   readonly linked: boolean;
@@ -28,7 +28,7 @@ export function useGithubLink(): GithubLinkViewModel {
   const query = useQuery(ready(getMyAccountOptions(), { retry: false }));
   const [unsafePage, setUnsafePage] = useState(false);
   // A local instance names its provider on the machine itself, over plain http.
-  const leave = useCallback((started: LinkStarted) => {
+  const leave = useCallback((started: LinkStartedResponse) => {
     setUnsafePage(!leaveFor(started.authorizationUrl, { loopback: true }));
   }, []);
   const linking = useMutation({ ...linkSignInProviderMutation(), onSuccess: leave });

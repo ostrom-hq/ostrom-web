@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudEvent, CloudEventPage, CloudSubagent } from '@gen/api/types.gen';
+import type { CloudEventDto, CloudEventPageDto, CloudSubagentDto } from '@gen/api/types.gen';
 
 /** A file a `message.user` carried, as the server recorded it. */
 export interface MessageFile {
@@ -344,14 +344,17 @@ function tasksOf(value: unknown): BackgroundTask[] {
   });
 }
 
+/** An event as it arrives: the document says its `data` is an object, the console checks it (`isFields`) all the same. */
+export type RawEvent = Omit<CloudEventDto, 'data'> & { readonly data: unknown };
+
 /**
  * Every type and field is optional (TeamCode's `CloudEventView.domain()`): an unknown type or a missing field never
  * fails the transcript. The subagent an event belongs to is its `parentToolUseId`, or the server's `feed`.
  */
-export function eventOf(event: CloudEvent): TranscriptEvent {
+export function eventOf(event: RawEvent): TranscriptEvent {
   const { seq, at, type } = event;
   const data: Fields = isFields(event.data) ? event.data : {};
-  const parentToolUseId = text(data, 'parentToolUseId') ?? event.feed;
+  const parentToolUseId = text(data, 'parentToolUseId') ?? event.feed ?? undefined;
   // The server replaces an event of more than 60 000 bytes with this marker.
   if (bool(data['truncated']) === true && data['originalBytes'] !== undefined) {
     return { kind: 'truncated', seq, at, type, originalBytes: int(data['originalBytes']) };
@@ -466,24 +469,30 @@ export function eventOf(event: CloudEvent): TranscriptEvent {
   }
 }
 
-export function pageOf(page: CloudEventPage): TranscriptPage {
-  return { events: page.events.map(eventOf), nextBefore: page.nextBefore, lastSeq: page.lastSeq ?? 0 };
+export function pageOf(
+  page: Omit<CloudEventPageDto, 'events'> & { readonly events: readonly RawEvent[] },
+): TranscriptPage {
+  return {
+    events: page.events.map(eventOf),
+    nextBefore: page.nextBefore ?? undefined,
+    lastSeq: page.lastSeq ?? 0,
+  };
 }
 
 const AGENT_STATES = ['running', 'completed', 'failed'] as const;
 
-export function knownAgentOf(agent: CloudSubagent): KnownAgent {
-  const ended = agent.endedAt === undefined ? undefined : Date.parse(agent.endedAt);
+export function knownAgentOf(agent: CloudSubagentDto): KnownAgent {
+  const ended = typeof agent.endedAt === 'string' ? Date.parse(agent.endedAt) : undefined;
   return {
     id: agent.id,
-    type: filled(agent.type),
+    type: filled(agent.type ?? undefined),
     description: agent.description ?? '',
     state: AGENT_STATES.find((state) => state === agent.state) ?? 'unknown',
     startedAt: Date.parse(agent.startedAt),
     endedAt: ended,
     steps: agent.steps ?? 0,
-    parentId: agent.parentId,
-    taskId: agent.taskId,
+    parentId: agent.parentId ?? undefined,
+    taskId: agent.taskId ?? undefined,
   };
 }
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudRuntime } from '@gen/api/types.gen';
+import type { CloudRuntimeResponse } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
@@ -37,7 +37,7 @@ function RuntimeForm({
   runtime,
   view,
 }: {
-  readonly runtime: CloudRuntime;
+  readonly runtime: CloudRuntimeResponse;
   readonly view: CloudRuntimeViewModel;
 }): ReactElement {
   const { t } = useTranslation();

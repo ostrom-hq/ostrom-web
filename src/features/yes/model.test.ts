@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Approval } from '@gen/api/types.gen';
-import { approvalTone, askedByViewer, checksSummary, shortSha, stillOpen } from './model';
+import { approvalTone, askedByViewer, shortSha, stillOpen } from './model';
 
 describe('stillOpen', () => {
   it('is open until the request is decided', () => {
@@ -43,18 +43,6 @@ describe('askedByViewer', () => {
     const anonymous = structuredClone(base);
     delete anonymous.askedBy;
     expect(askedByViewer(anonymous, 'theo')).toBe(false);
-  });
-});
-
-describe('checksSummary', () => {
-  it('counts passed and failed checks', () => {
-    expect(
-      checksSummary([
-        { name: 'a', state: 'success' },
-        { name: 'b', state: 'failure' },
-        { name: 'c', state: 'pending' },
-      ]),
-    ).toEqual({ passed: 1, failed: 1, total: 3 });
   });
 });
 

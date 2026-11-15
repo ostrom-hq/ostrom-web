@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Spending } from '@gen/api/types.gen';
+import type { SpendingDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -7,10 +7,10 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { budgetLevel } from '../model';
 
 /** The total, then how much of the budget it is: a meter a screen reader reads as a value, amber then red. */
-export function SpendTotal({ spending }: { readonly spending: Spending }): ReactElement {
+export function SpendTotal({ spending }: { readonly spending: SpendingDto }): ReactElement {
   const { t, i18n } = useTranslation();
   const total = formatUsd(spending.totalUsd, i18n.language);
-  const budget = spending.budgetUsd;
+  const budget = spending.budgetUsd ?? undefined;
   return (
     <div className="o-card o-stack sp-total">
       <p className="o-row__meta">

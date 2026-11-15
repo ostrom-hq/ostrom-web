@@ -72,8 +72,8 @@ describe('the list of groups', () => {
     expect(await screen.findByText('This group no longer exists.')).toBeInTheDocument();
   });
 
-  it('reads a group the server gives without its pauses as one with nobody paused', async () => {
-    const bare = { id: groupId(7), name: 'Bare', members: ['theo'], accounts: [] };
+  it('reads a group the server gives with an empty list of pauses as one with nobody paused', async () => {
+    const bare = { id: groupId(7), name: 'Bare', members: ['theo'], accounts: [], paused: [] };
     server.use(http.get('*/api/v1/groups', () => HttpResponse.json({ items: [bare] })));
     visit('/accounts/groups');
     expect(await findCard('Bare')).not.toHaveTextContent('paused');

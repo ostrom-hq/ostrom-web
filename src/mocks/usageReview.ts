@@ -5,16 +5,16 @@ import {
   handleListUsageReconciliations,
   handleReconcileUsage,
 } from '@gen/api/msw.gen';
-import type { PendingUsage, UsageReconciliation } from '@gen/api/types.gen';
+import type { PendingUsageDto, UsageReconciliationDto } from '@gen/api/types.gen';
 import { zReconcileUsageBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
 
 export interface UsageReviewState {
   /** The holds whose usage is unknown, newest first. */
-  pendingUsage: PendingUsage[];
+  pendingUsage: PendingUsageDto[];
   /** The corrections made, newest first. */
-  usageReconciliations: UsageReconciliation[];
+  usageReconciliations: UsageReconciliationDto[];
 }
 
 /** Two holds a stream cut left unknown, and one corrected, in the demo organization. */
@@ -141,7 +141,7 @@ export function createUsageReviewHandlers(
           'stale_reconciliation',
           'The request changed since it was shown: review it again.',
         );
-      const record: UsageReconciliation = {
+      const record: UsageReconciliationDto = {
         id: pending.id,
         member: pending.member,
         ...(pending.workflowId === undefined ? {} : { workflowId: pending.workflowId }),

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudEvent } from '@gen/api/types.gen';
+import type { CloudEventDto } from '@gen/api/types.gen';
 import { CONVERSATION_ID, feedOf, pageOf, subagentsOf } from '@/mocks/cloudConversation';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
@@ -35,7 +35,7 @@ async function call(
   return { status: response.status, json: await response.json() };
 }
 
-function events(count: number): CloudEvent[] {
+function events(count: number): CloudEventDto[] {
   return Array.from({ length: count }, (_, index) => ({
     seq: index + 1,
     type: 'message.agent',
@@ -45,7 +45,7 @@ function events(count: number): CloudEvent[] {
   }));
 }
 
-function seqs(page: { readonly events: readonly CloudEvent[] }): number[] {
+function seqs(page: { readonly events: readonly CloudEventDto[] }): number[] {
   return page.events.map((event) => event.seq);
 }
 
@@ -141,6 +141,7 @@ describe('the mock conversation sessions', () => {
     ]);
     expect((await call('POST', path, { text: '  ' })).status).toBe(400);
     expect((await call('POST', path, 'nope')).status).toBe(400);
+    expect((await call('POST', path, { clientMessageId: 'no-text' })).status).toBe(400);
     expect((await call('POST', path, { text: 'no id' })).json).toMatchObject({
       error: { type: 'idempotency_key_required' },
     });
@@ -150,11 +151,16 @@ describe('the mock conversation sessions', () => {
     });
     db.cloudSessions.push({
       id: 'cs-p',
+      name: 'codex · cs-p',
       owner: 'maya',
       agent: 'codex',
       mode: 'conversation',
       status: 'paused',
+      desiredStatus: 'paused',
+      epoch: 1,
+      limits: { idleTimeoutMinutes: 30, maxRunMinutes: 480, restrictedEgress: false },
       createdAt: '2026-10-30T08:00:00.000Z',
+      updatedAt: '2026-10-30T08:00:00.000Z',
     });
     expect((await call('POST', '/cs-p/messages', { text: 'wake', clientMessageId: 'k' })).json).toMatchObject(
       { woke: true },
@@ -204,7 +210,7 @@ describe('the mock conversation sessions', () => {
 describe('the mock conversation controls', () => {
   const path = `/${CONVERSATION_ID}`;
   const at = '2026-10-30T09:00:00.000Z';
-  const add = (type: string, data: unknown, feed?: string): void => {
+  const add = (type: string, data: Record<string, unknown>, feed?: string): void => {
     const known = db.cloudEvents[CONVERSATION_ID] ?? [];
     db.cloudEvents[CONVERSATION_ID] = [
       ...known,
@@ -314,7 +320,12 @@ describe('the mock conversation controls', () => {
   });
 
   it('reads the subagents and the feeds of a transcript', () => {
-    const event = (seq: number, type: string, data: unknown, feed?: string): CloudEvent => ({
+    const event = (
+      seq: number,
+      type: string,
+      data: Record<string, unknown>,
+      feed?: string,
+    ): CloudEventDto => ({
       seq,
       type,
       at,
@@ -329,7 +340,7 @@ describe('the mock conversation controls', () => {
       event(4, 'tool.result', { id: 'a' }),
       event(5, 'tool.call', { name: 'Agent' }),
       event(6, 'tool.call', { id: 'c', name: 'Bash' }),
-      event(7, 'message.agent', null),
+      event(7, 'message.agent', {}),
     ];
     expect(subagentsOf(events)).toEqual([
       { id: 'a', description: '', state: 'completed', startedAt: at, endedAt: at, steps: 1 },

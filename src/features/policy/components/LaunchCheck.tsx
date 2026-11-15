@@ -103,7 +103,7 @@ export function LaunchCheck({
           live
         >
           {answer.allowed ? allowedText(t, asked) : (answer.reason ?? t('policy.check.refused'))}
-          {answer.note === undefined ? null : <> {answer.note}</>}
+          {answer.note === undefined || answer.note === null ? null : <> {answer.note}</>}
         </Banner>
       )}
     </Section>

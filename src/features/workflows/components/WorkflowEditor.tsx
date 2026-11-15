@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Workflow } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { useEnumLabel } from '@/shared/i18n/enumLabel';
@@ -25,6 +24,7 @@ import {
 } from '../model';
 import { CONDITION_OPS, callChoices } from '../nodes';
 import { useOrgRepos, useWorkflows } from '../useWorkflows';
+import type { Workflow } from '@/shared/api/workflowDocument';
 
 type TextKey =
   | 'label'

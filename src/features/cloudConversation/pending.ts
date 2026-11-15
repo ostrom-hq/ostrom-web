@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { CloudInput } from '@gen/api/types.gen';
+import type { CloudInputDto } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import type { TranscriptEvent } from './events';
 import type { UploadedFile } from './files';
@@ -61,13 +61,13 @@ export function draftOf(
 }
 
 /** The server took it: queued, or already refused (`rejected`, `cancelled`) with its reason. */
-export function received(message: PendingMessage, input: CloudInput): PendingMessage {
+export function received(message: PendingMessage, input: CloudInputDto): PendingMessage {
   return {
     ...message,
     state: input.status === 'rejected' || input.status === 'cancelled' ? 'refused' : 'sent',
     inputId: input.id,
     woke: input.woke === true,
-    reason: input.reason,
+    reason: input.reason ?? undefined,
   };
 }
 

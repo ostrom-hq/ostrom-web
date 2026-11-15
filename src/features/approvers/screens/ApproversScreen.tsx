@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ApproversGraph } from '@gen/api/types.gen';
+import type { ApproversGraphResponse } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useId, useMemo } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -96,7 +96,7 @@ function PolicySection({ policy }: { readonly policy: PolicyViewModel }): ReactE
 }
 
 /** What the server's graph warns about: gates that stop an agent for good, and actions no gate covers. */
-function GraphNotes({ graph }: { readonly graph: ApproversGraph }): ReactElement {
+function GraphNotes({ graph }: { readonly graph: ApproversGraphResponse }): ReactElement {
   const { t } = useTranslation();
   const stuck = blocking(graph.unanswered);
   return (
@@ -123,7 +123,7 @@ function People({
   graph,
   nameOf,
 }: {
-  readonly graph: ApproversGraph;
+  readonly graph: ApproversGraphResponse;
   readonly nameOf: (login: string) => string;
 }): ReactElement | null {
   const { t } = useTranslation();

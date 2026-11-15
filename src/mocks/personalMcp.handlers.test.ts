@@ -43,6 +43,8 @@ describe('the mock personal MCP servers', () => {
   it('checks a server, refuses a hosted command and a taken name, and keeps 20 at most', async () => {
     expect((await call('POST', '', { ...SERVER, name: 'Bad' })).status).toBe(400);
     expect((await call('POST', '', { ...SERVER, url: 'http://x.dev' })).status).toBe(400);
+    expect((await call('POST', '', { name: 'mine', transport: 'http', scope: 'shared' })).status).toBe(400);
+    expect((await call('POST', '', {})).status).toBe(400);
     expect(
       (await call('POST', '', { name: 'mine', transport: 'stdio', enabled: true, scope: 'shared' })).status,
     ).toBe(400);
@@ -52,6 +54,11 @@ describe('the mock personal MCP servers', () => {
       expect((await call('POST', '', { ...SERVER, name: `mine-${String(index)}` })).status).toBe(201);
     }
     expect((await call('POST', '', SERVER)).text).toContain('mcp_server_limit');
+  });
+
+  it('takes a server that says nothing of being enabled', async () => {
+    const bare = { name: 'bare', url: SERVER.url, transport: 'http', scope: 'shared' };
+    expect((await call('POST', '', bare)).status).toBe(201);
   });
 
   it('saves and deletes the person’s own only, after a fresh sign-in', async () => {

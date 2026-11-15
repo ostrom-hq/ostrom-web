@@ -2,7 +2,7 @@
 import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { zSendCloudMessageRequest } from '@gen/api/zod.gen';
+import { zSendCloudMessageBody } from '@gen/api/zod.gen';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { CONVERSATION_ID } from '@/mocks/cloudConversation';
 import { FEATURES } from '@/shared/capabilities/model';
@@ -45,14 +45,14 @@ function withoutFiles(): void {
 }
 
 /** The bodies of the messages sent, in order. */
-function sentMessages(): ReturnType<typeof zSendCloudMessageRequest.parse>[] {
-  const sent: ReturnType<typeof zSendCloudMessageRequest.parse>[] = [];
+function sentMessages(): ReturnType<typeof zSendCloudMessageBody.parse>[] {
+  const sent: ReturnType<typeof zSendCloudMessageBody.parse>[] = [];
   traffic.onRequest((request) => {
     if (request.method === 'POST' && request.url.endsWith('/messages'))
       void request
         .clone()
         .json()
-        .then((body: unknown) => sent.push(zSendCloudMessageRequest.parse(body)));
+        .then((body: unknown) => sent.push(zSendCloudMessageBody.parse(body)));
   });
   return sent;
 }

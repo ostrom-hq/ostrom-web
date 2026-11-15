@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Assignment, HookDefinition, OrgMember } from '@gen/api/types.gen';
+import type { AssignmentDto, HookDefinitionDto, MemberResponse } from '@gen/api/types.gen';
 
 /** A member's explicit decision on a skill or a hook, as the server writes it: `allow` is the Yes, `deny` the No. */
 export type Decision = 'allow' | 'deny';
@@ -17,7 +17,7 @@ export function choiceOf(value: string): DecisionChoice {
 }
 
 /** The explicit decisions by member id; any other value the server may send later reads as no decision. */
-export function decisionsById(assignments: readonly Assignment[]): ReadonlyMap<string, Decision> {
+export function decisionsById(assignments: readonly AssignmentDto[]): ReadonlyMap<string, Decision> {
   const decided = new Map<string, Decision>();
   for (const assignment of assignments) {
     if (isDecision(assignment.decision)) decided.set(assignment.memberId, assignment.decision);
@@ -26,18 +26,18 @@ export function decisionsById(assignments: readonly Assignment[]): ReadonlyMap<s
 }
 
 /** "Maya Lind (maya)", or the login alone. */
-export function memberLabel(member: OrgMember): string {
+export function memberLabel(member: MemberResponse): string {
   return member.name === '' ? member.login : `${member.name} (${member.login})`;
 }
 
 /** Whom a member id names: the member, else the id itself (the members are unreadable, or the person left). */
-export function whoIs(id: string, members: readonly OrgMember[] | undefined): string {
+export function whoIs(id: string, members: readonly MemberResponse[] | undefined): string {
   const known = members?.find((member) => member.id === id);
   return known === undefined ? id : memberLabel(known);
 }
 
 /** An invitation not accepted yet has no account a skill or a hook could reach. */
-export function candidatesOf(members: readonly OrgMember[] | undefined): readonly OrgMember[] {
+export function candidatesOf(members: readonly MemberResponse[] | undefined): readonly MemberResponse[] {
   return (members ?? []).filter((member) => member.role !== 'invited');
 }
 
@@ -53,7 +53,7 @@ export interface DefinitionFacts {
 
 export const DEFAULT_TIMEOUT_SECONDS = 60;
 
-export function factsOf(definition: HookDefinition): DefinitionFacts {
+export function factsOf(definition: HookDefinitionDto): DefinitionFacts {
   return {
     events: [...definition.events].sort().join(', '),
     matcher: definition.matcher ?? undefined,

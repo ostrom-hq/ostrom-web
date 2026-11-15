@@ -148,7 +148,7 @@ describe('the API price editor', () => {
       http.get('*/api/v1/auth/me', () =>
         HttpResponse.json({
           dev: { login: 'maya', verified: true, via: 'github' },
-          member: { id: MEMBER_IDS.maya, login: 'maya', avatarUrl: '', role: 'member' },
+          member: { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya', avatarUrl: '', role: 'member' },
           capabilities: [],
         }),
       ),

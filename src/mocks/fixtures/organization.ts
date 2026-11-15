@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Member, Organization, OrgMember, Team } from '@gen/api/types.gen';
+import type { MemberResponse, MeOrganizationResponse, TeamResponse } from '@gen/api/types.gen';
 import type { MockInvitation } from '@/mocks/orgs';
 
-const organization: Organization = {
+const organization: MeOrganizationResponse = {
   id: '6f1c2a4e-8b3d-4e7a-9c5f-1d2e3f4a5b6c',
   name: 'Acme',
   avatarUrl: '',
-  description: 'Billing and payments',
   connectedVia: 'github-app',
-  createdAt: '2026-09-01T09:00:00.000Z',
 };
 
 /** Each member's id (`Member.id`): artifacts, relayed servers and imports name a member by it, never by login. */
@@ -21,58 +19,53 @@ export const MEMBER_IDS = {
   ines: '8cbe4f6d-7091-4cd3-8e5f-60718293a4b5',
 } as const;
 
-const members: Member[] = [
-  { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin', teams: ['billing'] },
-  { id: MEMBER_IDS.lena, login: 'lena', name: 'Lena Ortiz', avatarUrl: '', role: 'owner' },
-  {
-    id: MEMBER_IDS.samir,
-    login: 'samir',
-    name: 'Samir Haddad',
-    avatarUrl: '',
-    role: 'approver',
-    teams: ['billing', 'release'],
-  },
+const joinedAt = '2026-09-01T09:00:00.000Z';
+
+/** The members the mock knows (the console reads their ids and roles; `/orgs/{org}/members` serves `initialOrgMembers`). */
+const members: MemberResponse[] = [
+  { id: MEMBER_IDS.maya, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'admin', joinedAt },
+  { id: MEMBER_IDS.lena, login: 'lena', name: 'Lena Ortiz', avatarUrl: '', role: 'owner', joinedAt },
+  { id: MEMBER_IDS.samir, login: 'samir', name: 'Samir Haddad', avatarUrl: '', role: 'approver', joinedAt },
   {
     id: MEMBER_IDS.theo,
     login: 'theo',
+    name: '',
     avatarUrl: '',
     role: 'member',
     email: 'theo@acme.dev',
-    teams: ['billing'],
+    joinedAt,
   },
-  { id: MEMBER_IDS.jo, login: 'jo', avatarUrl: '', role: 'invited' },
+  { id: MEMBER_IDS.jo, login: 'jo', name: '', avatarUrl: '', role: 'invited', joinedAt },
 ];
 
-const teams: Team[] = [
+const teams: TeamResponse[] = [
   { slug: 'billing', name: 'Billing', members: ['maya', 'samir', 'theo'], repos: ['acme/billing-api'] },
-  { slug: 'release', name: 'Release', members: ['samir'] },
+  { slug: 'release', name: 'Release', members: ['samir'], repos: [] },
 ];
 
-export function initialOrganization(): Organization {
+export function initialOrganization(): MeOrganizationResponse {
   return structuredClone(organization);
 }
 
 /** A second organization the demo person can belong to: with it, the console must say which one it acts in. */
-export function otherOrganization(): Organization {
+export function otherOrganization(): MeOrganizationResponse {
   return {
     ...structuredClone(organization),
     id: '8c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f',
     name: 'Globex',
-    description: 'Imports and exports',
   };
 }
 
-export function initialMembers(): Member[] {
+export function initialMembers(): MemberResponse[] {
   return structuredClone(members);
 }
 
-export function initialTeams(): Team[] {
+export function initialTeams(): TeamResponse[] {
   return structuredClone(teams);
 }
 
 /** Acme's members as `/orgs/{org}/members` serves them: with their id, an empty name or address when there is none. */
-export function initialOrgMembers(): OrgMember[] {
-  const joined = '2026-09-01T09:00:00.000Z';
+export function initialOrgMembers(): MemberResponse[] {
   return [
     {
       id: MEMBER_IDS.lena,
@@ -81,7 +74,7 @@ export function initialOrgMembers(): OrgMember[] {
       avatarUrl: '',
       email: 'lena@acme.dev',
       role: 'owner',
-      joinedAt: joined,
+      joinedAt,
     },
     {
       id: MEMBER_IDS.maya,
@@ -90,7 +83,7 @@ export function initialOrgMembers(): OrgMember[] {
       avatarUrl: '',
       email: 'maya@acme.dev',
       role: 'admin',
-      joinedAt: joined,
+      joinedAt,
     },
     {
       id: MEMBER_IDS.samir,
@@ -99,7 +92,7 @@ export function initialOrgMembers(): OrgMember[] {
       avatarUrl: '',
       email: null,
       role: 'approver',
-      joinedAt: joined,
+      joinedAt,
     },
     {
       id: MEMBER_IDS.theo,
@@ -108,7 +101,7 @@ export function initialOrgMembers(): OrgMember[] {
       avatarUrl: '',
       email: 'theo@acme.dev',
       role: 'member',
-      joinedAt: joined,
+      joinedAt,
     },
     {
       id: MEMBER_IDS.ines,
@@ -117,19 +110,18 @@ export function initialOrgMembers(): OrgMember[] {
       avatarUrl: '',
       email: 'ines@acme.dev',
       role: 'billing',
-      joinedAt: joined,
+      joinedAt,
     },
   ];
 }
 
 /** An organization the demo person is not in yet: the demo invitation link leads there. */
-export function invitedOrganization(): Organization {
+export function invitedOrganization(): MeOrganizationResponse {
   return {
     id: '9d3e4f5a-6b7c-4d8e-9f0a-1b2c3d4e5f6a',
     name: 'Initech',
     avatarUrl: '',
     connectedVia: 'github-app',
-    createdAt: '2026-08-12T09:00:00.000Z',
   };
 }
 

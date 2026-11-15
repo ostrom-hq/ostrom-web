@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 import type {
-  ArtifactFileContent,
-  Assignment,
-  HookEntry,
-  HookVersion,
-  SkillEntry,
-  SkillInstallation,
-  SkillVersion,
+  ArtifactFileContentDto,
+  AssignmentDto,
+  HookEntryDto,
+  HookVersionDto,
+  SkillEntryDto,
+  SkillInstallationDto,
+  SkillVersionDto,
 } from '@gen/api/types.gen';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 
 const digest = (seed: string): string => `sha256:${seed.repeat(64).slice(0, 64)}`;
 
-export function initialSkills(): SkillEntry[] {
+export function initialSkills(): SkillEntryDto[] {
   return [
     {
       id: 'skl-1',
@@ -68,7 +68,7 @@ const skillVersion = (
   pinned: boolean,
   retired = false,
   publishedBy: string = MEMBER_IDS.lena,
-): SkillVersion => ({
+): SkillVersionDto => ({
   version,
   digest: digest(seed),
   sizeBytes: 1204,
@@ -79,7 +79,7 @@ const skillVersion = (
   pinned,
 });
 
-export function initialSkillVersions(): Record<string, SkillVersion[]> {
+export function initialSkillVersions(): Record<string, SkillVersionDto[]> {
   return {
     'review-pr': [
       skillVersion('1.2.0', 'a', true),
@@ -93,7 +93,7 @@ export function initialSkillVersions(): Record<string, SkillVersion[]> {
   };
 }
 
-export function initialSkillAssignments(): Record<string, Assignment[]> {
+export function initialSkillAssignments(): Record<string, AssignmentDto[]> {
   return {
     'review-pr': [{ memberId: MEMBER_IDS.theo, decision: 'deny', updatedAt: '2026-11-01T10:00:00.000Z' }],
     'release-notes': [
@@ -103,7 +103,7 @@ export function initialSkillAssignments(): Record<string, Assignment[]> {
 }
 
 /** What each member's workstations last reported, by member id. */
-export function initialSkillInstallations(): Record<string, SkillInstallation[]> {
+export function initialSkillInstallations(): Record<string, SkillInstallationDto[]> {
   return {
     [MEMBER_IDS.theo]: [
       {
@@ -145,7 +145,7 @@ export function initialSkillInstallations(): Record<string, SkillInstallation[]>
   };
 }
 
-export function initialHooks(): HookEntry[] {
+export function initialHooks(): HookEntryDto[] {
   return [
     {
       id: 'hok-1',
@@ -165,7 +165,7 @@ export function initialHooks(): HookEntry[] {
   ];
 }
 
-export function initialHookVersions(): Record<string, HookVersion[]> {
+export function initialHookVersions(): Record<string, HookVersionDto[]> {
   return {
     'require-status': [
       {
@@ -208,7 +208,7 @@ export function initialHookVersions(): Record<string, HookVersion[]> {
   };
 }
 
-export function initialHookAssignments(): Record<string, Assignment[]> {
+export function initialHookAssignments(): Record<string, AssignmentDto[]> {
   return {
     'require-status': [
       { memberId: MEMBER_IDS.lena, decision: 'allow', updatedAt: '2026-11-01T10:00:00.000Z' },
@@ -216,7 +216,7 @@ export function initialHookAssignments(): Record<string, Assignment[]> {
   };
 }
 
-const file = (path: string, mode: string, text: string): ArtifactFileContent => ({
+const file = (path: string, mode: string, text: string): ArtifactFileContentDto => ({
   path,
   mode,
   size: text.length,
@@ -225,7 +225,7 @@ const file = (path: string, mode: string, text: string): ArtifactFileContent => 
 });
 
 /** The files of each hook version, by `name@version`. */
-export function initialHookFiles(): Record<string, ArtifactFileContent[]> {
+export function initialHookFiles(): Record<string, ArtifactFileContentDto[]> {
   const script = '#!/bin/sh\n# Refuse to stop without saying where it stands.\nexec cat >/dev/null\n';
   return {
     'require-status@1.0.0': [

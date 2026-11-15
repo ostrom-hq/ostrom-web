@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ForecastSnapshot } from '@gen/api/types.gen';
+import type { ForecastSnapshotResponse } from '@gen/api/types.gen';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type ReactElement, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -68,7 +68,7 @@ function Forecasts(): ReactElement {
   );
 }
 
-function AccountPicker({ snapshot }: { readonly snapshot: ForecastSnapshot }): ReactElement {
+function AccountPicker({ snapshot }: { readonly snapshot: ForecastSnapshotResponse }): ReactElement {
   const { t } = useTranslation();
   const id = useId();
   const navigate = useNavigate({ from: '/forecasts' });
@@ -94,10 +94,10 @@ function AccountPicker({ snapshot }: { readonly snapshot: ForecastSnapshot }): R
   );
 }
 
-function SnapshotView({ snapshot }: { readonly snapshot: ForecastSnapshot }): ReactElement {
+function SnapshotView({ snapshot }: { readonly snapshot: ForecastSnapshotResponse }): ReactElement {
   const { t, i18n } = useTranslation();
   const selected = snapshot.account;
-  if (selected === undefined) {
+  if (selected === undefined || selected === null) {
     return <EmptyState title={t('forecasts.noAccountsTitle')}>{t('forecasts.noAccounts')}</EmptyState>;
   }
   const percent = new Intl.NumberFormat(i18n.language, { style: 'percent', maximumFractionDigits: 1 });

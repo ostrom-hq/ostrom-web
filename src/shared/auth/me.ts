@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getMeOptions } from '@gen/api/@tanstack/react-query.gen';
-import type { GetMeResponse, Me } from '@gen/api/types.gen';
+import type { GetMeResponse, MeResponse } from '@gen/api/types.gen';
 
 /** "Maya Lind (maya)", or the login alone: who an approval from this browser is signed as. */
-export function viewerName(me: Me | undefined): string | undefined {
+export function viewerName(me: MeResponse | undefined): string | undefined {
   return me === undefined ? undefined : signedInName(me);
 }
 
 /** "Maya Lind (maya)" when the answer has the person's member and a name in it, else the login alone. */
-export function signedInName(me: Me): string {
+export function signedInName(me: MeResponse): string {
   const name = me.member?.name;
   return name === undefined || name === '' ? me.dev.login : `${name} (${me.dev.login})`;
 }
@@ -17,7 +17,7 @@ export function signedInName(me: Me): string {
  * The contract lets `GET /auth/me` answer 204 with no body, which the client hands over as `null`; only a body says
  * who is signed in (`typeof null` is `'object'`, hence `instanceof`).
  */
-export function meOf(data: GetMeResponse | null | undefined): Me | undefined {
+export function meOf(data: GetMeResponse | null | undefined): MeResponse | undefined {
   return data instanceof Object ? data : undefined;
 }
 

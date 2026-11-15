@@ -18,7 +18,7 @@ import {
   setSkillAudience,
   unpinSkill,
 } from '@gen/api/sdk.gen';
-import type { OrgMember, SkillEntry, SkillVersion } from '@gen/api/types.gen';
+import type { MemberResponse, SkillEntryDto, SkillVersionDto } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -29,15 +29,15 @@ import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 import type { OrgMembers } from '@/shared/org/members';
 
 /** A skill a member published for themself: only they receive it, until an administrator promotes it. */
-export function isPersonal(skill: SkillEntry): boolean {
+export function isPersonal(skill: SkillEntryDto): boolean {
   return skill.ownerId !== undefined && skill.ownerId !== null;
 }
 
 export interface SkillCatalogViewModel {
   /** Newest change first, as the server lists them. */
-  readonly skills: readonly SkillEntry[] | undefined;
+  readonly skills: readonly SkillEntryDto[] | undefined;
   /** To name the owner of a personal skill; absent if unreadable. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   readonly failure: Error | undefined;
 }
 
@@ -50,12 +50,12 @@ export function useSkillCatalog(): SkillCatalogViewModel {
 }
 
 export interface SkillViewModel {
-  readonly skill: SkillEntry | undefined;
+  readonly skill: SkillEntryDto | undefined;
   /** Newest first. */
-  readonly versions: readonly SkillVersion[] | undefined;
+  readonly versions: readonly SkillVersionDto[] | undefined;
   /** The explicit decisions by member id; absent until read, and for a personal skill, which has none. */
   readonly decisions: ReadonlyMap<string, Decision> | undefined;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
   readonly failure: Error | undefined;

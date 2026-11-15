@@ -8,7 +8,7 @@ import {
   listServiceKeysOptions,
   listServiceKeysQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { Device, ServiceKey } from '@gen/api/types.gen';
+import type { DeviceResponse, ServiceKeyResponse } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
@@ -17,10 +17,10 @@ import { personalDevices, type ServiceKeyLifetime, sortDevices } from './model';
 
 export interface DevicesViewModel {
   /** Where the CLI is signed in as the person, the most recently seen first. */
-  readonly devices: readonly Device[] | undefined;
+  readonly devices: readonly DeviceResponse[] | undefined;
   readonly failure: Error | undefined;
   /** Signs a workstation out: its CLI token stops working at once. */
-  readonly signOut: (device: Device) => void;
+  readonly signOut: (device: DeviceResponse) => void;
   /** A workstation is being signed out: no other sign-out starts meanwhile. */
   readonly signingOut: boolean;
   readonly signOutFailure: Error | undefined;
@@ -44,7 +44,7 @@ export function useDevices(personal = false): DevicesViewModel {
   const deletion = useMutation({ ...deleteDeviceMutation(), onSettled: relist });
   const { mutate } = deletion;
   const signOut = useCallback(
-    (device: Device) => {
+    (device: DeviceResponse) => {
       mutate({ path: { id: device.id } });
     },
     [mutate],
@@ -63,7 +63,7 @@ const FORGET_AT_ONCE = { gcTime: 0 } as const;
 
 export interface ServiceKeysViewModel {
   /** The organization's live keys, newest first, without their secrets; undefined while loading. */
-  readonly keys: readonly ServiceKey[] | undefined;
+  readonly keys: readonly ServiceKeyResponse[] | undefined;
   readonly failure: Error | undefined;
   /** Creates a key; `onCreated` runs once the server issued it (the form clears then, not before). */
   readonly create: (
@@ -74,9 +74,9 @@ export interface ServiceKeysViewModel {
   ) => void;
   readonly creating: boolean;
   /** The key just created, with its secret, until the person says they copied it. */
-  readonly created: ServiceKey | undefined;
+  readonly created: ServiceKeyResponse | undefined;
   readonly dismiss: () => void;
-  readonly remove: (key: ServiceKey) => void;
+  readonly remove: (key: ServiceKeyResponse) => void;
   /** A key is being deleted. */
   readonly removing: boolean;
   /** Why the last creation or deletion failed; a stale sign-in reads as such (`FailureText`). */
@@ -113,7 +113,7 @@ export function useServiceKeys(manages: boolean): ServiceKeysViewModel {
     [createMutate, resetDeletion],
   );
   const remove = useCallback(
-    (key: ServiceKey) => {
+    (key: ServiceKeyResponse) => {
       if (creationFailed) resetCreation();
       deleteMutate({ path: { id: key.id } });
     },

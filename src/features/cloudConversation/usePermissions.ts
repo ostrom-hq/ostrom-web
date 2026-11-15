@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { answerCloudPermission } from '@gen/api/sdk.gen';
-import type { CloudSession } from '@gen/api/types.gen';
+import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { useAnnounced } from '@/shared/capabilities';
@@ -60,7 +60,7 @@ export interface PermissionsViewModel {
 }
 
 /** The statuses in which a session takes an answer. */
-function answering(session: CloudSession | undefined): boolean {
+function answering(session: CloudSessionResponse | undefined): boolean {
   return session === undefined || session.status === 'running';
 }
 
@@ -83,7 +83,7 @@ function noticeOf(outcome: Exclude<AnswerOutcome, { kind: 'accepted' | 'retry' }
  */
 export function usePermissions(
   sessionId: string,
-  session: CloudSession | undefined,
+  session: CloudSessionResponse | undefined,
   events: readonly TranscriptEvent[],
   enableBypass: () => Promise<boolean>,
 ): PermissionsViewModel {

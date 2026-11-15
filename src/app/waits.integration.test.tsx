@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Wait } from '@gen/api/types.gen';
+import type { WaitResponse } from '@gen/api/types.gen';
 import { handleCapabilities, handleGetMe, handleListWaits } from '@gen/api/msw.gen';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,13 +21,13 @@ const SHIP = id(1);
 const refused = (status: number, type: string, message: string) =>
   HttpResponse.json({ error: { type, message } }, { status });
 
-function wait(n: number): Wait {
+function wait(n: number): WaitResponse {
   const found = db.waits.find((item) => item.id === id(n));
   if (found === undefined) throw new Error(`no fixture ${String(n)}`);
   return found;
 }
 
-function replace(n: number, change: (item: Wait) => Wait): void {
+function replace(n: number, change: (item: WaitResponse) => WaitResponse): void {
   db.waits = db.waits.map((item) => (item.id === id(n) ? change(item) : item));
 }
 
@@ -768,10 +768,10 @@ describe('a wait', () => {
     expect(screen.queryByRole('form')).toBeNull();
   });
 
-  it('names an action the wait no longer lists, and an answer without values', async () => {
+  it('names an action the wait no longer lists, and an answer with no values', async () => {
     replace(5, (item) => ({
       ...item,
-      answer: { action: 'gone', author: 'someone-else', answeredAt: '2026-10-30T09:00:00.000Z' },
+      answer: { action: 'gone', values: {}, author: 'someone-else', answeredAt: '2026-10-30T09:00:00.000Z' },
     }));
     visit(`/waits/${id(5)}`);
     const outcome = await screen.findByRole('region', { name: 'Answer' }, SLOW);
@@ -785,6 +785,7 @@ describe('a wait', () => {
       kind: item.kind,
       status: item.status,
       assignee: item.assignee,
+      createdBy: item.createdBy,
       question: item.question,
       createdAt: item.createdAt,
     }));
@@ -803,7 +804,7 @@ describe('a wait', () => {
     expect(
       await screen.findByText('This wait ended without an answer.', undefined, SLOW),
     ).toBeInTheDocument();
-    expect(screen.getByText(/^Asked by someone · /)).toBeInTheDocument();
+    expect(screen.getByText(/^Asked by you · /)).toBeInTheDocument();
   });
 
   it('goes back to the list', async () => {

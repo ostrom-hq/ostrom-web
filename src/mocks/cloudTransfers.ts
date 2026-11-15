@@ -7,7 +7,11 @@ import {
   handleListCloudTransfers,
   handleTransferCloudSession,
 } from '@gen/api/msw.gen';
-import type { CloudSession, CloudTransfer, CloudTransferRecipient } from '@gen/api/types.gen';
+import type {
+  CloudSessionResponse,
+  CloudTransferResponse,
+  CloudTransferRecipientResponse,
+} from '@gen/api/types.gen';
 import { zCreateCloudTransferRequest } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
@@ -15,9 +19,9 @@ import { readJson, refusal } from './http';
 
 /** The ownership transfers of cloud sessions (`runners.cloud.transfer.v1`), as `runners` of ostrom-server keeps them. */
 export interface CloudTransfersState {
-  cloudTransfers: CloudTransfer[];
+  cloudTransfers: CloudTransferResponse[];
   /** The sessions: a transfer moves the one it names. */
-  cloudSessions: CloudSession[];
+  cloudSessions: CloudSessionResponse[];
 }
 
 export interface CloudTransfersAccess {
@@ -28,7 +32,7 @@ export interface CloudTransfersAccess {
 }
 
 /** Everyone who can own a session: the server names the id, the login and whether the member is an administrator. */
-export const TRANSFER_RECIPIENTS: readonly CloudTransferRecipient[] = [
+export const TRANSFER_RECIPIENTS: readonly CloudTransferRecipientResponse[] = [
   { id: MEMBER_IDS.maya, login: 'maya', administrator: true },
   { id: MEMBER_IDS.theo, login: 'theo', administrator: false },
   { id: MEMBER_IDS.samir, login: 'samir', administrator: false },
@@ -65,7 +69,7 @@ function decide(
   if (transfer === undefined) return refusal(404, 'transfer_not_found', 'There is no such transfer.');
   if (transfer.state !== 'offered' && transfer.state !== 'accepted')
     return refusal(409, 'transfer_not_open', 'The transfer is no longer open.');
-  const changed: CloudTransfer = {
+  const changed: CloudTransferResponse = {
     ...transfer,
     state: to,
     decidedAt: now.toISOString(),
@@ -100,14 +104,14 @@ export function createCloudTransferHandlers(
       const caller = access.memberId(request);
       if (caller === undefined)
         return refusal(403, 'transfer_forbidden', 'Only a member can transfer a session.');
-      const created: CloudTransfer = {
+      const created: CloudTransferResponse = {
         id: `tr-${String(state().cloudTransfers.length + 1)}`,
         sessionId: session.id,
         fromMemberId: caller,
         toMemberId: to.id,
         state: immediate ? 'accepted' : 'offered',
         initiatedBy: caller,
-        resume: body.data.resume,
+        resume: body.data.resume ?? false,
         createdAt: now().toISOString(),
         updatedAt: now().toISOString(),
         ...(immediate ? {} : { expiresAt: new Date(now().getTime() + 7 * 86_400_000).toISOString() }),

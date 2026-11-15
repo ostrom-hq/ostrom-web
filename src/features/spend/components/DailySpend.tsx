@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { SpendingDay } from '@gen/api/types.gen';
+import type { SpendingDayDto } from '@gen/api/types.gen';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -18,7 +18,7 @@ function dayLabels(date: string, locale: string): { readonly full: string; reado
 }
 
 /** The last days as columns to one scale; each column is a list item a screen reader reads as day and amount. */
-export function DailySpend({ days }: { readonly days: readonly SpendingDay[] }): ReactElement | null {
+export function DailySpend({ days }: { readonly days: readonly SpendingDayDto[] }): ReactElement | null {
   const { t, i18n } = useTranslation();
   if (days.length === 0) return null;
   const largest = Math.max(...days.map((day) => day.usd));

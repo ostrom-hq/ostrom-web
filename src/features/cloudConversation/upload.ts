@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { client } from '@gen/api/client.gen';
 import type { UploadCloudFileErrors, UploadCloudFileResponses } from '@gen/api/types.gen';
-import { zCloudFile } from '@gen/api/zod.gen';
+import { zCloudFileDto } from '@gen/api/zod.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import {
   FILE_INTEGRITY_FAILED,
@@ -154,7 +154,7 @@ async function attempt(request: UploadRequest, bytes: ArrayBuffer, seen: Seen): 
     },
     body: bytes,
     bodySerializer: null,
-    responseValidator: async (value: unknown) => zCloudFile.parseAsync(value),
+    responseValidator: async (value: unknown) => zCloudFileDto.parseAsync(value),
     fetch: xhrFetch(
       bytes,
       (sent) => {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, Secret } from '@gen/api/types.gen';
+import type { MemberResponse, SecretResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -14,9 +14,9 @@ import type { AccountChangeViewModel } from '../useSharing';
 
 export interface EnrollFormProps {
   readonly change: AccountChangeViewModel;
-  readonly secrets: readonly Secret[];
+  readonly secrets: readonly SecretResponse[];
   /** The other members, to lend the subscription to. */
-  readonly members: readonly OrgMember[];
+  readonly members: readonly MemberResponse[];
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore'>;
 }

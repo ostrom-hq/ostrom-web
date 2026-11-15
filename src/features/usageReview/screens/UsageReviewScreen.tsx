@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { PendingUsage, UsageReconciliation } from '@gen/api/types.gen';
+import type { PendingUsageDto, UsageReconciliationDto } from '@gen/api/types.gen';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type ReactElement, type ReactNode, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -160,7 +160,7 @@ function Page<T>({
   );
 }
 
-function PendingRow({ item }: { readonly item: PendingUsage }): ReactElement {
+function PendingRow({ item }: { readonly item: PendingUsageDto }): ReactElement {
   const { t, i18n } = useTranslation();
   return (
     <li className="o-row">
@@ -181,7 +181,7 @@ function PendingRow({ item }: { readonly item: PendingUsage }): ReactElement {
   );
 }
 
-function ReconciliationRow({ item }: { readonly item: UsageReconciliation }): ReactElement {
+function ReconciliationRow({ item }: { readonly item: UsageReconciliationDto }): ReactElement {
   const { t, i18n } = useTranslation();
   return (
     <li className="o-row">

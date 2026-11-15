@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   zApiError,
-  zNotificationPreferences,
+  zNotificationPreferencesBody,
   zNotificationSettings,
-  zPushDeviceList,
+  zPushDeviceListDto,
   zPushTestResults,
   zSlackLink,
 } from '@gen/api/zod.gen';
@@ -109,7 +109,7 @@ describe('the mock phone preferences', () => {
   });
 
   it('reads and replaces them, with or without quiet hours', async () => {
-    expect(zNotificationPreferences.parse((await call('GET', '/me/notifications')).body)).toEqual({
+    expect(zNotificationPreferencesBody.parse((await call('GET', '/me/notifications')).body)).toEqual({
       requests: true,
       decisions: true,
       spending: false,
@@ -178,7 +178,7 @@ describe('the mock push phones', () => {
 
   it('lists them, and removes one from the list and from the test', async () => {
     const listed = await call('GET', '/push-devices');
-    expect(zPushDeviceList.parse(listed.body).items.map((phone) => phone.id)).toEqual([
+    expect(zPushDeviceListDto.parse(listed.body).items.map((phone) => phone.id)).toEqual([
       'pd_ios',
       'pd_android',
     ]);

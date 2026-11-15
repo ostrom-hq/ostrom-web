@@ -1,18 +1,37 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { InferenceSettings, OrgMember, ModelPolicy, Secret } from '@gen/api/types.gen';
-import { zModelPolicy } from '@gen/api/zod.gen';
+import type {
+  InferenceSettingsDto,
+  MemberResponse,
+  ModelPolicyDto,
+  SecretResponse,
+} from '@gen/api/types.gen';
+import { zModelPolicyDto } from '@gen/api/zod.gen';
 import { z } from 'zod/mini';
 
 // The contract's policy, with `default` as the server may send it: left out (or null) until one is set.
-const SENT_POLICY = z.extend(zModelPolicy, { default: z.nullish(z.string()) });
+const SENT_POLICY = z.extend(zModelPolicyDto, { default: z.nullish(z.string()) });
 
 /**
  * The policy as the server sends it. A new organization's has no `default` until one is set (the server leaves the
  * field out while the contract requires it): it reads as no default, `""`, rather than as a broken answer.
  */
-export async function readModelPolicy(data: unknown): Promise<ModelPolicy> {
+export async function readModelPolicy(data: unknown): Promise<ModelPolicyDto> {
   const { allowed, default: model, byMember } = await SENT_POLICY.parseAsync(data);
-  return { allowed, default: model ?? '', ...(byMember === undefined ? {} : { byMember }) };
+  return {
+    allowed: allowed ?? [],
+    default: model ?? '',
+    ...(byMember === undefined ? {} : { byMember }),
+  };
+}
+
+/** The models the policy allows; none listed is the empty list, which allows every model. */
+export function allowedOf(policy: ModelPolicyDto): readonly string[] {
+  return policy.allowed ?? [];
+}
+
+/** The policy's default model; none set (ostrom-core#48) is the empty string. */
+export function defaultModelOf(policy: ModelPolicyDto): string {
+  return policy.default ?? '';
 }
 
 /** "claude-opus, gpt-5" or one per line: each value once, in the order typed. */
@@ -42,12 +61,11 @@ export interface PolicyDraft {
   readonly byMember: readonly MemberModels[];
 }
 
-export function policyDraftOf(policy: ModelPolicy): PolicyDraft {
+export function policyDraftOf(policy: ModelPolicyDto): PolicyDraft {
   // The contract leaves `default` out until one is set (ostrom-core#48): no default is an empty field.
-  const { default: defaultModel = '' } = policy;
   return {
-    allowed: policy.allowed.join(', '),
-    defaultModel,
+    allowed: allowedOf(policy).join(', '),
+    defaultModel: defaultModelOf(policy),
     byMember: Object.entries(policy.byMember ?? {}).map(([member, models], key) => ({
       key,
       member,
@@ -57,7 +75,7 @@ export function policyDraftOf(policy: ModelPolicy): PolicyDraft {
 }
 
 /** A member by their login when the members are known, else by the id the policy keys them by. */
-export function memberName(id: string, members: readonly OrgMember[] | undefined): string {
+export function memberName(id: string, members: readonly MemberResponse[] | undefined): string {
   return members?.find((member) => member.id === id)?.login ?? id;
 }
 
@@ -105,12 +123,12 @@ export function defaultRefusedFor(draft: PolicyDraft): string[] {
 }
 
 /** Who may get a list of their own: a member who runs agents, not an invitation (no account yet). */
-export function runsAgents(member: OrgMember): boolean {
+export function runsAgents(member: MemberResponse): boolean {
   return member.role !== 'invited';
 }
 
 /** The policy a draft says, once `policyProblem` finds nothing. */
-export function policyOf(draft: PolicyDraft): ModelPolicy {
+export function policyOf(draft: PolicyDraft): ModelPolicyDto {
   return {
     allowed: listOf(draft.allowed),
     default: draft.defaultModel.trim(),
@@ -129,7 +147,7 @@ export interface ProvidersDraft {
 export const PROVIDERS = ['anthropic', 'openai', 'openrouter'] as const;
 export type Provider = (typeof PROVIDERS)[number];
 
-export function providersDraftOf(settings: InferenceSettings): ProvidersDraft {
+export function providersDraftOf(settings: InferenceSettingsDto): ProvidersDraft {
   return {
     anthropic: settings.anthropicKeySecret ?? '',
     openai: settings.openaiKeySecret ?? '',
@@ -142,7 +160,7 @@ export function providersDraftOf(settings: InferenceSettings): ProvidersDraft {
  * The settings a draft says; a key left empty is no key. The settings are written whole: the members' concurrent
  * requests of [read], the settings on screen, are kept as they are.
  */
-export function settingsOf(draft: ProvidersDraft, read?: InferenceSettings): InferenceSettings {
+export function settingsOf(draft: ProvidersDraft, read?: InferenceSettingsDto): InferenceSettingsDto {
   const anthropic = draft.anthropic.trim();
   const openai = draft.openai.trim();
   const openrouter = draft.openrouter.trim();
@@ -156,9 +174,9 @@ export function settingsOf(draft: ProvidersDraft, read?: InferenceSettings): Inf
 }
 
 /** The secrets a provider key may name: the organization's, never a member's own. */
-export function keySecrets(secrets: readonly Secret[]): string[] {
+export function keySecrets(secrets: readonly SecretResponse[]): string[] {
   return secrets
-    .filter((secret) => secret.owner === undefined)
+    .filter((secret) => (secret.owner ?? undefined) === undefined)
     .map((secret) => secret.name)
     .sort((a, b) => a.localeCompare(b, 'en'));
 }

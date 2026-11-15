@@ -27,7 +27,7 @@ function asMember(): void {
     http.get('*/api/v1/auth/me', () =>
       HttpResponse.json({
         dev: { login: 'maya', verified: true, via: 'github' },
-        member: { id: MEMBER_IDS.theo, login: 'maya', avatarUrl: '', role: 'member' },
+        member: { id: MEMBER_IDS.theo, login: 'maya', name: 'Maya Lind', avatarUrl: '', role: 'member' },
         capabilities: [],
       }),
     ),
@@ -140,7 +140,12 @@ describe('the organization’s cloud settings', () => {
     const settings = await section('Organization settings');
     const minutes = await within(settings).findByLabelText(/^Background work/);
     // Another administrator saves first.
-    db.cloudSettings = { backgroundWorkMaxMinutes: 90, updatedAt: '2026-11-10T10:00:00Z', updatedBy: 'lena' };
+    db.cloudSettings = {
+      backgroundWorkMaxMinutes: 90,
+      maxRunningAutomationsPerMember: 2,
+      updatedAt: '2026-11-10T10:00:00Z',
+      updatedBy: 'lena',
+    };
     await user.clear(minutes);
     await user.type(minutes, '60');
     await user.click(within(settings).getByRole('button', { name: 'Save' }));
@@ -693,9 +698,13 @@ describe('the cap of automation sessions per member', () => {
     expect(db.cloudSettings.backgroundWorkMaxMinutes).toBe(240);
   });
 
-  it('reads a server that sends no cap as the default, and sends the cap with each save', async () => {
+  it('reads the default cap, and sends the cap with each save', async () => {
     const user = userEvent.setup();
-    db.cloudSettings = { backgroundWorkMaxMinutes: 90, updatedAt: '2026-11-10T10:00:00Z' };
+    db.cloudSettings = {
+      backgroundWorkMaxMinutes: 90,
+      maxRunningAutomationsPerMember: 2,
+      updatedAt: '2026-11-10T10:00:00Z',
+    };
     visit('/cloud/admin');
     const settings = await section('Organization settings');
     expect(await within(settings).findByLabelText(/^Automation sessions running/)).toHaveValue(2);

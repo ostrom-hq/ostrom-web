@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ActivityItem } from '@gen/api/types.gen';
+import type { ActivityItemDto } from '@gen/api/types.gen';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -12,16 +12,17 @@ import { LoadState, Screen } from '@/shared/ui/Screen';
 import { knownKind, linkOf, toneOf } from '../model';
 import { useActivity } from '../useActivity';
 
-function ActivityRow({ item }: { readonly item: ActivityItem }): ReactElement {
+function ActivityRow({ item }: { readonly item: ActivityItemDto }): ReactElement {
   const { t, i18n } = useTranslation();
   const kind = knownKind(item.kind);
+  const cost = item.costUsd ?? undefined;
   const meta = [
     // The summary already names an agent or a person; another kind of actor is said, never taken for a person.
     item.actor.kind === 'agent' || item.actor.kind === 'person'
       ? undefined
       : t('activity.actor.other', { name: item.actor.name, kind: item.actor.kind }),
-    item.repo,
-    item.costUsd === undefined ? undefined : formatUsd(item.costUsd, i18n.language),
+    item.repo ?? undefined,
+    cost === undefined ? undefined : formatUsd(cost, i18n.language),
     formatAbsolute(item.at, i18n.language),
   ].filter((part) => part !== undefined);
   const body = (

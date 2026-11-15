@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { SkillEntry } from '@gen/api/types.gen';
+import type { SkillEntryDto } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
@@ -11,7 +11,7 @@ import { type PersonalChangeViewModel, usePersonalVersions } from '../usePersona
 import { Content } from './Content';
 
 export interface PersonalSkillProps {
-  readonly skill: SkillEntry;
+  readonly skill: SkillEntryDto;
   readonly change: PersonalChangeViewModel;
 }
 

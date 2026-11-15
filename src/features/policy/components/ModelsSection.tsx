@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, ModelPolicy } from '@gen/api/types.gen';
+import type { MemberResponse, ModelPolicyDto } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
@@ -9,6 +9,8 @@ import { MorePeople } from '@/shared/ui/MorePeople';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   addMemberRow,
+  allowedOf,
+  defaultModelOf,
   defaultRefusedFor,
   type MemberModels,
   memberName,
@@ -25,8 +27,8 @@ function PolicyFacts({
   policy,
   members,
 }: {
-  readonly policy: ModelPolicy;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly policy: ModelPolicyDto;
+  readonly members: readonly MemberResponse[] | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   const own = Object.entries(policy.byMember ?? {});
@@ -35,12 +37,14 @@ function PolicyFacts({
       <div className="o-facts__row">
         <dt>{t('policy.models.allowed')}</dt>
         <dd className="o-mono">
-          {policy.allowed.length === 0 ? t('policy.models.every') : policy.allowed.join(', ')}
+          {allowedOf(policy).length === 0 ? t('policy.models.every') : allowedOf(policy).join(', ')}
         </dd>
       </div>
       <div className="o-facts__row">
         <dt>{t('policy.models.default')}</dt>
-        <dd className="o-mono">{policy.default === '' ? t('policy.models.noDefault') : policy.default}</dd>
+        <dd className="o-mono">
+          {defaultModelOf(policy) === '' ? t('policy.models.noDefault') : defaultModelOf(policy)}
+        </dd>
       </div>
       {own.map(([member, models]) => (
         <div key={member} className="o-facts__row">
@@ -61,7 +65,7 @@ function MemberPicker({
 }: {
   readonly row: MemberModels;
   readonly number: number;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   readonly onChange: (member: string) => void;
 }): ReactElement {
   const { t } = useTranslation();
@@ -108,11 +112,11 @@ function PolicyForm({
   change,
   onDone,
 }: {
-  readonly policy: ModelPolicy;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly policy: ModelPolicyDto;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The next page of members, read when asked. */
   readonly people: Pick<OrgMembers, 'more' | 'loadingMore' | 'moreFailed'>;
-  readonly change: SaveViewModel<ModelPolicy>;
+  readonly change: SaveViewModel<ModelPolicyDto>;
   readonly onDone: () => void;
 }): ReactElement {
   const { t } = useTranslation();

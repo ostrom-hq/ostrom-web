@@ -11,9 +11,9 @@ import {
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
   GovernanceConfirmationPending,
-  Invitation,
-  InvitationLink,
-  OrgMember,
+  InvitationResponse,
+  InvitationLinkResponse,
+  MemberResponse,
 } from '@gen/api/types.gen';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
@@ -37,7 +37,7 @@ export interface MembersViewModel {
   /** The search the list shows, as sent: trimmed, empty for none. */
   readonly search: string;
   /** The people the list shows, a page of a hundred at a time: everyone, or those the search found. */
-  readonly members: readonly OrgMember[] | undefined;
+  readonly members: readonly MemberResponse[] | undefined;
   /** The list shows the last search's people while the new one is read. */
   readonly stale: boolean;
   /** Reads the next hundred of the list; absent once all are read. */
@@ -46,7 +46,7 @@ export interface MembersViewModel {
   /** Why the search did not answer: the list and its box stay. */
   readonly searchFailure: Error | undefined;
   /** The live invitations, read by owners and admins only (the server refuses everyone else). */
-  readonly invitations: readonly Invitation[] | undefined;
+  readonly invitations: readonly InvitationResponse[] | undefined;
   /** Why the people did not load. */
   readonly failure: Error | undefined;
   /** Why the invitations did not load: said in their own section, the people still show. */
@@ -189,7 +189,7 @@ export interface InviteLinkViewModel extends HeldWrite {
   readonly create: (role: OrgRole, maxUses: number) => void;
   readonly creating: boolean;
   /** The link just made: the only time its address is shown (it carries the secret). */
-  readonly link: InvitationLink | undefined;
+  readonly link: InvitationLinkResponse | undefined;
   /** The link the server held for a confirmation rather than made. */
   readonly held: GovernanceConfirmationPending | undefined;
   readonly failure: Error | undefined;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { OrgMember, SkillEntry } from '@gen/api/types.gen';
+import type { MemberResponse, SkillEntryDto } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
@@ -64,8 +64,8 @@ function SkillRow({
   skill,
   members,
 }: {
-  readonly skill: SkillEntry;
-  readonly members: readonly OrgMember[] | undefined;
+  readonly skill: SkillEntryDto;
+  readonly members: readonly MemberResponse[] | undefined;
 }): ReactElement {
   const { t, i18n } = useTranslation();
   const owner = skill.ownerId ?? undefined;
