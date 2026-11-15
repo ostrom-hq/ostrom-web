@@ -27,14 +27,21 @@ export function DiscordSection(): ReactElement | null {
   return (
     <Section id="discord" label={t('discord.title')}>
       <p className="o-screen__lead">{t('discord.lead')}</p>
-      {returned === undefined || view.actionFailure !== undefined ? null : <Returned outcome={returned} />}
+      {/* "Linked" only while the link says so: after an unlink, or a hand-typed address, it is not shown. */}
+      {returned === undefined ||
+      view.actionFailure !== undefined ||
+      (returned === 'linked' && view.link?.linked !== true) ? null : (
+        <Returned outcome={returned} />
+      )}
       <LoadState data={view.link} failure={view.failure} rows={1}>
         {(link) =>
           link.linked ? (
             <>
               <p className="o-inline">
                 <Badge tone="success">{t('discord.linkedTag')}</Badge>{' '}
-                {t('discord.linked', { name: link.discordUsername ?? link.discordUserId ?? '' })}
+                {link.discordUsername === undefined
+                  ? t('discord.linkedUnnamed')
+                  : t('discord.linked', { name: link.discordUsername })}
               </p>
               <span className="o-self-start">
                 <Button onClick={view.disconnect} disabled={view.busy}>

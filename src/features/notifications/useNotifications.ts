@@ -29,7 +29,7 @@ import type {
   SlackLink,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { leaveFor } from '@/shared/lib/leave';
@@ -236,6 +236,16 @@ export function useDiscordLink(enabled: boolean): DiscordLinkViewModel {
   const queryClient = useQueryClient();
   const [leaving, setLeaving] = useState(false);
   const [unsafe, setUnsafe] = useState(false);
+  // Back from Discord's page without finishing (the page restored as it was left): the section is usable again.
+  useEffect(() => {
+    const back = (): void => {
+      setLeaving(false);
+    };
+    window.addEventListener('pageshow', back);
+    return () => {
+      window.removeEventListener('pageshow', back);
+    };
+  }, []);
   const query = useQuery(ready(getDiscordLinkOptions(), { enabled, retry: false }));
   const start = useMutation({
     ...linkDiscordMutation(),

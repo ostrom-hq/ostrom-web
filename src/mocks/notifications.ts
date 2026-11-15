@@ -53,7 +53,7 @@ export interface NotificationsState {
   /** Whether the instance's Discord application is set (the `discord` settings section's five fields). */
   discordConfigured: boolean;
   /** The demo person's Discord link in the organization, or undefined while they linked none. */
-  discordLinked: { discordUserId: string; discordUsername: string; linkedAt: string } | undefined;
+  discordLinked: { discordUserId: string; discordUsername?: string; linkedAt: string } | undefined;
 }
 
 /** The demo person's membership, as the Slack link names it. */

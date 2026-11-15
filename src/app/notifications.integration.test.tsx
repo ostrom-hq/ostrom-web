@@ -480,6 +480,9 @@ describe('the Discord account', () => {
     });
     expect(nth(nth(leave.mock.calls, 0), 0).startsWith(`${DISCORD_AUTHORIZE}?`)).toBe(true);
     expect(await within(box).findByRole('button', { name: 'Opening Discord…' })).toBeDisabled();
+    // Back from Discord's page without finishing: the section is usable again.
+    fireEvent(window, new Event('pageshow'));
+    expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeEnabled();
     leave.mockRestore();
   });
 
@@ -511,6 +514,20 @@ describe('the Discord account', () => {
     await user.click(within(box).getByRole('button', { name: 'Unlink' }));
     expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeInTheDocument();
     expect(db.discordLinked).toBeUndefined();
+  });
+
+  it('says nothing of a return that did not link', async () => {
+    visit('/me/notifications?discord=linked');
+    const box = await region('Discord');
+    expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeInTheDocument();
+    expect(within(box).queryByText('Your Discord account is linked.')).toBeNull();
+  });
+
+  it('says the account is linked without a name the server did not give', async () => {
+    db.discordLinked = { discordUserId: '80351110224678912', linkedAt: '2026-11-15T10:00:00Z' };
+    visit('/me/notifications');
+    const box = await region('Discord');
+    expect(await within(box).findByText(/^Your Discord account receives/u)).toBeInTheDocument();
   });
 
   it("says why Discord's return linked nothing", async () => {

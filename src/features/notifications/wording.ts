@@ -13,6 +13,8 @@ export const discordEn = {
     linkedTag: 'Linked',
     linked:
       'Your Discord account {{name}} receives your notifications. A request for your yes has a Reject button, and Approve opens it here.',
+    linkedUnnamed:
+      'Your Discord account receives your notifications. A request for your yes has a Reject button, and Approve opens it here.',
     unlink: 'Unlink',
     notConfigured:
       'Discord is not set up on this server. An administrator sets the Discord application in Admin, Settings (section discord).',
@@ -55,6 +57,8 @@ registerWording({
       linkedTag: 'Lié',
       linked:
         'Votre compte Discord {{name}} reçoit vos notifications. Une demande de oui a un bouton Refuser, et Approuver l’ouvre ici.',
+      linkedUnnamed:
+        'Votre compte Discord reçoit vos notifications. Une demande de oui a un bouton Refuser, et Approuver l’ouvre ici.',
       unlink: 'Délier',
       notConfigured:
         'Discord n’est pas configuré sur ce serveur. Un administrateur règle l’application Discord dans Admin, Réglages (section discord).',
