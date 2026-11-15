@@ -606,7 +606,6 @@ function canManage(db: MockDb): boolean {
   return role === 'owner' || role === 'admin';
 }
 
-/** An automation changes by its owner, or by an owner or an admin of the organization. */
 /**
  * The gallery's filters as the server applies them: the tab (`scope`: everything, theirs, shared with them), the origin
  * kind (none is `api`, a launch with a cloud session `cloud_session`, a launch alone `local_run`), the access, and the
@@ -637,6 +636,7 @@ function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams)
   return launch === null || artifact.origin?.launchId === launch;
 }
 
+/** An automation changes by its owner, or by an owner or an admin of the organization. */
 function mayChange(db: MockDb, automation: Automation): boolean {
   return automation.owner === me.dev.login || canManage(db);
 }
@@ -1648,7 +1648,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const matches = db.artifacts.filter((item) => artifactMatches(db, item, query));
       // Newest first as the server lists, after the one `before` names.
       const after = query.get('before');
-      const from = after === null ? 0 : matches.findIndex((item) => item.id === after) + 1;
+      const at = after === null ? -1 : matches.findIndex((item) => item.id === after);
+      // A cursor that names none of them is no page, as the server's 400 is.
+      if (after !== null && at < 0) return refusal(400, 'invalid_request', 'before names no artifact');
+      const from = at + 1;
       const items = matches.slice(from, from + size);
       const last = items.at(-1);
       return HttpResponse.json({

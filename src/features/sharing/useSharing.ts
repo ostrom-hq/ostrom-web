@@ -41,6 +41,8 @@ export interface ArtifactsViewModel {
   readonly failure: Error | undefined;
   /** Only an artifact's owner shares or deletes it. */
   readonly login: string | undefined;
+  /** Why an older page could not be read; what was read stays. */
+  readonly moreFailure: Error | undefined;
   /** An older page exists (`next`). */
   readonly more: boolean;
   readonly loadingMore: boolean;
@@ -58,7 +60,9 @@ export function useArtifacts(filters: GalleryFilters): ArtifactsViewModel {
   const { fetchNextPage } = artifacts;
   return {
     artifacts: artifacts.data?.pages.flatMap((page) => page.items),
-    failure: failureOf(artifacts.error),
+    // A failed older page leaves the ones read on screen.
+    failure: artifacts.data === undefined ? failureOf(artifacts.error) : undefined,
+    moreFailure: artifacts.data === undefined ? undefined : failureOf(artifacts.error),
     login: viewer.login,
     more: artifacts.hasNextPage,
     loadingMore: artifacts.isFetchingNextPage,

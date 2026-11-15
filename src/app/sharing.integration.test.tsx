@@ -372,6 +372,29 @@ describe('the artifacts gallery', () => {
     });
     expect(screen.queryByRole('button', { name: 'Older artifacts' })).toBeNull();
   });
+
+  it('keeps the artifacts read when an older page fails, and says why', async () => {
+    const user = userEvent.setup();
+    const first = db.artifacts[0];
+    if (first === undefined) throw new Error('no artifact');
+    db.artifacts = Array.from({ length: 25 }, (_, at) => ({
+      ...first,
+      id: `art-${String(100 + at)}`,
+      title: `Report ${String(at)}`,
+    }));
+    visit('/artifacts');
+    await findCard('Report 0');
+    server.use(
+      http.get('*/api/v1/artifacts', ({ request }) =>
+        new URL(request.url).searchParams.has('before')
+          ? HttpResponse.json({ error: { type: 'conflict', message: 'busy' } }, { status: 409 })
+          : undefined,
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: 'Older artifacts' }));
+    expect(await screen.findByText('busy')).toBeInTheDocument();
+    expect(titles()).toHaveLength(20);
+  });
 });
 
 describe('the shared subscriptions', () => {

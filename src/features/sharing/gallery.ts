@@ -75,7 +75,8 @@ export function formatBytes(bytes: number, locale: string): string {
     `${new Intl.NumberFormat(locale, { maximumFractionDigits: unit === 'B' ? 0 : 1 }).format(value)} ${unit}`;
   let value = bytes;
   for (const unit of UNITS) {
-    if (value < 1024) return show(value, unit);
+    // Rounded to what is shown: 1023.99 KB is 1 MB, never « 1,024 KB ».
+    if (Math.round(value * 10) / 10 < 1024) return show(value, unit);
     value /= 1024;
   }
   return show(value, 'GB');

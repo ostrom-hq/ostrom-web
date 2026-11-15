@@ -111,6 +111,8 @@ describe('a file’s size', () => {
     expect(formatBytes(5 * 1024 ** 3, 'en')).toBe('5 GB');
     expect(formatBytes(5 * 1024 ** 4, 'en')).toBe('5,120 GB');
     expect(formatBytes(1536, 'fr')).toBe('1,5 KB');
+    expect(formatBytes(1_048_570, 'en')).toBe('1 MB');
+    expect(formatBytes(1_048_000, 'en')).toBe('1,023.4 KB');
   });
 });
 

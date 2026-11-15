@@ -167,6 +167,9 @@ describe('mock artifacts', () => {
     ).data;
     expect(second.items.map((item) => item.id)).toEqual(['art-2']);
     expect(second.next).toBeUndefined();
+    expect(
+      await statusOf(async () => listArtifacts({ query: { before: 'art-gone' }, throwOnError: true })),
+    ).toBe(400);
   });
 
   it('shares with a member once, stops sharing, and lets only the owner do either', async () => {

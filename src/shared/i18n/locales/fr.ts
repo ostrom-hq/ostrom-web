@@ -2349,7 +2349,7 @@ export const fr = {
       path: 'Chemin',
       size: 'Taille',
       type: 'Type',
-      fileCount_one: '1 fichier',
+      fileCount_one: '{{count}} fichier',
       fileCount_other: '{{count}} fichiers',
     },
     accounts: {

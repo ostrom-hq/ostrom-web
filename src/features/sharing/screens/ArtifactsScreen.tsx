@@ -77,6 +77,11 @@ export function ArtifactsScreen(): ReactElement {
           )
         }
       </LoadState>
+      {view.moreFailure === undefined ? null : (
+        <Banner tone="danger" tag={t('sharing.errorTag')} live>
+          {view.moreFailure.message}
+        </Banner>
+      )}
       {view.more ? (
         <div className="o-inline">
           <Button variant="ghost" disabled={view.loadingMore} onClick={view.loadMore}>
