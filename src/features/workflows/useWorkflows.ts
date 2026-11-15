@@ -5,7 +5,6 @@ import {
   getWorkflowQueryKey,
   listDecisionsQueryKey,
   listReposInfiniteOptions,
-  listWorkflowsOptions,
   listWorkflowsQueryKey,
 } from '@gen/api/@tanstack/react-query.gen';
 import { createWorkflow, deleteWorkflow, saveWorkflow } from '@gen/api/sdk.gen';
@@ -16,6 +15,7 @@ import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
+import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 
 export interface WorkflowsViewModel {
   readonly workflows: readonly Workflow[] | undefined;
@@ -25,7 +25,7 @@ export interface WorkflowsViewModel {
 }
 
 export function useWorkflows(): WorkflowsViewModel {
-  const query = useQuery(ready(listWorkflowsOptions()));
+  const query = useQuery(ready(allWorkflowsOptions()));
   const viewer = useViewer();
   return { workflows: query.data?.items, failure: failureOf(query.error), canChange: viewer.canManage };
 }

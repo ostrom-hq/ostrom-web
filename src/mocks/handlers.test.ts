@@ -626,7 +626,27 @@ describe('mock workflows and policy', () => {
     const all = await listWorkflows({ throwOnError: true });
     const proposed = await listWorkflows({ query: { status: 'proposed' }, throwOnError: true });
     expect(all.data.items).toHaveLength(4);
+    expect(all.data.next).toBeUndefined();
     expect(proposed.data.items.map((workflow) => workflow.id)).toEqual(['wf-migrations']);
+  });
+
+  it('pages workflows as the server does: after, limit and next', async () => {
+    const ids = db.workflows.map((workflow) => workflow.id);
+    const first = await listWorkflows({ query: { limit: 2 }, throwOnError: true });
+    expect(first.data.items.map((workflow) => workflow.id)).toEqual(ids.slice(0, 2));
+    expect(first.data.next).toBe(ids[1]);
+    const after = first.data.next ?? '';
+    const second = await listWorkflows({ query: { limit: 100, after }, throwOnError: true });
+    expect(second.data.items.map((workflow) => workflow.id)).toEqual(ids.slice(2));
+    const refused = async (call: () => Promise<unknown>): Promise<number | false | undefined> => {
+      const failure = await failureOf(call);
+      return isApiFailure(failure) && failure.status;
+    };
+    // The client refuses a limit below 1 before sending it: sent as is, the demo server refuses it as the server does.
+    expect((await fetch('http://ostrom.test/api/v1/workflows?limit=0')).status).toBe(400);
+    expect(await refused(async () => listWorkflows({ query: { after: 'nope' }, throwOnError: true }))).toBe(
+      400,
+    );
   });
 
   it('reads and sets the self-approval policy, for owners and admins only', async () => {
