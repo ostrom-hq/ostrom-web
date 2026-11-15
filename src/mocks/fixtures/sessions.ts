@@ -11,6 +11,8 @@ const sessions: Session[] = [
     devVerified: true,
     devVia: 'github',
     repo: 'acme/billing-api',
+    launchId: 'lch-7f3a',
+    labels: { env: 'ci', team: 'billing' },
     model: 'claude-opus-5-5',
     harnessVersion: '0.4.1',
     packageDigest: 'sha256:9e1d77c0',

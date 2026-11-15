@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Session } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { type ReactElement, useId, useMemo, useState } from 'react';
+import { Feature } from '@/shared/capabilities/Feature';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute, formatDuration, formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
@@ -10,14 +11,38 @@ import { Button } from '@/shared/ui/Button';
 import { EmptyState, LoadState, Screen } from '@/shared/ui/Screen';
 import { ActivityBadge } from '../components/ActivityBadge';
 import { StateBadge } from '../components/StateBadge';
-import { sessionState } from '../model';
+import { parseLabelFilter, sessionLabels, sessionState } from '../model';
 import { useSessionList } from '../useSessions';
 
 export function SessionsScreen(): ReactElement {
   const { t } = useTranslation();
-  const { open, ended, failure, more, loadingMore, moreFailure, loadMore } = useSessionList();
+  const [typed, setTyped] = useState('');
+  const filterId = useId();
+  const filter = useMemo(() => parseLabelFilter(typed), [typed]);
+  const { open, ended, failure, more, loadingMore, moreFailure, loadMore } = useSessionList(filter.labels);
   return (
     <Screen title={t('sessions.list.title')} lead={t('sessions.list.lead')}>
+      <Feature name="sessions.labels.v1">
+        <div className="o-stack">
+          <label htmlFor={filterId} className="o-field-label">
+            {t('sessions.list.filter')}
+          </label>
+          <input
+            id={filterId}
+            className="o-input"
+            placeholder={t('sessions.list.filterPlaceholder')}
+            value={typed}
+            onChange={(event) => {
+              setTyped(event.target.value);
+            }}
+          />
+          {filter.invalid.length === 0 ? null : (
+            <Banner tone="warning" tag={t('sessions.list.filterInvalidTag')}>
+              {t('sessions.list.filterInvalid', { list: filter.invalid.join(', ') })}
+            </Banner>
+          )}
+        </div>
+      </Feature>
       <LoadState data={open} failure={failure}>
         {(items) => (
           <section aria-labelledby="ss-open" className="o-stack">
@@ -71,6 +96,9 @@ function SessionRows({ sessions }: { readonly sessions: readonly Session[] }): R
               <span className="o-row__meta">
                 {[session.dev, session.model].filter((part) => part !== undefined).join(' · ')}
               </span>
+              {sessionLabels(session).length === 0 ? null : (
+                <span className="o-row__meta o-mono">{sessionLabels(session).join('  ')}</span>
+              )}
             </span>
             <time
               className="o-row__end"
