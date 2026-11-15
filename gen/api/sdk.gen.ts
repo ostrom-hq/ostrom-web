@@ -8330,7 +8330,7 @@ export const getCloudFilePolicy = <ThrowOnError extends boolean = false>(options
 /**
  * The runner of a conversation session reads how to start its agent; bearer: the execution's runner token
  *
- * `runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/agent`). Another epoch is 409 `execution_fenced`, a terminal session 409 `terminal_session`. The answer's flags say what the server takes: `permissionRelay` (`permission.request` events), `liveText` (`message.agent.delta`), `backgroundTasks` (`tasks` events); a runner never sends an event type the server did not announce, which would refuse the batch. `conversation` is the agent's conversation id to resume, or empty for a fresh one
+ * `runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/agent`). Another epoch is 409 `execution_fenced`, a terminal session 409 `terminal_session`. The answer's flags say what the server takes: `permissionRelay` (`permission.request` events), `liveText` (`message.agent.delta`), `backgroundTasks` (`tasks` events); a runner never sends an event type the server did not announce, which would refuse the batch. `conversation` says what the last execution left: `resumable` (the agent's own conversation is kept in the workspace: resume it), `transcript_only` (only the transcript is kept: start a fresh one) or `none` (the agent never ran)
  */
 export const cloudRunnerAgent = <ThrowOnError extends boolean = false>(options: Options<CloudRunnerAgentData, ThrowOnError>): RequestResult<CloudRunnerAgentResponses, CloudRunnerAgentErrors, ThrowOnError> => (options.client ?? client).post<CloudRunnerAgentResponses, CloudRunnerAgentErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
@@ -8356,7 +8356,7 @@ export const cloudRunnerAgent = <ThrowOnError extends boolean = false>(options: 
 /**
  * The runner uploads a batch of the agent's normalized transcript events
  *
- * `runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/events`). `sequence` is the runner's own consecutive counter per epoch, from 1: a retried batch is deduplicated. At most 200 events and 2 MB. The server bounds and masks each event again. A `turn` `started` makes the session's agent busy, `completed`, `interrupted` or `failed` idle again; both count as activity. A `status` with `conversation` records the id to resume. 409 `execution_fenced` for another epoch
+ * `runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/events`). `sequence` is the runner's own consecutive counter per epoch, from 1: a retried batch is deduplicated. At most 200 events and 2 MB. The server bounds and masks each event again. A `turn` `started` makes the session's agent busy, `completed`, `interrupted` or `failed` idle again; both count as activity. A `status` with `conversation` (`resumable`, `transcript_only` or `none`) records whether the next execution can resume the agent's own conversation, as `POST /cloud/runner/agent` then answers. 409 `execution_fenced` for another epoch
  */
 export const cloudRunnerEvents = <ThrowOnError extends boolean = false>(options: Options<CloudRunnerEventsData, ThrowOnError>): RequestResult<CloudRunnerEventsResponses, CloudRunnerEventsErrors, ThrowOnError> => (options.client ?? client).post<CloudRunnerEventsResponses, CloudRunnerEventsErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({

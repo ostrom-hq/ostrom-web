@@ -27031,7 +27031,7 @@ export type CloudRunnerAgentResponses = {
         version?: string;
         model?: string;
         effort?: string;
-        conversation: string;
+        conversation: 'resumable' | 'transcript_only' | 'none' | (string & {});
         permissionRelay?: boolean;
         /**
          * How long a request waits before the runner denies it; 0 waits without a deadline

@@ -11084,7 +11084,11 @@ export const zCloudRunnerAgentResponse = z.object({
     version: z.optional(z.string()),
     model: z.optional(z.string()),
     effort: z.optional(z.string()),
-    conversation: z.string(),
+    conversation: z.union([z.enum([
+            'resumable',
+            'transcript_only',
+            'none'
+        ]), z.string()]),
     permissionRelay: z.optional(z.boolean()),
     permissionDeadlineMinutes: z.optional(z.int()),
     liveText: z.optional(z.boolean()),
