@@ -53,27 +53,31 @@ export function initialCloudTransfers(): Pick<CloudTransfersState, 'cloudTransfe
   };
 }
 
-const NOT_FOUND = () => refusal(404, 'transfer_not_found', 'There is no such transfer.');
-
-function change(
+/** Moves a transfer to a state and, when it names one, its session to a status; refuses what is not open. */
+function decide(
   state: CloudTransfersState,
   id: string,
-  next: (transfer: CloudTransfer) => Partial<CloudTransfer>,
+  to: string,
+  sessionStatus: string | undefined,
   now: Date,
 ): Response {
   const transfer = state.cloudTransfers.find((item) => item.id === id);
-  if (transfer === undefined) return NOT_FOUND();
+  if (transfer === undefined) return refusal(404, 'transfer_not_found', 'There is no such transfer.');
   if (transfer.state !== 'offered' && transfer.state !== 'accepted')
     return refusal(409, 'transfer_not_open', 'The transfer is no longer open.');
-  const changed: CloudTransfer = { ...transfer, ...next(transfer), updatedAt: now.toISOString() };
+  const changed: CloudTransfer = {
+    ...transfer,
+    state: to,
+    decidedAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
   state.cloudTransfers = state.cloudTransfers.map((item) => (item.id === id ? changed : item));
-  return HttpResponse.json(changed);
-}
-
-function moveSession(state: CloudTransfersState, sessionId: string, status: string): void {
   state.cloudSessions = state.cloudSessions.map((session) =>
-    session.id === sessionId ? { ...session, status } : session,
+    session.id === transfer.sessionId && sessionStatus !== undefined
+      ? { ...session, status: sessionStatus }
+      : session,
   );
+  return HttpResponse.json(changed);
 }
 
 export function createCloudTransferHandlers(
@@ -106,33 +110,14 @@ export function createCloudTransferHandlers(
         ...(immediate ? {} : { expiresAt: new Date(now().getTime() + 7 * 86_400_000).toISOString() }),
       };
       state().cloudTransfers = [created, ...state().cloudTransfers];
-      if (immediate) moveSession(state(), session.id, 'transferring');
+      if (immediate)
+        state().cloudSessions = state().cloudSessions.map((item) =>
+          item.id === session.id ? { ...item, status: 'transferring' } : item,
+        );
       return HttpResponse.json(created, { status: 202 });
     }),
-    handleAcceptCloudTransfer(({ params }) => {
-      const answer = change(
-        state(),
-        params.id,
-        () => ({ state: 'accepted', decidedAt: now().toISOString() }),
-        now(),
-      );
-      const accepted = state().cloudTransfers.find((item) => item.id === params.id);
-      if (answer.ok && accepted !== undefined) moveSession(state(), accepted.sessionId, 'transferring');
-      return answer;
-    }),
-    handleDeclineCloudTransfer(({ params }) =>
-      change(state(), params.id, () => ({ state: 'declined', decidedAt: now().toISOString() }), now()),
-    ),
-    handleCancelCloudTransfer(({ params }) => {
-      const answer = change(
-        state(),
-        params.id,
-        () => ({ state: 'cancelled', decidedAt: now().toISOString() }),
-        now(),
-      );
-      const cancelled = state().cloudTransfers.find((item) => item.id === params.id);
-      if (answer.ok && cancelled !== undefined) moveSession(state(), cancelled.sessionId, 'running');
-      return answer;
-    }),
+    handleAcceptCloudTransfer(({ params }) => decide(state(), params.id, 'accepted', 'transferring', now())),
+    handleDeclineCloudTransfer(({ params }) => decide(state(), params.id, 'declined', undefined, now())),
+    handleCancelCloudTransfer(({ params }) => decide(state(), params.id, 'cancelled', 'running', now())),
   ];
 }

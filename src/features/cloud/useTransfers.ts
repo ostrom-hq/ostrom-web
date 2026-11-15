@@ -85,7 +85,13 @@ export function useTransferChange(): TransferChangeViewModel {
       queryClient.invalidateQueries({ queryKey: listCloudSessionsQueryKey() }),
     ]);
   }, [queryClient]);
-  const request = useMutation({ ...transferCloudSessionMutation(), onSuccess: refresh });
+  // The refresh is not awaited: the server took the request, so a failed re-read must not turn it into an error.
+  const request = useMutation({
+    ...transferCloudSessionMutation(),
+    onSuccess: () => {
+      void refresh();
+    },
+  });
   const acceptation = useMutation({ ...acceptCloudTransferMutation(), onSettled: refresh });
   const refusal = useMutation({ ...declineCloudTransferMutation(), onSettled: refresh });
   const withdrawal = useMutation({ ...cancelCloudTransferMutation(), onSettled: refresh });

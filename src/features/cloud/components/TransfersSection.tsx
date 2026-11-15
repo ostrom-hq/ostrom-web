@@ -44,9 +44,8 @@ export function TransfersSection({
         const title = session?.name ?? session?.id ?? transfer.sessionId;
         const incoming = transfer.toMemberId === memberId;
         const open = isOpenTransfer(transfer);
-        // The owner withdraws an offer; an accepted transfer is withdrawn by a manager only.
-        const mayCancel =
-          transfer.state === 'offered' ? transfer.fromMemberId === memberId : open && canManage;
+        // The owner withdraws their offer; a manager withdraws any open transfer.
+        const mayCancel = open && !incoming && (canManage || transfer.fromMemberId === memberId);
         return (
           <li key={transfer.id} className="o-row cl-transfer-row">
             <span className="o-row__main">

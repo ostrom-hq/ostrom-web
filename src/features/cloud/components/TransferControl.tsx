@@ -86,7 +86,7 @@ export function TransferControl({
       </span>
       <span className="o-inline">
         <Button
-          disabled={busy || member === ''}
+          disabled={busy || !candidates.some((recipient) => recipient.id === member)}
           onClick={() => {
             onOffer(member, resume, () => {
               setOpen(false);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudTransfer } from '@gen/api/types.gen';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { demoCapabilities } from '@/mocks/capabilities';
@@ -116,8 +116,8 @@ describe('the transfer of a cloud session', () => {
     await user.click(within(transfers).getByRole('button', { name: 'Accept' }));
     expect(await within(transfers).findByText('Moving')).toBeInTheDocument();
     expect(within(transfers).queryByRole('button', { name: 'Accept' })).toBeNull();
-    // An accepted transfer is withdrawn by a manager only.
-    expect(within(transfers).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+    // The recipient does not withdraw a transfer made to them: they decline an offer.
+    expect(within(transfers).queryByRole('button', { name: 'Cancel' })).toBeNull();
   });
 
   it('declines an offer', async () => {
@@ -126,6 +126,17 @@ describe('the transfer of a cloud session', () => {
     const transfers = await screen.findByRole('region', { name: 'Transfers' });
     await user.click(within(transfers).getByRole('button', { name: 'Decline' }));
     expect(await within(transfers).findByText('Declined')).toBeInTheDocument();
+  });
+
+  it('lets a manager withdraw an offer another member made', async () => {
+    const user = userEvent.setup();
+    db.cloudTransfers = db.cloudTransfers.map((item) => ({ ...item, toMemberId: MEMBER_IDS.samir }));
+    visit('/cloud');
+    const transfers = await screen.findByRole('region', { name: 'Transfers' });
+    expect(within(transfers).queryByRole('button', { name: 'Accept' })).toBeNull();
+    await user.click(within(transfers).getByRole('button', { name: 'Cancel' }));
+    await user.click(within(transfers).getByRole('button', { name: /Cancel the transfer of/ }));
+    expect(await within(transfers).findByText('Cancelled')).toBeInTheDocument();
   });
 
   it('gives a member no button on an accepted transfer they did not ask', async () => {
@@ -204,6 +215,106 @@ describe('the transfer of a cloud session', () => {
     await user.click(within(mine).getByRole('button', { name: 'Give the session' }));
     expect(await within(mine).findByRole('button', { name: 'Sending…' })).toBeDisabled();
     expect(within(mine).getByRole('combobox', { name: 'Give the session to' })).toBeDisabled();
+  });
+
+  it('names an administrator among the members to pick', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get('*/api/v1/cloud/transfer-recipients', () =>
+        HttpResponse.json({ recipients: [{ id: MEMBER_IDS.lena, login: 'lena', administrator: true }] }),
+      ),
+    );
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    const mine = row('Fix the flaky invoice test');
+    await user.click(within(mine).getByRole('button', { name: 'Transfer…' }));
+    expect(await within(mine).findByRole('option', { name: 'lena (administrator)' })).toBeInTheDocument();
+  });
+
+  it('holds the answer buttons of a transfer while the server has not answered', async () => {
+    const user = userEvent.setup();
+    const never = async (): Promise<Response> => {
+      await delay('infinite');
+      return new HttpResponse(null);
+    };
+    server.use(
+      http.post('*/api/v1/cloud/transfers/:id/accept', never),
+      http.post('*/api/v1/cloud/transfers/:id/decline', never),
+      http.post('*/api/v1/cloud/transfers/:id/cancel', never),
+    );
+    visit('/cloud');
+    const transfers = await screen.findByRole('region', { name: 'Transfers' });
+    await user.click(within(transfers).getByRole('button', { name: 'Accept' }));
+    expect(await within(transfers).findByRole('button', { name: 'Decline' })).toBeDisabled();
+  });
+
+  it('holds a decline, then a withdrawal, the same way', async () => {
+    const user = userEvent.setup();
+    const never = async (): Promise<Response> => {
+      await delay('infinite');
+      return new HttpResponse(null);
+    };
+    server.use(http.post('*/api/v1/cloud/transfers/:id/decline', never));
+    visit('/cloud');
+    const transfers = await screen.findByRole('region', { name: 'Transfers' });
+    await user.click(within(transfers).getByRole('button', { name: 'Decline' }));
+    expect(await within(transfers).findByRole('button', { name: 'Accept' })).toBeDisabled();
+  });
+
+  it('holds a withdrawal while the server has not answered', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/cloud/transfers/:id/cancel', async () => {
+        await delay('infinite');
+        return new HttpResponse(null);
+      }),
+    );
+    db.cloudTransfers = db.cloudTransfers.map((item) => ({ ...item, toMemberId: MEMBER_IDS.samir }));
+    visit('/cloud');
+    const transfers = await screen.findByRole('region', { name: 'Transfers' });
+    await user.click(within(transfers).getByRole('button', { name: 'Cancel' }));
+    await user.click(within(transfers).getByRole('button', { name: /Cancel the transfer of/ }));
+    expect(await within(transfers).findByRole('button', { name: 'Cancel' })).toBeDisabled();
+  });
+
+  it('keeps its key when the server fails, and takes a new one after a refusal', async () => {
+    const user = userEvent.setup();
+    const keys: (string | null)[] = [];
+    let answers = 0;
+    server.use(
+      http.post('*/api/v1/cloud/sessions/:id/transfer', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        answers += 1;
+        return HttpResponse.json(
+          { error: { type: answers === 1 ? 'internal' : 'transfer_pending', message: 'No.' } },
+          { status: answers === 1 ? 500 : 409 },
+        );
+      }),
+    );
+    visit('/cloud');
+    await screen.findByText('Fix the flaky invoice test');
+    const mine = row('Fix the flaky invoice test');
+    await user.click(within(mine).getByRole('button', { name: 'Transfer…' }));
+    await user.selectOptions(within(mine).getByRole('combobox', { name: 'Give the session to' }), 'theo');
+    await user.click(within(mine).getByRole('button', { name: 'Give the session' }));
+    await screen.findByRole('alert');
+    await user.click(within(mine).getByRole('button', { name: 'Give the session' }));
+    await waitFor(() => {
+      expect(keys).toHaveLength(2);
+    });
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it('reads the transfers before the sessions, and shows them by their session id', async () => {
+    server.use(
+      http.get('*/api/v1/cloud/sessions', async () => {
+        await delay('infinite');
+        return new HttpResponse(null);
+      }),
+    );
+    visit('/cloud');
+    const transfers = await screen.findByRole('region', { name: 'Transfers' });
+    expect(transfers).toHaveTextContent('cs-27');
   });
 
   it('shows nothing of transfers on a server that does not serve them', async () => {
