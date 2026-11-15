@@ -143,7 +143,7 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
       const inputs = inputsOf(workflow.inputs ?? [], start.inputs);
       const repository = start.repository.trim();
       // One key per press, kept while its answer is unknown so that pressing again cannot start a second run.
-      const press = pressOf(pending.current, workflowId, inputs, withRepository ? repository : '');
+      const press = pressOf(pending.current, workflowId, inputs, repository);
       pending.current = press;
       try {
         const run = (
@@ -154,11 +154,11 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
             throwOnError: true,
           })
         ).data;
-        if (pending.current === press) pending.current = undefined;
+        pending.current = undefined;
         return run;
       } catch (error) {
-        // A press still in flight is another one's: only this press's own key is dropped.
-        if (startRefused(error) && pending.current === press) pending.current = undefined;
+        // The button is held while a press is in flight, so this press owns the key it drops.
+        if (startRefused(error)) pending.current = undefined;
         throw error;
       }
     },
