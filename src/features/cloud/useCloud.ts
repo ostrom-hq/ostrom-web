@@ -32,13 +32,14 @@ import type {
   Workflow,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useAnnounced } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
+import { createRefused, type PendingCreate, pressOf } from './createKey';
 import type { CloudAgent, GithubAccess } from './model';
 
 const POLL_MS = 10_000;
@@ -97,6 +98,7 @@ export function useSessionChange(): SessionChangeViewModel {
     await queryClient.invalidateQueries({ queryKey: listCloudSessionsQueryKey() });
   }, [queryClient]);
   const create = useMutation({ ...createCloudSessionMutation(), onSuccess: refresh });
+  const pending = useRef<PendingCreate | undefined>(undefined);
   const halt = useMutation({ ...stopCloudSessionMutation(), onSettled: refresh });
   const { mutate: createMutate, reset: resetCreate } = create;
   const { mutate: haltMutate, reset: resetHalt } = halt;
@@ -105,21 +107,33 @@ export function useSessionChange(): SessionChangeViewModel {
       resetHalt();
       const name = request.name.trim();
       const repo = request.repo.trim();
+      const body = {
+        agent: request.agent,
+        prompt: request.prompt.trim(),
+        ...(name === '' ? {} : { name }),
+        ...(repo === '' ? {} : { repo }),
+        ...(request.environment === undefined ? {} : { environment: request.environment }),
+        ...(request.profileId === undefined ? {} : { profileId: request.profileId }),
+        ...(request.image === undefined || request.image.trim() === ''
+          ? {}
+          : { image: request.image.trim() }),
+      };
+      // One key per press, kept while its answer is unknown so that pressing again cannot create a second session.
+      const press = pressOf(pending.current, body);
+      pending.current = press;
       createMutate(
+        { body, headers: { 'Idempotency-Key': press.key } },
         {
-          body: {
-            agent: request.agent,
-            prompt: request.prompt.trim(),
-            ...(name === '' ? {} : { name }),
-            ...(repo === '' ? {} : { repo }),
-            ...(request.environment === undefined ? {} : { environment: request.environment }),
-            ...(request.profileId === undefined ? {} : { profileId: request.profileId }),
-            ...(request.image === undefined || request.image.trim() === ''
-              ? {}
-              : { image: request.image.trim() }),
+          onSuccess: () => {
+            pending.current = undefined;
+            onDone();
+          },
+          // A refusal created no session under the key: the next press is a new one. The button is held while a press is in
+          // flight, so this press owns the key it drops.
+          onError: (error) => {
+            if (createRefused(error)) pending.current = undefined;
           },
         },
-        { onSuccess: onDone },
       );
     },
     [createMutate, resetHalt],

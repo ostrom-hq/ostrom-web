@@ -211,6 +211,41 @@ describe('the cloud agents', () => {
     expect(zCreateCloudSessionBody.parse(body)).toMatchObject({ agent: 'gemini', prompt: 'Look around' });
   });
 
+  it('presses Start again after a lost answer under the same Idempotency-Key, and a new one after a refusal', async () => {
+    const user = userEvent.setup();
+    const keys: (string | null)[] = [];
+    const answers = [
+      () => HttpResponse.error(),
+      () => HttpResponse.json({ error: { type: 'conflict', message: 'No.' } }, { status: 409 }),
+      () => HttpResponse.error(),
+      () => HttpResponse.error(),
+    ];
+    server.use(
+      http.post('*/api/v1/cloud/sessions', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        return answers.shift()?.() ?? HttpResponse.error();
+      }),
+    );
+    visit('/cloud');
+    const form = await screen.findByRole('region', { name: 'Start an agent' });
+    await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
+    const press = async (): Promise<void> => {
+      await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
+      await vi.waitFor(() => {
+        expect(within(form).getByRole('button', { name: 'Start the agent' })).toBeEnabled();
+      });
+    };
+    await press(); // the answer is lost
+    await press(); // the same press again: the server refuses it
+    await press(); // a refusal created nothing: a new press
+    await press(); // lost again, then the same key
+    expect(keys).toHaveLength(4);
+    expect(keys[0]).toMatch(/^[0-9a-f]{32}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[1]);
+    expect(keys[3]).toBe(keys[2]);
+  });
+
   it('starts an agent without a name or a repository', async () => {
     const user = userEvent.setup();
     visit('/cloud');
