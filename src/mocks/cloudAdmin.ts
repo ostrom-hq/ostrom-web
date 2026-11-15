@@ -51,6 +51,7 @@ export function initialCloudAdmin(): CloudAdminState {
       enabled: true,
       runnerImage: 'ghcr.io/acme/ostrom-runner:1.4',
       runnerBinary: '/usr/local/bin/ostrom',
+      sessionImage: DEFAULT_SESSION_IMAGE,
       effectiveServerUrl: 'https://ostrom.acme.test',
       workspaceAccessMode: 'ReadWriteOncePod',
       failedWorkspaceRetentionDays: 7,
@@ -172,7 +173,13 @@ export function createCloudAdminHandlers(
       state().cloudRuntime = {
         enabled: sent.enabled,
         ...part('runnerImage', sent.runnerImage),
-        sessionImage: sent.sessionImage ?? DEFAULT_SESSION_IMAGE,
+        // Absent keeps the stored image, blank stores the default (core#282).
+        sessionImage:
+          sent.sessionImage === undefined
+            ? state().cloudRuntime.sessionImage
+            : sent.sessionImage.trim() === ''
+              ? DEFAULT_SESSION_IMAGE
+              : sent.sessionImage.trim(),
         runnerBinary: sent.runnerBinary,
         ...part('serverUrl', sent.serverUrl),
         effectiveServerUrl: sent.serverUrl ?? 'https://ostrom.acme.test',

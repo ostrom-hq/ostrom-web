@@ -312,23 +312,30 @@ export const zArtifactStorage = z.object({
 });
 
 /**
+ * `normal`; `slow_down` when, at the team's current rate, every usable account is projected to run out before one resets (admissions spaced by 2, 5 or 10 seconds as the gap is lighter or more severe); `pause` when no usable account is left (30 seconds); `can_increase` when no gap appears even at twice the rate and every usable window is under half used; `unknown` when observations are missing. Clients treat an unknown value as `unknown`
+ */
+export const zDirectivePace = z.union([z.enum([
+        'unknown',
+        'normal',
+        'slow_down',
+        'can_increase',
+        'pause'
+    ]), z.string()]);
+
+/**
  * The capacity controller's advice (`capacity.pacing.v1`). Pacing never caps parallelism: it only spaces the admission of new calls, and the server enforces it whatever the agent does
  */
 export const zDirective = z.object({
     id: z.string(),
-    pace: z.union([z.enum([
-            'unknown',
-            'normal',
-            'slow_down',
-            'can_increase',
-            'pause'
-        ]), z.string()]),
+    pace: zDirectivePace,
     maxConcurrent: z.int().check(z.gte(0)),
     minIntervalMillis: z.int().check(z.gte(0)),
     message: z.string(),
     createdAt: z.iso.datetime({ offset: true }),
     expiresAt: z.iso.datetime({ offset: true })
 });
+
+export const zDirectiveStage = z.union([z.enum(['received_by_cli', 'emitted_to_hook']), z.string()]);
 
 /**
  * A claimed delivery; both absent when nothing new is to be delivered
@@ -340,12 +347,12 @@ export const zDirectiveClaim = z.object({
 
 export const zDirectiveClaimRequest = z.object({
     sessionId: z.string().check(z.maxLength(128)),
-    stage: z.union([z.enum(['received_by_cli', 'emitted_to_hook']), z.string()])
+    stage: zDirectiveStage
 });
 
 export const zDirectiveReceipt = z.object({
     id: z.string(),
-    stage: z.union([z.enum(['received_by_cli', 'emitted_to_hook']), z.string()]),
+    stage: zDirectiveStage,
     sessionId: z.optional(z.string().check(z.maxLength(128))),
     claimId: z.optional(z.string())
 });
@@ -1321,7 +1328,7 @@ export const zApiPriceTable = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1377,7 +1384,7 @@ export const zCloudRuntime = z.object({
     enabled: z.boolean(),
     runnerImage: z.optional(z.string()),
     runnerBinary: z.string(),
-    sessionImage: z.optional(z.string()),
+    sessionImage: z.string().check(z.minLength(1)),
     serverUrl: z.optional(z.string()),
     effectiveServerUrl: z.string(),
     workspaceAccessMode: z.union([z.enum(['ReadWriteOncePod', 'ReadWriteOnce']), z.string()]),
@@ -1783,7 +1790,13 @@ export const zCreateCloudSessionRequest = z.object({
     profileId: z.optional(z.uuid()),
     mode: z.optional(z.string()),
     effort: z.optional(z.string().check(z.maxLength(120))),
-    image: z.optional(z.string())
+    image: z.optional(z.string()),
+    kind: z.optional(z.union([z.enum(['cloud', 'remote']), z.string()])),
+    directoryName: z.optional(z.string().check(z.maxLength(255))),
+    permissionMode: z.optional(z.union([z.enum(['ask', 'bypass']), z.string()])),
+    deviceId: z.optional(z.string()),
+    folderId: z.optional(z.string()),
+    resumeSessionId: z.optional(z.string())
 });
 
 /**
@@ -1845,58 +1858,6 @@ export const zCloudSessionLimits = z.object({
 });
 
 /**
- * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
- */
-export const zCloudSession = z.object({
-    id: z.string(),
-    name: z.optional(z.string()),
-    owner: z.string(),
-    agent: z.string(),
-    model: z.optional(z.string()),
-    repo: z.optional(z.string()),
-    ref: z.optional(z.string()),
-    status: z.string(),
-    desiredStatus: z.optional(z.string()),
-    phase: z.optional(z.string()),
-    epoch: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
-    failure: z.optional(zCloudSessionFailure),
-    limits: z.optional(zCloudSessionLimits),
-    updatedAt: z.optional(z.string()),
-    readyAt: z.optional(z.string()),
-    lastActivityAt: z.optional(z.string()),
-    pausedAt: z.optional(z.string()),
-    expiresAt: z.optional(z.string()),
-    terminatedReason: z.optional(z.string()),
-    workspaceDeletion: z.optional(zCloudWorkspaceDeletion),
-    runnerId: z.optional(z.string()),
-    environment: z.optional(zCloudEnvironment),
-    profile: z.optional(zCloudSessionProfile),
-    image: z.optional(z.string()),
-    githubAccess: z.optional(z.union([z.enum([
-            'owner',
-            'shared',
-            'none'
-        ]), z.string()])),
-    mode: z.optional(z.string()),
-    effort: z.optional(z.string()),
-    transferId: z.optional(z.string()),
-    permissionBypass: z.optional(z.boolean()),
-    waiting: z.optional(zCloudSessionWaiting),
-    runId: z.optional(z.string()),
-    automationId: z.optional(z.string()),
-    createdAt: z.string(),
-    endedAt: z.optional(z.string())
-});
-
-/**
- * A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page
- */
-export const zCloudSessionPage = z.object({
-    items: z.array(zCloudSession),
-    next: z.optional(z.string())
-});
-
-/**
  * The trigger of a check or notify node
  */
 export const zCompiledTrigger = z.object({
@@ -1951,6 +1912,94 @@ export const zDev = z.object({
 });
 
 /**
+ * The device a remote session runs on (`runners.cloud.remote.v1`)
+ */
+export const zCloudSessionHost = z.object({
+    deviceId: z.optional(z.string()),
+    deviceName: z.optional(z.string()),
+    platform: z.optional(z.string()),
+    osVersion: z.optional(z.string()),
+    directoryName: z.optional(z.string()),
+    online: z.optional(z.boolean()),
+    lastHeartbeatAt: z.optional(z.string()),
+    permissionMode: z.optional(z.string()),
+    folderId: z.optional(z.string())
+});
+
+/**
+ * A cloud agent session: one pod (or local container) per execution, with a workspace kept across pauses
+ */
+export const zCloudSession = z.object({
+    id: z.string(),
+    name: z.optional(z.string()),
+    owner: z.string(),
+    agent: z.string(),
+    model: z.optional(z.string()),
+    repo: z.optional(z.string()),
+    ref: z.optional(z.string()),
+    status: z.string(),
+    desiredStatus: z.optional(z.string()),
+    phase: z.optional(z.string()),
+    epoch: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    failure: z.optional(zCloudSessionFailure),
+    limits: z.optional(zCloudSessionLimits),
+    updatedAt: z.optional(z.string()),
+    readyAt: z.optional(z.string()),
+    lastActivityAt: z.optional(z.string()),
+    pausedAt: z.optional(z.string()),
+    expiresAt: z.optional(z.string()),
+    terminatedReason: z.optional(z.string()),
+    workspaceDeletion: z.optional(zCloudWorkspaceDeletion),
+    runnerId: z.optional(z.string()),
+    environment: z.optional(zCloudEnvironment),
+    profile: z.optional(zCloudSessionProfile),
+    image: z.optional(z.string()),
+    githubAccess: z.optional(z.union([z.enum([
+            'owner',
+            'shared',
+            'none'
+        ]), z.string()])),
+    mode: z.optional(z.string()),
+    effort: z.optional(z.string()),
+    transferId: z.optional(z.string()),
+    permissionBypass: z.optional(z.boolean()),
+    waiting: z.optional(zCloudSessionWaiting),
+    runId: z.optional(z.string()),
+    automationId: z.optional(z.string()),
+    createdAt: z.string(),
+    endedAt: z.optional(z.string()),
+    kind: z.optional(z.string()),
+    host: z.optional(zCloudSessionHost)
+});
+
+/**
+ * A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page
+ */
+export const zCloudSessionPage = z.object({
+    items: z.array(zCloudSession),
+    next: z.optional(z.string())
+});
+
+/**
+ * The execution a remote session's host just opened (`hostCloudSession`)
+ */
+export const zCloudHost = z.object({
+    orgId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    session: zCloudSession
+});
+
+/**
+ * A device's daemon as the server last saw it (`runners.cloud.remote.daemon.v1`)
+ */
+export const zDaemonPresence = z.object({
+    online: z.boolean(),
+    lastSeenAt: z.string(),
+    version: z.optional(z.string()),
+    features: z.optional(z.array(z.string()))
+});
+
+/**
  * A workstation where the CLI is signed in
  */
 export const zDevice = z.object({
@@ -1967,7 +2016,134 @@ export const zDevice = z.object({
     createdAt: z.optional(z.string()),
     lastLoginAt: z.optional(z.string()),
     activeSessions: z.optional(z.int()),
-    current: z.optional(z.boolean())
+    current: z.optional(z.boolean()),
+    daemon: z.optional(zDaemonPresence)
+});
+
+/**
+ * A folder a device's daemon offers, never a full path the server relies on
+ */
+export const zDeviceFolder = z.object({
+    id: z.string().check(z.regex(/^[A-Za-z0-9_-]{1,64}$/)),
+    name: z.string().check(z.maxLength(255)),
+    label: z.optional(z.string())
+});
+
+/**
+ * The folders the caller's device offers
+ */
+export const zPublishDeviceFoldersRequest = z.object({
+    folders: z.array(zDeviceFolder).check(z.maxLength(64))
+});
+
+/**
+ * A device's daemon and published folders
+ */
+export const zDeviceFolders = z.object({
+    deviceId: z.string(),
+    daemon: z.optional(zDaemonPresence),
+    folders: z.array(zDeviceFolder)
+});
+
+/**
+ * A daemon's long poll
+ */
+export const zDaemonPollRequest = z.object({
+    waitMillis: z.optional(z.coerce.bigint().check(z.gte(BigInt(0)), z.lte(BigInt(20000)))),
+    version: z.optional(z.string()),
+    features: z.optional(z.array(z.string()).check(z.maxLength(8)))
+});
+
+/**
+ * A session the daemon is asked to host, or refuse
+ */
+export const zDaemonOrder = z.object({
+    sessionId: z.string(),
+    folderId: z.string(),
+    directoryName: z.string(),
+    agent: z.string(),
+    permissionMode: z.string(),
+    status: z.string(),
+    requestedAt: z.string(),
+    resumeSessionId: z.optional(z.string())
+});
+
+/**
+ * A member waits for the conversations of a folder
+ */
+export const zDaemonListing = z.object({
+    requestId: z.string(),
+    folderId: z.string(),
+    limit: z.int(),
+    before: z.optional(z.string())
+});
+
+/**
+ * A poll's answer
+ */
+export const zDaemonPoll = z.object({
+    orders: z.array(zDaemonOrder),
+    onlineTtlMillis: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    maxWaitMillis: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    listings: z.optional(z.array(zDaemonListing))
+});
+
+/**
+ * An agent conversation a session can continue (`runners.cloud.remote.resume.v1`); nothing else of it leaves the device
+ */
+export const zResumableSession = z.object({
+    id: z.string(),
+    title: z.string().check(z.maxLength(80)),
+    lastActiveAt: z.string(),
+    turns: z.int()
+});
+
+/**
+ * A page of a folder's conversations
+ */
+export const zResumableSessionPage = z.object({
+    items: z.array(zResumableSession),
+    next: z.optional(z.string())
+});
+
+/**
+ * The daemon's answer to a listing, the page or a refusal code
+ */
+export const zDaemonListingAnswer = z.object({
+    items: z.optional(z.array(zResumableSession).check(z.maxLength(50))),
+    next: z.optional(z.string()),
+    refused: z.optional(z.string())
+});
+
+/**
+ * Why the daemon does not host an order
+ */
+export const zRefuseDaemonOrderRequest = z.object({
+    reason: z.string().check(z.regex(/^[a-z_]{1,64}$/))
+});
+
+/**
+ * What `ostrom remote resumable DIRECTORY --json` prints, read on the device and never sent to the server: the directory's conversations, or `unavailable` (`server_unsupported`, `platform_unsupported`, `daemon_offline`, `daemon_too_old`)
+ */
+export const zLocalResumableSessions = z.object({
+    items: z.optional(z.array(zResumableSession)),
+    next: z.optional(z.string()),
+    unavailable: z.optional(z.string())
+});
+
+/**
+ * A folder the device knows; its full path stays on the device
+ */
+export const zLocalKnownFolder = z.object({
+    path: z.string(),
+    lastUsedAt: z.optional(z.string())
+});
+
+/**
+ * What `ostrom remote folders --json` prints, read from the device's own files and never sent to the server
+ */
+export const zLocalKnownFolders = z.object({
+    folders: z.optional(z.array(zLocalKnownFolder))
 });
 
 /**
@@ -6686,6 +6862,99 @@ export const zRenameDevicePath = z.object({
  */
 export const zRenameDeviceResponse = zDevice;
 
+export const zPollDeviceDaemonBody = zDaemonPollRequest;
+
+export const zPollDeviceDaemonHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zPollDeviceDaemonResponse = zDaemonPoll;
+
+export const zStopDeviceDaemonHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Done
+ */
+export const zStopDeviceDaemonResponse = z.void();
+
+export const zRefuseDaemonOrderBody = zRefuseDaemonOrderRequest;
+
+export const zRefuseDaemonOrderHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRefuseDaemonOrderPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRefuseDaemonOrderResponse = zCloudSession;
+
+export const zAnswerDaemonListingBody = zDaemonListingAnswer;
+
+export const zAnswerDaemonListingHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zAnswerDaemonListingPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Done
+ */
+export const zAnswerDaemonListingResponse = z.void();
+
+export const zPublishDeviceFoldersBody = zPublishDeviceFoldersRequest;
+
+export const zPublishDeviceFoldersHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zPublishDeviceFoldersResponse = z.array(zDeviceFolder);
+
+export const zListDeviceFoldersHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListDeviceFoldersPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListDeviceFoldersResponse = zDeviceFolders;
+
+export const zListResumableSessionsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListResumableSessionsPath = z.object({
+    id: z.string(),
+    folderId: z.string()
+});
+
+export const zListResumableSessionsQuery = z.object({
+    limit: z.optional(z.int().check(z.gte(1), z.lte(50))),
+    before: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListResumableSessionsResponse = zResumableSessionPage;
+
 export const zListMemberDevicesHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -10160,6 +10429,7 @@ export const zListCloudSessionsHeaders = z.object({
 });
 
 export const zListCloudSessionsQuery = z.object({
+    kind: z.optional(z.array(z.union([z.enum(['cloud', 'remote']), z.string()]))),
     status: z.optional(z.string()),
     before: z.optional(z.string()),
     limit: z.optional(z.int().check(z.gte(1), z.lte(50)))
@@ -10333,6 +10603,19 @@ export const zResumeCloudSessionPath = z.object({
  * Accepted, the reconciler starts a new execution
  */
 export const zResumeCloudSessionResponse = zCloudSession;
+
+export const zHostCloudSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zHostCloudSessionPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zHostCloudSessionResponse = zCloudHost;
 
 export const zSetCloudSessionGithubAccessBody = z.object({
     access: z.union([z.enum([

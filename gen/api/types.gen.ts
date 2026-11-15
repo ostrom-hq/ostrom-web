@@ -472,10 +472,7 @@ export type Directive = {
      * Changes whenever the advice or its context changes
      */
     id: string;
-    /**
-     * `normal`; `slow_down` when, at the team's current rate, every usable account is projected to run out before one resets (admissions spaced by 2, 5 or 10 seconds as the gap is lighter or more severe); `pause` when no usable account is left (30 seconds); `can_increase` when no gap appears even at twice the rate and every usable window is under half used; `unknown` when observations are missing. Clients treat an unknown value as `unknown`
-     */
-    pace: 'unknown' | 'normal' | 'slow_down' | 'can_increase' | 'pause' | (string & {});
+    pace: DirectivePace;
     /**
      * The member's, group's or run's concurrency limit that applies, 0 for none
      */
@@ -493,6 +490,13 @@ export type Directive = {
 };
 
 /**
+ * `normal`; `slow_down` when, at the team's current rate, every usable account is projected to run out before one resets (admissions spaced by 2, 5 or 10 seconds as the gap is lighter or more severe); `pause` when no usable account is left (30 seconds); `can_increase` when no gap appears even at twice the rate and every usable window is under half used; `unknown` when observations are missing. Clients treat an unknown value as `unknown`
+ */
+export type DirectivePace = 'unknown' | 'normal' | 'slow_down' | 'can_increase' | 'pause' | (string & {});
+
+export type DirectiveStage = 'received_by_cli' | 'emitted_to_hook' | (string & {});
+
+/**
  * A claimed delivery; both absent when nothing new is to be delivered
  */
 export type DirectiveClaim = {
@@ -502,7 +506,7 @@ export type DirectiveClaim = {
 
 export type DirectiveClaimRequest = {
     sessionId: string;
-    stage: 'received_by_cli' | 'emitted_to_hook' | (string & {});
+    stage: DirectiveStage;
 };
 
 export type DirectiveReceipt = {
@@ -510,7 +514,7 @@ export type DirectiveReceipt = {
      * The advice's id
      */
     id: string;
-    stage: 'received_by_cli' | 'emitted_to_hook' | (string & {});
+    stage: DirectiveStage;
     sessionId?: string;
     claimId?: string;
 };
@@ -1877,7 +1881,7 @@ export type ApiPriceTable = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -1957,9 +1961,9 @@ export type CloudRuntime = {
      */
     runnerBinary: string;
     /**
-     * The image the containers of a Docker or registered session run (the agents, git, the session's accounts): the stored image, else `docker.io/ostromhq/ostrom-session:latest`, so always present once served. Only Docker and registered sessions use it; a Kubernetes session runs its profile's image
+     * The image the containers of a Docker or registered session run (the agents, git, the session's accounts): the stored image, else `docker.io/ostromhq/ostrom-session:latest`. Only Docker and registered sessions use it; a Kubernetes session runs its profile's image
      */
-    sessionImage?: string;
+    sessionImage: string;
     /**
      * The https origin session pods call back; absent uses the public URL
      */
@@ -2007,7 +2011,7 @@ export type SaveCloudRuntimeRequest = {
     runnerImage?: string;
     runnerBinary: string;
     /**
-     * The session image of Docker and registered sessions, trimmed; absent or blank stores the default `docker.io/ostromhq/ostrom-session:latest` (the request replaces the whole runtime, as for `runnerBinary`)
+     * The session image of Docker and registered sessions, trimmed; absent keeps the stored one, blank stores the default `docker.io/ostromhq/ostrom-session:latest`
      */
     sessionImage?: string;
     /**
@@ -2439,6 +2443,11 @@ export type CloudSession = {
     automationId?: string;
     createdAt: string;
     endedAt?: string;
+    /**
+     * `cloud` (absent: a pod the server starts) or `remote`, a member's device (`runners.cloud.remote.v1`)
+     */
+    kind?: string;
+    host?: CloudSessionHost;
 };
 
 /**
@@ -2802,6 +2811,30 @@ export type CreateCloudSessionRequest = {
      * The session image instead of the profile's: the profile's image, or one matching its `allowedImageOverrides` (`*` matches any run of characters), 403 `image_not_allowed` otherwise. Absent: the profile's image
      */
     image?: string;
+    /**
+     * `remote` (`runners.cloud.remote.v1`): a session on the caller's own device, claude or codex, always `conversation` (400 `invalid_mode` for another mode), refusing `repo`, `ref`, `environment`, `profileId` and `image` (400); the host is the device of the caller's sign-in (422 `remote_requires_device` for a service key or a sign-in without one), and creating on behalf of another member is 403 `on_behalf_forbidden`. It starts `creating` with phase `waiting_host` and counts toward no running or retained cap. Absent or `cloud`: a pod
+     */
+    kind?: 'cloud' | 'remote' | (string & {});
+    /**
+     * With `kind: remote`: the last segment of the directory, never its path (not `.` or `..`, no `/`, `\` or control character; 400 `invalid_directory_name`). Omit it with `folderId`, whose name it is; refused for a cloud session
+     */
+    directoryName?: string;
+    /**
+     * With `kind: remote`: `ask` (absent) or `bypass`, which sets `permissionBypass` at creation (400 `invalid_permission_mode` otherwise); refused for a cloud session
+     */
+    permissionMode?: 'ask' | 'bypass' | (string & {});
+    /**
+     * With `kind: remote` (`runners.cloud.remote.daemon.v1`): one of the caller's own devices, whose daemon starts the session in `folderId`. Another member's device, whoever the caller is: 404 `device_not_found`; its daemon offline: 409 `device_offline` (nothing is queued); a service key: 422 `remote_requires_login`
+     */
+    deviceId?: string;
+    /**
+     * With `deviceId`: a folder the device published (422 `folder_not_published`); without `deviceId` or malformed: 400 `invalid_folder`
+     */
+    folderId?: string;
+    /**
+     * With `deviceId` and `folderId` (`runners.cloud.remote.resume.v1`, claude only): the conversation of that folder the session continues, a lowercase UUID the daemon listed (400 `invalid_resume`; 422 `resume_unsupported` for codex; 409 `daemon_resume_unsupported` for a daemon without `resume.v1`). Absent, the idempotency digest is the same as before
+     */
+    resumeSessionId?: string;
 };
 
 /**
@@ -3011,6 +3044,188 @@ export type Device = {
      * With `devices.v1`: the call came from this device
      */
     current?: boolean;
+    daemon?: DaemonPresence;
+};
+
+/**
+ * The device a remote session runs on (`runners.cloud.remote.v1`)
+ */
+export type CloudSessionHost = {
+    /**
+     * Absent once the device was removed
+     */
+    deviceId?: string;
+    deviceName?: string;
+    platform?: string;
+    osVersion?: string;
+    /**
+     * The last segment of the session's directory, never its path
+     */
+    directoryName?: string;
+    /**
+     * The host runs the session now: an execution registered and heartbeating (a silent host is noticed within 90 s)
+     */
+    online?: boolean;
+    lastHeartbeatAt?: string;
+    /**
+     * `ask` or `bypass`
+     */
+    permissionMode?: string;
+    /**
+     * The published folder the device's daemon started it in (`runners.cloud.remote.daemon.v1`)
+     */
+    folderId?: string;
+};
+
+/**
+ * The execution a remote session's host just opened (`hostCloudSession`)
+ */
+export type CloudHost = {
+    orgId: string;
+    epoch: number;
+    session: CloudSession;
+};
+
+/**
+ * A device's daemon as the server last saw it (`runners.cloud.remote.daemon.v1`)
+ */
+export type DaemonPresence = {
+    /**
+     * It polled less than 60 s ago
+     */
+    online: boolean;
+    lastSeenAt: string;
+    version?: string;
+    features?: Array<string>;
+};
+
+/**
+ * A folder a device's daemon offers, never a full path the server relies on
+ */
+export type DeviceFolder = {
+    id: string;
+    name: string;
+    label?: string;
+};
+
+/**
+ * The folders the caller's device offers
+ */
+export type PublishDeviceFoldersRequest = {
+    folders: Array<DeviceFolder>;
+};
+
+/**
+ * A device's daemon and published folders
+ */
+export type DeviceFolders = {
+    deviceId: string;
+    daemon?: DaemonPresence;
+    folders: Array<DeviceFolder>;
+};
+
+/**
+ * A daemon's long poll
+ */
+export type DaemonPollRequest = {
+    waitMillis?: number;
+    version?: string;
+    features?: Array<string>;
+};
+
+/**
+ * A session the daemon is asked to host, or refuse
+ */
+export type DaemonOrder = {
+    sessionId: string;
+    folderId: string;
+    directoryName: string;
+    agent: string;
+    permissionMode: string;
+    /**
+     * `creating`, `resuming` or `preparing`
+     */
+    status: string;
+    requestedAt: string;
+    resumeSessionId?: string;
+};
+
+/**
+ * A poll's answer
+ */
+export type DaemonPoll = {
+    orders: Array<DaemonOrder>;
+    onlineTtlMillis: number;
+    maxWaitMillis: number;
+    listings?: Array<DaemonListing>;
+};
+
+/**
+ * A member waits for the conversations of a folder
+ */
+export type DaemonListing = {
+    requestId: string;
+    folderId: string;
+    limit: number;
+    before?: string;
+};
+
+/**
+ * An agent conversation a session can continue (`runners.cloud.remote.resume.v1`); nothing else of it leaves the device
+ */
+export type ResumableSession = {
+    id: string;
+    title: string;
+    lastActiveAt: string;
+    turns: number;
+};
+
+/**
+ * A page of a folder's conversations
+ */
+export type ResumableSessionPage = {
+    items: Array<ResumableSession>;
+    next?: string;
+};
+
+/**
+ * The daemon's answer to a listing, the page or a refusal code
+ */
+export type DaemonListingAnswer = {
+    items?: Array<ResumableSession>;
+    next?: string;
+    refused?: string;
+};
+
+/**
+ * Why the daemon does not host an order
+ */
+export type RefuseDaemonOrderRequest = {
+    reason: string;
+};
+
+/**
+ * What `ostrom remote resumable DIRECTORY --json` prints, read on the device and never sent to the server: the directory's conversations, or `unavailable` (`server_unsupported`, `platform_unsupported`, `daemon_offline`, `daemon_too_old`)
+ */
+export type LocalResumableSessions = {
+    items?: Array<ResumableSession>;
+    next?: string;
+    unavailable?: string;
+};
+
+/**
+ * What `ostrom remote folders --json` prints, read from the device's own files and never sent to the server
+ */
+export type LocalKnownFolders = {
+    folders?: Array<LocalKnownFolder>;
+};
+
+/**
+ * A folder the device knows; its full path stays on the device
+ */
+export type LocalKnownFolder = {
+    path: string;
+    lastUsedAt?: string;
 };
 
 /**
@@ -10518,6 +10733,375 @@ export type RenameDeviceResponses = {
 };
 
 export type RenameDeviceResponse = RenameDeviceResponses[keyof RenameDeviceResponses];
+
+export type PollDeviceDaemonData = {
+    body: DaemonPollRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/devices/current/daemon/poll';
+};
+
+export type PollDeviceDaemonErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type PollDeviceDaemonError = PollDeviceDaemonErrors[keyof PollDeviceDaemonErrors];
+
+export type PollDeviceDaemonResponses = {
+    /**
+     * OK
+     */
+    200: DaemonPoll;
+};
+
+export type PollDeviceDaemonResponse = PollDeviceDaemonResponses[keyof PollDeviceDaemonResponses];
+
+export type StopDeviceDaemonData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/devices/current/daemon';
+};
+
+export type StopDeviceDaemonErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type StopDeviceDaemonError = StopDeviceDaemonErrors[keyof StopDeviceDaemonErrors];
+
+export type StopDeviceDaemonResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type StopDeviceDaemonResponse = StopDeviceDaemonResponses[keyof StopDeviceDaemonResponses];
+
+export type RefuseDaemonOrderData = {
+    body: RefuseDaemonOrderRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/devices/current/daemon/sessions/{id}/refuse';
+};
+
+export type RefuseDaemonOrderErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type RefuseDaemonOrderError = RefuseDaemonOrderErrors[keyof RefuseDaemonOrderErrors];
+
+export type RefuseDaemonOrderResponses = {
+    /**
+     * OK
+     */
+    200: CloudSession;
+};
+
+export type RefuseDaemonOrderResponse = RefuseDaemonOrderResponses[keyof RefuseDaemonOrderResponses];
+
+export type AnswerDaemonListingData = {
+    body: DaemonListingAnswer;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/devices/current/daemon/listings/{id}';
+};
+
+export type AnswerDaemonListingErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type AnswerDaemonListingError = AnswerDaemonListingErrors[keyof AnswerDaemonListingErrors];
+
+export type AnswerDaemonListingResponses = {
+    /**
+     * Done
+     */
+    204: void;
+};
+
+export type AnswerDaemonListingResponse = AnswerDaemonListingResponses[keyof AnswerDaemonListingResponses];
+
+export type PublishDeviceFoldersData = {
+    body: PublishDeviceFoldersRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/devices/current/folders';
+};
+
+export type PublishDeviceFoldersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type PublishDeviceFoldersError = PublishDeviceFoldersErrors[keyof PublishDeviceFoldersErrors];
+
+export type PublishDeviceFoldersResponses = {
+    /**
+     * OK
+     */
+    200: Array<DeviceFolder>;
+};
+
+export type PublishDeviceFoldersResponse = PublishDeviceFoldersResponses[keyof PublishDeviceFoldersResponses];
+
+export type ListDeviceFoldersData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/devices/{id}/folders';
+};
+
+export type ListDeviceFoldersErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type ListDeviceFoldersError = ListDeviceFoldersErrors[keyof ListDeviceFoldersErrors];
+
+export type ListDeviceFoldersResponses = {
+    /**
+     * OK
+     */
+    200: DeviceFolders;
+};
+
+export type ListDeviceFoldersResponse = ListDeviceFoldersResponses[keyof ListDeviceFoldersResponses];
+
+export type ListResumableSessionsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+        folderId: string;
+    };
+    query?: {
+        limit?: number;
+        before?: string;
+    };
+    url: '/api/v1/devices/{id}/folders/{folderId}/resumable';
+};
+
+export type ListResumableSessionsErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+    /**
+     * A refusal
+     */
+    504: ApiError;
+};
+
+export type ListResumableSessionsError = ListResumableSessionsErrors[keyof ListResumableSessionsErrors];
+
+export type ListResumableSessionsResponses = {
+    /**
+     * OK
+     */
+    200: ResumableSessionPage;
+};
+
+export type ListResumableSessionsResponse = ListResumableSessionsResponses[keyof ListResumableSessionsResponses];
 
 export type ListMemberDevicesData = {
     body?: never;
@@ -24093,6 +24677,7 @@ export type ListCloudSessionsData = {
     };
     path?: never;
     query?: {
+        kind?: Array<'cloud' | 'remote' | (string & {})>;
         status?: string;
         before?: string;
         limit?: number;
@@ -24749,6 +25334,59 @@ export type ResumeCloudSessionResponses = {
 };
 
 export type ResumeCloudSessionResponse = ResumeCloudSessionResponses[keyof ResumeCloudSessionResponses];
+
+export type HostCloudSessionData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/cloud/sessions/{id}/host';
+};
+
+export type HostCloudSessionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
+};
+
+export type HostCloudSessionError = HostCloudSessionErrors[keyof HostCloudSessionErrors];
+
+export type HostCloudSessionResponses = {
+    /**
+     * OK
+     */
+    200: CloudHost;
+};
+
+export type HostCloudSessionResponse = HostCloudSessionResponses[keyof HostCloudSessionResponses];
 
 export type SetCloudSessionGithubAccessData = {
     body: {
