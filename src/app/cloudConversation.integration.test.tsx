@@ -39,12 +39,16 @@ function withSession(change: Partial<(typeof db.cloudSessions)[number]>): void {
   );
 }
 
-function withoutConversations(): void {
+function withoutFeatures(...keys: readonly string[]): void {
   server.use(
     http.get('*/api/v1/capabilities', () =>
-      HttpResponse.json(demoCapabilities(FEATURES.filter((key) => key !== 'runners.cloud.conversation.v1'))),
+      HttpResponse.json(demoCapabilities(FEATURES.filter((key) => !keys.includes(key)))),
     ),
   );
+}
+
+function withoutConversations(): void {
+  withoutFeatures('runners.cloud.conversation.v1');
 }
 
 async function opened(): Promise<HTMLElement> {
@@ -308,6 +312,8 @@ describe('a conversation session (TeamCode SessionViewModel)', () => {
 
   it('shows every kind of line the transcript has', async () => {
     const user = userEvent.setup();
+    // Without feeds a subagent's steps show nested under its card, in the one transcript.
+    withoutFeatures('runners.cloud.transcript.feeds.v1');
     withEvents(
       { type: 'message.user', data: { text: 'From Theo', inputId: 'in-t', authorId: MEMBER_IDS.theo } },
       { type: 'tool.result', data: { id: 'tu-old', output: 'orphan output', isError: true } },

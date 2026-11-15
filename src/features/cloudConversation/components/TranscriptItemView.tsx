@@ -5,19 +5,29 @@ import { formatAbsolute } from '@/shared/lib/time';
 import { Markdown } from '@/shared/ui/Markdown';
 import type { TranscriptEvent } from '../events';
 import { keyOf, nestedOf, type SystemEvent, type ToolItem, type TranscriptItem } from '../items';
+import type { Subagent } from '../subagents';
+import { SubagentStateBadge } from './RunningPanel';
+
+/** With feeds, a subagent's card opens its own thread; `subagents` gives each its type, description and state. */
+export interface ThreadLinks {
+  readonly subagents: ReadonlyMap<string, Subagent>;
+  readonly open: (id: string) => void;
+}
 
 /** One item of the transcript (TeamCode's companion `TranscriptItemView`). */
 export function TranscriptItemView({
   item,
   memberId,
+  threads,
 }: {
   readonly item: TranscriptItem;
   /** The viewer's member id: a message by someone else says so. */
   readonly memberId: string | undefined;
+  readonly threads?: ThreadLinks | undefined;
 }): ReactElement {
   return (
     <div className={nestedOf(item) ? 'cc-item cc-item--nested' : 'cc-item'}>
-      <ItemBody item={item} memberId={memberId} />
+      <ItemBody item={item} memberId={memberId} threads={threads} />
     </div>
   );
 }
@@ -25,9 +35,11 @@ export function TranscriptItemView({
 function ItemBody({
   item,
   memberId,
+  threads,
 }: {
   readonly item: TranscriptItem;
   readonly memberId: string | undefined;
+  readonly threads: ThreadLinks | undefined;
 }): ReactElement {
   const { t } = useTranslation();
   switch (item.kind) {
@@ -46,19 +58,47 @@ function ItemBody({
       return <ToolCard tool={item} />;
     case 'tools':
       return <ToolGroup tools={item.tools} />;
-    case 'subagent':
-      // The subagent's own thread opens from its card once the console follows feeds; its steps show nested meanwhile.
+    case 'subagent': {
+      // With feeds the card opens the subagent's own thread; without, its steps show nested under it.
+      const subagent = threads?.subagents.get(item.call.id);
+      if (threads !== undefined && subagent !== undefined)
+        return <SubagentCard subagent={subagent} onOpen={threads.open} />;
       return (
         <div className="cc-tool">
           <span className="cc-tool__name">{item.call.name}</span>
           <span className="cc-meta">{item.call.summary ?? ''}</span>
         </div>
       );
+    }
     case 'turnEnd':
       return <TurnSeparator event={item.event} />;
     case 'system':
       return <SystemLine event={item.event} />;
   }
+}
+
+function SubagentCard({
+  subagent,
+  onOpen,
+}: {
+  readonly subagent: Subagent;
+  readonly onOpen: (id: string) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      className="cc-tool cc-tool__head"
+      aria-label={t('cloudConversation.work.open', { type: subagent.type })}
+      onClick={() => {
+        onOpen(subagent.id);
+      }}
+    >
+      <span className="cc-tool__name">{subagent.type}</span>
+      <span className="cc-meta">{subagent.description}</span>
+      <SubagentStateBadge subagent={subagent} />
+    </button>
+  );
 }
 
 function ToolCard({ tool }: { readonly tool: ToolItem }): ReactElement {
@@ -167,6 +207,7 @@ function systemText(event: SystemEvent, t: ReturnType<typeof useTranslation>['t'
     case 'error':
       return t('cloudConversation.system.error', { message: event.message ?? event.code ?? '' });
     case 'input':
+      if (event.status === 'consumed') return t('cloudConversation.system.permissionAnswered');
       return event.status === 'cancelled'
         ? t('cloudConversation.system.inputCancelled', { reason: event.reason ?? event.status })
         : t('cloudConversation.system.inputRejected', { reason: event.reason ?? event.status });

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getCloudSessionOptions, getCloudSessionQueryKey } from '@gen/api/@tanstack/react-query.gen';
-import { interruptCloudSession, listCloudEvents, sendCloudMessage } from '@gen/api/sdk.gen';
+import {
+  interruptCloudSession,
+  listCloudEvents,
+  listCloudSubagents,
+  sendCloudMessage,
+} from '@gen/api/sdk.gen';
 import type { CloudSession, CloudSessionWaiting } from '@gen/api/types.gen';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -11,11 +16,12 @@ import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
 import { useAnnounced } from '@/shared/capabilities';
-import { eventOf, pageOf, type TranscriptEvent } from './events';
-import { liveTextOf, type TranscriptItem, transcriptItems } from './items';
+import { eventOf, finished, type KnownAgent, knownAgentOf, pageOf, type TranscriptEvent } from './events';
+import { AGENT_TOOLS, liveTextOf, type TranscriptItem, transcriptItems } from './items';
 import { draftOf, errorOf, failed, type PendingMessage, received, reconciled, validMessage } from './pending';
 import { followEvents, StreamRefused } from './stream';
-import { EMPTY_TRANSCRIPT, type Transcript, withLatest, withLive } from './transcript';
+import { threadEvents } from './subagents';
+import { EMPTY_TRANSCRIPT, type Transcript, withFeed, withLatest, withLive } from './transcript';
 
 /** The transcript does not carry pauses, resumes or a failed pod: the header is read again while the screen is open. */
 const HEADER_MS = 10_000;
@@ -24,7 +30,13 @@ const HEADER_MS = 10_000;
 const NEWEST = Number.MAX_SAFE_INTEGER;
 
 /** The statuses after which a session no longer changes. */
-const ENDED: ReadonlySet<string> = new Set(['ended', 'stopped', 'failed', 'terminated']);
+export const ENDED: ReadonlySet<string> = new Set(['ended', 'stopped', 'failed', 'terminated']);
+
+/** The `feed` of the main agent's own events (`runners.cloud.transcript.feeds.v1`). */
+const MAIN_FEED = 'main';
+
+/** A burst of events reads the server's list of subagents twice at most: once, then once more a second later. */
+const AGENTS_MS = 1_000;
 
 export type LiveState = 'connecting' | 'live' | 'reconnecting' | 'ended' | 'stopped';
 
@@ -69,6 +81,18 @@ export interface CloudConversationViewModel {
   readonly interrupt: () => void;
   /** After the stream stopped on a failure: follow again. */
   readonly retry: () => void;
+  /** Every event loaded, every thread's, oldest first. */
+  readonly events: readonly TranscriptEvent[];
+  /** The server pages each agent's events apart and lists subagents (`runners.cloud.transcript.feeds.v1`). */
+  readonly feeds: boolean;
+  /** The session's subagents as the server tracks them, so their start and state are right without their events loaded. */
+  readonly agents: readonly KnownAgent[];
+  /** The subagent whose thread shows (its `Agent` call id), undefined for the main agent's. */
+  readonly thread: string | undefined;
+  /** The thread's newest page was read (the main agent's once the first page is there). */
+  readonly threadLoaded: boolean;
+  readonly openThread: (id: string) => void;
+  readonly backToMain: () => void;
 }
 
 interface FollowState {
@@ -120,6 +144,15 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
   const session = header.data;
   const { memberId } = useViewer();
   const conversation = announced && session?.mode === 'conversation';
+  const feeds = useAnnounced('runners.cloud.transcript.feeds.v1');
+  const [thread, setThread] = useState<string | undefined>(undefined);
+  const [agents, setAgents] = useState<readonly KnownAgent[]>([]);
+  const agentsRef = useRef<readonly KnownAgent[]>([]);
+  /** The feeds whose newest page is on its way or was read: each is read once. */
+  const feedsAsked = useRef(new Set<string>());
+  /** A read of the subagents is on its way; `again`: one more is wanted after it. */
+  const agentsRead = useRef({ busy: false, again: false });
+  const unmounted = useRef(new AbortController());
   const [state, setState] = useState<FollowState>(INITIAL);
   const [pending, setPending] = useState<readonly PendingMessage[]>([]);
   const [draft, setDraft] = useState('');
@@ -131,6 +164,67 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
   const loaded = useRef(false);
   const ended = useRef(false);
   const events = useRef<readonly TranscriptEvent[]>([]);
+
+  useEffect(() => {
+    const controller = unmounted.current;
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  /**
+   * Reads the server's list of subagents: their start, state and step count without their events loaded. A request
+   * while one runs asks for one more read after it, a second later at the earliest.
+   */
+  const refreshAgents = useCallback(() => {
+    if (!feeds) return;
+    const read = agentsRead.current;
+    if (read.busy) {
+      read.again = true;
+      return;
+    }
+    read.busy = true;
+    const { signal } = unmounted.current;
+    /** Asked again meanwhile, and the screen is still open (a read in flight sets `again`). */
+    const wanted = (): boolean => read.again && !signal.aborted;
+    const run = async (): Promise<void> => {
+      do {
+        read.again = false;
+        try {
+          const { data } = await listCloudSubagents({ path: { id: sessionId }, signal, throwOnError: true });
+          const known = data.agents.map(knownAgentOf);
+          agentsRef.current = known;
+          setAgents(known);
+        } catch {
+          // The panel keeps what the loaded events show; the next change reads again.
+        }
+        if (wanted())
+          await new Promise((resolve) => {
+            setTimeout(resolve, AGENTS_MS);
+          });
+      } while (wanted());
+      read.busy = false;
+    };
+    void run();
+  }, [feeds, sessionId]);
+
+  /** An event after which the server's list of subagents may have changed: a subagent started, answered, or the tasks moved. */
+  const changesAgents = useCallback((event: TranscriptEvent): boolean => {
+    const listed = (id: string | undefined): boolean => agentsRef.current.some((agent) => agent.id === id);
+    if (event.kind === 'toolCall')
+      return (
+        AGENT_TOOLS.has(event.name) || (event.parentToolUseId !== undefined && listed(event.parentToolUseId))
+      );
+    if (event.kind === 'toolResult')
+      return (
+        listed(event.id) ||
+        (event.parentToolUseId === undefined &&
+          events.current.some(
+            (known) => known.kind === 'toolCall' && known.id === event.id && AGENT_TOOLS.has(known.name),
+          ))
+      );
+    return event.kind === 'tasks' || (event.kind === 'turn' && finished(event.phase));
+  }, []);
 
   const refreshHeader = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: getCloudSessionQueryKey({ path: { id: sessionId } }) });
@@ -159,7 +253,9 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
         if (!loaded.current) {
           const { data } = await listCloudEvents({
             path: { id: sessionId },
-            query: { before: NEWEST },
+            // With feeds the conversation opens on the main agent's own events: a subagent's burst of steps no
+            // longer pushes the main agent's out of the first page.
+            query: feeds ? { before: NEWEST, feed: MAIN_FEED } : { before: NEWEST },
             signal,
             throwOnError: true,
           });
@@ -171,6 +267,7 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
             transcript: withLatest(current.transcript, page),
             loaded: true,
           }));
+          refreshAgents();
         }
         let cut = false;
         const end = await followEvents(
@@ -180,13 +277,17 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
             opened: () => {
               setState((current) => ({ ...current, live: 'live' }));
               // Back after a cut: the session may have been paused or resumed meanwhile.
-              if (cut) refreshHeader();
+              if (cut) {
+                refreshHeader();
+                refreshAgents();
+              }
               cut = false;
             },
             event: (cloud) => {
               const event = eventOf(cloud);
               newest.current = Math.max(newest.current, event.seq);
               merge((transcript) => withLive(transcript, event));
+              if (changesAgents(event)) refreshAgents();
             },
             reconnecting: () => {
               cut = true;
@@ -219,7 +320,46 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     return () => {
       controller.abort();
     };
-  }, [conversation, sessionId, attempt, merge, refreshHeader]);
+  }, [conversation, sessionId, attempt, merge, refreshHeader, feeds, refreshAgents, changesAgents]);
+
+  /** The newest page of the subagent `feed`, read once: a feed has its own cursor, the main agent's does not move. */
+  const loadFeed = useCallback(
+    (feed: string) => {
+      if (!feeds || feedsAsked.current.has(feed)) return;
+      feedsAsked.current.add(feed);
+      const { signal } = unmounted.current;
+      const run = async (): Promise<void> => {
+        try {
+          const { data } = await listCloudEvents({
+            path: { id: sessionId },
+            query: { before: NEWEST, feed },
+            signal,
+            throwOnError: true,
+          });
+          const page = pageOf(data);
+          merge((transcript) => withFeed(transcript, feed, page));
+        } catch {
+          // Opened again, it is read again; meanwhile the thread shows what the loaded events hold.
+          feedsAsked.current.delete(feed);
+        }
+      };
+      void run();
+    },
+    [feeds, sessionId, merge],
+  );
+
+  /** Shows the subagent `id`'s thread in place of the main agent's. */
+  const openThread = useCallback(
+    (id: string) => {
+      setThread(id);
+      loadFeed(id);
+    },
+    [loadFeed],
+  );
+
+  const backToMain = useCallback(() => {
+    setThread(undefined);
+  }, []);
 
   const deliver = useCallback(
     async (message: PendingMessage) => {
@@ -302,8 +442,16 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     setAttempt((count) => count + 1);
   }, []);
 
-  const items = useMemo(() => transcriptItems(state.transcript.events), [state.transcript.events]);
-  const liveText = useMemo(() => liveTextOf(state.transcript.events, undefined), [state.transcript.events]);
+  // With feeds each thread shows its own events, its subagents as cards; without, the steps show nested, as before.
+  const shown = feeds ? thread : undefined;
+  const items = useMemo(
+    () => transcriptItems(feeds ? threadEvents(state.transcript.events, shown) : state.transcript.events),
+    [state.transcript.events, feeds, shown],
+  );
+  const liveText = useMemo(
+    () => liveTextOf(state.transcript.events, shown),
+    [state.transcript.events, shown],
+  );
   const running = runningOf(session, state.transcript.events);
   const sessionEnded = session !== undefined && ENDED.has(session.status);
   const headerGone = goneBy(header.error);
@@ -332,5 +480,12 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     discard,
     interrupt,
     retry,
+    events: state.transcript.events,
+    feeds,
+    agents,
+    thread: shown,
+    threadLoaded: shown === undefined ? state.loaded : state.transcript.feeds.has(shown),
+    openThread,
+    backToMain,
   };
 }

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudEvent } from '@gen/api/types.gen';
-import { CONVERSATION_ID, pageOf } from '@/mocks/cloudConversation';
+import { CONVERSATION_ID, feedOf, pageOf, subagentsOf } from '@/mocks/cloudConversation';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
 import { createHandlerFetch } from '@/test/handlerFetch';
@@ -198,5 +198,145 @@ describe('the mock conversation sessions', () => {
       error: { type: 'invalid_mode' },
     });
     expect((await start({ agent: 'claude', mode: 'pty' })).status).toBe(400);
+  });
+});
+
+describe('the mock conversation controls', () => {
+  const path = `/${CONVERSATION_ID}`;
+  const at = '2026-10-30T09:00:00.000Z';
+  const add = (type: string, data: unknown, feed?: string): void => {
+    const known = db.cloudEvents[CONVERSATION_ID] ?? [];
+    db.cloudEvents[CONVERSATION_ID] = [
+      ...known,
+      { seq: known.length + 1, type, at, epoch: 1, data, ...(feed === undefined ? {} : { feed }) },
+    ];
+  };
+  const answer = async (body: unknown, key?: string): Promise<{ status: number; json: unknown }> => {
+    const response = await fetch(`${BASE}${path}/permissions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(key === undefined ? {} : { 'Idempotency-Key': key }),
+      },
+      body: JSON.stringify(body),
+    });
+    return { status: response.status, json: await response.json() };
+  };
+  const setStatus = (status: string, owner = 'maya'): void => {
+    db.cloudSessions = db.cloudSessions.map((session) =>
+      session.id === CONVERSATION_ID ? { ...session, status, owner } : session,
+    );
+  };
+
+  it('answers a permission request once per key, and refuses what the server would', async () => {
+    const deploy = await call('POST', `${path}/messages`, { text: 'Please deploy', clientMessageId: 'k1' });
+    expect(deploy.status).toBe(202);
+    expect(db.cloudSessions.find((session) => session.id === CONVERSATION_ID)?.waiting).toMatchObject({
+      requestId: 'perm-deploy',
+    });
+    expect((await answer({ requestId: 'perm-deploy', behavior: 'maybe' })).status).toBe(400);
+    expect((await answer('nope')).status).toBe(400);
+    expect((await answer({ requestId: 'none', behavior: 'allow' })).json).toMatchObject({
+      error: { type: 'unknown_permission_request' },
+    });
+    const first = await answer({ requestId: 'perm-deploy', behavior: 'allow' }, 'key-1');
+    expect(first.status).toBe(202);
+    expect(db.cloudSessions.find((session) => session.id === CONVERSATION_ID)?.waiting).toBeUndefined();
+    expect((await answer({ requestId: 'perm-deploy', behavior: 'allow' }, 'key-1')).json).toEqual(first.json);
+    expect((await answer({ requestId: 'perm-deploy', behavior: 'deny' })).json).toMatchObject({
+      error: { type: 'permission_request_answered' },
+    });
+    // A request that expired; then a denied one, answered without the session waiting on it.
+    add('permission.request', { requestId: 'old' });
+    add('permission.expired', { requestId: 'old' });
+    expect((await answer({ requestId: 'old', behavior: 'deny' })).json).toMatchObject({
+      error: { type: 'permission_request_expired' },
+    });
+    add('permission.request', { requestId: 'later' });
+    expect((await answer({ requestId: 'later', behavior: 'deny' })).status).toBe(202);
+    expect(JSON.stringify(db.cloudEvents[CONVERSATION_ID]?.at(-2)?.data)).toContain('I will not deploy');
+    add('permission.request', { requestId: 'other' });
+    expect((await answer({ requestId: 'other', behavior: 'allow' })).status).toBe(202);
+    setStatus('paused');
+    expect((await answer({ requestId: 'later', behavior: 'deny' }, 'key-2')).json).toMatchObject({
+      error: { type: 'nothing_to_answer' },
+    });
+    const missing = await fetch(`${BASE}/cs-none/permissions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ requestId: 'x', behavior: 'allow' }),
+    });
+    expect(missing.status).toBe(404);
+  });
+
+  it('changes the owner’s settings only, while the session runs', async () => {
+    expect((await call('PUT', `${path}/permission-bypass`, { enabled: true })).json).toMatchObject({
+      permissionBypass: true,
+    });
+    expect((await call('PUT', `${path}/permission-bypass`, { enabled: 'yes' })).status).toBe(400);
+    expect((await call('PUT', `${path}/model`, { model: 'claude-opus-5' })).json).toMatchObject({
+      model: 'claude-opus-5',
+    });
+    expect((await call('PUT', `${path}/model`, { model: 'a b' })).status).toBe(400);
+    expect((await call('PUT', `${path}/model`, {})).status).toBe(400);
+    expect((await call('PUT', `${path}/effort`, { effort: 'high' })).json).toMatchObject({ effort: 'high' });
+    expect((await call('PUT', `${path}/effort`, { effort: '' })).status).toBe(400);
+    expect((await call('PUT', `${path}/effort`, 'x')).status).toBe(400);
+    expect((await call('PUT', '/cs-none/effort', { effort: 'high' })).status).toBe(404);
+    setStatus('running', 'lena');
+    expect((await call('PUT', `${path}/model`, { model: 'x' })).json).toMatchObject({
+      error: { type: 'model_owner_only' },
+    });
+    setStatus('terminated');
+    expect((await call('PUT', `${path}/permission-bypass`, { enabled: false })).json).toMatchObject({
+      error: { type: 'session_not_running' },
+    });
+  });
+
+  it('stops a task, which leaves the runner’s next report, and lists the subagents', async () => {
+    // No report yet: the runner reports none left.
+    expect((await call('POST', `${path}/tasks/stop`, { taskId: 'task-tests' })).status).toBe(202);
+    expect(db.cloudEvents[CONVERSATION_ID]?.at(-1)?.data).toMatchObject({ tasks: [] });
+    await call('POST', `${path}/messages`, { text: 'deploy it', clientMessageId: 'k1' });
+    expect((await call('POST', `${path}/tasks/stop`, { taskId: 'task-tests' })).status).toBe(202);
+    expect(JSON.stringify(db.cloudEvents[CONVERSATION_ID]?.at(-1)?.data)).not.toContain('task-tests');
+    expect((await call('POST', `${path}/tasks/stop`, { taskId: 'bad id' })).status).toBe(400);
+    expect((await call('POST', `${path}/tasks/stop`, {})).status).toBe(400);
+    expect((await call('POST', '/cs-none/tasks/stop', { taskId: 't' })).status).toBe(404);
+    expect((await call('GET', `${path}/agents`)).json).toEqual({
+      agents: [expect.objectContaining({ id: 'tu-agent-1', type: 'reviewer', state: 'running', steps: 1 })],
+    });
+    expect((await call('GET', '/cs-none/agents')).status).toBe(404);
+    setStatus('paused');
+    expect((await call('POST', `${path}/tasks/stop`, { taskId: 't' })).json).toMatchObject({
+      error: { type: 'nothing_to_interrupt' },
+    });
+  });
+
+  it('reads the subagents and the feeds of a transcript', () => {
+    const event = (seq: number, type: string, data: unknown, feed?: string): CloudEvent => ({
+      seq,
+      type,
+      at,
+      epoch: 1,
+      data,
+      ...(feed === undefined ? {} : { feed }),
+    });
+    const events = [
+      event(1, 'tool.call', { id: 'a', name: 'Task', input: {} }),
+      event(2, 'tool.call', { id: 'b', name: 'Agent', input: 'odd' }, 'a'),
+      event(3, 'tool.result', { id: 'b', isError: true }, 'a'),
+      event(4, 'tool.result', { id: 'a' }),
+      event(5, 'tool.call', { name: 'Agent' }),
+      event(6, 'tool.call', { id: 'c', name: 'Bash' }),
+      event(7, 'message.agent', null),
+    ];
+    expect(subagentsOf(events)).toEqual([
+      { id: 'a', description: '', state: 'completed', startedAt: at, endedAt: at, steps: 1 },
+      { id: 'b', description: '', state: 'failed', startedAt: at, endedAt: at, steps: 0, parentId: 'a' },
+    ]);
+    expect(feedOf(events, null)).toHaveLength(7);
+    expect(feedOf(events, 'main').map((item) => item.seq)).toEqual([1, 4, 5, 6, 7]);
+    expect(feedOf(events, 'a').map((item) => item.seq)).toEqual([2, 3]);
   });
 });

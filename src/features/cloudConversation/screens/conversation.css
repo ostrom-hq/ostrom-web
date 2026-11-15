@@ -103,3 +103,80 @@
 .cc-waiting {
   margin: 0;
 }
+
+/* The conversation and, beside it on a wide window, what runs in the session. */
+.cc-layout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 1100px) {
+  .cc-layout:has(.cc-work) {
+    grid-template-columns: minmax(0, 1fr) 312px;
+    align-items: start;
+  }
+}
+
+.cc-work,
+.cc-permission,
+.cc-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.cc-work__list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cc-work__row,
+.cc-work__line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.cc-work__row {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.cc-work__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cc-permission__head,
+.cc-thread-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.cc-question {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cc-choice {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
