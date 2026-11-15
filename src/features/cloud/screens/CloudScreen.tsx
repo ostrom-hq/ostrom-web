@@ -9,9 +9,13 @@ import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { GithubAccessControl } from '../components/GithubAccessControl';
 import { SessionRow } from '../components/SessionRow';
+import { TransferControl } from '../components/TransferControl';
+import { TransfersSection } from '../components/TransfersSection';
 import { StartSessionForm } from '../components/StartSessionForm';
 import { isLive, mayChange, startRefusalOf } from '../model';
+import { mayTransfer, transferRefusalOf } from '../transfer';
 import { useCloud, useGithubAccess, useSessionChange, useStartProfiles } from '../useCloud';
+import { useTransferChange, useTransfers } from '../useTransfers';
 import './cloud.css';
 
 /** Agents that run on the organization's runners, not on a laptop: start one, follow it, stop it. */
@@ -21,6 +25,10 @@ export function CloudScreen(): ReactElement {
   const change = useSessionChange();
   const github = useGithubAccess();
   const { profiles } = useStartProfiles();
+  const transfers = useTransfers();
+  const transferChange = useTransferChange();
+  const transferRefusal =
+    transferChange.failure === undefined ? undefined : transferRefusalOf(transferChange.failure);
   const refusal = change.startFailure === undefined ? undefined : startRefusalOf(change.startFailure);
   const now = useNow();
   return (
@@ -28,6 +36,13 @@ export function CloudScreen(): ReactElement {
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('cloud.errorTag')} live>
           {refusal === undefined ? change.failure.message : t(`cloud.start.refusal.${refusal}`)}
+        </Banner>
+      )}
+      {transferChange.failure === undefined ? null : (
+        <Banner tone="danger" tag={t('cloud.errorTag')} live>
+          {transferRefusal === undefined
+            ? transferChange.failure.message
+            : t(`cloud.transfer.refusal.${transferRefusal}`)}
         </Banner>
       )}
       <StartSessionForm change={change} />
@@ -53,6 +68,19 @@ export function CloudScreen(): ReactElement {
                           : undefined
                       }
                     />
+                    {mayTransfer(session, view.viewer, view.canManage) ? (
+                      <Feature name="runners.cloud.transfer.v1">
+                        <TransferControl
+                          session={session}
+                          recipients={transfers.recipients}
+                          canManage={view.canManage}
+                          busy={transferChange.busy === session.id}
+                          onOffer={(to, resume, onDone) => {
+                            transferChange.offer(session.id, to, resume, onDone);
+                          }}
+                        />
+                      </Feature>
+                    ) : null}
                     {session.endedAt === undefined ? (
                       <Feature name="runners.cloud.github.v1">
                         <GithubAccessControl
@@ -73,6 +101,24 @@ export function CloudScreen(): ReactElement {
           }
         </LoadState>
       </Section>
+      <Feature name="runners.cloud.transfer.v1">
+        {transfers.transfers === undefined || transfers.transfers.length === 0 ? null : (
+          <Section label={t('cloud.transfer.title')}>
+            <TransfersSection
+              transfers={transfers.transfers}
+              sessions={view.sessions ?? []}
+              logins={transfers.logins}
+              now={now}
+              memberId={transfers.memberId}
+              canManage={transfers.canManage}
+              busy={transferChange.busy}
+              onAccept={transferChange.accept}
+              onDecline={transferChange.decline}
+              onCancel={transferChange.cancel}
+            />
+          </Section>
+        )}
+      </Feature>
       {view.runners === undefined ? null : (
         <Section label={t('cloud.runners.title')}>
           {view.runners.length === 0 ? (

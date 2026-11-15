@@ -3420,6 +3420,7 @@ export const zRunnerPreparationFailure = z.object({
             'working_directory',
             'setup_create',
             'setup_start',
+            'workspace',
             'runner'
         ]), z.string()]),
     index: z.optional(z.int()),
@@ -3433,6 +3434,7 @@ export const zRunnerPreparationReport = z.object({
     sessionId: z.string(),
     epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
     phase: z.union([z.enum([
+            'securing_workspace',
             'configuring_git',
             'cloning_repositories',
             'fetching_repositories',

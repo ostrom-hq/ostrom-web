@@ -6061,7 +6061,7 @@ export const getInferenceQueueQueryKey = (options?: Options<GetInferenceQueueDat
 /**
  * The inference calls waiting in the organization's admission queue (`inference.queue.v1`)
  *
- * Any member reads the counts (`inference:use` or `usage:read` on a key); no call, prompt or other member is named. Counts only waits still renewed by their replica
+ * Any member reads the counts (`inference:use`, `inference:read` or `usage:read` on a key; the token of `ostrom login` holds `inference:read`, for `ostrom status`); no call, prompt or other member is named. Counts only waits still renewed by their replica
  */
 export const getInferenceQueueOptions = (options?: Options<GetInferenceQueueData>) => queryOptions<GetInferenceQueueResponse, GetInferenceQueueError, GetInferenceQueueResponse, ReturnType<typeof getInferenceQueueQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -6222,7 +6222,7 @@ export const listBudgetsQueryKey = (options?: Options<ListBudgetsData>) => creat
 /**
  * Budgets
  *
- * Read by a browser session, or by a token with `budgets:read` made on the console. Never by the token of `ostrom login`, nor by that of `ostrom login --admin`: the limits of every member stay off the CLI's tokens (SECURITY-AUDIT S2-03)
+ * Owners and admins only, read by a browser session or a token holding `budgets:read`: one made on the console, or the token of `ostrom login` (with or without `--admin`), which holds it for `getMyBudget` (SECURITY-AUDIT S2-03 kept every member's limits off the CLI's tokens until ostrom-server#587; they now read them, never write them, and only for an owner or an admin). A member, whatever the token: 403. A device credential (a machine's, not the CLI's token), a key without the scope or an agent token: 403
  */
 export const listBudgetsOptions = (options?: Options<ListBudgetsData>) => queryOptions<ListBudgetsResponse, ListBudgetsError, ListBudgetsResponse, ReturnType<typeof listBudgetsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -6261,7 +6261,7 @@ export const getMyBudgetQueryKey = (options?: Options<GetMyBudgetData>) => creat
 /**
  * The caller's own budget this month, for any member and for an agent session
  *
- * Read by a browser session, a token with `budgets:read`, or an agent session's token. Planned (Q-CLI-BUDGETS): also by the token of `ostrom login`, with or without `--admin` (`ostrom budgets me`), which reads only the budget of the person it belongs to, never another member's nor the organization's list (`listBudgets`)
+ * Read by a browser session, a token with `budgets:read`, or an agent session's token. The token of `ostrom login`, with or without `--admin`, holds `budgets:read` (`ostrom status` shows this budget): it reads the budget of the person it belongs to; the organization's list (`listBudgets`) only when that person is an owner or an admin. A CLI token issued before it held `budgets:read`, `accounts:read`, `inference:read` and `guidance` lacks them (403): `ostrom login` again
  */
 export const getMyBudgetOptions = (options?: Options<GetMyBudgetData>) => queryOptions<GetMyBudgetResponse, GetMyBudgetError, GetMyBudgetResponse, ReturnType<typeof getMyBudgetQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -7442,7 +7442,7 @@ export const fetchRunnerEnvironmentMutation = (options?: Partial<Options<FetchRu
 };
 
 /**
- * The runner reports its preparation (`runners.cloud.environment.v1`): a `phase` (`configuring_git`, `cloning_repositories`, `fetching_repositories`, `running_setup`), shown on the session, or a failed step as `{step, index, exitCode}` only. The server writes the session's message itself (no command output or runner text reaches the API), sets `failure.code = preparation_failed` (`retryable` for clone, fetch and GitHub failures), and stops the execution: a first execution fails the session and deletes its workspace, a resume pauses it and keeps the workspace. Same audience as `fetchRunnerEnvironment`. Returns the heartbeat's instruction
+ * The runner reports its preparation (`runners.cloud.environment.v1`): a `phase` (`configuring_git`, `cloning_repositories`, `fetching_repositories`, `running_setup`, and `securing_workspace` first after a transfer), shown on the session, or a failed step as `{step, index, exitCode}` only. The server writes the session's message itself (no command output or runner text reaches the API), sets `failure.code = preparation_failed` (`retryable` for clone, fetch and GitHub failures), and stops the execution: a first execution fails the session and deletes its workspace, a resume pauses it and keeps the workspace. Same audience as `fetchRunnerEnvironment`. Returns the heartbeat's instruction
  */
 export const reportRunnerPreparationMutation = (options?: Partial<Options<ReportRunnerPreparationData>>): UseMutationOptions<ReportRunnerPreparationResponse, ReportRunnerPreparationError, Options<ReportRunnerPreparationData>> => {
     const mutationOptions: UseMutationOptions<ReportRunnerPreparationResponse, ReportRunnerPreparationError, Options<ReportRunnerPreparationData>> = {
@@ -8461,6 +8461,8 @@ export const listSharedAccountsQueryKey = (options?: Options<ListSharedAccountsD
 
 /**
  * Subscriptions shared with the caller or owned by them
+ *
+ * Read with `accounts:read` (the token of `ostrom login` holds it, for `ostrom status`) or a key's `team:read`; an agent's or a device's credential: 403
  */
 export const listSharedAccountsOptions = (options?: Options<ListSharedAccountsData>) => queryOptions<ListSharedAccountsResponse, ListSharedAccountsError, ListSharedAccountsResponse, ReturnType<typeof listSharedAccountsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -8587,7 +8589,7 @@ export const getForecastsQueryKey = (options?: Options<GetForecastsData>) => cre
 /**
  * Quota forecasts of one shared account (`capacity.forecasts.v1`)
  *
- * TeamCode's Forecasts page. For each current provider window of the account: its latest reading, the readings of the last hour cut into segments (a segment never joins two readings across a reset, a drop in utilization or more than five minutes without a reading), the rate learned from the latest segment (at least three readings over at least a minute, never across a drop) and when, at that rate, the window reaches the account's `utilizationCeiling` (`pressureThreshold`). An unknown state is said, never drawn as 0 %: `unknown` (no reset known, or no rate learned yet), `stale` (the reading is older than five minutes or its reset has passed), `exhausted` (at or above the threshold), `idle` (a rate of zero), `reset_first` or `exhausts_first`. Without `account`, the first account by id. Owners and admins of the organization only, signed in (a browser session or the unlocked app); a member, a key, an agent or a device credential: 403. An account of another organization: 404; `account` given twice: 400 `invalid_account`. Bounded: at most 64 accounts listed, 128 windows and 8,192 readings, `truncated` true past a bound. Never names a credential or a provider identity beyond the account's label and e-mail. Answered with `Cache-Control: no-store`. The console reads it again every 15 seconds while the page is open (TeamCode's live updates)
+ * TeamCode's Forecasts page. For each current provider window of the account: its latest reading, the readings of the last hour cut into segments (a segment never joins two readings across a reset, a drop in utilization or more than five minutes without a reading), the rate learned from the latest segment (at least three readings over at least a minute, never across a drop) and when, at that rate, the window reaches the account's `utilizationCeiling` (`pressureThreshold`). An unknown state is said, never drawn as 0 %: `unknown` (no reset known, or no rate learned yet), `stale` (the reading is older than five minutes or its reset has passed), `exhausted` (at or above the threshold), `idle` (a rate of zero), `reset_first` or `exhausts_first`. Without `account`, the first account by id. Owners and admins of the organization only, signed in (a browser session, the unlocked app or the token of `ostrom login`, which holds `accounts:read`); a member, a key, an agent or a device credential: 403. An account of another organization: 404; `account` given twice: 400 `invalid_account`. Bounded: at most 64 accounts listed, 128 windows and 8,192 readings, `truncated` true past a bound. Never names a credential or a provider identity beyond the account's label and e-mail. Answered with `Cache-Control: no-store`. The console reads it again every 15 seconds while the page is open (TeamCode's live updates)
  */
 export const getForecastsOptions = (options?: Options<GetForecastsData>) => queryOptions<GetForecastsResponse, GetForecastsError, GetForecastsResponse, ReturnType<typeof getForecastsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -8627,7 +8629,7 @@ export const getPacingSettingsQueryKey = (options?: Options<GetPacingSettingsDat
 /**
  * The capacity controller's settings (`capacity.pacing.v1`)
  *
- * Any member reads them (`inference:use` on a key). Off by default: `observationOnly` false (the controller spaces admissions and sends its advice to agents) and `autoPoolSize` false (the typed daily budget applies)
+ * Any member reads them (`inference:use` or `guidance` on a key; the token of `ostrom login` holds `guidance`), and an agent token. Off by default: `observationOnly` false (the controller spaces admissions and sends its advice to agents) and `autoPoolSize` false (the typed daily budget applies)
  */
 export const getPacingSettingsOptions = (options?: Options<GetPacingSettingsData>) => queryOptions<GetPacingSettingsResponse, GetPacingSettingsError, GetPacingSettingsResponse, ReturnType<typeof getPacingSettingsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -8645,7 +8647,7 @@ export const getPacingSettingsOptions = (options?: Options<GetPacingSettingsData
 /**
  * Change the capacity controller's settings (owners and admins, a person signed in)
  *
- * A field omitted keeps its stored value. Recorded in the organization's audit log with the names of the fields changed. A key, an agent or a device credential: 403
+ * A field omitted keeps its stored value. Recorded in the organization's audit log with the names of the fields changed. A key, an agent, a device credential or the token of `ostrom login`, even an administrator's (it holds `guidance`, which reads, never `inference:use`): 403
  */
 export const setPacingSettingsMutation = (options?: Partial<Options<SetPacingSettingsData>>): UseMutationOptions<SetPacingSettingsResponse, SetPacingSettingsError, Options<SetPacingSettingsData>> => {
     const mutationOptions: UseMutationOptions<SetPacingSettingsResponse, SetPacingSettingsError, Options<SetPacingSettingsData>> = {
@@ -8666,7 +8668,7 @@ export const previewDirectiveQueryKey = (options?: Options<PreviewDirectiveData>
 /**
  * The controller's current advice for the caller, also in observation mode (`capacity.pacing.v1`)
  *
- * Informational: the settings and the advice the controller would give the caller now, whether or not it is delivered. Any member (`inference:use` or `guidance` on a key)
+ * Informational: the settings and the advice the controller would give the caller now, whether or not it is delivered. Any member (`inference:use` or `guidance` on a key; the token of `ostrom login` holds `guidance`), and an agent token
  */
 export const previewDirectiveOptions = (options?: Options<PreviewDirectiveData>) => queryOptions<PreviewDirectiveResponse, PreviewDirectiveError, PreviewDirectiveResponse, ReturnType<typeof previewDirectiveQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -8686,7 +8688,7 @@ export const getCurrentDirectiveQueryKey = (options?: Options<GetCurrentDirectiv
 /**
  * The caller's current capacity advice, member-wide (`capacity.pacing.v1`)
  *
- * TeamCode's agent guidance: `directive` is absent in observation mode, before the controller's first pass, and once the advice expires (3 minutes after it was made; the controller renews it every minute). The most constrained target the member's recent calls used governs. A person, an agent token, or a key holding `guidance`
+ * TeamCode's agent guidance: `directive` is absent in observation mode, before the controller's first pass, and once the advice expires (3 minutes after it was made; the controller renews it every minute). The most constrained target the member's recent calls used governs. A person, an agent token, or a key holding `guidance` (the token of `ostrom login` holds it, for `ostrom agents hint|watch`)
  */
 export const getCurrentDirectiveOptions = (options?: Options<GetCurrentDirectiveData>) => queryOptions<GetCurrentDirectiveResponse, GetCurrentDirectiveError, GetCurrentDirectiveResponse, ReturnType<typeof getCurrentDirectiveQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

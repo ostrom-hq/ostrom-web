@@ -37,6 +37,7 @@ export const FEATURES = [
   'notifications.v1',
   'runners.cloud.environment.v1',
   'runners.cloud.github.v1',
+  'runners.cloud.transfer.v1',
   'runners.cloud.v1',
   'servicekeys.scopes.v1',
   'sessions.labels.v1',

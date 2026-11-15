@@ -50,7 +50,15 @@ export function accessOf(session: CloudSession): GithubAccess {
   return GITHUB_ACCESS.find((known) => known === access) ?? 'owner';
 }
 
-export const CLOUD_STATUSES = ['queued', 'starting', 'running', 'ended', 'stopped', 'failed'] as const;
+export const CLOUD_STATUSES = [
+  'queued',
+  'starting',
+  'running',
+  'transferring',
+  'ended',
+  'stopped',
+  'failed',
+] as const;
 export type CloudStatus = (typeof CLOUD_STATUSES)[number];
 
 /** The statuses the console has words for; another one is shown as the server wrote it. */
@@ -67,7 +75,7 @@ export function isLive(session: CloudSession): boolean {
 export function sessionTone(status: string): BadgeTone {
   if (status === 'running') return 'success';
   if (status === 'failed') return 'danger';
-  if (status === 'queued' || status === 'starting') return 'warning';
+  if (status === 'queued' || status === 'starting' || status === 'transferring') return 'warning';
   return 'neutral';
 }
 

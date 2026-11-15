@@ -138,6 +138,7 @@ describe('a session being prepared', () => {
 
   it('names the phases of the contract, and only those', () => {
     expect(PREPARATION_PHASES).toEqual([
+      'securing_workspace',
       'configuring_git',
       'cloning_repositories',
       'fetching_repositories',

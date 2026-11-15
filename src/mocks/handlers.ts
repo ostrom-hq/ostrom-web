@@ -233,6 +233,11 @@ import {
 } from '@/mocks/fixtures/delivery';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
+import {
+  type CloudTransfersState,
+  createCloudTransferHandlers,
+  initialCloudTransfers,
+} from '@/mocks/cloudTransfers';
 import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
 import { createEnvironmentHandlers, type EnvironmentState } from '@/mocks/environment';
 import { createPersonalMcpHandlers, type PersonalMcpState } from '@/mocks/personalMcp';
@@ -274,6 +279,7 @@ export interface MockDb
     AccountState,
     AdminState,
     CloudAdminState,
+    CloudTransfersState,
     ActivityState,
     AuditState,
     BillingState,
@@ -376,6 +382,7 @@ export function createMockDb(): MockDb {
   return {
     instanceAdmin: false,
     ...initialCloudAdmin(),
+    ...initialCloudTransfers(),
     instanceAdmins: initialInstanceAdmins(),
     instanceSettings: initialInstanceSettings(),
     activity: initialActivity(),
@@ -1339,6 +1346,15 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     ...createDeliveryHandlers(
       () => db,
       (request) => organizationOf(db, request),
+      now,
+    ),
+    ...createCloudTransferHandlers(
+      () => db,
+      {
+        manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+        memberId: (request) =>
+          membersIn(db, organizationOf(db, request), now).find((member) => member.login === me.dev.login)?.id,
+      },
       now,
     ),
     ...createCloudAdminHandlers(

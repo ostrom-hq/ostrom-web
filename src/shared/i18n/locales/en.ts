@@ -1890,6 +1890,7 @@ export const en = {
       queued: 'Queued',
       starting: 'Starting',
       running: 'Running',
+      transferring: 'Transferring',
       ended: 'Ended',
       stopped: 'Stopped',
       failed: 'Failed',
@@ -1925,6 +1926,7 @@ export const en = {
       notPaused: 'Pause the session first: an agent that is running keeps the access it already received.',
     },
     phase: {
+      securing_workspace: 'resetting the workspace after a transfer',
       configuring_git: 'setting up Git',
       cloning_repositories: 'cloning the repositories',
       fetching_repositories: 'fetching the repositories',

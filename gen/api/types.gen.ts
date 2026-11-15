@@ -5105,7 +5105,7 @@ export type RunnerHeartbeatAnswer = {
  * A failed preparation step, as structured fields only
  */
 export type RunnerPreparationFailure = {
-    step: 'git_identity' | 'clone' | 'checkout' | 'fetch' | 'working_directory' | 'setup_create' | 'setup_start' | 'runner' | (string & {});
+    step: 'git_identity' | 'clone' | 'checkout' | 'fetch' | 'working_directory' | 'setup_create' | 'setup_start' | 'workspace' | 'runner' | (string & {});
     /**
      * The repository or the setup command, from 0
      */
@@ -5122,7 +5122,7 @@ export type RunnerPreparationReport = {
     /**
      * The phase starting, or the one that failed
      */
-    phase: 'configuring_git' | 'cloning_repositories' | 'fetching_repositories' | 'running_setup' | (string & {});
+    phase: 'securing_workspace' | 'configuring_git' | 'cloning_repositories' | 'fetching_repositories' | 'running_setup' | (string & {});
     failure?: RunnerPreparationFailure;
 };
 
