@@ -12,11 +12,13 @@ export interface SessionRowProps {
   readonly session: CloudSession;
   readonly now: Date;
   readonly busy: boolean;
+  /** The name of the profile the session runs on, when the profiles are known. */
+  readonly profileName?: string | undefined;
   /** Present when the viewer may stop this session and it still runs. */
   readonly onStop: (() => void) | undefined;
 }
 
-export function SessionRow({ session, now, busy, onStop }: SessionRowProps): ReactElement {
+export function SessionRow({ session, now, busy, profileName, onStop }: SessionRowProps): ReactElement {
   const { t, i18n } = useTranslation();
   const title = sessionTitle(session);
   const phase = preparationOf(session);
@@ -30,6 +32,13 @@ export function SessionRow({ session, now, busy, onStop }: SessionRowProps): Rea
             session.owner,
             isCloudAgent(session.agent) ? t(`cloud.agent.${session.agent}`) : session.agent,
             session.model,
+            session.profile === undefined
+              ? undefined
+              : t('cloud.session.profile', {
+                  name: profileName ?? session.profile.id,
+                  version: session.profile.version,
+                }),
+            session.image,
             phase === undefined ? undefined : t(`cloud.phase.${phase}`),
             session.automationId === undefined ? undefined : t('cloud.session.byAutomation'),
             t('cloud.session.started', { when: formatRelative(session.createdAt, now, i18n.language) }),

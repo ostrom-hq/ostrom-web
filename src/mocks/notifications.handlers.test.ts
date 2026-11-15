@@ -3,12 +3,14 @@ import {
   zApiError,
   zNotificationPreferences,
   zNotificationSettings,
+  zPushDeviceList,
   zPushTestResults,
 } from '@gen/api/zod.gen';
 import { getResponse } from 'msw';
 import {
   initialNotificationPreferences,
   initialNotificationSwitches,
+  initialPushDevices,
   initialPushPhones,
 } from '@/mocks/fixtures/notifications';
 import {
@@ -23,6 +25,7 @@ function fresh(): NotificationsState {
     notificationSwitches: initialNotificationSwitches(),
     notificationPreferences: initialNotificationPreferences(),
     pushProvider: 'relay',
+    pushDevices: initialPushDevices(),
     pushPhones: initialPushPhones(),
     lastPushTestAt: undefined,
   };
@@ -159,6 +162,33 @@ describe('the mock test push', () => {
     const none = await call('POST', '/notifications/push/test');
     expect(none.status).toBe(409);
     expect(typeOf(none.body)).toBe('push_no_device');
+  });
+});
+
+describe('the mock push phones', () => {
+  afterEach(() => {
+    state = fresh();
+  });
+
+  it('lists them, and removes one from the list and from the test', async () => {
+    const listed = await call('GET', '/push-devices');
+    expect(zPushDeviceList.parse(listed.body).items.map((phone) => phone.id)).toEqual([
+      'pd_ios',
+      'pd_android',
+    ]);
+    const gone = await getResponse(
+      handlers,
+      new Request('http://ostrom.test/api/v1/push-devices/pd_ios', { method: 'DELETE' }),
+    );
+    expect(gone?.status).toBe(204);
+    expect(state.pushDevices.map((phone) => phone.id)).toEqual(['pd_android']);
+    expect(state.pushPhones).toEqual([initialPushPhones()[1]]);
+  });
+
+  it('refuses a phone it does not know', async () => {
+    const missing = await call('DELETE', '/push-devices/pd_none');
+    expect(missing.status).toBe(404);
+    expect(typeOf(missing.body)).toBe('push_device_not_found');
   });
 });
 

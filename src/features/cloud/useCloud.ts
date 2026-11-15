@@ -9,6 +9,7 @@ import {
   listAutomationRunsQueryKey,
   listAutomationsOptions,
   listAutomationsQueryKey,
+  listCloudProfilesOptions,
   listCloudSessionsOptions,
   listCloudSessionsQueryKey,
   listRunnersOptions,
@@ -20,6 +21,7 @@ import {
   testAutomationMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
+  CloudProfile,
   Automation,
   AutomationDryRun,
   AutomationRun,
@@ -35,6 +37,7 @@ import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
+import { useAnnounced } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
 import type { CloudAgent, GithubAccess } from './model';
 
@@ -71,6 +74,9 @@ export interface StartRequest {
   readonly repo: string;
   /** The preparation recipe (`runners.cloud.environment.v1`), never with `repo`'s repository too. */
   readonly environment?: CloudEnvironment | undefined;
+  /** The profile the session runs on (`runners.cloud.profiles.v1`), and an image it allows instead of its own. */
+  readonly profileId?: string | undefined;
+  readonly image?: string | undefined;
 }
 
 export interface SessionChangeViewModel {
@@ -81,6 +87,8 @@ export interface SessionChangeViewModel {
   /** The session being stopped. */
   readonly stopping: string | undefined;
   readonly failure: Error | undefined;
+  /** The failure of the start alone: the stop's own words are not those of a start. */
+  readonly startFailure: Error | undefined;
 }
 
 export function useSessionChange(): SessionChangeViewModel {
@@ -105,6 +113,10 @@ export function useSessionChange(): SessionChangeViewModel {
             ...(name === '' ? {} : { name }),
             ...(repo === '' ? {} : { repo }),
             ...(request.environment === undefined ? {} : { environment: request.environment }),
+            ...(request.profileId === undefined ? {} : { profileId: request.profileId }),
+            ...(request.image === undefined || request.image.trim() === ''
+              ? {}
+              : { image: request.image.trim() }),
           },
         },
         { onSuccess: onDone },
@@ -125,6 +137,7 @@ export function useSessionChange(): SessionChangeViewModel {
     starting: create.isPending,
     stopping: halt.isPending ? halt.variables.path.id : undefined,
     failure: failureOf(create.error ?? halt.error),
+    startFailure: failureOf(create.error),
   };
 }
 
@@ -393,4 +406,19 @@ export function useGithubAccess(): GithubAccessViewModel {
     [refused, set.error],
   );
   return { change, changing: set.isPending ? set.variables.path.id : undefined, failure };
+}
+
+export interface StartProfilesViewModel {
+  /** Whether the server has cloud session profiles: when not, a session is started without one. */
+  readonly enabled: boolean;
+  /** The profiles the caller may use; undefined while they are read. */
+  readonly profiles: readonly CloudProfile[] | undefined;
+  readonly failure: Error | undefined;
+}
+
+/** The profiles a session may be started on: the server returns only those the caller may use. */
+export function useStartProfiles(): StartProfilesViewModel {
+  const enabled = useAnnounced('runners.cloud.profiles.v1');
+  const query = useQuery({ ...ready(listCloudProfilesOptions(), { retry: false }), enabled });
+  return { enabled, profiles: query.data?.profiles, failure: failureOf(query.error) };
 }
