@@ -52,6 +52,8 @@
     "/webhooks/$webhookId": 12.2,
     "/accounts": 17.7,
     "/forecasts": 11.4,
+    "/usage": 10.7,
+    "/usage/$reservationId": 10.7,
     "/accounts/groups": 17.7,
     "/accounts/groups/$groupId": 17.7,
     "/receipts": 9.7,

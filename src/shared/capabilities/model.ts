@@ -19,6 +19,7 @@ export const FEATURES = [
   'billing.v1',
   'capacity.budgetoverrides.v1',
   'capacity.forecasts.v1',
+  'capacity.usagereconciliation.v1',
   'cloud.admin.v1',
   'runners.cloud.profiles.v1',
   'environment.v1',
