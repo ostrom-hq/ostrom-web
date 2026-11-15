@@ -86,10 +86,10 @@ jobs:
 
   # The server the journeys run against, resolved once so that every shard runs the same one: the newest
   # docker.io/ostromhq/ostrom-server:sha-<commit> of main's last commits (never `latest`, which a slower run of an older
-  # commit may still hold). The cloud sessions run docker.io/ostromhq/ostrom-session:latest, the server's default
-  # session image (its cloud runtime's `sessionImage`), named by that tag because the server's plan names it so. It
-  # also holds `ostrom` at /usr/local/bin, so it is the runner image too (OSTROM_RUNNERS_IMAGE, the machines' delivery
-  # image): a server from before the session image setting runs OSTROM_RUNNERS_IMAGE as both. Both images are public:
+  # commit may still hold). The cloud sessions' containers run docker.io/ostromhq/ostrom-session:latest, the server's
+  # default session image (its cloud runtime's `sessionImage`, ostrom-server#573), named by that tag because the
+  # server's plan names it so. The machines run the slim runner image docker.io/ostromhq/ostrom-runner:latest, by
+  # digest, and deliver `ostrom` from it (OSTROM_RUNNERS_IMAGE, the machines' delivery image). Both images are public:
   # nothing here needs a secret, a pull request from a fork runs the journeys too.
   server:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
@@ -99,6 +99,7 @@ jobs:
       image: ${{ steps.images.outputs.image }}
       revision: ${{ steps.images.outputs.revision }}
       runner: ${{ steps.images.outputs.runner }}
+      session: ${{ steps.images.outputs.session }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -116,7 +117,10 @@ jobs:
           # The oldest server the console's journeys need: cloud sessions on registered runners (server#223), after
           # /auth/me with Ostrom-Org (server#92) and the browser session (server#58).
           MIN_SERVER: b091032
-          RUNNER_IMAGE: docker.io/ostromhq/ostrom-session:latest
+          # The oldest server whose Docker and registered sessions run the session image apart from the runner image.
+          MIN_SESSION_SERVER: 1d59c29
+          RUNNER_IMAGE: docker.io/ostromhq/ostrom-runner:latest
+          SESSION_IMAGE: docker.io/ostromhq/ostrom-session:latest
         run: |
           image=
           for commit in $(git -C server rev-list --first-parent --max-count=10 HEAD); do
@@ -127,21 +131,30 @@ jobs:
           [ -n "$image" ] || { echo "::error::no sha-<commit> image of ostrom-server main's last 10 commits"; exit 1; }
           git -C server merge-base --is-ancestor "$MIN_SERVER" "$revision" \
             || { echo "::error::$image is older than $MIN_SERVER (server#223)"; exit 1; }
-          digest=$(docker buildx imagetools inspect "$RUNNER_IMAGE" --format '{{json .Manifest}}' | jq -r .digest) \
-            || { echo "::error::$RUNNER_IMAGE cannot be read"; exit 1; }
-          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::$RUNNER_IMAGE has no digest: $digest"; exit 1; }
-          # by its tag, the name the server's plan uses; the summary records the digest it held
-          runner=$RUNNER_IMAGE
+          git -C server merge-base --is-ancestor "$MIN_SESSION_SERVER" "$revision" \
+            || { echo "::error::$image is older than $MIN_SESSION_SERVER (server#573, the session image)"; exit 1; }
+          digest() {
+            local digest
+            digest=$(docker buildx imagetools inspect "$1" --format '{{json .Manifest}}' | jq -r .digest) \
+              || { echo "::error::$1 cannot be read" >&2; return 1; }
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::$1 has no digest: $digest" >&2; return 1; }
+            echo "$digest"
+          }
+          runner=docker.io/ostromhq/ostrom-runner@$(digest "$RUNNER_IMAGE")
+          # the sessions take it by its tag, the name the server's plan uses; the summary records the digest it holds now
+          session_digest=$(digest "$SESSION_IMAGE")
           main=$(git -C server rev-parse HEAD)
           {
             echo "image=$image"
             echo "revision=$revision"
             echo "runner=$runner"
+            echo "session=$SESSION_IMAGE"
           } >> "$GITHUB_OUTPUT"
           {
             echo "### Real server"
             echo "- server: \`$image\` (main is at ${main:0:7})"
-            echo "- cloud sessions and machines: \`$runner\` (\`$digest\` when resolved)"
+            echo "- machines and delivery: \`$runner\`"
+            echo "- cloud sessions: \`$SESSION_IMAGE\` (its digest now: \`$session_digest\`)"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # The same console against the REAL server, as deployed (the owner role migrates, the server serves as `ostrom_app`,
@@ -169,7 +182,8 @@ jobs:
     env:
       IMAGE: ${{ needs.server.outputs.image }}
       REVISION: ${{ needs.server.outputs.revision }}
-      SESSION_IMAGE: ${{ needs.server.outputs.runner }}
+      RUNNER_IMAGE: ${{ needs.server.outputs.runner }}
+      SESSION_IMAGE: ${{ needs.server.outputs.session }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -182,9 +196,10 @@ jobs:
           path: .ostrom/server
           sparse-checkout: ci
           persist-credentials: false
-      - name: Images (the server's commit, the cloud sessions' image)
+      - name: Images (the server's commit, the machines' runner)
         run: |
           docker pull --quiet "$IMAGE"
+          docker pull --quiet "$RUNNER_IMAGE"
           docker pull --quiet "$SESSION_IMAGE"
           label=$(docker inspect -f '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$IMAGE")
           [ "$label" = "$REVISION" ] || { echo "::error::$IMAGE is labelled ostrom-server@$label"; exit 1; }
@@ -240,7 +255,7 @@ jobs:
           OSTROM_RUNNERS_ALLOWED_ORGS=*
           ENV
           sed -i 's/^ *//' "$RUNNER_TEMP/server.env"
-          echo "OSTROM_RUNNERS_IMAGE=$SESSION_IMAGE" >> "$RUNNER_TEMP/server.env"
+          echo "OSTROM_RUNNERS_IMAGE=$RUNNER_IMAGE" >> "$RUNNER_TEMP/server.env"
           # The journeys' GitHub App gets a key made for this run, written straight to the env file, never to
           # $GITHUB_ENV. One line, its newlines as `\n`, as the server reads it.
           openssl genrsa -traditional -out "$RUNNER_TEMP/github-app.pem" 2048
@@ -248,7 +263,7 @@ jobs:
             >> "$RUNNER_TEMP/server.env"
           rm "$RUNNER_TEMP/github-app.pem"
           # Cloud sessions on registered runners (e2e-real/machines.ts): the journeys register them and start
-          # `ostrom-runner machine` containers on this runner's Docker, which reach the Engine API through a socket
+          # `ostrom cloud machine` containers on this runner's Docker, which reach the Engine API through a socket
           # proxy limited to containers, volumes and images, on loopback.
           docker run -d --name docker-api -p 127.0.0.1:2375:2375 -v /var/run/docker.sock:/var/run/docker.sock:ro \
             -e CONTAINERS=1 -e VOLUMES=1 -e IMAGES=1 -e POST=1 -e ALLOW_START=1 -e ALLOW_STOP=1 \
@@ -279,6 +294,7 @@ jobs:
           # payment.spec.ts pays with the test card 4242 only against Stripe's test mode; on stripe-mock it is skipped.
           OSTROM_E2E_STRIPE: mock
           OSTROM_E2E_MACHINE_IMAGE: ${{ needs.server.outputs.runner }}
+          OSTROM_E2E_SESSION_IMAGE: ${{ needs.server.outputs.session }}
           OSTROM_E2E_MACHINE_SERVER_URL: http://127.0.0.1:4600
           OSTROM_E2E_MACHINE_DOCKER_API: http://127.0.0.1:2375
         run: pnpm exec playwright test --config playwright.real.config.ts --shard "$SHARD/4"
