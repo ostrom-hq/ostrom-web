@@ -14,6 +14,7 @@ const artifacts: Artifact[] = [
     url: 'https://app.ostrom.run/a/art-7',
     createdAt: '2026-10-27T09:00:00.000Z',
     updatedAt: '2026-10-29T18:40:00.000Z',
+    origin: { launchId: 'launch-4d2e8a6b90c1' },
   },
   {
     id: 'art-5',
@@ -25,6 +26,7 @@ const artifacts: Artifact[] = [
     url: 'https://app.ostrom.run/a/art-5',
     createdAt: '2026-10-21T10:00:00.000Z',
     updatedAt: '2026-10-21T10:00:00.000Z',
+    origin: { launchId: 'launch-71c0e5a9d2b3', cloudSessionId: 'session-b83f1a05e7c9' },
   },
   {
     id: 'art-2',
@@ -44,6 +46,11 @@ const versions: Record<string, ArtifactVersion[]> = {
     {
       number: 3,
       files: ['index.html', 'chart.svg', 'data.json'],
+      fileDetails: [
+        { path: 'chart.svg', size: 18_432, contentType: 'image/svg+xml' },
+        { path: 'data.json', size: 1_258_291, contentType: 'application/json' },
+        { path: 'index.html', size: 812, contentType: 'text/html; charset=utf-8' },
+      ],
       entry: 'index.html',
       createdAt: '2026-10-29T18:40:00.000Z',
       createdBy: 'maya',

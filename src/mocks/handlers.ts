@@ -606,6 +606,35 @@ function canManage(db: MockDb): boolean {
   return role === 'owner' || role === 'admin';
 }
 
+/**
+ * The gallery's filters as the server applies them: the tab (`scope`: everything, theirs, shared with them), the origin
+ * kind (none is `api`, a launch with a cloud session `cloud_session`, a launch alone `local_run`), the access, and the
+ * cloud session or launch that published it.
+ */
+function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams): boolean {
+  const scope = query.get('scope');
+  if (scope === 'mine' && artifact.owner !== me.dev.login) return false;
+  if (
+    scope === 'shared' &&
+    (artifact.owner === me.dev.login || !(db.artifactMembers[artifact.id] ?? []).includes(MEMBER_IDS.maya))
+  )
+    return false;
+  const origin = query.get('origin');
+  const kind =
+    artifact.origin === undefined
+      ? 'api'
+      : artifact.origin.cloudSessionId === undefined
+        ? 'local_run'
+        : 'cloud_session';
+  if (origin !== null && origin !== kind) return false;
+  const access = query.get('access');
+  if (access !== null && access !== artifact.access) return false;
+  const session = query.get('cloudSession');
+  if (session !== null && artifact.origin?.cloudSessionId !== session) return false;
+  const launch = query.get('launch');
+  return launch === null || artifact.origin?.launchId === launch;
+}
+
 /** An automation changes by its owner, or by an owner or an admin of the organization. */
 function mayChange(db: MockDb, automation: Automation): boolean {
   return automation.owner === me.dev.login || canManage(db);
@@ -1611,9 +1640,24 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       });
     }),
     // The demo's artifacts are Acme's: another organization never sees them (CONVENTIONS § 16).
-    handleListArtifacts(({ request }) =>
-      HttpResponse.json({ items: organizationOf(db, request).id === db.organization.id ? db.artifacts : [] }),
-    ),
+    handleListArtifacts(({ request }) => {
+      if (organizationOf(db, request).id !== db.organization.id) return HttpResponse.json({ items: [] });
+      const query = new URL(request.url).searchParams;
+      const size = Number(query.get('limit') ?? 20);
+      const matches = db.artifacts.filter((item) => artifactMatches(db, item, query));
+      // Newest first as the server lists, after the one `before` names.
+      const after = query.get('before');
+      const at = after === null ? -1 : matches.findIndex((item) => item.id === after);
+      // A cursor that names none of them is no page, as the server's 400 is.
+      if (after !== null && at < 0) return refusal(400, 'invalid_request', 'before names no artifact');
+      const from = at + 1;
+      const items = matches.slice(from, from + size);
+      const last = items.at(-1);
+      return HttpResponse.json({
+        items,
+        ...(last !== undefined && from + size < matches.length ? { next: last.id } : {}),
+      });
+    }),
     handleGetArtifact(({ params, request }) => {
       const artifact = db.artifacts.find((item) => item.id === params.id);
       if (artifact === undefined || organizationOf(db, request).id !== db.organization.id)

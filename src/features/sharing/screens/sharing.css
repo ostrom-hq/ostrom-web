@@ -60,3 +60,24 @@
   border-radius: 8px;
   background: Canvas;
 }
+
+/* The files of a version: path, size, type; it scrolls inside its own box on a phone. */
+.sh-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.sh-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.sh-table th,
+.sh-table td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.sh-table .sh-num {
+  text-align: end;
+  white-space: nowrap;
+}

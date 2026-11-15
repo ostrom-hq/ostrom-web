@@ -937,6 +937,28 @@ export type ArtifactVersionPage = {
 };
 
 /**
+ * A file of a published version
+ */
+export type ArtifactVersionFile = {
+    /**
+     * Its path in the version
+     */
+    path: string;
+    /**
+     * Its size in bytes
+     */
+    size: number;
+    /**
+     * The type it is served with
+     */
+    contentType: string;
+    /**
+     * The SHA-256 of its bytes, in hex
+     */
+    sha256?: string;
+};
+
+/**
  * A version of an artifact
  */
 export type ArtifactVersion = {
@@ -964,6 +986,10 @@ export type ArtifactVersion = {
      * Where it was committed, when an agent committed it: taken from the agent token, never from the call. Absent for a person's publication
      */
     origin?: ArtifactOrigin;
+    /**
+     * The same files with their size and type (TeamCode's files panel), in the same order
+     */
+    fileDetails?: Array<ArtifactVersionFile>;
 };
 
 /**
@@ -1881,7 +1907,7 @@ export type ApiPriceTable = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -5020,6 +5046,24 @@ export type RunnerEnvironment = {
 export type RunnerExecution = {
     sessionId: string;
     epoch: number;
+};
+
+/**
+ * The execution's inference credential, for the runner's memory only
+ */
+export type RunnerInferenceCredential = {
+    /**
+     * The credential, sent as the bearer of the agent's model calls by the runner's proxy
+     */
+    token: string;
+    /**
+     * When the server stops accepting it
+     */
+    expiresAt: string;
+    /**
+     * Its lifetime from now, which the runner measures on its own clock (renewed after a third)
+     */
+    expiresInMillis: number;
 };
 
 /**
@@ -25695,6 +25739,53 @@ export type OpenRunnerLaunchResponses = {
 
 export type OpenRunnerLaunchResponse = OpenRunnerLaunchResponses[keyof OpenRunnerLaunchResponses];
 
+export type IssueRunnerInferenceData = {
+    body: RunnerExecution;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/cloud/runner/inference';
+};
+
+export type IssueRunnerInferenceErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type IssueRunnerInferenceError = IssueRunnerInferenceErrors[keyof IssueRunnerInferenceErrors];
+
+export type IssueRunnerInferenceResponses = {
+    /**
+     * OK
+     */
+    200: RunnerInferenceCredential;
+};
+
+export type IssueRunnerInferenceResponse = IssueRunnerInferenceResponses[keyof IssueRunnerInferenceResponses];
+
 export type ReportRunnerCheckData = {
     body: {
         /**
@@ -27223,6 +27314,26 @@ export type ListArtifactsData = {
          */
         before?: string;
         limit?: number;
+        /**
+         * As TeamCode's gallery tabs: `team` (everything the caller can read, the default), `mine` (the ones they own) or `shared` (the ones shared with them)
+         */
+        scope?: 'team' | 'mine' | 'shared' | (string & {});
+        /**
+         * Where the artifact was created: `local_run` (an agent on a machine), `cloud_session` (an agent of a cloud session) or `api` (a person or a program without an agent token)
+         */
+        origin?: 'local_run' | 'cloud_session' | 'api' | (string & {});
+        /**
+         * Only the artifacts with this access. The filters combine (all of them must match): a `cloudSession` or `launch` no artifact of the scope matches gives an empty page, not an error
+         */
+        access?: ArtifactAccess;
+        /**
+         * Only what the launches of this cloud session published (an id)
+         */
+        cloudSession?: string;
+        /**
+         * Only what this launch published, a run of `ostrom <agent>` or a cloud session's (an id)
+         */
+        launch?: string;
     };
     url: '/api/v1/artifacts';
 };

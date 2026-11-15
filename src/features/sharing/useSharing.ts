@@ -5,8 +5,8 @@ import {
   handOverSharedAccountMutation,
   listArtifactMembersOptions,
   listArtifactMembersQueryKey,
-  listArtifactsOptions,
-  listArtifactsQueryKey,
+  listArtifactsInfiniteOptions,
+  listArtifactsInfiniteQueryKey,
   listArtifactVersionsOptions,
   listSecretsOptions,
   listSharedAccountsOptions,
@@ -25,25 +25,51 @@ import type {
   SharedAccount,
   UpdateSharedAccountData,
 } from '@gen/api/types.gen';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { useViewer } from '@/shared/auth/useViewer';
 import { ready } from '@/shared/api/ready';
 import type { OrgMembers } from '@/shared/org/members';
+import { queryOf } from './gallery';
+import type { GalleryFilters } from './route';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
 
 export interface ArtifactsViewModel {
+  /** Newest first, every page read so far; undefined while the first loads. */
   readonly artifacts: readonly Artifact[] | undefined;
   readonly failure: Error | undefined;
   /** Only an artifact's owner shares or deletes it. */
   readonly login: string | undefined;
+  /** Why an older page could not be read; what was read stays. */
+  readonly moreFailure: Error | undefined;
+  /** An older page exists (`next`). */
+  readonly more: boolean;
+  readonly loadingMore: boolean;
+  readonly loadMore: () => void;
 }
 
-export function useArtifacts(): ArtifactsViewModel {
-  const artifacts = useQuery(ready(listArtifactsOptions()));
+/** The gallery, 20 at a time (`next` read back as `before`), narrowed by its tab and filters on the server. */
+export function useArtifacts(filters: GalleryFilters): ArtifactsViewModel {
+  const artifacts = useInfiniteQuery({
+    ...ready(listArtifactsInfiniteOptions({ query: queryOf(filters) })),
+    initialPageParam: {},
+    getNextPageParam: (last) => last.next,
+  });
   const viewer = useViewer();
-  return { artifacts: artifacts.data?.items, failure: failureOf(artifacts.error), login: viewer.login };
+  const { fetchNextPage } = artifacts;
+  return {
+    artifacts: artifacts.data?.pages.flatMap((page) => page.items),
+    // A failed older page leaves the ones read on screen.
+    failure: artifacts.data === undefined ? failureOf(artifacts.error) : undefined,
+    moreFailure: artifacts.data === undefined ? undefined : failureOf(artifacts.error),
+    login: viewer.login,
+    more: artifacts.hasNextPage,
+    loadingMore: artifacts.isFetchingNextPage,
+    loadMore: () => {
+      void fetchNextPage();
+    },
+  };
 }
 
 export interface ArtifactDetailViewModel {
@@ -107,7 +133,7 @@ export function useArtifactChange(): ArtifactChangeViewModel {
     async (id: string) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: listArtifactMembersQueryKey({ path: { id } }) }),
-        queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: listArtifactsInfiniteQueryKey() }),
       ]);
     },
     [queryClient],
@@ -127,7 +153,7 @@ export function useArtifactChange(): ArtifactChangeViewModel {
   const dropped = useMutation({
     ...deleteArtifactMutation(),
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: listArtifactsInfiniteQueryKey() });
     },
   });
   const { mutateAsync: shareAsync, reset: resetShare } = shared;

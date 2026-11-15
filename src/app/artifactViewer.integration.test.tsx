@@ -39,7 +39,41 @@ describe('an artifact’s reading page', () => {
     const files = panel('Files');
     expect(files).toHaveTextContent('index.htmlpage');
     expect(files).toHaveTextContent('data.json');
+    // TeamCode's table: path, size, type.
+    const rows = within(files)
+      .getAllByRole('row')
+      .map((row) => row.textContent);
+    expect(rows).toEqual([
+      'PathSizeType',
+      'chart.svg18 KBimage/svg+xml',
+      'data.json1.2 MBapplication/json',
+      'index.htmlpage812 Btext/html; charset=utf-8',
+    ]);
     expect(screen.getByRole('link', { name: 'All artifacts' })).toHaveAttribute('href', '/artifacts');
+  });
+
+  it('lists the paths of a server that does not tell the sizes', async () => {
+    server.use(
+      http.get('*/api/v1/artifacts/:id/versions', () =>
+        HttpResponse.json({
+          items: [
+            {
+              number: 3,
+              files: ['index.html', 'data.json'],
+              entry: 'index.html',
+              createdAt: '2026-10-29T18:40:00.000Z',
+              createdBy: 'maya',
+            },
+          ],
+        }),
+      ),
+    );
+    visit('/artifacts/art-7');
+    await vi.waitFor(() => {
+      expect(panel('Files')).toHaveTextContent('index.htmlpage');
+    });
+    expect(panel('Files')).toHaveTextContent('data.json');
+    expect(within(panel('Files')).queryByRole('table')).toBeNull();
   });
 
   it('pins a version with ?v=, links to the latest, and ignores a version that is no number', async () => {
