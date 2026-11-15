@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { act, renderHook } from '@testing-library/react';
-import { PHONE_QUERY, usePhone } from '@/app/usePhone';
+import { useMediaQuery } from '@/shared/ui/useMediaQuery';
 
-/** A matchMedia whose answer for PHONE_QUERY the test sets, telling its listeners. */
+const QUERY = '(max-width: 640px)';
+
+/** A matchMedia whose answer for QUERY the test sets, telling its listeners. */
 function fakeMedia(phone: boolean): { set: (next: boolean) => void; listeners: Set<() => void> } {
   let matches = phone;
   const listeners = new Set<() => void>();
@@ -10,7 +12,7 @@ function fakeMedia(phone: boolean): { set: (next: boolean) => void; listeners: S
     (query: string) =>
       ({
         get matches() {
-          return query === PHONE_QUERY && matches;
+          return query === QUERY && matches;
         },
         media: query,
         addEventListener: (_type: string, listener: () => void) => {
@@ -30,10 +32,10 @@ function fakeMedia(phone: boolean): { set: (next: boolean) => void; listeners: S
   };
 }
 
-describe('usePhone', () => {
-  it('says a phone, follows the screen as it widens and narrows, and stops listening once unmounted', () => {
+describe('useMediaQuery', () => {
+  it('says the query matches, follows the screen as it changes, and stops listening once unmounted', () => {
     const media = fakeMedia(true);
-    const { result, unmount } = renderHook(() => usePhone());
+    const { result, unmount } = renderHook(() => useMediaQuery(QUERY));
     expect(result.current).toBe(true);
     act(() => {
       media.set(false);
@@ -47,9 +49,9 @@ describe('usePhone', () => {
     expect(media.listeners.size).toBe(0);
   });
 
-  it('says a wide screen is not a phone', () => {
+  it('says when the query does not match', () => {
     fakeMedia(false);
-    const { result } = renderHook(() => usePhone());
+    const { result } = renderHook(() => useMediaQuery(QUERY));
     expect(result.current).toBe(false);
   });
 });

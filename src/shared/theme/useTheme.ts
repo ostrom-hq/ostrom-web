@@ -1,24 +1,13 @@
-import { useCallback, useLayoutEffect, useSyncExternalStore } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import {
   nextThemePreference,
   type ResolvedTheme,
   type ThemePreference,
   useThemeStore,
 } from '@/shared/theme/themeStore';
+import { useMediaQuery } from '@/shared/ui/useMediaQuery';
 
 const DARK_QUERY = '(prefers-color-scheme: dark)';
-
-function subscribeToSystemTheme(onChange: () => void): () => void {
-  const media = window.matchMedia(DARK_QUERY);
-  media.addEventListener('change', onChange);
-  return () => {
-    media.removeEventListener('change', onChange);
-  };
-}
-
-function systemTheme(): ResolvedTheme {
-  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
-}
 
 export function resolveTheme(preference: ThemePreference, system: ResolvedTheme): ResolvedTheme {
   return preference === 'system' ? system : preference;
@@ -36,7 +25,7 @@ export interface ThemeViewModel {
 export function useTheme(): ThemeViewModel {
   const preference = useThemeStore((state) => state.preference);
   const setPreference = useThemeStore((state) => state.setPreference);
-  const system = useSyncExternalStore(subscribeToSystemTheme, systemTheme);
+  const system: ResolvedTheme = useMediaQuery(DARK_QUERY) ? 'dark' : 'light';
   const next = nextThemePreference(preference);
   const cycle = useCallback(() => {
     setPreference(next);
