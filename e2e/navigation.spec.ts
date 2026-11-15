@@ -24,8 +24,9 @@ test('a phone opens every screen from the menu, its focus held until it closes',
   await button.click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
   await expect(menu).toBeFocused();
-  // The same screens as the bar, hidden on a phone but still in the page.
-  await expect(menu.getByRole('link')).toHaveCount(await page.locator('.o-nav a').count());
+  // The same screens as the bar, which a phone does not render (src/app/AppShell.tsx).
+  await expect(page.locator('.o-nav')).toHaveCount(0);
+  const screens = await menu.getByRole('link').count();
   await expect(menu.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');
   // The focus goes round the sheet: past its last link, nothing of the console behind it takes it.
   for (let step = 0; step < 30; step += 1) await page.keyboard.press('Tab');
@@ -43,4 +44,9 @@ test('a phone opens every screen from the menu, its focus held until it closes',
   await expect(menu).toBeHidden();
   await expect(page).toHaveURL(/\/sessions$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Sessions');
+
+  // Turned wide, the screen shows the bar, with the menu's screens, and no menu.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByRole('navigation', { name: 'Main' }).getByRole('link')).toHaveCount(screens);
+  await expect(button).toBeHidden();
 });

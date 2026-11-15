@@ -16,6 +16,26 @@ describe('App', () => {
   });
 });
 
+describe('on a phone', () => {
+  it('renders no bar, only the menu that shows the screens', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === '(max-width: 640px)',
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
+    render(<App router={router} />);
+
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Menu/ })).toBeInTheDocument();
+  });
+});
+
 describe('mock mode', () => {
   it('says the data is a demo', async () => {
     const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));

@@ -7,6 +7,7 @@ import { useOrgStore } from '@/shared/org/orgStore';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
+import { useMediaQuery } from '@/shared/ui/useMediaQuery';
 import { NavLabel } from '@/app/NavLabel';
 import { NavMenu } from '@/app/NavMenu';
 import { needOf } from '@/app/navigation';
@@ -53,6 +54,10 @@ export function AppShell(): ReactElement {
   const afterPaint = useAfterFirstPaint();
   const server = useServerStatus();
   const links = useNavLinks();
+  // A phone's screen, where shell.css shows the menu instead of the bar: the bar is then not rendered at all, rather
+  // than rendered and hidden, as its links cost a slow phone's CPU before the first paint (e2e-real/vitals.spec.ts).
+  // It comes back when the screen widens.
+  const phone = useMediaQuery('(max-width: 640px)');
   const need = needOf(pathname);
   const screen = <Outlet key={organizationGeneration} />;
   // A server the console cannot speak to: nothing of the console is offered but the explanation and the sign-out.
@@ -68,13 +73,15 @@ export function AppShell(): ReactElement {
           <span>{t('app.name')}</span>
         </Link>
         <NavMenu />
-        <nav className="o-nav" aria-label={t('app.nav.label')}>
-          {links.map((link) => (
-            <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
-              <NavLabel label={link.label} />
-            </Link>
-          ))}
-        </nav>
+        {phone ? null : (
+          <nav className="o-nav" aria-label={t('app.nav.label')}>
+            {links.map((link) => (
+              <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
+                <NavLabel label={link.label} />
+              </Link>
+            ))}
+          </nav>
+        )}
         <div className="o-topbar__end">
           <OrgControls anonymousPage={anonymousPage} />
           <ThemeToggle />

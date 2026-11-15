@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // The console's web vitals on a slow phone, against the real server: the largest contentful paint (LCP) of five
 // screens loaded cold, and the delay before the next paint after a real interaction on each (INP), on DevTools' Fast 3G
-// with the CPU of a mid-tier phone. Within Google's "good": LCP under 2.5 s, INP under 200 ms. Chromium only: the
-// network and the CPU are slowed through the DevTools protocol.
+// with the CPU of a mid-tier phone. Within Google's "good": LCP under 2.5 s, INP under 200 ms; on the phone, LCP under
+// 2.8 s, the floor of the console's stack and its margin (MOBILE_LCP_BUDGET_MS). Chromium only: the network and the CPU
+// are slowed through the DevTools protocol.
 import { appendFileSync } from 'node:fs';
 import { type CDPSession, expect, type Locator, type Page, test } from '@playwright/test';
 import { z } from 'zod';
@@ -74,6 +75,18 @@ function cpuSlowdownFor(index: number): number {
 const LOADS = 3;
 /** Google's "good" thresholds (web.dev/articles/vitals). */
 const LCP_BUDGET_MS = 2_500;
+/**
+ * The phone's LCP budget, a guard against regressions above the floor of the console's stack, measured on 15/11/2026
+ * (decided by the coordinator, ostrom-web PR "perf(vitals)"): about 2 450 ms ± 70 ms on every screen, for 10+ runs of
+ * main. It breaks down as the HTML (about 620 ms: one 562 ms round trip), the entry's own round trip (about 560 ms),
+ * about 185 KB the first paint needs at Fast 3G's 180 KB/s (about 1 000 ms, the link full from the first byte to the
+ * end of the entry), then the CPU (170 to 280 ms: the entry run, zod's schemas built, React's render, the layout).
+ * Nothing in the bytes is cheap to cut: of the entry's 131 KB gzipped, react-dom is 62, the router 18, React Query 10,
+ * all of the console's own code 21. The wording, the whole language and the analytics come off that path already
+ * (/boot.js, src/shared/i18n/i18n.ts, src/app/AppShell.tsx). Under 2 500 ms means another stack (Preact, or each
+ * screen's shell rendered at build), not a fix; 2 800 ms fails a real regression (a 50 KB entry, a new chain).
+ */
+const MOBILE_LCP_BUDGET_MS = 2_800;
 const INP_BUDGET_MS = 200;
 
 /** Where the page keeps what it measured (the script below). */
@@ -356,7 +369,8 @@ test('LCP and INP of five screens on Fast 3G, the CPU of a mid-tier phone', asyn
     );
   }
   await cdp.detach();
-  const table = `### Web vitals on Fast 3G, CPU ×${cpuSlowdown.toFixed(2)} (BenchmarkIndex ${String(index)}, runs ${indexes.join(', ')}), cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(LCP_BUDGET_MS)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n\nFiles of the first load (asked, sent, done in ms; KB over the wire):\n\n${files.join('\n')}\n`;
+  const lcpBudget = isMobile ? MOBILE_LCP_BUDGET_MS : LCP_BUDGET_MS;
+  const table = `### Web vitals on Fast 3G, CPU ×${cpuSlowdown.toFixed(2)} (BenchmarkIndex ${String(index)}, runs ${indexes.join(', ')}), cold, median of ${String(LOADS)} (${test.info().project.name})\n\nBudgets: LCP ≤ ${String(lcpBudget)} ms, INP ≤ ${String(INP_BUDGET_MS)} ms.\n\n${rows.join('\n')}\n\nAPI calls of the first load, from the navigation:\n\n${timelines.join('\n')}\n\nFiles of the first load (asked, sent, done in ms; KB over the wire):\n\n${files.join('\n')}\n`;
   await test.info().attach('vitals.md', { body: table, contentType: 'text/markdown' });
   const summary = process.env['GITHUB_STEP_SUMMARY'];
   if (summary !== undefined) appendFileSync(summary, table);
@@ -367,7 +381,7 @@ test('LCP and INP of five screens on Fast 3G, the CPU of a mid-tier phone', asyn
   expect.soft(violations, 'the CSP violations of the loads').toEqual([]);
   for (const { path, lcp, inp } of results) {
     expect.soft(lcp, `${path}: LCP, median`).toBeGreaterThan(0);
-    expect.soft(lcp, `${path}: LCP, median`).toBeLessThanOrEqual(LCP_BUDGET_MS);
+    expect.soft(lcp, `${path}: LCP, median`).toBeLessThanOrEqual(lcpBudget);
     expect.soft(inp, `${path}: INP, median`).toBeLessThanOrEqual(INP_BUDGET_MS);
   }
 });
