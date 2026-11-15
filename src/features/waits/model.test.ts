@@ -11,8 +11,10 @@ import {
   isMemberId,
   isViewer,
   resolvesByItself,
+  secretProvided,
   shownValue,
   styleOf,
+  takesValue,
   targetOf,
   valueOf,
   valueTypeOf,
@@ -118,7 +120,24 @@ describe('the first state of a field', () => {
 
   it('knows which types it fills', () => {
     expect(valueTypeOf(field({ type: 'date' }))).toBe('date');
-    expect(valueTypeOf(field({ type: 'secret' }))).toBeUndefined();
+    expect(valueTypeOf(field({ type: 'secret' }))).toBe('secret');
+    expect(valueTypeOf(field({ type: 'file' }))).toBe('file');
+    expect(valueTypeOf(field({ type: 'info' }))).toBeUndefined();
+    expect(valueTypeOf(field({ type: 'hologram' }))).toBeUndefined();
+  });
+
+  it('fills a secret or a file only where the server announces waits.secrets.v1', () => {
+    expect(takesValue(field({ type: 'secret' }), true)).toBe(true);
+    expect(takesValue(field({ type: 'file' }), true)).toBe(true);
+    expect(takesValue(field({ type: 'secret' }), false)).toBe(false);
+    expect(takesValue(field({ type: 'file' }), false)).toBe(false);
+    expect(takesValue(field({ type: 'text' }), false)).toBe(true);
+    expect(takesValue(field({ type: 'info' }), true)).toBe(false);
+  });
+
+  it('starts a file from its default name and a secret from nothing', () => {
+    expect(draftOf(field({ type: 'file', default: 'a.png' })).text).toBe('a.png');
+    expect(draftOf(field({ type: 'secret', default: 'hunter2' })).text).toBe('');
   });
 });
 
@@ -194,6 +213,38 @@ describe('the value of a field', () => {
     expect(valueOf(multiple, draft('', ['a', 'b'], 'c'))).toEqual({ kind: 'value', value: ['a', 'b', 'c'] });
   });
 
+  it('secret: as typed, spaces kept; nothing for blanks; refused with a NUL or past 4,096 bytes', () => {
+    expect(valueOf(field({ type: 'secret' }), draft(''))).toEqual({ kind: 'empty' });
+    expect(valueOf(field({ type: 'secret' }), draft('   '))).toEqual({ kind: 'empty' });
+    expect(valueOf(field({ type: 'secret' }), draft(' pa ss '))).toEqual({ kind: 'value', value: ' pa ss ' });
+    expect(valueOf(field({ type: 'secret' }), draft('a\u0000b'))).toEqual({
+      kind: 'invalid',
+      problem: 'secretNul',
+    });
+    expect(valueOf(field({ type: 'secret' }), draft('a'.repeat(4096)))).toEqual({
+      kind: 'value',
+      value: 'a'.repeat(4096),
+    });
+    // Bytes, not characters: 2,049 two-byte letters are 4,098 bytes.
+    expect(valueOf(field({ type: 'secret' }), draft('é'.repeat(2049)))).toEqual({
+      kind: 'invalid',
+      problem: 'secretTooLong',
+    });
+    expect(valueOf(field({ type: 'secret' }), draft('é'.repeat(2048)))).toMatchObject({ kind: 'value' });
+  });
+
+  it('file: a trimmed name of 255 characters at most, without / or \\ or a control character', () => {
+    expect(valueOf(field({ type: 'file' }), draft('  '))).toEqual({ kind: 'empty' });
+    expect(valueOf(field({ type: 'file' }), draft(' shot.png '))).toEqual({
+      kind: 'value',
+      value: 'shot.png',
+    });
+    expect(valueOf(field({ type: 'file' }), draft('a'.repeat(255)))).toMatchObject({ kind: 'value' });
+    for (const bad of ['a'.repeat(256), 'a/b.png', 'a\\b.png', 'a\u0007b', 'a\u007fb', 'a\u0085b']) {
+      expect(valueOf(field({ type: 'file' }), draft(bad))).toEqual({ kind: 'invalid', problem: 'fileName' });
+    }
+  });
+
   it('info and unknown types: nothing', () => {
     expect(valueOf(field({ type: 'info' }), draft('x'))).toEqual({ kind: 'empty' });
   });
@@ -209,17 +260,42 @@ describe('answerFor', () => {
   const ok = { text: 'x', picked: [], other: '' };
 
   it('collects the filled values, leaves the empty ones out', () => {
-    expect(answerFor(fields, { must: ok }, { id: 'go', label: 'Go' })).toEqual({
+    expect(answerFor(fields, { must: ok }, { id: 'go', label: 'Go' }, true)).toEqual({
       answer: { action: 'go', values: { must: 'x' } },
     });
   });
 
+  it('carries a secret and a file name, and leaves both out when the server does not take them', () => {
+    const asked: WaitField[] = [
+      field({ id: 'key', type: 'secret', required: true }),
+      field({ id: 'shot', type: 'file' }),
+    ];
+    const drafts = { key: { ...ok, text: 'hunter2' }, shot: { ...ok, text: 'a.png' } };
+    expect(answerFor(asked, drafts, { id: 'go', label: 'Go' }, true)).toEqual({
+      answer: { action: 'go', values: { key: 'hunter2', shot: 'a.png' } },
+    });
+    expect(answerFor(asked, {}, { id: 'go', label: 'Go' }, true)).toEqual({ problems: { key: 'required' } });
+    expect(answerFor(asked, drafts, { id: 'go', label: 'Go' }, false)).toEqual({
+      answer: { action: 'go', values: {} },
+    });
+  });
+
+  it('reads the server’s mark of a secret: only “provided” is provided', () => {
+    expect(secretProvided('provided')).toBe(true);
+    expect(secretProvided('not provided')).toBe(false);
+    expect(secretProvided('hunter2')).toBe(false);
+  });
+
   it('refuses a missing required field, a missing field the action requires, and a bad value', () => {
-    expect(answerFor(fields, {}, { id: 'go', label: 'Go' })).toEqual({ problems: { must: 'required' } });
-    expect(answerFor(fields, { must: ok }, { id: 'go', label: 'Go', requires: ['why'] })).toEqual({
+    expect(answerFor(fields, {}, { id: 'go', label: 'Go' }, true)).toEqual({
+      problems: { must: 'required' },
+    });
+    expect(answerFor(fields, { must: ok }, { id: 'go', label: 'Go', requires: ['why'] }, true)).toEqual({
       problems: { why: 'required' },
     });
-    expect(answerFor(fields, { must: ok, n: { ...ok, text: 'nope' } }, { id: 'go', label: 'Go' })).toEqual({
+    expect(
+      answerFor(fields, { must: ok, n: { ...ok, text: 'nope' } }, { id: 'go', label: 'Go' }, true),
+    ).toEqual({
       problems: { n: 'notNumber' },
     });
   });

@@ -41,6 +41,7 @@ export const FEATURES = [
   'skills.v1',
   'slack.v1',
   'todos.v1',
+  'waits.secrets.v1',
   'waits.v1',
   'webhooks.v1',
   'workflows.deliver.v1',

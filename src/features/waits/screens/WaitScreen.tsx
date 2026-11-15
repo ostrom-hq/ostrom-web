@@ -16,6 +16,7 @@ import {
   answeredThroughSession,
   resolvesByItself,
   isViewer,
+  secretProvided,
   shownValue,
   targetOf,
 } from '../model';
@@ -197,12 +198,20 @@ function Outcome({ wait, people }: { readonly wait: Wait; readonly people: Peopl
       </p>
       {values.length === 0 ? null : (
         <dl className="wt-answer">
-          {values.map(([id, value]) => (
-            <div key={id}>
-              <dt className="o-field-label">{fields.find((field) => field.id === id)?.label ?? id}</dt>
-              <dd>{shownValue(value)}</dd>
-            </div>
-          ))}
+          {values.map(([id, value]) => {
+            const field = fields.find((item) => item.id === id);
+            return (
+              <div key={id}>
+                <dt className="o-field-label">{field?.label ?? id}</dt>
+                {/* A secret is never shown: the answer holds `provided` or `not provided`, and so does the line. */}
+                <dd>
+                  {field?.type === 'secret'
+                    ? t(secretProvided(value) ? 'waits.field.provided' : 'waits.field.notProvided')
+                    : shownValue(value)}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
       )}
     </Section>

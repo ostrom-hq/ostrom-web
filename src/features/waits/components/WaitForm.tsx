@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Wait, WaitField } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
+import { useAnnounced } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -14,6 +15,7 @@ import {
   OTHER_LIMIT,
   type Problems,
   styleOf,
+  takesValue,
   TEXT_LIMIT,
   valueTypeOf,
   without,
@@ -29,6 +31,8 @@ export interface WaitFormProps {
 export function WaitForm({ wait, sending, onAnswer }: WaitFormProps): ReactElement {
   const { t } = useTranslation();
   const { fields = [] } = wait.question;
+  // `secret` and `file` fields are filled only where the server says it takes them.
+  const secrets = useAnnounced('waits.secrets.v1');
   const [drafts, setDrafts] = useState<Drafts>(() => draftsOf(fields));
   const [problems, setProblems] = useState<Problems>({});
   const prefix = useId();
@@ -49,6 +53,7 @@ export function WaitForm({ wait, sending, onAnswer }: WaitFormProps): ReactEleme
         <FieldInput
           key={field.id}
           field={field}
+          secrets={secrets}
           draft={drafts[field.id]}
           problem={problems[field.id]}
           id={`${prefix}-${field.id}`}
@@ -64,7 +69,7 @@ export function WaitForm({ wait, sending, onAnswer }: WaitFormProps): ReactEleme
             variant={styleOf(action)}
             disabled={sending}
             onClick={() => {
-              const checked = answerFor(fields, drafts, action);
+              const checked = answerFor(fields, drafts, action, secrets);
               if ('problems' in checked) setProblems(checked.problems);
               else {
                 setProblems({});
@@ -82,6 +87,7 @@ export function WaitForm({ wait, sending, onAnswer }: WaitFormProps): ReactEleme
 
 interface FieldInputProps {
   readonly field: WaitField;
+  readonly secrets: boolean;
   readonly draft: Draft | undefined;
   readonly problem: FieldProblem | undefined;
   readonly id: string;
@@ -90,9 +96,9 @@ interface FieldInputProps {
 
 const BLANK: Draft = { text: '', picked: [], other: '' };
 
-function FieldInput({ field, draft = BLANK, problem, id, onChange }: FieldInputProps): ReactElement {
+function FieldInput({ field, secrets, draft = BLANK, problem, id, onChange }: FieldInputProps): ReactElement {
   const { t } = useTranslation();
-  const type = valueTypeOf(field);
+  const type = takesValue(field, secrets) ? valueTypeOf(field) : undefined;
   const helpId = `${id}-help`;
   const problemId = `${id}-problem`;
   const label = (
@@ -126,7 +132,8 @@ function FieldInput({ field, draft = BLANK, problem, id, onChange }: FieldInputP
     );
 
   if (type === undefined) {
-    // `info` shows its help and takes nothing; a type this screen cannot fill (file, secret) says where it is filled.
+    // `info` shows its help and takes nothing; a type this screen cannot fill (a file or a secret asked of a server that
+    // does not announce `waits.secrets.v1`) says where it is filled.
     return (
       <div className="wt-field">
         <p className="o-field-label">{field.label}</p>
@@ -213,6 +220,38 @@ function FieldInput({ field, draft = BLANK, problem, id, onChange }: FieldInputP
       </fieldset>
     );
   }
+  if (type === 'secret') {
+    return (
+      <div className="wt-field">
+        <label htmlFor={id} className="o-field-label">
+          {label}
+        </label>
+        {help}
+        <p className="wt-help">
+          {field.oneTime === true ? t('waits.field.secretOnce') : t('waits.field.secretKept')}
+        </p>
+        {/* Typed masked and kept in this component's state alone: no name (no form to remember), no autofill, no
+            spelling help, no copy of it anywhere else. It leaves in the answer's body and is never shown again. */}
+        <input
+          id={id}
+          className="o-input"
+          type="password"
+          autoComplete="off"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          data-1p-ignore
+          data-lpignore="true"
+          value={draft.text}
+          {...aria}
+          onChange={(event) => {
+            onChange({ ...draft, text: event.target.value });
+          }}
+        />
+        {warning}
+      </div>
+    );
+  }
   const inputProps = {
     id,
     className: 'o-input',
@@ -225,6 +264,7 @@ function FieldInput({ field, draft = BLANK, problem, id, onChange }: FieldInputP
         {label}
       </label>
       {help}
+      {type === 'file' ? <p className="wt-help">{t('waits.field.fileHint')}</p> : null}
       {type === 'text' && (field.maxLength === undefined || field.maxLength > 200) ? (
         <textarea
           {...inputProps}

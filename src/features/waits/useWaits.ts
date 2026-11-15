@@ -165,7 +165,13 @@ function useAfterWrite(id: string): {
 /** Answering and cancelling one wait: one refusal at a time, the latest write's. */
 export function useWaitWrites(id: string): WritesViewModel {
   const { settle, refresh } = useAfterWrite(id);
-  const answering = useMutation({ ...answerWaitMutation(), onSuccess: settle, onError: refresh });
+  // The answer may carry a secret: the mutation's variables go as soon as it is answered, and with the screen.
+  const answering = useMutation({
+    ...answerWaitMutation(),
+    gcTime: 0,
+    onSuccess: settle,
+    onError: refresh,
+  });
   const cancelling = useMutation({ ...cancelWaitMutation(), onSuccess: settle, onError: refresh });
   const { mutate: sendAnswer, reset: resetAnswer } = answering;
   const { mutate: sendCancel, reset: resetCancel } = cancelling;
@@ -176,9 +182,12 @@ export function useWaitWrites(id: string): WritesViewModel {
     answer: useCallback(
       (answer: Answer) => {
         resetCancel();
-        sendAnswer({ path: { id }, body: { action: answer.action, values: answer.values } });
+        sendAnswer(
+          { path: { id }, body: { action: answer.action, values: answer.values } },
+          { onSuccess: resetAnswer },
+        );
       },
-      [id, sendAnswer, resetCancel],
+      [id, sendAnswer, resetAnswer, resetCancel],
     ),
     cancel: useCallback(() => {
       resetAnswer();
