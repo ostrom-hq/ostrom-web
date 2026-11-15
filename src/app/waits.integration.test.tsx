@@ -350,7 +350,7 @@ describe('a wait', () => {
     expect(within(form).getByText('The name of a file already uploaded in the session.')).toBeInTheDocument();
     const token = within(form).getByLabelText('Deploy token');
     expect(token).toHaveAttribute('type', 'password');
-    expect(token).toHaveAttribute('autocomplete', 'off');
+    expect(token).toHaveAttribute('autocomplete', 'new-password');
     expect(token).not.toHaveAttribute('name');
     expect(token).toHaveValue('');
     expect(
