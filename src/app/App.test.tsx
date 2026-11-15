@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
+import { PHONE_QUERY } from '@/app/usePhone';
 
 describe('App', () => {
   it('renders the shell and the home screen', async () => {
@@ -13,6 +14,26 @@ describe('App', () => {
       'Every agent change, approved by the right person.',
     );
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
+  });
+});
+
+describe('on a phone', () => {
+  it('renders no bar, only the menu that shows the screens', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation(
+      (query: string) =>
+        ({
+          matches: query === PHONE_QUERY,
+          media: query,
+          addEventListener: () => undefined,
+          removeEventListener: () => undefined,
+        }) as unknown as MediaQueryList,
+    );
+    const router = createAppRouter(createMemoryHistory({ initialEntries: ['/'] }));
+    render(<App router={router} />);
+
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Menu/ })).toBeInTheDocument();
   });
 });
 
