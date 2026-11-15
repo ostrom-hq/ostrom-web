@@ -24,6 +24,7 @@ import {
   getMe,
   getReceipt,
   getReceiptBundle,
+  getLaunchLimits,
   getSession,
   getSpending,
   getWorkflow,
@@ -41,6 +42,7 @@ import {
   listRunners,
   listSecrets,
   listSessions,
+  setLaunchLimits,
   listWorkflows,
   saveWorkflow,
   rotateAutomationSecret,
@@ -69,6 +71,7 @@ import {
   selfApprovalRefusal,
 } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
+import { setDemoRole } from '@/mocks/orgs';
 
 const { server, db } = createMockServer();
 const NOW = new Date('2026-10-30T08:00:00.000Z');
@@ -448,6 +451,50 @@ describe('mock sessions', () => {
     expect(open.data).not.toHaveProperty('receipt');
     const error = await failureOf(async () => getSession({ path: { id: 'nope' }, throwOnError: true }));
     expect(isApiFailure(error) && error.message).toBe('session not found');
+  });
+});
+
+describe('mock labels and launch limits', () => {
+  it('lists the sessions whose launch carries every label asked for', async () => {
+    const both = await listSessions({ query: { label: ['team=billing', 'env=ci'] }, throwOnError: true });
+    const none = await listSessions({ query: { label: ['team=billing', 'env=prod'] }, throwOnError: true });
+    expect(both.data.items.map((session) => session.id)).toEqual(['ses-7f3a']);
+    expect(none.data.items).toEqual([]);
+  });
+
+  it('reads the limits of a launch, zeros until given, and writes them', async () => {
+    const path = { launchId: 'lch-7f3a' };
+    const read = await getLaunchLimits({ path, throwOnError: true });
+    expect(read.data).toEqual({ budgetMicros: 0, maxConcurrent: 0, paused: false, spentMicros: 0 });
+    const body = { budgetMicros: 2_000_000, maxConcurrent: 3, paused: true };
+    const saved = await setLaunchLimits({ path, body, throwOnError: true });
+    expect(saved.data).toEqual({ ...body, spentMicros: 0 });
+    expect((await getLaunchLimits({ path, throwOnError: true })).data).toEqual({ ...body, spentMicros: 0 });
+  });
+
+  it('says 404 for a launch no session names or a person who does not administer, and 400 for a bad body', async () => {
+    const gone = { launchId: 'lch-none' };
+    const body = { budgetMicros: 0, maxConcurrent: 0, paused: false };
+    const read = await failureOf(async () => getLaunchLimits({ path: gone, throwOnError: true }));
+    const write = await failureOf(async () => setLaunchLimits({ path: gone, body, throwOnError: true }));
+    expect(isApiFailure(read) && read.kind).toBe('not-found');
+    expect(isApiFailure(write) && write.kind).toBe('not-found');
+    // The client checks a body against the contract before it leaves: a raw request reaches the handler.
+    const bad = await fetch('http://ostrom.test/api/v1/launches/lch-7f3a/limits', {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ...body, maxConcurrent: 33 }),
+    });
+    expect(bad.status).toBe(400);
+    setDemoRole(db, 'member');
+    const member = await failureOf(async () =>
+      getLaunchLimits({ path: { launchId: 'lch-7f3a' }, throwOnError: true }),
+    );
+    const memberWrite = await failureOf(async () =>
+      setLaunchLimits({ path: { launchId: 'lch-7f3a' }, body, throwOnError: true }),
+    );
+    expect(isApiFailure(member) && member.kind).toBe('not-found');
+    expect(isApiFailure(memberWrite) && memberWrite.kind).toBe('not-found');
   });
 });
 

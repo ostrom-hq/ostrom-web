@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-import { handleCapabilities } from '@gen/api/msw.gen';
-import { screen, waitFor, within } from '@testing-library/react';
+import { handleCapabilities, handleGetLaunchLimits, handleSetLaunchLimits } from '@gen/api/msw.gen';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HttpResponse } from 'msw';
+import { delay, HttpResponse } from 'msw';
 import { demoCapabilities } from '@/mocks/capabilities';
 import { setDemoRole } from '@/mocks/orgs';
 import { FEATURES } from '@/shared/capabilities/model';
@@ -104,5 +104,46 @@ describe('the limits of a launch (launches.limits.v1)', () => {
     visit('/sessions/ses-7f3a');
     await screen.findByRole('region', { name: 'Who and where' });
     expect(screen.queryByRole('region', { name: 'Limits of this launch' })).toBeNull();
+  });
+
+  it('shows what was spent when the server says, holds the form while it saves, and says why a save failed', async () => {
+    const user = userEvent.setup();
+    server.use(
+      handleGetLaunchLimits(() => HttpResponse.json({ budgetMicros: 0, maxConcurrent: 0, paused: false })),
+      handleSetLaunchLimits(async () => {
+        await delay(150);
+        return HttpResponse.json(
+          { error: { type: 'invalid_launch_limits', message: 'Out of range.' } },
+          { status: 400 },
+        );
+      }),
+    );
+    visit('/sessions/ses-7f3a');
+    const section = await screen.findByRole('region', { name: 'Limits of this launch' });
+    expect(within(section).queryByText(/Spent so far/)).toBeNull();
+    await user.click(within(section).getByRole('button', { name: 'Save the limits' }));
+    expect(await within(section).findByRole('button', { name: 'Saving…' })).toBeDisabled();
+    expect(await within(section).findByText('Out of range.')).toBeInTheDocument();
+    expect(within(section).queryByText('The limits apply from the next model call.')).toBeNull();
+  });
+
+  it('sends nothing for a form that is not valid, even submitted by other means', async () => {
+    const user = userEvent.setup();
+    visit('/sessions/ses-7f3a');
+    const section = await screen.findByRole('region', { name: 'Limits of this launch' });
+    const budget = await within(section).findByRole('textbox', { name: /Budget/ });
+    await user.clear(budget);
+    await user.type(budget, 'lots');
+    const form = section.querySelector('form');
+    if (form === null) throw new Error('no form');
+    fireEvent.submit(form);
+    expect(db.launchLimits['lch-7f3a']).toBeUndefined();
+    await user.clear(budget);
+    await user.type(budget, '1');
+    const concurrent = within(section).getByRole('spinbutton', { name: /Concurrent requests/ });
+    await user.clear(concurrent);
+    await user.type(concurrent, '99');
+    fireEvent.submit(form);
+    expect(db.launchLimits['lch-7f3a']).toBeUndefined();
   });
 });
