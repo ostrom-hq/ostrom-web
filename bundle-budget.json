@@ -1,6 +1,6 @@
 {
   "entryKiB": 188.6,
-  "routeKiB": 210.6,
+  "routeKiB": 213.9,
   "routes": {
     "/": 14.7,
     "/confirm/$confirmationId": 12.7,
@@ -44,9 +44,9 @@
     "/tokens": 11.6,
     "/admin": 11.0,
     "/admin/settings": 11.0,
-    "/cloud": 22.0,
+    "/cloud": 25.5,
     "/cloud/admin": 14.9,
-    "/automations": 22.0,
+    "/automations": 25.5,
     "/artifacts": 19.3,
     "/artifacts/$artifactId": 19.3,
     "/webhooks": 12.2,
