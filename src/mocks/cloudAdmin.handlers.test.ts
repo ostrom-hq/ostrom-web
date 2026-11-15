@@ -87,6 +87,22 @@ describe('the mock cloud administration, as the server keeps it', () => {
     expect(db.cloudRuntime.effectiveServerUrl).toBe('https://ostrom.acme.test');
   });
 
+  it('keeps the stored session image when none is sent, and the default when a blank one is', async () => {
+    db.instanceAdmin = true;
+    const save = async (extra: object) => {
+      const saved = await call(
+        'PUT',
+        '/cloud/runtime',
+        runtime({ updatedAt: db.cloudRuntime.updatedAt, ...extra }),
+      );
+      expect(saved.status).toBe(200);
+      return db.cloudRuntime.sessionImage;
+    };
+    expect(await save({ sessionImage: ' ghcr.io/acme/session:3 ' })).toBe('ghcr.io/acme/session:3');
+    expect(await save({})).toBe('ghcr.io/acme/session:3');
+    expect(await save({ sessionImage: ' ' })).toBe('docker.io/ostromhq/ostrom-session:latest');
+  });
+
   it('creates and updates a cluster, and refuses what the server refuses', async () => {
     db.instanceAdmin = true;
     expect((await call('GET', '/cloud/clusters')).status).toBe(200);

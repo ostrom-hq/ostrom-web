@@ -98,3 +98,73 @@ test('an owner sets a member’s daily budget that warns only, chosen by login a
   expect(own).toEqual([expect.objectContaining({ scope: 'member', usdPerDay: 20, hardStop: false })]);
   expect(own[0]).not.toHaveProperty('usdPerMonth');
 });
+
+test('an owner grants a member a temporary daily budget, replaces it, revokes it, and another organization reads none', async ({
+  page,
+  browser,
+}) => {
+  const org = await ownerOfNewOrganization(page, 'ines');
+  const capabilities = await callFromPage(page, 'GET', '/api/v1/capabilities');
+  test.skip(
+    !(capabilities.body as { features: string[] }).features.includes('capacity.budgetoverrides.v1'),
+    'the server does not serve the temporary budgets yet',
+  );
+  const member = await anotherPerson(browser);
+  await joinAs(page, org.id, member, 'olga', 'member');
+  const login = ((await callFromPage(member, 'GET', '/api/v1/auth/me')).body as { dev: { login: string } })
+    .dev.login;
+
+  await page.goto('/spend');
+  const box = page.getByRole('region', { name: 'Temporary daily budgets' });
+  await box.getByRole('combobox', { name: 'Member' }).selectOption({ label: login });
+  await expect(box.getByText(`No temporary budget for ${login} yet.`)).toBeVisible();
+  const grant = box.getByRole('form', { name: 'Grant the temporary budget' });
+  await grant.getByRole('textbox', { name: 'Total today ($)' }).fill('25');
+  await grant.getByRole('textbox', { name: 'Reason (no secrets)' }).fill('release day');
+  await grant.getByRole('button', { name: 'Grant the temporary budget' }).click();
+  const history = box.getByRole('list', { name: 'Grants and revocations' });
+  await expect(history.getByRole('listitem').filter({ hasText: '$25.00 today' })).toContainText('In force');
+
+  // Replacing names the one in force: the server keeps both, the first one ended.
+  const replace = box.getByRole('form', { name: 'Replace the temporary budget' });
+  await replace.getByRole('textbox', { name: 'Total today ($)' }).fill('40');
+  await replace.getByRole('textbox', { name: 'Reason (no secrets)' }).fill('more');
+  await replace.getByRole('button', { name: 'Replace the temporary budget' }).click();
+  await expect(history.getByRole('listitem').filter({ hasText: '$40.00 today' })).toContainText('In force');
+  const listed = await callFromPage(page, 'GET', `/api/v1/members/${login}/budget-overrides`);
+  expect(listed.status).toBe(200);
+  const read = listed.body as {
+    items: { id: string; micros: number; replacesId?: string }[];
+    activeId?: string;
+  };
+  expect(read.items.map((item) => item.micros)).toEqual([40_000_000, 25_000_000]);
+  expect(read.activeId).toBe(read.items[0]?.id);
+  expect(read.items[0]?.replacesId).toBe(read.items[1]?.id);
+
+  await box
+    .getByRole('form', { name: 'Revoke' })
+    .getByRole('textbox', { name: 'Revocation reason' })
+    .fill('done');
+  await box.getByRole('form', { name: 'Revoke' }).getByRole('button', { name: 'Revoke' }).click();
+  await expect(history.getByRole('listitem').filter({ hasText: '$40.00 today' })).toContainText('Revoked');
+  await expect(box.getByRole('form', { name: 'Grant the temporary budget' })).toBeVisible();
+  const after = await callFromPage(page, 'GET', `/api/v1/members/${login}/budget-overrides`);
+  expect(after.body).not.toHaveProperty('activeId');
+
+  // The member reads none of it, and another organization's owner cannot name it.
+  expect(
+    (await callFromPage(member, 'GET', `/api/v1/members/${login}/budget-overrides`, undefined, org.id))
+      .status,
+  ).toBe(403);
+  const stranger = await anotherPerson(browser);
+  await ownerOfNewOrganization(stranger, 'pia');
+  const foreign = await callFromPage(
+    stranger,
+    'GET',
+    `/api/v1/members/${login}/budget-overrides`,
+    undefined,
+    org.id,
+  );
+  expect(foreign.status).toBe(404);
+  expect((await callFromPage(stranger, 'GET', `/api/v1/members/${login}/budget-overrides`)).status).toBe(404);
+});

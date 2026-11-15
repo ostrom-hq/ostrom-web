@@ -25,6 +25,7 @@ const runtime: CloudRuntime = {
   enabled: true,
   runnerImage: 'ghcr.io/acme/ostrom-runner:1.4',
   runnerBinary: '/usr/local/bin/ostrom',
+  sessionImage: 'docker.io/ostromhq/ostrom-session:latest',
   effectiveServerUrl: 'https://ostrom.acme.test',
   workspaceAccessMode: 'ReadWriteOncePod',
   failedWorkspaceRetentionDays: 7,
@@ -97,6 +98,7 @@ describe('the runtime form', () => {
     expect(runtimeRequestOf(draft, runtime)).toEqual({
       enabled: true,
       runnerImage: 'ghcr.io/acme/ostrom-runner:1.4',
+      sessionImage: '',
       runnerBinary: '/usr/local/bin/ostrom',
       workspaceAccessMode: 'ReadWriteOncePod',
       failedWorkspaceRetentionDays: 7,
@@ -122,6 +124,7 @@ describe('the runtime form', () => {
     };
     expect(runtimeRequestOf(draft, unsaved)).toEqual({
       enabled: true,
+      sessionImage: '',
       runnerBinary: '/usr/local/bin/ostrom',
       serverUrl: 'https://ostrom.acme.test',
       workspaceAccessMode: 'ReadWriteOnce',

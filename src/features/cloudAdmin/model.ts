@@ -158,14 +158,14 @@ export function runtimeRequestOf(draft: RuntimeDraft, stored: CloudRuntime): Sav
     return typed === undefined ? undefined : Number(typed);
   };
   const image = optional(draft.runnerImage);
-  const session = optional(draft.sessionImage);
   const url = optional(draft.serverUrl);
   const paused = optionalNumber(draft.pausedRetentionDays);
   const transcript = optionalNumber(draft.transcriptRetentionDays);
   return {
     enabled: draft.enabled,
     ...(image === undefined ? {} : { runnerImage: image }),
-    ...(session === undefined ? {} : { sessionImage: session }),
+    // Always sent: absent keeps the stored image, blank stores the default (core#282).
+    sessionImage: draft.sessionImage.trim(),
     runnerBinary: draft.runnerBinary.trim(),
     ...(url === undefined ? {} : { serverUrl: url }),
     workspaceAccessMode: workspaceMode(draft.workspaceAccessMode),
