@@ -28,7 +28,6 @@ export const FEATURES = [
   'inference.queue.v1',
   'launches.limits.v1',
   'mcp.personal.v1',
-  'memory.v1',
   'notifications.push.test.v1',
   'notifications.push.v1',
   'notifications.v1',

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Wait, WaitField } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
-import { useAnnounced } from '@/shared/capabilities';
+import { useFeature } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import {
@@ -31,8 +31,9 @@ export interface WaitFormProps {
 export function WaitForm({ wait, sending, onAnswer }: WaitFormProps): ReactElement {
   const { t } = useTranslation();
   const { fields = [] } = wait.question;
-  // `secret` and `file` fields are filled only where the server says it takes them.
-  const secrets = useAnnounced('waits.secrets.v1');
+  // `secret` and `file` fields are filled unless the server answered without `waits.secrets.v1`: while the answer is on
+  // its way a field is shown, never skipped (a required secret would be sent missing).
+  const secrets = useFeature('waits.secrets.v1');
   const [drafts, setDrafts] = useState<Drafts>(() => draftsOf(fields));
   const [problems, setProblems] = useState<Problems>({});
   const prefix = useId();
@@ -236,7 +237,7 @@ function FieldInput({ field, secrets, draft = BLANK, problem, id, onChange }: Fi
           id={id}
           className="o-input"
           type="password"
-          autoComplete="off"
+          autoComplete="new-password"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
