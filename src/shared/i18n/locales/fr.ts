@@ -1929,6 +1929,7 @@ export const fr = {
       queued: 'En file',
       starting: 'Démarrage',
       running: 'En cours',
+      transferring: 'Transfert',
       ended: 'Terminée',
       stopped: 'Arrêtée',
       failed: 'Échec',

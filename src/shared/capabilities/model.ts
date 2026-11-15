@@ -45,6 +45,7 @@ export const FEATURES = [
   'runners.cloud.tasks.v1',
   'runners.cloud.transcript.feeds.v1',
   'runners.cloud.transcript.live.v1',
+  'runners.cloud.transfer.v1',
   'runners.cloud.v1',
   'servicekeys.scopes.v1',
   'sessions.labels.v1',

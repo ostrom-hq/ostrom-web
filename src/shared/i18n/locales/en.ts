@@ -1890,6 +1890,7 @@ export const en = {
       queued: 'Queued',
       starting: 'Starting',
       running: 'Running',
+      transferring: 'Transferring',
       ended: 'Ended',
       stopped: 'Stopped',
       failed: 'Failed',
