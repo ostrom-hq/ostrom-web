@@ -5,7 +5,14 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
-import { EMPTY_PROFILE, type ProfileDraft, profileDraftOf, profileProblem, profileRequestOf } from '../model';
+import {
+  EMPTY_PROFILE,
+  type ProfileDraft,
+  profileDraftOf,
+  profileProblem,
+  profileRequestOf,
+  profileSaveRefusalOf,
+} from '../model';
 import { type CloudProfilesViewModel, useAssignableMembers, useCloudProfiles } from '../useCloudAdmin';
 import { Field } from './Field';
 import { InvalidHint } from './InvalidHint';
@@ -119,6 +126,7 @@ function ProfileForm({
   const people = useAssignableMembers(orgId);
   const { write } = view;
   const problem = profileProblem(draft);
+  const refusal = profileSaveRefusalOf(write.failure);
   const [touched, setTouched] = useState(false);
   const edit = (change: Partial<ProfileDraft>): void => {
     write.clear();
@@ -197,6 +205,7 @@ function ProfileForm({
       <SaveOutcome
         write={write}
         saved={t('cloudAdmin.profiles.saved')}
+        refusal={refusal === undefined ? undefined : t(`cloudAdmin.profiles.refusal.${refusal}`)}
         onReload={() => {
           void view.reload();
         }}

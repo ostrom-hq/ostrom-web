@@ -25,6 +25,14 @@ export const cloudEn = {
     },
     session: {
       profile: 'profile {{name}} v{{version}}',
+      expires: 'deleted {{when}} unless resumed',
+      terminated: { deleted: 'deleted', expired: 'expired while paused' },
+      deletionBlocked: 'Its workspace volume is not deleted: {{why}}',
+      deletionProblem: {
+        volume_retained:
+          'its storage class keeps volumes, so an administrator deletes the provider volume by hand.',
+        volume_deletion_stalled: 'the provider has not deleted the volume yet; the server keeps trying.',
+      },
     },
   },
 } as const;
@@ -53,6 +61,14 @@ const cloudFr = {
     },
     session: {
       profile: 'profil {{name}} v{{version}}',
+      expires: 'supprimée {{when}} si elle n’est pas reprise',
+      terminated: { deleted: 'supprimée', expired: 'expirée en pause' },
+      deletionBlocked: 'Son volume de travail n’est pas supprimé : {{why}}',
+      deletionProblem: {
+        volume_retained:
+          'sa classe de stockage garde les volumes, un administrateur supprime donc le volume chez le fournisseur à la main.',
+        volume_deletion_stalled: 'le fournisseur n’a pas encore supprimé le volume ; le serveur réessaie.',
+      },
     },
   },
 };

@@ -2,6 +2,8 @@
 import type { CloudCluster } from '@gen/api/types.gen';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
+import { formatRelative } from '@/shared/lib/time';
+import { useNow } from '@/shared/lib/useNow';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
@@ -20,7 +22,8 @@ import { SaveOutcome } from './SaveOutcome';
 
 /** The Kubernetes clusters sessions run on. Only mounted for an administrator of the instance. */
 export function ClustersSection(): ReactElement {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const now = useNow();
   const view = useCloudClusters();
   // `undefined`: no form; `'new'`: a new cluster; an id: that cluster is edited.
   const [editing, setEditing] = useState<string | undefined>(undefined);
@@ -38,8 +41,20 @@ export function ClustersSection(): ReactElement {
                       <span className="o-row__title">{cluster.name}</span>
                       <span className="o-row__meta">{cluster.apiUrl}</span>
                       <span className="o-row__meta">{cluster.allowedNamespaces.join(', ')}</span>
+                      <span className="o-row__meta">
+                        {cluster.lastGarbageCollectionAt === undefined
+                          ? t('cloudAdmin.clusters.gcNever')
+                          : t('cloudAdmin.clusters.gcLast', {
+                              when: formatRelative(cluster.lastGarbageCollectionAt, now, i18n.language),
+                            })}
+                      </span>
                     </span>
                     <span className="o-row__end o-inline">
+                      {cluster.orphanedVolumes === undefined || cluster.orphanedVolumes === 0 ? null : (
+                        <Badge tone="warning">
+                          {t('cloudAdmin.clusters.orphanedVolumes', { count: cluster.orphanedVolumes })}
+                        </Badge>
+                      )}
                       {cluster.inCluster === true ? (
                         <Badge tone="success">{t('cloudAdmin.clusters.inCluster')}</Badge>
                       ) : (
