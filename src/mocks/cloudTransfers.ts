@@ -71,7 +71,7 @@ function decide(
     decidedAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };
-  state.cloudTransfers = state.cloudTransfers.map((item) => (item.id === id ? changed : item));
+  state.cloudTransfers = state.cloudTransfers.map((item) => (item === transfer ? changed : item));
   state.cloudSessions = state.cloudSessions.map((session) =>
     session.id === transfer.sessionId && sessionStatus !== undefined
       ? { ...session, status: sessionStatus }
@@ -97,13 +97,16 @@ export function createCloudTransferHandlers(
       if (to === undefined)
         return refusal(422, 'recipient_ineligible', 'The recipient cannot own this session.');
       const immediate = access.manages(request);
+      const caller = access.memberId(request);
+      if (caller === undefined)
+        return refusal(403, 'transfer_forbidden', 'Only a member can transfer a session.');
       const created: CloudTransfer = {
         id: `tr-${String(state().cloudTransfers.length + 1)}`,
         sessionId: session.id,
-        fromMemberId: access.memberId(request) ?? MEMBER_IDS.maya,
+        fromMemberId: caller,
         toMemberId: to.id,
         state: immediate ? 'accepted' : 'offered',
-        initiatedBy: access.memberId(request) ?? MEMBER_IDS.maya,
+        initiatedBy: caller,
         resume: body.data.resume,
         createdAt: now().toISOString(),
         updatedAt: now().toISOString(),

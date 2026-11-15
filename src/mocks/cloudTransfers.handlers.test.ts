@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { createCloudTransferHandlers } from '@/mocks/cloudTransfers';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
@@ -36,5 +37,24 @@ describe('the transfer handlers of the demo server', () => {
     expect(await call('POST', '/cloud/transfers/nope/accept')).toBe(404);
     expect(await call('POST', '/cloud/transfers/tr-1/decline')).toBe(200);
     expect(await call('POST', '/cloud/transfers/tr-1/accept')).toBe(409);
+  });
+
+  it('answers a decision on one transfer without touching the others or a session it does not name', async () => {
+    const [first] = db.cloudTransfers;
+    if (first === undefined) throw new Error('no transfer');
+    db.cloudTransfers = [{ ...first, id: 'tr-2', sessionId: 'cs-30' }, first];
+    expect(await call('POST', '/cloud/transfers/tr-1/decline')).toBe(200);
+    expect(db.cloudTransfers.map((item) => item.state)).toEqual(['offered', 'declined']);
+  });
+
+  it('refuses a caller who is not a member of the organization', async () => {
+    server.use(
+      ...createCloudTransferHandlers(
+        () => db,
+        { memberId: () => undefined, manages: () => false },
+        () => new Date(),
+      ),
+    );
+    expect(await call('POST', '/cloud/sessions/cs-31/transfer', { toMemberId: MEMBER_IDS.theo })).toBe(403);
   });
 });
