@@ -238,6 +238,38 @@ describe('the files of a conversation’s next message (TeamCode SessionFiles)',
     expect(keys).toHaveLength(2);
     expect(keys[1]).toBe(keys[0]);
 
+    // The server stored other bytes: a retry goes under a new key, or it would replay them.
+    server.use(
+      http.post(
+        FILES,
+        () =>
+          HttpResponse.json(
+            {
+              id: 'file-bad',
+              sessionId: CONVERSATION_ID,
+              name: 'x.png',
+              size: 1,
+              contentType: 'image/png',
+              sha256: 'ab',
+              createdAt: '2026-10-30T09:00:00.000Z',
+              expiresAt: '2026-10-31T09:00:00.000Z',
+            },
+            { status: 201 },
+          ),
+        { once: true },
+      ),
+    );
+    pick(png('x.png'));
+    const corrupt = await within(chips()).findByText(
+      'The server stored other bytes than the ones sent. Try again.',
+    );
+    const corruptChip = corrupt.closest('li');
+    if (corruptChip === null) throw new Error('the chip');
+    await user.click(within(corruptChip).getByRole('button', { name: 'Retry' }));
+    await within(corruptChip).findByText(/^Uploaded/);
+    expect(keys).toHaveLength(4);
+    expect(keys[3]).not.toBe(keys[2]);
+
     server.use(http.post(FILES, () => ERROR(415, 'file_type_not_allowed'), { once: true }));
     pick(png('b.png'));
     const refused = await within(chips()).findByText(

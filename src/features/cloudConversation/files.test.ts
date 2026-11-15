@@ -146,6 +146,12 @@ describe('the files of a message (TeamCode SessionFilesUseCase)', () => {
     expect(of(undefined, 502)).toEqual({ kind: 'other', code: undefined, transient: true });
     expect(of('slow', 408)).toEqual({ kind: 'other', code: 'slow', transient: true });
     expect(of('busy', 429)).toEqual({ kind: 'other', code: 'busy', transient: true });
+    expect(of('file_upload_in_progress', 409)).toEqual({
+      kind: 'other',
+      code: 'file_upload_in_progress',
+      transient: true,
+    });
+    expect(of('conflict', 409)).toEqual({ kind: 'other', code: 'conflict', transient: false });
     expect(new FileRefused(undefined, 500).message).toBe('HTTP 500');
     const failure = (kind: ApiFailure['kind'], status: number | undefined, code?: string): unknown =>
       problemOf(new ApiFailure(kind, 'x', status, undefined, code), team);

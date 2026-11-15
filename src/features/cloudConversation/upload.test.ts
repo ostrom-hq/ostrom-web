@@ -196,6 +196,40 @@ describe('an upload (TeamCode uploadCloudFile)', () => {
     expect(noWait).not.toHaveBeenCalled();
   });
 
+  it('waits for an upload of the same key still running on the server, and sends nothing once stopped', async () => {
+    let calls = 0;
+    server.use(
+      http.post(URL_PATTERN, () => {
+        calls += 1;
+        return calls === 1
+          ? HttpResponse.json(
+              { error: { type: 'file_upload_in_progress', message: 'later' } },
+              { status: 409 },
+            )
+          : HttpResponse.json(stored(), { status: 200 });
+      }),
+    );
+    expect((await uploadFile(request(), noWait)).id).toBe('file-1');
+    expect(noWait).toHaveBeenCalledTimes(1);
+    server.use(
+      http.post(URL_PATTERN, () =>
+        HttpResponse.json(
+          { error: { type: 'file_storage_not_configured', message: 'off' } },
+          { status: 409 },
+        ),
+      ),
+    );
+    expect(await failureOf(uploadFile(request(), noWait))).toMatchObject({
+      code: 'file_storage_not_configured',
+    });
+    expect(noWait).toHaveBeenCalledTimes(1);
+    calls = 0;
+    const stopped = new AbortController();
+    stopped.abort();
+    await failureOf(uploadFile(request({ signal: stopped.signal }), noWait));
+    expect(calls).toBe(0);
+  });
+
   it('leaves the network, a sign-in and a missing session to the caller as any call', async () => {
     server.use(http.post(URL_PATTERN, () => HttpResponse.error()));
     const network = await failureOf(uploadFile(request(), noWait));

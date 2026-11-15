@@ -47,7 +47,8 @@ export interface SessionFilesViewModel extends FilesState {
 /** A file being sent: its bytes, the key all its attempts share, and what stops it. */
 interface Source {
   readonly file: File;
-  readonly key: string;
+  /** A new one only after the server stored other bytes: under the same key it would replay them. */
+  key: string;
   controller: AbortController | undefined;
 }
 
@@ -190,6 +191,7 @@ export function useSessionFiles(sessionId: string): SessionFilesViewModel {
       // Only a failed file whose problem may pass is sent again (the chip offers Retry for no other).
       if (known === undefined || source === undefined || file?.problem === undefined) return;
       if (!retryable(file.problem)) return;
+      if (file.problem.kind === 'integrity') source.key = idempotencyKey();
       update(localId, (item) => ({ ...item, state: 'uploading', sent: 0, problem: undefined }));
       upload(localId, source, known);
     },

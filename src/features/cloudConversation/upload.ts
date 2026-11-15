@@ -7,6 +7,7 @@ import {
   FILE_INTEGRITY_FAILED,
   FILE_UNREADABLE,
   FileRefused,
+  UPLOAD_IN_PROGRESS,
   UPLOAD_QUOTA,
   type UploadedFile,
 } from './files';
@@ -82,6 +83,11 @@ export function xhrFetch(body: ArrayBuffer, onProgress: (sent: number) => void, 
   return async (input, init) =>
     new Promise((resolve, reject) => {
       const request = input instanceof Request ? input : new Request(input, init);
+      // Stopped before it left (removed while its bytes were read or it waited): nothing is sent.
+      if (request.signal.aborted) {
+        reject(new DOMException('The upload was stopped.', 'AbortError'));
+        return;
+      }
       const xhr = new XMLHttpRequest();
       xhr.open(request.method, request.url);
       request.headers.forEach((value, name) => {
@@ -180,7 +186,13 @@ function transient(error: unknown): boolean {
   if (!isApiFailure(error)) return false;
   if (error.kind === 'network') return true;
   const status = error.status ?? 0;
-  return status === 408 || status >= 500 || (status === 429 && error.code !== UPLOAD_QUOTA);
+  return (
+    status === 408 ||
+    status >= 500 ||
+    (status === 429 && error.code !== UPLOAD_QUOTA) ||
+    // The first attempt under this key still runs on the server: a later one gets the file.
+    (status === 409 && error.code === UPLOAD_IN_PROGRESS)
+  );
 }
 
 /**

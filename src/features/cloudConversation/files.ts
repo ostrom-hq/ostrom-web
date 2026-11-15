@@ -216,6 +216,8 @@ export function check(
 export const FILE_TOO_LARGE = 'file_too_large';
 export const FILE_TYPE_NOT_ALLOWED = 'file_type_not_allowed';
 export const UPLOAD_QUOTA = 'upload_quota';
+/** A retry under a key whose first upload still runs on the server (Ostrom's contract): later, it gets the file. */
+export const UPLOAD_IN_PROGRESS = 'file_upload_in_progress';
 export const STORAGE_NOT_CONFIGURED = 'file_storage_not_configured';
 export const STORAGE_UNAVAILABLE = 'file_storage_unavailable';
 /** Not the server's: the bytes it stored differ from the ones sent. */
@@ -239,8 +241,8 @@ export class FileRefused extends Error {
   }
 }
 
-function transientStatus(status: number): boolean {
-  return status >= 500 || status === 408 || status === 429;
+function transientStatus(status: number, code: string | undefined): boolean {
+  return status >= 500 || status === 408 || status === 429 || (status === 409 && code === UPLOAD_IN_PROGRESS);
 }
 
 /** The problem a refusal of the file names. */
@@ -269,7 +271,7 @@ export function refusal(error: FileRefused, policy: FilePolicy): FileProblem {
     default:
       return error.status === 403
         ? { kind: 'denied' }
-        : { kind: 'other', code: error.code, transient: transientStatus(error.status) };
+        : { kind: 'other', code: error.code, transient: transientStatus(error.status, error.code) };
   }
 }
 
