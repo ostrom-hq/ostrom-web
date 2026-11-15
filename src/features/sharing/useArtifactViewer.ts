@@ -2,7 +2,7 @@
 import {
   getArtifactOptions,
   getArtifactQueryKey,
-  listArtifactsQueryKey,
+  listArtifactsInfiniteQueryKey,
   listArtifactVersionsOptions,
   updateArtifactMutation,
 } from '@gen/api/@tanstack/react-query.gen';
@@ -116,7 +116,7 @@ export function useArtifactAccess(id: string): ArtifactAccessViewModel {
     onSettled: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getArtifactQueryKey({ path: { id } }) }),
-        queryClient.invalidateQueries({ queryKey: listArtifactsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: listArtifactsInfiniteQueryKey() }),
       ]);
     },
   });

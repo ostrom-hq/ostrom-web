@@ -15,6 +15,7 @@ import {
   updateArtifact,
   updateSharedAccount,
 } from '@gen/api/sdk.gen';
+import type { ListArtifactsData } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { resetMockDb } from '@/mocks/handlers';
@@ -139,6 +140,33 @@ describe('mock artifacts', () => {
     expect((await listArtifactMembers({ path: { id: 'art-2' }, throwOnError: true })).data.members).toEqual(
       [],
     );
+  });
+
+  it('narrows the list as the server does: the tab, the origin kind, the access, the session and the launch', async () => {
+    const ids = async (query: NonNullable<ListArtifactsData['query']>) =>
+      (await listArtifacts({ query, throwOnError: true })).data.items.map((item) => item.id);
+    expect(await ids({ scope: 'mine' })).toEqual(['art-7', 'art-2']);
+    expect(await ids({ scope: 'shared' })).toEqual([]);
+    db.artifactMembers['art-5'] = [MEMBER_IDS.maya];
+    expect(await ids({ scope: 'shared' })).toEqual(['art-5']);
+    expect(await ids({ origin: 'api' })).toEqual(['art-2']);
+    expect(await ids({ origin: 'local_run' })).toEqual(['art-7']);
+    expect(await ids({ origin: 'cloud_session' })).toEqual(['art-5']);
+    expect(await ids({ access: 'personal' })).toEqual(['art-7', 'art-2']);
+    expect(await ids({ cloudSession: 'session-b83f1a05e7c9' })).toEqual(['art-5']);
+    expect(await ids({ launch: 'launch-4d2e8a6b90c1', scope: 'mine' })).toEqual(['art-7']);
+    expect(await ids({ launch: 'launch-4d2e8a6b90c1', cloudSession: 'session-b83f1a05e7c9' })).toEqual([]);
+  });
+
+  it('pages the list: a page, the cursor to the next, none after the last', async () => {
+    const first = (await listArtifacts({ query: { limit: 2 }, throwOnError: true })).data;
+    expect(first.items.map((item) => item.id)).toEqual(['art-7', 'art-5']);
+    expect(first.next).toBe('art-5');
+    const second = (
+      await listArtifacts({ query: { limit: 2, before: first.next ?? '' }, throwOnError: true })
+    ).data;
+    expect(second.items.map((item) => item.id)).toEqual(['art-2']);
+    expect(second.next).toBeUndefined();
   });
 
   it('shares with a member once, stops sharing, and lets only the owner do either', async () => {

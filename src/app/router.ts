@@ -12,6 +12,7 @@ import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens'
 import { activitySearchSchema } from '@/features/activity/route';
 import { deviceSearchSchema } from '@/features/device/route';
 import { forecastsSearchSchema } from '@/features/forecasts/route';
+import { artifactsSearchSchema } from '@/features/sharing/route';
 import { usageReviewSearchSchema } from '@/features/usageReview/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
@@ -337,6 +338,7 @@ const automationsRoute = createRoute({
 const artifactsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/artifacts',
+  validateSearch: artifactsSearchSchema,
   component: lazyRouteComponent(async () => import('@/features/sharing'), 'ArtifactsScreen'),
 });
 /** An artifact's reading page; `?v=` pins one version (the latest, followed, without it or for anything else). */

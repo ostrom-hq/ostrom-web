@@ -27,7 +27,7 @@ describe('the artifacts', () => {
       '/artifacts/art-7',
     );
     expect(study).toHaveTextContent('Its owner and chosen people');
-    expect(study).toHaveTextContent(/by maya · version 3 · updated /);
+    expect(study).toHaveTextContent(/by maya · version 3 · local run launch-4 · updated /);
     expect(within(study).getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     const checklist = await findCard('Release checklist');
     expect(checklist).toHaveTextContent('Whole organization');
@@ -242,6 +242,135 @@ describe('the artifacts', () => {
     await user.click(within(study).getByRole('button', { name: 'Delete' }));
     await user.click(within(study).getByRole('button', { name: 'Delete Billing API: latency study' }));
     expect(await screen.findByText('it is still linked from a receipt')).toBeInTheDocument();
+  });
+});
+
+function titles(): string[] {
+  return screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent);
+}
+
+describe('the artifacts gallery', () => {
+  it('has the three tabs of TeamCode’s, each its own address, and keeps what is on the current one', async () => {
+    const user = userEvent.setup();
+    db.artifacts = db.artifacts.map((item) => (item.id === 'art-5' ? { ...item, access: 'personal' } : item));
+    db.artifactMembers['art-5'] = [MEMBER_IDS.maya];
+    visit('/artifacts');
+    await findCard('Release checklist');
+    const tabs = within(screen.getByRole('navigation', { name: 'Show' }));
+    expect(tabs.getByRole('link', { name: 'Everything I can read' })).toHaveAttribute('aria-current', 'page');
+    expect(tabs.getByRole('link', { name: 'Everything I can read' })).toHaveAttribute('href', '/artifacts');
+    expect(tabs.getByRole('link', { name: 'Mine' })).toHaveAttribute('href', '/artifacts?scope=mine');
+    expect(titles()).toEqual(['Billing API: latency study', 'Release checklist', 'Draft: pricing page']);
+    await user.click(tabs.getByRole('link', { name: 'Mine' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Billing API: latency study', 'Draft: pricing page']);
+    });
+    expect(tabs.getByRole('link', { name: 'Mine' })).toHaveAttribute('aria-current', 'page');
+    await user.click(tabs.getByRole('link', { name: 'Shared with me' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Release checklist']);
+    });
+    await user.click(tabs.getByRole('link', { name: 'Everything I can read' }));
+    await vi.waitFor(() => {
+      expect(titles()).toHaveLength(3);
+    });
+  });
+
+  it('shows where each came from, and lists what one launch or one cloud session published, with the way back', async () => {
+    const user = userEvent.setup();
+    visit('/artifacts');
+    const checklist = await findCard('Release checklist');
+    const draft = await findCard('Draft: pricing page');
+    expect(draft).toHaveTextContent(/by maya · version 1 · API · updated /);
+    await user.click(within(checklist).getByRole('link', { name: 'cloud session session-' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Release checklist']);
+    });
+    expect(screen.getByText(/Published from cloud session session-/)).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Show every origin' }));
+    await vi.waitFor(() => {
+      expect(titles()).toHaveLength(3);
+    });
+    const study = await findCard('Billing API: latency study');
+    await user.click(within(study).getByRole('link', { name: 'local run launch-4' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Billing API: latency study']);
+    });
+    expect(screen.getByText(/Published from launch launch-4/)).toBeInTheDocument();
+  });
+
+  it('keeps the tab on an origin link', async () => {
+    visit('/artifacts?scope=mine');
+    const study = await findCard('Billing API: latency study');
+    expect(within(study).getByRole('link', { name: 'local run launch-4' })).toHaveAttribute(
+      'href',
+      '/artifacts?scope=mine&launch=launch-4d2e8a6b90c1',
+    );
+  });
+
+  it('filters by origin and by access together, and clears them', async () => {
+    const user = userEvent.setup();
+    visit('/artifacts');
+    await findCard('Release checklist');
+    await user.selectOptions(screen.getByLabelText('Origin'), 'API and CLI');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Draft: pricing page']);
+    });
+    await user.selectOptions(screen.getByLabelText('Access'), 'Whole organization');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    expect(await screen.findByText('No artifact matches these filters.')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Clear the filters' }));
+    await vi.waitFor(() => {
+      expect(titles()).toHaveLength(3);
+    });
+    expect(screen.getByLabelText('Origin')).toHaveValue('');
+    // Any origin and any access again, from the form.
+    await user.selectOptions(screen.getByLabelText('Origin'), 'Cloud sessions');
+    await user.selectOptions(screen.getByLabelText('Access'), 'Whole organization');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await vi.waitFor(() => {
+      expect(titles()).toEqual(['Release checklist']);
+    });
+    await user.selectOptions(screen.getByLabelText('Origin'), 'Any origin');
+    await user.selectOptions(screen.getByLabelText('Access'), 'Any access');
+    await user.click(screen.getByRole('button', { name: 'Filter' }));
+    await vi.waitFor(() => {
+      expect(titles()).toHaveLength(3);
+    });
+  });
+
+  it('starts from what the address says, and ignores a filter it does not know', async () => {
+    visit('/artifacts?origin=cloud_session&access=team');
+    await findCard('Release checklist');
+    expect(titles()).toEqual(['Release checklist']);
+    expect(screen.getByLabelText('Origin')).toHaveValue('cloud_session');
+    expect(screen.getByLabelText('Access')).toHaveValue('team');
+  });
+
+  it('ignores a tab, an origin or an id it does not know', async () => {
+    visit('/artifacts?origin=elsewhere&scope=everyone&launch=a%20b');
+    await findCard('Release checklist');
+    expect(titles()).toHaveLength(3);
+  });
+
+  it('reads the older artifacts on demand, twenty at a time', async () => {
+    const user = userEvent.setup();
+    const first = db.artifacts[0];
+    if (first === undefined) throw new Error('no artifact');
+    db.artifacts = Array.from({ length: 25 }, (_, at) => ({
+      ...first,
+      id: `art-${String(100 + at)}`,
+      title: `Report ${String(at)}`,
+    }));
+    visit('/artifacts');
+    await findCard('Report 0');
+    expect(titles()).toHaveLength(20);
+    await user.click(screen.getByRole('button', { name: 'Older artifacts' }));
+    await vi.waitFor(() => {
+      expect(titles()).toHaveLength(25);
+    });
+    expect(screen.queryByRole('button', { name: 'Older artifacts' })).toBeNull();
   });
 });
 

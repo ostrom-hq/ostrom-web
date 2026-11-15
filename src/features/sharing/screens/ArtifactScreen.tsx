@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { Artifact } from '@gen/api/types.gen';
+import type { Artifact, ArtifactVersion } from '@gen/api/types.gen';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
+import { useViewer } from '@/shared/auth/useViewer';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatAbsolute } from '@/shared/lib/time';
 import { safeHref } from '@/shared/lib/safeHref';
@@ -10,9 +11,10 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Screen } from '@/shared/ui/Screen';
 import { ArtifactDetail } from '../components/ArtifactDetail';
+import { formatBytes } from '../gallery';
 import { appLinkOf, ARTIFACT_ACCESSES, type ArtifactAccess, isArtifactAccess, ownsArtifact } from '../model';
 import { useArtifactAccess, useArtifactViewer } from '../useArtifactViewer';
-import { useArtifactChange, useArtifacts } from '../useSharing';
+import { useArtifactChange } from '../useSharing';
 import './sharing.css';
 
 /**
@@ -27,7 +29,7 @@ export function ArtifactScreen(): ReactElement {
   const { artifactId } = useParams({ from: '/artifacts/$artifactId' });
   const { v } = useSearch({ from: '/artifacts/$artifactId' });
   const view = useArtifactViewer(artifactId, v);
-  const owner = useArtifacts().login;
+  const owner = useViewer().login;
   const change = useArtifactChange();
   const navigate = useNavigate();
   const appLink = appLinkOf(window.location.href, navigator.userAgent);
@@ -100,6 +102,16 @@ export function ArtifactScreen(): ReactElement {
                           when: formatAbsolute(version.createdAt, i18n.language),
                         })}
                       </Link>
+                      {version.fileDetails === undefined ? null : (
+                        <span className="o-row__meta">
+                          {' · '}
+                          {t('sharing.artifacts.fileCount', { count: version.fileDetails.length })},{' '}
+                          {formatBytes(
+                            version.fileDetails.reduce((total, file) => total + file.size, 0),
+                            i18n.language,
+                          )}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -108,14 +120,7 @@ export function ArtifactScreen(): ReactElement {
             {shown === undefined ? null : (
               <details>
                 <summary>{t('sharing.artifacts.files')}</summary>
-                <ul className="o-rows">
-                  {shown.files.map((path) => (
-                    <li key={path} className="o-row o-mono">
-                      {path}
-                      {path === shown.entry ? <Badge>{t('sharing.artifacts.entry')}</Badge> : null}
-                    </li>
-                  ))}
-                </ul>
+                <FilesPanel version={shown} />
               </details>
             )}
             <details>
@@ -242,5 +247,52 @@ function DeletePanel({
         </Button>
       </form>
     </details>
+  );
+}
+
+/**
+ * The files of the version shown: TeamCode's table of path, size and type, the page the reader opens first marked. A
+ * server that does not tell the sizes lists the paths.
+ */
+function FilesPanel({ version }: { readonly version: ArtifactVersion }): ReactElement {
+  const { t, i18n } = useTranslation();
+  const entry = <Badge>{t('sharing.artifacts.entry')}</Badge>;
+  if (version.fileDetails === undefined)
+    return (
+      <ul className="o-rows">
+        {version.files.map((path) => (
+          <li key={path} className="o-row o-mono">
+            {path}
+            {path === version.entry ? entry : null}
+          </li>
+        ))}
+      </ul>
+    );
+  return (
+    <div className="sh-scroll">
+      <table className="sh-table">
+        <thead>
+          <tr>
+            <th scope="col">{t('sharing.artifacts.path')}</th>
+            <th scope="col" className="sh-num">
+              {t('sharing.artifacts.size')}
+            </th>
+            <th scope="col">{t('sharing.artifacts.type')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {version.fileDetails.map((file) => (
+            <tr key={file.path}>
+              <td className="o-mono">
+                {file.path}
+                {file.path === version.entry ? entry : null}
+              </td>
+              <td className="sh-num">{formatBytes(file.size, i18n.language)}</td>
+              <td className="o-mono">{file.contentType}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
