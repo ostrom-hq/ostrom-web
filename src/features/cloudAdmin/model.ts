@@ -83,7 +83,9 @@ export function runtimeDraftOf(runtime: CloudRuntime): RuntimeDraft {
   return {
     enabled: runtime.enabled,
     runnerImage: text(runtime.runnerImage),
-    sessionImage: text(runtime.sessionImage),
+    // The server sends the effective image: the default is shown as the placeholder, not typed in, so a save
+    // does not pin it.
+    sessionImage: runtime.sessionImage === DEFAULT_SESSION_IMAGE ? '' : text(runtime.sessionImage),
     runnerBinary: runtime.runnerBinary,
     serverUrl: text(runtime.serverUrl),
     workspaceAccessMode: runtime.workspaceAccessMode,
