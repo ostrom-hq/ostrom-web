@@ -49,6 +49,12 @@ const MAX_CALLS = 12;
  * that screen alone, so a new read anywhere else still counts against the common ceiling.
  */
 const MAX_CALLS_OF: Readonly<Partial<Record<(typeof screens)[number], number>>> = { '/mcp': 14 };
+/**
+ * `/spend` shows the organization's daily limit in force from the pool size feature's own chunk (`PoolLimitSlot`): its
+ * one read starts once that chunk has come, which on a real network can be after the members' answer. It adds a line to
+ * the page and nothing waits for it, so that screen alone may go one deeper.
+ */
+const MAX_DEPTH_OF: Readonly<Partial<Record<(typeof screens)[number], number>>> = { '/spend': 3 };
 /** A screen that asks the server still after this long never settles: a loop, not a load. */
 const SETTLE_LIMIT_MS = 30_000;
 /**
@@ -234,7 +240,8 @@ async function measure(
   if (!settled) problems.push(`${screen}: still asking after ${String(SETTLE_LIMIT_MS / 1000)} s`);
   if (twice.length > 0) problems.push(`${screen}: asked twice ${twice.join(', ')}`);
   if (again.length > 0) problems.push(`${screen}: asked again once answered ${listed(again, 'name')}`);
-  if (depth > MAX_DEPTH) problems.push(`${screen}: a chain of ${String(depth)} calls`);
+  if (depth > (MAX_DEPTH_OF[screen] ?? MAX_DEPTH))
+    problems.push(`${screen}: a chain of ${String(depth)} calls`);
   if (calls.length > (MAX_CALLS_OF[screen] ?? MAX_CALLS))
     problems.push(`${screen}: ${String(calls.length)} calls`);
   const counted = (some: readonly Call[], key: 'name' | 'asked'): string =>
