@@ -38,6 +38,22 @@ export function isPromptAgent(value: string): value is PromptAgent {
   return PROMPT_AGENT.safeParse(value).success;
 }
 
+/**
+ * How a session runs, fixed at its start: `terminal` (the default, a PTY) or `conversation` (the agent headless, its
+ * transcript followed and messaged from the console), which only Claude Code and Codex have.
+ */
+export const SESSION_MODES = ['terminal', 'conversation'] as const;
+export type SessionMode = (typeof SESSION_MODES)[number];
+
+export function isSessionMode(value: string): value is SessionMode {
+  return SESSION_MODES.some((mode) => mode === value);
+}
+
+/** The agents a conversation runs headless. */
+export function conversesHeadless(agent: CloudAgent): boolean {
+  return agent === 'claude' || agent === 'codex';
+}
+
 /** What a session's `githubAccess` may be: the owner only (the default), everyone who may use the session, or no token. */
 export const GITHUB_ACCESS = ['owner', 'shared', 'none'] as const satisfies readonly NonNullable<
   CloudSession['githubAccess']

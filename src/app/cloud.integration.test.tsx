@@ -203,7 +203,7 @@ describe('the cloud agents', () => {
     await user.selectOptions(agent, 'Gemini CLI');
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
-    expect(await screen.findByText('gemini · cs-104')).toBeInTheDocument();
+    expect(await screen.findByText('gemini · cs-105')).toBeInTheDocument();
     const bodies = await Promise.all(sent);
     expect(bodies).toHaveLength(1);
     const body: unknown = JSON.parse(bodies.join(''));
@@ -252,7 +252,7 @@ describe('the cloud agents', () => {
     const form = await screen.findByRole('region', { name: 'Start an agent' });
     await user.type(within(form).getByRole('textbox', { name: 'What should it do?' }), 'Look around');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
-    expect(await screen.findByText('claude · cs-104')).toBeInTheDocument();
+    expect(await screen.findByText('claude · cs-105')).toBeInTheDocument();
   });
 
   it('holds the form while the agent starts, and says why it did not', async () => {
@@ -636,7 +636,7 @@ describe('the preparation recipe of a cloud session', () => {
     await user.click(within(form).getByRole('checkbox', { name: 'Require a linked GitHub account' }));
     await user.type(within(form).getByRole('textbox', { name: 'Git e-mail domain' }), 'acme.dev');
     await user.click(within(form).getByRole('button', { name: 'Start the agent' }));
-    expect(await screen.findByText('claude · cs-104')).toBeInTheDocument();
+    expect(await screen.findByText('claude · cs-105')).toBeInTheDocument();
     const bodies = await Promise.all(sent);
     const body: unknown = JSON.parse(bodies.join(''));
     expect(zCreateCloudSessionBody.parse(body).environment).toEqual({
@@ -687,7 +687,7 @@ describe('the preparation recipe of a cloud session', () => {
     expect(within(form).getByRole('alert')).toHaveTextContent(
       'Use an https://github.com/<owner>/<name> clone URL',
     );
-    expect(db.cloudSessions).toHaveLength(4);
+    expect(db.cloudSessions).toHaveLength(5);
   });
 
   it('adds at most the repositories the server takes', async () => {

@@ -1966,11 +1966,11 @@ export const fr = {
       notPaused: 'Mets d’abord la session en pause : un agent qui tourne garde l’accès qu’il a déjà reçu.',
     },
     phase: {
-      securing_workspace: 'réinitialisation de l’espace de travail après un transfert',
       configuring_git: 'configuration de Git',
       cloning_repositories: 'clonage des dépôts',
       fetching_repositories: 'mise à jour des dépôts',
       running_setup: 'préparation en cours',
+      securing_workspace: 'sécurisation de l’espace de travail pour son nouveau propriétaire',
     },
     preparation: {
       retry: 'Un nouvel essai peut passer : reprenez la session pour réessayer.',

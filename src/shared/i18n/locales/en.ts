@@ -1926,11 +1926,11 @@ export const en = {
       notPaused: 'Pause the session first: an agent that is running keeps the access it already received.',
     },
     phase: {
-      securing_workspace: 'resetting the workspace after a transfer',
       configuring_git: 'setting up Git',
       cloning_repositories: 'cloning the repositories',
       fetching_repositories: 'fetching the repositories',
       running_setup: 'running the setup',
+      securing_workspace: 'securing the workspace for its new owner',
     },
     preparation: {
       retry: 'This may pass on another try: resume the session to try again.',

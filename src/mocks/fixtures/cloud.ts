@@ -3,6 +3,17 @@ import type { Automation, AutomationRun, CloudSession, Runner } from '@gen/api/t
 
 const sessions: CloudSession[] = [
   {
+    id: 'cs-33',
+    name: 'Why the invoice test fails on Mondays',
+    owner: 'maya',
+    agent: 'claude',
+    model: 'claude-sonnet-5',
+    mode: 'conversation',
+    status: 'running',
+    runnerId: 'rn-1',
+    createdAt: '2026-10-30T08:09:00.000Z',
+  },
+  {
     id: 'cs-31',
     name: 'Fix the flaky invoice test',
     owner: 'maya',

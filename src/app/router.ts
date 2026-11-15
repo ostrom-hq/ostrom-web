@@ -315,6 +315,11 @@ const cloudRoute = createRoute({
   path: '/cloud',
   component: lazyRouteComponent(async () => import('@/features/cloud'), 'CloudScreen'),
 });
+const cloudSessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cloud/sessions/$sessionId',
+  component: lazyRouteComponent(async () => import('@/features/cloudConversation'), 'CloudSessionScreen'),
+});
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
@@ -566,6 +571,7 @@ export const routeTree = rootRoute.addChildren([
   tokensRoute,
   cloudRoute,
   cloudAdminRoute,
+  cloudSessionRoute,
   adminRoute,
   adminSettingsRoute,
   automationsRoute,

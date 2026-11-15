@@ -5,6 +5,8 @@ import { registerWording } from '@/shared/i18n/i18n';
 export const cloudEn = {
   cloud: {
     start: {
+      mode: 'Mode',
+      modes: { terminal: 'Terminal', conversation: 'Conversation' },
       profile: 'Profile',
       pickProfile: 'Pick a profile',
       profilesLoading: 'Reading the profiles you may use…',
@@ -88,6 +90,8 @@ export const cloudEn = {
 const cloudFr = {
   cloud: {
     start: {
+      mode: 'Mode',
+      modes: { terminal: 'Terminal', conversation: 'Conversation' },
       profile: 'Profil',
       pickProfile: 'Choisir un profil',
       profilesLoading: 'Lecture des profils que vous pouvez utiliser…',
