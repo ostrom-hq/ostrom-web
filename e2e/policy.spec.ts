@@ -29,3 +29,21 @@ test('an admin narrows the models, gives a member their own list, and checks a l
   await check.getByRole('button', { name: 'Ask' }).click();
   await expect(check.getByText('You may launch claude with claude-opus-4-1.')).toBeVisible();
 });
+
+test('an admin adds an API price over the built-in ones, then loads Anthropic’s list prices', async ({
+  page,
+}) => {
+  await page.goto('/policy');
+  const box = page.getByRole('region', { name: 'API prices' });
+  await expect(box.getByText('Built-in prices')).toBeVisible();
+  const form = box.getByRole('form', { name: 'Add or replace a price' });
+  await form.getByRole('combobox', { name: 'Provider' }).selectOption('openai');
+  await form.getByRole('textbox', { name: 'Model or family prefix' }).fill('gpt-5');
+  await form.getByRole('textbox', { name: 'Input $ / million tokens' }).fill('1.25');
+  await form.getByRole('textbox', { name: 'Output $ / million' }).fill('10');
+  await form.getByRole('button', { name: 'Save the price' }).click();
+  await expect(box.getByRole('cell', { name: 'gpt-5' })).toBeVisible();
+  await expect(box.getByText('Built-in prices')).toHaveCount(0);
+  await box.getByRole('button', { name: 'Load current Anthropic prices' }).click();
+  await expect(box.getByRole('cell', { name: 'claude-sonnet-4' })).toBeVisible();
+});

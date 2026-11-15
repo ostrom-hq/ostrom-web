@@ -29,3 +29,34 @@
   flex: none;
   margin-top: 0.2em;
 }
+.pl-scroll {
+  overflow-x: auto;
+}
+.pl-prices {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.pl-prices caption {
+  text-align: start;
+  padding-bottom: var(--space-2);
+}
+.pl-prices th,
+.pl-prices td {
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.pl-prices .pl-num {
+  text-align: end;
+}
+.pl-price-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.pl-price-form > * {
+  min-width: 0;
+}

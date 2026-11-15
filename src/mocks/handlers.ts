@@ -251,6 +251,7 @@ import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mo
 import { createRunHandlers } from '@/mocks/runs';
 import { createWorkflowSettingsHandlers } from '@/mocks/workflowSettings';
 import { createMemoryCurationHandlers, type MemoryCurationState } from '@/mocks/memoryCuration';
+import { type ApiPricesState, createApiPricesHandlers } from '@/mocks/apiPrices';
 import { type BudgetOverridesState, createBudgetOverridesHandlers } from '@/mocks/budgetOverrides';
 import { createUsageReviewHandlers, initialUsageReview, type UsageReviewState } from '@/mocks/usageReview';
 import { createNotificationsHandlers, type NotificationsState } from '@/mocks/notifications';
@@ -283,6 +284,7 @@ export interface MockDb
     PersonalMcpState,
     NotificationsState,
     MemoryCurationState,
+    ApiPricesState,
     BudgetOverridesState,
     UsageReviewState,
     GithubState,
@@ -407,6 +409,7 @@ export function createMockDb(): MockDb {
     workflowRuns: initialWorkflowRuns(),
     workflowEditors: { mode: 'admins' },
     memoryCuration: { enabled: false },
+    apiPrices: [],
     budgetOverrides: [],
     ...initialUsageReview(),
     notificationChannels: ['push'],
@@ -1770,6 +1773,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       () => db,
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
     ),
+    ...createApiPricesHandlers(() => db, {
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+      stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
+    }),
     ...createBudgetOverridesHandlers(
       () => db,
       {
