@@ -12,7 +12,7 @@ test('an approver opens a request from the queue, reads the proof, approves and 
 
   await page.getByRole('link', { name: /Merge PR #412 into main/ }).click();
   await expect(page).toHaveURL(/\/yes\/apr-merge-412$/);
-  await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
+  await expect(page.getByText('3fa0d81', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /^Approve/ }).click();
 
   const decision = page.getByRole('region', { name: 'Decision' });
@@ -65,7 +65,7 @@ test('a yes from a sign-in more than five minutes old asks to sign in again, the
 }) => {
   await page.clock.install();
   await page.goto('/yes/apr-merge-412');
-  await expect(page.getByText('fix(invoices): round VAT per line')).toBeVisible();
+  await expect(page.getByText('3fa0d81', { exact: true })).toBeVisible();
   // The demo signed in when it opened: six minutes later, a yes needs a fresh sign-in (S2-54).
   await page.clock.fastForward('06:00');
   await page.getByRole('button', { name: /^Approve/ }).click();

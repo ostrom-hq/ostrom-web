@@ -14,12 +14,11 @@ test('the starter hands in what an agent step asked for, and sees the run succee
   await expect(form).toHaveCount(0);
 });
 
-test('an owner starts a release run with its inputs and a repository', async ({ page }) => {
+test('an owner starts a release run with its inputs', async ({ page }) => {
   await page.goto('/workflows/wf-release');
   const form = page.getByRole('form', { name: 'Start a run' });
   await expect(form.getByRole('button', { name: 'Run it now' })).toBeDisabled();
   await form.getByLabel('Release tag (required)').fill('v2.0.0');
-  await form.getByLabel('Repository (required)').fill('acme/api');
   await form.getByRole('button', { name: 'Run it now' }).click();
   const runs = page.getByRole('region', { name: 'Runs' });
   await expect(runs.getByRole('listitem').first()).toContainText('Queued');
