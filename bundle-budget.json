@@ -3,7 +3,7 @@
   "routeKiB": 209.8,
   "routes": {
     "/": 14.7,
-    "/confirm/$confirmationId": 12.6,
+    "/confirm/$confirmationId": 12.7,
     "/waits": 13.2,
     "/waits/$waitId": 13.2,
     "/sessions": 14.5,
