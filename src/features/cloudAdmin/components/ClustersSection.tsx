@@ -41,13 +41,13 @@ export function ClustersSection(): ReactElement {
                       <span className="o-row__title">{cluster.name}</span>
                       <span className="o-row__meta">{cluster.apiUrl}</span>
                       <span className="o-row__meta">{cluster.allowedNamespaces.join(', ')}</span>
-                      <span className="o-row__meta">
-                        {cluster.lastGarbageCollectionAt === undefined
-                          ? t('cloudAdmin.clusters.gcNever')
-                          : t('cloudAdmin.clusters.gcLast', {
-                              when: formatRelative(cluster.lastGarbageCollectionAt, now, i18n.language),
-                            })}
-                      </span>
+                      {cluster.lastGarbageCollectionAt === undefined ? null : (
+                        <span className="o-row__meta">
+                          {t('cloudAdmin.clusters.gcLast', {
+                            when: formatRelative(cluster.lastGarbageCollectionAt, now, i18n.language),
+                          })}
+                        </span>
+                      )}
                     </span>
                     <span className="o-row__end o-inline">
                       {cluster.orphanedVolumes === undefined || cluster.orphanedVolumes === 0 ? null : (

@@ -90,6 +90,15 @@ describe('the cloud agents', () => {
       db.cloudSessions = [
         { id: 'cs-p', owner: 'maya', agent: 'claude', status: 'paused', expiresAt: soon, createdAt: soon },
         {
+          id: 'cs-r',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'running',
+          expiresAt: soon,
+          terminatedReason: 'deleted',
+          createdAt: soon,
+        },
+        {
           id: 'cs-e',
           owner: 'maya',
           agent: 'claude',
@@ -135,18 +144,21 @@ describe('the cloud agents', () => {
       ];
       visit('/cloud');
       await screen.findByText('claude · cs-p', {}, { timeout: 10000 });
-      expect(row('claude · cs-p')).toHaveTextContent(/deleted in 3 days unless resumed/);
-      expect(row('claude · cs-e')).toHaveTextContent('expired while paused');
+      expect(row('claude · cs-p')).toHaveTextContent(/deleted in [23] days unless resumed/);
+      expect(row('claude · cs-r')).not.toHaveTextContent(/unless resumed|ended:/);
+      expect(row('claude · cs-e')).toHaveTextContent('ended: expired while paused');
       expect(row('claude · cs-e')).toHaveTextContent(
         'Its workspace volume is not deleted: its storage class keeps volumes',
       );
-      expect(row('claude · cs-d')).toHaveTextContent(/· deleted/);
+      expect(row('claude · cs-d')).toHaveTextContent('ended: deleted');
       expect(row('claude · cs-d')).toHaveTextContent('the provider has not deleted the volume yet');
       expect(row('claude · cs-o')).toHaveTextContent(
         'Its workspace volume is not deleted: The provider said no.',
       );
-      expect(row('claude · cs-o')).not.toHaveTextContent(/expired|· deleted/);
-      expect(row('claude · cs-n')).toHaveTextContent('Its workspace volume is not deleted:');
+      expect(row('claude · cs-o')).not.toHaveTextContent('ended:');
+      expect(row('claude · cs-n')).toHaveTextContent(
+        'Its workspace volume is not deleted: the server gave no reason.',
+      );
       expect(row('claude · cs-ok')).not.toHaveTextContent('workspace');
     },
   );

@@ -54,10 +54,12 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             session.endedAt === undefined
               ? undefined
               : t('cloud.session.ended', { when: formatRelative(session.endedAt, now, i18n.language) }),
-            session.expiresAt === undefined
+            session.status !== 'paused' || session.expiresAt === undefined
               ? undefined
               : t('cloud.session.expires', { when: formatRelative(session.expiresAt, now, i18n.language) }),
-            reason === undefined ? undefined : t(`cloud.session.terminated.${reason}`),
+            session.status !== 'terminated' || reason === undefined
+              ? undefined
+              : t(`cloud.session.terminated.${reason}`),
           ]
             .filter((part) => part !== undefined)
             .join(' · ')}
@@ -73,9 +75,11 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
           <span className="cl-session__failure">
             {t('cloud.session.deletionBlocked', {
               why:
-                blocked.code === undefined
-                  ? blocked.message
-                  : t(`cloud.session.deletionProblem.${blocked.code}`),
+                blocked.code !== undefined
+                  ? t(`cloud.session.deletionProblem.${blocked.code}`)
+                  : blocked.message === ''
+                    ? t('cloud.session.deletionUnknown')
+                    : blocked.message,
             })}
           </span>
         )}

@@ -449,7 +449,7 @@ describe('the runtime and the clusters, the instance’s own', () => {
         if (found === null) throw new Error(`no cluster ${name}`);
         return found;
       };
-      expect(await rowOf('eu-west')).toHaveTextContent('No garbage collection yet');
+      expect(await rowOf('eu-west')).not.toHaveTextContent('Garbage collected');
       expect(await rowOf('us-east')).toHaveTextContent(/Garbage collected (now|.* ago)/);
       expect(
         within(await rowOf('us-east')).getByText('2 orphaned volumes to delete at the provider'),

@@ -26,7 +26,8 @@ export const cloudEn = {
     session: {
       profile: 'profile {{name}} v{{version}}',
       expires: 'deleted {{when}} unless resumed',
-      terminated: { deleted: 'deleted', expired: 'expired while paused' },
+      terminated: { deleted: 'ended: deleted', expired: 'ended: expired while paused' },
+      deletionUnknown: 'the server gave no reason.',
       deletionBlocked: 'Its workspace volume is not deleted: {{why}}',
       deletionProblem: {
         volume_retained:
@@ -62,7 +63,8 @@ const cloudFr = {
     session: {
       profile: 'profil {{name}} v{{version}}',
       expires: 'supprimée {{when}} si elle n’est pas reprise',
-      terminated: { deleted: 'supprimée', expired: 'expirée en pause' },
+      terminated: { deleted: 'fin : supprimée', expired: 'fin : expirée en pause' },
+      deletionUnknown: 'le serveur n’a pas donné de raison.',
       deletionBlocked: 'Son volume de travail n’est pas supprimé : {{why}}',
       deletionProblem: {
         volume_retained:

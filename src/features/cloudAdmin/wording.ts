@@ -6,7 +6,6 @@ export const cloudAdminEn = {
   cloudAdmin: {
     clusters: {
       inCluster: 'The server’s own cluster: credentials read from its pod',
-      gcNever: 'No garbage collection yet',
       gcLast: 'Garbage collected {{when}}',
       orphanedVolumes_one: '{{count}} orphaned volume to delete at the provider',
       orphanedVolumes_other: '{{count}} orphaned volumes to delete at the provider',
@@ -34,7 +33,6 @@ registerWording({
     cloudAdmin: {
       clusters: {
         inCluster: 'Le cluster du serveur : identifiants lus dans son pod',
-        gcNever: 'Pas encore de ramasse-miettes',
         gcLast: 'Ramasse-miettes passé {{when}}',
         orphanedVolumes_one: '{{count}} volume orphelin à supprimer chez le fournisseur',
         orphanedVolumes_other: '{{count}} volumes orphelins à supprimer chez le fournisseur',
