@@ -127,10 +127,10 @@ jobs:
           [ -n "$image" ] || { echo "::error::no sha-<commit> image of ostrom-server main's last 10 commits"; exit 1; }
           git -C server merge-base --is-ancestor "$MIN_SERVER" "$revision" \
             || { echo "::error::$image is older than $MIN_SERVER (server#223)"; exit 1; }
-          runner=$(docker buildx imagetools inspect "$RUNNER_IMAGE" --format '{{json .Manifest}}' | jq -r .digest) \
+          digest=$(docker buildx imagetools inspect "$RUNNER_IMAGE" --format '{{json .Manifest}}' | jq -r .digest) \
             || { echo "::error::$RUNNER_IMAGE cannot be read"; exit 1; }
-          [[ "$runner" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::$RUNNER_IMAGE has no digest: $runner"; exit 1; }
-          # by its tag, the name the server's plan uses; the digest only says it is published
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "::error::$RUNNER_IMAGE has no digest: $digest"; exit 1; }
+          # by its tag, the name the server's plan uses; the summary records the digest it held
           runner=$RUNNER_IMAGE
           main=$(git -C server rev-parse HEAD)
           {
@@ -141,7 +141,7 @@ jobs:
           {
             echo "### Real server"
             echo "- server: \`$image\` (main is at ${main:0:7})"
-            echo "- cloud sessions and machines: \`$runner\`"
+            echo "- cloud sessions and machines: \`$runner\` (\`$digest\` when resolved)"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # The same console against the REAL server, as deployed (the owner role migrates, the server serves as `ostrom_app`,

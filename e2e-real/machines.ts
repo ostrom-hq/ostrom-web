@@ -71,7 +71,7 @@ export async function startMachine(page: Page, org: string, name: string): Promi
       '-e',
       `OSTROM_DOCKER_API_URL=${DOCKER_API_URL}`,
       '-e',
-      `OSTROM_RUNNER_SESSION_IMAGE=${sessionImage ?? machineImage}`,
+      `OSTROM_RUNNER_SESSION_IMAGE=${sessionImage}`,
       '-e',
       `OSTROM_RUNNER_DELIVERY_IMAGE=${machineImage}`,
       // The image's own entrypoint is not the CLI: the machine is the CLI's `ostrom cloud machine`.
