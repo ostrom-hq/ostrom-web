@@ -616,8 +616,7 @@ function artifactMatches(db: MockDb, artifact: Artifact, query: URLSearchParams)
   if (scope === 'mine' && artifact.owner !== me.dev.login) return false;
   if (
     scope === 'shared' &&
-    (artifact.owner === me.dev.login ||
-      !(db.artifactMembers[artifact.id] ?? []).includes(me.member?.id ?? ''))
+    (artifact.owner === me.dev.login || !(db.artifactMembers[artifact.id] ?? []).includes(MEMBER_IDS.maya))
   )
     return false;
   const origin = query.get('origin');
