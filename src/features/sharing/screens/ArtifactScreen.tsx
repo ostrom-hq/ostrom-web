@@ -221,7 +221,7 @@ function DeletePanel({
         className="o-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (typed.trim() === artifact.title) onDelete();
+          if (typed.trim() === artifact.title.trim()) onDelete();
         }}
       >
         <p className="o-row__meta">{t('sharing.artifacts.deleteWarning', { title: artifact.title })}</p>
@@ -237,7 +237,7 @@ function DeletePanel({
             setTyped(event.target.value);
           }}
         />
-        <Button type="submit" variant="danger" disabled={busy || typed.trim() !== artifact.title}>
+        <Button type="submit" variant="danger" disabled={busy || typed.trim() !== artifact.title.trim()}>
           {t('sharing.artifacts.deleteForGood')}
         </Button>
       </form>

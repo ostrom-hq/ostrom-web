@@ -9,7 +9,7 @@ import {
 import { createArtifactTicket } from '@gen/api/sdk.gen';
 import type { Artifact, ArtifactTicket, ArtifactVersion } from '@gen/api/types.gen';
 import type { ArtifactAccess } from './model';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
@@ -17,6 +17,11 @@ import { newestFirst } from './useSharing';
 
 /** TeamCode's viewer asks every 10 seconds, while the page is visible, whether a newer version is published. */
 export const ARTIFACT_LIVE_MS = 10_000;
+
+/** Every 10 seconds, until the artifact cannot be read any more. */
+export function livePoll(query: { readonly state: { readonly error: unknown } }): number | false {
+  return query.state.error === null ? ARTIFACT_LIVE_MS : false;
+}
 
 export interface ArtifactViewerViewModel {
   readonly artifact: Artifact | undefined;
@@ -29,6 +34,7 @@ export interface ArtifactViewerViewModel {
   readonly newer: boolean;
   /** Shows the latest version: a new ticket, so the frame reloads only when the reader asks. */
   readonly showLatest: () => void;
+  /** Why the artifact cannot be read (not found, access lost). */
   readonly failure: Error | undefined;
   /** Why the page itself cannot be shown (artifacts off, no content origin, the ticket refused). */
   readonly ticketFailure: Error | undefined;
@@ -43,10 +49,11 @@ export interface ArtifactViewerViewModel {
 export function useArtifactViewer(id: string, requested: number | undefined): ArtifactViewerViewModel {
   const [reloads, setReloads] = useState(0);
   const following = requested === undefined;
-  const artifact = useQuery(
-    ready(getArtifactOptions({ path: { id } }), following ? { refetchInterval: ARTIFACT_LIVE_MS } : {}),
-  );
-  const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } })));
+  // Polling stops at a refusal (deleted, access lost): the page says so once.
+  const live = following ? { refetchInterval: livePoll } : {};
+  const artifact = useQuery(ready(getArtifactOptions({ path: { id } }), live));
+  // The versions follow too, so the newer one is listed when the reader asks for it.
+  const versions = useQuery(ready(listArtifactVersionsOptions({ path: { id } }), { ...live, retry: false }));
   const ticket = useQuery({
     queryKey: ['artifactTicket', id, requested ?? 'latest', reloads],
     queryFn: async ({ signal }: { readonly signal: AbortSignal }) => {
@@ -54,8 +61,10 @@ export function useArtifactViewer(id: string, requested: number | undefined): Ar
       const { data } = await createArtifactTicket({ path: { id }, body, signal, throwOnError: true });
       return data;
     },
-    // A ticket lasts hours: the frame keeps it until the reader asks for another version.
+    // A ticket lasts hours: the frame keeps it until the reader asks for another version (TeamCode's viewer left
+    // open past its ticket needs a reload too). The last one stays while the next loads: no blank frame between.
     staleTime: Infinity,
+    placeholderData: keepPreviousData,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -77,7 +86,8 @@ export function useArtifactViewer(id: string, requested: number | undefined): Ar
     shown,
     newer: following && number !== undefined && latest !== undefined && latest > number,
     showLatest,
-    failure: failureOf(artifact.error ?? versions.error),
+    // The versions only feed the panels: without them the page still reads.
+    failure: failureOf(artifact.error),
     ticketFailure: failureOf(ticket.error),
   };
 }
