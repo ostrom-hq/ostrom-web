@@ -1,6 +1,6 @@
 {
-  "entryKiB": 188.9,
-  "routeKiB": 210.9,
+  "entryKiB": 187.4,
+  "routeKiB": 210.1,
   "routes": {
     "/": 14.7,
     "/confirm/$confirmationId": 12.7,
@@ -53,8 +53,8 @@
     "/webhooks/$webhookId": 12.2,
     "/accounts": 17.7,
     "/forecasts": 11.4,
-    "/usage": 10.8,
-    "/usage/$reservationId": 10.8,
+    "/usage": 12.5,
+    "/usage/$reservationId": 12.5,
     "/accounts/groups": 17.7,
     "/accounts/groups/$groupId": 17.7,
     "/receipts": 9.7,
