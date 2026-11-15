@@ -2568,6 +2568,29 @@ export const en = {
       saved: 'Saved.',
       savedTag: 'Done',
     },
+    slack: {
+      title: 'Slack',
+      lead: 'Your notifications and the requests for your yes, as direct messages in Slack.',
+      invite:
+        'Link the Slack account of your proven e-mail address. Ostrom finds it in the workspace of this server’s Slack app; you never type a Slack id.',
+      link: 'Link my Slack account',
+      linking: 'Linking…',
+      linkedTag: 'Linked',
+      linked:
+        'Your Slack account receives your notifications. A request for your yes has a Reject button, and Approve opens it here.',
+      unlink: 'Unlink',
+      notConfigured:
+        'Slack is not set up on this server. An administrator sets the Slack app in Admin, Settings (section slack).',
+      errorTag: 'Not linked',
+      refusal: {
+        notConfigured:
+          'Slack is not set up on this server. An administrator sets the Slack app in Admin, Settings.',
+        emailUnproven:
+          'Your account has no proven e-mail address. Prove one in your account settings, then try again.',
+        notFound: 'No active Slack account of this workspace has your e-mail address.',
+        taken: 'Another member of this organization already linked this Slack account.',
+      },
+    },
     test: {
       title: 'Test',
       lead: 'Sends a test notification to each of your phones signed in to this organization.',

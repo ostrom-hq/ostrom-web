@@ -148,3 +148,19 @@ export function browserTimeZone(): string {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return zone === '' ? 'UTC' : zone;
 }
+
+/** Why the server did not link a Slack account, when it said why. */
+export type SlackRefusal = 'notConfigured' | 'emailUnproven' | 'notFound' | 'taken';
+
+const SLACK_REFUSALS: Readonly<Record<string, SlackRefusal>> = {
+  slack_not_configured: 'notConfigured',
+  slack_email_unproven: 'emailUnproven',
+  slack_user_not_found: 'notFound',
+  slack_user_taken: 'taken',
+};
+
+/** The refusal a failed link names by its code, or undefined for any other failure (its message is shown). */
+export function slackRefusalOf(failure: Error): SlackRefusal | undefined {
+  if (!isApiFailure(failure) || failure.code === undefined) return undefined;
+  return SLACK_REFUSALS[failure.code];
+}

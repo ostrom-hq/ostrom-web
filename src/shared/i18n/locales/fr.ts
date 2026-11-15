@@ -2624,6 +2624,29 @@ export const fr = {
       saved: 'Enregistré.',
       savedTag: 'Fait',
     },
+    slack: {
+      title: 'Slack',
+      lead: 'Vos notifications et les demandes de votre oui, en messages directs dans Slack.',
+      invite:
+        'Liez le compte Slack de votre adresse e-mail prouvée. Ostrom le trouve dans l’espace de travail de l’app Slack de ce serveur ; vous ne saisissez jamais d’identifiant Slack.',
+      link: 'Lier mon compte Slack',
+      linking: 'Liaison…',
+      linkedTag: 'Lié',
+      linked:
+        'Votre compte Slack reçoit vos notifications. Une demande de votre oui a un bouton Refuser, et Approuver l’ouvre ici.',
+      unlink: 'Délier',
+      notConfigured:
+        'Slack n’est pas configuré sur ce serveur. Un administrateur règle l’app Slack dans Admin, Réglages (section slack).',
+      errorTag: 'Non lié',
+      refusal: {
+        notConfigured:
+          'Slack n’est pas configuré sur ce serveur. Un administrateur règle l’app Slack dans Admin, Réglages.',
+        emailUnproven:
+          'Votre compte n’a pas d’adresse e-mail prouvée. Prouvez-en une dans les réglages de votre compte, puis réessayez.',
+        notFound: 'Aucun compte Slack actif de cet espace de travail n’a votre adresse e-mail.',
+        taken: 'Un autre membre de cette organisation a déjà lié ce compte Slack.',
+      },
+    },
     test: {
       title: 'Test',
       lead: 'Envoie une notification de test à chacun de tes téléphones connectés à cette organisation.',

@@ -5,6 +5,7 @@ import {
   zNotificationSettings,
   zPushDeviceList,
   zPushTestResults,
+  zSlackLink,
 } from '@gen/api/zod.gen';
 import { getResponse } from 'msw';
 import {
@@ -28,6 +29,9 @@ function fresh(): NotificationsState {
     pushDevices: initialPushDevices(),
     pushPhones: initialPushPhones(),
     lastPushTestAt: undefined,
+    slackConfigured: true,
+    slackDirectory: 'U024BE7LH',
+    slackLinked: undefined,
   };
 }
 
@@ -52,7 +56,7 @@ async function call(
     }),
   );
   if (response === undefined) throw new Error('no answer');
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: response.status === 204 ? undefined : await response.json() };
 }
 
 function typeOf(body: unknown): string {
@@ -200,5 +204,32 @@ describe('the mock test push clock', () => {
       new Request('http://ostrom.test/api/v1/notifications/push/test', { method: 'POST' }),
     );
     expect(response?.status).toBe(200);
+  });
+});
+
+describe('the mock Slack link', () => {
+  afterEach(() => {
+    state = fresh();
+  });
+
+  it('links the Slack account of the proven address, then unlinks it', async () => {
+    expect(zSlackLink.parse((await call('GET', '/slack/link')).body)).toMatchObject({
+      linked: false,
+      configured: true,
+    });
+    const linked = await call('POST', '/slack/link');
+    expect(linked.status).toBe(200);
+    expect(zSlackLink.parse(linked.body)).toMatchObject({ linked: true, slackUserId: 'U024BE7LH' });
+    expect((await call('DELETE', '/slack/link')).status).toBe(204);
+    expect(state.slackLinked).toBeUndefined();
+  });
+
+  it('refuses while Slack is not set or no account has the address', async () => {
+    state.slackDirectory = undefined;
+    expect(typeOf((await call('POST', '/slack/link')).body)).toBe('slack_user_not_found');
+    state.slackConfigured = false;
+    const refused = await call('POST', '/slack/link');
+    expect(refused.status).toBe(409);
+    expect(typeOf(refused.body)).toBe('slack_not_configured');
   });
 });

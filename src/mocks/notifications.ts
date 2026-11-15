@@ -4,15 +4,19 @@ import {
   handleDeletePushDevice,
   handleGetNotificationSettings,
   handleListPushDevices,
+  handleGetSlackLink,
+  handleLinkSlack,
   handleSendTestPush,
   handleSetNotificationPreferences,
   handleSetNotificationSetting,
+  handleUnlinkSlack,
 } from '@gen/api/msw.gen';
 import type {
   NotificationPreferences,
   NotificationSetting,
   PushDevice,
   PushTestResult,
+  SlackLink,
 } from '@gen/api/types.gen';
 import { zNotificationPreferences, zNotificationSettingChange } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
@@ -36,7 +40,16 @@ export interface NotificationsState {
   pushPhones: PushTestResult[];
   /** When the last test went out, for the server's ten seconds between two. */
   lastPushTestAt: number | undefined;
+  /** Whether the instance's Slack app is set (the `slack` settings section's bot token and signing secret). */
+  slackConfigured: boolean;
+  /** The Slack account the demo person's proven address finds in the workspace, or undefined when none does. */
+  slackDirectory: string | undefined;
+  /** The demo person's Slack link in the organization, or undefined while they linked none. */
+  slackLinked: { slackUserId: string; linkedAt: string } | undefined;
 }
+
+/** The demo person's membership, as the Slack link names it. */
+const SLACK_MEMBER_ID = 'member-demo';
 
 /** The server's ten seconds between two tests (`TEST_WINDOW`). */
 export const PUSH_TEST_WINDOW_MS = 10_000;
@@ -120,6 +133,19 @@ export function createNotificationsHandlers(
       db.pushPhones = db.pushPhones.filter((_, at) => at !== index);
       return new HttpResponse(null, { status: 204 });
     }),
+    handleGetSlackLink(() => HttpResponse.json(slackLink(state()))),
+    handleLinkSlack(() => {
+      const db = state();
+      if (!db.slackConfigured) return refusal(409, 'slack_not_configured', 'Slack is not configured.');
+      if (db.slackDirectory === undefined)
+        return refusal(404, 'slack_user_not_found', 'No Slack account has your proven e-mail address.');
+      db.slackLinked = { slackUserId: db.slackDirectory, linkedAt: now().toISOString() };
+      return HttpResponse.json(slackLink(db));
+    }),
+    handleUnlinkSlack(() => {
+      state().slackLinked = undefined;
+      return new HttpResponse(null, { status: 204 });
+    }),
     handleSendTestPush(() => {
       const db = state();
       if (db.pushProvider === 'off') return refusal(409, 'push_off', 'Push notifications are off.');
@@ -134,4 +160,12 @@ export function createNotificationsHandlers(
       });
     }),
   ];
+}
+
+/** The demo person's Slack link, as `GET /slack/link` answers it. */
+function slackLink(db: NotificationsState): SlackLink {
+  const linked = db.slackLinked;
+  return linked === undefined
+    ? { memberId: SLACK_MEMBER_ID, configured: db.slackConfigured, linked: false }
+    : { memberId: SLACK_MEMBER_ID, configured: db.slackConfigured, linked: true, ...linked };
 }
