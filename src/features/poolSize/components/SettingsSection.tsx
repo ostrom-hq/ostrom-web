@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId, useState } from 'react';
+import { useAnnounced } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
@@ -11,13 +12,15 @@ import { usePacingSettings } from '../usePoolSize';
  * TeamCode's controller settings: observation only, and the automatic pool size (`PUT /api/v1/policy/pacing`). A field
  * left as it is stays out of the write, so a change here never rewrites the other setting.
  */
-export function SettingsSection(): ReactElement {
+export function SettingsSection(): ReactElement | null {
   const { t } = useTranslation();
-  const view = usePacingSettings(true);
+  const served = useAnnounced('capacity.pacing.v1');
+  const view = usePacingSettings(served);
   const [auto, setAuto] = useState<boolean | undefined>(undefined);
   const [observation, setObservation] = useState<boolean | undefined>(undefined);
   const autoId = useId();
   const observationId = useId();
+  if (!served) return null;
   return (
     <Section label={t('poolSize.settings.title')}>
       <LoadState data={view.settings} failure={view.failure} rows={2}>

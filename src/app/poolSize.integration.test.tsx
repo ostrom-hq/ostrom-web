@@ -36,7 +36,7 @@ describe('the pool size page (TeamCode’s automatic pool size and controller se
     const save = screen.getByRole('button', { name: 'Save settings' });
     expect(save).toBeDisabled();
 
-    await user.click(screen.getByRole('checkbox', { name: 'Automatic pool size' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Automatic pool size' }));
     await user.click(save);
     expect(await screen.findByText('In force: $38.50 a day (automatic)')).toBeVisible();
     // Only the changed field is sent: the other setting keeps its stored value.
@@ -153,6 +153,19 @@ describe('the pool size report in its other states', () => {
   });
 });
 
+describe('a server that serves the pool size without the controller settings', () => {
+  it('shows the report without the switches', async () => {
+    server.use(
+      handleCapabilities(() =>
+        HttpResponse.json(demoCapabilities(FEATURES.filter((key) => key !== 'capacity.pacing.v1'))),
+      ),
+    );
+    visit('/pool-size');
+    expect(await screen.findByText('In force: $25.00 a day (typed)')).toBeVisible();
+    expect(screen.queryByRole('checkbox', { name: 'Automatic pool size' })).toBeNull();
+  });
+});
+
 describe('a pool whose capacity is fully learned', () => {
   it('shows a counted account without a binding window, and the saving state', async () => {
     const user = userEvent.setup();
@@ -188,7 +201,7 @@ describe('a pool whose capacity is fully learned', () => {
     visit('/pool-size');
     expect(await screen.findByText(/^Counted · \$2\.00 a day$/)).toBeVisible();
     expect(screen.getByText('$4.00 a day')).toBeVisible();
-    await user.click(screen.getByRole('checkbox', { name: 'Automatic pool size' }));
+    await user.click(await screen.findByRole('checkbox', { name: 'Automatic pool size' }));
     await user.click(screen.getByRole('button', { name: 'Save settings' }));
     expect(await screen.findByRole('button', { name: 'Saving…' })).toBeDisabled();
   });
