@@ -2,16 +2,20 @@
 import {
   handleGetNotificationPreferences,
   handleDeletePushDevice,
+  handleGetDiscordLink,
   handleGetNotificationSettings,
   handleListPushDevices,
   handleGetSlackLink,
+  handleLinkDiscord,
   handleLinkSlack,
   handleSendTestPush,
   handleSetNotificationPreferences,
   handleSetNotificationSetting,
+  handleUnlinkDiscord,
   handleUnlinkSlack,
 } from '@gen/api/msw.gen';
 import type {
+  DiscordLink,
   NotificationPreferences,
   NotificationSetting,
   PushDevice,
@@ -46,10 +50,17 @@ export interface NotificationsState {
   slackDirectory: string | undefined;
   /** The demo person's Slack link in the organization, or undefined while they linked none. */
   slackLinked: { slackUserId: string; linkedAt: string } | undefined;
+  /** Whether the instance's Discord application is set (the `discord` settings section's five fields). */
+  discordConfigured: boolean;
+  /** The demo person's Discord link in the organization, or undefined while they linked none. */
+  discordLinked: { discordUserId: string; discordUsername?: string; linkedAt: string } | undefined;
 }
 
 /** The demo person's membership, as the Slack link names it. */
 const SLACK_MEMBER_ID = 'member-demo';
+
+/** Discord's authorization page, where a link start sends the browser. */
+export const DISCORD_AUTHORIZE = 'https://discord.com/oauth2/authorize';
 
 /** The server's ten seconds between two tests (`TEST_WINDOW`). */
 export const PUSH_TEST_WINDOW_MS = 10_000;
@@ -146,6 +157,19 @@ export function createNotificationsHandlers(
       state().slackLinked = undefined;
       return new HttpResponse(null, { status: 204 });
     }),
+    handleGetDiscordLink(() => HttpResponse.json(discordLink(state()))),
+    handleLinkDiscord(() => {
+      if (!state().discordConfigured)
+        return refusal(409, 'discord_not_configured', 'Discord is not configured.');
+      // Discord's sign-in, which a real server's callback answers by sending the browser back with `?discord=`.
+      return HttpResponse.json({
+        authorizeUrl: `${DISCORD_AUTHORIZE}?response_type=code&client_id=1&scope=identify&state=demo`,
+      });
+    }),
+    handleUnlinkDiscord(() => {
+      state().discordLinked = undefined;
+      return new HttpResponse(null, { status: 204 });
+    }),
     handleSendTestPush(() => {
       const db = state();
       if (db.pushProvider === 'off') return refusal(409, 'push_off', 'Push notifications are off.');
@@ -168,4 +192,12 @@ function slackLink(db: NotificationsState): SlackLink {
   return linked === undefined
     ? { memberId: SLACK_MEMBER_ID, configured: db.slackConfigured, linked: false }
     : { memberId: SLACK_MEMBER_ID, configured: db.slackConfigured, linked: true, ...linked };
+}
+
+/** The demo person's Discord link, as `GET /discord/link` answers it. */
+function discordLink(db: NotificationsState): DiscordLink {
+  const linked = db.discordLinked;
+  return linked === undefined
+    ? { memberId: SLACK_MEMBER_ID, configured: db.discordConfigured, linked: false }
+    : { memberId: SLACK_MEMBER_ID, configured: db.discordConfigured, linked: true, ...linked };
 }

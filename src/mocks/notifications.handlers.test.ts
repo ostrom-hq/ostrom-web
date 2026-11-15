@@ -32,6 +32,8 @@ function fresh(): NotificationsState {
     slackConfigured: true,
     slackDirectory: 'U024BE7LH',
     slackLinked: undefined,
+    discordConfigured: true,
+    discordLinked: undefined,
   };
 }
 

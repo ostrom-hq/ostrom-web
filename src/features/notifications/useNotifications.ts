@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   deletePushDeviceMutation,
+  getDiscordLinkOptions,
+  getDiscordLinkQueryKey,
   getNotificationPreferencesOptions,
   getNotificationPreferencesQueryKey,
   getNotificationSettingsOptions,
@@ -9,13 +11,16 @@ import {
   listPushDevicesQueryKey,
   getSlackLinkOptions,
   getSlackLinkQueryKey,
+  linkDiscordMutation,
   linkSlackMutation,
   sendTestPushMutation,
   setNotificationPreferencesMutation,
   setNotificationSettingMutation,
+  unlinkDiscordMutation,
   unlinkSlackMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
+  DiscordLink,
   NotificationPreferences,
   NotificationSettingChange,
   NotificationSettings,
@@ -24,9 +29,10 @@ import type {
   SlackLink,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
+import { leaveFor } from '@/shared/lib/leave';
 
 export interface NotificationSwitchesViewModel {
   /** The channels the server offers and every switch in force; undefined until they are read. */
@@ -207,5 +213,69 @@ export function useSlackLink(enabled: boolean): SlackLinkViewModel {
     },
     busy: link.isPending || unlink.isPending,
     actionFailure: failureOf(link.error ?? unlink.error),
+  };
+}
+
+export interface DiscordLinkViewModel {
+  /** The member's Discord link in this organization; undefined until it is read. */
+  readonly link: DiscordLink | undefined;
+  readonly failure: Error | undefined;
+  /** Starts the link: the browser goes to Discord's sign-in, which sends it back here. */
+  readonly connect: () => void;
+  /** Removes the link. */
+  readonly disconnect: () => void;
+  /** A start or an unlink on its way, or the browser leaving for Discord. */
+  readonly busy: boolean;
+  readonly actionFailure: Error | undefined;
+  /** The server named an address that is not Discord's https page: the browser stays here. */
+  readonly unsafe: boolean;
+}
+
+/** `GET`/`POST`/`DELETE /discord/link` (`discord.v1`): the member's own Discord account, in this organization. */
+export function useDiscordLink(enabled: boolean): DiscordLinkViewModel {
+  const queryClient = useQueryClient();
+  const [leaving, setLeaving] = useState(false);
+  const [unsafe, setUnsafe] = useState(false);
+  // Back from Discord's page without finishing (the page restored as it was left): the section is usable again.
+  useEffect(() => {
+    const back = (): void => {
+      setLeaving(false);
+    };
+    window.addEventListener('pageshow', back);
+    return () => {
+      window.removeEventListener('pageshow', back);
+    };
+  }, []);
+  const query = useQuery(ready(getDiscordLinkOptions(), { enabled, retry: false }));
+  const start = useMutation({
+    ...linkDiscordMutation(),
+    onSuccess: (started) => {
+      const left = leaveFor(started.authorizeUrl);
+      setLeaving(left);
+      setUnsafe(!left);
+    },
+    // A refusal may say Discord is not set any more: the section reads it again.
+    onError: async () => queryClient.invalidateQueries({ queryKey: getDiscordLinkQueryKey() }),
+  });
+  const unlink = useMutation({
+    ...unlinkDiscordMutation(),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: getDiscordLinkQueryKey() }),
+  });
+  return {
+    link: query.data,
+    failure: failureOf(query.error),
+    connect: () => {
+      unlink.reset();
+      setUnsafe(false);
+      start.mutate({});
+    },
+    disconnect: () => {
+      start.reset();
+      setUnsafe(false);
+      unlink.mutate({});
+    },
+    busy: start.isPending || unlink.isPending || leaving,
+    actionFailure: failureOf(start.error ?? unlink.error),
+    unsafe,
   };
 }

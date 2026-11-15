@@ -4,7 +4,9 @@ import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { demoCapabilities } from '@/mocks/capabilities';
+import { DISCORD_AUTHORIZE } from '@/mocks/notifications';
 import { FEATURES, type FeatureKey } from '@/shared/capabilities/model';
+import { exit } from '@/shared/lib/leave';
 import { setupMockApp, visit } from '@/test/mockApp';
 
 const { server, db, traffic } = setupMockApp();
@@ -463,5 +465,122 @@ describe('the Slack account', () => {
     await new Promise((done) => setTimeout(done, 200));
     expect(screen.queryByRole('region', { name: 'Slack' })).toBeNull();
     expect(asked).not.toContain('/api/v1/slack/link');
+  });
+});
+
+describe('the Discord account', () => {
+  it("sends the browser to Discord's sign-in, nowhere else", async () => {
+    const user = userEvent.setup();
+    const leave = vi.spyOn(exit, 'assign').mockImplementation(() => undefined);
+    visit('/me/notifications');
+    const box = await region('Discord');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Discord account' }));
+    await vi.waitFor(() => {
+      expect(leave).toHaveBeenCalledTimes(1);
+    });
+    expect(nth(nth(leave.mock.calls, 0), 0).startsWith(`${DISCORD_AUTHORIZE}?`)).toBe(true);
+    expect(await within(box).findByRole('button', { name: 'Opening Discord…' })).toBeDisabled();
+    // Back from Discord's page without finishing: the section is usable again.
+    fireEvent(window, new Event('pageshow'));
+    expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeEnabled();
+    leave.mockRestore();
+  });
+
+  it('opens nothing when the server names a page that is not https', async () => {
+    const user = userEvent.setup();
+    const leave = vi.spyOn(exit, 'assign').mockImplementation(() => undefined);
+    server.use(
+      http.post('*/api/v1/discord/link', () => HttpResponse.json({ authorizeUrl: 'http://evil.test/' })),
+    );
+    visit('/me/notifications');
+    const box = await region('Discord');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Discord account' }));
+    expect(await within(box).findByText(/nothing was opened/u)).toBeInTheDocument();
+    expect(leave).not.toHaveBeenCalled();
+    leave.mockRestore();
+  });
+
+  it('says the account is linked when Discord sends the browser back, and unlinks it', async () => {
+    const user = userEvent.setup();
+    db.discordLinked = {
+      discordUserId: '80351110224678912',
+      discordUsername: 'nelly',
+      linkedAt: '2026-11-15T10:00:00Z',
+    };
+    visit('/me/notifications?discord=linked');
+    const box = await region('Discord');
+    expect(await within(box).findByText('Your Discord account is linked.')).toBeInTheDocument();
+    expect(await within(box).findByText(/Your Discord account nelly receives/u)).toBeInTheDocument();
+    await user.click(within(box).getByRole('button', { name: 'Unlink' }));
+    expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeInTheDocument();
+    expect(db.discordLinked).toBeUndefined();
+  });
+
+  it('says nothing of a return that did not link', async () => {
+    visit('/me/notifications?discord=linked');
+    const box = await region('Discord');
+    expect(await within(box).findByRole('button', { name: 'Link my Discord account' })).toBeInTheDocument();
+    expect(within(box).queryByText('Your Discord account is linked.')).toBeNull();
+  });
+
+  it('says the account is linked without a name the server did not give', async () => {
+    db.discordLinked = { discordUserId: '80351110224678912', linkedAt: '2026-11-15T10:00:00Z' };
+    visit('/me/notifications');
+    const box = await region('Discord');
+    expect(await within(box).findByText(/^Your Discord account receives/u)).toBeInTheDocument();
+  });
+
+  it("says why Discord's return linked nothing", async () => {
+    visit('/me/notifications?discord=discord_not_in_guild');
+    const box = await region('Discord');
+    expect(await within(box).findByText(/Join this server’s Discord server first/u)).toBeInTheDocument();
+  });
+
+  it('says what failed when a start is refused', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/discord/link', () =>
+        HttpResponse.json({ error: { type: 'internal', message: 'discord is down' } }, { status: 500 }),
+      ),
+    );
+    visit('/me/notifications');
+    const box = await region('Discord');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Discord account' }));
+    expect(await within(box).findByText('discord is down')).toBeInTheDocument();
+  });
+
+  it('says Discord is not set when it was unset since the page was read', async () => {
+    const user = userEvent.setup();
+    visit('/me/notifications');
+    const box = await region('Discord');
+    const link = await within(box).findByRole('button', { name: 'Link my Discord account' });
+    db.discordConfigured = false;
+    await user.click(link);
+    expect(
+      await within(box).findByText(
+        'Discord is not set up on this server. An administrator sets the Discord application first.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('points at the administrators while Discord is not set', async () => {
+    db.discordConfigured = false;
+    visit('/me/notifications');
+    const box = await region('Discord');
+    expect(
+      await within(box).findByText(/An administrator sets the Discord application/u),
+    ).toBeInTheDocument();
+    expect(within(box).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('asks nothing of a server without Discord', async () => {
+    without('discord.v1');
+    const asked: string[] = [];
+    traffic.onRequest((request) => asked.push(new URL(request.url).pathname));
+    visit('/me/notifications');
+    await region('What you are told about');
+    await screen.findByRole('region', { name: 'Slack' });
+    expect(screen.queryByRole('region', { name: 'Discord' })).toBeNull();
+    expect(asked).not.toContain('/api/v1/discord/link');
   });
 });

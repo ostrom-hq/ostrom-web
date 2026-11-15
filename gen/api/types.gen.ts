@@ -1344,6 +1344,14 @@ export type AuditEvent = {
      */
     keyId?: string;
     /**
+     * The member the action was done for: the member an `Ostrom-On-Behalf-Of` named, otherwise the actor; the session's owner for an entry of the server (`runners.cloud.onbehalf.v1`, `cloud.session.*`). Absent from the other events
+     */
+    effectiveMemberId?: string | null;
+    /**
+     * The id of the credential the actor used (a browser session, a token, a service key), never the token itself (`runners.cloud.onbehalf.v1`, `cloud.session.*`). Absent from the other events
+     */
+    credentialId?: string | null;
+    /**
      * What the server found when it read the line (`listAudit` only): `verified` (hash, signature and link to the previous line hold), `altered` (the line no longer matches its hash, or its signature does not verify with the instance key it names, past keys included, or it names a key the instance never had), `unlinked` (the previous line of the chain is missing or is not the one this line was signed after: a line was erased or rewritten before it).
      */
     integrity?: 'verified' | 'altered' | 'unlinked' | (string & {});
@@ -1916,7 +1924,7 @@ export type ApiPriceTable = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -2224,6 +2232,10 @@ export type CloudSettings = {
      */
     maxRunningAutomationsPerMember?: number;
     /**
+     * With `runners.cloud.remote.v1`, how long a remote session may go without a turn, a message or an attached client before it pauses; 0 never pauses one. 60 by default (TeamCode's `remoteIdleTimeoutMinutes`, `RemoteSessionLimits`)
+     */
+    remoteIdleTimeoutMinutes?: number;
+    /**
      * The last save; absent while nothing is stored
      */
     updatedAt?: string;
@@ -2239,6 +2251,10 @@ export type SaveCloudSettingsRequest = {
      * Absent keeps the stored value (2 while nothing is stored)
      */
     maxRunningAutomationsPerMember?: number;
+    /**
+     * Absent keeps the stored value (60 while nothing is stored)
+     */
+    remoteIdleTimeoutMinutes?: number;
     /**
      * The `updatedAt` of the settings edited; absent while nothing is stored
      */
@@ -2483,6 +2499,25 @@ export type CloudSession = {
      */
     kind?: string;
     host?: CloudSessionHost;
+    createdBy?: CloudAttribution;
+};
+
+/**
+ * Who created a cloud session (`runners.cloud.onbehalf.v1`, TeamCode's attribution): absent from a session created before the feature
+ */
+export type CloudAttribution = {
+    /**
+     * The member who made the request
+     */
+    initiatorId: string;
+    /**
+     * The id of the credential they used (a browser session, a token, a service key), never the token itself; null when the server knows none
+     */
+    credentialId?: string | null;
+    /**
+     * The member it was created for, its first owner: the initiator, unless `Ostrom-On-Behalf-Of` named another member
+     */
+    effectiveMemberId: string;
 };
 
 /**
@@ -5186,6 +5221,40 @@ export type SlackLink = {
 };
 
 /**
+ * A member's Discord link: the Discord account their notifications (channel `discord`) and yes requests go to as direct messages. At most one per member of an organization, and one member per Discord account in an organization
+ */
+export type DiscordLink = {
+    memberId: string;
+    /**
+     * Whether the instance's Discord application is configured (the `discord` settings section's bot token, application id, public key, client secret and server id)
+     */
+    configured: boolean;
+    linked: boolean;
+    /**
+     * The Discord user (a snowflake)
+     */
+    discordUserId?: string;
+    /**
+     * The account's Discord username when it was linked
+     */
+    discordUsername?: string;
+    /**
+     * ISO time the member linked it
+     */
+    linkedAt?: string;
+};
+
+/**
+ * The start of a Discord link (`linkDiscord`): Discord's authorization URL, to open in the browser that asked for it
+ */
+export type DiscordLinkStart = {
+    /**
+     * `https://discord.com/oauth2/authorize?...` with scope `identify` and a single-use `state`, valid 10 minutes
+     */
+    authorizeUrl: string;
+};
+
+/**
  * The files of one effective version; the digest is recomputable from their metadata
  */
 export type SkillArtifact = {
@@ -5808,7 +5877,7 @@ export type NotificationPreferences = {
  */
 export type NotificationSetting = {
     /**
-     * `push`, `slack` (later `discord`); a client tolerates one it does not know
+     * `push`, `slack`, `discord`; a client tolerates one it does not know
      */
     channel: string;
     /**
@@ -8650,6 +8719,11 @@ export type OstromOrigin = string;
  * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
  */
 export type OstromOrg = string;
+
+/**
+ * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+ */
+export type OstromOnBehalfOf = string;
 
 export type HealthRootData = {
     body?: never;
@@ -12441,6 +12515,192 @@ export type LinkSlackResponses = {
 };
 
 export type LinkSlackResponse = LinkSlackResponses[keyof LinkSlackResponses];
+
+export type ReceiveDiscordInteractionData = {
+    /**
+     * The interaction, as Discord sends it
+     */
+    body: {
+        /**
+         * 1 PING, 3 MESSAGE_COMPONENT (a button)
+         */
+        type: number;
+    };
+    headers: {
+        'X-Signature-Ed25519': string;
+        'X-Signature-Timestamp': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/webhooks/discord';
+};
+
+export type ReceiveDiscordInteractionErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
+    /**
+     * A refusal
+     */
+    401: ApiError;
+};
+
+export type ReceiveDiscordInteractionError = ReceiveDiscordInteractionErrors[keyof ReceiveDiscordInteractionErrors];
+
+export type ReceiveDiscordInteractionResponses = {
+    /**
+     * The interaction response (`type` 1 PONG, 4 a message to the clicker only, or 7 the updated message)
+     */
+    200: {
+        type: number;
+        data?: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type ReceiveDiscordInteractionResponse = ReceiveDiscordInteractionResponses[keyof ReceiveDiscordInteractionResponses];
+
+export type UnlinkDiscordData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/discord/link';
+};
+
+export type UnlinkDiscordErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnlinkDiscordError = UnlinkDiscordErrors[keyof UnlinkDiscordErrors];
+
+export type UnlinkDiscordResponses = {
+    /**
+     * Unlinked, or nothing to unlink
+     */
+    204: void;
+};
+
+export type UnlinkDiscordResponse = UnlinkDiscordResponses[keyof UnlinkDiscordResponses];
+
+export type GetDiscordLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/discord/link';
+};
+
+export type GetDiscordLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetDiscordLinkError = GetDiscordLinkErrors[keyof GetDiscordLinkErrors];
+
+export type GetDiscordLinkResponses = {
+    /**
+     * OK
+     */
+    200: DiscordLink;
+};
+
+export type GetDiscordLinkResponse = GetDiscordLinkResponses[keyof GetDiscordLinkResponses];
+
+export type LinkDiscordData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/discord/link';
+};
+
+export type LinkDiscordErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type LinkDiscordError = LinkDiscordErrors[keyof LinkDiscordErrors];
+
+export type LinkDiscordResponses = {
+    /**
+     * Where to send the browser
+     */
+    200: DiscordLinkStart;
+};
+
+export type LinkDiscordResponse = LinkDiscordResponses[keyof LinkDiscordResponses];
+
+export type DiscordLinkCallbackData = {
+    body?: never;
+    path?: never;
+    query?: {
+        code?: string;
+        state?: string;
+        error?: string;
+    };
+    url: '/api/v1/discord/link/callback';
+};
 
 export type GithubCheckData = {
     body: {
@@ -16733,6 +16993,14 @@ export type ListWorkflowsData = {
     query?: {
         repo?: string;
         status?: string;
+        /**
+         * The id the previous page ended on, its `next` (planned, TeamCode's `after`; `400 invalid_cursor` for an id the organization has no workflow of)
+         */
+        after?: string;
+        /**
+         * 1 to 100, 50 by default (planned; every workflow of the organization until the server pages them)
+         */
+        limit?: number;
     };
     url: '/api/v1/workflows';
 };
@@ -17122,11 +17390,15 @@ export type ListRunsData = {
          */
         all?: boolean;
         /**
-         * Only the runs of this workflow (planned; a `limit` of 1 to 100, 50 by default, comes with it once the server bounds the page)
+         * Only the runs of this workflow (planned; `404 not_found` for a workflow the organization does not have)
          */
         workflow?: string;
         status?: string;
         before?: string;
+        /**
+         * 1 to 100, 50 by default
+         */
+        limit?: number;
     };
     url: '/api/v1/runs';
 };
@@ -24780,6 +25052,10 @@ export type CreateCloudSessionData = {
          */
         'Ostrom-Org'?: string;
         /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
+        /**
          * 1 to 128 characters of `A-Za-z0-9._:-`; one fresh key per press of Start, reused for each retry of it
          */
         'Idempotency-Key'?: string;
@@ -24842,6 +25118,10 @@ export type StopCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25297,6 +25577,10 @@ export type PauseCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25346,6 +25630,10 @@ export type ResumeCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25450,6 +25738,10 @@ export type SetCloudSessionGithubAccessData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25782,6 +26074,10 @@ export type IssueRunnerInferenceErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type IssueRunnerInferenceError = IssueRunnerInferenceErrors[keyof IssueRunnerInferenceErrors];
@@ -26675,6 +26971,10 @@ export type SetCloudPermissionBypassData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -27024,6 +27324,10 @@ export type CloudRunnerAgentErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    413: ApiError;
 };
 
 export type CloudRunnerAgentError = CloudRunnerAgentErrors[keyof CloudRunnerAgentErrors];

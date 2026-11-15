@@ -10,6 +10,8 @@ import {
   quietHoursProblem,
   samePhoneForm,
   sentCount,
+  discordRefusalOf,
+  discordReturnOf,
   slackRefusalOf,
   switchRows,
   testRefusalOf,
@@ -187,5 +189,40 @@ describe('why a Slack link is refused', () => {
     expect(slackRefusalOf(new ApiFailure('conflict', 'no', 409, undefined, 'other'))).toBeUndefined();
     expect(slackRefusalOf(new ApiFailure('conflict', 'no', 500, undefined))).toBeUndefined();
     expect(slackRefusalOf(new Error('offline'))).toBeUndefined();
+  });
+});
+
+describe('the Discord link', () => {
+  it('names the refusals of a start by their codes, nothing else', () => {
+    expect(discordRefusalOf(new ApiFailure('conflict', 'no', 409, undefined, 'discord_not_configured'))).toBe(
+      'notConfigured',
+    );
+    expect(discordRefusalOf(new ApiFailure('conflict', 'no', 409, undefined, 'other'))).toBeUndefined();
+    expect(discordRefusalOf(new ApiFailure('conflict', 'no', 500, undefined))).toBeUndefined();
+    expect(discordRefusalOf(new Error('offline'))).toBeUndefined();
+  });
+
+  it("reads what Discord's return carried, and nothing when it carried nothing", () => {
+    const codes = [
+      'discord_user_taken',
+      'discord_not_in_guild',
+      'discord_link_not_found',
+      'discord_link_browser_mismatch',
+      'discord_link_denied',
+      'discord_unreachable',
+    ];
+    expect(codes.map(discordReturnOf)).toEqual([
+      'taken',
+      'notInGuild',
+      'notFound',
+      'otherBrowser',
+      'denied',
+      'unreachable',
+    ]);
+    expect(discordReturnOf('linked')).toBe('linked');
+    expect(discordReturnOf('something_new')).toBe('failed');
+    expect(discordReturnOf('')).toBeUndefined();
+    expect(discordReturnOf(undefined)).toBeUndefined();
+    expect(discordReturnOf(1)).toBeUndefined();
   });
 });

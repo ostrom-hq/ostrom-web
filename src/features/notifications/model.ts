@@ -164,3 +164,33 @@ export function slackRefusalOf(failure: Error): SlackRefusal | undefined {
   if (!isApiFailure(failure) || failure.code === undefined) return undefined;
   return SLACK_REFUSALS[failure.code];
 }
+
+/** Why a Discord link did not happen: refused when it was started, or the outcome Discord's return carried. */
+export type DiscordRefusal =
+  'notConfigured' | 'taken' | 'notInGuild' | 'notFound' | 'otherBrowser' | 'denied' | 'unreachable';
+
+const DISCORD_REFUSALS: Readonly<Record<string, DiscordRefusal>> = {
+  discord_not_configured: 'notConfigured',
+  discord_user_taken: 'taken',
+  discord_not_in_guild: 'notInGuild',
+  discord_link_not_found: 'notFound',
+  discord_link_browser_mismatch: 'otherBrowser',
+  discord_link_denied: 'denied',
+  discord_unreachable: 'unreachable',
+};
+
+/** The refusal a failed start names by its code, or undefined for any other failure (its message is shown). */
+export function discordRefusalOf(failure: Error): DiscordRefusal | undefined {
+  if (!isApiFailure(failure) || failure.code === undefined) return undefined;
+  return DISCORD_REFUSALS[failure.code];
+}
+
+/** What Discord's return said (`/me/notifications?discord=…`): linked, a known refusal, or another outcome. */
+export type DiscordReturn = 'linked' | DiscordRefusal | 'failed';
+
+/** The outcome of `?discord=`, or undefined when the page was not opened by Discord's return. */
+export function discordReturnOf(value: unknown): DiscordReturn | undefined {
+  if (typeof value !== 'string' || value === '') return undefined;
+  if (value === 'linked') return 'linked';
+  return DISCORD_REFUSALS[value] ?? 'failed';
+}

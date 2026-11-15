@@ -946,6 +946,8 @@ export const zAuditEvent = z.object({
     hash: z.optional(z.string()),
     signature: z.optional(z.string()),
     keyId: z.optional(z.string()),
+    effectiveMemberId: z.nullish(z.string()),
+    credentialId: z.nullish(z.string()),
     integrity: z.optional(z.union([z.enum([
             'verified',
             'altered',
@@ -1354,7 +1356,7 @@ export const zApiPriceTable = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1515,6 +1517,7 @@ export const zSaveCompilerSettingsRequest = z.object({
 export const zCloudSettings = z.object({
     backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
     maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
+    remoteIdleTimeoutMinutes: z.optional(z.int().check(z.gte(0), z.lte(1440))),
     updatedAt: z.optional(z.iso.datetime({ offset: true })),
     updatedBy: z.optional(z.string())
 });
@@ -1522,6 +1525,7 @@ export const zCloudSettings = z.object({
 export const zSaveCloudSettingsRequest = z.object({
     backgroundWorkMaxMinutes: z.int().check(z.gte(0), z.lte(1440)),
     maxRunningAutomationsPerMember: z.optional(z.int().check(z.gte(1), z.lte(100))),
+    remoteIdleTimeoutMinutes: z.optional(z.int().check(z.gte(0), z.lte(1440))),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
 });
 
@@ -1601,6 +1605,15 @@ export const zCloudEnvironment = z.object({
     requiredVariables: z.optional(z.array(z.string()).check(z.maxLength(64))),
     requireGitHub: z.optional(z.boolean()),
     gitEmailDomain: z.optional(z.string())
+});
+
+/**
+ * Who created a cloud session (`runners.cloud.onbehalf.v1`, TeamCode's attribution): absent from a session created before the feature
+ */
+export const zCloudAttribution = z.object({
+    initiatorId: z.string(),
+    credentialId: z.nullish(z.string()),
+    effectiveMemberId: z.string()
 });
 
 /**
@@ -1995,7 +2008,8 @@ export const zCloudSession = z.object({
     createdAt: z.string(),
     endedAt: z.optional(z.string()),
     kind: z.optional(z.string()),
-    host: z.optional(zCloudSessionHost)
+    host: z.optional(zCloudSessionHost),
+    createdBy: z.optional(zCloudAttribution)
 });
 
 /**
@@ -3495,6 +3509,25 @@ export const zSlackLink = z.object({
     linked: z.boolean(),
     slackUserId: z.optional(z.string()),
     linkedAt: z.optional(z.string())
+});
+
+/**
+ * A member's Discord link: the Discord account their notifications (channel `discord`) and yes requests go to as direct messages. At most one per member of an organization, and one member per Discord account in an organization
+ */
+export const zDiscordLink = z.object({
+    memberId: z.string(),
+    configured: z.boolean(),
+    linked: z.boolean(),
+    discordUserId: z.optional(z.string()),
+    discordUsername: z.optional(z.string()),
+    linkedAt: z.optional(z.string())
+});
+
+/**
+ * The start of a Discord link (`linkDiscord`): Discord's authorization URL, to open in the browser that asked for it
+ */
+export const zDiscordLinkStart = z.object({
+    authorizeUrl: z.string()
 });
 
 /**
@@ -6398,6 +6431,11 @@ export const zOstromOrigin = z.string();
 export const zOstromOrg = z.string();
 
 /**
+ * Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+ */
+export const zOstromOnBehalfOf = z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/));
+
+/**
  * OK
  */
 export const zHealthRootResponse = zHealth;
@@ -7273,6 +7311,59 @@ export const zLinkSlackHeaders = z.object({
  * Linked
  */
 export const zLinkSlackResponse = zSlackLink;
+
+/**
+ * The interaction, as Discord sends it
+ */
+export const zReceiveDiscordInteractionBody = z.object({
+    type: z.int()
+});
+
+export const zReceiveDiscordInteractionHeaders = z.object({
+    'X-Signature-Ed25519': z.string(),
+    'X-Signature-Timestamp': z.string()
+});
+
+/**
+ * The interaction response (`type` 1 PONG, 4 a message to the clicker only, or 7 the updated message)
+ */
+export const zReceiveDiscordInteractionResponse = z.object({
+    type: z.int(),
+    data: z.optional(z.record(z.string(), z.unknown()))
+});
+
+export const zUnlinkDiscordHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Unlinked, or nothing to unlink
+ */
+export const zUnlinkDiscordResponse = z.void();
+
+export const zGetDiscordLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetDiscordLinkResponse = zDiscordLink;
+
+export const zLinkDiscordHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Where to send the browser
+ */
+export const zLinkDiscordResponse = zDiscordLinkStart;
+
+export const zDiscordLinkCallbackQuery = z.object({
+    code: z.optional(z.string()),
+    state: z.optional(z.string()),
+    error: z.optional(z.string())
+});
 
 export const zGithubCheckBody = z.object({
     repo: z.string(),
@@ -8401,7 +8492,9 @@ export const zListWorkflowsHeaders = z.object({
 
 export const zListWorkflowsQuery = z.object({
     repo: z.optional(z.string()),
-    status: z.optional(z.string())
+    status: z.optional(z.string()),
+    after: z.optional(z.string()),
+    limit: z.optional(z.int().check(z.gte(1), z.lte(100)))
 });
 
 /**
@@ -8503,7 +8596,8 @@ export const zListRunsQuery = z.object({
     all: z.optional(z.boolean()),
     workflow: z.optional(z.string()),
     status: z.optional(z.string()),
-    before: z.optional(z.string())
+    before: z.optional(z.string()),
+    limit: z.optional(z.int().check(z.gte(1), z.lte(100)))
 });
 
 /**
@@ -10481,6 +10575,7 @@ export const zCreateCloudSessionBody = zCreateCloudSessionRequest;
 
 export const zCreateCloudSessionHeaders = z.object({
     'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/))),
     'Idempotency-Key': z.optional(z.string().check(z.minLength(1), z.maxLength(128), z.regex(/^[A-Za-z0-9._:-]+$/)))
 });
 
@@ -10490,7 +10585,8 @@ export const zCreateCloudSessionHeaders = z.object({
 export const zCreateCloudSessionResponse = zCloudSession;
 
 export const zStopCloudSessionHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zStopCloudSessionPath = z.object({
@@ -10616,7 +10712,8 @@ export const zCancelCloudTransferPath = z.object({
 export const zCancelCloudTransferResponse = zCloudTransfer;
 
 export const zPauseCloudSessionHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zPauseCloudSessionPath = z.object({
@@ -10629,7 +10726,8 @@ export const zPauseCloudSessionPath = z.object({
 export const zPauseCloudSessionResponse = zCloudSession;
 
 export const zResumeCloudSessionHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zResumeCloudSessionPath = z.object({
@@ -10663,7 +10761,8 @@ export const zSetCloudSessionGithubAccessBody = z.object({
 });
 
 export const zSetCloudSessionGithubAccessHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zSetCloudSessionGithubAccessPath = z.object({
@@ -10996,7 +11095,8 @@ export const zAnswerCloudPermissionResponse = zCloudInput;
 export const zSetCloudPermissionBypassBody = zSetCloudPermissionBypassRequest;
 
 export const zSetCloudPermissionBypassHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zSetCloudPermissionBypassPath = z.object({
