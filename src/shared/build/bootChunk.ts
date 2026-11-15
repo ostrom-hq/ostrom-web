@@ -15,10 +15,11 @@ export interface ModuleGraph {
 
 /**
  * Parts the screens share beyond the first download: the console's own shared code, but not a language's wording (a
- * chunk of its own, src/shared/i18n/i18n.ts), and React Query's infinite lists (its core already is in the entry).
+ * chunk of its own, src/shared/i18n/i18n.ts), nor analytics (loaded after the first paint, src/app/AnalyticsLayer.tsx),
+ * and React Query's infinite lists (its core already is in the entry).
  */
 const SHARED =
-  /[\\/]src[\\/]shared[\\/](?!i18n[\\/]locales[\\/])|[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?@tanstack[\\/](?:react-query|query-core)[\\/]/;
+  /[\\/]src[\\/]shared[\\/](?!i18n[\\/]locales[\\/]|analytics[\\/])|[\\/]node_modules[\\/](?:\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/])?@tanstack[\\/](?:react-query|query-core)[\\/]/;
 
 /** A module of a screen's feature (src/features/<feature>/), which the router loads lazily. */
 const FEATURE = /[\\/]src[\\/]features[\\/]([^\\/]+)[\\/]/;

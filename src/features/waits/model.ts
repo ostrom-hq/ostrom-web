@@ -12,7 +12,7 @@ export type WaitScope = (typeof SCOPES)[number];
 
 /** The page size the console asks for (the server's default); the badge in the navigation reads the largest page. */
 export const PAGE = 50;
-export const BADGE_PAGE = 100;
+export { BADGE_PAGE } from './badge';
 
 /** The kinds a cloud session answers itself: `POST /waits/{id}/answer` refuses them (409 `answer_through_session`). */
 const THROUGH_SESSION: readonly string[] = ['permission', 'question'];
@@ -233,8 +233,4 @@ export function isViewer(
   if (who === undefined) return false;
   return who === viewer.memberId || who.toLowerCase() === viewer.login?.toLowerCase();
 }
-
-/** The badge's count: a page that has more says so ("100+"). */
-export function countLabel(count: number, more: boolean): string {
-  return more ? `${String(count)}+` : String(count);
-}
+export { countLabel } from './badge';
