@@ -74,7 +74,7 @@ test('another organization never sees the first one’s models or keys', async (
   }
 });
 
-test('an owner edits the API price table: a dated row of its own, the list prices loaded, a row removed, and another organization keeps the built-in prices', async ({
+test('an owner edits the API price table: a dated row of its own over the list prices, the list loaded again, a row removed, and another organization keeps the built-in prices', async ({
   page,
   browser,
 }) => {
@@ -109,17 +109,20 @@ test('an owner edits the API price table: a dated row of its own, the list price
   await expect(box.getByText('Built-in prices')).toHaveCount(0);
   const own = await read(page);
   expect(own.defaults).not.toBe(true);
-  expect(own.prices).toEqual([
+  // The built-in rows shown are kept as the organization's own, with the new one.
+  expect(own.prices.length).toBeGreaterThan(1);
+  expect(own.prices).toContainEqual(
     expect.objectContaining({
       provider: 'anthropic',
       model: 'claude-test-9',
       effectiveFrom: '2026-11-01',
       outputMicros: 8_000_000,
     }),
-  ]);
+  );
 
+  // Loading again changes nothing: every list price is there already.
   await box.getByRole('button', { name: 'Load current Anthropic prices' }).click();
-  await expect.poll(async () => (await read(page)).prices.length).toBeGreaterThan(1);
+  await expect.poll(async () => (await read(page)).prices.length).toBe(own.prices.length);
   await box.getByRole('button', { name: 'Remove claude-test-9 from 2026-11-01' }).click();
   await expect(box.getByRole('cell', { name: 'claude-test-9' })).toHaveCount(0);
   await expect

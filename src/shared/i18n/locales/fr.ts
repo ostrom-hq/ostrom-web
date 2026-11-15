@@ -775,7 +775,7 @@ export const fr = {
       lead: 'Ce que l’API à l’usage du fournisseur facture, en dollars le million de jetons. Ces prix valorisent les appels de modèle de l’organisation : leur coût, les budgets, la taille automatique du pool. Une ligne s’applique à partir de sa date jusqu’à une ligne plus récente du même modèle ; un modèle exact l’emporte sur le préfixe le plus long. Propriétaires et admins uniquement.',
       defaultsTag: 'Prix intégrés',
       defaults:
-        'L’organisation n’a aucun prix à elle : les prix catalogue d’Anthropic intégrés ci-dessous s’appliquent. Enregistrer une ligne ne garde que vos lignes ; chargez d’abord les prix actuels d’Anthropic pour les conserver.',
+        'L’organisation n’a aucun prix à elle : les prix catalogue d’Anthropic intégrés ci-dessous s’appliquent. Enregistrer une ligne les garde comme ceux de l’organisation, avec les vôtres.',
       empty:
         'Aucun prix : aucun appel de modèle n’est valorisé. Saisissez-en un ou chargez les prix catalogue d’Anthropic ci-dessous.',
       caption: 'Dollars le million de jetons.',
@@ -792,6 +792,7 @@ export const fr = {
       remove: 'Retirer',
       removeRow: 'Retirer {{model}} à partir du {{from}}',
       add: 'Ajouter ou remplacer un prix',
+      addHelp: 'Une ligne du même fournisseur, modèle et date est remplacée. Un prix de cache vide vaut 0 $.',
       modelField: 'Modèle ou préfixe de famille',
       fromField: 'En vigueur à partir du (UTC)',
       field: {

@@ -168,12 +168,13 @@ function PriceForm({
       onSubmit={(event) => {
         event.preventDefault();
         if (row !== undefined)
-          view.save(withPrice(table.prices, table.defaults === true, row), () => {
+          view.save(withPrice(table.prices, row), () => {
             setDraft((was) => ({ ...was, model: '', ...EMPTY_PRICES }));
           });
       }}
     >
       <h3 className="o-label">{t('policy.prices.add')}</h3>
+      <p className="o-row__meta">{t('policy.prices.addHelp')}</p>
       <div className="pl-price-form">
         <div className="o-stack">
           <label htmlFor={ids.provider} className="o-field-label">

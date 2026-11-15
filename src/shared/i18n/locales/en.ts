@@ -756,7 +756,7 @@ export const en = {
       lead: 'What the provider’s pay-as-you-go API charges, in dollars a million tokens. They price the organization’s model calls: their cost, the budgets, the automatic pool size. A row applies from its date until a later row of the same model; an exact model wins over the longest prefix. Owners and admins only.',
       defaultsTag: 'Built-in prices',
       defaults:
-        'The organization has no price of its own: the built-in Anthropic list prices below apply. Saving a row stores your rows only; load the current Anthropic prices first to keep them.',
+        'The organization has no price of its own: the built-in Anthropic list prices below apply. Saving a row keeps them as the organization’s own, with yours.',
       empty: 'No price: every model call is unpriced. Enter one or load Anthropic’s list prices below.',
       caption: 'Dollars a million tokens.',
       provider: 'Provider',
@@ -772,6 +772,7 @@ export const en = {
       remove: 'Remove',
       removeRow: 'Remove {{model}} from {{from}}',
       add: 'Add or replace a price',
+      addHelp: 'A row of the same provider, model and date is replaced. An empty cache price is $0.',
       modelField: 'Model or family prefix',
       fromField: 'Effective from (UTC)',
       field: {

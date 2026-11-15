@@ -8,8 +8,6 @@ import type { ApiPrice } from '@gen/api/types.gen';
 const MICROS = 1_000_000;
 /** The largest price the server takes: $1 000 000 a million tokens. */
 export const MAX_PRICE_MICROS = 1_000_000_000_000;
-/** At most 200 rows. */
-export const MAX_PRICE_ROWS = 200;
 export const PRICE_PROVIDERS = ['anthropic', 'openai'] as const;
 export const MAX_MODEL_LENGTH = 128;
 
@@ -82,11 +80,11 @@ function sameRow(a: ApiPrice, b: ApiPrice): boolean {
 
 /**
  * The table to send once `row` is added: it replaces the row of the same provider, model and date. While the built-in
- * prices apply (`defaults`), they are not the organization's rows: the table sent holds the new row alone.
+ * prices apply, the rows shown are those: they are kept as the organization's own, so one new row never leaves every
+ * other model unpriced.
  */
-export function withPrice(prices: readonly ApiPrice[], defaults: boolean, row: ApiPrice): ApiPrice[] {
-  const kept = defaults ? [] : prices.filter((item) => !sameRow(item, row));
-  return sortPrices([...kept, row]);
+export function withPrice(prices: readonly ApiPrice[], row: ApiPrice): ApiPrice[] {
+  return sortPrices([...prices.filter((item) => !sameRow(item, row)), row]);
 }
 
 /** The table to send without `row`. */

@@ -49,7 +49,9 @@ describe('the API price editor', () => {
     await addRow(user, box, 'GPT-5');
     expect(await within(box).findByRole('cell', { name: 'gpt-5' })).toBeInTheDocument();
     expect(within(box).queryByText('Built-in prices')).toBeNull();
+    // The built-in rows shown are kept as the organization's own, with the new one.
     expect(db.apiPrices).toEqual([
+      ...BUILT_IN_PRICES,
       {
         provider: 'openai',
         model: 'gpt-5',
@@ -63,7 +65,7 @@ describe('the API price editor', () => {
     expect(within(form).getByRole('textbox', { name: 'Model or family prefix' })).toHaveValue('');
 
     await user.click(within(box).getByRole('button', { name: 'Load current Anthropic prices' }));
-    expect(await within(box).findByRole('cell', { name: 'claude-opus-4' })).toBeInTheDocument();
+    await within(box).findByRole('button', { name: 'Load current Anthropic prices' });
     expect(db.apiPrices).toHaveLength(3);
     await user.click(within(box).getByRole('button', { name: 'Remove claude-opus-4 from 2026-10-21' }));
     await within(box).findByRole('button', { name: 'Remove gpt-5 from 2026-11-01' });

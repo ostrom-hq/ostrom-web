@@ -58,11 +58,10 @@ describe('the API price table', () => {
     expect(draftPrice({ ...draft, outputMicros: '0' })).toBeUndefined();
   });
 
-  it('replaces the row of the same model and date, and drops the built-in rows', () => {
+  it('replaces the row of the same model and date, and keeps the others', () => {
     const table = [row('claude-sonnet-4', '2026-10-21'), row('claude-opus-4', '2026-10-21')];
     const changed = { ...row('claude-sonnet-4', '2026-10-21'), outputMicros: 1 };
-    expect(withPrice(table, false, changed)).toEqual([row('claude-opus-4', '2026-10-21'), changed]);
-    expect(withPrice(table, true, changed)).toEqual([changed]);
+    expect(withPrice(table, changed)).toEqual([row('claude-opus-4', '2026-10-21'), changed]);
     expect(withoutPrice(table, row('claude-opus-4', '2026-10-21'))).toEqual([
       row('claude-sonnet-4', '2026-10-21'),
     ]);
