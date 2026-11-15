@@ -244,6 +244,7 @@ import { createNotificationsHandlers, type NotificationsState } from '@/mocks/no
 import {
   initialNotificationPreferences,
   initialNotificationSwitches,
+  initialPushDevices,
   initialPushPhones,
 } from '@/mocks/fixtures/notifications';
 import { createGroupsHandlers, type GroupsState } from '@/mocks/groups';
@@ -388,6 +389,7 @@ export function createMockDb(): MockDb {
     notificationSwitches: initialNotificationSwitches(),
     notificationPreferences: initialNotificationPreferences(),
     pushProvider: 'relay',
+    pushDevices: initialPushDevices(),
     pushPhones: initialPushPhones(),
     lastPushTestAt: undefined,
     selfApproval: 'never',

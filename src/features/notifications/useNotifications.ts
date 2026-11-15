@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  deletePushDeviceMutation,
   getNotificationPreferencesOptions,
   getNotificationPreferencesQueryKey,
   getNotificationSettingsOptions,
   getNotificationSettingsQueryKey,
+  listPushDevicesOptions,
+  listPushDevicesQueryKey,
   sendTestPushMutation,
   setNotificationPreferencesMutation,
   setNotificationSettingMutation,
@@ -12,6 +15,7 @@ import type {
   NotificationPreferences,
   NotificationSettingChange,
   NotificationSettings,
+  PushDevice,
   PushTestResults,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -124,5 +128,36 @@ export function useTestPush(): TestPushViewModel {
     sending: mutation.isPending,
     results: mutation.data,
     failure: failureOf(mutation.error),
+  };
+}
+
+export interface PushDevicesViewModel {
+  /** The caller's phones, the most recently seen first; undefined until they are read. */
+  readonly phones: readonly PushDevice[] | undefined;
+  readonly failure: Error | undefined;
+  /** Stops notifying one phone; the list is read again once the server did. */
+  readonly remove: (phone: PushDevice) => void;
+  /** The phone on its way out, if any. */
+  readonly removing: string | undefined;
+  readonly removeFailure: Error | undefined;
+}
+
+/** `GET /push-devices` and `DELETE /push-devices/{id}`: the phones the caller is notified on, in this organization. */
+export function usePushDevices(enabled: boolean): PushDevicesViewModel {
+  const queryClient = useQueryClient();
+  const query = useQuery(ready(listPushDevicesOptions(), { enabled, retry: false }));
+  const relist = async (): Promise<void> => {
+    await queryClient.invalidateQueries({ queryKey: listPushDevicesQueryKey() });
+  };
+  const mutation = useMutation({ ...deletePushDeviceMutation(), onSuccess: relist, onError: relist });
+  const { mutate } = mutation;
+  return {
+    phones: query.data?.items,
+    failure: failureOf(query.error),
+    remove: (phone) => {
+      mutate({ path: { id: phone.id } });
+    },
+    removing: mutation.isPending ? mutation.variables.path.id : undefined,
+    removeFailure: failureOf(mutation.error),
   };
 }

@@ -2572,6 +2572,19 @@ export const en = {
         rateLimited: 'A test was just sent. Wait a few seconds, then try again.',
       },
     },
+    phones: {
+      title: 'Registered phones',
+      lead: 'The phones notified for you in this organization. Remove one you no longer use.',
+      none: 'No phone is registered yet. Sign in with the app on your phone and allow notifications.',
+      since: 'Registered {{date}}',
+      platform: {
+        ios: 'iPhone',
+        android: 'Android phone',
+      },
+      remove: 'Remove',
+      removeConfirm: 'Stop notifying {{phone}}',
+      keep: 'Keep',
+    },
   },
   account: {
     title: 'My account',
