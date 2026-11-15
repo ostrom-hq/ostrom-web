@@ -84,6 +84,7 @@ describe('the runtime form', () => {
   it('fills from what is stored and sends the same back, with the date it read', () => {
     const draft = runtimeDraftOf(runtime);
     expect(draft.runnerBinary).toBe('/usr/local/bin/ostrom');
+    expect(draft.sessionImage).toBe('');
     expect(draft.pausedRetentionDays).toBe('');
     expect(runtimeProblem(draft)).toBeUndefined();
     expect(runtimeRequestOf(draft, runtime)).toEqual({
@@ -105,6 +106,7 @@ describe('the runtime form', () => {
     const draft = {
       ...runtimeDraftOf(unsaved),
       runnerImage: '',
+      sessionImage: '  ',
       serverUrl: ' https://ostrom.acme.test ',
       pausedRetentionDays: '30',
       transcriptRetentionDays: '90',

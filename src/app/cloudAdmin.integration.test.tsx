@@ -330,6 +330,11 @@ describe('the runtime and the clusters, the instance’s own', () => {
     expect(await within(runtime).findByLabelText('Runner image')).toHaveValue(
       'ghcr.io/acme/ostrom-runner:1.4',
     );
+    // The server may not send a session image yet: the field is empty and shows the default.
+    const sessionImage = within(runtime).getByLabelText('Session image');
+    expect(sessionImage).toHaveValue('');
+    expect(sessionImage).toHaveAttribute('placeholder', 'docker.io/ostromhq/ostrom-session:latest');
+    expect(within(runtime).getByText(/Kubernetes sessions use their profile’s image\./)).toBeVisible();
     expect(
       within(runtime).getByText('An https origin without a path. Empty uses https://ostrom.acme.test.'),
     ).toBeVisible();
@@ -345,6 +350,7 @@ describe('the runtime and the clusters, the instance’s own', () => {
     );
     await user.type(within(runtime).getByLabelText('Days a paused session keeps its workspace'), '30');
     await user.type(within(runtime).getByLabelText('Days transcripts are kept'), '90');
+    await user.type(within(runtime).getByLabelText('Session image'), ' ghcr.io/acme/session:3 ');
     await user.click(save);
     expect(await within(runtime).findByText(/The runtime is saved\./)).toBeVisible();
     expect(db.cloudRuntime).toMatchObject({
@@ -354,6 +360,7 @@ describe('the runtime and the clusters, the instance’s own', () => {
       memberTransfers: 'disabled',
       pausedRetentionDays: 30,
       transcriptRetentionDays: 90,
+      sessionImage: 'ghcr.io/acme/session:3',
     });
   });
 

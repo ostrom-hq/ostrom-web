@@ -5,6 +5,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import { LoadState, Section } from '@/shared/ui/Screen';
 import {
+  DEFAULT_SESSION_IMAGE,
   type RuntimeDraft,
   runtimeDraftOf,
   runtimeProblem,
@@ -78,6 +79,17 @@ function RuntimeForm({
         maxLength={512}
         onChange={(runnerImage) => {
           edit({ runnerImage });
+        }}
+      />
+      <Field
+        label={t('cloudAdmin.runtime.sessionImage')}
+        value={draft.sessionImage}
+        disabled={disabled}
+        maxLength={512}
+        placeholder={DEFAULT_SESSION_IMAGE}
+        hint={t('cloudAdmin.runtime.sessionImageHint', { image: DEFAULT_SESSION_IMAGE })}
+        onChange={(sessionImage) => {
+          edit({ sessionImage });
         }}
       />
       <Field
