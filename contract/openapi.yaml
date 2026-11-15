@@ -21,7 +21,7 @@ info:
     console''s, or `OSTROM_ALLOWED_ORIGINS`), or is refused with 403.
 
     Every route is under `/api/v1`, except `/health` and the incoming webhooks (`/webhooks/stripe`, `/webhooks/github`,
-    `/webhooks/slack`), each authenticated by its sender''s signature.
+    `/webhooks/slack`, `/webhooks/discord`), each authenticated by its sender''s signature.
 
     A route without `orgs/{orgId}` in its path acts in the caller''s organization. A person who is a member of several
     organizations names it with the `Ostrom-Org` header (the organization''s id); without it they get 409 with
@@ -3195,6 +3195,185 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+  /webhooks/discord:
+    post:
+      operationId: receiveDiscordInteraction
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: 'Discord interactions (the Reject button of a yes request, and the PING Discord sends when the URL is
+        saved). Called by Discord only, authenticated by `X-Signature-Ed25519` (Ed25519 of `X-Signature-Timestamp` +
+        the raw body, with the application''s public key) with a timestamp at most 5 minutes old'
+      description: 'The interactions endpoint URL of the instance''s Discord application (`discord.v1`), checked with the
+        public key of the `discord` settings section, exactly as Discord specifies. A body over 64 KiB is 400 first,
+        unread and unverified; then a bad signature, a timestamp more than 5 minutes away, or Discord not configured
+        is 401, before the interaction is parsed. A
+        PING (type 1) answers `{"type":1}`. Reject answers no for the approver whose Discord account clicked it (the
+        member who linked that `discordUserId` in the request''s organization, answer channel `discord`), and the
+        response itself updates the message (type 7, UPDATE_MESSAGE) with the outcome; anyone else''s click answers
+        an ephemeral message (type 4) and changes nothing. Approve is a link button to the console''s page of the
+        request (`/yes/{approvalId}`): a yes always needs a fresh proof of who the approver is (S2-54), which a
+        Discord click is not, so no yes is ever given here and Discord sends no interaction for it. Once a request is
+        decided on any channel, the approvers'' messages lose their buttons'
+      security: []
+      parameters:
+      - name: X-Signature-Ed25519
+        in: header
+        required: true
+        schema:
+          type: string
+      - name: X-Signature-Timestamp
+        in: header
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: The interaction, as Discord sends it
+              properties:
+                type:
+                  type: integer
+                  description: 1 PING, 3 MESSAGE_COMPONENT (a button)
+              required:
+              - type
+      responses:
+        '200':
+          description: The interaction response (`type` 1 PONG, 4 a message to the clicker only, or 7 the updated
+            message)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: integer
+                  data:
+                    type: object
+                required:
+                - type
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+  /api/v1/discord/link:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getDiscordLink
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: "The caller's own Discord link in the organization (`discord.v1`): the Discord account their notifications
+        and yes requests go to as direct messages. A person's interactive login only (a browser session, the unlocked
+        app or `ostrom login`); a service key, an agent or a device token is 403. Works while Discord is not configured
+        (`configured` false), so a member can still see and remove a link. 404 and 409 are the organization's
+        resolution (`Ostrom-Org`)"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscordLink'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: linkDiscord
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: "Starts linking the caller's Discord account: the URL of Discord's authorization (OAuth2, scope
+        `identify`) to open in the same browser"
+      description: "A browser session only (the console), 403 otherwise: Discord proves which account the person
+        holds by signing them in, and the attempt is bound to the browser session that started it. The answer carries
+        Discord's authorization URL with a single-use `state` whose hash is stored with the caller's organization and
+        member for 10 minutes; Discord then returns to `discordLinkCallback`, which must be registered as a redirect of
+        the instance's Discord application. Nobody types a Discord id, so nobody links another person's account. 409
+        `discord_not_configured` while the `discord` settings section misses the bot token, the application id, the
+        client secret or the server (guild) id; 404 and 409 are otherwise the organization's resolution
+        (`Ostrom-Org`). Starting again replaces an unfinished attempt; an existing link stays until the new one is
+        stored"
+      responses:
+        '200':
+          description: Where to send the browser
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscordLinkStart'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+    delete:
+      operationId: unlinkDiscord
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: "Removes the caller's own Discord link; 204 also when not linked. Nothing more is sent to that Discord
+        account, and a Reject from a message sent before changes nothing. 404 and 409 are the organization's
+        resolution (`Ostrom-Org`)"
+      responses:
+        '204':
+          description: Unlinked, or nothing to unlink
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/discord/link/callback:
+    get:
+      operationId: discordLinkCallback
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: "Discord's return from a link (`<OSTROM_PUBLIC_URL>/api/v1/discord/link/callback`, a redirect of the
+        instance's Discord application). The single-use state identifies the attempt and its member, and must come
+        back with the browser session that started it: a link opened in another browser binds nothing
+        (`discord_link_browser_mismatch`). The code is exchanged for the Discord account (`identify`), which must be a
+        member of the instance's Discord server, since a bot only writes to a person it shares a server with. Once
+        stored, the account is told by a direct message that it now receives this member's notifications (best
+        effort). The browser is always sent back to the console's `/me/notifications` page with `discord=linked` or
+        `discord=<error.type>` (`discord_link_not_found`, `discord_link_browser_mismatch`, `discord_link_denied`,
+        `discord_user_taken`, `discord_not_in_guild`, `discord_not_configured`, `discord_unreachable`; a missing or
+        unknown state is `discord_link_not_found`, whatever else comes with it): this route never answers with an
+        error body"
+      parameters:
+      - name: code
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: error
+        in: query
+        required: false
+        schema:
+          type: string
+      security: []
+      responses:
+        '302':
+          description: Redirect to the console
   /api/v1/github/checks:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -6196,7 +6375,7 @@ paths:
       - notifications
       summary: The caller's notification switches, per channel and kind
       description: 'What the caller is told about (`notifications.v1`): `waiting` (an agent or a wait needs them),
-        `turn_completed`, `turn_failed` and `session_failed`, on each channel the server offers (`push`, `slack`, later
+        `turn_completed`, `turn_failed` and `session_failed`, on each channel the server offers (`push`, `slack`,
         `discord`). Every kind is on until the member turns it off; `channels` is empty while the server offers none.
         A member reads and changes only their own, with an interactive login (a browser session, the unlocked app or
         `ostrom login`); a service key has no person to notify (403).'
@@ -6545,6 +6724,21 @@ paths:
         required: false
         schema:
           type: string
+      - name: after
+        in: query
+        required: false
+        description: "The id the previous page ended on, its `next` (planned, TeamCode's `after`; `400 invalid_cursor` for
+          an id the organization has no workflow of)"
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        description: "1 to 100, 50 by default (planned; every workflow of the organization until the server pages them)"
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -6807,8 +7001,8 @@ paths:
       - name: workflow
         in: query
         required: false
-        description: "Only the runs of this workflow (planned; a `limit` of 1 to 100, 50 by default, comes with it once
-          the server bounds the page)"
+        description: "Only the runs of this workflow (planned; `404 not_found` for a workflow the organization does not
+          have)"
         schema:
           type: string
       - name: status
@@ -6821,6 +7015,14 @@ paths:
         required: false
         schema:
           type: string
+      - name: limit
+        in: query
+        required: false
+        description: "1 to 100, 50 by default"
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
       responses:
         '200':
           description: OK
@@ -12925,7 +13127,7 @@ paths:
       tags:
       - runners
       summary: The caller's cloud agent sessions, newest first
-      description: "With `runners.cloud.remote.v1` (planned), `kind` (repeatable) chooses the kinds listed, `cloud` or
+      description: "With `runners.cloud.remote.v1`, `kind` (repeatable) chooses the kinds listed, `cloud` or
         `remote` (400 `invalid_kind` otherwise); without it, cloud sessions only, so a client from before remote sessions
         never lists one it cannot show"
       parameters:
@@ -12986,8 +13188,15 @@ paths:
         key with the same request answers `202` with the session's current view and `Idempotency-Replayed: true`,
         creating nothing; the same key with another request or another effective member is 422 `idempotency_conflict`;
         concurrent requests with one key create one session and the others replay. A malformed key is 400
-        `invalid_request`. The key is optional until every client sends one; TeamCode requires it"
+        `invalid_request`. The key is optional until every client sends one; TeamCode requires it.
+        With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.v1`), the effective member becomes the owner: the
+        profile assignment and the plan resolve for them, the session starts with `githubAccess: none` (its first
+        instructions are the creator's), and a profile whose environment requires GitHub is 422 `github_owner_consent`
+        (the owner creates that session themselves). A remote session (`kind: remote`) runs on the caller's own device
+        and is never created on behalf of another member (403 `on_behalf_forbidden`). `createdBy` records who created
+        it"
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: Idempotency-Key
         in: header
         required: false
@@ -13076,6 +13285,7 @@ paths:
       description: "Once terminated, the waits its agent asked in it that are still open are cancelled, as when a
         session on a machine ends"
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: id
         in: path
         required: true
@@ -13384,6 +13594,7 @@ paths:
       - runners
       summary: Pause a cloud session; the workspace is kept
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: id
         in: path
         required: true
@@ -13416,6 +13627,7 @@ paths:
       - runners
       summary: Resume a paused cloud session, within the plan's running cap and hours
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: id
         in: path
         required: true
@@ -13443,7 +13655,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: hostCloudSession
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: Open the next execution of a remote session, from its device
@@ -13490,10 +13702,12 @@ paths:
       - runners
       summary: "Changes the session's GitHub access (`runners.cloud.github.v1`): `owner`, `shared` or `none`. Only the
         owner, signed in (console, app) or with the CLI's login, never a service key acting for them (403
-        `github_owner_only`); anyone else, 404. Turning access off waits for a pause (409 `session_not_paused`), because a
+        `github_owner_only`, also for an `Ostrom-On-Behalf-Of` naming another member than the caller); anyone else,
+        404. Turning access off waits for a pause (409 `session_not_paused`), because a
         running agent keeps a token it already received until it expires; turning it on or sharing applies from the
         runner's next token renewal. Journaled `cloud.session.github_access_changed`"
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: id
         in: path
         required: true
@@ -13777,12 +13991,12 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: issueRunnerInference
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - runners
       summary: "The runner of a cloud session asks for the execution's inference credential (`runners.cloud.inference.v1`,
-        TeamCode's `POST /cloud/runner/inference`): an agent token of the launch the runner opened for this execution,
-        limited to inference, lasting one hour (`expiresInMillis`). The runner keeps it in memory only, renews it after a
+        TeamCode's `POST /cloud/runner/inference`): an agent token of the launch the runner opened for this execution
+        (`agent:session`, the scope every agent token carries), lasting one hour (`expiresInMillis`). The runner keeps it in memory only, renews it after a
         third of its lifetime and forwards the agent's model calls through its loopback proxy, so the agent only holds
         the proxy's random local token. The server keeps at most the current credential and the one before it per
         execution, deletes them in the write that ends the execution and purges expired ones every minute. Only the
@@ -13812,6 +14026,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
   /api/v1/cloud/runner/checks:
     parameters:
@@ -14550,6 +14766,7 @@ paths:
         `..._disabled`). The owner only, never on their behalf (403 `bypass_owner_only`); 409 `session_not_running`
         once terminated"
       parameters:
+      - $ref: '#/components/parameters/OstromOnBehalfOf'
       - name: id
         in: path
         required: true
@@ -14893,6 +15110,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '413':
           $ref: '#/components/responses/Error'
   /api/v1/cloud/runner/events:
     parameters:
@@ -19427,6 +19646,27 @@ components:
         organization (device, agent, runner, service key) acts in its own organization
       schema:
         type: string
+    OstromOnBehalfOf:
+      name: Ostrom-On-Behalf-Of
+      in: header
+      required: false
+      description: "Planned (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a
+        cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters
+        of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an
+        administrator's service key with `cloud:admin` may name another member; on any other credential the header must
+        be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the
+        organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one
+        are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective
+        member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is
+        journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the
+        effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone
+        (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the
+        header: a client checks the capability before sending it"
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: '^[A-Za-z0-9._-]+$'
   responses:
     GovernanceConfirmationPending:
       description: |-
@@ -21562,6 +21802,19 @@ components:
         keyId:
           type: string
           description: The instance key that signed it, `GET /api/v1/instance/keys` (`listAudit` only)
+        effectiveMemberId:
+          type:
+          - string
+          - 'null'
+          description: "The member the action was done for: the member an `Ostrom-On-Behalf-Of` named, otherwise the
+            actor; the session's owner for an entry of the server (`runners.cloud.onbehalf.v1`, `cloud.session.*`).
+            Absent from the other events"
+        credentialId:
+          type:
+          - string
+          - 'null'
+          description: "The id of the credential the actor used (a browser session, a token, a service key), never the
+            token itself (`runners.cloud.onbehalf.v1`, `cloud.session.*`). Absent from the other events"
         integrity:
           type: string
           enum:
@@ -21774,7 +22027,6 @@ components:
         profileId:
           type: string
           format: uuid
-          x-ostrom-status: planned
           description: "The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's
             `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name
             none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has
@@ -22454,8 +22706,8 @@ components:
         compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core):
         `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`,
         `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`,
-        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
-        `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`,
+        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
+        `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`,
         `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`,
         `license.v1`. A client
         ignores a key it does not know."
@@ -22992,6 +23244,13 @@ components:
           description: How many sessions of one member's automation runs may work at once (TeamCode's
             `maxRunningAutomationsPerMember`); a run over it stays `queued` (up to 30 minutes, then fails
             `capacity_timeout`). A run of a workflow action does not count. 2 by default
+        remoteIdleTimeoutMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          description: With `runners.cloud.remote.v1`, how long a remote session may go without a turn, a message or an attached client before it pauses; 0 never
+            pauses one. 60 by default (TeamCode's `remoteIdleTimeoutMinutes`,
+            `RemoteSessionLimits`)
         updatedAt:
           type: string
           format: date-time
@@ -23013,6 +23272,11 @@ components:
           minimum: 1
           maximum: 100
           description: Absent keeps the stored value (2 while nothing is stored)
+        remoteIdleTimeoutMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          description: Absent keeps the stored value (60 while nothing is stored)
         updatedAt:
           type: string
           format: date-time
@@ -23316,12 +23580,35 @@ components:
             (`runners.cloud.remote.v1`)"
         host:
           $ref: '#/components/schemas/CloudSessionHost'
+        createdBy:
+          $ref: '#/components/schemas/CloudAttribution'
       required:
       - id
       - owner
       - agent
       - status
       - createdAt
+    CloudAttribution:
+      type: object
+      description: "Who created a cloud session (`runners.cloud.onbehalf.v1`, TeamCode's attribution): absent from a
+        session created before the feature"
+      properties:
+        initiatorId:
+          type: string
+          description: The member who made the request
+        credentialId:
+          type:
+          - string
+          - 'null'
+          description: "The id of the credential they used (a browser session, a token, a service key), never the token
+            itself; null when the server knows none"
+        effectiveMemberId:
+          type: string
+          description: "The member it was created for, its first owner: the initiator, unless `Ostrom-On-Behalf-Of`
+            named another member"
+      required:
+      - initiatorId
+      - effectiveMemberId
     CloudWorkspaceDeletion:
       type: object
       description: "The proof that a Kubernetes session's workspace is gone, provider volume included
@@ -27293,6 +27580,44 @@ components:
       - memberId
       - configured
       - linked
+    DiscordLink:
+      type: object
+      description: "A member's Discord link: the Discord account their notifications (channel `discord`) and yes
+        requests go to as direct messages. At most one per member of an organization, and one member per Discord
+        account in an organization"
+      properties:
+        memberId:
+          type: string
+        configured:
+          type: boolean
+          description: Whether the instance's Discord application is configured (the `discord` settings section's bot
+            token, application id, public key, client secret and server id)
+        linked:
+          type: boolean
+        discordUserId:
+          type: string
+          description: The Discord user (a snowflake)
+        discordUsername:
+          type: string
+          description: The account's Discord username when it was linked
+        linkedAt:
+          type: string
+          description: ISO time the member linked it
+      required:
+      - memberId
+      - configured
+      - linked
+    DiscordLinkStart:
+      type: object
+      description: "The start of a Discord link (`linkDiscord`): Discord's authorization URL, to open in the browser that
+        asked for it"
+      properties:
+        authorizeUrl:
+          type: string
+          description: "`https://discord.com/oauth2/authorize?...` with scope `identify` and a single-use `state`, valid
+            10 minutes"
+      required:
+      - authorizeUrl
     SkillArtifact:
       type: object
       description: "The files of one effective version; the digest is recomputable from their metadata"
@@ -28074,7 +28399,6 @@ components:
         profileId:
           type: string
           format: uuid
-          x-ostrom-status: planned
           description: "Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`,
             TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an
             automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the
@@ -28234,7 +28558,7 @@ components:
       properties:
         channel:
           type: string
-          description: '`push`, `slack` (later `discord`); a client tolerates one it does not know'
+          description: '`push`, `slack`, `discord`; a client tolerates one it does not know'
         kind:
           type: string
           description: '`waiting`, `turn_completed`, `turn_failed` or `session_failed`; a client tolerates one it does not
@@ -32007,7 +32331,6 @@ components:
         profileId:
           type: string
           format: uuid
-          x-ostrom-status: planned
           description: "The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's
             `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each
             such node's session runs on the starter's only usable profile"
@@ -32276,7 +32599,6 @@ components:
         profileId:
           type: string
           format: uuid
-          x-ostrom-status: planned
           description: "The cloud profile of the agent nodes that name none: the one given at a manual start, or,
             for a run an automation started, its workflow action's. Absent when none was named (the profile is then
             chosen at each session's creation, never written back here)"

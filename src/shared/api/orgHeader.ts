@@ -19,8 +19,8 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/admin\//,
   /^\/api\/v1\/me\/(?:organizations|notifications)$/,
   /^\/api\/v1\/(?:health|capabilities|instance(?:\/keys)?|receipts\/keys|billing\/stripe\/webhook)$/,
-  // A link a person follows from GitHub or from a wait's message: the secret in it says the organization.
-  /^\/api\/v1\/github\/link\/callback$/,
+  // A link a person follows from GitHub, Discord or a wait's message: the secret in it says the organization.
+  /^\/api\/v1\/(?:github|discord)\/link\/callback$/,
   /^\/api\/v1\/waits\/[^/]+\/event$/,
   /^\/api\/v1\/github\/app\/(?:manifest\/(?:start|callback)|install\/callback|configuration)$/,
   /^\/api\/v1\/automations\/[^/]+(?:\/v\/[^/]+)?\/trigger$/,

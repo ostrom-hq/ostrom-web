@@ -24,6 +24,7 @@ export const FEATURES = [
   'capacity.poolsize.v1',
   'capacity.usagereconciliation.v1',
   'cloud.admin.v1',
+  'discord.v1',
   'runners.cloud.profiles.v1',
   'environment.v1',
   'github.link.v1',

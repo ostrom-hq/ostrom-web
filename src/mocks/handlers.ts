@@ -438,6 +438,8 @@ export function createMockDb(): MockDb {
     slackConfigured: true,
     slackDirectory: 'U024BE7LH',
     slackLinked: undefined,
+    discordConfigured: true,
+    discordLinked: undefined,
     selfApproval: 'never',
     rules: initialRules(),
     decisions: initialDecisions(),
