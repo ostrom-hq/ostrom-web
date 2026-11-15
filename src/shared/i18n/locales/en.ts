@@ -1929,6 +1929,7 @@ export const en = {
       cloning_repositories: 'cloning the repositories',
       fetching_repositories: 'fetching the repositories',
       running_setup: 'running the setup',
+      securing_workspace: 'securing the workspace for its new owner',
     },
     preparation: {
       retry: 'This may pass on another try: resume the session to try again.',
