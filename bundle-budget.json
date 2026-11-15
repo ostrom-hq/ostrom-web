@@ -1,6 +1,6 @@
 {
-  "entryKiB": 188.1,
-  "routeKiB": 210.1,
+  "entryKiB": 188.9,
+  "routeKiB": 210.9,
   "routes": {
     "/": 14.7,
     "/confirm/$confirmationId": 12.7,
@@ -30,7 +30,7 @@
     "/members/$memberId/skills": 15.2,
     "/members/$memberId/hooks": 15.2,
     "/me/skills": 15.2,
-    "/policy": 13.2,
+    "/policy": 13.6,
     "/secrets": 17.1,
     "/environment": 13.6,
     "/me/environment": 13.6,

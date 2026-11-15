@@ -4,6 +4,7 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Screen } from '@/shared/ui/Screen';
+import { ApiPricesSection } from '../components/ApiPricesSection';
 import { LaunchCheck } from '../components/LaunchCheck';
 import { ModelsSection } from '../components/ModelsSection';
 import { ProvidersSection } from '../components/ProvidersSection';
@@ -19,6 +20,7 @@ function PolicyBody({ role }: { readonly role: OrgRole | undefined }): ReactElem
     <>
       <ModelsSection view={models} canChange={canChange} />
       <ProvidersSection view={providers} canChange={canChange} />
+      <ApiPricesSection manages={canChange} />
       <LaunchCheck
         check={check}
         defaultModel={models.policy?.default ?? (models.failure === undefined ? undefined : null)}

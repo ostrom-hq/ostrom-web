@@ -29,3 +29,15 @@
   flex: none;
   margin-top: 0.2em;
 }
+.pl-figures {
+  font-variant-numeric: tabular-nums;
+}
+.pl-price-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3);
+  align-items: end;
+}
+.pl-price-form > * {
+  min-width: 0;
+}
