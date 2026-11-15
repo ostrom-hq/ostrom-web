@@ -55,7 +55,7 @@ export function SessionScreen(): ReactElement {
         >
           {todo !== undefined && open ? <TodoView id={todoId} todo={todo} /> : null}
           <SessionDetail session={found} receipt={receipt} />
-          <LaunchLimitsSection launchId={found.launchId} role={role} />
+          <LaunchLimitsSection key={found.launchId} launchId={found.launchId} role={role} />
         </Screen>
       )}
     </LoadState>
