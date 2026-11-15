@@ -90,7 +90,11 @@ describe('the mock cloud administration, as the server keeps it', () => {
   it('keeps the stored session image when none is sent, and the default when a blank one is', async () => {
     db.instanceAdmin = true;
     const save = async (extra: object) => {
-      const saved = await call('PUT', '/cloud/runtime', runtime({ updatedAt: db.cloudRuntime.updatedAt, ...extra }));
+      const saved = await call(
+        'PUT',
+        '/cloud/runtime',
+        runtime({ updatedAt: db.cloudRuntime.updatedAt, ...extra }),
+      );
       expect(saved.status).toBe(200);
       return db.cloudRuntime.sessionImage;
     };

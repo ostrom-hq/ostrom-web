@@ -21,3 +21,20 @@ test('an owner reads the month against the budget and sets a member budget', asy
   await expect(line).toContainText('$20.00 a day');
   await expect(line).toContainText('Warns');
 });
+
+test('an admin grants a member a temporary daily budget, then revokes it', async ({ page }) => {
+  await page.goto('/spend');
+  const box = page.getByRole('region', { name: 'Temporary daily budgets' });
+  await box.getByRole('combobox', { name: 'Member' }).selectOption({ label: 'theo' });
+  const grant = box.getByRole('form', { name: 'Grant the temporary budget' });
+  await grant.getByRole('textbox', { name: 'Total today ($)' }).fill('25');
+  await grant.getByRole('textbox', { name: 'Reason (no secrets)' }).fill('release day');
+  await grant.getByRole('button', { name: 'Grant the temporary budget' }).click();
+  const line = box.getByRole('list', { name: 'Grants and revocations' }).getByRole('listitem');
+  await expect(line).toContainText('$25.00 today');
+  await expect(line).toContainText('In force');
+  const revoke = box.getByRole('form', { name: 'Revoke' });
+  await revoke.getByRole('textbox', { name: 'Revocation reason' }).fill('done');
+  await revoke.getByRole('button', { name: 'Revoke' }).click();
+  await expect(line).toContainText('Revoked');
+});

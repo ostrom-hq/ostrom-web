@@ -7,6 +7,7 @@ import { LoadState, Screen } from '@/shared/ui/Screen';
 import { Breakdown } from '../components/Breakdown';
 import { BudgetForm } from '../components/BudgetForm';
 import { BudgetList } from '../components/BudgetList';
+import { BudgetOverridesSection } from '../components/BudgetOverridesSection';
 import { DailySpend } from '../components/DailySpend';
 import { SpendTotal } from '../components/SpendTotal';
 import { type Period, PERIODS } from '../model';
@@ -55,6 +56,7 @@ export function SpendScreen(): ReactElement {
         </Banner>
       )}
       {view.canManage ? <BudgetForm change={change} people={view.people} /> : null}
+      <BudgetOverridesSection manages={view.canManage} people={view.people} />
     </Screen>
   );
 }
