@@ -71,6 +71,17 @@ describe('the mock budget overrides', () => {
   });
 
   it('grants until midnight UTC at the latest, replaces only the one in force, and revokes it once', async () => {
+    // Another member's grant, which a replacement leaves as it is.
+    const other = {
+      id: 'x1',
+      member: 'samir',
+      micros: 1,
+      createdAt: '2026-11-15T22:00:00Z',
+      expiresAt: '2026-11-15T23:00:00Z',
+      reason: 'r',
+      createdBy: 'lena',
+    };
+    state.budgetOverrides = [other];
     expect((await call('POST', 'theo/budget-overrides', {})).status).toBe(400);
     expect((await call('POST', 'theo/budget-overrides', grant({ reason: 'a\nb' }))).status).toBe(400);
     expect((await call('POST', 'theo/budget-overrides', grant({ reason: ' ' }))).status).toBe(400);
@@ -100,6 +111,7 @@ describe('the mock budget overrides', () => {
     const again = await call('POST', `theo/budget-overrides/${secondId}/revoke`, { reason: 'other' });
     expect(again.body).toMatchObject({ revocationReason: 'done' });
     expect((await call('GET', 'theo/budget-overrides')).body).not.toHaveProperty('activeId');
+    expect(state.budgetOverrides[0]).toEqual(other);
   });
 
   it('pages 50 grants at a time, newest first', async () => {

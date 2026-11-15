@@ -18,6 +18,7 @@ import {
   MAX_OVERRIDE_MINUTES,
   MAX_REASON_LENGTH,
   overrideDraftOf,
+  type OverrideState,
   overrideStateOf,
   reasonOf,
   usdOfMicros,
@@ -78,10 +79,11 @@ function MemberOverrides({ login }: { readonly login: string }): ReactElement {
   return (
     <LoadState data={view.overrides} failure={view.failure} rows={2}>
       {(overrides) => {
-        const active = overrides.find((item) => item.id === view.activeId);
+        const now = new Date();
+        const active = overrides.find((item) => overrideStateOf(item, view.activeId, now) === 'active');
         return (
           <div className="o-stack">
-            <GrantForm key={view.activeId ?? ''} view={view} active={active} />
+            <GrantForm key={active?.id ?? ''} view={view} active={active} />
             {view.revokeFailure === undefined ? null : (
               <Banner tone="danger" tag={t('spend.overrides.errorTag')} live>
                 <FailureText failure={view.revokeFailure} />
@@ -93,7 +95,12 @@ function MemberOverrides({ login }: { readonly login: string }): ReactElement {
             ) : (
               <ul className="o-card o-rows" aria-label={t('spend.overrides.history')}>
                 {overrides.map((item) => (
-                  <OverrideRow key={item.id} item={item} view={view} />
+                  <OverrideRow
+                    key={item.id}
+                    item={item}
+                    state={overrideStateOf(item, view.activeId, now)}
+                    view={view}
+                  />
                 ))}
               </ul>
             )}
@@ -201,13 +208,14 @@ function GrantForm({
 
 function OverrideRow({
   item,
+  state,
   view,
 }: {
   readonly item: BudgetOverride;
+  readonly state: OverrideState;
   readonly view: BudgetOverridesViewModel;
 }): ReactElement {
   const { t, i18n } = useTranslation();
-  const state = overrideStateOf(item, view.activeId);
   const when = (iso: string): string => formatAbsolute(iso, i18n.language);
   return (
     <li className="o-row">

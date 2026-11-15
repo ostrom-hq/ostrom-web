@@ -45,8 +45,9 @@ export function useBudgetOverrides(login: string): BudgetOverridesViewModel {
   });
   const overrides = useMemo(() => query.data?.pages.flatMap((page) => page.items), [query.data]);
   const queryKey = listBudgetOverridesInfiniteOptions({ path }).queryKey;
+  // Back to the first page only: older pages read with the previous cursors would shift by the new grant.
   const settled = async (): Promise<void> => {
-    await queryClient.invalidateQueries({ queryKey });
+    await queryClient.resetQueries({ queryKey });
   };
   const granting = useMutation({ ...createBudgetOverrideMutation(), onSettled: settled });
   const revoking = useMutation({ ...revokeBudgetOverrideMutation(), onSettled: settled });

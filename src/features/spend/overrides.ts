@@ -17,9 +17,17 @@ export const MAX_REASON_LENGTH = 240;
 /** Active: the one in force now; revoked: ended by an administrator; ended: past its deadline, or replaced. */
 export type OverrideState = 'active' | 'revoked' | 'ended';
 
-export function overrideStateOf(item: BudgetOverride, activeId: string | undefined): OverrideState {
+/**
+ * The page is read once: the override the server said was in force has ended once its deadline is past, so it is no
+ * longer offered for revocation or replacement (the server would answer 409).
+ */
+export function overrideStateOf(
+  item: BudgetOverride,
+  activeId: string | undefined,
+  now: Date,
+): OverrideState {
   if (item.revokedAt !== undefined) return 'revoked';
-  return item.id === activeId ? 'active' : 'ended';
+  return item.id === activeId && Date.parse(item.expiresAt) > now.getTime() ? 'active' : 'ended';
 }
 
 /** An allowance in USD, for the reader. */

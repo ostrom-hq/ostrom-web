@@ -22,9 +22,11 @@ const item: BudgetOverride = {
 
 describe('temporary daily budgets', () => {
   it('tells the one in force from a revoked or ended one', () => {
-    expect(overrideStateOf(item, 'o1')).toBe('active');
-    expect(overrideStateOf(item, undefined)).toBe('ended');
-    expect(overrideStateOf({ ...item, revokedAt: '2026-11-15T09:30:00Z' }, 'o1')).toBe('revoked');
+    const during = new Date('2026-11-15T09:30:00Z');
+    expect(overrideStateOf(item, 'o1', during)).toBe('active');
+    expect(overrideStateOf(item, 'o1', new Date('2026-11-15T10:00:00Z'))).toBe('ended');
+    expect(overrideStateOf(item, undefined, during)).toBe('ended');
+    expect(overrideStateOf({ ...item, revokedAt: '2026-11-15T09:30:00Z' }, 'o1', during)).toBe('revoked');
   });
 
   it('reads an allowance in dollars, 0 included, up to $100 000 000', () => {
