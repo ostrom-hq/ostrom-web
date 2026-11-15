@@ -1809,8 +1809,9 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         items.length === SESSIONS_PAGE && last !== undefined ? { items, next: last.id } : { items },
       );
     }),
-    handleGetLaunchLimits(({ params }) => {
-      if (!canManage(db)) return refusal(404, 'not_found', 'launch not found');
+    handleGetLaunchLimits(({ request, params }) => {
+      if (!managesMembers(demoRoleIn(db, organizationOf(db, request), now)))
+        return refusal(404, 'not_found', 'launch not found');
       if (!db.sessions.some((session) => session.launchId === params.launchId)) {
         return refusal(404, 'not_found', 'launch not found');
       }
@@ -1824,7 +1825,8 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       );
     }),
     handleSetLaunchLimits(async ({ request, params }) => {
-      if (!canManage(db)) return refusal(404, 'not_found', 'launch not found');
+      if (!managesMembers(demoRoleIn(db, organizationOf(db, request), now)))
+        return refusal(404, 'not_found', 'launch not found');
       if (!db.sessions.some((session) => session.launchId === params.launchId)) {
         return refusal(404, 'not_found', 'launch not found');
       }
