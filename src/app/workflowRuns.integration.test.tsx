@@ -171,6 +171,41 @@ describe('the runs of a workflow', () => {
     expect(within(runs).getByRole('button', { name: 'Run it now' })).toBeEnabled();
   });
 
+  it('presses Start again after a lost answer under the same Idempotency-Key, and a new one after an answer', async () => {
+    const user = userEvent.setup();
+    const keys: (string | null)[] = [];
+    const answers = [
+      () => HttpResponse.error(),
+      () => HttpResponse.json({ error: { type: 'forbidden', message: 'No.' } }, { status: 403 }),
+      () => HttpResponse.error(),
+      () => HttpResponse.json({ error: { type: 'forbidden', message: 'No.' } }, { status: 403 }),
+    ];
+    server.use(
+      http.post('*/api/v1/workflows/:id/runs', ({ request }) => {
+        keys.push(request.headers.get('Idempotency-Key'));
+        return answers.shift()?.() ?? HttpResponse.error();
+      }),
+    );
+    visit('/workflows/wf-backend');
+    const runs = await screen.findByRole('region', { name: 'Runs' });
+    expect(await within(runs).findAllByRole('listitem')).toHaveLength(3);
+    const press = async (): Promise<void> => {
+      await user.click(within(runs).getByRole('button', { name: 'Run it now' }));
+      await vi.waitFor(() => {
+        expect(within(runs).getByRole('button', { name: 'Run it now' })).toBeEnabled();
+      });
+    };
+    await press(); // the answer is lost
+    await press(); // the same press again: the server refuses it
+    await press(); // an answer came: a new press
+    await press(); // lost again, then the same key
+    expect(keys).toHaveLength(4);
+    expect(keys[0]).toMatch(/^[0-9a-f]{32}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[1]);
+    expect(keys[3]).toBe(keys[2]);
+  });
+
   it('asks an admin to accept a proposed workflow before running it', async () => {
     visit('/workflows/wf-migrations');
     const runs = await screen.findByRole('region', { name: 'Runs' });

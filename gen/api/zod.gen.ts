@@ -1377,6 +1377,7 @@ export const zCloudRuntime = z.object({
     enabled: z.boolean(),
     runnerImage: z.optional(z.string()),
     runnerBinary: z.string(),
+    sessionImage: z.optional(z.string()),
     serverUrl: z.optional(z.string()),
     effectiveServerUrl: z.string(),
     workspaceAccessMode: z.union([z.enum(['ReadWriteOncePod', 'ReadWriteOnce']), z.string()]),
@@ -1396,6 +1397,7 @@ export const zSaveCloudRuntimeRequest = z.object({
     enabled: z.boolean(),
     runnerImage: z.optional(z.string().check(z.maxLength(512))),
     runnerBinary: z.string().check(z.maxLength(256)),
+    sessionImage: z.optional(z.string().check(z.maxLength(512))),
     serverUrl: z.optional(z.string().check(z.maxLength(512))),
     workspaceAccessMode: z.union([z.enum(['ReadWriteOncePod', 'ReadWriteOnce']), z.string()]),
     pausedRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
@@ -3264,6 +3266,17 @@ export const zSetAssignmentRequest = z.object({
  */
 export const zSetAudienceRequest = z.object({
     allMembers: z.boolean()
+});
+
+/**
+ * A member's Slack link: the Slack account their notifications (channel `slack`) and yes requests go to as direct messages. At most one per member of an organization, and one member per Slack account in an organization
+ */
+export const zSlackLink = z.object({
+    memberId: z.string(),
+    configured: z.boolean(),
+    linked: z.boolean(),
+    slackUserId: z.optional(z.string()),
+    linkedAt: z.optional(z.string())
 });
 
 /**
@@ -6809,6 +6822,33 @@ export const zReceiveSlackInteractionHeaders = z.object({
     'X-Slack-Signature': z.string(),
     'X-Slack-Request-Timestamp': z.string()
 });
+
+export const zUnlinkSlackHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Unlinked, or nothing to unlink
+ */
+export const zUnlinkSlackResponse = z.void();
+
+export const zGetSlackLinkHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetSlackLinkResponse = zSlackLink;
+
+export const zLinkSlackHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Linked
+ */
+export const zLinkSlackResponse = zSlackLink;
 
 export const zGithubCheckBody = z.object({
     repo: z.string(),

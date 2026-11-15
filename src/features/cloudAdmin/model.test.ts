@@ -84,6 +84,14 @@ describe('the runtime form', () => {
   it('fills from what is stored and sends the same back, with the date it read', () => {
     const draft = runtimeDraftOf(runtime);
     expect(draft.runnerBinary).toBe('/usr/local/bin/ostrom');
+    expect(draft.sessionImage).toBe('');
+    // The server answers the effective image: the default stays an empty field, so a save does not pin it.
+    expect(
+      runtimeDraftOf({ ...runtime, sessionImage: 'docker.io/ostromhq/ostrom-session:latest' }).sessionImage,
+    ).toBe('');
+    expect(runtimeDraftOf({ ...runtime, sessionImage: 'ghcr.io/acme/session:3' }).sessionImage).toBe(
+      'ghcr.io/acme/session:3',
+    );
     expect(draft.pausedRetentionDays).toBe('');
     expect(runtimeProblem(draft)).toBeUndefined();
     expect(runtimeRequestOf(draft, runtime)).toEqual({
@@ -105,6 +113,7 @@ describe('the runtime form', () => {
     const draft = {
       ...runtimeDraftOf(unsaved),
       runnerImage: '',
+      sessionImage: '  ',
       serverUrl: ' https://ostrom.acme.test ',
       pausedRetentionDays: '30',
       transcriptRetentionDays: '90',
