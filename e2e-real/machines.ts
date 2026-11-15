@@ -48,7 +48,9 @@ function docker(...args: string[]): string {
 export async function startMachine(page: Page, org: string, name: string): Promise<Machine> {
   if (machineImage === undefined) throw new Error('OSTROM_E2E_MACHINE_IMAGE is not set');
   const sessionImage =
-    configuredSessionImage === undefined || configuredSessionImage === '' ? machineImage : configuredSessionImage;
+    configuredSessionImage === undefined || configuredSessionImage === ''
+      ? machineImage
+      : configuredSessionImage;
   const registered = await callFromPage(page, 'POST', '/api/v1/runners', { name, labels: ['docker'] }, org);
   expect(registered.status, JSON.stringify(registered.body)).toBe(201);
   const { id, token } = zRegistered.parse(registered.body);
