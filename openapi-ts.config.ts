@@ -10,16 +10,22 @@ const input = process.env['OSTROM_CONTRACT'] ?? './contract/openapi.yaml';
 // (a discriminator such as `type: 'error'`) and stays closed.
 const OPEN_ENUM_MIN_VALUES = 2;
 
+/** The server-sent event streams that take an `after` cursor. */
+const SSE_WITH_CURSOR: ReadonlySet<string> = new Set([
+  '/api/v1/events',
+  '/api/v1/cloud/sessions/{id}/events/stream',
+]);
+
 export default defineConfig({
   input,
   output: { path: 'gen/api' },
   parser: {
     hooks: {
       operations: {
-        // The live event feed is a server-sent event stream, which the console will read with an `EventSource`, never
-        // through a query: its `after` cursor makes the react-query plugin generate an infinite query, which does not
-        // type for a stream. The operation keeps its SDK function and types, and gets no query.
-        getKind: (operation) => (operation.path === '/api/v1/events' ? [] : undefined),
+        // The live event feeds are server-sent event streams, which the console reads with an `EventSource`, never
+        // through a query: their `after` cursor makes the react-query plugin generate an infinite query, which does not
+        // type for a stream. The operations keep their SDK functions and types, and get no query.
+        getKind: (operation) => (SSE_WITH_CURSOR.has(operation.path) ? [] : undefined),
       },
     },
   },

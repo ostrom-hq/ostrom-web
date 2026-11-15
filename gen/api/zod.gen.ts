@@ -312,6 +312,207 @@ export const zArtifactStorage = z.object({
 });
 
 /**
+ * The capacity controller's advice (`capacity.pacing.v1`). Pacing never caps parallelism: it only spaces the admission of new calls, and the server enforces it whatever the agent does
+ */
+export const zDirective = z.object({
+    id: z.string(),
+    pace: z.union([z.enum([
+            'unknown',
+            'normal',
+            'slow_down',
+            'can_increase',
+            'pause'
+        ]), z.string()]),
+    maxConcurrent: z.int().check(z.gte(0)),
+    minIntervalMillis: z.int().check(z.gte(0)),
+    message: z.string(),
+    createdAt: z.iso.datetime({ offset: true }),
+    expiresAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * A claimed delivery; both absent when nothing new is to be delivered
+ */
+export const zDirectiveClaim = z.object({
+    directive: z.optional(zDirective),
+    claimId: z.optional(z.string())
+});
+
+export const zDirectiveClaimRequest = z.object({
+    sessionId: z.string().check(z.maxLength(128)),
+    stage: z.union([z.enum(['received_by_cli', 'emitted_to_hook']), z.string()])
+});
+
+export const zDirectiveReceipt = z.object({
+    id: z.string(),
+    stage: z.union([z.enum(['received_by_cli', 'emitted_to_hook']), z.string()]),
+    sessionId: z.optional(z.string().check(z.maxLength(128))),
+    claimId: z.optional(z.string())
+});
+
+export const zDirectiveResponse = z.object({
+    directive: z.optional(zDirective)
+});
+
+export const zDirectiveScope = z.object({
+    sessionId: z.string().check(z.maxLength(128))
+});
+
+/**
+ * A shared account as the Forecasts page lists it, never its credentials nor its provider account id
+ */
+export const zForecastAccount = z.object({
+    id: z.string(),
+    provider: z.string(),
+    label: z.string(),
+    status: z.string(),
+    paused: z.boolean(),
+    email: z.optional(z.string())
+});
+
+/**
+ * One real reading; a missing reading is never written as 0
+ */
+export const zForecastSample = z.object({
+    utilization: z.number(),
+    observedAt: z.iso.datetime({ offset: true }),
+    resetsAt: z.optional(z.iso.datetime({ offset: true }))
+});
+
+/**
+ * One current provider window of the account and what the controller learned of it
+ */
+export const zForecastWindow = z.object({
+    window: z.string(),
+    utilization: z.number(),
+    observedAt: z.iso.datetime({ offset: true }),
+    resetsAt: z.optional(z.iso.datetime({ offset: true })),
+    state: z.union([z.enum([
+            'unknown',
+            'stale',
+            'exhausted',
+            'idle',
+            'reset_first',
+            'exhausts_first'
+        ]), z.string()]),
+    pointsPerHour: z.optional(z.number()),
+    reachesThresholdAt: z.optional(z.iso.datetime({ offset: true })),
+    segments: z.array(z.array(zForecastSample)),
+    learningSamples: z.int(),
+    learningSpanMillis: z.int()
+});
+
+/**
+ * A bounded point-in-time view of one account's windows, never a sum of percentages of different plans
+ */
+export const zForecastSnapshot = z.object({
+    generatedAt: z.iso.datetime({ offset: true }),
+    accounts: z.array(zForecastAccount),
+    account: z.optional(zForecastAccount),
+    windows: z.array(zForecastWindow),
+    truncated: z.boolean(),
+    pressureThreshold: z.number()
+});
+
+/**
+ * The capacity controller's settings for the organization (`capacity.pacing.v1`). A provider window counts as exhausted at its account's `utilizationCeiling`, as admission does
+ */
+export const zPacingSettings = z.object({
+    observationOnly: z.optional(z.boolean()),
+    autoPoolSize: z.optional(z.boolean())
+});
+
+/**
+ * Informational advice, never sent to an agent by itself
+ */
+export const zPacingPreview = z.object({
+    settings: zPacingSettings,
+    directive: z.optional(zDirective)
+});
+
+/**
+ * Seven days of one model's tokens and their API-equivalent by token type; costs absent without a price
+ */
+export const zPoolSizeModel = z.object({
+    provider: z.string(),
+    model: z.string(),
+    inputTokens: z.int(),
+    cacheWriteTokens: z.int(),
+    cacheReadTokens: z.int(),
+    outputTokens: z.int(),
+    inputMicros: z.optional(z.int()),
+    cacheWriteMicros: z.optional(z.int()),
+    cacheReadMicros: z.optional(z.int()),
+    outputMicros: z.optional(z.int()),
+    totalMicros: z.optional(z.int()),
+    unpricedTokens: z.int()
+});
+
+/**
+ * The learned full capacity of one shared window (0 to 100 %); absent below three samples
+ */
+export const zPoolSizeWindowCapacity = z.object({
+    window: z.string(),
+    fullWindowMicros: z.optional(z.int()),
+    capacityMicros: z.optional(z.int()),
+    samples: z.int()
+});
+
+/**
+ * One current window split between Ostrom's traffic and use of the subscription outside Ostrom since it opened; the split is absent without a learned capacity
+ */
+export const zPoolSizeWindowUsage = z.object({
+    window: z.string(),
+    since: z.iso.datetime({ offset: true }),
+    observedAt: z.iso.datetime({ offset: true }),
+    resetsAt: z.iso.datetime({ offset: true }),
+    observedUtilization: z.number(),
+    ostromMicros: z.optional(z.int()),
+    ostromUtilization: z.optional(z.number()),
+    outsideUtilization: z.optional(z.number()),
+    outsideMicros: z.optional(z.int()),
+    remainingMicros: z.optional(z.int())
+});
+
+export const zPoolSizeAccount = z.object({
+    accountId: z.string(),
+    status: z.union([z.enum([
+            'counted',
+            'unavailable',
+            'no_fresh_observation',
+            'no_estimate'
+        ]), z.string()]),
+    dailyMicros: z.int(),
+    binding: z.optional(z.string()),
+    capacityDailyMicros: z.optional(z.int()),
+    windows: z.array(zPoolSizeWindowCapacity),
+    usage: z.array(zPoolSizeWindowUsage)
+});
+
+/**
+ * The automatic daily budget and the estimate behind it, in USD millionths at the gateway's prices (API-equivalent)
+ */
+export const zPoolSize = z.object({
+    enabled: z.boolean(),
+    manualDailyMicros: z.optional(z.int()),
+    automaticDailyMicros: z.optional(z.int()),
+    automaticComputedAt: z.optional(z.iso.datetime({ offset: true })),
+    effectiveDailyMicros: z.optional(z.int()),
+    source: z.union([z.enum(['automatic', 'manual']), z.string()]),
+    estimatedDailyMicros: z.int(),
+    reason: z.optional(z.union([z.enum(['no_accounts', 'no_estimate']), z.string()])),
+    unpricedModels: z.array(z.string()),
+    accounts: z.array(zPoolSizeAccount),
+    capacityDailyMicros: z.int(),
+    capacityUnknownAccounts: z.int(),
+    capacityDailyTokens: z.optional(z.int()),
+    tokensPerMicro: z.optional(z.number()),
+    outsideWeeklyMicros: z.optional(z.int()),
+    outsideUnknownAccounts: z.int(),
+    models: z.array(zPoolSizeModel)
+});
+
+/**
  * `version` is the one replaced (0 for the first save); an omitted `secretAccessKey` keeps the stored one
  */
 export const zSaveArtifactStorageRequest = z.object({
@@ -574,16 +775,25 @@ export const zGitHubDeviceLink = z.object({
     interval: z.int()
 });
 
+export const zGitHubDeviceLinkStatus = z.union([z.enum([
+        'pending',
+        'linked',
+        'expired',
+        'denied'
+    ]), z.string()]);
+
+export const zGitHubLinkState = z.union([z.enum([
+        'not_linked',
+        'linked',
+        'reconnect_required'
+    ]), z.string()]);
+
 /**
  * A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens reach only the runner of the member's own sessions. `state` is `not_linked`, `linked` or `reconnect_required` (GitHub refused the refresh token, or the instance's App changed: the member links again)
  */
 export const zGitHubLink = z.object({
     memberId: z.string(),
-    state: z.union([z.enum([
-            'not_linked',
-            'linked',
-            'reconnect_required'
-        ]), z.string()]),
+    state: zGitHubLinkState,
     appConfigured: z.boolean(),
     login: z.optional(z.string()),
     userId: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
@@ -596,12 +806,7 @@ export const zGitHubLink = z.object({
  * One poll of a device link; `link` once linked, `interval` (seconds) while pending
  */
 export const zGitHubDeviceLinkPoll = z.object({
-    status: z.union([z.enum([
-            'pending',
-            'linked',
-            'expired',
-            'denied'
-        ]), z.string()]),
+    status: zGitHubDeviceLinkStatus,
     interval: z.optional(z.int()),
     link: z.optional(zGitHubLink)
 });
@@ -790,7 +995,8 @@ export const zAutomationAction = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     effort: z.optional(z.string()),
-    maxRuntimeMinutes: z.optional(z.int())
+    maxRuntimeMinutes: z.optional(z.int()),
+    profileId: z.optional(z.uuid())
 });
 
 /**
@@ -1030,20 +1236,92 @@ export const zBudget = z.object({
 });
 
 /**
- * A dated exception to a daily allocation
+ * A temporary daily budget granted to a member (`capacity.budgetoverrides.v1`), kept after it ends or is revoked
  */
 export const zBudgetOverride = z.object({
     id: z.string(),
     member: z.string(),
-    usd: z.number(),
+    micros: z.int(),
+    createdAt: z.string(),
     expiresAt: z.string(),
     reason: z.string(),
     createdBy: z.string(),
-    revokedAt: z.optional(z.string())
+    replacesId: z.optional(z.string()),
+    revokedAt: z.optional(z.string()),
+    revokedBy: z.optional(z.string()),
+    revocationReason: z.optional(z.string())
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * The override in force, as its member sees it (`getMyBudget`): no reason, no grantor
+ */
+export const zBudgetOverrideSummary = z.object({
+    id: z.string(),
+    micros: z.int(),
+    expiresAt: z.string()
+});
+
+/**
+ * A model call whose final usage is unknown: the hold it was admitted with stays charged (`capacity.usagereconciliation.v1`)
+ */
+export const zPendingUsage = z.object({
+    id: z.string(),
+    member: z.string(),
+    micros: z.int(),
+    heldAt: z.string(),
+    leaseExpiredAt: z.string(),
+    workflowId: z.optional(z.string()),
+    launchId: z.optional(z.string()),
+    providerRequestId: z.optional(z.string())
+});
+
+/**
+ * A final correction of an unknown charge, attested by an administrator, with the attribution the call had when it was held
+ */
+export const zUsageReconciliation = z.object({
+    id: z.string(),
+    member: z.string(),
+    workflowId: z.optional(z.string()),
+    launchId: z.optional(z.string()),
+    providerRequestId: z.optional(z.string()),
+    heldAt: z.string(),
+    previousMicros: z.int(),
+    micros: z.int(),
+    source: z.union([z.enum(['PROVIDER_RECORD', 'PROVIDER_CONFIRMATION']), z.string()]),
+    reference: z.string(),
+    reason: z.string(),
+    reconciledBy: z.string(),
+    reconciledAt: z.string()
+});
+
+/**
+ * `pending` while the hold is unknown, `reconciliation` once corrected: exactly one is present
+ */
+export const zUsageReview = z.object({
+    pending: z.optional(zPendingUsage),
+    reconciliation: z.optional(zUsageReconciliation)
+});
+
+/**
+ * One row of the price table: micro-dollars (USD millionths) per million tokens, so `3000000` is $3 a million tokens
+ */
+export const zApiPrice = z.object({
+    provider: z.string(),
+    model: z.string(),
+    effectiveFrom: z.string(),
+    inputMicros: z.int().check(z.gte(1), z.lte(1000000000000)),
+    cacheWriteMicros: z.int().check(z.gte(0), z.lte(1000000000000)),
+    cacheReadMicros: z.int().check(z.gte(0), z.lte(1000000000000)),
+    outputMicros: z.int().check(z.gte(1), z.lte(1000000000000))
+});
+
+export const zApiPriceTable = z.object({
+    prices: z.array(zApiPrice).check(z.maxLength(200)),
+    defaults: z.optional(z.boolean())
+});
+
+/**
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -1107,6 +1385,9 @@ export const zCloudRuntime = z.object({
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    permissionDeadlineMinutes: z.optional(z.int().check(z.gte(0), z.lte(1440))),
+    fileMaxMebibytes: z.optional(z.int().check(z.gte(1), z.lte(100))),
+    messageFileMebibytes: z.optional(z.int().check(z.gte(1), z.lte(100))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
 });
@@ -1122,6 +1403,9 @@ export const zSaveCloudRuntimeRequest = z.object({
     maxRunningSessionsPerMember: z.int().check(z.gte(1), z.lte(1000)),
     maxRetainedSessionsPerMember: z.int().check(z.gte(1), z.lte(10000)),
     transcriptRetentionDays: z.optional(z.int().check(z.gte(1), z.lte(3650))),
+    permissionDeadlineMinutes: z.optional(z.int().check(z.gte(0), z.lte(1440))),
+    fileMaxMebibytes: z.optional(z.int().check(z.gte(1), z.lte(100))),
+    messageFileMebibytes: z.optional(z.int().check(z.gte(1), z.lte(100))),
     memberTransfers: z.union([z.enum(['offer', 'disabled']), z.string()]),
     updatedAt: z.optional(z.iso.datetime({ offset: true }))
 });
@@ -1232,7 +1516,7 @@ export const zSaveGitHubAppConfigurationRequest = z.object({
     clientId: z.string().check(z.minLength(4), z.maxLength(64), z.regex(/^Iv[0-9A-Za-z._-]{2,62}$/)),
     clientSecret: z.nullish(z.string().check(z.minLength(20), z.maxLength(256))),
     privateKey: z.nullish(z.string().check(z.maxLength(16384))),
-    webhookSecret: z.nullish(z.string().check(z.minLength(1), z.maxLength(256))),
+    webhookSecret: z.nullish(z.string().check(z.maxLength(256))),
     version: z.nullish(z.int())
 });
 
@@ -1293,6 +1577,197 @@ export const zCloudSessionProfile = z.object({
 });
 
 /**
+ * One transcript event of a conversation session (`runners.cloud.conversation.v1`, TeamCode's `CloudEventView`). `type` is open: `message.user`, `message.agent`, `message.agent.delta`, `tool.call`, `tool.result`, `turn`, `status`, `error`, `input`, `permission.request`, `permission.expired`, `tasks`; clients tolerate unknown types and unknown `data` fields
+ */
+export const zCloudEvent = z.object({
+    seq: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    type: z.string(),
+    at: z.iso.datetime({ offset: true }),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    data: z.unknown(),
+    feed: z.optional(z.string())
+});
+
+/**
+ * A page of transcript events in ascending order. `firstSeq` is the oldest retained event, `lastSeq` the session's newest when the page was read; a null cursor means nothing more in that direction
+ */
+export const zCloudEventPage = z.object({
+    events: z.array(zCloudEvent),
+    firstSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    lastSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    nextAfter: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    nextBefore: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
+ * A message to the agent (`sendCloudMessage`). `clientMessageId` is an alias of the `Idempotency-Key` header (one or the other). `wake` false leaves a paused session paused: the message waits for the next resume. `fileIds` (`runners.cloud.files.v1`, at most 5, distinct) names files the caller uploaded to this session and did not send yet; with files the text may be empty
+ */
+export const zSendCloudMessageRequest = z.object({
+    text: z.string().check(z.maxLength(32000)),
+    wake: z._default(z.optional(z.boolean()), true),
+    clientMessageId: z.optional(z.string().check(z.maxLength(200))),
+    expectedLastEventSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    fileIds: z.optional(z.array(z.string()).check(z.maxLength(5)))
+});
+
+/**
+ * A message, an interrupt, a permission answer, a task stop or a model or effort change, and its acknowledgement (TeamCode's `CloudInputView`)
+ */
+export const zCloudInput = z.object({
+    id: z.string(),
+    kind: z.string(),
+    status: z.string(),
+    authorId: z.string(),
+    text: z.optional(z.string()),
+    wake: z._default(z.optional(z.boolean()), true),
+    woke: z._default(z.optional(z.boolean()), false),
+    clientMessageId: z.optional(z.string()),
+    createdAt: z.iso.datetime({ offset: true }),
+    deliveredAt: z.optional(z.iso.datetime({ offset: true })),
+    deliveredEpoch: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    consumedAt: z.optional(z.iso.datetime({ offset: true })),
+    finishedAt: z.optional(z.iso.datetime({ offset: true })),
+    reason: z.optional(z.string()),
+    eventSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    fileIds: z.optional(z.array(z.string()))
+});
+
+/**
+ * The session's inputs, newest first; `nextBefore` is the cursor of the following page
+ */
+export const zCloudInputPage = z.object({
+    inputs: z.array(zCloudInput),
+    nextBefore: z.optional(z.string())
+});
+
+/**
+ * The answer to the question at index `question` (from 0, in the request's `input.questions`): the chosen `options` by index (several only for a `multiSelect` question), or a free `text`; one or the other
+ */
+export const zCloudQuestionAnswer = z.object({
+    question: z.int().check(z.gte(0)),
+    options: z.optional(z.array(z.int().check(z.gte(0)))),
+    text: z.optional(z.string().check(z.maxLength(4000)))
+});
+
+/**
+ * The answer to the `permission.request` event `requestId` (`answerCloudPermission`). `deny` passes `message` to the agent. `allow` with `answers` answers a question (`AskUserQuestion`): one entry per question, by index, at most 16
+ */
+export const zAnswerCloudPermissionRequest = z.object({
+    requestId: z.string().check(z.maxLength(128)),
+    behavior: z.string(),
+    message: z.optional(z.string().check(z.maxLength(4000))),
+    answers: z.optional(z.array(zCloudQuestionAnswer).check(z.maxLength(16)))
+});
+
+/**
+ * A subagent of a session (`runners.cloud.transcript.feeds.v1`). `id` is the `tool.call` that started it and the `feed` of its events; `parentId` the feed it was started from (absent: the main agent); `taskId` the id to stop it with while it is a live background task
+ */
+export const zCloudSubagent = z.object({
+    id: z.string(),
+    type: z.optional(z.string()),
+    description: z._default(z.optional(z.string()), ''),
+    state: z.string(),
+    startedAt: z.iso.datetime({ offset: true }),
+    endedAt: z.optional(z.iso.datetime({ offset: true })),
+    steps: z._default(z.optional(z.int()), 0),
+    parentId: z.optional(z.string()),
+    taskId: z.optional(z.string())
+});
+
+/**
+ * The session's subagents, oldest first, the newest 200
+ */
+export const zCloudSubagentList = z.object({
+    agents: z.array(zCloudSubagent)
+});
+
+/**
+ * The background task of the session's agent to stop (`stopCloudTask`)
+ */
+export const zStopCloudTaskRequest = z.object({
+    taskId: z.string().check(z.maxLength(64))
+});
+
+/**
+ * The owner's standing approval of tool uses (`setCloudPermissionBypass`)
+ */
+export const zSetCloudPermissionBypassRequest = z.object({
+    enabled: z.boolean()
+});
+
+/**
+ * The model of the session's agent (`setCloudSessionModel`)
+ */
+export const zSetCloudModelRequest = z.object({
+    model: z.string().check(z.maxLength(120))
+});
+
+/**
+ * The effort of the session's agent (`setCloudSessionEffort`)
+ */
+export const zSetCloudEffortRequest = z.object({
+    effort: z.string().check(z.maxLength(120))
+});
+
+/**
+ * Why the session's agent waits for a person (`runners.cloud.permissions.v1`, TeamCode's `waiting`): set when a `permission.request` is stored, gone when it stops being answerable
+ */
+export const zCloudSessionWaiting = z.object({
+    reason: z.string(),
+    requestId: z.optional(z.string()),
+    since: z.optional(z.iso.datetime({ offset: true })),
+    eventSeq: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
+ * A file uploaded to a session (`runners.cloud.files.v1`). `name` is the cleaned name the host writes it under, `contentType` the type recognized from its bytes. Name its `id` in a message's `fileIds` before `expiresAt`
+ */
+export const zCloudFile = z.object({
+    id: z.string(),
+    sessionId: z.string(),
+    name: z.string(),
+    size: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    contentType: z.string(),
+    sha256: z.string(),
+    createdAt: z.iso.datetime({ offset: true }),
+    expiresAt: z.iso.datetime({ offset: true })
+});
+
+/**
+ * Whether the caller's organization can send files now (`available`; `reason` `file_storage_not_configured` without a tested artifact bucket), and its limits
+ */
+export const zCloudFilePolicy = z.object({
+    available: z.boolean(),
+    reason: z.optional(z.string()),
+    maxFileBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    maxMessageBytes: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    maxFilesPerMessage: z.int(),
+    types: z.array(z.string())
+});
+
+/**
+ * A member a session can be given to
+ */
+export const zCloudTransferRecipient = z.object({
+    id: z.string(),
+    login: z.string(),
+    administrator: z.boolean()
+});
+
+export const zCloudTransferRecipients = z.object({
+    recipients: z.array(zCloudTransferRecipient)
+});
+
+export const zCreateCloudTransferRequest = z.object({
+    toMemberId: z.string(),
+    resume: z._default(z.optional(z.boolean()), false)
+});
+
+export const zAcceptCloudTransferRequest = z.object({
+    resume: z.optional(z.boolean())
+});
+
+/**
  * The cloud session to start (`createCloudSession`)
  */
 export const zCreateCloudSessionRequest = z.object({
@@ -1304,6 +1779,8 @@ export const zCreateCloudSessionRequest = z.object({
     name: z.optional(z.string()),
     environment: z.optional(zCloudEnvironment),
     profileId: z.optional(z.uuid()),
+    mode: z.optional(z.string()),
+    effort: z.optional(z.string().check(z.maxLength(120))),
     image: z.optional(z.string())
 });
 
@@ -1314,6 +1791,46 @@ export const zCloudSessionFailure = z.object({
     code: z.string(),
     message: z.string(),
     retryable: z.optional(z.boolean())
+});
+
+/**
+ * The proof that a Kubernetes session's workspace is gone, provider volume included (`runners.cloud.retention.v1`, TeamCode's `workspaceDeletion`). When the session ends, the reconciler records the PersistentVolume bound to its claim and the provider's volume handle, deletes the claim, waits until it is gone, then until the PersistentVolume is gone: with `reclaimPolicy: Delete`, the provisioner removes it only once the provider deleted the volume. A volume with another policy, in phase `Failed`, or still there an hour after its claim was deleted blocks the deletion (`volume_retained`, `volume_deletion_stalled`), checked again every 10 minutes until an administrator deletes it. Absent from a session on Docker or a registered runner
+ */
+export const zCloudWorkspaceDeletion = z.object({
+    state: z.string(),
+    claimDeletedAt: z.optional(z.string()),
+    volumeDeletedAt: z.optional(z.string()),
+    volumeHandle: z.optional(z.string()),
+    problem: z.optional(zCloudSessionFailure)
+});
+
+/**
+ * A change of owner of a cloud session (`runners.cloud.transfer.v1`): `offered`, then `accepted`, then `completed`; or `declined`, `cancelled`, `expired` or `failed`
+ */
+export const zCloudTransfer = z.object({
+    id: z.string(),
+    sessionId: z.string(),
+    fromMemberId: z.string(),
+    toMemberId: z.string(),
+    state: z.string(),
+    initiatedBy: z.string(),
+    decidedBy: z.optional(z.string()),
+    resume: z.boolean(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    expiresAt: z.optional(z.string()),
+    decidedAt: z.optional(z.string()),
+    completedAt: z.optional(z.string()),
+    atEpoch: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    failure: z.optional(zCloudSessionFailure)
+});
+
+/**
+ * A page of the caller's transfers, newest first; `next` is the cursor of the following page
+ */
+export const zCloudTransferPage = z.object({
+    items: z.array(zCloudTransfer),
+    next: z.optional(z.string())
 });
 
 /**
@@ -1346,6 +1863,9 @@ export const zCloudSession = z.object({
     readyAt: z.optional(z.string()),
     lastActivityAt: z.optional(z.string()),
     pausedAt: z.optional(z.string()),
+    expiresAt: z.optional(z.string()),
+    terminatedReason: z.optional(z.string()),
+    workspaceDeletion: z.optional(zCloudWorkspaceDeletion),
     runnerId: z.optional(z.string()),
     environment: z.optional(zCloudEnvironment),
     profile: z.optional(zCloudSessionProfile),
@@ -1355,6 +1875,11 @@ export const zCloudSession = z.object({
             'shared',
             'none'
         ]), z.string()])),
+    mode: z.optional(z.string()),
+    effort: z.optional(z.string()),
+    transferId: z.optional(z.string()),
+    permissionBypass: z.optional(z.boolean()),
+    waiting: z.optional(zCloudSessionWaiting),
     runId: z.optional(z.string()),
     automationId: z.optional(z.string()),
     createdAt: z.string(),
@@ -1435,7 +1960,27 @@ export const zDevice = z.object({
     kind: z.optional(z.union([z.enum(['cli', 'admin']), z.string()])),
     orgId: z.optional(z.string()),
     scopes: z.optional(z.array(z.string())),
-    expiresAt: z.optional(z.string())
+    expiresAt: z.optional(z.string()),
+    osVersion: z.optional(z.string()),
+    createdAt: z.optional(z.string()),
+    lastLoginAt: z.optional(z.string()),
+    activeSessions: z.optional(z.int()),
+    current: z.optional(z.boolean())
+});
+
+/**
+ * A page of devices
+ */
+export const zDevicePage = z.object({
+    items: z.array(zDevice),
+    next: z.optional(z.string())
+});
+
+/**
+ * A device's new name
+ */
+export const zRenameDeviceRequest = z.object({
+    name: z.string().check(z.minLength(1), z.maxLength(120))
 });
 
 /**
@@ -1455,7 +2000,17 @@ export const zDeviceLoginStart = z.object({
             'harness:write',
             'gates:policy',
             'budgets:write'
-        ]), z.string()])))
+        ]), z.string()]))),
+    installationId: z.optional(z.string()),
+    deviceName: z.optional(z.string().check(z.maxLength(120))),
+    platform: z.optional(z.union([z.enum([
+            'macos',
+            'windows',
+            'linux',
+            'ios',
+            'android'
+        ]), z.string()])),
+    osVersion: z.optional(z.string().check(z.maxLength(64)))
 });
 
 /**
@@ -1592,7 +2147,9 @@ export const zEnvironmentAssignmentsPage = z.object({
  */
 export const zEnvironmentValues = z.object({
     variables: z.record(z.string(), z.string()),
-    unavailable: z.array(z.string())
+    unavailable: z.array(z.string()),
+    secrets: z.optional(z.record(z.string(), z.string())),
+    oneTime: z.optional(z.array(z.string()))
 });
 
 /**
@@ -2032,6 +2589,8 @@ export const zCloudCluster = z.object({
     version: z.int(),
     caCertificate: zInstanceSecretState,
     serviceAccountToken: zInstanceSecretState,
+    orphanedVolumes: z.optional(z.int()),
+    lastGarbageCollectionAt: z.optional(z.iso.datetime({ offset: true })),
     inCluster: z.optional(z.boolean()),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true })
@@ -2634,7 +3193,8 @@ export const zRunnerEnvironment = z.object({
     environment: zCloudEnvironment,
     git: zRunnerGitIdentity,
     variables: z.record(z.string(), z.string()),
-    unavailable: z.array(z.string())
+    unavailable: z.array(z.string()),
+    untrustedWorkspace: z.optional(z.boolean())
 });
 
 /**
@@ -2981,7 +3541,7 @@ export const zModelPolicy = z.object({
 });
 
 /**
- * The caller's budget this month, in millionths of a US dollar
+ * The caller's budget this month, in millionths of a US dollar. Planned (`capacity.budgetoverrides.v1`): `override`, the temporary daily budget in force, and `baseLimitMicros`; the server does not send them yet
  */
 export const zMyBudget = z.object({
     limitMicros: z.optional(z.int()),
@@ -2990,6 +3550,8 @@ export const zMyBudget = z.object({
     resetsAt: z.string(),
     exhausted: z.boolean(),
     exhaustedScope: z.optional(z.union([z.enum(['org', 'member']), z.string()])),
+    override: z.optional(zBudgetOverrideSummary),
+    baseLimitMicros: z.optional(z.int()),
     period: z.optional(z.union([z.enum(['day', 'month']), z.string()]))
 });
 
@@ -3397,6 +3959,13 @@ export const zPushDevice = z.object({
 });
 
 /**
+ * The caller's phones registered for push notifications, the most recently seen first
+ */
+export const zPushDeviceList = z.object({
+    items: z.array(zPushDevice)
+});
+
+/**
  * Ostrom Push relay (`push.v1`), `POST /v1/instances`: an instance introduces its Ed25519 public key. The same key gets the same id. This and the other `PushRelay` schemas are the wire format between a server and the relay that holds the Firebase project of the published apps; the relay sees an instance, a token and an encrypted blob, never a member, a session or the text. Every request but this one carries `Ostrom-Instance`, `Ostrom-Timestamp` (Unix seconds, at most 300 s off) and `Ostrom-Signature`, Ed25519 over `<METHOD>\n<path>\n<timestamp>\n<sha256 of the body, lowercase hex>`, base64url without padding.
  */
 export const zPushRelayRegisterRequest = z.object({
@@ -3674,7 +4243,8 @@ export const zNodeRun = z.object({
     agent: z.optional(z.string()),
     model: z.optional(z.string()),
     deliverable: z.optional(zDeliverable),
-    repository: z.optional(z.string())
+    repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid())
 });
 
 /**
@@ -3795,6 +4365,16 @@ export const zServiceKey = z.object({
 });
 
 /**
+ * The limits of one launch (`launches.limits.v1`), TeamCode's run policy `{budgetUnits, maxConcurrent, paused}` with the budget in USD millionths as every limit of Ostrom. Each is an additional cap for the model calls the launch's agent token makes, never a substitute for the member's own limits
+ */
+export const zLaunchLimits = z.object({
+    budgetMicros: z.coerce.bigint().check(z.gte(BigInt(0)), z.lte(BigInt(100000000000000))),
+    maxConcurrent: z.int().check(z.gte(0), z.lte(32)),
+    paused: z.boolean(),
+    spentMicros: z.optional(z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
  * What an agent's hook reports (`reportSessionActivity`): only the state, never the prompt, the message, the tool or a path.
  */
 export const zSessionActivityRequest = z.object({
@@ -3858,7 +4438,8 @@ export const zSession = z.object({
     ended: z.optional(z.boolean()),
     lost: z.optional(z.boolean()),
     activity: z.optional(z.union([z.enum(['working', 'waiting_for_human']), z.string()])),
-    activitySince: z.optional(z.iso.datetime({ offset: true }))
+    activitySince: z.optional(z.iso.datetime({ offset: true })),
+    labels: z.optional(z.record(z.string(), z.string()))
 });
 
 /**
@@ -4706,7 +5287,7 @@ export const zWaitAnswer = z.object({
 });
 
 /**
- * A field of a wait
+ * A field of a wait. `file` takes the name of an uploaded file, a string of at most 255 characters without `/`, `\` or control characters. `secret` asks a person for a value the agent needs and nobody else should read (a password, a token): a string of at most 4 096 bytes without NUL, only in a wait an agent asks in its session (never in a workflow's wait node), without `default`. The value is sealed with the server's credential cipher, bound to the wait's session and kept at most 24 hours; it is never returned, so the stored answer, every view, the wake message, the audit and the feed carry `provided` or `not provided` for the field. It reaches the agent only as the environment variable `OSTROM_WAIT_<FIELD ID UPPER-CASED>` of its commands (Claude Code only, `waits.secrets.v1`): two secret fields of a wait must not give the same name
  */
 export const zWaitField = z.object({
     id: z.string(),
@@ -4718,7 +5299,8 @@ export const zWaitField = z.object({
     options: z.optional(z.array(z.string())),
     multiple: z.optional(z.boolean()),
     allowOther: z.optional(z.boolean()),
-    maxLength: z.optional(z.int())
+    maxLength: z.optional(z.int()),
+    oneTime: z.optional(z.boolean())
 });
 
 /**
@@ -4906,7 +5488,8 @@ export const zWebhookDeliveryList = z.object({
  */
 export const zStartWorkflowRunRequest = z.object({
     inputs: z.optional(z.record(z.string(), z.string())),
-    repository: z.optional(z.string())
+    repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid())
 });
 
 /**
@@ -5038,6 +5621,7 @@ export const zWorkflowRun = z.object({
     parentRunId: z.optional(z.string()),
     sessionId: z.optional(z.string()),
     repository: z.optional(z.string()),
+    profileId: z.optional(z.uuid()),
     visits: z.optional(z.array(zNodeVisit)),
     failure: z.optional(z.string()),
     failureCode: z.optional(z.string()),
@@ -5695,6 +6279,7 @@ export const zCreateLaunchBody = z.object({
     repo: z.optional(z.string()),
     agent: z.string(),
     model: z.optional(z.string()),
+    labels: z.optional(z.record(z.string(), z.string())),
     workflowId: z.optional(z.string())
 });
 
@@ -5731,6 +6316,34 @@ export const zReportHooksMissingPath = z.object({
  * Recorded
  */
 export const zReportHooksMissingResponse = z.void();
+
+export const zGetLaunchLimitsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetLaunchLimitsPath = z.object({
+    launchId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetLaunchLimitsResponse = zLaunchLimits;
+
+export const zSetLaunchLimitsBody = zLaunchLimits;
+
+export const zSetLaunchLimitsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetLaunchLimitsPath = z.object({
+    launchId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetLaunchLimitsResponse = zLaunchLimits;
 
 export const zCheckAgentPolicyHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5912,10 +6525,7 @@ export const zListDevicesHeaders = z.object({
 /**
  * OK
  */
-export const zListDevicesResponse = z.object({
-    items: z.array(zDevice),
-    next: z.optional(z.string())
-});
+export const zListDevicesResponse = zDevicePage;
 
 export const zDeleteDeviceHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -5929,6 +6539,43 @@ export const zDeleteDevicePath = z.object({
  * Done
  */
 export const zDeleteDeviceResponse = z.void();
+
+export const zRenameDeviceBody = zRenameDeviceRequest;
+
+export const zRenameDeviceHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zRenameDevicePath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zRenameDeviceResponse = zDevice;
+
+export const zListMemberDevicesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListMemberDevicesPath = z.object({
+    memberId: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListMemberDevicesResponse = zDevicePage;
+
+export const zListPushDevicesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListPushDevicesResponse = zPushDeviceList;
 
 export const zRegisterPushDeviceBody = zRegisterPushDeviceRequest;
 
@@ -6489,6 +7136,7 @@ export const zListSessionsQuery = z.object({
     dev: z.optional(z.string()),
     open: z.optional(z.boolean()),
     before: z.optional(z.string()),
+    label: z.optional(z.array(z.string())),
     limit: z.optional(z.int().check(z.gte(1), z.lte(100)))
 });
 
@@ -7379,7 +8027,7 @@ export const zStartWorkflowRunPath = z.object({
 });
 
 /**
- * The first run of this `Idempotency-Key` (planned)
+ * The first run of this `Idempotency-Key`, with `Idempotency-Replayed: true`
  */
 export const zStartWorkflowRunResponse = zWorkflowRun;
 
@@ -7818,7 +8466,7 @@ export const zReceiveWaitEventQuery = z.object({
 });
 
 /**
- * The wait is resolved and its session will be woken
+ * The wait is resolved and its session will be woken (a paused cloud session resumes, as with `answerWait`)
  */
 export const zReceiveWaitEventResponse = zWaitEventReceived;
 
@@ -9027,7 +9675,8 @@ export const zListPendingUsageQuery = z.object({
  * OK
  */
 export const zListPendingUsageResponse = z.object({
-    items: z.array(z.record(z.string(), z.unknown()))
+    items: z.array(zPendingUsage),
+    next: z.optional(z.string())
 });
 
 export const zListUsageReconciliationsHeaders = z.object({
@@ -9043,11 +9692,30 @@ export const zListUsageReconciliationsQuery = z.object({
  * OK
  */
 export const zListUsageReconciliationsResponse = z.object({
-    items: z.array(z.record(z.string(), z.unknown()))
+    items: z.array(zUsageReconciliation),
+    next: z.optional(z.string())
 });
 
+export const zGetUsageReviewHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetUsageReviewPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetUsageReviewResponse = zUsageReview;
+
 export const zReconcileUsageBody = z.object({
-    usd: z.number()
+    expectedMicros: z.int(),
+    expectedProviderRequestId: z.optional(z.string().check(z.maxLength(128))),
+    micros: z.int().check(z.gte(0), z.lte(100000000000000)),
+    source: z.union([z.enum(['PROVIDER_RECORD', 'PROVIDER_CONFIRMATION']), z.string()]),
+    reference: z.string().check(z.minLength(1), z.maxLength(240)),
+    reason: z.string().check(z.minLength(1), z.maxLength(240))
 });
 
 export const zReconcileUsageHeaders = z.object({
@@ -9061,10 +9729,7 @@ export const zReconcileUsagePath = z.object({
 /**
  * OK
  */
-export const zReconcileUsageResponse = z.object({
-    id: z.string(),
-    usd: z.number()
-});
+export const zReconcileUsageResponse = zUsageReconciliation;
 
 export const zListBudgetOverridesHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -9074,18 +9739,24 @@ export const zListBudgetOverridesPath = z.object({
     login: z.string()
 });
 
+export const zListBudgetOverridesQuery = z.object({
+    before: z.optional(z.string())
+});
+
 /**
  * OK
  */
 export const zListBudgetOverridesResponse = z.object({
     items: z.array(zBudgetOverride),
-    next: z.optional(z.string())
+    next: z.optional(z.string()),
+    activeId: z.optional(z.string())
 });
 
 export const zCreateBudgetOverrideBody = z.object({
-    usd: z.number(),
-    expiresAt: z.string(),
-    reason: z.string()
+    micros: z.int().check(z.gte(0), z.lte(100000000000000)),
+    durationMinutes: z.int().check(z.gte(1), z.lte(1440)),
+    reason: z.string().check(z.minLength(1), z.maxLength(240)),
+    replacesId: z.optional(z.string())
 });
 
 export const zCreateBudgetOverrideHeaders = z.object({
@@ -9101,6 +9772,10 @@ export const zCreateBudgetOverridePath = z.object({
  */
 export const zCreateBudgetOverrideResponse = zBudgetOverride;
 
+export const zRevokeBudgetOverrideBody = z.object({
+    reason: z.string().check(z.minLength(1), z.maxLength(240))
+});
+
 export const zRevokeBudgetOverrideHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -9114,6 +9789,35 @@ export const zRevokeBudgetOverridePath = z.object({
  * OK
  */
 export const zRevokeBudgetOverrideResponse = zBudgetOverride;
+
+export const zGetApiPricesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetApiPricesResponse = zApiPriceTable;
+
+export const zSetApiPricesBody = zApiPriceTable;
+
+export const zSetApiPricesHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSetApiPricesResponse = zApiPriceTable;
+
+export const zLoadApiPriceDefaultsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zLoadApiPriceDefaultsResponse = zApiPriceTable;
 
 export const zListRunnersHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -9345,6 +10049,106 @@ export const zGetCloudSessionPath = z.object({
  */
 export const zGetCloudSessionResponse = zCloudSession;
 
+export const zListCloudTransferRecipientsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zListCloudTransferRecipientsResponse = zCloudTransferRecipients;
+
+export const zTransferCloudSessionBody = zCreateCloudTransferRequest;
+
+export const zTransferCloudSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.string()
+});
+
+export const zTransferCloudSessionPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted
+ */
+export const zTransferCloudSessionResponse = zCloudTransfer;
+
+export const zListCloudTransfersHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListCloudTransfersQuery = z.object({
+    direction: z.optional(z.union([z.enum([
+            'incoming',
+            'outgoing',
+            'all'
+        ]), z.string()])),
+    state: z.optional(z.array(z.string())),
+    session: z.optional(z.string()),
+    before: z.optional(z.string()),
+    limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(50))), 50)
+});
+
+/**
+ * OK
+ */
+export const zListCloudTransfersResponse = zCloudTransferPage;
+
+export const zGetCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetCloudTransferResponse = zCloudTransfer;
+
+export const zAcceptCloudTransferBody = zAcceptCloudTransferRequest;
+
+export const zAcceptCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zAcceptCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted
+ */
+export const zAcceptCloudTransferResponse = zCloudTransfer;
+
+export const zDeclineCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zDeclineCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zDeclineCloudTransferResponse = zCloudTransfer;
+
+export const zCancelCloudTransferHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCancelCloudTransferPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zCancelCloudTransferResponse = zCloudTransfer;
+
 export const zPauseCloudSessionHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
@@ -9571,12 +10375,80 @@ export const zDownloadRunnerHookHeaders = z.object({
  */
 export const zDownloadRunnerHookResponse = zHookArtifact;
 
-export const zSendCloudMessageBody = z.object({
-    text: z.string()
+export const zListCloudEventsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
 });
 
-export const zSendCloudMessageHeaders = z.object({
+export const zListCloudEventsPath = z.object({
+    id: z.string()
+});
+
+export const zListCloudEventsQuery = z.object({
+    after: z.optional(z.coerce.bigint().check(z.gte(BigInt(0)), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    before: z.optional(z.coerce.bigint().check(z.gte(BigInt(1)), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))),
+    limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(200))), 100),
+    feed: z.optional(z.string().check(z.regex(/^[A-Za-z0-9_.:-]{1,128}$/)))
+});
+
+/**
+ * OK
+ */
+export const zListCloudEventsResponse = zCloudEventPage;
+
+export const zStreamCloudSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Last-Event-ID': z.optional(z.string())
+});
+
+export const zStreamCloudSessionPath = z.object({
+    id: z.string()
+});
+
+export const zStreamCloudSessionQuery = z.object({
+    after: z.optional(z.coerce.bigint().check(z.gte(BigInt(0)), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })))
+});
+
+/**
+ * Server-sent events
+ */
+export const zStreamCloudSessionResponse = z.string();
+
+export const zListCloudSubagentsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListCloudSubagentsPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zListCloudSubagentsResponse = zCloudSubagentList;
+
+export const zListCloudInputsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zListCloudInputsPath = z.object({
+    id: z.string()
+});
+
+export const zListCloudInputsQuery = z.object({
+    before: z.optional(z.string()),
+    limit: z._default(z.optional(z.int().check(z.gte(1), z.lte(100))), 50)
+});
+
+/**
+ * OK
+ */
+export const zListCloudInputsResponse = zCloudInputPage;
+
+export const zSendCloudMessageBody = zSendCloudMessageRequest;
+
+export const zSendCloudMessageHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.optional(z.string().check(z.maxLength(200)))
 });
 
 export const zSendCloudMessagePath = z.object({
@@ -9584,24 +10456,263 @@ export const zSendCloudMessagePath = z.object({
 });
 
 /**
- * OK
+ * Accepted; the first acknowledgement on a replay
  */
-export const zSendCloudMessageResponse = z.object({
-    id: z.string()
-});
+export const zSendCloudMessageResponse = zCloudInput;
 
-export const zStreamCloudSessionHeaders = z.object({
+export const zGetCloudInputHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
 
-export const zStreamCloudSessionPath = z.object({
+export const zGetCloudInputPath = z.object({
+    id: z.string(),
+    input: z.string()
+});
+
+/**
+ * OK
+ */
+export const zGetCloudInputResponse = zCloudInput;
+
+export const zInterruptCloudSessionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zInterruptCloudSessionPath = z.object({
     id: z.string()
 });
 
 /**
- * Server-sent events
+ * Accepted
  */
-export const zStreamCloudSessionResponse = z.string();
+export const zInterruptCloudSessionResponse = zCloudInput;
+
+export const zAnswerCloudPermissionBody = zAnswerCloudPermissionRequest;
+
+export const zAnswerCloudPermissionHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.optional(z.string().check(z.maxLength(200)))
+});
+
+export const zAnswerCloudPermissionPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted (kind `permission`)
+ */
+export const zAnswerCloudPermissionResponse = zCloudInput;
+
+export const zSetCloudPermissionBypassBody = zSetCloudPermissionBypassRequest;
+
+export const zSetCloudPermissionBypassHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetCloudPermissionBypassPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetCloudPermissionBypassResponse = zCloudSession;
+
+export const zSetCloudSessionModelBody = zSetCloudModelRequest;
+
+export const zSetCloudSessionModelHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetCloudSessionModelPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetCloudSessionModelResponse = zCloudSession;
+
+export const zSetCloudSessionEffortBody = zSetCloudEffortRequest;
+
+export const zSetCloudSessionEffortHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zSetCloudSessionEffortPath = z.object({
+    id: z.string()
+});
+
+/**
+ * OK
+ */
+export const zSetCloudSessionEffortResponse = zCloudSession;
+
+export const zStopCloudTaskBody = zStopCloudTaskRequest;
+
+export const zStopCloudTaskHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zStopCloudTaskPath = z.object({
+    id: z.string()
+});
+
+/**
+ * Accepted
+ */
+export const zStopCloudTaskResponse = zCloudInput;
+
+export const zUploadCloudFileBody = z.string();
+
+export const zUploadCloudFileHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.optional(z.string().check(z.maxLength(200)))
+});
+
+export const zUploadCloudFilePath = z.object({
+    id: z.string()
+});
+
+export const zUploadCloudFileQuery = z.object({
+    name: z.string().check(z.maxLength(1024))
+});
+
+/**
+ * The first file of this `Idempotency-Key`
+ */
+export const zUploadCloudFileResponse = zCloudFile;
+
+export const zGetCloudFilePolicyHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetCloudFilePolicyResponse = zCloudFilePolicy;
+
+export const zCloudRunnerAgentBody = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+export const zCloudRunnerAgentHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCloudRunnerAgentResponse = z.object({
+    kind: z.string(),
+    version: z.optional(z.string()),
+    model: z.optional(z.string()),
+    effort: z.optional(z.string()),
+    conversation: z.string(),
+    permissionRelay: z.optional(z.boolean()),
+    permissionDeadlineMinutes: z.optional(z.int()),
+    liveText: z.optional(z.boolean()),
+    backgroundTasks: z.optional(z.boolean()),
+    owner: z.optional(z.object({
+        username: z.string(),
+        githubLogin: z.optional(z.string())
+    }))
+});
+
+export const zCloudRunnerEventsBody = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    events: z.array(z.object({
+        sequence: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+        type: z.string(),
+        data: z.record(z.string(), z.unknown())
+    })).check(z.maxLength(200))
+});
+
+export const zCloudRunnerEventsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCloudRunnerEventsResponse = z.object({
+    acceptedThrough: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    lastSeq: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+export const zCloudRunnerInputsBody = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    waitMillis: z.optional(z.coerce.bigint().check(z.gte(BigInt(0)), z.lte(BigInt(20000)))),
+    desiredStatus: z.optional(z.string()),
+    acceptsFiles: z.optional(z.boolean()),
+    acceptsTaskStops: z.optional(z.boolean()),
+    acceptsModelChanges: z.optional(z.boolean()),
+    acceptsEffortChanges: z.optional(z.boolean())
+});
+
+export const zCloudRunnerInputsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zCloudRunnerInputsResponse = z.object({
+    inputs: z.array(z.object({
+        id: z.string(),
+        kind: z.string(),
+        text: z.optional(z.string()),
+        attempt: z.optional(z.int()),
+        files: z.optional(z.array(z.object({
+            id: z.string(),
+            name: z.string(),
+            size: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+            contentType: z.string(),
+            sha256: z.string()
+        })))
+    })),
+    desiredStatus: z.optional(z.string())
+});
+
+export const zCloudRunnerInputsAckBody = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' })),
+    acks: z.array(z.object({
+        id: z.string(),
+        status: z.union([z.enum(['consumed', 'rejected']), z.string()]),
+        reason: z.optional(z.string())
+    })).check(z.maxLength(200))
+});
+
+export const zCloudRunnerInputsAckHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Recorded
+ */
+export const zCloudRunnerInputsAckResponse = z.void();
+
+export const zCloudRunnerFileHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zCloudRunnerFilePath = z.object({
+    id: z.string()
+});
+
+export const zCloudRunnerFileQuery = z.object({
+    sessionId: z.string(),
+    epoch: z.coerce.bigint().check(z.minimum(BigInt('-9223372036854775808'), { error: 'Invalid value: Expected int64 to be >= -9223372036854775808' }), z.maximum(BigInt('9223372036854775807'), { error: 'Invalid value: Expected int64 to be <= 9223372036854775807' }))
+});
+
+/**
+ * The bytes
+ */
+export const zCloudRunnerFileResponse = z.string();
 
 export const zListArtifactsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
@@ -10015,6 +11126,99 @@ export const zGetCapacityHeaders = z.object({
  * OK
  */
 export const zGetCapacityResponse = zCapacity;
+
+export const zGetForecastsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+export const zGetForecastsQuery = z.object({
+    account: z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetForecastsResponse = zForecastSnapshot;
+
+export const zGetPoolSizeHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetPoolSizeResponse = zPoolSize;
+
+export const zGetPacingSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetPacingSettingsResponse = zPacingSettings;
+
+export const zSetPacingSettingsBody = zPacingSettings;
+
+export const zSetPacingSettingsHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zSetPacingSettingsResponse = zPacingSettings;
+
+export const zPreviewDirectiveHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zPreviewDirectiveResponse = zPacingPreview;
+
+export const zGetCurrentDirectiveHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetCurrentDirectiveResponse = zDirectiveResponse;
+
+export const zGetSessionDirectiveBody = zDirectiveScope;
+
+export const zGetSessionDirectiveHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zGetSessionDirectiveResponse = zDirectiveResponse;
+
+export const zClaimDirectiveBody = zDirectiveClaimRequest;
+
+export const zClaimDirectiveHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * OK
+ */
+export const zClaimDirectiveResponse = zDirectiveClaim;
+
+export const zAcknowledgeDirectiveBody = zDirectiveReceipt;
+
+export const zAcknowledgeDirectiveHeaders = z.object({
+    'Ostrom-Org': z.optional(z.string())
+});
+
+/**
+ * Recorded
+ */
+export const zAcknowledgeDirectiveResponse = z.void();
 
 export const zListGroupsHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
