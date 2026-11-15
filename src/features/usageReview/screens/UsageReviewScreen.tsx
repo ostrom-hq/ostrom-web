@@ -111,6 +111,10 @@ function MemberFilter({
         }}
       >
         <option value="">{t('usageReview.everyMember')}</option>
+        {/* A member asked for by the address that is not among the people read yet stays chosen, by id. */}
+        {member === undefined || (people.members ?? []).some((person) => person.id === member) ? null : (
+          <option value={member}>{member}</option>
+        )}
         {(people.members ?? []).map((person) => (
           <option key={person.id} value={person.id}>
             {person.login}

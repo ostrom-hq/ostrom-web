@@ -75,6 +75,7 @@ describe('the usage review', () => {
       leaseExpiredAt: '2026-11-14T16:12:00Z',
     }));
     visit('/usage?member=' + MEMBER_IDS.theo);
+    expect(await screen.findByRole('combobox', { name: 'Member' })).toHaveValue(MEMBER_IDS.theo);
     const pending = await screen.findByRole('region', { name: 'Pending requests' });
     await within(pending).findByRole('link', { name: 'c0' });
     expect(within(pending).getAllByRole('listitem')).toHaveLength(50);
@@ -187,6 +188,13 @@ describe('the usage review', () => {
     await user.click(within(form).getByRole('button', { name: 'Reconcile usage' }));
     expect(await within(form).findByText('already reconciled')).toBeInTheDocument();
   }, 15_000);
+
+  it('keeps a member asked for by the address who is not among the people read', async () => {
+    visit('/usage?member=gone-member');
+    const picker = await screen.findByRole('combobox', { name: 'Member' });
+    expect(picker).toHaveValue('gone-member');
+    expect(await screen.findByText('No request needs review.')).toBeInTheDocument();
+  });
 
   it('says when there is nothing under review with this id', async () => {
     visit('/usage/nope');

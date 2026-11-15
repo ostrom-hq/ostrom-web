@@ -59,7 +59,7 @@ function Reservation(): ReactElement {
               )
             ) : (
               <Pending
-                key={`${review.pending.id}:${String(review.pending.micros)}`}
+                key={`${review.pending.id}:${String(review.pending.micros)}:${review.pending.providerRequestId ?? ''}`}
                 item={review.pending}
                 view={view}
               />
