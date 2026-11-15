@@ -9,8 +9,9 @@ import {
 import { createArtifactTicket } from '@gen/api/sdk.gen';
 import type { Artifact, ArtifactTicket, ArtifactVersion } from '@gen/api/types.gen';
 import type { ArtifactAccess } from './model';
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { newestFirst } from './useSharing';
@@ -18,9 +19,17 @@ import { newestFirst } from './useSharing';
 /** TeamCode's viewer asks every 10 seconds, while the page is visible, whether a newer version is published. */
 export const ARTIFACT_LIVE_MS = 10_000;
 
-/** Every 10 seconds, until the artifact cannot be read any more. */
+/** The artifact cannot be read any more: deleted, or access lost. A network blip or a 5xx is not. */
+export function refused(error: unknown): boolean {
+  return (
+    isApiFailure(error) &&
+    (error.kind === 'not-found' || error.kind === 'forbidden' || error.kind === 'unauthorized')
+  );
+}
+
+/** Every 10 seconds, until the artifact cannot be read any more; a transient failure only skips a beat. */
 export function livePoll(query: { readonly state: { readonly error: unknown } }): number | false {
-  return query.state.error === null ? ARTIFACT_LIVE_MS : false;
+  return refused(query.state.error) ? false : ARTIFACT_LIVE_MS;
 }
 
 export interface ArtifactViewerViewModel {
@@ -64,7 +73,7 @@ export function useArtifactViewer(id: string, requested: number | undefined): Ar
     // A ticket lasts hours: the frame keeps it until the reader asks for another version (TeamCode's viewer left
     // open past its ticket needs a reload too). The last one stays while the next loads: no blank frame between.
     staleTime: Infinity,
-    placeholderData: keepPreviousData,
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === id ? previous : undefined),
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -87,7 +96,7 @@ export function useArtifactViewer(id: string, requested: number | undefined): Ar
     newer: following && number !== undefined && latest !== undefined && latest > number,
     showLatest,
     // The versions only feed the panels: without them the page still reads.
-    failure: failureOf(artifact.error),
+    failure: artifact.data === undefined || refused(artifact.error) ? failureOf(artifact.error) : undefined,
     ticketFailure: failureOf(ticket.error),
   };
 }
