@@ -56,6 +56,7 @@ export const en = {
       webhooks: 'Webhooks',
       forecasts: 'Forecasts',
       usageReview: 'Usage review',
+      poolSize: 'Pool size',
       tokens: 'Tokens',
       import: 'Import',
       policy: 'Agent policy',

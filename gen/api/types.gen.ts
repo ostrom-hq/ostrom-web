@@ -652,15 +652,12 @@ export type PoolSize = {
      * The daily budget admission applies now, absent when there is none
      */
     effectiveDailyMicros?: number;
-    source: 'automatic' | 'manual' | (string & {});
+    source: PoolSizeSource;
     /**
      * What is left of the accounts' capacity today, computed now
      */
     estimatedDailyMicros: number;
-    /**
-     * Why there is no automatic value; then the typed budget applies
-     */
-    reason?: 'no_accounts' | 'no_estimate' | (string & {});
+    reason?: PoolSizeReason;
     /**
      * Models used over seven days without a price, left out of the samples
      */
@@ -689,10 +686,7 @@ export type PoolSize = {
 
 export type PoolSizeAccount = {
     accountId: string;
-    /**
-     * Clients treat an unknown value as not counted
-     */
-    status: 'counted' | 'unavailable' | 'no_fresh_observation' | 'no_estimate' | (string & {});
+    status: PoolSizeAccountStatus;
     /**
      * What is left of the account's capacity today
      */
@@ -758,6 +752,21 @@ export type PoolSizeWindowUsage = {
     outsideMicros?: number;
     remainingMicros?: number;
 };
+
+/**
+ * Where the daily budget admission applies comes from: the stored automatic value or the typed one. Clients treat an unknown value as `manual`
+ */
+export type PoolSizeSource = 'automatic' | 'manual' | (string & {});
+
+/**
+ * Why there is no automatic value; then the typed budget applies
+ */
+export type PoolSizeReason = 'no_accounts' | 'no_estimate' | (string & {});
+
+/**
+ * Clients treat an unknown value as not counted
+ */
+export type PoolSizeAccountStatus = 'counted' | 'unavailable' | 'no_fresh_observation' | 'no_estimate' | (string & {});
 
 /**
  * `version` is the one replaced (0 for the first save); an omitted `secretAccessKey` keeps the stored one

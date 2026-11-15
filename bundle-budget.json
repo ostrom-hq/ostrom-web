@@ -54,6 +54,7 @@
     "/webhooks/$webhookId": 13.0,
     "/accounts": 19.8,
     "/forecasts": 12.0,
+    "/pool-size": 12.2,
     "/usage": 13.3,
     "/usage/$reservationId": 13.3,
     "/accounts/groups": 19.8,
