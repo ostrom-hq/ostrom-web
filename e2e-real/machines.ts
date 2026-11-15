@@ -9,8 +9,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { z } from 'zod';
 import { callFromPage } from './real';
 
-/** The runner image the machines run (by digest), set when the server hands sessions to registered runners. */
+/**
+ * The image the machines run and deliver `ostrom` from (the runner image), set when the server hands sessions to
+ * registered runners.
+ */
 export const machineImage = process.env['OSTROM_E2E_MACHINE_IMAGE'];
+
+/**
+ * The only image the sessions' containers may run: the server's session image (its cloud runtime's `sessionImage`,
+ * ostrom-session), the machine's image when unset or empty (an unset Actions output is empty).
+ */
+const configuredSessionImage = process.env['OSTROM_E2E_SESSION_IMAGE'];
 
 /** The CLI in the runner image, whatever the image's own entrypoint (as ostrom-cli's e2e/cloud.py). */
 const MACHINE_BINARY = '/usr/local/bin/ostrom';
@@ -38,6 +47,10 @@ function docker(...args: string[]): string {
  */
 export async function startMachine(page: Page, org: string, name: string): Promise<Machine> {
   if (machineImage === undefined) throw new Error('OSTROM_E2E_MACHINE_IMAGE is not set');
+  const sessionImage =
+    configuredSessionImage === undefined || configuredSessionImage === ''
+      ? machineImage
+      : configuredSessionImage;
   const registered = await callFromPage(page, 'POST', '/api/v1/runners', { name, labels: ['docker'] }, org);
   expect(registered.status, JSON.stringify(registered.body)).toBe(201);
   const { id, token } = zRegistered.parse(registered.body);
@@ -62,7 +75,7 @@ export async function startMachine(page: Page, org: string, name: string): Promi
       '-e',
       `OSTROM_DOCKER_API_URL=${DOCKER_API_URL}`,
       '-e',
-      `OSTROM_RUNNER_SESSION_IMAGE=${machineImage}`,
+      `OSTROM_RUNNER_SESSION_IMAGE=${sessionImage}`,
       '-e',
       `OSTROM_RUNNER_DELIVERY_IMAGE=${machineImage}`,
       // The image's own entrypoint is not the CLI: the machine is the CLI's `ostrom cloud machine`.
