@@ -67,3 +67,34 @@ test('a person creates a token, sees its secret once, and revokes it', async ({ 
   await confirm.click();
   await expect(row).toHaveCount(0);
 });
+
+test('the owner turns the memory curation on, and it stays on for this organization only', async ({
+  page,
+}) => {
+  await signIn(page, freshEmail('mia'));
+  const run = Date.now().toString(36);
+  const created = await callFromPage(page, 'POST', '/api/v1/orgs', { name: `Umbrella ${run}` });
+  expect(created.status).toBe(201);
+  const capabilities = await callFromPage(page, 'GET', '/api/v1/capabilities');
+  test.skip(
+    !(capabilities.body as { features: string[] }).features.includes('memory.v1'),
+    'the server does not serve the memory yet',
+  );
+
+  await page.goto('/settings');
+  const box = page.getByRole('region', { name: 'Memory curation' });
+  const toggle = box.getByRole('switch', { name: 'Curate the organization’s memory' });
+  await expect(toggle).not.toBeChecked();
+  await expect(box.getByText('It has not run yet.')).toBeVisible();
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+  await page.reload();
+  await expect(
+    page
+      .getByRole('region', { name: 'Memory curation' })
+      .getByRole('switch', { name: 'Curate the organization’s memory' }),
+  ).toBeChecked();
+  const read = await callFromPage(page, 'GET', '/api/v1/memory/curation');
+  expect(read.status).toBe(200);
+  expect(read.body).toMatchObject({ enabled: true });
+});

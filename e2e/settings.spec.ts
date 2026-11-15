@@ -61,3 +61,12 @@ test('a person creates a token, copies its secret once, then revokes it', async 
   await row.getByRole('button', { name: 'Revoke Nightly CI' }).click();
   await expect(row).toHaveCount(0);
 });
+
+test('an admin turns the memory curation on', async ({ page }) => {
+  await page.goto('/settings');
+  const box = page.getByRole('region', { name: 'Memory curation' });
+  const toggle = box.getByRole('switch', { name: 'Curate the organization’s memory' });
+  await expect(toggle).not.toBeChecked();
+  await toggle.click();
+  await expect(toggle).toBeChecked();
+});

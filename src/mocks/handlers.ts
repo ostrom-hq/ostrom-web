@@ -108,6 +108,7 @@ import type {
   Spending,
   Team,
   Workflow,
+  MemoryCuration,
   WorkflowEditors,
   WorkflowRun,
 } from '@gen/api/types.gen';
@@ -244,6 +245,7 @@ import {
 import { createPolicyHandlers, initialModelPolicy, type PolicyState } from '@/mocks/policy';
 import { createRunHandlers } from '@/mocks/runs';
 import { createWorkflowSettingsHandlers } from '@/mocks/workflowSettings';
+import { createMemoryCurationHandlers, type MemoryCurationState } from '@/mocks/memoryCuration';
 import { createNotificationsHandlers, type NotificationsState } from '@/mocks/notifications';
 import {
   initialNotificationPreferences,
@@ -273,6 +275,7 @@ export interface MockDb
     EnvironmentState,
     PersonalMcpState,
     NotificationsState,
+    MemoryCurationState,
     GithubState,
     GroupsState,
     OrgsState,
@@ -313,6 +316,8 @@ export interface MockDb
   workflowRuns: WorkflowRun[];
   /** Who decides a workflow that has no gate node; the server's default is the administrators. */
   workflowEditors: WorkflowEditors;
+  /** Whether the organization's memory is curated, and what the last run did (off by default, as the server). */
+  memoryCuration: MemoryCuration;
   /**
    * `never` (the server's default since core#66 and server#159, S2-15): the asker never approves their own request;
    * `sole-approver`, chosen by the organization: the asker who is the only approver may, and the receipt says so.
@@ -392,6 +397,7 @@ export function createMockDb(): MockDb {
     workflows: initialWorkflows(),
     workflowRuns: initialWorkflowRuns(),
     workflowEditors: { mode: 'admins' },
+    memoryCuration: { enabled: false },
     notificationChannels: ['push'],
     notificationSwitches: initialNotificationSwitches(),
     notificationPreferences: initialNotificationPreferences(),
@@ -1709,6 +1715,10 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       now,
     ),
     ...createNotificationsHandlers(() => db, now),
+    ...createMemoryCurationHandlers(
+      () => db,
+      (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+    ),
     ...createWorkflowSettingsHandlers(
       () => db,
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),

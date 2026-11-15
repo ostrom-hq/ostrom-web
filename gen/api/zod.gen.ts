@@ -1321,7 +1321,7 @@ export const zApiPriceTable = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -2501,7 +2501,12 @@ export const zImportItem = z.object({
             'account',
             'workflow',
             'editors',
-            'automation'
+            'automation',
+            'skill',
+            'hook',
+            'variable',
+            'decision',
+            'exclusion'
         ]), z.string()]),
     name: z.string(),
     action: z.union([z.enum([
@@ -3482,6 +3487,90 @@ export const zTeamCodeWorkflow = z.object({
 export const zTeamCodeWorkflowEditors = z.object({
     mode: z.string(),
     memberIds: z.optional(z.array(z.string()))
+});
+
+/**
+ * One file of a TeamCode skill or hook version
+ */
+export const zTeamCodeArtifactFile = z.object({
+    path: z.string(),
+    mode: z.union([z.enum(['file', 'executable']), z.string()]),
+    content: z.string()
+});
+
+/**
+ * A TeamCode member's explicit decision on a skill or a hook (a cleared one is not sent)
+ */
+export const zTeamCodeDecision = z.object({
+    memberId: z.string(),
+    decision: z.union([z.enum(['allow', 'deny']), z.string()])
+});
+
+export const zTeamCodeSkillVersion = z.object({
+    version: z.string(),
+    files: z.array(zTeamCodeArtifactFile)
+});
+
+/**
+ * A TeamCode skill with the versions the CLI read: its pinned version, or its latest one when none is pinned; the server publishes them, pins `pinnedVersion` and sets the audience and the decisions. A personal skill (`ownerId`) is published as its mapped owner's personal skill
+ */
+export const zTeamCodeSkill = z.object({
+    id: z.string(),
+    name: z.string(),
+    ownerId: z.optional(z.string()),
+    allMembers: z.optional(z.boolean()),
+    retired: z.optional(z.boolean()),
+    pinnedVersion: z.optional(z.string()),
+    versions: z.optional(z.array(zTeamCodeSkillVersion)),
+    omittedVersions: z.optional(z.int()),
+    decisions: z.optional(z.array(zTeamCodeDecision))
+});
+
+export const zTeamCodeHookVersion = z.object({
+    version: z.string(),
+    events: z.array(z.string()),
+    matcher: z.optional(z.string()),
+    command: z.string(),
+    timeoutSeconds: z.int(),
+    files: z.array(zTeamCodeArtifactFile)
+});
+
+/**
+ * A TeamCode hook with the versions the CLI read (its pinned one, or its latest). TeamCode's hooks are the team's only (no personal hook, no retirement); a hook reaches members only through its pinned version and its audience, as in TeamCode
+ */
+export const zTeamCodeHook = z.object({
+    id: z.string(),
+    name: z.string(),
+    allMembers: z.optional(z.boolean()),
+    pinnedVersion: z.optional(z.string()),
+    versions: z.optional(z.array(zTeamCodeHookVersion)),
+    omittedVersions: z.optional(z.int()),
+    decisions: z.optional(z.array(zTeamCodeDecision))
+});
+
+/**
+ * A TeamCode environment variant: one value for one environment variable. A personal one (`ownerId`) becomes its mapped owner's personal variant
+ */
+export const zTeamCodeVariable = z.object({
+    id: z.string(),
+    variable: z.string(),
+    name: z.string(),
+    binding: z.union([z.enum(['shared', 'perMember']), z.string()]),
+    ownerId: z.optional(z.string())
+});
+
+export const zTeamCodeVariableAssignment = z.object({
+    memberId: z.string(),
+    variantId: z.string(),
+    source: z.optional(z.union([z.enum(['direct', 'bulk']), z.string()]))
+});
+
+/**
+ * A member excluded from an environment variable, by its exact name (as TeamCode keys it); a reserved name is refused as on an exclusion in Ostrom
+ */
+export const zTeamCodeVariableExclusion = z.object({
+    memberId: z.string(),
+    variable: z.string()
 });
 
 export const zTokenScope = z.object({
@@ -4802,6 +4891,11 @@ export const zTeamCodeImportRequest = z.object({
     workflowEditors: z.optional(zTeamCodeWorkflowEditors),
     automations: z.optional(z.array(zTeamCodeAutomation)),
     profiles: z.optional(z.array(zTeamCodeProfile)),
+    skills: z.optional(z.array(zTeamCodeSkill)),
+    hooks: z.optional(z.array(zTeamCodeHook)),
+    variables: z.optional(z.array(zTeamCodeVariable)),
+    variableAssignments: z.optional(z.array(zTeamCodeVariableAssignment)),
+    variableExclusions: z.optional(z.array(zTeamCodeVariableExclusion)),
     memberMap: z.optional(z.record(z.string(), z.string()))
 });
 
@@ -5983,6 +6077,25 @@ export const zMcpServerListWritable = z.object({
 });
 
 /**
+ * A TeamCode environment variant: one value for one environment variable. A personal one (`ownerId`) becomes its mapped owner's personal variant
+ */
+export const zTeamCodeVariableWritable = z.object({
+    id: z.string(),
+    variable: z.string(),
+    name: z.string(),
+    binding: z.union([z.enum(['shared', 'perMember']), z.string()]),
+    ownerId: z.optional(z.string()),
+    value: z.optional(z.string())
+});
+
+export const zTeamCodeVariableAssignmentWritable = z.object({
+    memberId: z.string(),
+    variantId: z.string(),
+    source: z.optional(z.union([z.enum(['direct', 'bulk']), z.string()])),
+    memberValue: z.optional(z.string())
+});
+
+/**
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export const zTeamCodeAccountWritable = z.object({
@@ -6043,6 +6156,11 @@ export const zTeamCodeImportRequestWritable = z.object({
     workflowEditors: z.optional(zTeamCodeWorkflowEditors),
     automations: z.optional(z.array(zTeamCodeAutomation)),
     profiles: z.optional(z.array(zTeamCodeProfile)),
+    skills: z.optional(z.array(zTeamCodeSkill)),
+    hooks: z.optional(z.array(zTeamCodeHook)),
+    variables: z.optional(z.array(zTeamCodeVariableWritable)),
+    variableAssignments: z.optional(z.array(zTeamCodeVariableAssignmentWritable)),
+    variableExclusions: z.optional(z.array(zTeamCodeVariableExclusion)),
     memberMap: z.optional(z.record(z.string(), z.string()))
 });
 
@@ -10055,7 +10173,8 @@ export const zListCloudSessionsResponse = zCloudSessionPage;
 export const zCreateCloudSessionBody = zCreateCloudSessionRequest;
 
 export const zCreateCloudSessionHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Idempotency-Key': z.optional(z.string().check(z.minLength(1), z.maxLength(128), z.regex(/^[A-Za-z0-9._:-]+$/)))
 });
 
 /**

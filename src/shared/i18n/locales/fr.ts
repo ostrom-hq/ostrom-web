@@ -2766,6 +2766,14 @@ export const fr = {
       savedTag: 'Fait',
       errorTag: 'Non enregistré',
     },
+    memoryCuration: {
+      title: 'Curation de la mémoire',
+      lead: 'Environ une fois par heure, le serveur range la mémoire : de deux entrées au même titre et au même texte il garde la plus récente, et il met en file pour une personne chaque paire qu’il ne sait pas trancher seul. Il n’appelle jamais de modèle, et une entrée remplacée peut être restaurée.',
+      switch: 'Curer la mémoire de l’organisation',
+      neverRun: 'Elle n’a pas encore tourné.',
+      lastRun: 'Dernier passage {{when}} : {{superseded}} remplacée(s), {{queued}} en file pour relecture.',
+      errorTag: 'Non enregistré',
+    },
     serviceKeys: {
       title: 'Clés de service',
       lead: 'Pour la CI de {{name}} : une clé agit pour l’organisation, pas pour une personne, et chaque usage est tracé.',
