@@ -149,6 +149,44 @@ export const cloudConversationEn = {
       minutes: '{{minutes}} min {{seconds}} s',
       hours: '{{hours}} h {{minutes}} min',
     },
+    files: {
+      attach: 'Attach files',
+      list: 'Files of the next message',
+      drop: 'Drop files to attach them to your next message',
+      remove: 'Remove {{name}}',
+      retry: 'Retry',
+      uploaded: 'Uploaded',
+      dismiss: 'Dismiss',
+      progress: '{{sent}} of {{size}}',
+      notReady: 'Wait until every file is uploaded, or remove the ones that failed.',
+      problem: {
+        tooMany: 'A message carries {{max}} files at most: send this one first, or remove a file.',
+        empty: 'This file is empty.',
+        tooLarge: 'The organization allows {{size}} per file.',
+        messageTooLarge:
+          'The organization allows {{size}} of files per message: send the files already attached first.',
+        typeNotAllowed: 'The organization takes {{types}}; the content decides, not the name.',
+        unreadable: 'The file could not be read, or changed while it was sent. Pick it again.',
+        quotaDaily: 'Your daily upload quota is used up; try again in {{wait}}.',
+        quotaSession: 'This session holds too many files not sent yet: send a message with them first.',
+        storageNotConfigured:
+          'Files are off for this organization: an administrator has to configure and test its artifact storage first.',
+        storageUnavailable: 'The organization’s file storage did not answer. Try again in a moment.',
+        integrity: 'The server stored other bytes than the ones sent. Try again.',
+        denied: 'You may not send files to this session.',
+        unreachable: 'The server could not be reached.',
+        unsupported: 'This server does not take files; it needs an update first.',
+        sessionGone: 'This session no longer exists, or you can no longer see it.',
+        other: 'The upload was refused ({{code}}).',
+      },
+      message: {
+        unavailable:
+          'an attached file is no longer available (sent already, or expired after 24 hours). Attach it again.',
+        tooLarge: 'its files together exceed the organization’s limit per message. Attach fewer.',
+        unsupported: 'this session’s host does not take files yet.',
+        invalid: 'the attached files are not valid for this session. Attach them again.',
+      },
+    },
     pending: {
       sending: 'Sending…',
       sent: 'Sent, waiting for the agent',
@@ -312,6 +350,49 @@ const cloudConversationFr = {
       seconds: '{{seconds}} s',
       minutes: '{{minutes}} min {{seconds}} s',
       hours: '{{hours}} h {{minutes}} min',
+    },
+    files: {
+      attach: 'Joindre des fichiers',
+      list: 'Fichiers du prochain message',
+      drop: 'Déposez des fichiers pour les joindre à votre prochain message',
+      remove: 'Retirer {{name}}',
+      retry: 'Réessayer',
+      uploaded: 'Envoyé',
+      dismiss: 'Fermer',
+      progress: '{{sent}} sur {{size}}',
+      notReady: 'Attendez que tous les fichiers soient envoyés, ou retirez ceux qui ont échoué.',
+      problem: {
+        tooMany:
+          'Un message contient {{max}} fichiers au maximum : envoyez d’abord celui-ci, ou retirez un fichier.',
+        empty: 'Ce fichier est vide.',
+        tooLarge: 'L’organisation autorise {{size}} par fichier.',
+        messageTooLarge:
+          'L’organisation autorise {{size}} de fichiers par message : envoyez d’abord les fichiers déjà joints.',
+        typeNotAllowed: 'L’organisation accepte {{types}} ; c’est le contenu qui compte, pas le nom.',
+        unreadable:
+          'Le fichier n’a pas pu être lu, ou il a changé pendant l’envoi. Sélectionnez-le à nouveau.',
+        quotaDaily: 'Votre quota d’envoi quotidien est atteint ; réessayez dans {{wait}}.',
+        quotaSession:
+          'Cette session contient trop de fichiers pas encore envoyés : envoyez d’abord un message avec ceux-ci.',
+        storageNotConfigured:
+          'Les fichiers sont désactivés pour cette organisation : un administrateur doit d’abord configurer et tester son stockage d’artefacts.',
+        storageUnavailable:
+          'Le stockage de fichiers de l’organisation n’a pas répondu. Réessayez dans un instant.',
+        integrity: 'Le serveur a enregistré d’autres octets que ceux envoyés. Réessayez.',
+        denied: 'Vous n’avez pas le droit d’envoyer des fichiers à cette session.',
+        unreachable: 'Le serveur est injoignable.',
+        unsupported: 'Ce serveur n’accepte pas les fichiers ; il doit d’abord être mis à jour.',
+        sessionGone: 'Cette session n’existe plus, ou vous ne pouvez plus la voir.',
+        other: 'L’envoi a été refusé ({{code}}).',
+      },
+      message: {
+        unavailable:
+          'un fichier joint n’est plus disponible (déjà envoyé, ou expiré au bout de 24 heures). Joignez-le à nouveau.',
+        tooLarge:
+          'ses fichiers dépassent ensemble la limite de l’organisation par message. Joignez-en moins.',
+        unsupported: 'l’hôte de cette session n’accepte pas encore les fichiers.',
+        invalid: 'les fichiers joints ne sont pas valides pour cette session. Joignez-les à nouveau.',
+      },
     },
     pending: {
       sending: 'Envoi…',

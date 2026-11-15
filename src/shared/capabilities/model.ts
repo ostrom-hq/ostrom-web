@@ -41,6 +41,7 @@ export const FEATURES = [
   'runners.cloud.conversation.v1',
   'runners.cloud.effort.v1',
   'runners.cloud.environment.v1',
+  'runners.cloud.files.v1',
   'runners.cloud.github.v1',
   'runners.cloud.model.v1',
   'runners.cloud.permissions.bypass.v1',

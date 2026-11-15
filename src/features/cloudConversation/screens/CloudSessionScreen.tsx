@@ -9,6 +9,7 @@ import { Button } from '@/shared/ui/Button';
 import { Markdown } from '@/shared/ui/Markdown';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { Composer, PendingBubble } from '../components/Composer';
+import { FileDropArea } from '../components/FileComponents';
 import { PermissionCardView } from '../components/PermissionCardView';
 import { RunningPanel, ThreadBar } from '../components/RunningPanel';
 import { SessionControls } from '../components/SessionControls';
@@ -156,57 +157,64 @@ function Conversation({
           </Badge>
         </p>
       )}
-      <div className="cc-layout">
-        <Section label={t('cloudConversation.transcript')}>
-          {opened === undefined ? null : <ThreadBar subagent={opened} onBack={view.backToMain} />}
-          <LoadState data={view.loaded ? view.items : undefined} failure={undefined}>
-            {(items) => (
-              <div className="cc-transcript" aria-live="polite">
-                {items.length === 0 && view.pending.length === 0 && view.liveText === undefined ? (
-                  <p className="o-empty">
-                    {view.thread === undefined
-                      ? t('cloudConversation.empty')
-                      : t('cloudConversation.work.threadEmpty')}
-                  </p>
-                ) : null}
-                {items.map((item) => (
-                  <TranscriptItemView
-                    key={keyOf(item)}
-                    item={item}
-                    memberId={view.memberId}
-                    threads={threads}
-                  />
-                ))}
-                {view.liveText === undefined ? null : (
-                  <div className="cc-item cc-live" aria-label={t('cloudConversation.writing')}>
-                    <Markdown source={view.liveText} />
-                  </div>
-                )}
-                {view.pending.map((message) => (
-                  <PendingBubble
-                    key={message.clientMessageId}
-                    message={message}
-                    onRetry={() => {
-                      view.retryMessage(message);
-                    }}
-                    onDiscard={() => {
-                      view.discard(message.clientMessageId);
-                    }}
-                  />
-                ))}
-                {view.running && view.liveText === undefined ? (
-                  <p className="cc-meta" role="status">
-                    {t('cloudConversation.running')}
-                  </p>
-                ) : null}
-              </div>
-            )}
-          </LoadState>
-          <PermissionCardView view={permissions} bypassOffered={controls.bypassOffered} />
-          <Composer view={view} />
-        </Section>
-        <RunningPanel view={running} thread={view.thread} onOpen={view.openThread} onMain={view.backToMain} />
-      </div>
+      <FileDropArea files={view.files}>
+        <div className="cc-layout">
+          <Section label={t('cloudConversation.transcript')}>
+            {opened === undefined ? null : <ThreadBar subagent={opened} onBack={view.backToMain} />}
+            <LoadState data={view.loaded ? view.items : undefined} failure={undefined}>
+              {(items) => (
+                <div className="cc-transcript" aria-live="polite">
+                  {items.length === 0 && view.pending.length === 0 && view.liveText === undefined ? (
+                    <p className="o-empty">
+                      {view.thread === undefined
+                        ? t('cloudConversation.empty')
+                        : t('cloudConversation.work.threadEmpty')}
+                    </p>
+                  ) : null}
+                  {items.map((item) => (
+                    <TranscriptItemView
+                      key={keyOf(item)}
+                      item={item}
+                      memberId={view.memberId}
+                      threads={threads}
+                    />
+                  ))}
+                  {view.liveText === undefined ? null : (
+                    <div className="cc-item cc-live" aria-label={t('cloudConversation.writing')}>
+                      <Markdown source={view.liveText} />
+                    </div>
+                  )}
+                  {view.pending.map((message) => (
+                    <PendingBubble
+                      key={message.clientMessageId}
+                      message={message}
+                      onRetry={() => {
+                        view.retryMessage(message);
+                      }}
+                      onDiscard={() => {
+                        view.discard(message.clientMessageId);
+                      }}
+                    />
+                  ))}
+                  {view.running && view.liveText === undefined ? (
+                    <p className="cc-meta" role="status">
+                      {t('cloudConversation.running')}
+                    </p>
+                  ) : null}
+                </div>
+              )}
+            </LoadState>
+            <PermissionCardView view={permissions} bypassOffered={controls.bypassOffered} />
+            <Composer view={view} />
+          </Section>
+          <RunningPanel
+            view={running}
+            thread={view.thread}
+            onOpen={view.openThread}
+            onMain={view.backToMain}
+          />
+        </div>
+      </FileDropArea>
     </>
   );
 }

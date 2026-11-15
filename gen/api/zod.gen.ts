@@ -1356,7 +1356,7 @@ export const zApiPriceTable = z.object({
 });
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.onbehalf.writes.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.profiles.member.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.sessions.owner.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export const zCapabilities = z.object({
     apiVersion: z.int(),
@@ -6431,7 +6431,7 @@ export const zOstromOrigin = z.string();
 export const zOstromOrg = z.string();
 
 /**
- * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+ * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
  */
 export const zOstromOnBehalfOf = z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/));
 
@@ -10504,6 +10504,10 @@ export const zListCloudProfilesHeaders = z.object({
     'Ostrom-Org': z.optional(z.string())
 });
 
+export const zListCloudProfilesQuery = z.object({
+    member: z.optional(z.string())
+});
+
 /**
  * OK
  */
@@ -10560,6 +10564,7 @@ export const zListCloudSessionsHeaders = z.object({
 });
 
 export const zListCloudSessionsQuery = z.object({
+    owner: z.optional(z.string()),
     kind: z.optional(z.array(z.union([z.enum(['cloud', 'remote']), z.string()]))),
     status: z.optional(z.string()),
     before: z.optional(z.string()),
@@ -10624,6 +10629,7 @@ export const zTransferCloudSessionBody = zCreateCloudTransferRequest;
 
 export const zTransferCloudSessionHeaders = z.object({
     'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/))),
     'Idempotency-Key': z.string()
 });
 
@@ -10673,7 +10679,8 @@ export const zGetCloudTransferResponse = zCloudTransfer;
 export const zAcceptCloudTransferBody = zAcceptCloudTransferRequest;
 
 export const zAcceptCloudTransferHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zAcceptCloudTransferPath = z.object({
@@ -10686,7 +10693,8 @@ export const zAcceptCloudTransferPath = z.object({
 export const zAcceptCloudTransferResponse = zCloudTransfer;
 
 export const zDeclineCloudTransferHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zDeclineCloudTransferPath = z.object({
@@ -10699,7 +10707,8 @@ export const zDeclineCloudTransferPath = z.object({
 export const zDeclineCloudTransferResponse = zCloudTransfer;
 
 export const zCancelCloudTransferHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zCancelCloudTransferPath = z.object({
@@ -11111,7 +11120,8 @@ export const zSetCloudPermissionBypassResponse = zCloudSession;
 export const zSetCloudSessionModelBody = zSetCloudModelRequest;
 
 export const zSetCloudSessionModelHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zSetCloudSessionModelPath = z.object({
@@ -11126,7 +11136,8 @@ export const zSetCloudSessionModelResponse = zCloudSession;
 export const zSetCloudSessionEffortBody = zSetCloudEffortRequest;
 
 export const zSetCloudSessionEffortHeaders = z.object({
-    'Ostrom-Org': z.optional(z.string())
+    'Ostrom-Org': z.optional(z.string()),
+    'Ostrom-On-Behalf-Of': z.optional(z.string().check(z.minLength(1), z.maxLength(64), z.regex(/^[A-Za-z0-9._-]+$/)))
 });
 
 export const zSetCloudSessionEffortPath = z.object({

@@ -22,6 +22,14 @@ describe('a message sent from the screen (TeamCode SendMessageUseCase)', () => {
     expect(validMessage('é ✓ 😀')).toBe(true);
   });
 
+  it('may carry files and no text (TeamCode aMessageWithFilesMayHaveNoText)', () => {
+    expect(validMessage('', true)).toBe(true);
+    expect(validMessage('  ', true)).toBe(true);
+    expect(validMessage('bell\u0007', true)).toBe(false);
+    const file = { id: 'f1', name: 'a.png', size: 10, contentType: 'image/png' };
+    expect(draftOf('', 'k2', [file]).files).toEqual([file]);
+  });
+
   it('is sent, then received: queued, or refused with its reason, and says when it woke the session', () => {
     const draft = draftOf('hi', 'k1');
     expect(draft).toEqual({
@@ -31,6 +39,7 @@ describe('a message sent from the screen (TeamCode SendMessageUseCase)', () => {
       inputId: undefined,
       woke: false,
       reason: undefined,
+      files: [],
     });
     expect(received(draft, input('queued', { woke: true }))).toMatchObject({
       state: 'sent',
@@ -61,8 +70,8 @@ describe('a message sent from the screen (TeamCode SendMessageUseCase)', () => {
 
   it('leaves once the transcript shows it, and is refused when an input event says so', () => {
     const events: TranscriptEvent[] = [
-      { kind: 'user', seq: 1, at: AT, text: 'a', inputId: 'in-a', authorId: undefined },
-      { kind: 'user', seq: 2, at: AT, text: 'x', inputId: undefined, authorId: undefined },
+      { kind: 'user', seq: 1, at: AT, text: 'a', inputId: 'in-a', authorId: undefined, files: [] },
+      { kind: 'user', seq: 2, at: AT, text: 'x', inputId: undefined, authorId: undefined, files: [] },
       {
         kind: 'input',
         seq: 3,

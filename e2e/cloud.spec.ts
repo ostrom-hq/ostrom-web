@@ -102,3 +102,28 @@ test('a developer answers the agent’s permission request, and follows what run
   await transcript.getByRole('button', { name: '← Main conversation' }).click();
   await expect(transcript.getByText('Deployed.')).toBeVisible();
 });
+
+test('a developer attaches a file to a message for the agent', async ({ page }) => {
+  await page.goto('/');
+  await openScreen(page, 'Cloud agents');
+  await page.getByRole('link', { name: 'Why the invoice test fails on Mondays' }).click();
+  const transcript = page.getByRole('region', { name: 'Conversation' });
+  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  // The paperclip opens the browser's file dialog; the file uploads at once, as a chip.
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Attach files' }).click();
+  await (
+    await chooser
+  ).setFiles({
+    name: 'trace.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('TypeError at invoice.ts:42'),
+  });
+  const chips = page.getByRole('list', { name: 'Files of the next message' });
+  await expect(chips.getByText(/^Uploaded/)).toBeVisible();
+  // A message may carry files and no text.
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(transcript.getByText('Read trace.txt.')).toBeVisible();
+  await expect(transcript.getByText('trace.txt (26 B)')).toBeVisible();
+  await expect(chips).toBeHidden();
+});

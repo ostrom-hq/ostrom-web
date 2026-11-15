@@ -6969,7 +6969,7 @@ export const listCloudProfilesQueryKey = (options?: Options<ListCloudProfilesDat
 /**
  * The organization's cloud profiles
  *
- * A member of the organization: an owner or an admin sees every profile, a member the ones assigned to them (TeamCode's `cloud_profiles`). A profile names the cluster and namespace a session runs in and the session image the team chose: Ostrom imposes none
+ * A member of the organization: an owner or an admin sees every profile, a member the ones assigned to them (TeamCode's `cloud_profiles`). A profile names the cluster and namespace a session runs in and the session image the team chose: Ostrom imposes none. Planned (`runners.cloud.profiles.member.v1`, TeamCode's `cloud.profiles.member.v1`): `member` (an id or a login) lists the profiles that member can use, every profile for an owner or an admin; another member than the caller needs an owner or an admin of the organization, or an administrator's `cloud:admin` service key (403 `forbidden`), and a member who is not an active member of the organization is 422 `invalid_effective_member`; sent twice, 400 `invalid_query`
  */
 export const listCloudProfilesOptions = (options?: Options<ListCloudProfilesData>) => queryOptions<ListCloudProfilesResponse, ListCloudProfilesError, ListCloudProfilesResponse, ReturnType<typeof listCloudProfilesQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -7066,7 +7066,7 @@ export const listCloudSessionsQueryKey = (options?: Options<ListCloudSessionsDat
 /**
  * The caller's cloud agent sessions, newest first
  *
- * With `runners.cloud.remote.v1`, `kind` (repeatable) chooses the kinds listed, `cloud` or `remote` (400 `invalid_kind` otherwise); without it, cloud sessions only, so a client from before remote sessions never lists one it cannot show
+ * With `runners.cloud.remote.v1`, `kind` (repeatable) chooses the kinds listed, `cloud` or `remote` (400 `invalid_kind` otherwise); without it, cloud sessions only, so a client from before remote sessions never lists one it cannot show. Planned (`runners.cloud.sessions.owner.v1`, TeamCode's `owner`): `owner` is the caller's member id, or absent; another member's id, or `all`, is 403 `forbidden`, administrators included, since a role opens nobody else's session (TeamCode's rule)
  */
 export const listCloudSessionsOptions = (options?: Options<ListCloudSessionsData>) => queryOptions<ListCloudSessionsResponse, ListCloudSessionsError, ListCloudSessionsResponse, ReturnType<typeof listCloudSessionsQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {
@@ -7086,7 +7086,7 @@ export const listCloudSessionsInfiniteQueryKey = (options?: Options<ListCloudSes
 /**
  * The caller's cloud agent sessions, newest first
  *
- * With `runners.cloud.remote.v1`, `kind` (repeatable) chooses the kinds listed, `cloud` or `remote` (400 `invalid_kind` otherwise); without it, cloud sessions only, so a client from before remote sessions never lists one it cannot show
+ * With `runners.cloud.remote.v1`, `kind` (repeatable) chooses the kinds listed, `cloud` or `remote` (400 `invalid_kind` otherwise); without it, cloud sessions only, so a client from before remote sessions never lists one it cannot show. Planned (`runners.cloud.sessions.owner.v1`, TeamCode's `owner`): `owner` is the caller's member id, or absent; another member's id, or `all`, is 403 `forbidden`, administrators included, since a role opens nobody else's session (TeamCode's rule)
  */
 export const listCloudSessionsInfiniteOptions = (options?: Options<ListCloudSessionsData>) => {
     const opts = infiniteQueryOptions<ListCloudSessionsResponse, ListCloudSessionsError, InfiniteData<ListCloudSessionsResponse>, QueryKey<Options<ListCloudSessionsData>>, string | Pick<QueryKey<Options<ListCloudSessionsData>>[0], 'body' | 'headers' | 'path' | 'query'>>(
@@ -7192,7 +7192,7 @@ export const listCloudTransferRecipientsOptions = (options?: Options<ListCloudTr
 /**
  * Give one of the caller's cloud sessions to another member
  *
- * `runners.cloud.transfer.v1`. Only the owner asks. An administrator's transfer is `accepted` at once; a member's is `offered` and the recipient accepts within 7 days (403 `transfer_disabled` when the instance's `memberTransfers` is `disabled`). Accepting pauses the session (the agent stops, its pod is gone); the owner changes only then, and the workspace is marked untrusted for the recipient. At most one open transfer per session (409 `transfer_pending`); a session still being created is 409 `session_preparing`, an ended one 409 `session_not_running`; a recipient who cannot own the session (disabled, not a member, at their cloud session limit) is 422 `recipient_ineligible` naming every reason. `Idempotency-Key` is required (400 `idempotency_key_required`): a retry returns the first transfer (`Idempotency-Replayed: true`), the same key with another request is 422 `idempotency_conflict`
+ * `runners.cloud.transfer.v1`. Only the owner asks. An administrator's transfer is `accepted` at once; a member's is `offered` and the recipient accepts within 7 days (403 `transfer_disabled` when the instance's `memberTransfers` is `disabled`). Accepting pauses the session (the agent stops, its pod is gone); the owner changes only then, and the workspace is marked untrusted for the recipient. At most one open transfer per session (409 `transfer_pending`); a session still being created is 409 `session_preparing`, an ended one 409 `session_not_running`; a recipient who cannot own the session (disabled, not a member, at their cloud session limit) is 422 `recipient_ineligible` naming every reason. `Idempotency-Key` is required (400 `idempotency_key_required`): a retry returns the first transfer (`Idempotency-Replayed: true`), the same key with another request is 422 `idempotency_conflict`. With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential. A transfer write stays a person's, signed in: a service key never names a member here
  */
 export const transferCloudSessionMutation = (options?: Partial<Options<TransferCloudSessionData>>): UseMutationOptions<TransferCloudSessionResponse, TransferCloudSessionError, Options<TransferCloudSessionData>> => {
     const mutationOptions: UseMutationOptions<TransferCloudSessionResponse, TransferCloudSessionError, Options<TransferCloudSessionData>> = {
@@ -7283,7 +7283,7 @@ export const getCloudTransferOptions = (options: Options<GetCloudTransferData>) 
 /**
  * Accept a session offered to the caller
  *
- * `runners.cloud.transfer.v1`. Only the recipient. The session pauses, then becomes the recipient's; before it runs again the runner resets the agent's settings and the repositories' Git configuration (`untrustedWorkspace`). Idempotent. 409 `transfer_expired`, `transfer_not_open`; 422 `recipient_ineligible`
+ * `runners.cloud.transfer.v1`. Only the recipient. The session pauses, then becomes the recipient's; before it runs again the runner resets the agent's settings and the repositories' Git configuration (`untrustedWorkspace`). Idempotent. 409 `transfer_expired`, `transfer_not_open`; 422 `recipient_ineligible`. With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential
  */
 export const acceptCloudTransferMutation = (options?: Partial<Options<AcceptCloudTransferData>>): UseMutationOptions<AcceptCloudTransferResponse, AcceptCloudTransferError, Options<AcceptCloudTransferData>> => {
     const mutationOptions: UseMutationOptions<AcceptCloudTransferResponse, AcceptCloudTransferError, Options<AcceptCloudTransferData>> = {
@@ -7302,7 +7302,7 @@ export const acceptCloudTransferMutation = (options?: Partial<Options<AcceptClou
 /**
  * Decline an offered session
  *
- * `runners.cloud.transfer.v1`. Only the recipient; only an offered transfer
+ * `runners.cloud.transfer.v1`. Only the recipient; only an offered transfer. With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential
  */
 export const declineCloudTransferMutation = (options?: Partial<Options<DeclineCloudTransferData>>): UseMutationOptions<DeclineCloudTransferResponse, DeclineCloudTransferError, Options<DeclineCloudTransferData>> => {
     const mutationOptions: UseMutationOptions<DeclineCloudTransferResponse, DeclineCloudTransferError, Options<DeclineCloudTransferData>> = {
@@ -7321,7 +7321,7 @@ export const declineCloudTransferMutation = (options?: Partial<Options<DeclineCl
 /**
  * Withdraw an offer, or cancel an accepted transfer before the owner change starts
  *
- * `runners.cloud.transfer.v1`. Only the session's former owner; an accepted transfer only by an administrator, and not once the session is `transferring` (409 `transfer_in_progress`)
+ * `runners.cloud.transfer.v1`. Only the session's former owner; an accepted transfer only by an administrator, and not once the session is `transferring` (409 `transfer_in_progress`). With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential
  */
 export const cancelCloudTransferMutation = (options?: Partial<Options<CancelCloudTransferData>>): UseMutationOptions<CancelCloudTransferResponse, CancelCloudTransferError, Options<CancelCloudTransferData>> => {
     const mutationOptions: UseMutationOptions<CancelCloudTransferResponse, CancelCloudTransferError, Options<CancelCloudTransferData>> = {
@@ -7881,7 +7881,7 @@ export const setCloudPermissionBypassMutation = (options?: Partial<Options<SetCl
 /**
  * Changes the model of the session's agent, while it runs too
  *
- * `runners.cloud.model.v1` (TeamCode's `PUT /cloud/sessions/{id}/model`). The owner only. 1 to 120 letters, digits and `. _ : / -` (400 `invalid_agent`); the organization's model policy decides (403 `model_not_allowed`). Recorded at once (audited `cloud.session.model_changed`, the same model writes nothing), so a paused session starts with it; a running conversation agent also gets a `set_model` input, taken at its next turn. A terminal session's agent gets it at its next start. 409 `session_not_running` once terminated
+ * `runners.cloud.model.v1` (TeamCode's `PUT /cloud/sessions/{id}/model`). The owner only. 1 to 120 letters, digits and `. _ : / -` (400 `invalid_agent`); the organization's model policy decides (403 `model_not_allowed`). Recorded at once (audited `cloud.session.model_changed`, the same model writes nothing), so a paused session starts with it; a running conversation agent also gets a `set_model` input, taken at its next turn. A terminal session's agent gets it at its next start. 409 `session_not_running` once terminated. With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential
  */
 export const setCloudSessionModelMutation = (options?: Partial<Options<SetCloudSessionModelData>>): UseMutationOptions<SetCloudSessionModelResponse, SetCloudSessionModelError, Options<SetCloudSessionModelData>> => {
     const mutationOptions: UseMutationOptions<SetCloudSessionModelResponse, SetCloudSessionModelError, Options<SetCloudSessionModelData>> = {
@@ -7900,7 +7900,7 @@ export const setCloudSessionModelMutation = (options?: Partial<Options<SetCloudS
 /**
  * Changes the effort (reasoning level) of the session's agent, while it runs too
  *
- * `runners.cloud.effort.v1` (TeamCode's `PUT /cloud/sessions/{id}/effort`), as `setCloudSessionModel` for the effort: 1 to 120 letters, digits and `. _ : / -` (400 `invalid_agent`), no policy. Clients suggest `low`, `medium`, `high`, `xhigh` and `max` for Claude Code, `low`, `medium`, `high` and `xhigh` for Codex. Audited `cloud.session.effort_changed`; a running conversation agent gets a `set_effort` input
+ * `runners.cloud.effort.v1` (TeamCode's `PUT /cloud/sessions/{id}/effort`), as `setCloudSessionModel` for the effort: 1 to 120 letters, digits and `. _ : / -` (400 `invalid_agent`), no policy. Clients suggest `low`, `medium`, `high`, `xhigh` and `max` for Claude Code, `low`, `medium`, `high` and `xhigh` for Codex. Audited `cloud.session.effort_changed`; a running conversation agent gets a `set_effort` input. With `Ostrom-On-Behalf-Of` (planned, `runners.cloud.onbehalf.writes.v1`, TeamCode's `actor()`), an administrator acts for the member it names, journaled with the effective member and the credential
  */
 export const setCloudSessionEffortMutation = (options?: Partial<Options<SetCloudSessionEffortData>>): UseMutationOptions<SetCloudSessionEffortResponse, SetCloudSessionEffortError, Options<SetCloudSessionEffortData>> => {
     const mutationOptions: UseMutationOptions<SetCloudSessionEffortResponse, SetCloudSessionEffortError, Options<SetCloudSessionEffortData>> = {
@@ -7938,7 +7938,7 @@ export const stopCloudTaskMutation = (options?: Partial<Options<StopCloudTaskDat
 /**
  * Upload a file for the next message (an image, a PDF or UTF-8 text)
  *
- * `runners.cloud.files.v1` (TeamCode's `POST /cloud/sessions/{id}/files`). The raw bytes; authorized like a message. The type is recognized from the bytes (PNG, JPEG, GIF, WebP, PDF, else UTF-8 text without NUL), 415 `file_type_not_allowed` otherwise, 400 `empty_file`; 413 `file_too_large` above the organization's `fileMaxMebibytes`; 429 `upload_quota` (20 unsent files or 100 MiB per session, 1 GiB and 500 files per member per UTC day); 409 `file_storage_not_configured` without a tested artifact bucket, 503 `file_storage_unavailable`. `Idempotency-Key` makes a retry of the same name and bytes return the first file (200). Name it in a message's `fileIds` before `expiresAt`; kept 24 hours at most, deleted once the host has it
+ * `runners.cloud.files.v1` (TeamCode's `POST /cloud/sessions/{id}/files`). The raw bytes; authorized like a message. The type is recognized from the bytes (PNG, JPEG, GIF, WebP, PDF, else UTF-8 text without NUL), 415 `file_type_not_allowed` otherwise, 400 `empty_file`; 413 `file_too_large` above the organization's `fileMaxMebibytes`; 429 `upload_quota` (20 unsent files or 100 MiB per session, 1 GiB and 500 files per member per UTC day); 409 `file_storage_not_configured` without a tested artifact bucket, 503 `file_storage_unavailable`; 400 `invalid_file_name` or `invalid_idempotency_key`. `Idempotency-Key` makes a retry of the same name and bytes return the first file (200, `Idempotency-Replayed: true`); other bytes under the key are 422 `idempotency_conflict`, and a retry while the first upload still runs 409 `file_upload_in_progress` (retry later). Name it in a message's `fileIds` before `expiresAt`; kept 24 hours at most, deleted once the host has it
  */
 export const uploadCloudFileMutation = (options?: Partial<Options<UploadCloudFileData>>): UseMutationOptions<UploadCloudFileResponse, UploadCloudFileError, Options<UploadCloudFileData>> => {
     const mutationOptions: UseMutationOptions<UploadCloudFileResponse, UploadCloudFileError, Options<UploadCloudFileData>> = {
@@ -8055,7 +8055,7 @@ export const cloudRunnerFileQueryKey = (options: Options<CloudRunnerFileData>) =
 /**
  * The bytes of a file a message delivered to this very execution carries
  *
- * `runners.cloud.files.v1` (TeamCode's `GET /cloud/runner/files/{id}`), with `X-Ostrom-Sha256`. 404 for any other file, 409 `execution_fenced` for another epoch
+ * `runners.cloud.files.v1` (TeamCode's `GET /cloud/runner/files/{id}`), with `X-Ostrom-Sha256`. 404 for any other file (only a message delivered to this execution and not yet acknowledged carries it), 409 `execution_fenced` for another execution or `file_unavailable` while its bytes are not all stored, 410 `file_expired` once its bytes are deleted, 503 `file_storage_unavailable` when the bucket fails
  */
 export const cloudRunnerFileOptions = (options: Options<CloudRunnerFileData>) => queryOptions<CloudRunnerFileResponse, CloudRunnerFileError, CloudRunnerFileResponse, ReturnType<typeof cloudRunnerFileQueryKey>>({
     queryFn: async ({ queryKey, signal }) => {

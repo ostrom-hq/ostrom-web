@@ -2,6 +2,7 @@
 import type { CloudInput } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import type { TranscriptEvent } from './events';
+import type { UploadedFile } from './files';
 
 /**
  * A message sent from this screen that the transcript does not show yet, or that failed (TeamCode's companion
@@ -17,6 +18,8 @@ export interface PendingMessage {
   readonly woke: boolean;
   /** Why it failed or was refused: the server's stable key, or its sentence. */
   readonly reason: string | undefined;
+  /** The files it carries (`runners.cloud.files.v1`), already uploaded; sent again as they are on a retry. */
+  readonly files: readonly UploadedFile[];
 }
 
 export type PendingState = 'sending' | 'sent' | 'failed' | 'refused';
@@ -35,13 +38,26 @@ function hasControl(text: string): boolean {
   return false;
 }
 
-export function validMessage(text: string): boolean {
-  return text.trim() !== '' && text.length <= MAX_MESSAGE_CHARS && !hasControl(text);
+/** A message with files may have no text; without, it needs some. */
+export function validMessage(text: string, withFiles = false): boolean {
+  return (withFiles || text.trim() !== '') && text.length <= MAX_MESSAGE_CHARS && !hasControl(text);
 }
 
-/** A new message, on its way. */
-export function draftOf(text: string, clientMessageId: string): PendingMessage {
-  return { clientMessageId, text, state: 'sending', inputId: undefined, woke: false, reason: undefined };
+/** A new message, on its way, with the files it carries. */
+export function draftOf(
+  text: string,
+  clientMessageId: string,
+  files: readonly UploadedFile[] = [],
+): PendingMessage {
+  return {
+    clientMessageId,
+    text,
+    state: 'sending',
+    inputId: undefined,
+    woke: false,
+    reason: undefined,
+    files,
+  };
 }
 
 /** The server took it: queued, or already refused (`rejected`, `cancelled`) with its reason. */

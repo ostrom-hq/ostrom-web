@@ -1924,7 +1924,7 @@ export type ApiPriceTable = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.inference.v1`, `runners.cloud.model.v1`, `runners.cloud.onbehalf.v1`, `runners.cloud.onbehalf.writes.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.profiles.member.v1`, `runners.cloud.remote.v1`, `runners.cloud.remote.daemon.v1`, `runners.cloud.remote.resume.v1`, `runners.cloud.retention.v1`, `runners.cloud.sessions.owner.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `discord.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -8721,7 +8721,7 @@ export type OstromOrigin = string;
 export type OstromOrg = string;
 
 /**
- * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+ * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
  */
 export type OstromOnBehalfOf = string;
 
@@ -24773,11 +24773,20 @@ export type ListCloudProfilesData = {
         'Ostrom-Org'?: string;
     };
     path?: never;
-    query?: never;
+    query?: {
+        /**
+         * Planned (`runners.cloud.profiles.member.v1`): the member, by id or login, whose profiles are listed
+         */
+        member?: string;
+    };
     url: '/api/v1/cloud/profiles';
 };
 
 export type ListCloudProfilesErrors = {
+    /**
+     * A refusal
+     */
+    400: ApiError;
     /**
      * A refusal
      */
@@ -24790,6 +24799,10 @@ export type ListCloudProfilesErrors = {
      * A refusal
      */
     404: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type ListCloudProfilesError = ListCloudProfilesErrors[keyof ListCloudProfilesErrors];
@@ -25002,6 +25015,10 @@ export type ListCloudSessionsData = {
     };
     path?: never;
     query?: {
+        /**
+         * Planned (`runners.cloud.sessions.owner.v1`): the caller's member id; anything else is 403
+         */
+        owner?: string;
         kind?: Array<'cloud' | 'remote' | (string & {})>;
         status?: string;
         before?: string;
@@ -25052,7 +25069,7 @@ export type CreateCloudSessionData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
         /**
@@ -25119,7 +25136,7 @@ export type StopCloudSessionData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
     };
@@ -25267,6 +25284,10 @@ export type TransferCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
         /**
          * 1 to 128 characters of `A-Za-z0-9._:-`
          */
@@ -25426,6 +25447,10 @@ export type AcceptCloudTransferData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25479,6 +25504,10 @@ export type DeclineCloudTransferData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25508,6 +25537,10 @@ export type DeclineCloudTransferErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type DeclineCloudTransferError = DeclineCloudTransferErrors[keyof DeclineCloudTransferErrors];
@@ -25528,6 +25561,10 @@ export type CancelCloudTransferData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -25557,6 +25594,10 @@ export type CancelCloudTransferErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type CancelCloudTransferError = CancelCloudTransferErrors[keyof CancelCloudTransferErrors];
@@ -25578,7 +25619,7 @@ export type PauseCloudSessionData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
     };
@@ -25631,7 +25672,7 @@ export type ResumeCloudSessionData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
     };
@@ -25739,7 +25780,7 @@ export type SetCloudSessionGithubAccessData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
     };
@@ -26972,7 +27013,7 @@ export type SetCloudPermissionBypassData = {
          */
         'Ostrom-Org'?: string;
         /**
-         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
          */
         'Ostrom-On-Behalf-Of'?: string;
     };
@@ -27024,6 +27065,10 @@ export type SetCloudSessionModelData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -27053,6 +27098,10 @@ export type SetCloudSessionModelErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type SetCloudSessionModelError = SetCloudSessionModelErrors[keyof SetCloudSessionModelErrors];
@@ -27073,6 +27122,10 @@ export type SetCloudSessionEffortData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * Served since ostrom-server#619 (`runners.cloud.onbehalf.v1`, TeamCode's `TeamCode-On-Behalf-Of`): the effective member of a cloud session write, named by member id or by login (an id wins over a login that spells it), 1 to 64 characters of `A-Za-z0-9._-`. Only an owner or an admin signed in (browser, app, `ostrom login`, a personal token) or an administrator's service key with `cloud:admin` may name another member; on any other credential the header must be absent or name the caller (403 `on_behalf_forbidden`). The target must be an active member of the organization (422 `invalid_effective_member`, also for a login nobody has); several values or a malformed one are 400 `invalid_on_behalf`. The header never grants a right of its own: the call acts on the effective member's sessions with the caller's rights (an administrator's). Each creation, pause, resume and deletion is journaled (`cloud.session.created`, `.paused`, `.resumed`, `.deleted`) with the caller as the actor, the effective member and the credential (`effectiveMemberId`, `credentialId` of `listAudit`). GitHub access and the permission bypass are the owner's alone (403 `github_owner_only`, `bypass_owner_only`). A server that does not announce the capability ignores the header: a client checks the capability before sending it. Planned (`runners.cloud.onbehalf.writes.v1`): the header is also read on the model, the effort and the transfer writes (`setCloudSessionModel`, `setCloudSessionEffort`, `transferCloudSession`, `acceptCloudTransfer`, `declineCloudTransfer`, `cancelCloudTransfer`), as on every TeamCode cloud write, and each `cloud.session.*` entry is written in the transaction of the change it tells (TeamCode's `CloudWrite`): a write that cannot be journaled does not happen
+         */
+        'Ostrom-On-Behalf-Of'?: string;
     };
     path: {
         id: string;
@@ -27102,6 +27155,10 @@ export type SetCloudSessionEffortErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    422: ApiError;
 };
 
 export type SetCloudSessionEffortError = SetCloudSessionEffortErrors[keyof SetCloudSessionEffortErrors];
@@ -27599,6 +27656,14 @@ export type CloudRunnerFileErrors = {
      * A refusal
      */
     409: ApiError;
+    /**
+     * A refusal
+     */
+    410: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
 };
 
 export type CloudRunnerFileError = CloudRunnerFileErrors[keyof CloudRunnerFileErrors];

@@ -4,6 +4,8 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Button } from '@/shared/ui/Button';
 import type { PendingMessage } from '../pending';
 import type { CloudConversationViewModel } from '../useCloudConversation';
+import { messageFilesReason } from '../files';
+import { AttachButton, FileProblemText, MessageFiles, PendingFileChips } from './FileComponents';
 
 /** A message sent from here, until the transcript shows it: its state, and Retry or Discard once it failed. */
 export function PendingBubble({
@@ -16,7 +18,11 @@ export function PendingBubble({
   readonly onDiscard: () => void;
 }): ReactElement {
   const { t } = useTranslation();
-  const reason = message.reason ?? t('cloudConversation.pending.unknown');
+  const files = message.reason === undefined ? undefined : messageFilesReason(message.reason);
+  const reason =
+    files !== undefined
+      ? t(`cloudConversation.files.message.${files}`)
+      : (message.reason ?? t('cloudConversation.pending.unknown'));
   const status =
     message.state === 'sending'
       ? t('cloudConversation.pending.sending')
@@ -30,7 +36,8 @@ export function PendingBubble({
   const over = message.state === 'failed' || message.state === 'refused';
   return (
     <div className="cc-item cc-user cc-pending">
-      <p className="cc-bubble">{message.text}</p>
+      {message.text === '' ? null : <p className="cc-bubble">{message.text}</p>}
+      <MessageFiles files={message.files} />
       <span className={over ? 'cc-meta cc-danger' : 'cc-meta'} role="status">
         {status}
       </span>
@@ -48,10 +55,11 @@ export function PendingBubble({
   );
 }
 
-/** The message box, Send, and Interrupt while a turn runs. */
+/** The message box, the paperclip and its files, Send, and Interrupt while a turn runs. */
 export function Composer({ view }: { readonly view: CloudConversationViewModel }): ReactElement {
   const { t } = useTranslation();
   const id = useId();
+  const { files } = view;
   if (view.ended) return <p className="o-row__meta">{t('cloudConversation.composer.ended')}</p>;
   return (
     <form
@@ -72,6 +80,14 @@ export function Composer({ view }: { readonly view: CloudConversationViewModel }
         onChange={(event) => {
           view.setDraft(event.target.value);
         }}
+        onPaste={(event) => {
+          // Files, or an image alone, are attached as the paperclip would; text goes to the field.
+          const pasted = Array.from(event.clipboardData.files);
+          if (!files.supported || pasted.length === 0 || event.clipboardData.types.includes('text/plain'))
+            return;
+          event.preventDefault();
+          files.attach(pasted);
+        }}
         onKeyDown={(event) => {
           // Enter sends, Shift+Enter breaks the line.
           if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
@@ -80,16 +96,28 @@ export function Composer({ view }: { readonly view: CloudConversationViewModel }
           }
         }}
       />
+      <PendingFileChips files={files} />
+      {files.notice === undefined ? null : (
+        <p className="cc-danger" role="alert">
+          <FileProblemText problem={files.notice} />{' '}
+          <Button variant="ghost" onClick={files.dismissNotice}>
+            {t('cloudConversation.files.dismiss')}
+          </Button>
+        </p>
+      )}
       {view.notice === undefined ? null : (
         <p className="cc-danger" role="alert">
           {view.notice.kind === 'nothingRunning'
             ? t('cloudConversation.nothingRunning')
             : view.notice.kind === 'invalidMessage'
               ? t('cloudConversation.composer.invalid')
-              : view.notice.error.message}
+              : view.notice.kind === 'filesNotReady'
+                ? t('cloudConversation.files.notReady')
+                : view.notice.error.message}
         </p>
       )}
       <div className="o-inline">
+        {files.supported ? <AttachButton files={files} /> : null}
         <Button type="submit" disabled={!view.canSend}>
           {t('cloudConversation.composer.send')}
         </Button>

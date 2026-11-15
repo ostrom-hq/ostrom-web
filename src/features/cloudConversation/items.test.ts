@@ -52,7 +52,7 @@ describe('the transcript items (TeamCode TranscriptItemsTest)', () => {
   it('joins results to their calls and folds runs of tools', () => {
     const items = transcriptItems([
       turn(1, 'started'),
-      { kind: 'user', seq: 2, at: AT, text: 'Go', inputId: 'i1', authorId: 'm1' },
+      { kind: 'user', seq: 2, at: AT, text: 'Go', inputId: 'i1', authorId: 'm1', files: [] },
       call(3, 'a'),
       result(4, 'a'),
       call(5, 'b'),

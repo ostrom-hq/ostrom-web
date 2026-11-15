@@ -17,7 +17,31 @@ describe('the mapping of a transcript event (TeamCode CloudMapping)', () => {
       inputId: 'i1',
       authorId: 'm1',
     });
-    expect(eventOf(cloud(1, 'message.user', 'not an object'))).toMatchObject({ kind: 'user', text: '' });
+    expect(eventOf(cloud(1, 'message.user', 'not an object'))).toMatchObject({
+      kind: 'user',
+      text: '',
+      files: [],
+    });
+    // The files it carried: names, sizes and types; one without an id or a name is left out.
+    expect(
+      eventOf(
+        cloud(1, 'message.user', {
+          text: '',
+          files: [
+            { id: 'f1', name: 'shot.png', size: 2048, contentType: 'image/png' },
+            { id: 'f2', name: 'notes' },
+            { name: 'no id' },
+            { id: 'no name' },
+            'not a file',
+          ],
+        }),
+      ),
+    ).toMatchObject({
+      files: [
+        { id: 'f1', name: 'shot.png', size: 2048, contentType: 'image/png' },
+        { id: 'f2', name: 'notes', size: 0, contentType: '' },
+      ],
+    });
     expect(eventOf(cloud(2, 'message.agent', {}))).toMatchObject({ kind: 'agent', text: '' });
     expect(
       eventOf(cloud(3, 'tool.call', { id: 'a', name: 'Bash', input: { command: 'ls -la' } })),
