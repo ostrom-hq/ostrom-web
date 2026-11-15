@@ -8,6 +8,7 @@ import { Breakdown } from '../components/Breakdown';
 import { BudgetForm } from '../components/BudgetForm';
 import { BudgetList } from '../components/BudgetList';
 import { BudgetOverridesSection } from '../components/BudgetOverridesSection';
+import { PoolLimitSlot } from '../components/PoolLimitSlot';
 import { DailySpend } from '../components/DailySpend';
 import { SpendTotal } from '../components/SpendTotal';
 import { type Period, PERIODS } from '../model';
@@ -47,6 +48,7 @@ export function SpendScreen(): ReactElement {
           </div>
         )}
       </LoadState>
+      <PoolLimitSlot manages={view.canManage} />
       {view.budgets === undefined ? null : (
         <BudgetList budgets={view.budgets} members={view.people.members} />
       )}

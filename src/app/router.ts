@@ -386,6 +386,12 @@ const forecastsRoute = createRoute({
   validateSearch: forecastsSearchSchema,
   component: lazyRouteComponent(async () => import('@/features/forecasts'), 'ForecastsScreen'),
 });
+/** TeamCode's automatic pool size page and the capacity controller's settings. */
+const poolSizeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/pool-size',
+  component: lazyRouteComponent(async () => import('@/features/poolSize'), 'PoolSizeScreen'),
+});
 /** TeamCode's Usage review: `?view=history` for the corrections, `?member=` for one member's (`OrgMember.id`). */
 const usageReviewRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -581,6 +587,7 @@ export const routeTree = rootRoute.addChildren([
   webhookRoute,
   accountsRoute,
   forecastsRoute,
+  poolSizeRoute,
   usageReviewRoute,
   usageReservationRoute,
   groupsRoute,

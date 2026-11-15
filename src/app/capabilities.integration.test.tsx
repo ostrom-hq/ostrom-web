@@ -135,6 +135,7 @@ describe('features the server does not serve', () => {
     ['/automations', 'Automations'],
     ['/webhooks', 'Webhooks'],
     ['/forecasts', 'Forecasts'],
+    ['/pool-size', 'Pool size'],
     ['/usage', 'Usage review'],
     ['/cloud', 'Cloud agents'],
     ['/import', 'Import'],

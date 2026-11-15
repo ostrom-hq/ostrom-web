@@ -60,6 +60,7 @@ export const fr = {
       webhooks: 'Webhooks',
       forecasts: 'Prévisions',
       usageReview: 'Revue de l’usage',
+      poolSize: 'Taille du pool',
       tokens: 'Jetons',
       import: 'Importer',
       policy: 'Politique des agents',

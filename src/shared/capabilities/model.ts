@@ -20,6 +20,8 @@ export const FEATURES = [
   'capacity.apiprices.v1',
   'capacity.budgetoverrides.v1',
   'capacity.forecasts.v1',
+  'capacity.pacing.v1',
+  'capacity.poolsize.v1',
   'capacity.usagereconciliation.v1',
   'cloud.admin.v1',
   'runners.cloud.profiles.v1',

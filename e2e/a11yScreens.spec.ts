@@ -48,6 +48,7 @@ const SCREENS = [
   '/webhooks',
   '/accounts',
   '/forecasts',
+  '/pool-size',
   '/usage',
   '/usage/call_7f3a9c',
   // Reached by the tab of the shared accounts, not the navigation (web#97).

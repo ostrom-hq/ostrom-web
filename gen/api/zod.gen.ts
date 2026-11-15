@@ -481,14 +481,29 @@ export const zPoolSizeWindowUsage = z.object({
     remainingMicros: z.optional(z.int())
 });
 
+/**
+ * Where the daily budget admission applies comes from: the stored automatic value or the typed one. Clients treat an unknown value as `manual`
+ */
+export const zPoolSizeSource = z.union([z.enum(['automatic', 'manual']), z.string()]);
+
+/**
+ * Why there is no automatic value; then the typed budget applies
+ */
+export const zPoolSizeReason = z.union([z.enum(['no_accounts', 'no_estimate']), z.string()]);
+
+/**
+ * Clients treat an unknown value as not counted
+ */
+export const zPoolSizeAccountStatus = z.union([z.enum([
+        'counted',
+        'unavailable',
+        'no_fresh_observation',
+        'no_estimate'
+    ]), z.string()]);
+
 export const zPoolSizeAccount = z.object({
     accountId: z.string(),
-    status: z.union([z.enum([
-            'counted',
-            'unavailable',
-            'no_fresh_observation',
-            'no_estimate'
-        ]), z.string()]),
+    status: zPoolSizeAccountStatus,
     dailyMicros: z.int(),
     binding: z.optional(z.string()),
     capacityDailyMicros: z.optional(z.int()),
@@ -505,9 +520,9 @@ export const zPoolSize = z.object({
     automaticDailyMicros: z.optional(z.int()),
     automaticComputedAt: z.optional(z.iso.datetime({ offset: true })),
     effectiveDailyMicros: z.optional(z.int()),
-    source: z.union([z.enum(['automatic', 'manual']), z.string()]),
+    source: zPoolSizeSource,
     estimatedDailyMicros: z.int(),
-    reason: z.optional(z.union([z.enum(['no_accounts', 'no_estimate']), z.string()])),
+    reason: z.optional(zPoolSizeReason),
     unpricedModels: z.array(z.string()),
     accounts: z.array(zPoolSizeAccount),
     capacityDailyMicros: z.int(),

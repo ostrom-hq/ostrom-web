@@ -1,5 +1,5 @@
 {
-  "entryKiB": 188.6,
+  "entryKiB": 188.7,
   "routeKiB": 214.6,
   "routes": {
     "/": 14.7,
@@ -37,7 +37,7 @@
     "/me/mcp": 17.9,
     "/me/notifications": 12.4,
     "/import": 12.5,
-    "/spend": 14.0,
+    "/spend": 14.2,
     "/billing": 13.3,
     "/settings": 15.5,
     "/account": 15.5,
@@ -54,6 +54,7 @@
     "/webhooks/$webhookId": 13.0,
     "/accounts": 19.8,
     "/forecasts": 12.0,
+    "/pool-size": 12.9,
     "/usage": 13.3,
     "/usage/$reservationId": 13.3,
     "/accounts/groups": 19.8,
