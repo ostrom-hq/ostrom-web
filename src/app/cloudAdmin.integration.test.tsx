@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import { handleGetCloudSettings, handleListCloudProfiles, handleSaveCloudSettings } from '@gen/api/msw.gen';
+import {
+  handleGetCloudSettings,
+  handleListCloudProfiles,
+  handleSaveCloudSettings,
+  handleUpdateCloudProfile,
+} from '@gen/api/msw.gen';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
@@ -268,6 +273,25 @@ describe('the cloud profiles', () => {
     );
   });
 
+  it.each([
+    ['storage_class_missing', 'The workspace storage class does not exist on the cluster.'],
+    [
+      'storage_class_retains_volumes',
+      'The workspace storage class keeps volumes (its reclaimPolicy is not Delete)',
+    ],
+  ])('says the storage class refusal %s in its own words', { timeout: 20000 }, async (code, words) => {
+    server.use(handleUpdateCloudProfile(() => refused(422, code, 'raw server words')));
+    const user = userEvent.setup();
+    visit('/cloud/admin');
+    const profiles = await screen.findByRole('region', { name: 'Profiles' }, { timeout: 10000 });
+    await user.click(await within(profiles).findByRole('button', { name: 'Edit default' }));
+    const form = within(await screen.findByRole('form', { name: 'default' }));
+    await user.click(form.getByRole('button', { name: 'Save' }));
+    const alert = await form.findByRole('alert', {}, { timeout: 5000 });
+    expect(alert).toHaveTextContent(words);
+    expect(alert).not.toHaveTextContent('raw server words');
+  });
+
   it('shows a member only the profiles assigned to them, with nothing to change', async () => {
     asMember();
     db.cloudProfiles = db.cloudProfiles.map((profile) => ({
@@ -400,6 +424,46 @@ describe('the runtime and the clusters, the instance’s own', () => {
     expect(within(clusters).getByText('CA bundle not set')).toBeVisible();
     expect(within(clusters).getByText('Token not set')).toBeVisible();
   });
+
+  it(
+    'shows each cluster’s last garbage collection and its orphaned volumes',
+    { timeout: 20000 },
+    async () => {
+      db.instanceAdmin = true;
+      const [first] = db.cloudClusters;
+      if (first === undefined) throw new Error('no cluster');
+      db.cloudClusters = [
+        first,
+        {
+          ...first,
+          id: '00000000-0000-4000-8000-000000000902',
+          name: 'us-east',
+          orphanedVolumes: 2,
+          lastGarbageCollectionAt: new Date().toISOString(),
+        },
+        {
+          ...first,
+          id: '00000000-0000-4000-8000-000000000903',
+          name: 'ap-south',
+          orphanedVolumes: 0,
+          lastGarbageCollectionAt: new Date().toISOString(),
+        },
+      ];
+      visit('/cloud/admin');
+      const clusters = await section('Clusters');
+      const rowOf = async (name: string): Promise<HTMLElement> => {
+        const found = (await within(clusters).findByText(name, {}, { timeout: 5000 })).closest('li');
+        if (found === null) throw new Error(`no cluster ${name}`);
+        return found;
+      };
+      expect(await rowOf('eu-west')).not.toHaveTextContent('Garbage collected');
+      expect(await rowOf('us-east')).toHaveTextContent(/Garbage collected (now|.* ago)/);
+      expect(
+        within(await rowOf('us-east')).getByText('2 orphaned volumes to delete at the provider'),
+      ).toBeVisible();
+      expect(await rowOf('ap-south')).not.toHaveTextContent('orphaned');
+    },
+  );
 
   it('connects a cluster, which needs its CA bundle and its token', async () => {
     db.instanceAdmin = true;

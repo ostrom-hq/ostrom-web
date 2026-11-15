@@ -13,10 +13,12 @@ export interface SaveOutcomeProps {
   readonly saved: string;
   /** Reads what was saved first again: what a person does after a conflict. */
   readonly onReload: () => void;
+  /** What a refusal with its own words says, instead of the server's. */
+  readonly refusal?: string | undefined;
 }
 
 /** What a save came to: taken, refused in the server's words, or a conflict that asks to reload. */
-export function SaveOutcome({ write, saved, onReload }: SaveOutcomeProps): ReactElement {
+export function SaveOutcome({ write, saved, onReload, refusal }: SaveOutcomeProps): ReactElement {
   const { t } = useTranslation();
   return (
     <>
@@ -40,7 +42,7 @@ export function SaveOutcome({ write, saved, onReload }: SaveOutcomeProps): React
               </Button>
             </>
           ) : (
-            <FailureText failure={write.failure} />
+            (refusal ?? <FailureText failure={write.failure} />)
           )}
         </Banner>
       )}

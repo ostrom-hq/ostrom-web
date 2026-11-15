@@ -378,3 +378,15 @@ export function profileRequestOf(
     assignedMemberIds: [...draft.assignedMemberIds],
   };
 }
+
+/**
+ * The refusals of a profile save that have their own words (`runners.cloud.retention.v1`): the workspace storage class
+ * is missing from the cluster, or keeps the volumes of deleted sessions.
+ */
+export const PROFILE_SAVE_REFUSALS = ['storage_class_missing', 'storage_class_retains_volumes'] as const;
+export type ProfileSaveRefusal = (typeof PROFILE_SAVE_REFUSALS)[number];
+
+export function profileSaveRefusalOf(failure: Error | undefined): ProfileSaveRefusal | undefined {
+  const code = isApiFailure(failure) ? failure.code : undefined;
+  return PROFILE_SAVE_REFUSALS.find((known) => known === code);
+}

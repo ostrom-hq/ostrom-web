@@ -197,3 +197,25 @@ export function startRefusalOf(failure: Error): StartRefusal | undefined {
   const code = isApiFailure(failure) ? failure.code : undefined;
   return START_REFUSALS.find((known) => known === code);
 }
+
+/** Why a terminated session ended, as the contract names it (`runners.cloud.retention.v1`); another reason shows none. */
+export const TERMINATED_REASONS = ['deleted', 'expired'] as const;
+export type TerminatedReason = (typeof TERMINATED_REASONS)[number];
+
+export function terminatedReasonOf(session: CloudSession): TerminatedReason | undefined {
+  return TERMINATED_REASONS.find((known) => known === session.terminatedReason);
+}
+
+/** Why a session's workspace volume could not be deleted, with words for the two the contract names. */
+export const DELETION_PROBLEMS = ['volume_retained', 'volume_deletion_stalled'] as const;
+export type DeletionProblem = (typeof DELETION_PROBLEMS)[number];
+
+/** The blocked deletion of a session's workspace: its known reason, else the server's message. Undefined unless blocked. */
+export function blockedDeletionOf(
+  session: CloudSession,
+): { readonly code: DeletionProblem | undefined; readonly message: string } | undefined {
+  const deletion = session.workspaceDeletion;
+  if (deletion?.state !== 'blocked') return undefined;
+  const code = DELETION_PROBLEMS.find((known) => known === deletion.problem?.code);
+  return { code, message: deletion.problem?.message ?? '' };
+}

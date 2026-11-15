@@ -78,6 +78,91 @@ describe('the cloud agents', () => {
     expect(screen.queryByRole('button', { name: 'Stop' })).toBeNull();
   });
 
+  it(
+    'says when a paused session expires, why a session ended and a workspace deletion that is blocked',
+    { timeout: 20000 },
+    async () => {
+      const soon = new Date(Date.now() + 3 * 86_400_000).toISOString();
+      const blocked = (code: string, message: string) => ({
+        state: 'blocked',
+        problem: { code, message, retryable: false },
+      });
+      db.cloudSessions = [
+        { id: 'cs-p', owner: 'maya', agent: 'claude', status: 'paused', expiresAt: soon, createdAt: soon },
+        {
+          id: 'cs-r',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'running',
+          expiresAt: soon,
+          terminatedReason: 'deleted',
+          createdAt: soon,
+        },
+        {
+          id: 'cs-e',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'terminated',
+          terminatedReason: 'expired',
+          workspaceDeletion: blocked('volume_retained', 'raw'),
+          createdAt: soon,
+        },
+        {
+          id: 'cs-d',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'terminated',
+          terminatedReason: 'deleted',
+          workspaceDeletion: blocked('volume_deletion_stalled', 'raw'),
+          createdAt: soon,
+        },
+        {
+          id: 'cs-o',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'terminated',
+          terminatedReason: 'other',
+          workspaceDeletion: blocked('new_problem', 'The provider said no.'),
+          createdAt: soon,
+        },
+        {
+          id: 'cs-n',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'terminated',
+          workspaceDeletion: { state: 'blocked' },
+          createdAt: soon,
+        },
+        {
+          id: 'cs-ok',
+          owner: 'maya',
+          agent: 'claude',
+          status: 'terminated',
+          workspaceDeletion: { state: 'proven' },
+          createdAt: soon,
+        },
+      ];
+      visit('/cloud');
+      await screen.findByText('claude · cs-p', {}, { timeout: 10000 });
+      expect(row('claude · cs-p')).toHaveTextContent(/deleted in [23] days unless resumed/);
+      expect(row('claude · cs-r')).not.toHaveTextContent(/unless resumed|ended:/);
+      expect(row('claude · cs-e')).toHaveTextContent('ended: expired while paused');
+      expect(row('claude · cs-e')).toHaveTextContent(
+        'Its workspace volume is not deleted: its storage class keeps volumes',
+      );
+      expect(row('claude · cs-d')).toHaveTextContent('ended: deleted');
+      expect(row('claude · cs-d')).toHaveTextContent('the provider has not deleted the volume yet');
+      expect(row('claude · cs-o')).toHaveTextContent(
+        'Its workspace volume is not deleted: The provider said no.',
+      );
+      expect(row('claude · cs-o')).not.toHaveTextContent('ended:');
+      expect(row('claude · cs-n')).toHaveTextContent(
+        'Its workspace volume is not deleted: the server gave no reason.',
+      );
+      expect(row('claude · cs-ok')).not.toHaveTextContent('workspace');
+    },
+  );
+
   it('starts an agent once there is something to do, then clears the form', async () => {
     const user = userEvent.setup();
     visit('/cloud');

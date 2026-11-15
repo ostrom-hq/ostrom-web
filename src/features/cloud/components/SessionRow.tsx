@@ -5,7 +5,14 @@ import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { isCloudAgent, isCloudStatus, sessionTitle, sessionTone } from '../model';
+import {
+  blockedDeletionOf,
+  isCloudAgent,
+  isCloudStatus,
+  sessionTitle,
+  sessionTone,
+  terminatedReasonOf,
+} from '../model';
 import { preparationAdvice, preparationOf } from '../recipe';
 
 export interface SessionRowProps {
@@ -23,6 +30,8 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
   const title = sessionTitle(session);
   const phase = preparationOf(session);
   const advice = preparationAdvice(session);
+  const reason = terminatedReasonOf(session);
+  const blocked = blockedDeletionOf(session);
   return (
     <div className="o-row cl-session">
       <span className="o-row__main">
@@ -45,6 +54,12 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             session.endedAt === undefined
               ? undefined
               : t('cloud.session.ended', { when: formatRelative(session.endedAt, now, i18n.language) }),
+            session.status !== 'paused' || session.expiresAt === undefined
+              ? undefined
+              : t('cloud.session.expires', { when: formatRelative(session.expiresAt, now, i18n.language) }),
+            session.status !== 'terminated' || reason === undefined
+              ? undefined
+              : t(`cloud.session.terminated.${reason}`),
           ]
             .filter((part) => part !== undefined)
             .join(' · ')}
@@ -54,6 +69,18 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             {[session.failure.message, advice === undefined ? undefined : t(`cloud.preparation.${advice}`)]
               .filter((part) => part !== undefined)
               .join(' ')}
+          </span>
+        )}
+        {blocked === undefined ? null : (
+          <span className="cl-session__failure">
+            {t('cloud.session.deletionBlocked', {
+              why:
+                blocked.code !== undefined
+                  ? t(`cloud.session.deletionProblem.${blocked.code}`)
+                  : blocked.message === ''
+                    ? t('cloud.session.deletionUnknown')
+                    : blocked.message,
+            })}
           </span>
         )}
       </span>
