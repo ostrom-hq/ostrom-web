@@ -597,6 +597,10 @@ function storedRecipe(
 const LIVE = new Set(['queued', 'starting', 'running']);
 /** The server's page of sessions (ostrom-server `SessionsRoutes`): 50 lines, and never more. */
 const SESSIONS_PAGE = 50;
+
+/** The workflows the server answers by page: 50 without a `limit`, 100 at most. */
+const WORKFLOWS_DEFAULT_PAGE = 50;
+const WORKFLOWS_MAX_PAGE = 100;
 /** The server's largest page of rules, and its default (`ListRulesUseCase.MAX_RULES`). */
 const RULES_PAGE = 1000;
 /** What a pause or a resume leaves of a shared account's status, as ostrom-server's `AccountStatus.awaitsSignIn`. */
@@ -1895,10 +1899,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
     ),
     handleListWorkflows(({ request }) => {
-      const status = new URL(request.url).searchParams.get('status');
-      return HttpResponse.json({
-        items: db.workflows.filter((workflow) => status === null || workflow.status === status),
-      });
+      // As the server pages them (`after` among all of the organization's workflows, `limit` 1 to 100, 50 by default).
+      const query = new URL(request.url).searchParams;
+      const status = query.get('status');
+      const after = query.get('after');
+      const limit = Math.min(Number(query.get('limit') ?? WORKFLOWS_DEFAULT_PAGE), WORKFLOWS_MAX_PAGE);
+      if (!(limit >= 1)) return refusal(400, 'invalid_request', 'limit is 1 to 100.');
+      const start = after === null ? 0 : db.workflows.findIndex((workflow) => workflow.id === after) + 1;
+      if (after !== null && start === 0) return refusal(400, 'invalid_request', 'after is not the next of a page.');
+      const items = db.workflows
+        .slice(start)
+        .filter((workflow) => status === null || workflow.status === status)
+        .slice(0, limit);
+      const last = items.at(-1);
+      return HttpResponse.json(items.length === limit && last !== undefined ? { items, next: last.id } : { items });
     }),
     handleGetWorkflow(({ params }) => {
       const workflow = db.workflows.find((item) => item.id === params.id);

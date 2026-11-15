@@ -8,7 +8,6 @@ import {
   listOrgsOptions,
   listOrgsQueryKey,
   listSharedAccountsOptions,
-  listWorkflowsOptions,
 } from '@gen/api/@tanstack/react-query.gen';
 import type { OrgView } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -23,6 +22,7 @@ import { useOrgMembers } from '@/shared/org/members';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
+import { allWorkflowsOptions } from '@/features/workflows';
 
 export interface HomeViewModel {
   /** Nobody is signed in: the server refused the person's list of organizations. */
@@ -129,7 +129,7 @@ export function useSetup(org: string, role: OrgRole | undefined): SetupViewModel
     ready(listInvitationsOptions({ path: { org } }), { ...quiet, enabled: managesMembers(role) }),
   );
   const accounts = useQuery(ready(listSharedAccountsOptions(), quiet));
-  const workflows = useQuery(ready(listWorkflowsOptions(), quiet));
+  const workflows = useQuery(ready(allWorkflowsOptions(), quiet));
   const cliKey = `${GUIDE_CLI_KEY}.${org}`;
   const [cli, setCli] = useState(() => safeLocalStorage.getItem(cliKey) === '1');
   const steps = useMemo(

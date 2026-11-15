@@ -3,7 +3,6 @@ import {
   getApproversGraphOptions,
   getGatePolicyOptions,
   getGatePolicyQueryKey,
-  listWorkflowsOptions,
   setGatePolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type { ApproversGraph } from '@gen/api/types.gen';
@@ -17,6 +16,7 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
+import { allWorkflowsOptions } from '@/features/workflows';
 
 export interface ApproversViewModel {
   /** The steps, as soon as the workflows come: a slow graph never holds them. */
@@ -33,7 +33,7 @@ export interface ApproversViewModel {
 }
 
 export function useApprovers(): ApproversViewModel {
-  const workflows = useQuery(ready(listWorkflowsOptions()));
+  const workflows = useQuery(ready(allWorkflowsOptions()));
   const members = useCurrentOrgMembers({ all: true });
   // Read again on every visit: a workflow changed elsewhere changes who approves what.
   const graph = useQuery(ready(getApproversGraphOptions(), { staleTime: 0, retry: false }));

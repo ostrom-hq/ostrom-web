@@ -13,7 +13,6 @@ import {
   listCloudSessionsOptions,
   listCloudSessionsQueryKey,
   listRunnersOptions,
-  listWorkflowsOptions,
   rotateAutomationSecretMutation,
   setCloudSessionGithubAccessMutation,
   saveAutomationMutation,
@@ -41,6 +40,7 @@ import { useAnnounced } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
 import { createRefused, type PendingCreate, pressOf } from './createKey';
 import type { CloudAgent, GithubAccess, SessionMode } from './model';
+import { allWorkflowsOptions } from '@/features/workflows';
 
 const POLL_MS = 10_000;
 
@@ -260,7 +260,7 @@ export function useAutomationEdit(): AutomationEditViewModel {
  * those. Undefined while they are read; a workflow list the caller may not read is simply empty.
  */
 export function useRunnableWorkflows(): readonly Workflow[] | undefined {
-  const workflows = useQuery(ready(listWorkflowsOptions(), { retry: false, staleTime: 30_000 }));
+  const workflows = useQuery(ready(allWorkflowsOptions(), { retry: false, staleTime: 30_000 }));
   return useMemo(
     () =>
       workflows.data?.items.filter(
