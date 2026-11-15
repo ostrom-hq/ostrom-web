@@ -242,6 +242,25 @@ describe('the phones notified', () => {
     expect(within(phones).getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
   });
 
+  it('holds every phone while one is on its way out', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.delete('*/api/v1/push-devices/:id', async () => {
+        await delay('infinite');
+        return undefined;
+      }),
+    );
+    visit('/me/notifications');
+    const box = await region('Registered phones');
+    const phones = await within(box).findByRole('list', { name: 'Registered phones' });
+    await user.click(nth(within(phones).getAllByRole('button', { name: 'Remove' }), 0));
+    await user.click(await within(phones).findByRole('button', { name: 'Stop notifying iPhone' }));
+    await vi.waitFor(() => {
+      for (const button of within(phones).getAllByRole('button', { name: 'Remove' }))
+        expect(button).toBeDisabled();
+    });
+  });
+
   it('says there is none, and names a platform it does not know by its wire value', async () => {
     db.pushDevices = [];
     visit('/me/notifications');
