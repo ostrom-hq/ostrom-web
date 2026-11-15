@@ -431,6 +431,21 @@ describe('the Slack account', () => {
     ).toBeInTheDocument();
   });
 
+  it('says it is linking, then what failed when the server answers no known refusal', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/slack/link', async () => {
+        await delay(100);
+        return HttpResponse.json({ error: { type: 'internal', message: 'slack is down' } }, { status: 500 });
+      }),
+    );
+    visit('/me/notifications');
+    const box = await region('Slack');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Slack account' }));
+    expect(await within(box).findByRole('button', { name: 'Linking…' })).toBeDisabled();
+    expect(await within(box).findByText('slack is down')).toBeInTheDocument();
+  });
+
   it('points at the administrators while Slack is not set', async () => {
     db.slackConfigured = false;
     visit('/me/notifications');
