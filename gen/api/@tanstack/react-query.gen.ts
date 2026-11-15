@@ -6823,6 +6823,8 @@ export const listCloudSessionsInfiniteOptions = (options?: Options<ListCloudSess
 
 /**
  * Start a cloud agent session
+ *
+ * With an `Idempotency-Key` (TeamCode's create, `runners.cloud.idempotency.v1`), the key is scoped to the organization, the initiating member and the route, and the server stores a SHA-256 of the canonical request (the decoded body and the effective member) in the transaction that creates the session, for 24 hours. The same key with the same request answers `202` with the session's current view and `Idempotency-Replayed: true`, creating nothing; the same key with another request or another effective member is 422 `idempotency_conflict`; concurrent requests with one key create one session and the others replay. A malformed key is 400 `invalid_request`. The key is optional until every client sends one; TeamCode requires it
  */
 export const createCloudSessionMutation = (options?: Partial<Options<CreateCloudSessionData>>): UseMutationOptions<CreateCloudSessionResponse, CreateCloudSessionError, Options<CreateCloudSessionData>> => {
     const mutationOptions: UseMutationOptions<CreateCloudSessionResponse, CreateCloudSessionError, Options<CreateCloudSessionData>> = {

@@ -2706,6 +2706,14 @@ export const en = {
       savedTag: 'Done',
       errorTag: 'Not saved',
     },
+    memoryCuration: {
+      title: 'Memory curation',
+      lead: 'About once an hour the server tidies the memory: of two entries with the same title and text it keeps the newer one, and it queues for a person every pair it cannot decide alone. It never calls a model, and a superseded entry can be restored.',
+      switch: 'Curate the organization’s memory',
+      neverRun: 'It has not run yet.',
+      lastRun: 'Last run {{when}}: {{superseded}} superseded, {{queued}} queued for review.',
+      errorTag: 'Not saved',
+    },
     serviceKeys: {
       title: 'Service keys',
       lead: 'For the CI of {{name}}: a key acts for the organization, not for a person, and each use is audited.',

@@ -1877,7 +1877,7 @@ export type ApiPriceTable = {
 };
 
 /**
- * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
+ * What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core): `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`, `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`, `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.idempotency.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`, `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`, `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`, `license.v1`. A client ignores a key it does not know.
  */
 export type Capabilities = {
     /**
@@ -3687,9 +3687,9 @@ export type HookVersion = {
  */
 export type ImportItem = {
     /**
-     * Clients keep an unknown kind as UNKNOWN
+     * Clients keep an unknown kind as UNKNOWN. `variable`: an environment variant; `decision`: a member's decision on a skill or a hook; `exclusion`: a member excluded from an environment variable; `assignment` also names a member's environment variable selection
      */
-    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account' | 'workflow' | 'editors' | 'automation' | (string & {});
+    kind: 'setting' | 'secret' | 'server' | 'policy' | 'assignment' | 'account' | 'workflow' | 'editors' | 'automation' | 'skill' | 'hook' | 'variable' | 'decision' | 'exclusion' | (string & {});
     name: string;
     /**
      * `revive_at_cutover`: a shared account waiting for a reconnection, left so while TeamCode runs; the cutover run revives it.
@@ -5224,6 +5224,114 @@ export type TeamCodeWorkflow = {
 export type TeamCodeWorkflowEditors = {
     mode: string;
     memberIds?: Array<string>;
+};
+
+/**
+ * One file of a TeamCode skill or hook version
+ */
+export type TeamCodeArtifactFile = {
+    /**
+     * Relative, unique in its version ignoring case; the catalog refuses an absolute path, `..` or a duplicate as on publication, and the report says the item skipped
+     */
+    path: string;
+    mode: 'file' | 'executable' | (string & {});
+    /**
+     * The file's bytes, base64
+     */
+    content: string;
+};
+
+/**
+ * A TeamCode member's explicit decision on a skill or a hook (a cleared one is not sent)
+ */
+export type TeamCodeDecision = {
+    memberId: string;
+    decision: 'allow' | 'deny' | (string & {});
+};
+
+/**
+ * A TeamCode skill with the versions the CLI read: its pinned version, or its latest one when none is pinned; the server publishes them, pins `pinnedVersion` and sets the audience and the decisions. A personal skill (`ownerId`) is published as its mapped owner's personal skill
+ */
+export type TeamCodeSkill = {
+    id: string;
+    name: string;
+    /**
+     * The TeamCode member a personal skill belongs to; absent for a team skill
+     */
+    ownerId?: string;
+    allMembers?: boolean;
+    /**
+     * Retired in TeamCode; it is not imported
+     */
+    retired?: boolean;
+    /**
+     * One of `versions` (the CLI always sends it); absent, the skill stays unpinned as in TeamCode
+     */
+    pinnedVersion?: string;
+    versions?: Array<TeamCodeSkillVersion>;
+    /**
+     * How many of its other versions were not sent (the report says so)
+     */
+    omittedVersions?: number;
+    decisions?: Array<TeamCodeDecision>;
+};
+
+export type TeamCodeSkillVersion = {
+    version: string;
+    files: Array<TeamCodeArtifactFile>;
+};
+
+/**
+ * A TeamCode hook with the versions the CLI read (its pinned one, or its latest). TeamCode's hooks are the team's only (no personal hook, no retirement); a hook reaches members only through its pinned version and its audience, as in TeamCode
+ */
+export type TeamCodeHook = {
+    id: string;
+    name: string;
+    allMembers?: boolean;
+    pinnedVersion?: string;
+    versions?: Array<TeamCodeHookVersion>;
+    omittedVersions?: number;
+    decisions?: Array<TeamCodeDecision>;
+};
+
+export type TeamCodeHookVersion = {
+    version: string;
+    /**
+     * Claude Code's event names; one Ostrom does not run makes the report skip the hook
+     */
+    events: Array<string>;
+    matcher?: string;
+    command: string;
+    timeoutSeconds: number;
+    files: Array<TeamCodeArtifactFile>;
+};
+
+/**
+ * A TeamCode environment variant: one value for one environment variable. A personal one (`ownerId`) becomes its mapped owner's personal variant
+ */
+export type TeamCodeVariable = {
+    id: string;
+    /**
+     * The environment variable it fills (TeamCode's `target`)
+     */
+    variable: string;
+    name: string;
+    binding: 'shared' | 'perMember' | (string & {});
+    ownerId?: string;
+};
+
+export type TeamCodeVariableAssignment = {
+    memberId: string;
+    variantId: string;
+    source?: 'direct' | 'bulk' | (string & {});
+};
+
+/**
+ * A member excluded from an environment variable, by its exact name (as TeamCode keys it); a reserved name is refused as on an exclusion in Ostrom
+ */
+export type TeamCodeVariableExclusion = {
+    memberId: string;
+    variable: string;
 };
 
 export type TokenScope = {
@@ -6831,6 +6939,26 @@ export type TeamCodeImportRequest = {
      */
     profiles?: Array<TeamCodeProfile>;
     /**
+     * TeamCode's skills (the CLI sends the skills and hooks in several requests when they would pass the import's body limit: each run imports what its request holds and removes nothing else). TeamCode's skills (`skills`, `skill_versions`, `skill_files`, `skill_assignments`); the server publishes them through the skill catalog, idempotently (a version already published with the same content is unchanged)
+     */
+    skills?: Array<TeamCodeSkill>;
+    /**
+     * TeamCode's hooks (`hooks`, `hook_versions`, `hook_files`, `hook_assignments`), published through the hook catalog
+     */
+    hooks?: Array<TeamCodeHook>;
+    /**
+     * TeamCode's environment variants (`variants` of kind `ENV`), values in clear (sent once, over TLS) and sealed by the server; a reserved variable name is refused as on creation
+     */
+    variables?: Array<TeamCodeVariable>;
+    /**
+     * TeamCode's `variant_assignments` of kind `ENV`
+     */
+    variableAssignments?: Array<TeamCodeVariableAssignment>;
+    /**
+     * TeamCode's `variant_exclusions` of kind `ENV`
+     */
+    variableExclusions?: Array<TeamCodeVariableExclusion>;
+    /**
      * TeamCode member id to Ostrom member id (`Member.id`); unmapped members are skipped
      */
     memberMap?: {
@@ -8087,6 +8215,34 @@ export type McpServerListWritable = {
 };
 
 /**
+ * A TeamCode environment variant: one value for one environment variable. A personal one (`ownerId`) becomes its mapped owner's personal variant
+ */
+export type TeamCodeVariableWritable = {
+    id: string;
+    /**
+     * The environment variable it fills (TeamCode's `target`)
+     */
+    variable: string;
+    name: string;
+    binding: 'shared' | 'perMember' | (string & {});
+    ownerId?: string;
+    /**
+     * The shared value, in clear: required for `shared`, refused for `perMember` (the report skips the variant, as the environment module refuses it on creation)
+     */
+    value?: string;
+};
+
+export type TeamCodeVariableAssignmentWritable = {
+    memberId: string;
+    variantId: string;
+    source?: 'direct' | 'bulk' | (string & {});
+    /**
+     * The member's own value, for a per-member variant, in clear (required there; ignored for a shared variant)
+     */
+    memberValue?: string;
+};
+
+/**
  * A shared subscription account of TeamCode, tokens in clear (sent once, over TLS)
  */
 export type TeamCodeAccountWritable = {
@@ -8136,6 +8292,26 @@ export type TeamCodeImportRequestWritable = {
      * The cloud profiles the workflows and automations name (planned)
      */
     profiles?: Array<TeamCodeProfile>;
+    /**
+     * TeamCode's skills (the CLI sends the skills and hooks in several requests when they would pass the import's body limit: each run imports what its request holds and removes nothing else). TeamCode's skills (`skills`, `skill_versions`, `skill_files`, `skill_assignments`); the server publishes them through the skill catalog, idempotently (a version already published with the same content is unchanged)
+     */
+    skills?: Array<TeamCodeSkill>;
+    /**
+     * TeamCode's hooks (`hooks`, `hook_versions`, `hook_files`, `hook_assignments`), published through the hook catalog
+     */
+    hooks?: Array<TeamCodeHook>;
+    /**
+     * TeamCode's environment variants (`variants` of kind `ENV`), values in clear (sent once, over TLS) and sealed by the server; a reserved variable name is refused as on creation
+     */
+    variables?: Array<TeamCodeVariableWritable>;
+    /**
+     * TeamCode's `variant_assignments` of kind `ENV`
+     */
+    variableAssignments?: Array<TeamCodeVariableAssignmentWritable>;
+    /**
+     * TeamCode's `variant_exclusions` of kind `ENV`
+     */
+    variableExclusions?: Array<TeamCodeVariableExclusion>;
     /**
      * TeamCode member id to Ostrom member id (`Member.id`); unmapped members are skipped
      */
@@ -23965,6 +24141,10 @@ export type CreateCloudSessionData = {
          * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
          */
         'Ostrom-Org'?: string;
+        /**
+         * 1 to 128 characters of `A-Za-z0-9._:-`; one fresh key per press of Start, reused for each retry of it
+         */
+        'Idempotency-Key'?: string;
     };
     path?: never;
     query?: never;
@@ -24009,6 +24189,10 @@ export type CreateCloudSessionResponses = {
      * OK
      */
     201: CloudSession;
+    /**
+     * The session this `Idempotency-Key` created, as it is now, with `Idempotency-Replayed: true`
+     */
+    202: CloudSession;
 };
 
 export type CreateCloudSessionResponse = CreateCloudSessionResponses[keyof CreateCloudSessionResponses];

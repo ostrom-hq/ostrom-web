@@ -9483,7 +9483,7 @@ export type HandleCreateCloudSessionResponse = {
 /**
  * Handler for the `POST /api/v1/cloud/sessions` operation.
  */
-export function handleCreateCloudSession(response?: HandleCreateCloudSessionResponse | HttpResponseResolver<never, CreateCloudSessionData['body']>, options?: RequestHandlerOptions): HttpHandler {
+export function handleCreateCloudSession(response?: HandleCreateCloudSessionResponse | ToResponseUnion<CreateCloudSessionResponses> | HttpResponseResolver<never, CreateCloudSessionData['body']>, options?: RequestHandlerOptions): HttpHandler {
     return http.post<never, CreateCloudSessionData['body']>(`${options?.baseUrl ?? '*'}/api/v1/cloud/sessions`, info => {
         if (typeof response === 'function') {
             return response(info);
