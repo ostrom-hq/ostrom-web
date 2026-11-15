@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { useFeature } from '@/shared/capabilities';
+import { useAnnounced, useFeature } from '@/shared/capabilities';
 import { Button } from '@/shared/ui/Button';
 import { Section } from '@/shared/ui/Screen';
-import { imageAllowed, isPromptAgent, PROMPT_AGENTS, type PromptAgent } from '../model';
+import {
+  conversesHeadless,
+  imageAllowed,
+  isPromptAgent,
+  isSessionMode,
+  PROMPT_AGENTS,
+  type PromptAgent,
+  SESSION_MODES,
+  type SessionMode,
+} from '../model';
 import { checkRecipe, EMPTY_RECIPE, type RecipeDraft } from '../recipe';
 import { type SessionChangeViewModel, useStartProfiles } from '../useCloud';
 import { RecipeFields } from './RecipeFields';
@@ -19,6 +28,10 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
   const [recipe, setRecipe] = useState<RecipeDraft>(EMPTY_RECIPE);
   const [picked, setPicked] = useState('');
   const [image, setImage] = useState('');
+  const [mode, setMode] = useState<SessionMode>('terminal');
+  // A conversation only where the server has one, and for the agents that run headless; otherwise a terminal, unsent.
+  const conversations = useAnnounced('runners.cloud.conversation.v1') && conversesHeadless(agent);
+  const sentMode = conversations && mode === 'conversation' ? mode : undefined;
   const start = useStartProfiles();
   const profiles = start.profiles ?? [];
   // The only profile there is is the one to run on; with several, the person chooses.
@@ -42,6 +55,7 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
     name: useId(),
     profile: useId(),
     image: useId(),
+    mode: useId(),
   };
   return (
     <Section label={t('cloud.start.title')}>
@@ -59,6 +73,7 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
               repo,
               environment: checked.environment,
               ...(profile === undefined ? {} : { profileId: profile.id, image }),
+              ...(sentMode === undefined ? {} : { mode: sentMode }),
             },
             () => {
               setPrompt('');
@@ -194,6 +209,27 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
               </option>
             ))}
           </select>
+          {conversations ? (
+            <>
+              <label htmlFor={ids.mode} className="o-field-label">
+                {t('cloud.start.mode')}
+              </label>
+              <select
+                id={ids.mode}
+                className="o-input o-select"
+                value={mode}
+                onChange={(event) => {
+                  if (isSessionMode(event.target.value)) setMode(event.target.value);
+                }}
+              >
+                {SESSION_MODES.map((option) => (
+                  <option key={option} value={option}>
+                    {t(`cloud.start.modes.${option}`)}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : null}
           <Button
             type="submit"
             disabled={change.starting || prompt.trim() === '' || problem !== undefined || profileBlocks}

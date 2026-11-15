@@ -1,0 +1,105 @@
+/* A conversation session's transcript (TeamCode's companion transcript views). */
+.cc-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.cc-item {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.cc-item--nested {
+  padding-inline-start: var(--space-5);
+  border-inline-start: 1px solid var(--border);
+}
+.cc-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.cc-bubble {
+  margin: 0;
+  max-width: 90%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: var(--text);
+  white-space: pre-wrap;
+}
+.cc-meta {
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+}
+.cc-danger {
+  color: var(--danger-text);
+}
+.cc-tool {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  min-width: 0;
+}
+.cc-tool--failed {
+  border-color: var(--danger);
+}
+.cc-tool__head {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.cc-tool.cc-tool__head {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+}
+.cc-tool__head > .cc-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cc-tool__name {
+  font-size: var(--fs-14);
+  font-weight: 600;
+}
+.cc-code {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--fs-12);
+}
+.cc-separator,
+.cc-system {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-12);
+  text-align: center;
+}
+.cc-system {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--fs-14);
+}
+.cc-live {
+  opacity: 0.8;
+}
+.cc-waiting {
+  margin: 0;
+}

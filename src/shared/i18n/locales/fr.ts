@@ -1969,6 +1969,7 @@ export const fr = {
       cloning_repositories: 'clonage des dépôts',
       fetching_repositories: 'mise à jour des dépôts',
       running_setup: 'préparation en cours',
+      securing_workspace: 'sécurisation de l’espace de travail pour son nouveau propriétaire',
     },
     preparation: {
       retry: 'Un nouvel essai peut passer : reprenez la session pour réessayer.',
