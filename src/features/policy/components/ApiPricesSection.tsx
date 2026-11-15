@@ -55,6 +55,10 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
               table={table}
               view={view}
               from={editing}
+              onSaved={() => {
+                // The next Edit, even of the same row, fills the form again.
+                setEditing(undefined);
+              }}
             />
             <div className="o-stack">
               <h3 className="o-label">{t('policy.prices.loadTitle')}</h3>
@@ -143,10 +147,12 @@ function PriceForm({
   table,
   view,
   from,
+  onSaved,
 }: {
   readonly table: ApiPriceTable;
   readonly view: ApiPricesViewModel;
   readonly from: ApiPrice | undefined;
+  readonly onSaved: () => void;
 }): ReactElement {
   const { t } = useTranslation();
   const [draft, setDraft] = useState<PriceDraft>(() =>
@@ -176,6 +182,7 @@ function PriceForm({
         if (row !== undefined)
           view.save(withPrice(table.prices, row), () => {
             setDraft((was) => ({ ...was, model: '', ...EMPTY_PRICES }));
+            onSaved();
           });
       }}
     >

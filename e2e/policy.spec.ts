@@ -44,6 +44,9 @@ test('an admin adds an API price over the built-in ones, then loads Anthropic’
   await form.getByRole('button', { name: 'Save the price' }).click();
   await expect(box.getByText('gpt-5', { exact: true })).toBeVisible();
   await expect(box.getByText('Built-in prices')).toHaveCount(0);
+  // The built-in rows were kept as the organization's own: one removed comes back with the list prices.
+  await box.getByRole('button', { name: 'Remove claude-opus-4 from 2026-10-21' }).click();
+  await expect(box.getByText('claude-opus-4', { exact: true })).toHaveCount(0);
   await box.getByRole('button', { name: 'Load current Anthropic prices' }).click();
-  await expect(box.getByText('claude-sonnet-4', { exact: true })).toBeVisible();
+  await expect(box.getByText('claude-opus-4', { exact: true })).toBeVisible();
 });

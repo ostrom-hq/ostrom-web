@@ -58,6 +58,14 @@ describe('the API price editor', () => {
     await user.click(within(edit).getByRole('button', { name: 'Save the price' }));
     await within(box).findByText(/Output \$16\.00/);
     expect(db.apiPrices.find((item) => item.model === 'claude-sonnet-4')?.outputMicros).toBe(16_000_000);
+    // The same row edited again fills the form again.
+    await user.click(within(box).getByRole('button', { name: 'Edit claude-sonnet-4 from 2026-10-21' }));
+    expect(within(box).getByRole('textbox', { name: 'Output $ / million' })).toHaveValue('16');
+    await user.click(within(box).getByRole('button', { name: 'Save the price' }));
+    await within(box).findByRole('button', { name: 'Save the price' });
+    await vi.waitFor(() => {
+      expect(within(box).getByRole('textbox', { name: 'Model or family prefix' })).toHaveValue('');
+    });
     db.apiPrices = [];
     await user.click(within(box).getByRole('button', { name: 'Load current Anthropic prices' }));
     await within(box).findByText(/Output \$15\.00/);
