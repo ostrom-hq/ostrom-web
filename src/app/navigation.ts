@@ -50,6 +50,7 @@ export const NAV_LINKS = [
   { to: '/webhooks', label: 'webhooks', feature: 'webhooks.v1', adminOnly: true },
   { to: '/accounts', label: 'accounts' },
   { to: '/forecasts', label: 'forecasts', feature: 'capacity.forecasts.v1', adminOnly: true },
+  { to: '/usage', label: 'usageReview', feature: 'capacity.usagereconciliation.v1', adminOnly: true },
   { to: '/admin', label: 'admin', feature: 'admin.settings.v1', instanceAdmin: true },
   { to: '/signin', label: 'signin' },
 ] as const satisfies readonly NavLink[];

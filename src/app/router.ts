@@ -12,6 +12,7 @@ import { ErrorScreen, NotFoundScreen, PendingScreen } from '@/app/StatusScreens'
 import { activitySearchSchema } from '@/features/activity/route';
 import { deviceSearchSchema } from '@/features/device/route';
 import { forecastsSearchSchema } from '@/features/forecasts/route';
+import { usageReviewSearchSchema } from '@/features/usageReview/route';
 import { githubSearchSchema } from '@/features/github/route';
 import { inviteToken } from '@/features/onboarding/route';
 import { fragmentValue, useEmailLinkStore, useSetupLinkStore } from '@/features/signin/route';
@@ -378,6 +379,18 @@ const forecastsRoute = createRoute({
   validateSearch: forecastsSearchSchema,
   component: lazyRouteComponent(async () => import('@/features/forecasts'), 'ForecastsScreen'),
 });
+/** TeamCode's Usage review: `?view=history` for the corrections, `?member=` for one member's (`OrgMember.id`). */
+const usageReviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/usage',
+  validateSearch: usageReviewSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/usageReview'), 'UsageReviewScreen'),
+});
+const usageReservationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/usage/$reservationId',
+  component: lazyRouteComponent(async () => import('@/features/usageReview'), 'UsageReservationScreen'),
+});
 /** `?gone` says, above the list, that the group just asked for no longer exists. */
 export const groupsSearchSchema = z.object({
   gone: z.optional(
@@ -560,6 +573,8 @@ export const routeTree = rootRoute.addChildren([
   webhookRoute,
   accountsRoute,
   forecastsRoute,
+  usageReviewRoute,
+  usageReservationRoute,
   groupsRoute,
   groupRoute,
 ]);
