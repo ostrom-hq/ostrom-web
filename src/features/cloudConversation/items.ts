@@ -133,7 +133,10 @@ function itemOf(
     case 'turn':
       return finished(event.phase) ? { kind: 'turnEnd', event } : undefined;
     case 'input':
-      return event.status === 'rejected' || event.status === 'cancelled'
+      // A consumed permission answer closes its request: said, so the card's going away is explained.
+      return event.status === 'rejected' ||
+        event.status === 'cancelled' ||
+        (event.status === 'consumed' && event.requestId !== undefined)
         ? { kind: 'system', event }
         : undefined;
     case 'unknown':

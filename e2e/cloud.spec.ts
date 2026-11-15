@@ -75,3 +75,30 @@ test('a developer opens a conversation session, reads it, and messages its agent
   await expect(transcript.getByText('On it: Fix it with UTC dates')).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Message the agent' })).toHaveValue('');
 });
+
+test('a developer answers the agent’s permission request, and follows what runs in the session', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openScreen(page, 'Cloud agents');
+  await page.getByRole('link', { name: 'Why the invoice test fails on Mondays' }).click();
+  const transcript = page.getByRole('region', { name: 'Conversation' });
+  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Message the agent' }).fill('Run the deploy');
+  await page.getByRole('button', { name: 'Send' }).click();
+  // The agent asks before its deploy; meanwhile a reviewer subagent and the tests run in the background.
+  const asked = page.getByRole('region', { name: 'The agent asks to use Bash' });
+  await expect(asked).toBeVisible();
+  const panel = page.getByRole('complementary', { name: 'Running in this session' });
+  await expect(panel.getByText('Review the deploy script')).toBeVisible();
+  await expect(panel.getByText('Tests in watch mode')).toBeVisible();
+  await asked.getByRole('button', { name: 'Allow' }).click();
+  await expect(transcript.getByText('Deployed.')).toBeVisible();
+  await expect(transcript.getByText('A permission request was answered')).toBeVisible();
+  await expect(asked).toBeHidden();
+  // The reviewer's own thread, from its feed.
+  await transcript.getByRole('button', { name: 'Open reviewer' }).click();
+  await expect(transcript.getByText('The script looks safe.')).toBeVisible();
+  await transcript.getByRole('button', { name: '← Main conversation' }).click();
+  await expect(transcript.getByText('Deployed.')).toBeVisible();
+});
