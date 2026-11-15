@@ -56,10 +56,14 @@ export function automationsOf(text: string): number | undefined {
 export const WORKSPACE_MODES = ['ReadWriteOncePod', 'ReadWriteOnce'] as const;
 export const TRANSFERS = ['offer', 'disabled'] as const;
 
+/** The session image the server uses while none is stored. */
+export const DEFAULT_SESSION_IMAGE = 'docker.io/ostromhq/ostrom-session:latest';
+
 /** What is typed in the runtime form: every value as text, so a half-typed number is never lost. */
 export interface RuntimeDraft {
   readonly enabled: boolean;
   readonly runnerImage: string;
+  readonly sessionImage: string;
   readonly runnerBinary: string;
   readonly serverUrl: string;
   readonly workspaceAccessMode: string;
@@ -79,6 +83,9 @@ export function runtimeDraftOf(runtime: CloudRuntime): RuntimeDraft {
   return {
     enabled: runtime.enabled,
     runnerImage: text(runtime.runnerImage),
+    // The server sends the effective image: the default is shown as the placeholder, not typed in, so a save
+    // does not pin it.
+    sessionImage: runtime.sessionImage === DEFAULT_SESSION_IMAGE ? '' : text(runtime.sessionImage),
     runnerBinary: runtime.runnerBinary,
     serverUrl: text(runtime.serverUrl),
     workspaceAccessMode: runtime.workspaceAccessMode,
@@ -151,12 +158,14 @@ export function runtimeRequestOf(draft: RuntimeDraft, stored: CloudRuntime): Sav
     return typed === undefined ? undefined : Number(typed);
   };
   const image = optional(draft.runnerImage);
+  const session = optional(draft.sessionImage);
   const url = optional(draft.serverUrl);
   const paused = optionalNumber(draft.pausedRetentionDays);
   const transcript = optionalNumber(draft.transcriptRetentionDays);
   return {
     enabled: draft.enabled,
     ...(image === undefined ? {} : { runnerImage: image }),
+    ...(session === undefined ? {} : { sessionImage: session }),
     runnerBinary: draft.runnerBinary.trim(),
     ...(url === undefined ? {} : { serverUrl: url }),
     workspaceAccessMode: workspaceMode(draft.workspaceAccessMode),

@@ -2332,6 +2332,9 @@ export const fr = {
       enabledHint:
         'Désactivé, seules les nouvelles sessions sont refusées : celles en cours vont à leur terme.',
       runnerImage: 'Image du runner',
+      sessionImage: 'Image de session',
+      sessionImageHint:
+        'L’image que lancent les sessions Docker et enregistrées. Les sessions Kubernetes utilisent l’image de leur profil. Vide, c’est {{image}}.',
       runnerBinary: 'Binaire dans l’image du runner',
       serverUrl: 'URL du serveur pour les pods de session',
       serverUrlHint: 'Une origine https sans chemin. Vide, c’est {{url}}.',
@@ -2647,6 +2650,19 @@ export const fr = {
           'Aucun téléphone enregistré pour l’instant. Connecte-toi avec l’app sur ton téléphone et autorise les notifications.',
         rateLimited: 'Un test vient d’être envoyé. Attends quelques secondes, puis réessaie.',
       },
+    },
+    phones: {
+      title: 'Téléphones enregistrés',
+      lead: 'Les téléphones notifiés pour toi dans cette organisation. Retire celui que tu n’utilises plus.',
+      none: 'Aucun téléphone enregistré pour l’instant. Connecte-toi avec l’app sur ton téléphone et autorise les notifications.',
+      since: 'Enregistré {{date}}',
+      platform: {
+        ios: 'iPhone',
+        android: 'Téléphone Android',
+      },
+      remove: 'Retirer',
+      removeConfirm: 'Ne plus notifier {{phone}}',
+      keep: 'Garder',
     },
   },
   account: {

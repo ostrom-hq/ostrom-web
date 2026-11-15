@@ -1957,6 +1957,10 @@ export type CloudRuntime = {
      */
     runnerBinary: string;
     /**
+     * The image the containers of a Docker or registered session run (the agents, git, the session's accounts): the stored image, else `docker.io/ostromhq/ostrom-session:latest`, so always present once served. Only Docker and registered sessions use it; a Kubernetes session runs its profile's image
+     */
+    sessionImage?: string;
+    /**
      * The https origin session pods call back; absent uses the public URL
      */
     serverUrl?: string;
@@ -2002,6 +2006,10 @@ export type SaveCloudRuntimeRequest = {
     enabled: boolean;
     runnerImage?: string;
     runnerBinary: string;
+    /**
+     * The session image of Docker and registered sessions, trimmed; absent or blank stores the default `docker.io/ostromhq/ostrom-session:latest` (the request replaces the whole runtime, as for `runnerBinary`)
+     */
+    sessionImage?: string;
     /**
      * The https origin session pods call back, without a path; never a link-local, unspecified or cloud metadata address in any spelling. Absent uses the server's public URL
      */
@@ -4887,6 +4895,26 @@ export type SetAudienceRequest = {
      * True: every member; false: only members set to `allow`
      */
     allMembers: boolean;
+};
+
+/**
+ * A member's Slack link: the Slack account their notifications (channel `slack`) and yes requests go to as direct messages. At most one per member of an organization, and one member per Slack account in an organization
+ */
+export type SlackLink = {
+    memberId: string;
+    /**
+     * Whether the instance's Slack app is configured (a bot token and a signing secret in the `slack` settings section)
+     */
+    configured: boolean;
+    linked: boolean;
+    /**
+     * The Slack user (`U…` or `W…`)
+     */
+    slackUserId?: string;
+    /**
+     * ISO time the member linked it
+     */
+    linkedAt?: string;
 };
 
 /**
@@ -11467,6 +11495,139 @@ export type ReceiveSlackInteractionResponses = {
      */
     200: unknown;
 };
+
+export type UnlinkSlackData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/slack/link';
+};
+
+export type UnlinkSlackErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type UnlinkSlackError = UnlinkSlackErrors[keyof UnlinkSlackErrors];
+
+export type UnlinkSlackResponses = {
+    /**
+     * Unlinked, or nothing to unlink
+     */
+    204: void;
+};
+
+export type UnlinkSlackResponse = UnlinkSlackResponses[keyof UnlinkSlackResponses];
+
+export type GetSlackLinkData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/slack/link';
+};
+
+export type GetSlackLinkErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+};
+
+export type GetSlackLinkError = GetSlackLinkErrors[keyof GetSlackLinkErrors];
+
+export type GetSlackLinkResponses = {
+    /**
+     * OK
+     */
+    200: SlackLink;
+};
+
+export type GetSlackLinkResponse = GetSlackLinkResponses[keyof GetSlackLinkResponses];
+
+export type LinkSlackData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/slack/link';
+};
+
+export type LinkSlackErrors = {
+    /**
+     * A refusal
+     */
+    401: ApiError;
+    /**
+     * A refusal
+     */
+    403: ApiError;
+    /**
+     * A refusal
+     */
+    404: ApiError;
+    /**
+     * A refusal
+     */
+    409: ApiError;
+    /**
+     * A refusal
+     */
+    503: ApiError;
+};
+
+export type LinkSlackError = LinkSlackErrors[keyof LinkSlackErrors];
+
+export type LinkSlackResponses = {
+    /**
+     * Linked
+     */
+    200: SlackLink;
+};
+
+export type LinkSlackResponse = LinkSlackResponses[keyof LinkSlackResponses];
 
 export type GithubCheckData = {
     body: {

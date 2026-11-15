@@ -50,6 +50,9 @@ function page(runs: readonly WorkflowRun[], url: URL): { items: WorkflowRun[]; n
   return from + RUNS_PAGE < sorted.length && last !== undefined ? { items, next: last.id } : { items };
 }
 
+/** An `Idempotency-Key`: 1 to 128 characters of `A-Za-z0-9._:-`. */
+const KEY = /^[A-Za-z0-9._:-]{1,128}$/;
+
 /**
  * The runs of the organization's workflows, served from memory as ostrom-server serves them (JOURNAL, WORKFLOW-RUNS,
  * 03/11): anyone in the organization reads them; owners and admins start one, of a workflow the organization accepted,
@@ -61,6 +64,8 @@ export function createRunHandlers(
   login: () => string,
   now: () => Date,
 ): HttpHandler[] {
+  /** The run each `Idempotency-Key` started, by `starter:key`: a replay answers it, never a second run. */
+  const startedByKey = new Map<string, string>();
   const workflowOf = (id: string): Workflow | undefined => state().workflows.find((item) => item.id === id);
   const runOf = (id: string): WorkflowRun | undefined => state().workflowRuns.find((item) => item.id === id);
   const replace = (run: WorkflowRun): void => {
@@ -97,6 +102,12 @@ export function createRunHandlers(
         return refusal(409, 'workflow_not_accepted', 'A rejected workflow does not run.');
       const body = zStartWorkflowRunBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'not a run');
+      const key = request.headers.get('Idempotency-Key');
+      if (key !== null && !KEY.test(key))
+        return refusal(400, 'invalid_request', 'an Idempotency-Key is 1 to 128 characters of A-Za-z0-9._:-');
+      const first = key === null ? undefined : runOf(startedByKey.get(`${login()}:${key}`) ?? '');
+      if (first !== undefined)
+        return HttpResponse.json(first, { status: 200, headers: { 'Idempotency-Replayed': 'true' } });
       const run: WorkflowRun = {
         id: `wfr_${crypto.randomUUID().replaceAll('-', '')}`,
         workflowId: workflow.id,
@@ -110,6 +121,7 @@ export function createRunHandlers(
         startedAt: now().toISOString(),
       };
       state().workflowRuns.unshift(run);
+      if (key !== null) startedByKey.set(`${login()}:${key}`, run.id);
       return HttpResponse.json(run, { status: 201 });
     }),
     handleGetRun(({ params }) => {

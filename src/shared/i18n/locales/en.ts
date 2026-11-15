@@ -2288,6 +2288,9 @@ export const en = {
       enabled: 'Cloud sessions are on',
       enabledHint: 'Off refuses only new sessions: those running go on until they end.',
       runnerImage: 'Runner image',
+      sessionImage: 'Session image',
+      sessionImageHint:
+        'The image Docker and registered sessions run. Kubernetes sessions use their profile’s image. Empty uses {{image}}.',
       runnerBinary: 'Binary in the runner image',
       serverUrl: 'Server URL for session pods',
       serverUrlHint: 'An https origin without a path. Empty uses {{url}}.',
@@ -2589,6 +2592,19 @@ export const en = {
         noPhone: 'No phone is registered yet. Sign in with the app on your phone and allow notifications.',
         rateLimited: 'A test was just sent. Wait a few seconds, then try again.',
       },
+    },
+    phones: {
+      title: 'Registered phones',
+      lead: 'The phones notified for you in this organization. Remove one you no longer use.',
+      none: 'No phone is registered yet. Sign in with the app on your phone and allow notifications.',
+      since: 'Registered {{date}}',
+      platform: {
+        ios: 'iPhone',
+        android: 'Android phone',
+      },
+      remove: 'Remove',
+      removeConfirm: 'Stop notifying {{phone}}',
+      keep: 'Keep',
     },
   },
   account: {

@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   handleGetNotificationPreferences,
+  handleDeletePushDevice,
   handleGetNotificationSettings,
+  handleListPushDevices,
   handleSendTestPush,
   handleSetNotificationPreferences,
   handleSetNotificationSetting,
 } from '@gen/api/msw.gen';
-import type { NotificationPreferences, NotificationSetting, PushTestResult } from '@gen/api/types.gen';
+import type {
+  NotificationPreferences,
+  NotificationSetting,
+  PushDevice,
+  PushTestResult,
+} from '@gen/api/types.gen';
 import { zNotificationPreferences, zNotificationSettingChange } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { z } from 'zod';
@@ -23,6 +30,8 @@ export interface NotificationsState {
   notificationPreferences: NotificationPreferences;
   /** Who sends the pushes (the instance's `push` settings section): `off` sends nothing. */
   pushProvider: string;
+  /** The demo person's phones, the most recently seen first (`/push-devices`). */
+  pushDevices: PushDevice[];
   /** What each of the demo person's phones answers to a test, in order; empty when they have none. */
   pushPhones: PushTestResult[];
   /** When the last test went out, for the server's ten seconds between two. */
@@ -100,6 +109,16 @@ export function createNotificationsHandlers(
         );
       state().notificationPreferences = preferences;
       return HttpResponse.json(preferences);
+    }),
+    handleListPushDevices(() => HttpResponse.json({ items: state().pushDevices })),
+    handleDeletePushDevice(({ params }) => {
+      const db = state();
+      const index = db.pushDevices.findIndex((phone) => phone.id === params.id);
+      if (index < 0) return refusal(404, 'push_device_not_found', 'No such phone.');
+      // A test reaches the phones in the order they are listed: the phone goes from both.
+      db.pushDevices = db.pushDevices.filter((_, at) => at !== index);
+      db.pushPhones = db.pushPhones.filter((_, at) => at !== index);
+      return new HttpResponse(null, { status: 204 });
     }),
     handleSendTestPush(() => {
       const db = state();

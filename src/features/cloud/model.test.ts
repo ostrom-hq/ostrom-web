@@ -2,13 +2,13 @@
 import type { Automation, CloudProfile, CloudSession } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { zCloudAgentKind } from '@gen/api/zod.gen';
+import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { knownValues } from '@/shared/lib/openEnum';
 import {
   imageAllowed,
   startRefusalOf,
   accessOf,
   CLOUD_AGENTS,
-  idempotencyKey,
   isCancellable,
   isCloudAgent,
   isPromptAgent,

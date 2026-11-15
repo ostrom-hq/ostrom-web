@@ -17,11 +17,12 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
 import { runnable } from './model';
+import { type PendingStart, pressOf, startRefused } from './startKey';
 import { type Delivery, deliveryOf, deliveryVisit, deliverableOf, finished, inputsOf } from './runs';
 import { useViewer } from '@/shared/auth/useViewer';
 import { useFeature } from '@/shared/capabilities';
@@ -136,17 +137,30 @@ export function useStartRun(workflow: Workflow): StartRunViewModel {
   const queryClient = useQueryClient();
   const viewer = useViewer();
   const withRepository = useFeature('workflows.deliver.v1');
+  const pending = useRef<PendingStart | undefined>(undefined);
   const mutation = useMutation({
     mutationFn: async (start: RunStart) => {
       const inputs = inputsOf(workflow.inputs ?? [], start.inputs);
       const repository = start.repository.trim();
-      return (
-        await startWorkflowRun({
-          path: { id: workflowId },
-          body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
-          throwOnError: true,
-        })
-      ).data;
+      // One key per press, kept while its answer is unknown so that pressing again cannot start a second run.
+      const press = pressOf(pending.current, workflowId, inputs, repository);
+      pending.current = press;
+      try {
+        const run = (
+          await startWorkflowRun({
+            path: { id: workflowId },
+            body: { inputs, ...(withRepository && repository !== '' ? { repository } : {}) },
+            headers: { 'Idempotency-Key': press.key },
+            throwOnError: true,
+          })
+        ).data;
+        pending.current = undefined;
+        return run;
+      } catch (error) {
+        // The button is held while a press is in flight, so this press owns the key it drops.
+        if (startRefused(error)) pending.current = undefined;
+        throw error;
+      }
     },
     // The new run comes first in both lists: they are read again, whatever the answer.
     onSettled: async () => {

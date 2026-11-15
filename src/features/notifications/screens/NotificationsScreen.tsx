@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { WithOrg } from '@/shared/org/WithOrg';
 import { Screen } from '@/shared/ui/Screen';
+import { PhonesSection } from '../components/PhonesSection';
 import { PhoneSection } from '../components/PhoneSection';
 import { SwitchesSection } from '../components/SwitchesSection';
 import { TestSection } from '../components/TestSection';
@@ -19,6 +20,7 @@ export function NotificationsScreen(): ReactElement {
         <Screen title={t('notifications.title')} lead={t('notifications.lead', { name: org.name })}>
           <SwitchesSection />
           <PhoneSection />
+          <PhonesSection />
           <TestSection />
         </Screen>
       )}

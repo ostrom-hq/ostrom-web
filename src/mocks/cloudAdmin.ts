@@ -28,6 +28,7 @@ import {
 import { type HttpHandler, HttpResponse } from 'msw';
 import type { z } from 'zod/mini';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { DEFAULT_SESSION_IMAGE } from '@/features/cloudAdmin/model';
 import { readJson, refusal } from './http';
 
 /** The cloud runtime, clusters, profiles and organization settings, as `runners` of ostrom-server keeps them. */
@@ -171,6 +172,7 @@ export function createCloudAdminHandlers(
       state().cloudRuntime = {
         enabled: sent.enabled,
         ...part('runnerImage', sent.runnerImage),
+        sessionImage: sent.sessionImage ?? DEFAULT_SESSION_IMAGE,
         runnerBinary: sent.runnerBinary,
         ...part('serverUrl', sent.serverUrl),
         effectiveServerUrl: sent.serverUrl ?? 'https://ostrom.acme.test',
