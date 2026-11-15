@@ -31,3 +31,25 @@ test('another organization never shows Acme’s waits', async ({ page }) => {
   await expect(page.getByText('Nothing is waiting')).toBeVisible();
   await expect(page.getByText('Ship the ledger migration to production?')).toHaveCount(0);
 });
+
+test('a secret is typed masked, sent with the answer and never shown again', async ({ page }) => {
+  const secret = 'sentinel-hunter2-4f9c';
+  await page.goto('/waits/0b9d3a52-7c41-4e0a-9d63-5a1f0c7e8a01');
+  const form = page.getByRole('form', { name: 'Your answer' });
+  const token = form.getByLabel('Deploy token');
+  await expect(token).toHaveAttribute('type', 'password');
+  await form.getByLabel('Reason').fill('Looks right');
+  await form.getByLabel('Screenshot').fill('shot.png');
+  await token.fill(secret);
+  await form.getByRole('button', { name: 'Approve' }).click();
+  const outcome = page.getByRole('region', { name: 'Answer' });
+  await expect(outcome).toContainText('Deploy token');
+  await expect(outcome).toContainText('Provided');
+  await expect(outcome).toContainText('shot.png');
+  expect(await page.content()).not.toContain(secret);
+  expect(page.url()).not.toContain(secret);
+  const stored = await page.evaluate(() =>
+    JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage)]),
+  );
+  expect(stored).not.toContain(secret);
+});

@@ -76,6 +76,7 @@ export function initialWaits(now: number): Wait[] {
           { id: 'batch', type: 'number', label: 'Batch size', default: 500 },
           { id: 'on', type: 'date', label: 'Day', default: '2026-11-20' },
           { id: 'ticket', type: 'file', label: 'Screenshot' },
+          { id: 'token', type: 'secret', label: 'Deploy token', oneTime: true },
         ],
         actions: [
           { id: 'approve', label: 'Approve', style: 'primary', requires: ['reason'] },

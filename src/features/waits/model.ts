@@ -58,8 +58,27 @@ export type Drafts = Readonly<Record<string, Draft>>;
 
 const EMPTY: Draft = { text: '', picked: [], other: '' };
 
-export const VALUE_TYPES = ['text', 'choice', 'confirm', 'number', 'date'] as const;
+export const VALUE_TYPES = ['text', 'choice', 'confirm', 'number', 'date', 'secret', 'file'] as const;
 export type ValueType = (typeof VALUE_TYPES)[number];
+
+/**
+ * The types that exist only where the server announces `waits.secrets.v1`: a `secret` is typed masked and goes in the
+ * answer alone, a `file` is the name of a file the session holds.
+ */
+const SECRET_TYPES: readonly ValueType[] = ['secret', 'file'];
+/** The most a secret holds, in UTF-8 bytes, and a file name in characters (the server's bounds). */
+export const SECRET_BYTES = 4_096;
+export const FILE_NAME_LIMIT = 255;
+
+/** Whether a file name holds a character the server refuses: `/`, `\`, a control character (ISO control: C0 and C1). */
+function hasForbiddenChar(name: string): boolean {
+  for (let at = 0; at < name.length; at += 1) {
+    const code = name.charCodeAt(at);
+    // `/` is 0x2f and `\` is 0x5c; the control characters are C0 and C1 (control characters are never surrogates).
+    if (code === 0x2f || code === 0x5c || code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+  }
+  return false;
+}
 
 export function valueTypeOf(field: WaitField): ValueType | undefined {
   return VALUE_TYPES.find((type) => type === field.type);
@@ -76,6 +95,7 @@ export function draftOf(field: WaitField): Draft {
   switch (valueTypeOf(field)) {
     case 'text':
     case 'date':
+    case 'file':
       return typeof value === 'string' ? { ...EMPTY, text: value } : EMPTY;
     case 'number':
       return typeof value === 'number' ? { ...EMPTY, text: String(value) } : EMPTY;
@@ -93,6 +113,8 @@ export function draftOf(field: WaitField): Draft {
         ? { ...EMPTY, picked, other: free }
         : { ...EMPTY, picked };
     }
+    // A secret has no default: it is never pre-filled.
+    case 'secret':
     case undefined:
       return EMPTY;
   }
@@ -102,7 +124,15 @@ export function draftsOf(fields: readonly WaitField[]): Drafts {
   return Object.fromEntries(fields.map((field) => [field.id, draftOf(field)]));
 }
 
-export type FieldProblem = 'required' | 'tooLong' | 'notNumber' | 'notDate' | 'otherTooLong';
+export type FieldProblem =
+  | 'required'
+  | 'tooLong'
+  | 'notNumber'
+  | 'notDate'
+  | 'otherTooLong'
+  | 'secretTooLong'
+  | 'secretNul'
+  | 'fileName';
 
 export type FieldValue =
   | { readonly kind: 'empty' }
@@ -140,6 +170,20 @@ export function valueOf(field: WaitField, draft: Draft | undefined): FieldValue 
       return isCalendarDate(text) ? { kind: 'value', value: text } : { kind: 'invalid', problem: 'notDate' };
     case 'confirm':
       return text === '' ? EMPTY_VALUE : { kind: 'value', value: text === 'true' };
+    case 'secret':
+      // As typed, spaces included; one made of spaces only is no value (the server reads it as not provided).
+      if (text.trim() === '') return EMPTY_VALUE;
+      if (text.includes('\u0000')) return { kind: 'invalid', problem: 'secretNul' };
+      return new TextEncoder().encode(text).length > SECRET_BYTES
+        ? { kind: 'invalid', problem: 'secretTooLong' }
+        : { kind: 'value', value: text };
+    case 'file': {
+      const name = text.trim();
+      if (name === '') return EMPTY_VALUE;
+      return name.length > FILE_NAME_LIMIT || hasForbiddenChar(name)
+        ? { kind: 'invalid', problem: 'fileName' }
+        : { kind: 'value', value: name };
+    }
     case 'choice': {
       const free = other.trim();
       if (free.length > OTHER_LIMIT) return { kind: 'invalid', problem: 'otherTooLong' };
@@ -153,9 +197,13 @@ export function valueOf(field: WaitField, draft: Draft | undefined): FieldValue 
   }
 }
 
-/** Fields that take no value from the person (`info`) or that this screen cannot fill (`file`, `secret`). */
-export function takesValue(field: WaitField): boolean {
-  return valueTypeOf(field) !== undefined;
+/**
+ * Whether the person fills a field: not `info`, and not a `secret` or `file` where the server does not announce
+ * `waits.secrets.v1` (`secrets`), which the screen says is filled in the session.
+ */
+export function takesValue(field: WaitField, secrets: boolean): boolean {
+  const type = valueTypeOf(field);
+  return type !== undefined && (secrets || !SECRET_TYPES.includes(type));
 }
 
 export interface Answer {
@@ -179,10 +227,11 @@ export function answerFor(
   fields: readonly WaitField[],
   drafts: Drafts,
   action: WaitAction,
+  secrets: boolean,
 ): { readonly answer: Answer } | { readonly problems: Problems } {
   const values: Record<string, string | number | boolean | readonly string[]> = {};
   const problems: Record<string, FieldProblem> = {};
-  for (const field of fields.filter(takesValue)) {
+  for (const field of fields.filter((field) => takesValue(field, secrets))) {
     const read = valueOf(field, drafts[field.id]);
     if (read.kind === 'value') values[field.id] = read.value;
     else if (read.kind === 'invalid') problems[field.id] = read.problem;
@@ -208,6 +257,11 @@ export function targetOf(ref: WaitRef): RefTarget | undefined {
   }
   const href = safeHref(ref.url);
   return href === undefined ? undefined : { kind: 'external', href };
+}
+
+/** What the server keeps of a secret field in the answer: `provided` or `not provided`, never the value. */
+export function secretProvided(value: unknown): boolean {
+  return value === 'provided';
 }
 
 /** The values of a resolved wait's answer, one line per field, as the form showed them. */

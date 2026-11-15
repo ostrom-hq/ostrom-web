@@ -345,8 +345,17 @@ describe('a wait', () => {
     ).toBeChecked();
     expect(within(form).getByLabelText('Batch size')).toHaveValue('500');
     expect(within(form).getByLabelText('Day')).toHaveValue('2026-11-20');
-    // a file is filled in the session.
-    expect(within(form).getByText(/This file field cannot be filled in the console/)).toBeInTheDocument();
+    // a file is the name of one the session holds; a secret is a masked input that says how long it lives.
+    expect(within(form).getByLabelText('Screenshot')).toHaveAttribute('type', 'text');
+    expect(within(form).getByText('The name of a file already uploaded in the session.')).toBeInTheDocument();
+    const token = within(form).getByLabelText('Deploy token');
+    expect(token).toHaveAttribute('type', 'password');
+    expect(token).toHaveAttribute('autocomplete', 'new-password');
+    expect(token).not.toHaveAttribute('name');
+    expect(token).toHaveValue('');
+    expect(
+      within(form).getByText(/The agent reads it for one turn only, then it is deleted\./),
+    ).toBeInTheDocument();
     // Actions as buttons, with their style.
     expect(within(form).getByRole('button', { name: 'Approve' })).toHaveClass('o-btn--primary');
     expect(within(form).getByRole('button', { name: 'Not now' })).toHaveClass('o-btn--secondary');
@@ -441,6 +450,141 @@ describe('a wait', () => {
       ]);
     });
     expect(wait(1).status).toBe('resolved');
+  });
+
+  it('sends a secret and a file name with the answer, shows the secret as provided, and keeps it nowhere else', async () => {
+    const user = userEvent.setup();
+    const sent = captureAnswers();
+    const SENTINEL = 'sentinel-hunter2-4f9c';
+    const logged: unknown[][] = [];
+    const spies = (['log', 'info', 'warn', 'error', 'debug'] as const).map((method) =>
+      vi.spyOn(console, method).mockImplementation((...args: unknown[]) => logged.push(args)),
+    );
+    visit(`/waits/${SHIP}`);
+    const form = await screen.findByRole('form', { name: 'Your answer' }, SLOW);
+    await user.type(within(form).getByLabelText('Reason'), 'Looks right');
+    await user.type(within(form).getByLabelText('Screenshot'), ' shot.png ');
+    await user.type(within(form).getByLabelText('Deploy token'), SENTINEL);
+    // Typed masked, and nowhere in the page text or its markup but the input's own value.
+    expect(within(form).getByLabelText('Deploy token')).toHaveValue(SENTINEL);
+    expect(document.body.textContent).not.toContain(SENTINEL);
+    await user.click(within(form).getByRole('button', { name: 'Approve' }));
+    const outcome = await screen.findByRole('region', { name: 'Answer' }, SLOW);
+    expect(within(outcome).getByText('Deploy token')).toBeInTheDocument();
+    expect(within(outcome).getByText('Provided')).toBeInTheDocument();
+    expect(within(outcome).getByText('shot.png')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(sent).toHaveLength(1);
+    });
+    expect(sent[0]).toMatchObject({
+      action: 'approve',
+      values: { ticket: 'shot.png', token: SENTINEL },
+    });
+    // Never echoed back, stored, logged or put in the address.
+    expect(document.body.innerHTML).not.toContain(SENTINEL);
+    expect(JSON.stringify(wait(1))).not.toContain(SENTINEL);
+    expect(wait(1).answer?.values).toMatchObject({ token: 'provided', ticket: 'shot.png' });
+    expect(window.location.href).not.toContain(SENTINEL);
+    expect(JSON.stringify(Object.entries(localStorage))).not.toContain(SENTINEL);
+    expect(JSON.stringify(Object.entries(sessionStorage))).not.toContain(SENTINEL);
+    expect(document.cookie).not.toContain(SENTINEL);
+    expect(JSON.stringify(logged)).not.toContain(SENTINEL);
+    for (const spy of spies) spy.mockRestore();
+  });
+
+  it('asks for a required secret, refuses a blank one, a NUL, a long one, and a bad file name, before it sends', async () => {
+    const user = userEvent.setup();
+    const sent = captureAnswers();
+    replace(2, (item) => ({
+      ...item,
+      question: {
+        title: 'Which region first?',
+        fields: [
+          { id: 'key', type: 'secret', label: 'API key', required: true },
+          { id: 'shot', type: 'file', label: 'Screenshot' },
+        ],
+      },
+    }));
+    visit(`/waits/${id(2)}`);
+    const form = await screen.findByRole('form', { name: 'Your answer' }, SLOW);
+    expect(within(form).getByLabelText(/API key/)).toBeRequired();
+    expect(within(form).getByText(/It is kept sealed for up to 24 hours/)).toBeInTheDocument();
+    const done = within(form).getByRole('button', { name: 'Done' });
+    await user.click(done);
+    expect(within(form).getByRole('alert')).toHaveTextContent('Fill this in to go on.');
+    await user.type(within(form).getByLabelText(/API key/), '   ');
+    await user.click(done);
+    expect(within(form).getByRole('alert')).toHaveTextContent('Fill this in to go on.');
+    await user.clear(within(form).getByLabelText(/API key/));
+    await user.click(within(form).getByLabelText(/API key/));
+    await user.paste('a'.repeat(4097));
+    await user.click(done);
+    expect(within(form).getByRole('alert')).toHaveTextContent('Too long: 4,096 bytes at most.');
+    await user.clear(within(form).getByLabelText(/API key/));
+    await user.click(within(form).getByLabelText(/API key/));
+    await user.paste('a\u0000b');
+    await user.click(done);
+    expect(within(form).getByRole('alert')).toHaveTextContent('A secret cannot hold a NUL character.');
+    await user.clear(within(form).getByLabelText(/API key/));
+    await user.type(within(form).getByLabelText(/API key/), 'ok');
+    await user.type(within(form).getByLabelText('Screenshot'), 'dir/shot.png');
+    await user.click(done);
+    expect(within(form).getByRole('alert')).toHaveTextContent('Enter a file name of 255 characters at most');
+    expect(sent).toEqual([]);
+    await user.clear(within(form).getByLabelText('Screenshot'));
+    await user.click(done);
+    await screen.findByRole('region', { name: 'Answer' }, SLOW);
+    expect(sent).toEqual([{ action: 'done', values: { key: 'ok' } }]);
+  });
+
+  it('shows an optional secret nobody gave as not provided', async () => {
+    const user = userEvent.setup();
+    replace(2, (item) => ({
+      ...item,
+      question: { title: 'Which region first?', fields: [{ id: 'key', type: 'secret', label: 'API key' }] },
+    }));
+    visit(`/waits/${id(2)}`);
+    await user.click(await screen.findByRole('button', { name: 'Done' }, SLOW));
+    const outcome = await screen.findByRole('region', { name: 'Answer' }, SLOW);
+    expect(within(outcome).getByText('Not provided')).toBeInTheDocument();
+  });
+
+  it('never shows what a server wrote for a secret but “provided”', async () => {
+    replace(5, (item) => ({
+      ...item,
+      question: { title: 'Rotate the staging key?', fields: [{ id: 'when', type: 'secret', label: 'Key' }] },
+      answer: {
+        action: 'yes',
+        values: { when: 'hunter2' },
+        author: MEMBER_IDS.maya,
+        answeredAt: item.createdAt,
+      },
+    }));
+    visit(`/waits/${id(5)}`);
+    const outcome = await screen.findByRole('region', { name: 'Answer' }, SLOW);
+    expect(within(outcome).getByText('Not provided')).toBeInTheDocument();
+    expect(outcome).not.toHaveTextContent('hunter2');
+  });
+
+  it('says a secret and a file are filled in the session where the server does not announce waits.secrets.v1', async () => {
+    const user = userEvent.setup();
+    const sent = captureAnswers();
+    server.use(
+      handleCapabilities(() =>
+        HttpResponse.json(demoCapabilities(FEATURES.filter((feature) => feature !== 'waits.secrets.v1'))),
+      ),
+    );
+    visit(`/waits/${SHIP}`);
+    const form = await screen.findByRole('form', { name: 'Your answer' }, SLOW);
+    await waitFor(() => {
+      expect(within(form).getAllByText(/field cannot be filled in the console/)).toHaveLength(2);
+    });
+    expect(within(form).queryByLabelText('Deploy token')).toBeNull();
+    expect(within(form).queryByLabelText('Screenshot')).toBeNull();
+    await user.type(within(form).getByLabelText('Reason'), 'ok');
+    await user.click(within(form).getByRole('button', { name: 'Approve' }));
+    await screen.findByRole('region', { name: 'Answer' }, SLOW);
+    expect(JSON.stringify(sent[0])).not.toContain('token');
   });
 
   it('takes one choice, or a typed other that replaces it, as a single value', async () => {

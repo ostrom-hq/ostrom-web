@@ -2835,9 +2835,19 @@ export const en = {
       no: 'No',
       other: 'Other',
       elsewhere: 'This {{type}} field cannot be filled in the console: fill it in the session.',
+      secretOnce:
+        'Typed hidden and sent with your answer, never shown again. The agent reads it for one turn only, then it is deleted.',
+      secretKept:
+        'Typed hidden and sent with your answer, never shown again. It is kept sealed for up to 24 hours, for the agent of this session alone.',
+      fileHint: 'The name of a file already uploaded in the session.',
+      provided: 'Provided',
+      notProvided: 'Not provided',
     },
     problem: {
       required: 'Fill this in to go on.',
+      secretTooLong: 'Too long: 4,096 bytes at most.',
+      secretNul: 'A secret cannot hold a NUL character.',
+      fileName: 'Enter a file name of 255 characters at most, without / or \\ or control characters.',
       tooLong: 'Too long: {{max}} characters at most.',
       notNumber: 'Enter a number.',
       notDate: 'Enter a real date as YYYY-MM-DD.',

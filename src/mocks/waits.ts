@@ -98,12 +98,19 @@ export function createWaitsHandlers(
       );
       if (missing !== undefined) return refusal(400, 'invalid_answer', `field ${missing.id} is required`);
       const at = now().toISOString();
+      // As ostrom-server does: the value of a secret field is sealed apart and the answer keeps `provided` or
+      // `not provided` for it, never the value.
+      const kept = Object.fromEntries(
+        fields
+          .filter((field) => field.type === 'secret')
+          .map((field) => [field.id, values[field.id] === undefined ? 'not provided' : 'provided']),
+      );
       return HttpResponse.json(
         save({
           ...wait,
           status: 'resolved',
           resolvedAt: at,
-          answer: { action, values, author: MEMBER_IDS.maya, answeredAt: at },
+          answer: { action, values: { ...values, ...kept }, author: MEMBER_IDS.maya, answeredAt: at },
         }),
       );
     }),

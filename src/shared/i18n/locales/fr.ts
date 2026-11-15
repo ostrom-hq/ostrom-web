@@ -2898,9 +2898,19 @@ export const fr = {
       no: 'Non',
       other: 'Autre',
       elsewhere: 'Ce champ {{type}} ne se remplit pas dans la console : remplis-le dans la session.',
+      secretOnce:
+        'Saisi masqué et envoyé avec ta réponse, jamais réaffiché. L’agent le lit pour un seul tour, puis il est supprimé.',
+      secretKept:
+        'Saisi masqué et envoyé avec ta réponse, jamais réaffiché. Il est conservé chiffré 24 heures au plus, pour l’agent de cette session seulement.',
+      fileHint: 'Le nom d’un fichier déjà envoyé dans la session.',
+      provided: 'Fourni',
+      notProvided: 'Non fourni',
     },
     problem: {
       required: 'À remplir pour continuer.',
+      secretTooLong: 'Trop long : 4 096 octets au plus.',
+      secretNul: 'Un secret ne peut pas contenir de caractère NUL.',
+      fileName: 'Saisis un nom de fichier de 255 caractères au plus, sans / ni \\ ni caractère de contrôle.',
       tooLong: 'Trop long : {{max}} caractères au plus.',
       notNumber: 'Saisis un nombre.',
       notDate: 'Saisis une vraie date au format AAAA-MM-JJ.',
