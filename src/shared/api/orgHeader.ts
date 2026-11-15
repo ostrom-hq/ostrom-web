@@ -43,12 +43,17 @@ export function actsInOrganization(pathname: string): boolean {
 }
 
 /**
- * A call that acts in an organization names the one the console acts in, once there is one. The others are never
+ * A call that acts in an organization names the one the console acts in, once there is one, unless it names one
+ * itself (an admin sign-in approved for another organization the person manages). The others are never
  * given it here: the person's list must answer whatever was chosen before, so a stale choice can be dropped, and
  * `/auth/me` takes it only as an option, named by its caller (`meInOrgOptions`) for the member there.
  */
 export function withOrg(request: Request, orgId: string | undefined): Request {
-  if (orgId !== undefined && actsInOrganization(new URL(request.url).pathname)) {
+  if (
+    orgId !== undefined &&
+    !request.headers.has(ORG_HEADER) &&
+    actsInOrganization(new URL(request.url).pathname)
+  ) {
     request.headers.set(ORG_HEADER, orgId);
   }
   return request;

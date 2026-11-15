@@ -134,7 +134,7 @@ export function useGithub(org: string, role: OrgRole | undefined): GithubViewMod
     appFailure: failureOf(app.error),
     install: manager ? installUrl(org) : undefined,
     repos: items,
-    more: repos.data?.next !== undefined,
+    more: typeof repos.data?.next === 'string',
     reposFailure: failureOf(repos.error),
     query,
     setQuery,

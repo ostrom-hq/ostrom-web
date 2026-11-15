@@ -26,6 +26,22 @@ describe('readWorkflow', () => {
     expect(read?.nodes[0]?.kind).toBe('robot');
   });
 
+  it('reads a null optional field as absent, and keeps a field the console does not know', () => {
+    const read = readWorkflow({
+      ...document,
+      description: null,
+      updatedBy: null,
+      owner: 'maya',
+      nodes: [{ id: 'n', kind: 'agent', label: 'N', run: { repository: null, profileId: 'p-1' }, extra: 1 }],
+    });
+    expect(read?.description).toBeUndefined();
+    expect(read?.['owner']).toBe('maya');
+    expect(read?.nodes[0]?.run?.repository).toBeUndefined();
+    expect(read?.nodes[0]?.run?.profileId).toBe('p-1');
+    expect((read?.nodes[0] as Record<string, unknown> | undefined)?.['extra']).toBe(1);
+    expect(read?.edges[0]?.to).toBeNull();
+  });
+
   it('refuses what is not a workflow', () => {
     expect(readWorkflow({ id: 'wf-1' })).toBeUndefined();
     expect(readWorkflow(null)).toBeUndefined();

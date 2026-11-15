@@ -115,7 +115,7 @@ export function useApprovalsQueue(): QueueViewModel {
   const linkRequired = useMemo(() => linkRequiredOf(rights.data), [rights.data]);
   return {
     waiting: waiting.data?.items,
-    more: waiting.data?.next !== undefined,
+    more: typeof waiting.data?.next === 'string',
     decided: decided.decided,
     failure: failureOf(waiting.error ?? decided.error),
     fresh,

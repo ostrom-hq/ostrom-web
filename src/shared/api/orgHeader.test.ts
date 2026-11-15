@@ -23,6 +23,14 @@ describe('withOrg', () => {
     expect(request.headers.get(ORG_HEADER)).toBe('org-acme');
   });
 
+  it('keeps the organization a call names itself (an admin sign-in approved for another one)', () => {
+    const named = new Request('http://ostrom.test/api/v1/auth/device/answer', {
+      method: 'POST',
+      headers: { [ORG_HEADER]: 'org-olga' },
+    });
+    expect(withOrg(named, 'org-acme').headers.get(ORG_HEADER)).toBe('org-olga');
+  });
+
   it('sends no header before there is an organization, nor to a route that acts in none', () => {
     expect(
       withOrg(new Request('http://ostrom.test/api/v1/artifacts'), undefined).headers.has(ORG_HEADER),

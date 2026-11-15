@@ -48,6 +48,8 @@ jobs:
             > "$RUNNER_TEMP/.npmrc"
           latest=$(npm view @ostrom-hq/openapi version --userconfig "$RUNNER_TEMP/.npmrc")
           pinned=$(node -p 'require("./package.json").ostrom.openapi')
+          # Never backwards: a `latest` tag older than the pin leaves the pin.
+          if [ "$(printf '%s\n%s\n' "$pinned" "$latest" | sort -V | tail -n 1)" != "$latest" ]; then latest=$pinned; fi
           echo "latest=$latest" >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
           echo "@ostrom-hq/openapi: pinned $pinned, newest $latest" >> "$GITHUB_STEP_SUMMARY"

@@ -113,12 +113,12 @@ function Pending({
               value: item.providerRequestId ?? t('usageReview.notCaptured'),
               mono: true,
             },
-            item.workflowId === undefined
-              ? undefined
-              : { label: t('usageReview.workflow'), value: item.workflowId, mono: true },
-            item.launchId === undefined
-              ? undefined
-              : { label: t('usageReview.launch'), value: item.launchId, mono: true },
+            typeof item.workflowId === 'string'
+              ? { label: t('usageReview.workflow'), value: item.workflowId, mono: true }
+              : undefined,
+            typeof item.launchId === 'string'
+              ? { label: t('usageReview.launch'), value: item.launchId, mono: true }
+              : undefined,
           ]}
         />
       </Section>
@@ -239,12 +239,12 @@ function Reconciled({ item }: { readonly item: UsageReconciliationDto }): ReactE
             value: item.providerRequestId ?? t('usageReview.notCaptured'),
             mono: true,
           },
-          item.workflowId === undefined
-            ? undefined
-            : { label: t('usageReview.workflow'), value: item.workflowId, mono: true },
-          item.launchId === undefined
-            ? undefined
-            : { label: t('usageReview.launch'), value: item.launchId, mono: true },
+          typeof item.workflowId === 'string'
+            ? { label: t('usageReview.workflow'), value: item.workflowId, mono: true }
+            : undefined,
+          typeof item.launchId === 'string'
+            ? { label: t('usageReview.launch'), value: item.launchId, mono: true }
+            : undefined,
           {
             label: t('usageReview.evidence'),
             // An evidence source this console does not know yet reads as the server wrote it.

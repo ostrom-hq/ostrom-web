@@ -218,149 +218,157 @@ export interface NodeWhen {
 
 export type RiskLevel = 'low' | 'medium' | 'high' | (string & {});
 
-export const zDeliverable = z.object({
+/** An optional field: absent, or null as the server writes an absent one, both read as absent. */
+function optional<T extends z.core.SomeType>(schema: T) {
+  return z.pipe(
+    z.optional(z.nullable(schema)),
+    z.transform((value: z.output<T> | null | undefined) => value ?? undefined),
+  );
+}
+
+export const zDeliverable = z.looseObject({
   type: z.string(),
-  label: z.optional(z.string()),
-  schema: z.optional(z.unknown()),
-  domain: z.optional(z.string()),
+  label: optional(z.string()),
+  schema: optional(z.unknown()),
+  domain: optional(z.string()),
 });
 
 export const zNodeConditionOp = z.union([z.enum(['equals', 'notEquals', 'exists', 'matches']), z.string()]);
 
-export const zNodeCondition = z.object({
+export const zNodeCondition = z.looseObject({
   step: z.string().check(z.maxLength(200)),
   path: z.string().check(z.maxLength(200)),
   op: zNodeConditionOp,
-  value: z.optional(z.string().check(z.maxLength(200))),
+  value: optional(z.string().check(z.maxLength(200))),
 });
 
-export const zNodePosition = z.object({
+export const zNodePosition = z.looseObject({
   x: z.number(),
   y: z.number(),
 });
 
-export const zNodeRunOn = z.object({
-  classes: z.optional(z.array(z.string())),
-  patterns: z.optional(z.array(z.string())),
+export const zNodeRunOn = z.looseObject({
+  classes: optional(z.array(z.string())),
+  patterns: optional(z.array(z.string())),
 });
 
 export const zRiskLevel = z.union([z.enum(['low', 'medium', 'high']), z.string()]);
 
-export const zNodeWhen = z.object({
-  hours: z.optional(z.string()),
-  days: z.optional(z.string()),
-  risk: z.optional(zRiskLevel),
+export const zNodeWhen = z.looseObject({
+  hours: optional(z.string()),
+  days: optional(z.string()),
+  risk: optional(zRiskLevel),
 });
 
-export const zRuleSource = z.object({
+export const zRuleSource = z.looseObject({
   kind: z.string(),
   ref: z.string(),
-  url: z.optional(z.string()),
+  url: optional(z.string()),
 });
 
 export const zRunLocation = z.union([z.enum(['workstation', 'ostrom']), z.string()]);
 
-export const zNodeRun = z.object({
-  on: z.optional(zNodeRunOn),
-  command: z.optional(z.string()),
-  timeoutSec: z.optional(z.int()),
-  where: z.optional(zRunLocation),
-  network: z.optional(z.boolean()),
-  channel: z.optional(z.string()),
-  message: z.optional(z.string()),
-  instructions: z.optional(z.string()),
-  agent: z.optional(z.string()),
-  model: z.optional(z.string()),
-  deliverable: z.optional(zDeliverable),
-  repository: z.optional(z.string()),
-  profileId: z.optional(z.uuid()),
+export const zNodeRun = z.looseObject({
+  on: optional(zNodeRunOn),
+  command: optional(z.string()),
+  timeoutSec: optional(z.int()),
+  where: optional(zRunLocation),
+  network: optional(z.boolean()),
+  channel: optional(z.string()),
+  message: optional(z.string()),
+  instructions: optional(z.string()),
+  agent: optional(z.string()),
+  model: optional(z.string()),
+  deliverable: optional(zDeliverable),
+  repository: optional(z.string()),
+  profileId: optional(z.string()),
 });
 
-export const zStringListSuggestion = z.object({
+export const zStringListSuggestion = z.looseObject({
   value: z.array(z.string()),
   evidence: z.array(z.string()),
-  excerpt: z.optional(z.string()),
-  why: z.optional(z.string()),
-  by: z.optional(z.string()),
+  excerpt: optional(z.string()),
+  why: optional(z.string()),
+  by: optional(z.string()),
   at: z.string(),
 });
 
-export const zStringSuggestion = z.object({
+export const zStringSuggestion = z.looseObject({
   value: z.string(),
   evidence: z.array(z.string()),
-  excerpt: z.optional(z.string()),
-  why: z.optional(z.string()),
-  by: z.optional(z.string()),
+  excerpt: optional(z.string()),
+  why: optional(z.string()),
+  by: optional(z.string()),
   at: z.string(),
 });
 
-export const zNodeSuggestions = z.object({
-  command: z.optional(zStringSuggestion),
-  on: z.optional(zStringListSuggestion),
-  actions: z.optional(zStringListSuggestion),
-  channel: z.optional(zStringSuggestion),
-  ruleIds: z.optional(zStringListSuggestion),
-  dismissed: z.optional(z.array(z.string())),
+export const zNodeSuggestions = z.looseObject({
+  command: optional(zStringSuggestion),
+  on: optional(zStringListSuggestion),
+  actions: optional(zStringListSuggestion),
+  channel: optional(zStringSuggestion),
+  ruleIds: optional(zStringListSuggestion),
+  dismissed: optional(z.array(z.string())),
 });
 
-export const zWaitAction = z.object({
+export const zWaitAction = z.looseObject({
   id: z.string(),
   label: z.string(),
-  requires: z.optional(z.array(z.string())),
-  style: z.optional(z.string()),
+  requires: optional(z.array(z.string())),
+  style: optional(z.string()),
 });
 
-export const zWaitField = z.object({
+export const zWaitField = z.looseObject({
   id: z.string(),
   type: z.string(),
   label: z.string(),
-  help: z.optional(z.string()),
-  required: z.optional(z.boolean()),
-  default: z.optional(z.unknown()),
-  options: z.optional(z.array(z.string())),
-  multiple: z.optional(z.boolean()),
-  allowOther: z.optional(z.boolean()),
-  maxLength: z.optional(z.int()),
-  oneTime: z.optional(z.boolean()),
+  help: optional(z.string()),
+  required: optional(z.boolean()),
+  default: optional(z.unknown()),
+  options: optional(z.array(z.string())),
+  multiple: optional(z.boolean()),
+  allowOther: optional(z.boolean()),
+  maxLength: optional(z.int()),
+  oneTime: optional(z.boolean()),
 });
 
-export const zWaitRef = z.object({
+export const zWaitRef = z.looseObject({
   kind: z.string(),
-  id: z.optional(z.string()),
-  url: z.optional(z.string()),
-  title: z.optional(z.string()),
+  id: optional(z.string()),
+  url: optional(z.string()),
+  title: optional(z.string()),
 });
 
-export const zWaitSpec = z.object({
+export const zWaitSpec = z.looseObject({
   title: z.string(),
-  body: z.optional(z.string()),
-  fields: z.optional(z.array(zWaitField)),
-  actions: z.optional(z.array(zWaitAction)),
-  refs: z.optional(z.array(zWaitRef)),
+  body: optional(z.string()),
+  fields: optional(z.array(zWaitField)),
+  actions: optional(z.array(zWaitAction)),
+  refs: optional(z.array(zWaitRef)),
 });
 
-export const zWorkflowEdge = z.object({
+export const zWorkflowEdge = z.looseObject({
   from: z.string(),
   to: z.nullable(z.string()),
-  label: z.optional(z.string()),
-  on: z.optional(z.string()),
+  label: optional(z.string()),
+  on: optional(z.string()),
 });
 
-export const zWorkflowInput = z.object({
+export const zWorkflowInput = z.looseObject({
   id: z.string(),
   label: z.string(),
-  required: z.optional(z.boolean()),
-  default: z.optional(z.string()),
-  maxLength: z.optional(z.int()),
+  required: optional(z.boolean()),
+  default: optional(z.string()),
+  maxLength: optional(z.int()),
 });
 
-export const zWorkflowLimits = z.object({
-  maxNodes: z.optional(z.int()),
-  maxVisits: z.optional(z.int()),
-  maxDepth: z.optional(z.int()),
+export const zWorkflowLimits = z.looseObject({
+  maxNodes: optional(z.int()),
+  maxVisits: optional(z.int()),
+  maxDepth: optional(z.int()),
 });
 
-export const zGateRef = z.object({
+export const zGateRef = z.looseObject({
   workflowId: z.string(),
   workflowName: z.string(),
   nodeId: z.string(),
@@ -368,64 +376,67 @@ export const zGateRef = z.object({
   approvers: z.array(z.string()),
   status: zWorkflowStatus,
   enforce: z.boolean(),
-  basis: z.optional(z.string()),
+  basis: optional(z.string()),
   reason: z.string(),
 });
 
-export const zGateAction = z.object({
+export const zGateAction = z.looseObject({
   class: z.string(),
   label: z.string(),
   patterns: z.array(z.string()),
-  repos: z.optional(z.array(z.string())),
-  tools: z.optional(z.array(z.string())),
-  keywords: z.optional(z.array(z.string())),
+  repos: optional(z.array(z.string())),
+  tools: optional(z.array(z.string())),
+  keywords: optional(z.array(z.string())),
   gate: z.nullish(zGateRef),
 });
 
-export const zWorkflowNode = z.object({
+export const zWorkflowNode = z.looseObject({
   id: z.string(),
   kind: zWorkflowNodeKind,
   label: z.string(),
-  detail: z.optional(z.string()),
-  owner: z.optional(z.string()),
-  approvers: z.optional(z.array(z.string())),
-  approverReason: z.optional(z.string()),
-  when: z.optional(zNodeWhen),
-  ruleIds: z.optional(z.array(z.string())),
-  position: z.optional(zNodePosition),
-  actions: z.optional(z.array(zGateAction)),
-  actionsBy: z.optional(z.string()),
-  actionsAt: z.optional(z.string()),
-  run: z.optional(zNodeRun),
-  suggested: z.optional(zNodeSuggestions),
-  wait: z.optional(zWaitSpec),
-  workflowId: z.optional(z.string()),
-  arguments: z.optional(z.record(z.string(), z.string())),
-  maxVisits: z.optional(z.int()),
-  condition: z.optional(zNodeCondition),
+  detail: optional(z.string()),
+  owner: optional(z.string()),
+  approvers: optional(z.array(z.string())),
+  approverReason: optional(z.string()),
+  when: optional(zNodeWhen),
+  ruleIds: optional(z.array(z.string())),
+  position: optional(zNodePosition),
+  actions: optional(z.array(zGateAction)),
+  actionsBy: optional(z.string()),
+  actionsAt: optional(z.string()),
+  run: optional(zNodeRun),
+  suggested: optional(zNodeSuggestions),
+  wait: optional(zWaitSpec),
+  workflowId: optional(z.string()),
+  arguments: optional(z.record(z.string(), z.string())),
+  maxVisits: optional(z.int()),
+  condition: optional(zNodeCondition),
 });
 
-export const zWorkflow = z.object({
+export const zWorkflow = z.looseObject({
   id: z.string(),
   name: z.string(),
   domain: z.string(),
-  description: z.optional(z.string()),
-  version: z.optional(z.int()),
-  repos: z.optional(z.array(z.string())),
+  description: optional(z.string()),
+  version: optional(z.int()),
+  repos: optional(z.array(z.string())),
   nodes: z.array(zWorkflowNode),
   edges: z.array(zWorkflowEdge),
-  start: z.optional(z.string()),
-  inputs: z.optional(z.array(zWorkflowInput)),
-  sessionMode: z.optional(z.string()),
-  limits: z.optional(zWorkflowLimits),
-  sources: z.optional(z.array(zRuleSource)),
+  start: optional(z.string()),
+  inputs: optional(z.array(zWorkflowInput)),
+  sessionMode: optional(z.string()),
+  limits: optional(zWorkflowLimits),
+  sources: optional(z.array(zRuleSource)),
   status: zWorkflowStatus,
   foundAt: z.string(),
-  updatedAt: z.optional(z.string()),
-  updatedBy: z.optional(z.string()),
+  updatedAt: optional(z.string()),
+  updatedBy: optional(z.string()),
 });
 
-/** The workflow a document holds, or `undefined` when the document is not one the console can read. */
+/**
+ * The workflow a document holds, or `undefined` when the document is not one the console can read. A field the
+ * console does not know is kept (loose objects), so saving the workflow back never drops what a newer server wrote.
+ */
 export function readWorkflow(document: unknown): Workflow | undefined {
   const parsed = zWorkflow.safeParse(document);
   return parsed.success ? parsed.data : undefined;

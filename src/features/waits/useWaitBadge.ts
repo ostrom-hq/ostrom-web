@@ -29,5 +29,5 @@ export function useWaitBadge(): WaitBadge | undefined {
   );
   const count = query.data?.items.length;
   if (!enabled || count === undefined || count === 0) return undefined;
-  return { count, label: countLabel(count, query.data?.next !== undefined) };
+  return { count, label: countLabel(count, typeof query.data?.next === 'string') };
 }
