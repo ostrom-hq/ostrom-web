@@ -7,9 +7,13 @@ import {
   getNotificationSettingsQueryKey,
   listPushDevicesOptions,
   listPushDevicesQueryKey,
+  getSlackLinkOptions,
+  getSlackLinkQueryKey,
+  linkSlackMutation,
   sendTestPushMutation,
   setNotificationPreferencesMutation,
   setNotificationSettingMutation,
+  unlinkSlackMutation,
 } from '@gen/api/@tanstack/react-query.gen';
 import type {
   NotificationPreferences,
@@ -17,6 +21,7 @@ import type {
   NotificationSettings,
   PushDevice,
   PushTestResults,
+  SlackLink,
 } from '@gen/api/types.gen';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -159,5 +164,48 @@ export function usePushDevices(enabled: boolean): PushDevicesViewModel {
     },
     removing: mutation.isPending ? mutation.variables.path.id : undefined,
     removeFailure: failureOf(mutation.error),
+  };
+}
+
+export interface SlackLinkViewModel {
+  /** The member's Slack link in this organization; undefined until it is read. */
+  readonly link: SlackLink | undefined;
+  readonly failure: Error | undefined;
+  /** Links the Slack account of the member's proven e-mail address. */
+  readonly connect: () => void;
+  /** Removes the link. */
+  readonly disconnect: () => void;
+  /** A link or an unlink on its way. */
+  readonly busy: boolean;
+  readonly actionFailure: Error | undefined;
+}
+
+/** `GET`/`POST`/`DELETE /slack/link` (`slack.v1`): the member's own Slack account, in this organization. */
+export function useSlackLink(enabled: boolean): SlackLinkViewModel {
+  const queryClient = useQueryClient();
+  const query = useQuery(ready(getSlackLinkOptions(), { enabled, retry: false }));
+  const link = useMutation({
+    ...linkSlackMutation(),
+    onSuccess: (linked) => {
+      queryClient.setQueryData(getSlackLinkQueryKey(), linked);
+    },
+  });
+  const unlink = useMutation({
+    ...unlinkSlackMutation(),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: getSlackLinkQueryKey() }),
+  });
+  return {
+    link: query.data,
+    failure: failureOf(query.error),
+    connect: () => {
+      unlink.reset();
+      link.mutate({});
+    },
+    disconnect: () => {
+      link.reset();
+      unlink.mutate({});
+    },
+    busy: link.isPending || unlink.isPending,
+    actionFailure: failureOf(link.error ?? unlink.error),
   };
 }

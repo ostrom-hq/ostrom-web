@@ -406,3 +406,62 @@ describe('a server without notifications', () => {
     expect(asked).not.toContain('/api/v1/notifications/settings');
   });
 });
+
+describe('the Slack account', () => {
+  it('links the Slack account of the proven address, then unlinks it', async () => {
+    const user = userEvent.setup();
+    visit('/me/notifications');
+    const box = await region('Slack');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Slack account' }));
+    expect(await within(box).findByText('Linked')).toBeInTheDocument();
+    expect(db.slackLinked?.slackUserId).toBe('U024BE7LH');
+    await user.click(within(box).getByRole('button', { name: 'Unlink' }));
+    expect(await within(box).findByRole('button', { name: 'Link my Slack account' })).toBeInTheDocument();
+    expect(db.slackLinked).toBeUndefined();
+  });
+
+  it('says why no account is linked', async () => {
+    const user = userEvent.setup();
+    db.slackDirectory = undefined;
+    visit('/me/notifications');
+    const box = await region('Slack');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Slack account' }));
+    expect(
+      await within(box).findByText('No active Slack account of this workspace has your e-mail address.'),
+    ).toBeInTheDocument();
+  });
+
+  it('says it is linking, then what failed when the server answers no known refusal', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post('*/api/v1/slack/link', async () => {
+        await delay(100);
+        return HttpResponse.json({ error: { type: 'internal', message: 'slack is down' } }, { status: 500 });
+      }),
+    );
+    visit('/me/notifications');
+    const box = await region('Slack');
+    await user.click(await within(box).findByRole('button', { name: 'Link my Slack account' }));
+    expect(await within(box).findByRole('button', { name: 'Linking…' })).toBeDisabled();
+    expect(await within(box).findByText('slack is down')).toBeInTheDocument();
+  });
+
+  it('points at the administrators while Slack is not set', async () => {
+    db.slackConfigured = false;
+    visit('/me/notifications');
+    const box = await region('Slack');
+    expect(await within(box).findByText(/An administrator sets the Slack app/u)).toBeInTheDocument();
+    expect(within(box).queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('asks nothing of a server without Slack', async () => {
+    without('slack.v1');
+    const asked: string[] = [];
+    traffic.onRequest((request) => asked.push(new URL(request.url).pathname));
+    visit('/me/notifications');
+    await region('What you are told about');
+    await new Promise((done) => setTimeout(done, 200));
+    expect(screen.queryByRole('region', { name: 'Slack' })).toBeNull();
+    expect(asked).not.toContain('/api/v1/slack/link');
+  });
+});

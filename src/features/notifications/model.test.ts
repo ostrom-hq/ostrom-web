@@ -10,6 +10,7 @@ import {
   quietHoursProblem,
   samePhoneForm,
   sentCount,
+  slackRefusalOf,
   switchRows,
   testRefusalOf,
 } from './model';
@@ -169,5 +170,22 @@ describe('the time fields', () => {
       { timeZone: 'Europe/Paris' },
     ])
       expect(samePhoneForm(form, { ...form, ...change })).toBe(false);
+  });
+});
+
+describe('why a Slack link is refused', () => {
+  it('names the refusals the server sends by their code, and nothing else', () => {
+    const codes = [
+      'slack_not_configured',
+      'slack_email_unproven',
+      'slack_user_not_found',
+      'slack_user_taken',
+    ];
+    expect(
+      codes.map((code) => slackRefusalOf(new ApiFailure('conflict', 'no', 409, undefined, code))),
+    ).toEqual(['notConfigured', 'emailUnproven', 'notFound', 'taken']);
+    expect(slackRefusalOf(new ApiFailure('conflict', 'no', 409, undefined, 'other'))).toBeUndefined();
+    expect(slackRefusalOf(new ApiFailure('conflict', 'no', 500, undefined))).toBeUndefined();
+    expect(slackRefusalOf(new Error('offline'))).toBeUndefined();
   });
 });

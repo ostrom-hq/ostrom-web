@@ -3643,7 +3643,7 @@ export const zModelPolicy = z.object({
 });
 
 /**
- * The caller's budget this month, in millionths of a US dollar. Planned (`capacity.budgetoverrides.v1`): `override`, the temporary daily budget in force, and `baseLimitMicros`; the server does not send them yet
+ * The caller's budget this month, in millionths of a US dollar, with `override`, the temporary daily budget in force (`capacity.budgetoverrides.v1`), and `baseLimitMicros`
  */
 export const zMyBudget = z.object({
     limitMicros: z.optional(z.int()),
