@@ -46,6 +46,7 @@ const SCREENS = [
   '/artifacts',
   '/webhooks',
   '/accounts',
+  '/forecasts',
   // Reached by the tab of the shared accounts, not the navigation (web#97).
   '/accounts/groups',
   // Reached from the catalogs and a member's row, not the navigation.

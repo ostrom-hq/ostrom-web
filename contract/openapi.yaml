@@ -970,8 +970,9 @@ paths:
         never launches. The person and the organization come from the credential. 403 when the organization's policy
         refuses the agent or the model, or the credential may not launch; 404 when it is no member of an organization
         the request can act in. The agent token acts for the person who launched it on its launch's sessions, the
-        workflow step it plays (`workflow:session`), the memory (`memory:use`) and the artifacts
-        (`artifacts:write`: publish and share as that person, never change an access nor delete)."
+        workflow step it plays (`workflow:session`), the memory (`memory:use`), the capacity advice of its own
+        sessions (`guidance`) and the artifacts (`artifacts:write`: publish and share as that person, never change an
+        access nor delete)."
       tags:
       - auth
       summary: 'Start an agent launch: returns an agent token scoped to the sessions of this launch, expiring at its end.
@@ -993,13 +994,12 @@ paths:
                   type: object
                   additionalProperties:
                     type: string
-                  x-ostrom-status: planned
+                  x-ostrom-status: served
                   description: "Up to 16 non-secret key=value pairs attached to the launch (`sessions.labels.v1`), as
                     TeamCode's `--label` (`labels` of `POST /runs`): a key is 1 to 63 characters, lowercase letters or
                     digits then letters, digits, `.`, `_`, `/` or `-`; a value is up to 256 characters without control
                     characters. 400 `invalid_label` otherwise. Fixed at start: they are copied onto every segment of the
-                    launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label. Planned: the
-                    server does not read it yet"
+                    launch (`Session.labels`) and filtered by `listSessions`. Never put a secret in a label"
                 workflowId:
                   type: string
                   x-ostrom-status: planned
@@ -1112,14 +1112,14 @@ paths:
         type: string
     get:
       operationId: getLaunchLimits
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sessions
       summary: The limits of a launch and what it spent (`launches.limits.v1`)
       description: "An owner or an admin from a signed-in session, a service key with `team:read`, or the launch's own
         person (to read their own launch). 404 for a launch of another organization or one that does not exist. A launch
         that was never given limits answers zeros (`budgetMicros` 0 and `maxConcurrent` 0 add no cap) and
-        `paused: false`. Planned: the server does not serve it yet"
+        `paused: false`"
       responses:
         '200':
           description: OK
@@ -1135,7 +1135,7 @@ paths:
           $ref: '#/components/responses/Error'
     put:
       operationId: setLaunchLimits
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sessions
       summary: Set the limits of a launch (`launches.limits.v1`)
@@ -1149,7 +1149,7 @@ paths:
         model call of the launch, on every replica. Past a limit the gateway answers its own refusals, each with
         `x-ostrom-error`: `launch_paused` (403, the launch is paused), `launch_budget_exhausted` (429, the launch spent
         its budget, or what is left does not cover the call), and a call over `maxConcurrent` waits in the admission
-        queue (`inference.queue.v1`) like a member over theirs. Planned: the server does not serve it yet"
+        queue (`inference.queue.v1`) like a member over theirs"
       requestBody:
         required: true
         content:
@@ -1775,10 +1775,10 @@ paths:
                     `artifacts:read` and `artifacts:write` (the artifacts the creator can read; write includes read),
                     `skills:read` and `hooks:read` (the skills and team hooks delivered to the creator, `skills.v1` and
                     `hooks.v1`), `memory:use` (the organization's memory and the creator's personal entries,
-                    `memory.v1`).
+                    `memory.v1`), `guidance` (the capacity advice for the creator's sessions, `capacity.pacing.v1`).
                     Reserved to an owner or an admin, and only while its creator still is one, checked at every call:
-                    `team:read` (a read-only view of the organization: usage, spending, budgets, accounts, MCP usage and
-                    the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write
+                    `team:read` (a read-only view of the organization: usage, spending, budgets, accounts and the automatic pool
+                    size, MCP usage and the member directory, no session, transcript or artifact of a member) and `cloud:admin` (cloud:write
                     with an administrator's rights over every cloud session of the organization), `skills:publish` (publish skill
                     versions, `publishSkillVersion`), `skills:pin` (with `skills:publish`: pin at publication or with
                     `pinSkill`), `skills:assign` (with `skills:publish`: deliver to all members at publication) and
@@ -1854,27 +1854,22 @@ paths:
       tags:
       - auth
       summary: Workstations where the caller is signed in
-      description: "A browser session only. The caller's CLI tokens (`kind: cli`), then, when `Ostrom-Org` names an
+      description: "A browser session only (with `devices.v1`, also the CLI's own sign-in, see below). Not paged:
+        `next` is always absent. The caller's CLI tokens (`kind: cli`), then, when `Ostrom-Org` names an
         organization, its live tokens of `ostrom login --admin` (`kind: admin`, with `orgId`, `scopes` and `expiresAt`):
         the caller's own for a member, every member's for an owner or an admin. Such a token is bound to its organization
         and only listed when the request names it; the console asks once per organization. A member of another
-        organization gets 404."
+        organization gets 404. With `devices.v1` (planned): the caller's registered devices (one per installation of
+        the CLI, with `createdAt`, `lastLoginAt`, `activeSessions`, `current` and `osVersion`), then the tokens of
+        CLIs older than that, each on its own; the CLI's own sign-in may read it too (`ostrom devices list`), an
+        agent's token or a service key may not (403)."
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  items:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Device'
-                  next:
-                    type: string
-                required:
-                - items
+                $ref: '#/components/schemas/DevicePage'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -1888,16 +1883,56 @@ paths:
   /api/v1/devices/{id}:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
+    patch:
+      operationId: renameDevice
+      x-ostrom-status: planned
+      tags:
+      - auth
+      summary: Rename a device
+      description: "With `devices.v1`. The caller's own registered device, from a browser session or the CLI's sign-in;
+        an owner or an admin also renames a member's (`Ostrom-Org` naming their organization), audited there.
+        1 to 120 characters, no control character (400 `invalid_device_name`). Another member's device, a token listed
+        on its own or an unknown id: 404 `device_not_found`."
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenameDeviceRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
     delete:
       operationId: deleteDevice
       x-ostrom-status: served
       tags:
       - auth
       summary: Sign a workstation out
-      description: "A browser session only. Revokes one of the caller's CLI tokens, or a token of `ostrom login --admin`
+      description: "A browser session only (with `devices.v1`, also the CLI's own sign-in, see below). Revokes one of the caller's CLI tokens, or a token of `ostrom login --admin`
         of the organization `Ostrom-Org` names: a member their own, an owner or an admin any member's (a leaked token, a
         member who left). Audited in that organization, naming the actor and the token's owner. Another member's for a
-        member, a token of another organization, a personal token or a service key: 404."
+        member, a token of another organization, a personal token or a service key: 404. With `devices.v1` (planned):
+        a registered device's id removes the device and signs every one of its sign-ins out at once (a copied
+        configuration included); the CLI's own sign-in may call it too, and removing the device it runs on signs it
+        out (`ostrom login` again). Its next sign-in registers the installation again, under a new id."
       parameters:
       - name: id
         in: path
@@ -1917,9 +1952,71 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+  /api/v1/members/{memberId}/devices:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listMemberDevices
+      x-ostrom-status: planned
+      tags:
+      - auth
+      summary: A member's devices (owner or admin)
+      description: "With `devices.v1`. An owner or an admin of the organization `Ostrom-Org` names reads the devices of
+        one of its members, as `GET /api/v1/devices` answers them to that member (`current` always false). A member
+        gets 403; a member of another organization or an unknown id 404."
+      parameters:
+      - name: memberId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DevicePage'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
   /api/v1/push-devices:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listPushDevices
+      x-ostrom-status: served
+      tags:
+      - notifications
+      summary: The caller's phones registered for push notifications
+      description: >-
+        Scope `notifications:write`, as the other phone routes: the phone app's token or a browser session, never a
+        personal or CLI token. The caller's own phones in the organization `Ostrom-Org` names, or their only one, the
+        most recently seen first (at most ten: see `registerPushDevice`). Another member's phones are never listed. A
+        push token and a public key are never answered back. Each phone's `id` is what `deletePushDevice` takes, so a
+        member can see the phones that are notified and stop one they no longer use. TeamCode's Devices page only says
+        whether a device has push on (`push: true`); Ostrom registers a phone as its own resource, so this list is
+        that flag's counterpart.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushDeviceList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
     post:
       operationId: registerPushDevice
       x-ostrom-status: served
@@ -3825,11 +3922,11 @@ paths:
       - name: label
         in: query
         required: false
-        x-ostrom-status: planned
+        x-ostrom-status: served
         description: "`key=value`, repeatable (at most 16): only the sessions whose launch carries every label given
           (`sessions.labels.v1`, TeamCode's `GET /runs?label=k=v`). The key is everything before the first `=`. It
           composes with the other filters and never widens what the caller may read. 400 `invalid_label` for a malformed
-          one. Planned: the server does not read it yet"
+          one"
         schema:
           type: array
           items:
@@ -3908,7 +4005,7 @@ paths:
       tags:
       - sessions
       summary: Sign of life of the launcher (every 20 s)
-      description: "With `sessions.activity.v1` (planned), a sign of life that ends a silence of the launcher (60 s
+      description: "With `sessions.activity.v1`, a sign of life that ends a silence of the launcher (60 s
         without one) clears a `working` activity reported before the silence, and keeps `waiting_for_human`."
       parameters:
       - name: id
@@ -4026,7 +4123,7 @@ paths:
     - $ref: '#/components/parameters/OstromOrg'
     post:
       operationId: reportSessionActivity
-      x-ostrom-status: planned
+      x-ostrom-status: served
       tags:
       - sessions
       summary: "Whether the agent works or waits for a person (`sessions.activity.v1`), reported by its hooks"
@@ -4038,7 +4135,7 @@ paths:
         one changes nothing (`superseded: true`). A repeated state keeps its time (`since`). 409 `session_ended` once
         the segment ended (a lost one too: its launcher reports to the segment it reopens). 400
         `invalid_session_activity` for another state or an `observedAt` that is not a date-time. Not audited, like a
-        sign of life. Planned: the server does not serve it yet"
+        sign of life."
       parameters:
       - name: id
         in: path
@@ -6244,7 +6341,7 @@ paths:
       summary: Start a run
       description: "Planned with `workflows.deliver.v1` (docs/decisions/workflows-one-system.md in ostrom-server): any
         member starts an accepted workflow as themselves; at most 20 unfinished runs per member (409 `run_limit`); the
-        same `Idempotency-Key` returns the first run (200, `Idempotency-Replayed: true`); `repository` is the repository
+        same `Idempotency-Key` returns the first run (200, `Idempotency-Replayed: true`; a malformed key is 400 `invalid_request`); `repository` is the repository
         of the agent nodes that name none (400 `repository_required` when one needs it)"
       parameters:
       - name: id
@@ -6255,7 +6352,7 @@ paths:
       - name: Idempotency-Key
         in: header
         required: false
-        description: 1 to 128 characters of `A-Za-z0-9._:-` (planned)
+        description: '1 to 128 characters of `A-Za-z0-9._:-`; one fresh key per press of Start, reused for each retry of it'
         schema:
           type: string
       requestBody:
@@ -6266,7 +6363,7 @@ paths:
               $ref: '#/components/schemas/StartWorkflowRunRequest'
       responses:
         '200':
-          description: "The first run of this `Idempotency-Key` (planned)"
+          description: "The first run of this `Idempotency-Key`, with `Idempotency-Replayed: true`"
           content:
             application/json:
               schema:
@@ -7247,7 +7344,10 @@ paths:
         (403 `wait_session_owner_only`, an administrator included) and while it runs (409 `session_not_running`).
         A `time` or `event` wait (`resolver`) is asked by an agent in its session only, and resolves by itself: at
         `dueAt`, or when its `eventUrl` is called, or at `timeoutAt`; the session's Stop hook wakes the agent with it
-        (`POST /api/v1/waits/wake`). Nobody answers it (409 `resolves_by_itself`); its asker cancels it."
+        (`POST /api/v1/waits/wake`). Nobody answers it (409 `resolves_by_itself`); its asker cancels it. A `secret` field
+        (`waits.secrets.v1`) is refused in a session whose agent is not Claude Code (422 `secret_unsupported_agent`:
+        only Claude Code reads its environment again before each command, so a value given later could reach no other
+        agent)."
       requestBody:
         required: true
         content:
@@ -7327,6 +7427,9 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+
   /api/v1/waits/mcp:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -7392,7 +7495,9 @@ paths:
         runs (403 otherwise). Holds the call up to `waitMillis` (0 to 30 000, 25 000 by default)
         and answers as soon as a wait of the session is answered: each answer is handed over once (`messages`, oldest
         first, each starting with `[Ostrom wait answered]`). `open` says a wait asked by the session is still open, so
-        the hook keeps holding the agent; a session with no open wait answers at once."
+        the hook keeps holding the agent; a session with no open wait answers at once. With `waitMillis` 0 it never
+        holds: a cloud session's runner asks so once an execution has started, and starts the agent with the answers
+        that arrived while the session was paused as its first message."
       parameters:
       - name: session
         in: query
@@ -7464,6 +7569,17 @@ paths:
       tags:
       - waits
       summary: Answer a wait; first answer wins (409 wait_closed)
+      description: "The answer stays on the wait and is handed once to the agent of its session, if any (`POST
+        /api/v1/waits/wake`). A wait of a cloud session that is paused (or pausing), not ended, resumes it, on its
+        owner's behalf and within the organization's limits (audited `cloud.session.woken`), and the runner of its next
+        execution starts the agent with the answer as its first message; a cloud session that runs keeps the answer on
+        the wait for its next execution (its Stop hook does not hold the agent). A session that cannot resume (its
+        organization out of hours or at a cap, its owner gone) stays paused with the answer kept on the wait, and an
+        ended one takes nothing. A wait for a time or an event that resolves by itself
+        (`time_reached`, `event_received`, `timed_out`) wakes its session the same way.
+        The value of a `secret` field travels in this request and nowhere else: it is sealed apart in the same
+        transaction (`waits.secrets.v1`, 503 `secrets_unavailable` when the server has no key to seal with), and the
+        stored answer holds `provided` or `not provided` for the field."
       parameters:
       - name: id
         in: path
@@ -7492,6 +7608,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '503':
           $ref: '#/components/responses/Error'
   /api/v1/waits/{id}/cancel:
     parameters:
@@ -7565,7 +7683,8 @@ paths:
               $ref: '#/components/schemas/WaitEventRequest'
       responses:
         '202':
-          description: The wait is resolved and its session will be woken
+          description: "The wait is resolved and its session will be woken (a paused cloud session resumes, as
+            with `answerWait`)"
           content:
             application/json:
               schema:
@@ -9894,11 +10013,13 @@ paths:
         `SSL_CERT_DIR`, `NODE_EXTRA_CA_CERTS`, `REQUESTS_CA_BUNDLE`; what else steers the loader or a runtime
         (`GLIBC_TUNABLES`, `NODE_TLS_REJECT_UNAUTHORIZED`, `NODE_ICU_DATA`, `ELECTRON_RUN_AS_NODE`, `PYTHONUSERBASE`,
         `PYTHONEXECUTABLE`, `PYTHONPLATLIBDIR`, `PYTHONBREAKPOINT`, `PERL5DB`, `CLASSPATH`, `DOTNET_STARTUP_HOOKS`,
-        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`), the
+        `CORECLR_PROFILER`, `CORECLR_PROFILER_PATH`, `CORECLR_ENABLE_PROFILING`, `CURL_CA_BUNDLE`, `SSLKEYLOGFILE`,
+        `GCONV_PATH`), the
         shell (`OLDPWD`, `SHELLOPTS`, `BASHOPTS`, `CDPATH`, `GLOBIGNORE`, `PS4`, `ZDOTDIR`), Git, SSH and the GitHub CLI
         (`GIT_TERMINAL_PROMPT`, `GH_CONFIG_DIR`, `GIT_ASKPASS`, `SSH_ASKPASS`, `GIT_PROXY_COMMAND`, `GIT_EXTERNAL_DIFF`,
         `GIT_PAGER`, `GIT_EDITOR`, `GIT_SEQUENCE_EDITOR`, `GIT_TEMPLATE_DIR`, `GIT_DIR`, `GIT_WORK_TREE`,
-        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`) or an agent's
+        `GIT_INDEX_FILE`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES`, `GIT_COMMON_DIR`, and what
+        weakens Git's TLS or protocols: `GIT_SSL_NO_VERIFY`, `GIT_SSL_CAINFO`, `GIT_SSL_CAPATH`, `GIT_ALLOW_PROTOCOL`) or an agent's
         tools (`RIPGREP_CONFIG_PATH`); and the prefixes `LD_`, `DYLD_`, `OSTROM_`, `TEAMCODE_`, `ANTHROPIC_`,
         `CLAUDE_`, `OPENAI_`, `CODEX_`, `XDG_`, `GIT_CONFIG_`, `BASH_FUNC_` (personal variants too). A variant stored
         under a name reserved later is never served to an agent, and can still be unassigned or deleted. The
@@ -11341,18 +11462,26 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Reservations not yet reconciled
+      summary: Unknown usage awaiting review (`capacity.usagereconciliation.v1`)
+      description: "TeamCode's Usage review. A model call whose final usage never reached the ledger (a stream cut, a
+        replica lost) keeps its conservative charge, the cost it was admitted for, instead of counting as zero: its
+        hold has run out and stays charged to the day it was held. This lists those holds, newest first, 50 at most a
+        page (`next` is the `before` of the following page). `before` is the `id` of the last item of the previous page;
+        `member` keeps one member's. A hold still within its lease is not listed. Owners and admins, a person signed
+        in; a member, a key (an administrator's included) or an agent: 403. Never cached"
       parameters:
       - name: member
         in: query
         required: false
         schema:
           type: string
+        description: Only this member's (`OrgMember.id`)
       - name: before
         in: query
         required: false
         schema:
           type: string
+        description: The `id` of the last item of the previous page
       responses:
         '200':
           description: OK
@@ -11364,8 +11493,9 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: {}
+                      $ref: '#/components/schemas/PendingUsage'
+                  next:
+                    type: string
                 required:
                 - items
         '400':
@@ -11386,7 +11516,9 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Reconciliation history
+      summary: Reconciliation history (`capacity.usagereconciliation.v1`)
+      description: "The corrections made to unknown usage, newest first, 50 at most a page, kept as long as their holds
+        (90 days). Same paging, filters and authority as `listPendingUsage`"
       parameters:
       - name: member
         in: query
@@ -11409,10 +11541,46 @@ paths:
                   items:
                     type: array
                     items:
-                      type: object
-                      additionalProperties: {}
+                      $ref: '#/components/schemas/UsageReconciliation'
+                  next:
+                    type: string
                 required:
                 - items
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/usage/reservations/{id}:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getUsageReview
+      x-ostrom-status: planned
+      tags:
+      - budgets
+      summary: One hold under review, or its correction (`capacity.usagereconciliation.v1`)
+      description: "`pending` while the hold is still unknown, `reconciliation` once an administrator corrected it
+        (the two are never both present). 404 for an id that is neither. The id is a resource identifier, not a
+        capability. Same authority as `listPendingUsage`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageReview'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -11431,7 +11599,16 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Reconcile a reservation with the provider bill
+      summary: Replace an unknown charge with what the provider billed (`capacity.usagereconciliation.v1`)
+      description: "An administrator's attestation of provider evidence for that exact call; the server does not fetch
+        or verify the record. Only a hold whose lease has run out and that no ledger line settled can be corrected,
+        once: a final correction, not a refund of known usage. `expectedMicros` must equal the charge displayed
+        (`PendingUsage.micros`) and `expectedProviderRequestId` the displayed provider request id (absent when none was
+        captured), else 409 `stale_reconciliation` and the view must be reviewed again. `micros` is the verified
+        total (0 to $100 000 000), the same correction again answers the original record without another delta, a different
+        one 409 `reconciled`. The correction applies to the day the hold was held and to the member, workflow and
+        launch it was attributed to then; it creates nothing on today's ledger. Audited (`usage.reconciled`). Owners
+        and admins, a person signed in (a sign-in less than 5 minutes old)"
       parameters:
       - name: id
         in: path
@@ -11445,31 +11622,57 @@ paths:
             schema:
               type: object
               properties:
-                usd:
-                  type: number
+                expectedMicros:
+                  type: integer
+                  description: The charge as the reviewer saw it, USD millionths
+                expectedProviderRequestId:
+                  type: string
+                  maxLength: 128
+                  description: The provider request id as the reviewer saw it; absent when it showed none
+                micros:
+                  type: integer
+                  minimum: 0
+                  maximum: 100000000000000
+                  description: The verified total, USD millionths (0 to $100 000 000)
+                source:
+                  type: string
+                  enum:
+                  - PROVIDER_RECORD
+                  - PROVIDER_CONFIRMATION
+                reference:
+                  type: string
+                  minLength: 1
+                  maxLength: 240
+                  description: A non-secret pointer to the evidence, one line
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 240
+                  description: One line
               required:
-              - usd
+              - expectedMicros
+              - micros
+              - source
+              - reference
+              - reason
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                  usd:
-                    type: number
-                required:
-                - id
-                - usd
+                $ref: '#/components/schemas/UsageReconciliation'
         '400':
           $ref: '#/components/responses/Error'
         '401':
           $ref: '#/components/responses/Error'
         '403':
-          $ref: '#/components/responses/Error'
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
         '404':
           $ref: '#/components/responses/Error'
         '409':
@@ -11482,13 +11685,22 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Budget overrides of a member
+      summary: Budget overrides of a member (`capacity.budgetoverrides.v1`)
+      description: "TeamCode's temporary quota overrides: the member's grants, newest first, 50 at most a page (`next`
+        is the `before` of the following page), revoked and expired ones included, and `activeId`, the one in force
+        now. Owners and admins, a person signed in; a member (their own is in `getMyBudget`), a key or an agent: 403"
       parameters:
       - name: login
         in: path
         required: true
         schema:
           type: string
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: string
+        description: The `id` of the last item of the previous page
       responses:
         '200':
           description: OK
@@ -11503,6 +11715,9 @@ paths:
                       $ref: '#/components/schemas/BudgetOverride'
                   next:
                     type: string
+                  activeId:
+                    type: string
+                    description: The override in force now, absent without one
                 required:
                 - items
         '400':
@@ -11520,7 +11735,17 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Grant a dated exception
+      summary: Grant a temporary daily budget (`capacity.budgetoverrides.v1`)
+      description: "While active, `micros` replaces the member's own daily limit that stops the calls (or adds one when
+        they have none): the total the member may spend today (UTC), not an addition, so a member who spent 80 under
+        a day limit of 100 and is granted 300 may spend 220 more, and an override never refunds what was spent. `0`
+        stops the member's calls; it does not mean unlimited. It ends at the earlier of `durationMinutes` and the next
+        midnight UTC, by the database's clock, with no job. The organization's limits, the member's monthly limit,
+        the workflow's, the launch's and the model policy still apply, and so do calls in flight. `replacesId` must be
+        the override in force when there is one, and null when there is none, else 409 `stale_budget_override`: it
+        replaces it, which stays in the history. At most 5 000 grants a member and 100 000 an organization: past
+        them, 400 `invalid_budget_override`. Audited (`budget_override.granted`, `budget_override.superseded`). Owners
+        and admins, a person signed in (a sign-in less than 5 minutes old)"
       parameters:
       - name: login
         in: path
@@ -11534,15 +11759,26 @@ paths:
             schema:
               type: object
               properties:
-                usd:
-                  type: number
-                expiresAt:
-                  type: string
+                micros:
+                  type: integer
+                  minimum: 0
+                  maximum: 100000000000000
+                  description: The member's total daily allowance, USD millionths (0 to $100 000 000)
+                durationMinutes:
+                  type: integer
+                  minimum: 1
+                  maximum: 1440
                 reason:
                   type: string
+                  minLength: 1
+                  maxLength: 240
+                  description: One line, without secrets
+                replacesId:
+                  type: string
+                  description: The override in force, to replace it
               required:
-              - usd
-              - expiresAt
+              - micros
+              - durationMinutes
               - reason
       responses:
         '201':
@@ -11556,7 +11792,12 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '403':
-          $ref: '#/components/responses/Error'
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
         '404':
           $ref: '#/components/responses/Error'
         '409':
@@ -11569,7 +11810,10 @@ paths:
       x-ostrom-status: planned
       tags:
       - budgets
-      summary: Revoke an exception
+      summary: Revoke a temporary daily budget (`capacity.budgetoverrides.v1`)
+      description: "The member's own limits apply again at once; calls in flight finish. Revoking one already revoked
+        answers it as it is (the first revocation is kept) and never revokes another grant. An expired grant: 409
+        `stale_budget_override`. Audited (`budget_override.revoked`). Same authority as `createBudgetOverride`"
       parameters:
       - name: login
         in: path
@@ -11581,6 +11825,20 @@ paths:
         required: true
         schema:
           type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 240
+                  description: One line
+              required:
+              - reason
       responses:
         '200':
           description: OK
@@ -11593,7 +11851,116 @@ paths:
         '401':
           $ref: '#/components/responses/Error'
         '403':
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
+        '404':
           $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/policy/api-prices:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getApiPrices
+      x-ostrom-status: planned
+      tags:
+      - budgets
+      summary: The organization's API price table (`capacity.apiprices.v1`)
+      description: "TeamCode's editable price table (ADR 0002 step 1): what the provider's pay-as-you-go API charges, per
+        million tokens, for each model from a date on. It prices the model calls of the organization (their cost in
+        the ledger, the budgets, the automatic pool size). With no row at all the gateway's built-in Anthropic list
+        prices apply (`defaults: true`); with any row, only the rows do, and a model with no row is unpriced (cost 0,
+        flagged). Any member, or a key holding `usage:read`"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiPriceTable'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: setApiPrices
+      x-ostrom-status: planned
+      tags:
+      - budgets
+      summary: Replace the organization's API price table (owners and admins, a person signed in)
+      description: "Replaces every row (an empty list goes back to the built-in prices). At most 200 rows; a provider
+        (`anthropic`, `openai`), a lowercase model or family prefix, a date, four prices from 0 to 1 000 000 000 000
+        with input and output above 0; one row a provider, model and date, else 400 `invalid_api_price`. A row prices
+        a call from its date until a later row of the same model; an exact model wins over the longest prefix. Audited
+        (`capacity.api_price_changed`, with the number of rows before and after)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiPriceTable'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiPriceTable'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/policy/api-prices/load-defaults:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: loadApiPriceDefaults
+      x-ostrom-status: planned
+      tags:
+      - budgets
+      summary: Add Anthropic's current list prices to the table (owners and admins, a person signed in)
+      description: "Adds the built-in rows (Anthropic's list prices read on 2026-10-21, cache writes at the 5-minute
+        rate) the table lacks, dated that day; a row already present for the same model and date is kept as typed, so
+        loading twice changes nothing. Audited (`capacity.api_prices_defaults_loaded`). The answer is the whole table"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiPriceTable'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
         '404':
           $ref: '#/components/responses/Error'
         '409':
@@ -12047,7 +12414,11 @@ paths:
       - runners
       summary: Create a cloud profile
       description: 'An owner or an admin of the organization, signed in. The namespace must be one the cluster allows
-        and the image a valid reference; 400 `invalid_cloud_profile` naming the field otherwise. `version` is 0'
+        and the image a valid reference; 400 `invalid_cloud_profile` naming the field otherwise. `version` is 0.
+        A server announcing `runners.cloud.retention.v1` also reads the workspace storage class (the profile''s,
+        else the cluster''s default) on the cluster: 422 `storage_class_missing` when it does not exist, 422
+        `storage_class_retains_volumes` when its `reclaimPolicy` is not `Delete`, since a deleted session must leave
+        no provider volume behind'
       requestBody:
         required: true
         content:
@@ -12069,6 +12440,8 @@ paths:
           $ref: '#/components/responses/Error'
         '404':
           $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
   /api/v1/cloud/profiles/{id}:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
@@ -12087,7 +12460,11 @@ paths:
       summary: Publish a new version of a cloud profile
       description: 'An owner or an admin of the organization, signed in. `version` is the current one (409
         `cloud_profile_conflict` otherwise); each save publishes an immutable version, which a running session keeps.
-        404 `cloud_profile_not_found` for a profile of another organization or none'
+        404 `cloud_profile_not_found` for a profile of another organization or none.
+        A server announcing `runners.cloud.retention.v1` also reads the workspace storage class (the profile''s,
+        else the cluster''s default) on the cluster: 422 `storage_class_missing` when it does not exist, 422
+        `storage_class_retains_volumes` when its `reclaimPolicy` is not `Delete`, since a deleted session must leave
+        no provider volume behind'
       requestBody:
         required: true
         content:
@@ -12110,6 +12487,8 @@ paths:
         '404':
           $ref: '#/components/responses/Error'
         '409':
+          $ref: '#/components/responses/Error'
+        '422':
           $ref: '#/components/responses/Error'
   /api/v1/cloud/settings:
     parameters:
@@ -12297,6 +12676,282 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CloudSession'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfer-recipients:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudTransferRecipients
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The members a session can be given to, for a picker"
+      description: "`runners.cloud.transfer.v1` (TeamCode's `GET /cloud/transfer-recipients`). Members of the organization who can own a session, by login, at most 500, the caller included (an administrator may take a session over): only the id, the login and whether the member is an administrator. An administrator, or a member while the instance's `memberTransfers` is `offer` (403 `transfer_disabled` otherwise). A listed member can still be refused for a given session, with 422 `recipient_ineligible`"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransferRecipients'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/transfer:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: transferCloudSession
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Give one of the caller's cloud sessions to another member"
+      description: "`runners.cloud.transfer.v1`. Only the owner asks. An administrator's transfer is `accepted` at once; a member's is `offered` and the recipient accepts within 7 days (403 `transfer_disabled` when the instance's `memberTransfers` is `disabled`). Accepting pauses the session (the agent stops, its pod is gone); the owner changes only then, and the workspace is marked untrusted for the recipient. At most one open transfer per session (409 `transfer_pending`); a session still being created is 409 `session_preparing`, an ended one 409 `session_not_running`; a recipient who cannot own the session (disabled, not a member, at their cloud session limit) is 422 `recipient_ineligible` naming every reason. `Idempotency-Key` is required (400 `idempotency_key_required`): a retry returns the first transfer (`Idempotency-Replayed: true`), the same key with another request is 422 `idempotency_conflict`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: true
+        description: 1 to 128 characters of `A-Za-z0-9._:-`
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCloudTransferRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudTransfers
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The caller's transfers, incoming and outgoing, newest first"
+      description: "`runners.cloud.transfer.v1`. A transfer is visible to its two members only. An offer past its validity reads `expired` before the server records it. `direction` is `incoming`, `outgoing` or `all` (default), `state` is repeatable"
+      parameters:
+      - name: direction
+        in: query
+        required: false
+        schema:
+          type: string
+          enum:
+          - incoming
+          - outgoing
+          - all
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: array
+          items:
+            type: string
+      - name: session
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransferPage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "One transfer"
+      description: "`runners.cloud.transfer.v1`. 404 for anyone but the two members"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/accept:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: acceptCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Accept a session offered to the caller"
+      description: "`runners.cloud.transfer.v1`. Only the recipient. The session pauses, then becomes the recipient's; before it runs again the runner resets the agent's settings and the repositories' Git configuration (`untrustedWorkspace`). Idempotent. 409 `transfer_expired`, `transfer_not_open`; 422 `recipient_ineligible`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcceptCloudTransferRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/decline:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: declineCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Decline an offered session"
+      description: "`runners.cloud.transfer.v1`. Only the recipient; only an offered transfer"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/transfers/{id}/cancel:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cancelCloudTransfer
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Withdraw an offer, or cancel an accepted transfer before the owner change starts"
+      description: "`runners.cloud.transfer.v1`. Only the session's former owner; an accepted transfer only by an administrator, and not once the session is `transferring` (409 `transfer_in_progress`)"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudTransfer'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -13004,15 +13659,401 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/events:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudEvents
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: A page of a conversation session's transcript, in ascending order
+      description: "`runners.cloud.conversation.v1` (TeamCode's `GET /cloud/sessions/{id}/events`). Owner, or an
+        administrator of the organization. `firstSeq` is the oldest retained event, `lastSeq` the session's newest;
+        continue with `after=nextAfter` or `before=nextBefore`. `feed` (`runners.cloud.transcript.feeds.v1`) keeps
+        `main` (the main agent's events) or one subagent's (the id of the `tool.call` that started it); 400
+        `invalid_feed` otherwise. A terminal session has no transcript: an empty page"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: after
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: before
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 100
+      - name: feed
+        in: query
+        required: false
+        schema:
+          type: string
+          pattern: '^[A-Za-z0-9_.:-]{1,128}$'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudEventPage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/events/stream:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: streamCloudSession
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Server-sent events of a conversation session's transcript"
+      description: "`runners.cloud.conversation.v1`. Each event is `id: <seq>`, `event: <type>`, `data:` the
+        `CloudEvent` as JSON; resumes after `Last-Event-ID` (or `?after=`). Keep-alive comments every 15 s, `retry:
+        2000`. Ends with `event: end` once the session is terminated, or `event: denied` when the caller lost access
+        (checked again every 15 s). Carries every feed: each event names its own"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: after
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int64
+          minimum: 0
+      - name: Last-Event-ID
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Server-sent events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/agents:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudSubagents
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The session's subagents and their state, oldest first, the newest 200"
+      description: "`runners.cloud.transcript.feeds.v1` (TeamCode's `GET /cloud/sessions/{id}/agents`). Kept by the
+        server as events arrive: an agent appears with its `tool.call` (`Agent`, or `Task`), counts its tool uses and
+        ends with that call's result; a live background task keeps it `running`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudSubagentList'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
   /api/v1/cloud/sessions/{id}/messages:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: listCloudInputs
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The session's inputs (messages, interrupts, permission answers, task stops), newest first"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: before
+        in: query
+        required: false
+        description: The `nextBefore` of the previous page
+        schema:
+          type: string
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInputPage'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
     post:
       operationId: sendCloudMessage
       x-ostrom-status: planned
       tags:
       - runners
-      summary: Send a message to the agent
+      summary: Send a message to the agent of a conversation session
+      description: "`runners.cloud.conversation.v1` (TeamCode's `POST /cloud/sessions/{id}/messages`). The owner, or
+        everyone who may use the session when `githubAccess` is `shared`; the caller is always the author, an agent
+        acting for someone else is refused (400 `on_behalf_unsupported`). Text 1 to 32,000 characters (empty only
+        with `fileIds`), body at most 256 KiB. `Idempotency-Key` or `clientMessageId` (one, not both, 400 otherwise):
+        a retry returns the first input with `Idempotency-Replayed: true`, the same key with another text is 422
+        `idempotency_conflict`. `expectedLastEventSeq` refuses it (409 `stale_view`) when newer events exist. A
+        message to a paused session resumes it (`woke: true`) unless `wake` is false; a terminal session is 409
+        `terminal_session`, a terminated one 409 `session_not_running`. At most 100 pending inputs per session (429
+        `too_many_pending_inputs`). Levels: `queued`, `delivered` (handed to the runner), `consumed` (written to the
+        agent, `eventSeq` points to its `message.user` event), and the final `cancelled` or `rejected` with a
+        `reason`; a delivery not acknowledged within 60 s, or whose execution ended, is offered again, up to 3
+        attempts (`rejected`, `delivery_failed`)"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCloudMessageRequest'
+      responses:
+        '202':
+          description: Accepted; the first acknowledgement on a replay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInput'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/messages/{input}:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getCloudInput
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: One input of the session and its acknowledgement
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: input
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInput'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/interrupt:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: interruptCloudSession
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Stops the agent's current turn"
+      description: "`runners.cloud.conversation.v1`. Delivered before queued messages; never wakes a session; 409
+        `nothing_to_interrupt` unless the session is running with its runner ready"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInput'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/permissions:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: answerCloudPermission
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: Answer a permission request of the agent (a tool use to approve, or a question)
+      description: "`runners.cloud.permissions.v1` (TeamCode's `POST /cloud/sessions/{id}/permissions`). Body at most
+        64 KiB, `Idempotency-Key` accepted. A question is answered by whoever may message the session; a tool use is
+        allowed or denied by the owner or an administrator only (403 `permission_owner_only`). Never wakes a session:
+        409 `nothing_to_answer` unless it runs. 409 `unknown_permission_request`, `permission_request_answered`,
+        `permission_request_expired` or `permission_request_ended`; 400 `invalid_permission_answer` for indexes the
+        request does not have, 400 `permission_input_unseen` for an `allow` of a request whose input was left out of
+        the event. At most 16 pending answers per session"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnswerCloudPermissionRequest'
+      responses:
+        '202':
+          description: Accepted (kind `permission`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInput'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/permission-bypass:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    put:
+      operationId: setCloudPermissionBypass
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The owner's standing approval of the session's tool uses (Bypass)"
+      description: "`runners.cloud.permissions.bypass.v1` (TeamCode's `PUT /cloud/sessions/{id}/permission-bypass`).
+        While on, the server allows each tool-use `permission.request` itself, as the owner, in the call that stores
+        it; a question still waits for a person. Idempotent and audited (`cloud.session.permission_bypass_enabled`,
+        `..._disabled`). The owner only, never on their behalf (403 `bypass_owner_only`); 409 `session_not_running`
+        once terminated"
       parameters:
       - name: id
         in: path
@@ -13024,24 +14065,14 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                text:
-                  type: string
-              required:
-              - text
+              $ref: '#/components/schemas/SetCloudPermissionBypassRequest'
       responses:
-        '202':
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                required:
-                - id
+                $ref: '#/components/schemas/CloudSession'
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -13052,28 +14083,596 @@ paths:
           $ref: '#/components/responses/Error'
         '409':
           $ref: '#/components/responses/Error'
-  /api/v1/cloud/sessions/{id}/events:
+  /api/v1/cloud/sessions/{id}/model:
     parameters:
     - $ref: '#/components/parameters/OstromOrg'
-    get:
-      operationId: streamCloudSession
+    put:
+      operationId: setCloudSessionModel
       x-ostrom-status: planned
       tags:
       - runners
-      summary: Events of a cloud session
+      summary: "Changes the model of the session's agent, while it runs too"
+      description: "`runners.cloud.model.v1` (TeamCode's `PUT /cloud/sessions/{id}/model`). The owner only. 1 to 120
+        letters, digits and `. _ : / -` (400 `invalid_agent`); the organization's model policy decides (403
+        `model_not_allowed`). Recorded at once (audited `cloud.session.model_changed`, the same model writes
+        nothing), so a paused session starts with it; a running conversation agent also gets a `set_model` input,
+        taken at its next turn. A terminal session's agent gets it at its next start. 409 `session_not_running` once
+        terminated"
       parameters:
       - name: id
         in: path
         required: true
         schema:
           type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCloudModelRequest'
       responses:
         '200':
-          description: Server-sent events
+          description: OK
           content:
-            text/event-stream:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudSession'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/effort:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    put:
+      operationId: setCloudSessionEffort
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Changes the effort (reasoning level) of the session's agent, while it runs too"
+      description: "`runners.cloud.effort.v1` (TeamCode's `PUT /cloud/sessions/{id}/effort`), as `setCloudSessionModel`
+        for the effort: 1 to 120 letters, digits and `. _ : / -` (400 `invalid_agent`), no policy. Clients suggest
+        `low`, `medium`, `high`, `xhigh` and `max` for Claude Code, `low`, `medium`, `high` and `xhigh` for Codex.
+        Audited `cloud.session.effort_changed`; a running conversation agent gets a `set_effort` input"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetCloudEffortRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudSession'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/tasks/stop:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: stopCloudTask
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Stops one of the agent's background tasks (a subagent, a background command, a monitor)"
+      description: "`runners.cloud.tasks.v1` (TeamCode's `POST /cloud/sessions/{id}/tasks/stop`). Whoever may message
+        the session. A `stop_task` input, delivered before queued messages, never waking a session (409
+        `nothing_to_interrupt`); rejected `task_stop_unsupported` for a runner that cannot stop tasks, `unknown_task`
+        when the task ended meanwhile. 400 `invalid_task` for an id outside 1 to 64 of letters, digits, `_` and `-`"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopCloudTaskRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudInput'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/sessions/{id}/files:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: uploadCloudFile
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: Upload a file for the next message (an image, a PDF or UTF-8 text)
+      description: "`runners.cloud.files.v1` (TeamCode's `POST /cloud/sessions/{id}/files`). The raw bytes; authorized
+        like a message. The type is recognized from the bytes (PNG, JPEG, GIF, WebP, PDF, else UTF-8 text without NUL),
+        415 `file_type_not_allowed` otherwise, 400 `empty_file`; 413 `file_too_large` above the organization's
+        `fileMaxMebibytes`; 429 `upload_quota` (20 unsent files or 100 MiB per session, 1 GiB and 500 files per member
+        per UTC day); 409 `file_storage_not_configured` without a tested artifact bucket, 503
+        `file_storage_unavailable`. `Idempotency-Key` makes a retry of the same name and bytes return the first file
+        (200). Name it in a message's `fileIds` before `expiresAt`; kept 24 hours at most, deleted once the host has
+        it"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+          maxLength: 1024
+      - name: Idempotency-Key
+        in: header
+        required: false
+        schema:
+          type: string
+          maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '200':
+          description: The first file of this `Idempotency-Key`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudFile'
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudFile'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
+        '415':
+          $ref: '#/components/responses/Error'
+        '422':
+          $ref: '#/components/responses/Error'
+        '429':
+          $ref: '#/components/responses/Error'
+        '503':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/files/policy:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getCloudFilePolicy
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "Whether the caller's organization can send files to sessions now, and its limits"
+      description: "`runners.cloud.files.v1` (TeamCode's `GET /cloud/files/policy`)"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudFilePolicy'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/runner/agent:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cloudRunnerAgent
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The runner of a conversation session reads how to start its agent; bearer: the execution's runner token"
+      description: "`runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/agent`). Another epoch is 409
+        `execution_fenced`, a terminal session 409 `terminal_session`. The answer's flags say what the server takes:
+        `permissionRelay` (`permission.request` events), `liveText` (`message.agent.delta`), `backgroundTasks`
+        (`tasks` events); a runner never sends an event type the server did not announce, which would refuse the
+        batch. `conversation` is the agent's conversation id to resume, or empty for a fresh one"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                epoch:
+                  type: integer
+                  format: int64
+              required:
+              - sessionId
+              - epoch
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  kind:
+                    type: string
+                    description: claude or codex
+                  version:
+                    type: string
+                  model:
+                    type: string
+                  effort:
+                    type: string
+                  conversation:
+                    type: string
+                  permissionRelay:
+                    type: boolean
+                  permissionDeadlineMinutes:
+                    type: integer
+                    description: How long a request waits before the runner denies it; 0 waits without a deadline
+                  liveText:
+                    type: boolean
+                  backgroundTasks:
+                    type: boolean
+                  owner:
+                    type: object
+                    description: The member the execution runs for, as the agent is told; never an email
+                    properties:
+                      username:
+                        type: string
+                      githubLogin:
+                        type: string
+                    required:
+                    - username
+                required:
+                - kind
+                - conversation
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/runner/events:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cloudRunnerEvents
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The runner uploads a batch of the agent's normalized transcript events"
+      description: "`runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/events`). `sequence` is the runner's
+        own consecutive counter per epoch, from 1: a retried batch is deduplicated. At most 200 events and 2 MB. The
+        server bounds and masks each event again. A `turn` `started` makes the session's agent busy, `completed`,
+        `interrupted` or `failed` idle again; both count as activity. A `status` with `conversation` records the id to
+        resume. 409 `execution_fenced` for another epoch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                epoch:
+                  type: integer
+                  format: int64
+                events:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    properties:
+                      sequence:
+                        type: integer
+                        format: int64
+                      type:
+                        type: string
+                      data:
+                        type: object
+                        additionalProperties: true
+                    required:
+                    - sequence
+                    - type
+                    - data
+              required:
+              - sessionId
+              - epoch
+              - events
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acceptedThrough:
+                    type: integer
+                    format: int64
+                  lastSeq:
+                    type: integer
+                    format: int64
+                required:
+                - acceptedThrough
+                - lastSeq
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+        '413':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/runner/inputs:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cloudRunnerInputs
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The runner long-polls the session's queued inputs; they come back `delivered`"
+      description: "`runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/inputs`). Waits up to `waitMillis`
+        (at most 20,000). Interrupts, task stops and permission answers come before messages. Nothing is delivered
+        unless the session runs and is desired running. With `desiredStatus` (the one the runner last knew), the poll
+        also ends as soon as the session's differs, so a pause reaches the runner within half a second. An input kind
+        the runner does not announce (`acceptsFiles`, `acceptsTaskStops`, `acceptsModelChanges`,
+        `acceptsEffortChanges`) is rejected for it (`files_unsupported`, `task_stop_unsupported`,
+        `model_change_unsupported`, `effort_change_unsupported`) instead of being delivered"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                epoch:
+                  type: integer
+                  format: int64
+                waitMillis:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  maximum: 20000
+                desiredStatus:
+                  type: string
+                acceptsFiles:
+                  type: boolean
+                acceptsTaskStops:
+                  type: boolean
+                acceptsModelChanges:
+                  type: boolean
+                acceptsEffortChanges:
+                  type: boolean
+              required:
+              - sessionId
+              - epoch
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  inputs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        kind:
+                          type: string
+                          description: message, interrupt, permission, stop_task, set_model or set_effort
+                        text:
+                          type: string
+                          description: "A message's text; a permission answer's JSON; a task's id; a model or effort"
+                        attempt:
+                          type: integer
+                        files:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              size:
+                                type: integer
+                                format: int64
+                              contentType:
+                                type: string
+                              sha256:
+                                type: string
+                            required:
+                            - id
+                            - name
+                            - size
+                            - contentType
+                            - sha256
+                      required:
+                      - id
+                      - kind
+                  desiredStatus:
+                    type: string
+                required:
+                - inputs
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/runner/inputs/ack:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: cloudRunnerInputsAck
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: The runner acknowledges inputs it handed to the agent (consumed) or refused (rejected)
+      description: "`runners.cloud.conversation.v1` (TeamCode's `POST /cloud/runner/inputs/ack`). A consumed message
+        becomes its `message.user` event; a consumed permission answer an `input` event. A repeat is accepted and
+        changes nothing"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sessionId:
+                  type: string
+                epoch:
+                  type: integer
+                  format: int64
+                acks:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      status:
+                        type: string
+                        enum:
+                        - consumed
+                        - rejected
+                      reason:
+                        type: string
+                    required:
+                    - id
+                    - status
+              required:
+              - sessionId
+              - epoch
+              - acks
+      responses:
+        '204':
+          description: Recorded
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/cloud/runner/files/{id}:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: cloudRunnerFile
+      x-ostrom-status: planned
+      tags:
+      - runners
+      summary: "The bytes of a file a message delivered to this very execution carries"
+      description: "`runners.cloud.files.v1` (TeamCode's `GET /cloud/runner/files/{id}`), with `X-Ostrom-Sha256`. 404
+        for any other file, 409 `execution_fenced` for another epoch"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: sessionId
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: epoch
+        in: query
+        required: true
+        schema:
+          type: integer
+          format: int64
+      responses:
+        '200':
+          description: The bytes
+          content:
+            application/octet-stream:
               schema:
                 type: string
+                format: binary
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -14288,6 +15887,314 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Capacity'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/forecasts:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getForecasts
+      x-ostrom-status: served
+      tags:
+      - sharing
+      summary: Quota forecasts of one shared account (`capacity.forecasts.v1`)
+      description: "TeamCode's Forecasts page. For each current provider window of the account: its latest reading, the
+        readings of the last hour cut into segments (a segment never joins two readings across a reset, a drop in
+        utilization or more than five minutes without a reading), the rate learned from the latest segment (at least
+        three readings over at least a minute, never across a drop) and when, at that rate, the window reaches the
+        account's `utilizationCeiling` (`pressureThreshold`). An unknown state is said, never drawn as 0 %: `unknown`
+        (no reset known, or no rate learned yet), `stale` (the reading is older than five minutes or its reset has
+        passed), `exhausted` (at or above the threshold), `idle` (a rate of zero), `reset_first` or `exhausts_first`.
+        Without `account`, the first account by id. Owners and admins of the organization only, signed in (a browser
+        session or the unlocked app); a member, a key, an agent or a device credential: 403. An account of another
+        organization: 404; `account` given twice: 400 `invalid_account`. Bounded: at most 64 accounts listed, 128
+        windows and 8,192 readings, `truncated` true past a bound. Never names a credential or a provider identity
+        beyond the account's label and e-mail. Answered with `Cache-Control: no-store`. The console reads it again
+        every 15 seconds while the page is open (TeamCode's live updates)"
+      parameters:
+      - name: account
+        in: query
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastSnapshot'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/pools/size:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getPoolSize
+      x-ostrom-status: planned
+      tags:
+      - sharing
+      summary: The organization's automatic daily budget sized from its shared accounts (`capacity.poolsize.v1`)
+      description: "TeamCode's automatic shared pool size (ADR 0002 step 2), computed on demand from the same data as
+        the job that stores it every ten minutes. Each shared window of each account learns its full capacity in
+        API-equivalent (USD millionths at the gateway's prices): a sample pairs two readings of the same window period
+        at least five points and one hour apart and divides the cost the gateway settled on the account between them by
+        the rise; with at least three samples over seven days, the median sizes the budget and the upper quartile is
+        the reported capacity. An account's daily figure is the smaller of its five-hour term (five-hour capacity ×
+        its ceiling × 24 / 5) and its weekly term (weekly points left before its ceiling × weekly capacity / days left
+        before the reset). Accounts that cannot serve count for nothing (`unavailable`); accounts without a fresh
+        reading or an estimate are left out (`no_fresh_observation`, `no_estimate`). With `autoPoolSize` on
+        (`PUT /api/v1/policy/pacing`), the stored value, moving at most 20 % an hour and younger than an hour, replaces
+        the organization's daily budget (`manualDailyMicros`); otherwise, or without an estimate (`reason`), the typed
+        budget applies. Owners and admins (a person signed in, or a key holding `team:read`); anyone else: 403"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoolSize'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/policy/pacing:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getPacingSettings
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: The capacity controller's settings (`capacity.pacing.v1`)
+      description: "Any member reads them (`inference:use` on a key). Off by default: `observationOnly` false (the
+        controller spaces admissions and sends its advice to agents) and `autoPoolSize` false (the typed daily budget
+        applies)"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacingSettings'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+    put:
+      operationId: setPacingSettings
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: Change the capacity controller's settings (owners and admins, a person signed in)
+      description: "A field omitted keeps its stored value. Recorded in the organization's audit log with the names of
+        the fields changed. A key, an agent or a device credential: 403"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PacingSettings'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacingSettings'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          description: step_up_required (a write from the console needs a sign-in less than 5 minutes old; sign in
+            again, then send it again), or forbidden (the key is `error.type`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StepUpOrForbidden'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/directives/preview:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: previewDirective
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: The controller's current advice for the caller, also in observation mode (`capacity.pacing.v1`)
+      description: "Informational: the settings and the advice the controller would give the caller now, whether or not
+        it is delivered. Any member (`inference:use` or `guidance` on a key)"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PacingPreview'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/directives/current:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    get:
+      operationId: getCurrentDirective
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: The caller's current capacity advice, member-wide (`capacity.pacing.v1`)
+      description: "TeamCode's agent guidance: `directive` is absent in observation mode, before the controller's first
+        pass, and once the advice expires (3 minutes after it was made; the controller renews it every minute). The
+        most constrained target the member's recent calls used governs. A person, an agent token, or a key holding
+        `guidance`"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectiveResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+    post:
+      operationId: getSessionDirective
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: The current capacity advice of one of the caller's agent sessions (`capacity.pacing.v1`)
+      description: "As `getCurrentDirective`, scoped to the session named (its own calls' targets); an agent token only
+        names its own session (403 otherwise); a session id of
+        another member reads nothing of theirs. A malformed session id: 400. Answered with `Cache-Control: no-store`"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectiveScope'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectiveResponse'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/directives/claim:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: claimDirective
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: Claim the delivery of a session's new advice to its agent (`capacity.pacing.v1`)
+      description: "The CLI's hook asks before each prompt and tool call: the advice comes back only when it changed
+        since the last one delivered to that session at that stage, under a claim of 15 seconds (two hooks at once
+        never both deliver it); the hook then confirms with `POST /api/v1/directives/receipt`. Without a new advice,
+        or in observation mode, `directive` is absent. Stages: `received_by_cli`, `emitted_to_hook`. At most 2,000
+        deliveries remembered per member. Deliveries are kept per member: a
+        session id names one of the caller's own sessions (an agent token only its own, 403 otherwise), never another
+        member's. Answered with `Cache-Control: no-store`"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectiveClaimRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DirectiveClaim'
+        '400':
+          $ref: '#/components/responses/Error'
+        '401':
+          $ref: '#/components/responses/Error'
+        '403':
+          $ref: '#/components/responses/Error'
+        '404':
+          $ref: '#/components/responses/Error'
+        '409':
+          $ref: '#/components/responses/Error'
+  /api/v1/directives/receipt:
+    parameters:
+    - $ref: '#/components/parameters/OstromOrg'
+    post:
+      operationId: acknowledgeDirective
+      x-ostrom-status: planned
+      tags:
+      - inference
+      summary: Record that an advice reached a stage of its delivery (`capacity.pacing.v1`)
+      description: "A receipt records the emission by the local bridge, never that the agent followed the advice.
+        Idempotent. With `claimId`, it settles that claim; an expired claim, or one of another member or session,
+        changes nothing. Without `sessionId`, the member-wide advice"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DirectiveReceipt'
+      responses:
+        '204':
+          description: Recorded
         '400':
           $ref: '#/components/responses/Error'
         '401':
@@ -17838,6 +19745,441 @@ components:
       - version
       - inUse
       x-ostrom-kotlin: pending
+    Directive:
+      type: object
+      description: "The capacity controller's advice (`capacity.pacing.v1`). Pacing never caps parallelism: it only
+        spaces the admission of new calls, and the server enforces it whatever the agent does"
+      properties:
+        id:
+          type: string
+          description: Changes whenever the advice or its context changes
+        pace:
+          type: string
+          enum: [unknown, normal, slow_down, can_increase, pause]
+          description: "`normal`; `slow_down` when, at the team's current rate, every usable account is projected to run
+            out before one resets (admissions spaced by 2, 5 or 10 seconds as the gap is lighter or more severe);
+            `pause` when no usable account is left (30 seconds); `can_increase` when no gap appears even at twice the
+            rate and every usable window is under half used; `unknown` when observations are missing. Clients treat
+            an unknown value as `unknown`"
+        maxConcurrent:
+          type: integer
+          minimum: 0
+          description: The member's, group's or run's concurrency limit that applies, 0 for none
+        minIntervalMillis:
+          type: integer
+          minimum: 0
+          description: The spacing between two admissions of the caller's calls, in milliseconds
+        message:
+          type: string
+          description: The advice in words, for the agent
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - pace
+      - maxConcurrent
+      - minIntervalMillis
+      - message
+      - createdAt
+      - expiresAt
+      x-ostrom-kotlin: pending
+    DirectiveClaim:
+      type: object
+      description: A claimed delivery; both absent when nothing new is to be delivered
+      properties:
+        directive:
+          $ref: '#/components/schemas/Directive'
+        claimId:
+          type: string
+      x-ostrom-kotlin: pending
+    DirectiveClaimRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          maxLength: 128
+        stage:
+          type: string
+          enum: [received_by_cli, emitted_to_hook]
+      required:
+      - sessionId
+      - stage
+      x-ostrom-kotlin: pending
+    DirectiveReceipt:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The advice's id
+        stage:
+          type: string
+          enum: [received_by_cli, emitted_to_hook]
+        sessionId:
+          type: string
+          maxLength: 128
+        claimId:
+          type: string
+      required:
+      - id
+      - stage
+      x-ostrom-kotlin: pending
+    DirectiveResponse:
+      type: object
+      properties:
+        directive:
+          $ref: '#/components/schemas/Directive'
+      x-ostrom-kotlin: pending
+    DirectiveScope:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          maxLength: 128
+      required:
+      - sessionId
+      x-ostrom-kotlin: pending
+    ForecastAccount:
+      type: object
+      description: A shared account as the Forecasts page lists it, never its credentials nor its provider account id
+      properties:
+        id:
+          type: string
+        provider:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          description: As `SharedAccount.status`
+        paused:
+          type: boolean
+        email:
+          type: string
+      required:
+      - id
+      - provider
+      - label
+      - status
+      - paused
+      x-ostrom-kotlin: pending
+    ForecastSample:
+      type: object
+      description: One real reading; a missing reading is never written as 0
+      properties:
+        utilization:
+          type: number
+          description: Used share, 0 to 1
+        observedAt:
+          type: string
+          format: date-time
+        resetsAt:
+          type: string
+          format: date-time
+      required:
+      - utilization
+      - observedAt
+      x-ostrom-kotlin: pending
+    ForecastWindow:
+      type: object
+      description: One current provider window of the account and what the controller learned of it
+      properties:
+        window:
+          type: string
+          description: "`five_hour`, `seven_day` or `model:<family>`"
+        utilization:
+          type: number
+          description: Used share, 0 to 1
+        observedAt:
+          type: string
+          format: date-time
+        resetsAt:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [unknown, stale, exhausted, idle, reset_first, exhausts_first]
+          description: Clients treat an unknown value as `unknown`
+        pointsPerHour:
+          type: number
+          description: "The learned rate in percentage points per hour (0 to 100 scale, where `utilization` is 0 to 1);
+            absent while unknown (0 is a known idle rate)"
+        reachesThresholdAt:
+          type: string
+          format: date-time
+          description: When the window reaches `pressureThreshold` at that rate, if known
+        segments:
+          type: array
+          description: The last hour's readings, oldest first, cut at every reset, drop or gap of more than five minutes
+          items:
+            type: array
+            items:
+              $ref: '#/components/schemas/ForecastSample'
+        learningSamples:
+          type: integer
+          description: Readings in the latest segment (the rate needs three)
+        learningSpanMillis:
+          type: integer
+          description: Time between the first and last readings of the latest segment
+      required:
+      - window
+      - utilization
+      - observedAt
+      - state
+      - segments
+      - learningSamples
+      - learningSpanMillis
+      x-ostrom-kotlin: pending
+    ForecastSnapshot:
+      type: object
+      description: A bounded point-in-time view of one account's windows, never a sum of percentages of different plans
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastAccount'
+        account:
+          $ref: '#/components/schemas/ForecastAccount'
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ForecastWindow'
+        truncated:
+          type: boolean
+        pressureThreshold:
+          type: number
+          description: The account's `utilizationCeiling`, at which it stops taking requests (0.95 by default)
+      required:
+      - generatedAt
+      - accounts
+      - windows
+      - truncated
+      - pressureThreshold
+      x-ostrom-kotlin: pending
+    PacingPreview:
+      type: object
+      description: Informational advice, never sent to an agent by itself
+      properties:
+        settings:
+          $ref: '#/components/schemas/PacingSettings'
+        directive:
+          $ref: '#/components/schemas/Directive'
+      required:
+      - settings
+      x-ostrom-kotlin: pending
+    PacingSettings:
+      type: object
+      description: "The capacity controller's settings for the organization (`capacity.pacing.v1`). A provider window
+        counts as exhausted at its account's `utilizationCeiling`, as admission does"
+      properties:
+        observationOnly:
+          type: boolean
+          description: "False by default. The controller keeps forecasting but neither spaces admissions nor sends advice to agents.
+            Budgets, concurrency limits and accounts' ceilings stay enforced; advice already sent cannot be recalled"
+        autoPoolSize:
+          type: boolean
+          description: "False by default. Size the organization's daily budget from its shared accounts (`capacity.poolsize.v1`,
+            `GET /api/v1/pools/size`) instead of the typed one"
+      x-ostrom-kotlin: pending
+    PoolSize:
+      type: object
+      description: "The automatic daily budget and the estimate behind it, in USD millionths at the gateway's prices
+        (API-equivalent)"
+      properties:
+        enabled:
+          type: boolean
+          description: "`autoPoolSize`"
+        manualDailyMicros:
+          type: integer
+          description: The organization's typed daily budget, absent when it has none
+        automaticDailyMicros:
+          type: integer
+          description: The value the job stored last, absent before its first estimate
+        automaticComputedAt:
+          type: string
+          format: date-time
+        effectiveDailyMicros:
+          type: integer
+          description: The daily budget admission applies now, absent when there is none
+        source:
+          type: string
+          enum: [automatic, manual]
+        estimatedDailyMicros:
+          type: integer
+          description: What is left of the accounts' capacity today, computed now
+        reason:
+          type: string
+          enum: [no_accounts, no_estimate]
+          description: Why there is no automatic value; then the typed budget applies
+        unpricedModels:
+          type: array
+          description: Models used over seven days without a price, left out of the samples
+          items:
+            type: string
+        accounts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PoolSizeAccount'
+        capacityDailyMicros:
+          type: integer
+          description: The full daily capacity of the accounts that can serve, whatever they used; a floor when `capacityUnknownAccounts` is above 0
+        capacityUnknownAccounts:
+          type: integer
+        capacityDailyTokens:
+          type: integer
+          description: "`capacityDailyMicros` in tokens at the organization's seven-day model mix, absent without priced traffic"
+        tokensPerMicro:
+          type: number
+        outsideWeeklyMicros:
+          type: integer
+          description: What the accounts' current weekly windows used outside Ostrom, absent while unknown; a floor when `outsideUnknownAccounts` is above 0
+        outsideUnknownAccounts:
+          type: integer
+        models:
+          type: array
+          description: The organization's seven days of tokens by model, priced by token type
+          items:
+            $ref: '#/components/schemas/PoolSizeModel'
+      required:
+      - enabled
+      - source
+      - estimatedDailyMicros
+      - unpricedModels
+      - accounts
+      - capacityDailyMicros
+      - capacityUnknownAccounts
+      - outsideUnknownAccounts
+      - models
+      x-ostrom-kotlin: pending
+    PoolSizeAccount:
+      type: object
+      properties:
+        accountId:
+          type: string
+        status:
+          type: string
+          enum: [counted, unavailable, no_fresh_observation, no_estimate]
+          description: Clients treat an unknown value as not counted
+        dailyMicros:
+          type: integer
+          description: What is left of the account's capacity today
+        binding:
+          type: string
+          description: The window that gives the smaller daily figure
+        capacityDailyMicros:
+          type: integer
+          description: The account's full daily capacity, absent while unknown
+        windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/PoolSizeWindowCapacity'
+        usage:
+          type: array
+          items:
+            $ref: '#/components/schemas/PoolSizeWindowUsage'
+      required:
+      - accountId
+      - status
+      - dailyMicros
+      - windows
+      - usage
+      x-ostrom-kotlin: pending
+    PoolSizeModel:
+      type: object
+      description: Seven days of one model's tokens and their API-equivalent by token type; costs absent without a price
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        inputTokens:
+          type: integer
+        cacheWriteTokens:
+          type: integer
+        cacheReadTokens:
+          type: integer
+        outputTokens:
+          type: integer
+        inputMicros:
+          type: integer
+        cacheWriteMicros:
+          type: integer
+        cacheReadMicros:
+          type: integer
+        outputMicros:
+          type: integer
+        totalMicros:
+          type: integer
+        unpricedTokens:
+          type: integer
+      required:
+      - provider
+      - model
+      - inputTokens
+      - cacheWriteTokens
+      - cacheReadTokens
+      - outputTokens
+      - unpricedTokens
+      x-ostrom-kotlin: pending
+    PoolSizeWindowCapacity:
+      type: object
+      description: The learned full capacity of one shared window (0 to 100 %); absent below three samples
+      properties:
+        window:
+          type: string
+        fullWindowMicros:
+          type: integer
+          description: The median of the samples, which the budget uses
+        capacityMicros:
+          type: integer
+          description: Their upper quartile, the reported capacity
+        samples:
+          type: integer
+      required:
+      - window
+      - samples
+      x-ostrom-kotlin: pending
+    PoolSizeWindowUsage:
+      type: object
+      description: "One current window split between Ostrom's traffic and use of the subscription outside Ostrom since
+        it opened; the split is absent without a learned capacity"
+      properties:
+        window:
+          type: string
+        since:
+          type: string
+          format: date-time
+        observedAt:
+          type: string
+          format: date-time
+        resetsAt:
+          type: string
+          format: date-time
+        observedUtilization:
+          type: number
+        ostromMicros:
+          type: integer
+        ostromUtilization:
+          type: number
+        outsideUtilization:
+          type: number
+        outsideMicros:
+          type: integer
+        remainingMicros:
+          type: integer
+      required:
+      - window
+      - since
+      - observedAt
+      - resetsAt
+      - observedUtilization
+      x-ostrom-kotlin: pending
     SaveArtifactStorageRequest:
       type: object
       description: '`version` is the one replaced (0 for the first save); an omitted `secretAccessKey` keeps the stored
@@ -18368,25 +20710,31 @@ components:
       - verificationUri
       - expiresAt
       - interval
-      x-ostrom-kotlin: pending
     GitHubDeviceLinkPoll:
       type: object
       description: One poll of a device link; `link` once linked, `interval` (seconds) while pending
       properties:
         status:
-          type: string
-          enum:
-          - pending
-          - linked
-          - expired
-          - denied
+          $ref: '#/components/schemas/GitHubDeviceLinkStatus'
         interval:
           type: integer
         link:
           $ref: '#/components/schemas/GitHubLink'
       required:
       - status
-      x-ostrom-kotlin: pending
+    GitHubDeviceLinkStatus:
+      type: string
+      enum:
+      - pending
+      - linked
+      - expired
+      - denied
+    GitHubLinkState:
+      type: string
+      enum:
+      - not_linked
+      - linked
+      - reconnect_required
     GitHubLink:
       type: object
       description: "A member's GitHub link: the account their cloud sessions use for Git and `gh`. Never a token: tokens
@@ -18396,11 +20744,7 @@ components:
         memberId:
           type: string
         state:
-          type: string
-          enum:
-          - not_linked
-          - linked
-          - reconnect_required
+          $ref: '#/components/schemas/GitHubLinkState'
         appConfigured:
           type: boolean
           description: Whether the instance's GitHub App can link accounts (its OAuth client is known)
@@ -18419,7 +20763,6 @@ components:
       - memberId
       - state
       - appConfigured
-      x-ostrom-kotlin: pending
     HookArtifact:
       type: object
       description: "A version's definition and files; the digest is recomputable from them"
@@ -18855,6 +21198,19 @@ components:
           type: string
         maxRuntimeMinutes:
           type: integer
+        profileId:
+          type: string
+          format: uuid
+          x-ostrom-status: planned
+          description: "The organization's cloud profile the action runs on (`runners.cloud.profiles.v1`, TeamCode's
+            `action.profileId`): the session's, or, for a workflow action, the one of its run's agent nodes that name
+            none. Where sessions run on cloud profiles, saving refuses an id none of the organization's profiles has
+            (400 `invalid_automation` naming `action.profileId`). Absent: the owner's only usable profile, as
+            `createCloudSession` chooses it (`profile_required` when they may use none or several). A run
+            whose session the profile refuses fails with the refusal's key as its `reason`:
+            `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
+            `cluster_unavailable` or `namespace_not_allowed`. Ignored by a server whose sessions run on Docker or
+            on registered runners"
     AutomationRun:
       type: object
       description: One trigger of an automation (cron, webhook or test) and the session it started, kept 14 days
@@ -18884,7 +21240,9 @@ components:
         reason:
           type: [string, 'null']
           description: "A stable code when it failed or was cancelled (cloud_session_limit, cloud_hours_exhausted,
-            owner_unavailable, capacity_timeout, cancelled…); for a workflow action also run_limit (the owner has 20
+            owner_unavailable, capacity_timeout, cancelled, and the cloud profile's refusals cloud_profile_not_found,
+            profile_unassigned, profile_required, image_not_allowed, cluster_unavailable, namespace_not_allowed…);
+            for a workflow action also run_limit (the owner has 20
             unfinished workflow runs), workflow_missing, invalid_inputs, workflow_failed and workflow_cancelled"
         problems:
           type: array
@@ -19322,38 +21680,209 @@ components:
       x-ostrom-kotlin: pending
     BudgetOverride:
       type: object
-      description: A dated exception to a daily allocation
+      description: "A temporary daily budget granted to a member (`capacity.budgetoverrides.v1`), kept after it ends
+        or is revoked"
       properties:
         id:
           type: string
         member:
           type: string
-        usd:
-          type: number
+          description: The member's `login`
+        micros:
+          type: integer
+          description: The member's total daily allowance while it lasts, USD millionths
+        createdAt:
+          type: string
         expiresAt:
           type: string
+          description: The earlier of the requested duration and the next midnight UTC
         reason:
           type: string
         createdBy:
           type: string
+        replacesId:
+          type: string
+          description: The override this one replaced
         revokedAt:
+          type: string
+        revokedBy:
+          type: string
+        revocationReason:
           type: string
       required:
       - id
       - member
-      - usd
+      - micros
+      - createdAt
       - expiresAt
       - reason
       - createdBy
+      x-ostrom-kotlin: pending
+    BudgetOverrideSummary:
+      type: object
+      description: "The override in force, as its member sees it (`getMyBudget`): no reason, no grantor"
+      properties:
+        id:
+          type: string
+        micros:
+          type: integer
+        expiresAt:
+          type: string
+      required:
+      - id
+      - micros
+      - expiresAt
+      x-ostrom-kotlin: pending
+    PendingUsage:
+      type: object
+      description: "A model call whose final usage is unknown: the hold it was admitted with stays charged
+        (`capacity.usagereconciliation.v1`)"
+      properties:
+        id:
+          type: string
+          description: The call's id, the id of the hold
+        member:
+          type: string
+          description: The member's `login`
+        micros:
+          type: integer
+          description: The charge kept, USD millionths
+        heldAt:
+          type: string
+        leaseExpiredAt:
+          type: string
+        workflowId:
+          type: string
+        launchId:
+          type: string
+        providerRequestId:
+          type: string
+          description: The provider's request id when the gateway captured one before streaming, bounded and unambiguous
+      required:
+      - id
+      - member
+      - micros
+      - heldAt
+      - leaseExpiredAt
+      x-ostrom-kotlin: pending
+    UsageReconciliation:
+      type: object
+      description: "A final correction of an unknown charge, attested by an administrator, with the attribution the call
+        had when it was held"
+      properties:
+        id:
+          type: string
+          description: The id of the hold that was corrected, as `PendingUsage.id` was
+        member:
+          type: string
+        workflowId:
+          type: string
+        launchId:
+          type: string
+        providerRequestId:
+          type: string
+        heldAt:
+          type: string
+        previousMicros:
+          type: integer
+        micros:
+          type: integer
+        source:
+          type: string
+          enum:
+          - PROVIDER_RECORD
+          - PROVIDER_CONFIRMATION
+        reference:
+          type: string
+        reason:
+          type: string
+        reconciledBy:
+          type: string
+        reconciledAt:
+          type: string
+      required:
+      - id
+      - member
+      - heldAt
+      - previousMicros
+      - micros
+      - source
+      - reference
+      - reason
+      - reconciledBy
+      - reconciledAt
+      x-ostrom-kotlin: pending
+    UsageReview:
+      type: object
+      description: "`pending` while the hold is unknown, `reconciliation` once corrected: exactly one is present"
+      properties:
+        pending:
+          $ref: '#/components/schemas/PendingUsage'
+        reconciliation:
+          $ref: '#/components/schemas/UsageReconciliation'
+      x-ostrom-kotlin: pending
+    ApiPrice:
+      type: object
+      description: "One row of the price table: micro-dollars (USD millionths) per million tokens, so `3000000` is $3
+        a million tokens"
+      properties:
+        provider:
+          type: string
+          description: "`anthropic` or `openai`"
+        model:
+          type: string
+          description: A lowercase model, or a family prefix (`claude-sonnet-4`)
+        effectiveFrom:
+          type: string
+          description: The UTC date (`YYYY-MM-DD`) from which it applies, until a later row of the same model
+        inputMicros:
+          type: integer
+          minimum: 1
+          maximum: 1000000000000
+        cacheWriteMicros:
+          type: integer
+          minimum: 0
+          maximum: 1000000000000
+        cacheReadMicros:
+          type: integer
+          minimum: 0
+          maximum: 1000000000000
+        outputMicros:
+          type: integer
+          minimum: 1
+          maximum: 1000000000000
+      required:
+      - provider
+      - model
+      - effectiveFrom
+      - inputMicros
+      - cacheWriteMicros
+      - cacheReadMicros
+      - outputMicros
+      x-ostrom-kotlin: pending
+    ApiPriceTable:
+      type: object
+      properties:
+        prices:
+          type: array
+          maxItems: 200
+          items:
+            $ref: '#/components/schemas/ApiPrice'
+        defaults:
+          type: boolean
+          description: "On a read: true when the table has no row and the gateway's built-in prices apply (`prices` then
+            lists them); ignored on a write"
+      required:
+      - prices
       x-ostrom-kotlin: pending
     Capabilities:
       type: object
       description: "What a server speaks and serves (`capabilities`). `apiVersion` changes only when `/api/v1` breaks
         compatibility; additive changes keep it. Feature keys are `<domain>.v<n>` (`ServerFeatures` in ostrom-core):
-        `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `cloud.admin.v1`, `environment.v1`, `gates.v1`, `github.v1`,
+        `admin.settings.v1`, `artifacts.v1`, `audit.v1`, `automations.v1`, `billing.v1`, `budgets.v1`, `capacity.apiprices.v1`, `capacity.budgetoverrides.v1`, `capacity.forecasts.v1`, `capacity.pacing.v1`, `capacity.poolsize.v1`, `capacity.usagereconciliation.v1`, `cloud.admin.v1`, `devices.v1`, `environment.v1`, `gates.v1`, `github.v1`,
         `github.link.v1`, `governance.v1`, `hooks.v1`, `import.teamcode.v1`, `inference.v1`, `inference.queue.v1`, `inference.cancel.v1`, `mcp.v1`, `mcp.personal.v1`, `memory.v1`, `notifications.v1`, `notifications.push.v1`, `notifications.push.test.v1`,
-        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.environment.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.profiles.v1`, `runners.cloud.skills.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
-        `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`,
+        `packages.v1`, `receipts.v1`, `reports.v1`, `rules.v1`, `runners.v1`, `runners.cloud.v1`, `runners.cloud.agent.v1`, `runners.cloud.conversation.v1`, `runners.cloud.effort.v1`, `runners.cloud.environment.v1`, `runners.cloud.files.v1`, `runners.cloud.github.v1`, `runners.cloud.hooks.v1`, `runners.cloud.model.v1`, `runners.cloud.permissions.v1`, `runners.cloud.permissions.bypass.v1`, `runners.cloud.profiles.v1`, `runners.cloud.retention.v1`, `runners.cloud.skills.v1`, `runners.cloud.tasks.v1`, `runners.cloud.transcript.feeds.v1`, `runners.cloud.transcript.live.v1`, `runners.cloud.variables.v1`, `secrets.v1`,
+        `sessions.v1`, `sessions.activity.v1`, `sessions.labels.v1`, `launches.limits.v1`, `servicekeys.scopes.v1`, `sharing.v1`, `sharing.handover.v1`, `skills.v1`, `slack.v1`, `todos.v1`, `usage.v1`, `waits.v1`, `waits.wake.v1`, `waits.timed.v1`, `waits.secrets.v1`,
         `workflows.v1`, `workflows.deliver.v1`, `workflows.settings.v1`,
         `license.v1`. A client
         ignores a key it does not know."
@@ -19517,6 +22046,25 @@ components:
           minimum: 1
           maximum: 3650
           description: Days transcript events are kept; absent keeps them
+        permissionDeadlineMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          x-ostrom-status: planned
+          description: "How long a permission request of a conversation session waits before the runner denies it; 0
+            (the default) waits for an answer, an interrupt or a pause (`runners.cloud.permissions.v1`)"
+        fileMaxMebibytes:
+          type: integer
+          minimum: 1
+          maximum: 100
+          x-ostrom-status: planned
+          description: The largest file sent to a session, 20 by default (`runners.cloud.files.v1`)
+        messageFileMebibytes:
+          type: integer
+          minimum: 1
+          maximum: 100
+          x-ostrom-status: planned
+          description: The files of one message together, 25 by default (`runners.cloud.files.v1`)
         memberTransfers:
           type: string
           enum: [offer, disabled]
@@ -19566,6 +22114,21 @@ components:
           type: integer
           minimum: 1
           maximum: 3650
+        permissionDeadlineMinutes:
+          type: integer
+          minimum: 0
+          maximum: 1440
+          x-ostrom-status: planned
+        fileMaxMebibytes:
+          type: integer
+          minimum: 1
+          maximum: 100
+          x-ostrom-status: planned
+        messageFileMebibytes:
+          type: integer
+          minimum: 1
+          maximum: 100
+          x-ostrom-status: planned
         memberTransfers:
           type: string
           enum: [offer, disabled]
@@ -19601,6 +22164,18 @@ components:
           $ref: '#/components/schemas/InstanceSecretState'
         serviceAccountToken:
           $ref: '#/components/schemas/InstanceSecretState'
+        orphanedVolumes:
+          type: integer
+          description: "PersistentVolumes of this cluster's session workspaces whose claim is gone and that their
+            provisioner will not delete (reclaimPolicy other than Delete, or phase Failed), counted by the last garbage
+            collection: an administrator deletes the provider volumes (`runners.cloud.retention.v1`). Absent before
+            the first collection"
+        lastGarbageCollectionAt:
+          type: string
+          format: date-time
+          description: "When the last garbage collection of the cluster ran: every 10 minutes, it deletes the session
+            pods and workspace claims no session accounts for (`runners.cloud.retention.v1`). Absent before the
+            first collection"
         inCluster:
           type: boolean
           description: "Whether the cluster is the server's own, reached with the server pod's mounted service account
@@ -19935,11 +22510,11 @@ components:
           description: The PEM private key; null or absent keeps the stored one; required to create the App
         webhookSecret:
           type: [string, 'null']
-          minLength: 1
           maxLength: 256
           description: 'The secret GitHub signs the webhooks with; null or absent keeps the stored one for the same
-            `appId` (another App signs with its own, so none is kept). Optional, as an App may have its webhooks turned
-            off: without it every webhook is refused (`webhookSecretSet` false)'
+            `appId` (another App signs with its own, so none is kept); an empty string clears it (for a first App or another
+            `appId` it leaves none, as null does). Optional, as an App
+            may have its webhooks turned off: without it every webhook is refused (`webhookSecretSet` false)'
         version:
           type: [integer, 'null']
           description: The stored `version`; null or absent to create the App
@@ -20069,7 +22644,7 @@ components:
           type: string
         status:
           type: string
-          description: creating, running, pausing, paused, resuming, terminated or failed
+          description: creating, running, pausing, paused, resuming, transferring (the owner changes at a paused boundary, `runners.cloud.transfer.v1`), terminated or failed
         desiredStatus:
           type: string
           description: What the owner asked for, running, paused or terminated
@@ -20092,6 +22667,21 @@ components:
           type: string
         pausedAt:
           type: string
+        expiresAt:
+          type: string
+          description: "When a paused session is terminated with its workspace (`terminatedReason` `expired`),
+            from the instance's `pausedRetentionDays` in force when it paused: a later change of the setting applies
+            to sessions paused afterwards, so shortening it never deletes existing work by surprise. Resuming clears
+            it. Absent while the session is not paused, or when paused sessions are kept indefinitely
+            (`runners.cloud.retention.v1`, TeamCode's `expiresAt`). A session paused before the server announced
+            the feature gets its `expiresAt` from the setting at its next reconciliation"
+        terminatedReason:
+          type: string
+          description: "Why a terminated session ended: `deleted` (its owner or an administrator) or `expired`
+            (its paused retention ran out). Absent from a session that is not terminated
+            (`runners.cloud.retention.v1`)"
+        workspaceDeletion:
+          $ref: '#/components/schemas/CloudWorkspaceDeletion'
         runnerId:
           type: string
         environment:
@@ -20111,6 +22701,23 @@ components:
           description: "Who may instruct the agent while it holds the owner's GitHub token (`runners.cloud.github.v1`):
             `owner` (the default) the owner only, `shared` everyone who may use the session, `none` no GitHub token at all.
             Absent from a server without the feature"
+        mode:
+          type: string
+          description: "`terminal` (absent: a PTY relayed over the terminal WebSocket) or `conversation`
+            (`runners.cloud.conversation.v1`, claude and codex only): the agent runs headless, talked to through the
+            transcript, messages and permission routes, and the session has no terminal"
+        effort:
+          type: string
+          description: The effort (reasoning level) the agent runs with, if chosen (`runners.cloud.effort.v1`)
+        transferId:
+          type: string
+          description: "The accepted transfer the session is moving toward, from its acceptance until the owner changed or the transfer ended (`runners.cloud.transfer.v1`)"
+        permissionBypass:
+          type: boolean
+          description: "The owner's standing approval of tool uses is on (`runners.cloud.permissions.bypass.v1`);
+            absent from a server without it"
+        waiting:
+          $ref: '#/components/schemas/CloudSessionWaiting'
         runId:
           type: string
         automationId:
@@ -20125,6 +22732,34 @@ components:
       - agent
       - status
       - createdAt
+    CloudWorkspaceDeletion:
+      type: object
+      description: "The proof that a Kubernetes session's workspace is gone, provider volume included
+        (`runners.cloud.retention.v1`, TeamCode's `workspaceDeletion`). When the session ends, the reconciler records
+        the PersistentVolume bound to its claim and the provider's volume handle, deletes the claim, waits until it is
+        gone, then until the PersistentVolume is gone: with `reclaimPolicy: Delete`, the provisioner removes it only
+        once the provider deleted the volume. A volume with another policy, in phase `Failed`, or still there an hour
+        after its claim was deleted blocks the deletion (`volume_retained`, `volume_deletion_stalled`), checked
+        again every 10 minutes until an administrator deletes it. Absent from a session on Docker or a registered
+        runner"
+      properties:
+        state:
+          type: string
+          description: "`none` (the session holds its workspace), `pending`, `proven` or `blocked`"
+        claimDeletedAt:
+          type: string
+        volumeDeletedAt:
+          type: string
+        volumeHandle:
+          type: string
+          description: The provider's volume handle (CSI `volumeHandle`), kept as evidence
+        problem:
+          $ref: '#/components/schemas/CloudSessionFailure'
+          description: "Why the deletion is blocked: `volume_retained` (the volume's reclaimPolicy is not Delete;
+            `retryable` false) or `volume_deletion_stalled` (phase Failed, or still there an hour after its claim was
+            deleted; `retryable` true). Absent unless `state` is `blocked`"
+      required:
+      - state
     CloudSessionProfile:
       type: object
       description: "The cloud profile a session runs on, at the version it was created with (`runners.cloud.profiles.v1`,
@@ -20138,6 +22773,463 @@ components:
       required:
       - id
       - version
+    CloudEvent:
+      type: object
+      description: "One transcript event of a conversation session (`runners.cloud.conversation.v1`, TeamCode's
+        `CloudEventView`). `type` is open: `message.user`, `message.agent`, `message.agent.delta`, `tool.call`,
+        `tool.result`, `turn`, `status`, `error`, `input`, `permission.request`, `permission.expired`, `tasks`; clients
+        tolerate unknown types and unknown `data` fields"
+      properties:
+        seq:
+          type: integer
+          format: int64
+          description: From 1, increased by one per session
+        type:
+          type: string
+        at:
+          type: string
+          format: date-time
+        epoch:
+          type: integer
+          format: int64
+          description: The execution that produced it; 0 for an event the server wrote
+        data:
+          description: "The event's object, bounded (16 levels, 200 entries, strings of 16,000 characters) and
+            secret-masked; an event above 60,000 bytes becomes `{truncated, originalBytes}` with its identity fields"
+        feed:
+          type: string
+          description: "`runners.cloud.transcript.feeds.v1`: the id of the `tool.call` that started the subagent the
+            event belongs to; absent for the main agent"
+      required:
+      - seq
+      - type
+      - at
+      - epoch
+      - data
+    CloudEventPage:
+      type: object
+      description: "A page of transcript events in ascending order. `firstSeq` is the oldest retained event, `lastSeq`
+        the session's newest when the page was read; a null cursor means nothing more in that direction"
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudEvent'
+        firstSeq:
+          type: integer
+          format: int64
+        lastSeq:
+          type: integer
+          format: int64
+        nextAfter:
+          type: integer
+          format: int64
+        nextBefore:
+          type: integer
+          format: int64
+      required:
+      - events
+    SendCloudMessageRequest:
+      type: object
+      description: "A message to the agent (`sendCloudMessage`). `clientMessageId` is an alias of the `Idempotency-Key`
+        header (one or the other). `wake` false leaves a paused session paused: the message waits for the next
+        resume. `fileIds` (`runners.cloud.files.v1`, at most 5, distinct) names files the caller uploaded to this
+        session and did not send yet; with files the text may be empty"
+      properties:
+        text:
+          type: string
+          maxLength: 32000
+        wake:
+          type: boolean
+          default: true
+        clientMessageId:
+          type: string
+          maxLength: 200
+        expectedLastEventSeq:
+          type: integer
+          format: int64
+        fileIds:
+          type: array
+          maxItems: 5
+          items:
+            type: string
+      required:
+      - text
+    CloudInput:
+      type: object
+      description: "A message, an interrupt, a permission answer, a task stop or a model or effort change, and its
+        acknowledgement (TeamCode's `CloudInputView`)"
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          description: message, interrupt, permission, stop_task, set_model or set_effort
+        status:
+          type: string
+          description: queued, delivered, consumed, cancelled or rejected
+        authorId:
+          type: string
+        text:
+          type: string
+        wake:
+          type: boolean
+          default: true
+        woke:
+          type: boolean
+          default: false
+          description: Accepting it resumed a paused session
+        clientMessageId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+        deliveredEpoch:
+          type: integer
+          format: int64
+        consumedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          description: "Why it was cancelled or rejected: a stable code (delivery_failed, session_terminated,
+            files_unsupported, task_stop_unsupported, unknown_permission_request, execution_ended...)"
+        eventSeq:
+          type: integer
+          format: int64
+          description: The `message.user` event recording a consumed message
+        fileIds:
+          type: array
+          items:
+            type: string
+      required:
+      - id
+      - kind
+      - status
+      - authorId
+      - createdAt
+    CloudInputPage:
+      type: object
+      description: "The session's inputs, newest first; `nextBefore` is the cursor of the following page"
+      properties:
+        inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudInput'
+        nextBefore:
+          type: string
+      required:
+      - inputs
+    AnswerCloudPermissionRequest:
+      type: object
+      description: "The answer to the `permission.request` event `requestId` (`answerCloudPermission`). `deny` passes
+        `message` to the agent. `allow` with `answers` answers a question (`AskUserQuestion`): one entry per question,
+        by index, at most 16"
+      properties:
+        requestId:
+          type: string
+          maxLength: 128
+        behavior:
+          type: string
+          description: allow or deny
+        message:
+          type: string
+          maxLength: 4000
+        answers:
+          type: array
+          maxItems: 16
+          items:
+            $ref: '#/components/schemas/CloudQuestionAnswer'
+      required:
+      - requestId
+      - behavior
+    CloudQuestionAnswer:
+      type: object
+      description: "The answer to the question at index `question` (from 0, in the request's `input.questions`): the
+        chosen `options` by index (several only for a `multiSelect` question), or a free `text`; one or the other"
+      properties:
+        question:
+          type: integer
+          minimum: 0
+        options:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+        text:
+          type: string
+          maxLength: 4000
+      required:
+      - question
+    CloudSubagent:
+      type: object
+      description: "A subagent of a session (`runners.cloud.transcript.feeds.v1`). `id` is the `tool.call` that started
+        it and the `feed` of its events; `parentId` the feed it was started from (absent: the main agent); `taskId`
+        the id to stop it with while it is a live background task"
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+          default: ''
+        state:
+          type: string
+          description: running, completed or failed
+        startedAt:
+          type: string
+          format: date-time
+        endedAt:
+          type: string
+          format: date-time
+        steps:
+          type: integer
+          default: 0
+        parentId:
+          type: string
+        taskId:
+          type: string
+      required:
+      - id
+      - state
+      - startedAt
+    CloudSubagentList:
+      type: object
+      description: The session's subagents, oldest first, the newest 200
+      properties:
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudSubagent'
+      required:
+      - agents
+    StopCloudTaskRequest:
+      type: object
+      description: The background task of the session's agent to stop (`stopCloudTask`)
+      properties:
+        taskId:
+          type: string
+          maxLength: 64
+      required:
+      - taskId
+    SetCloudPermissionBypassRequest:
+      type: object
+      description: "The owner's standing approval of tool uses (`setCloudPermissionBypass`)"
+      properties:
+        enabled:
+          type: boolean
+      required:
+      - enabled
+    SetCloudModelRequest:
+      type: object
+      description: The model of the session's agent (`setCloudSessionModel`)
+      properties:
+        model:
+          type: string
+          maxLength: 120
+      required:
+      - model
+    SetCloudEffortRequest:
+      type: object
+      description: The effort of the session's agent (`setCloudSessionEffort`)
+      properties:
+        effort:
+          type: string
+          maxLength: 120
+      required:
+      - effort
+    CloudSessionWaiting:
+      type: object
+      description: "Why the session's agent waits for a person (`runners.cloud.permissions.v1`, TeamCode's
+        `waiting`): set when a `permission.request` is stored, gone when it stops being answerable"
+      properties:
+        reason:
+          type: string
+          description: permission (a tool use to approve) or question (a question to answer)
+        requestId:
+          type: string
+          description: What `answerCloudPermission` takes
+        since:
+          type: string
+          format: date-time
+        eventSeq:
+          type: integer
+          format: int64
+          description: The `permission.request` event
+      required:
+      - reason
+    CloudFile:
+      type: object
+      description: "A file uploaded to a session (`runners.cloud.files.v1`). `name` is the cleaned name the host writes
+        it under, `contentType` the type recognized from its bytes. Name its `id` in a message's `fileIds` before
+        `expiresAt`"
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        name:
+          type: string
+        size:
+          type: integer
+          format: int64
+        contentType:
+          type: string
+        sha256:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - sessionId
+      - name
+      - size
+      - contentType
+      - sha256
+      - createdAt
+      - expiresAt
+    CloudFilePolicy:
+      type: object
+      description: "Whether the caller's organization can send files now (`available`; `reason`
+        `file_storage_not_configured` without a tested artifact bucket), and its limits"
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+        maxFileBytes:
+          type: integer
+          format: int64
+        maxMessageBytes:
+          type: integer
+          format: int64
+        maxFilesPerMessage:
+          type: integer
+        types:
+          type: array
+          items:
+            type: string
+      required:
+      - available
+      - maxFileBytes
+      - maxMessageBytes
+      - maxFilesPerMessage
+      - types
+    CloudTransfer:
+      type: object
+      description: "A change of owner of a cloud session (`runners.cloud.transfer.v1`): `offered`, then `accepted`, then `completed`; or `declined`, `cancelled`, `expired` or `failed`"
+      properties:
+        id:
+          type: string
+        sessionId:
+          type: string
+        fromMemberId:
+          type: string
+        toMemberId:
+          type: string
+        state:
+          type: string
+          description: offered, accepted, completed, declined, cancelled, expired or failed; tolerate unknown values
+        initiatedBy:
+          type: string
+          description: The member who asked
+        decidedBy:
+          type: string
+          description: The member who accepted, declined or cancelled
+        resume:
+          type: boolean
+          description: Resume the session for the recipient once the owner changed
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        expiresAt:
+          type: string
+          description: Offers - the recipient must accept before this time
+        decidedAt:
+          type: string
+        completedAt:
+          type: string
+        atEpoch:
+          type: integer
+          format: int64
+          description: The last execution run for the former owner; later executions run for the recipient
+        failure:
+          $ref: '#/components/schemas/CloudSessionFailure'
+      required:
+      - id
+      - sessionId
+      - fromMemberId
+      - toMemberId
+      - state
+      - initiatedBy
+      - resume
+      - createdAt
+      - updatedAt
+    CloudTransferPage:
+      type: object
+      description: "A page of the caller's transfers, newest first; `next` is the cursor of the following page"
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudTransfer'
+        next:
+          type: string
+      required:
+      - items
+    CloudTransferRecipient:
+      type: object
+      description: A member a session can be given to
+      properties:
+        id:
+          type: string
+        login:
+          type: string
+        administrator:
+          type: boolean
+      required:
+      - id
+      - login
+      - administrator
+    CloudTransferRecipients:
+      type: object
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/CloudTransferRecipient'
+      required:
+      - recipients
+    CreateCloudTransferRequest:
+      type: object
+      properties:
+        toMemberId:
+          type: string
+          description: The recipient's member id or login
+        resume:
+          type: boolean
+          description: Resume the session for the recipient once the owner changed
+          default: false
+      required:
+      - toMemberId
+    AcceptCloudTransferRequest:
+      type: object
+      properties:
+        resume:
+          type: boolean
+          description: Resume once the session is the recipient's; absent keeps what the offer asked for
     CloudSessionPage:
       type: object
       description: "A page of the caller's cloud sessions, newest first; `next` is the cursor of the following page"
@@ -20186,6 +23278,15 @@ components:
             checks both again at each later start, where they become the session's `failure.code` (a first
             start fails, a resume is blocked). Ignored by a server whose sessions run on Docker or on
             registered runners"
+        mode:
+          type: string
+          description: "`terminal` (absent) or `conversation` (`runners.cloud.conversation.v1`): 400 `invalid_mode` for
+            another value or for an agent other than claude and codex. In conversation mode `prompt` is the first
+            message of the transcript"
+        effort:
+          type: string
+          maxLength: 120
+          description: "The agent's effort (reasoning level), 1 to 120 letters, digits and `. _ : / -`"
         image:
           type: string
           description: "The session image instead of the profile's: the profile's image, or one matching
@@ -20200,8 +23301,10 @@ components:
         code:
           type: string
           description: "start_failed, execution_lost, idle_timeout, max_duration, hours_exhausted, preparation_failed,
-            cluster_unavailable, namespace_not_allowed or server_url_missing (a session on a cloud profile whose
-            cluster stopped opening, whose namespace is no longer allowed, or whose runner has no server URL)"
+            cluster_unavailable, namespace_not_allowed, server_url_missing, storage_class_missing or
+            storage_class_retains_volumes (a session on a cloud profile whose cluster stopped opening, whose namespace
+            is no longer allowed, whose runner has no server URL, or whose workspace storage class is gone or keeps
+            provider volumes after their claim is deleted)"
         message:
           type: string
         retryable:
@@ -20495,6 +23598,8 @@ components:
           type: string
         platform:
           type: string
+          description: "`macos`, `windows`, `linux`, `ios` or `android`, as reported at the latest sign-in; absent until
+            one did"
         cliVersion:
           type: string
         lastSeenAt:
@@ -20514,10 +23619,46 @@ components:
             type: string
         expiresAt:
           type: string
+        osVersion:
+          type: string
+          description: "With `devices.v1`: the system's version reported with `platform`"
+        createdAt:
+          type: string
+          description: "With `devices.v1`: when the installation was registered"
+        lastLoginAt:
+          type: string
+          description: "With `devices.v1`: its latest sign-in"
+        activeSessions:
+          type: integer
+          description: "With `devices.v1`: how many live sign-ins the device holds"
+        current:
+          type: boolean
+          description: "With `devices.v1`: the call came from this device"
       required:
       - id
       - name
-      x-ostrom-kotlin: pending
+    DevicePage:
+      type: object
+      description: A page of devices
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Device'
+        next:
+          type: string
+      required:
+      - items
+    RenameDeviceRequest:
+      type: object
+      description: A device's new name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+      required:
+      - name
     DeviceAnswer:
       type: object
       description: "The answer to an `ostrom login`"
@@ -20544,6 +23685,32 @@ components:
           items:
             type: string
             enum: ['policy:write', 'harness:write', 'gates:policy', 'budgets:write']
+        installationId:
+          type: string
+          description: "With `devices.v1`: the CLI's installation, a random lowercase UUID kept in its configuration
+            directory, which survives a sign-out and a change of server (otherwise 400 `invalid_installation`). Ignored with
+            `scopes`: a token of `ostrom login --admin` never registers nor joins a device. When the
+            sign-in is approved, the server registers the installation as a device of the approving member, keyed by
+            member and installation, or signs it in again on the device it already is: repeated sign-ins are
+            independent sessions of one device, which keeps its id and its name. A member holds at most 50 devices
+            (409 `device_limit` when the approval would register a 51st). Never returned. Absent: the token is listed on
+            its own, as before"
+        deviceName:
+          type: string
+          maxLength: 120
+          description: "With `installationId`: the name of a device this sign-in registers (1 to 120 characters, no
+            control character, otherwise 400 `invalid_device_name`); a device already registered keeps its name. The
+            client's name when absent"
+        platform:
+          type: string
+          enum: [macos, windows, linux, ios, android]
+          description: "With `installationId`: the system, recorded on the device (400 `invalid_platform` otherwise). A
+            sign-in without it keeps what was recorded before"
+        osVersion:
+          type: string
+          maxLength: 64
+          description: "With `platform` only: the system's version, 1 to 64 printable characters (400
+            `invalid_os_version` otherwise)"
     DeviceAuthorization:
       type: object
       description: "A pending `ostrom login`, as the console shows it"
@@ -20773,6 +23940,19 @@ components:
         unavailable:
           type: array
           description: Assigned variables withheld because their value cannot be read now, by name only
+          items:
+            type: string
+        secrets:
+          type: object
+          additionalProperties:
+            type: string
+          description: "`fetchRunnerVariables` only (`waits.secrets.v1`): the secrets of the session's answered waits,
+            by variable name (`OSTROM_WAIT_<NAME>`), for the member the execution runs for; never in any other
+            answer"
+        oneTime:
+          type: array
+          description: The names in `secrets` the server deleted by serving them, which the runner keeps for the rest
+            of the turn only
           items:
             type: string
       required:
@@ -23002,6 +26182,9 @@ components:
           type: array
           items:
             type: string
+        untrustedWorkspace:
+          type: boolean
+          description: "Another member's execution ran on the workspace since the owner's last execution that was ready (`runners.cloud.transfer.v1`): the runner resets the agent's settings and each repository's Git configuration and hooks before the setup and the agent run, and names it in the preparation. Absent when false"
       required:
       - environment
       - git
@@ -23597,7 +26780,8 @@ components:
       x-ostrom-kotlin: pending
     MyBudget:
       type: object
-      description: The caller's budget this month, in millionths of a US dollar
+      description: "The caller's budget this month, in millionths of a US dollar. Planned (`capacity.budgetoverrides.v1`):
+        `override`, the temporary daily budget in force, and `baseLimitMicros`; the server does not send them yet"
       properties:
         limitMicros:
           type: integer
@@ -23617,6 +26801,14 @@ components:
           enum:
           - org
           - member
+        override:
+          $ref: '#/components/schemas/BudgetOverrideSummary'
+        baseLimitMicros:
+          type: integer
+          x-ostrom-status: planned
+          description: "Planned (`capacity.budgetoverrides.v1`, with `override`, the temporary daily budget in force:
+            while it lasts the caller's own daily limit that stops is its `usd`): the daily limit in force without it,
+            absent when the caller had none"
         period:
           type: string
           enum:
@@ -23729,6 +26921,17 @@ components:
         repository:
           type: string
           description: "Agent: the repository (`owner/name`) its session works in, else the run's"
+        profileId:
+          type: string
+          format: uuid
+          x-ostrom-status: planned
+          description: "Agent: the organization's cloud profile its session runs on (`runners.cloud.profiles.v1`,
+            TeamCode's node `profileId`), else the run's `profileId`, else the only profile the run's starter (an
+            automation's owner for its runs) may use. Where sessions run on cloud profiles, saving a workflow the
+            server runs refuses an id none of the organization's profiles has (400 `invalid_workflow`, naming the
+            node). Ignored by a server whose sessions run on Docker or on registered runners. A session the profile refuses fails the visit, and the run's `failureCode` is the refusal's key:
+            `cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
+            `cluster_unavailable` or `namespace_not_allowed`"
     NodeRunOn:
       type: object
       description: What triggers a node
@@ -24524,6 +27727,16 @@ components:
       - provider
       - platform
       - createdAt
+    PushDeviceList:
+      type: object
+      description: The caller's phones registered for push notifications, the most recently seen first
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PushDevice'
+      required:
+      - items
     PushRelayRegisterRequest:
       type: object
       description: 'Ostrom Push relay (`push.v1`), `POST /v1/instances`: an instance introduces its Ed25519 public key.
@@ -25332,26 +28545,26 @@ components:
           enum:
           - working
           - waiting_for_human
-          x-ostrom-status: planned
+          x-ostrom-status: served
           description: "Whether the agent works or waits for a person (`sessions.activity.v1`), as its hooks last
             reported it (`reportSessionActivity`), as TeamCode's run `activity`. Only while the segment is open: after
             its end (`ended`, `lost` included) it would be a guess, so it is absent. Absent too before the first report,
             and once a sign of life that ends a silence of the launcher (60 s without one) cleared a `working` reported
             before the silence; `waiting_for_human` is kept over a silence, and a segment reopened after it starts with
-            it, since a person still has to answer. Planned: the server does not send it yet"
+            it, since a person still has to answer."
         activitySince:
           type: string
           format: date-time
-          x-ostrom-status: planned
+          x-ostrom-status: served
           description: "When `activity` began, by the server's clock: a repeated state keeps its time. Present with
-            `activity` only. Planned: the server does not send it yet"
+            `activity` only."
         labels:
           type: object
           additionalProperties:
             type: string
-          x-ostrom-status: planned
+          x-ostrom-status: served
           description: "The labels of its launch (`createLaunch.labels`, `sessions.labels.v1`), as TeamCode returns them
-            on a run; absent when the launch has none. Planned: the server does not send them yet"
+            on a run; absent when the launch has none"
       required:
       - id
       - agent
@@ -27349,12 +30562,21 @@ components:
       - answeredAt
     WaitField:
       type: object
-      description: A field of a wait
+      description: "A field of a wait. `file` takes the name of an uploaded file, a string of at most 255 characters
+        without `/`, `\\` or control characters. `secret` asks a person for a value the agent needs and nobody else
+        should read (a password, a token): a string of at most 4 096 bytes without NUL, only in a wait an agent asks in
+        its session (never in a workflow's wait node), without `default`. The value is sealed with the server's
+        credential cipher, bound to the wait's session and kept at most 24 hours; it is never returned, so the stored
+        answer, every view, the wake message, the audit and the feed carry `provided` or `not provided` for the
+        field. It reaches the agent only as the environment variable `OSTROM_WAIT_<FIELD ID UPPER-CASED>` of its
+        commands (Claude Code only, `waits.secrets.v1`): two secret fields of a wait must not give the same name"
       properties:
         id:
           type: string
         type:
           type: string
+          description: "`text`, `choice`, `confirm`, `number`, `date`, `secret`, `file` or `info`; a client shows a type
+            it does not know as text"
         label:
           type: string
         help:
@@ -27372,6 +30594,10 @@ components:
           type: boolean
         maxLength:
           type: integer
+        oneTime:
+          type: boolean
+          description: "`secret` only: the server deletes the value when it serves it to the session's runner, which
+            holds it for the turn (false when absent)"
       required:
       - id
       - type
@@ -27598,6 +30824,13 @@ components:
         repository:
           type: string
           description: "`owner/name`, for the agent nodes that name none (planned)"
+        profileId:
+          type: string
+          format: uuid
+          x-ostrom-status: planned
+          description: "The cloud profile of the agent nodes that name none (`runners.cloud.profiles.v1`, TeamCode's
+            `profileId` at start): 400 `invalid_request` when none of the organization's profiles has it. Absent: each
+            such node's session runs on the starter's only usable profile"
     WorkflowPage:
       type: object
       description: "The workflows; `next` is the cursor of the following page"
@@ -27860,6 +31093,13 @@ components:
         repository:
           type: string
           description: The repository of the agent nodes that name none
+        profileId:
+          type: string
+          format: uuid
+          x-ostrom-status: planned
+          description: "The cloud profile of the agent nodes that name none: the one given at a manual start, or,
+            for a run an automation started, its workflow action's. Absent when none was named (the profile is then
+            chosen at each session's creation, never written back here)"
         visits:
           type: array
           items:
@@ -27871,7 +31111,9 @@ components:
           description: "A stable code: `session_failed`, `session_deleted`, `session_missing`, `ended_without_delivery`,
             `repository_missing`, `starter_unavailable`, `wait_cancelled`, `wait_missing`, `max_visits:<node>`,
             `max_total_visits`, `max_depth`, `workflow_missing`, `invalid_arguments`, `sub_workflow_failed`,
-            `sub_workflow_cancelled`, `expired`, `no_transition`, or the code of a refusal that cannot be retried"
+            `sub_workflow_cancelled`, `expired`, `no_transition`, the cloud profile's refusal of an agent node's
+            session (`cloud_profile_not_found`, `profile_unassigned`, `profile_required`, `image_not_allowed`,
+            `cluster_unavailable`, `namespace_not_allowed`), or the code of a refusal that cannot be retried"
         output:
           type: string
         receiptId:
