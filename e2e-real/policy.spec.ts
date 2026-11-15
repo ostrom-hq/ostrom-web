@@ -105,7 +105,7 @@ test('an owner edits the API price table: a dated row of its own over the list p
   await form.getByRole('textbox', { name: 'Cache read $ / million' }).fill('0.2');
   await form.getByRole('textbox', { name: 'Output $ / million' }).fill('8');
   await form.getByRole('button', { name: 'Save the price' }).click();
-  await expect(box.getByRole('cell', { name: 'claude-test-9' })).toBeVisible();
+  await expect(box.getByRole('cell', { name: 'claude-test-9', exact: true })).toBeVisible();
   await expect(box.getByText('Built-in prices')).toHaveCount(0);
   const own = await read(page);
   expect(own.defaults).not.toBe(true);
@@ -124,7 +124,7 @@ test('an owner edits the API price table: a dated row of its own over the list p
   await box.getByRole('button', { name: 'Load current Anthropic prices' }).click();
   await expect.poll(async () => (await read(page)).prices.length).toBe(own.prices.length);
   await box.getByRole('button', { name: 'Remove claude-test-9 from 2026-11-01' }).click();
-  await expect(box.getByRole('cell', { name: 'claude-test-9' })).toHaveCount(0);
+  await expect(box.getByRole('cell', { name: 'claude-test-9', exact: true })).toHaveCount(0);
   await expect
     .poll(async () => (await read(page)).prices.some((row) => row.model === 'claude-test-9'))
     .toBe(false);

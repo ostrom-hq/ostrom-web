@@ -74,56 +74,54 @@ function PriceTable({
   const { t, i18n } = useTranslation();
   if (table.prices.length === 0) return <p className="o-empty">{t('policy.prices.empty')}</p>;
   return (
-    <div className="pl-scroll">
-      <table className="pl-prices">
-        <caption className="o-row__meta">{t('policy.prices.caption')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('policy.prices.provider')}</th>
-            <th scope="col">{t('policy.prices.model')}</th>
-            <th scope="col">{t('policy.prices.from')}</th>
+    <table className="pl-prices">
+      <caption className="o-row__meta">{t('policy.prices.caption')}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{t('policy.prices.provider')}</th>
+          <th scope="col">{t('policy.prices.model')}</th>
+          <th scope="col">{t('policy.prices.from')}</th>
+          {PRICE_KINDS.map((kind) => (
+            <th key={kind} scope="col" className="pl-num">
+              {t(`policy.prices.kind.${kind}`)}
+            </th>
+          ))}
+          {table.defaults === true ? null : (
+            <th scope="col">
+              <span className="o-visually-hidden">{t('policy.prices.actions')}</span>
+            </th>
+          )}
+        </tr>
+      </thead>
+      <tbody>
+        {sortPrices(table.prices).map((row) => (
+          <tr key={`${row.provider}:${row.model}:${row.effectiveFrom}`}>
+            <td>{row.provider}</td>
+            <td className="o-mono">{row.model}</td>
+            <td>{row.effectiveFrom}</td>
             {PRICE_KINDS.map((kind) => (
-              <th key={kind} scope="col" className="pl-num">
-                {t(`policy.prices.kind.${kind}`)}
-              </th>
+              <td key={kind} className="pl-num">
+                {formatPrice(row[kind], i18n.language)}
+              </td>
             ))}
             {table.defaults === true ? null : (
-              <th scope="col">
-                <span className="o-visually-hidden">{t('policy.prices.actions')}</span>
-              </th>
+              <td>
+                <Button
+                  variant="ghost"
+                  disabled={view.saving}
+                  aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
+                  onClick={() => {
+                    view.save(withoutPrice(table.prices, row), () => undefined);
+                  }}
+                >
+                  {t('policy.prices.remove')}
+                </Button>
+              </td>
             )}
           </tr>
-        </thead>
-        <tbody>
-          {sortPrices(table.prices).map((row) => (
-            <tr key={`${row.provider}:${row.model}:${row.effectiveFrom}`}>
-              <td>{row.provider}</td>
-              <td className="o-mono">{row.model}</td>
-              <td>{row.effectiveFrom}</td>
-              {PRICE_KINDS.map((kind) => (
-                <td key={kind} className="pl-num">
-                  {formatPrice(row[kind], i18n.language)}
-                </td>
-              ))}
-              {table.defaults === true ? null : (
-                <td>
-                  <Button
-                    variant="ghost"
-                    disabled={view.saving}
-                    aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
-                    onClick={() => {
-                      view.save(withoutPrice(table.prices, row), () => undefined);
-                    }}
-                  >
-                    {t('policy.prices.remove')}
-                  </Button>
-                </td>
-              )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
