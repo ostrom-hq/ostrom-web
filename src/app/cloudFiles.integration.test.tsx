@@ -380,8 +380,8 @@ describe('the files of a conversation’s next message (TeamCode SessionFiles)',
     fireEvent.dragLeave(area, { dataTransfer: transfer });
     expect(screen.queryByText('Drop files to attach them to your next message')).toBeNull();
     // A drag that carries nothing, or text, is not files.
-    fireEvent.dragOver(area);
-    fireEvent.drop(area);
+    fireEvent.dragOver(area, { dataTransfer: null });
+    fireEvent.drop(area, { dataTransfer: null });
     fireEvent.dragOver(area, { dataTransfer: { types: ['text/plain'], files: [] } });
     fireEvent.drop(area, { dataTransfer: { types: ['text/plain'], files: [] } });
     expect(screen.queryByText('Drop files to attach them to your next message')).toBeNull();
