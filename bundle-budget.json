@@ -4,8 +4,8 @@
   "routes": {
     "/": 14.7,
     "/confirm/$confirmationId": 12.7,
-    "/waits": 13.2,
-    "/waits/$waitId": 13.2,
+    "/waits": 13.6,
+    "/waits/$waitId": 13.6,
     "/sessions": 14.5,
     "/sessions/$sessionId": 14.5,
     "/members": 14.9,
