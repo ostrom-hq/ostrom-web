@@ -1107,7 +1107,7 @@ describe('mock cloud agents and automations', () => {
     expect(
       (await listCloudSessions({ query: { status: 'queued' }, throwOnError: true })).data.items,
     ).toHaveLength(5);
-    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(8);
+    expect((await listCloudSessions({ throwOnError: true })).data.items).toHaveLength(9);
   });
 
   it('keeps the recipe and the repository of a session, and never takes both', async () => {

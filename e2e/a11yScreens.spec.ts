@@ -42,6 +42,7 @@ const SCREENS = [
   '/tokens',
   '/cloud',
   '/cloud/admin',
+  '/cloud/sessions/cs-33',
   '/automations',
   '/artifacts',
   '/webhooks',

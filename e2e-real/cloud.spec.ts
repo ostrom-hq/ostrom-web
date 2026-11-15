@@ -274,3 +274,46 @@ test('6.2 an owner starts an agent with a preparation recipe; the server keeps i
   const stopped = await callFromPage(page, 'DELETE', `/api/v1/cloud/sessions/${id}`, undefined, org);
   expect([202, 404, 409]).toContain(stopped.status);
 });
+
+test('6.2 §16 a conversation session opens on its own screen, and never on another organization’s', async ({
+  page,
+  browser,
+}) => {
+  const { id: org } = await ownerOfNewOrganization(page, 'gus');
+  const capabilities = await callFromPage(page, 'GET', '/api/v1/capabilities', undefined, org);
+  const features = z.object({ features: z.array(z.string()) }).parse(capabilities.body).features;
+  test.skip(!features.includes('runners.cloud.conversation.v1'), 'This server does not serve conversations');
+  const name = `conversation-${Date.now().toString(36)}`;
+  const created = await callFromPage(
+    page,
+    'POST',
+    '/api/v1/cloud/sessions',
+    { agent: 'claude', mode: 'conversation', name, prompt: 'Say hello, then wait.' },
+    org,
+  );
+  expect(created.status, JSON.stringify(created.body)).toBe(201);
+  const session = zCloudSession.parse(created.body);
+  expect(session.mode).toBe('conversation');
+
+  // The owner opens it from its row: its screen, its transcript and its message box.
+  await page.goto('/cloud');
+  await page.getByRole('link', { name }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(name);
+  await expect(page.getByRole('region', { name: 'Conversation' })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Message the agent' })).toBeVisible();
+
+  // Another organization's owner, by its address or through the API, reads nothing of it.
+  const other = await anotherPerson(browser);
+  const { id: otherOrg } = await ownerOfNewOrganization(other, 'hal');
+  for (const path of ['', '/events', `/events?before=${String(Number.MAX_SAFE_INTEGER)}`])
+    expect(
+      (await callFromPage(other, 'GET', `/api/v1/cloud/sessions/${session.id}${path}`, undefined, otherOrg))
+        .status,
+    ).toBe(404);
+  await other.goto(`/cloud/sessions/${session.id}`);
+  await expect(other.getByText('This session does not exist, or you may no longer read it.')).toBeVisible();
+  await expect(other.getByText(name)).toHaveCount(0);
+
+  const stopped = await callFromPage(page, 'DELETE', `/api/v1/cloud/sessions/${session.id}`, undefined, org);
+  expect([202, 404, 409]).toContain(stopped.status);
+});

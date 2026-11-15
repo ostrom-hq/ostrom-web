@@ -56,3 +56,22 @@ test('a developer starts an agent with a preparation recipe, and reads what a fa
     'fix the recipe or your environment variables first',
   );
 });
+
+test('a developer opens a conversation session, reads it, and messages its agent', async ({ page }) => {
+  await page.goto('/');
+  await openScreen(page, 'Cloud agents');
+  // Only a conversation has its own screen: its title opens it.
+  await page.getByRole('link', { name: 'Why the invoice test fails on Mondays' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Why the invoice test fails on Mondays');
+  const transcript = page.getByRole('region', { name: 'Conversation' });
+  await expect(transcript.getByText('Why does the invoice test fail on Mondays?')).toBeVisible();
+  await expect(page.getByText('Live', { exact: true })).toBeVisible();
+  await transcript.getByRole('button', { name: /2 actions/ }).click();
+  await transcript.getByRole('button', { name: /^Bash/ }).click();
+  await expect(transcript.getByText('Exit code 1')).toBeVisible();
+  // The answer comes back on the live stream.
+  await page.getByRole('textbox', { name: 'Message the agent' }).fill('Fix it with UTC dates');
+  await page.getByRole('button', { name: 'Send' }).click();
+  await expect(transcript.getByText('On it: Fix it with UTC dates')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Message the agent' })).toHaveValue('');
+});

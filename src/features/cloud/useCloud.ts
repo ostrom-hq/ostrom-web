@@ -40,7 +40,7 @@ import { ready } from '@/shared/api/ready';
 import { useAnnounced } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
 import { createRefused, type PendingCreate, pressOf } from './createKey';
-import type { CloudAgent, GithubAccess } from './model';
+import type { CloudAgent, GithubAccess, SessionMode } from './model';
 
 const POLL_MS = 10_000;
 
@@ -78,6 +78,8 @@ export interface StartRequest {
   /** The profile the session runs on (`runners.cloud.profiles.v1`), and an image it allows instead of its own. */
   readonly profileId?: string | undefined;
   readonly image?: string | undefined;
+  /** `conversation` (`runners.cloud.conversation.v1`, Claude Code and Codex only): the agent runs headless, messaged from its screen. */
+  readonly mode?: SessionMode | undefined;
 }
 
 export interface SessionChangeViewModel {
@@ -117,6 +119,7 @@ export function useSessionChange(): SessionChangeViewModel {
         ...(request.image === undefined || request.image.trim() === ''
           ? {}
           : { image: request.image.trim() }),
+        ...(request.mode === undefined ? {} : { mode: request.mode }),
       };
       // One key per press, kept while its answer is unknown so that pressing again cannot create a second session.
       const press = pressOf(pending.current, body);

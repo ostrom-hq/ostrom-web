@@ -112,6 +112,7 @@ describe('the mapping of a transcript event (TeamCode CloudMapping)', () => {
     expect(parentOf(eventOf(cloud(1, 'message.agent', { parentToolUseId: 'w1' }, 'w2')))).toBe('w1');
     expect(parentOf(eventOf(cloud(1, 'tool.call', {}, 'w2')))).toBe('w2');
     expect(parentOf(eventOf(cloud(1, 'turn', {}, 'w2')))).toBeUndefined();
+    expect(parentOf(eventOf(cloud(1, 'message.user', {}, 'w2')))).toBeUndefined();
   });
 
   it('lists the live background tasks (aTasksEventListsTheLiveBackgroundTasks)', () => {

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { CloudSession } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
+import { useAnnounced } from '@/shared/capabilities';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
@@ -32,10 +34,18 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
   const advice = preparationAdvice(session);
   const reason = terminatedReasonOf(session);
   const blocked = blockedDeletionOf(session);
+  const conversation = useAnnounced('runners.cloud.conversation.v1') && session.mode === 'conversation';
   return (
     <div className="o-row cl-session">
       <span className="o-row__main">
-        <span className="o-row__title">{title}</span>
+        {conversation ? (
+          // A conversation has its own screen; a terminal session is followed from where it runs.
+          <Link to="/cloud/sessions/$sessionId" params={{ sessionId: session.id }} className="o-row__title">
+            {title}
+          </Link>
+        ) : (
+          <span className="o-row__title">{title}</span>
+        )}
         <span className="o-row__meta">
           {[
             session.owner,

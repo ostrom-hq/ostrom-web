@@ -233,6 +233,11 @@ import {
 } from '@/mocks/fixtures/delivery';
 import { createMcpAccessHandlers, type McpAccessState } from '@/mocks/mcpAccess';
 import { type CloudAdminState, createCloudAdminHandlers, initialCloudAdmin } from '@/mocks/cloudAdmin';
+import {
+  type CloudConversationState,
+  createCloudConversationHandlers,
+  initialCloudEvents,
+} from '@/mocks/cloudConversation';
 import { createMcpHostedHandlers, type McpHostedState } from '@/mocks/mcpHosted';
 import { createEnvironmentHandlers, type EnvironmentState } from '@/mocks/environment';
 import { createPersonalMcpHandlers, type PersonalMcpState } from '@/mocks/personalMcp';
@@ -274,6 +279,7 @@ export interface MockDb
     AccountState,
     AdminState,
     CloudAdminState,
+    CloudConversationState,
     ActivityState,
     AuditState,
     BillingState,
@@ -465,6 +471,8 @@ export function createMockDb(): MockDb {
     cutoverAvailable: true,
     budgets: initialBudgets(),
     cloudSessions: initialCloudSessions(),
+    cloudEvents: initialCloudEvents(),
+    cloudInputs: {},
     runners: initialRunners(),
     automations: initialAutomations(),
     automationRuns: initialAutomationRuns(),
@@ -1341,6 +1349,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       (request) => organizationOf(db, request),
       now,
     ),
+    ...createCloudConversationHandlers(() => db, now),
     ...createCloudAdminHandlers(
       () => db,
       {
@@ -1466,7 +1475,18 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           'invalid_request',
           `Unknown agent ${body.data.agent}: use ${knownValues(zCloudAgentKind).join(', ')}.`,
         );
-      const { repo, ref, environment } = body.data;
+      const { repo, ref, environment, mode } = body.data;
+      // A conversation runs Claude Code or Codex headless; any other mode is refused, as the server does.
+      if (
+        mode !== undefined &&
+        mode !== 'terminal' &&
+        (mode !== 'conversation' || (agent !== 'claude' && agent !== 'codex'))
+      )
+        return refusal(
+          400,
+          'invalid_mode',
+          'A conversation runs claude or codex; the mode is terminal or conversation.',
+        );
       // The server clones the recipe's repositories or the older single one, never both (ostrom-server
       // `CreateCloudSessionUseCase`).
       if (repo !== undefined && (environment?.repositories ?? []).length > 0)
@@ -1531,6 +1551,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
         ...(repo === undefined ? {} : { repo }),
         ...(ref === undefined ? {} : { ref }),
         ...(environment === undefined ? {} : { environment: storedRecipe(environment) }),
+        ...(mode === undefined ? {} : { mode }),
       };
       db.cloudSessions.unshift(session);
       return HttpResponse.json(session, { status: 201 });

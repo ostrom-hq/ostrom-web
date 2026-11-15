@@ -29,7 +29,12 @@ export type TranscriptItem =
       readonly result: Of<'toolResult'> | undefined;
     }
   | { readonly kind: 'turnEnd'; readonly event: Of<'turn'> }
-  | { readonly kind: 'system'; readonly event: TranscriptEvent };
+  | { readonly kind: 'system'; readonly event: SystemEvent };
+
+/** The events shown as a centered line. */
+export type SystemEvent = Of<
+  'status' | 'error' | 'input' | 'permission' | 'permissionExpired' | 'transferred' | 'truncated'
+>;
 
 /** The tools that start a subagent: `Agent`, and `Task`, its name before Claude Code renamed it. */
 export const AGENT_TOOLS: ReadonlySet<string> = new Set(['Agent', 'Task']);
