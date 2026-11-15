@@ -789,6 +789,8 @@ export const fr = {
         outputMicros: 'Sortie',
       },
       actions: 'Actions',
+      edit: 'Modifier',
+      editRow: 'Modifier {{model}} à partir du {{from}}',
       remove: 'Retirer',
       removeRow: 'Retirer {{model}} à partir du {{from}}',
       add: 'Ajouter ou remplacer un prix',

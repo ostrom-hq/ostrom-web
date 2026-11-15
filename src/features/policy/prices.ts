@@ -47,6 +47,20 @@ export interface PriceDraft {
   readonly outputMicros: string;
 }
 
+/** A row as the form shows it, to change its prices (or its date, for a new row of the same model). */
+export function priceDraftOf(row: ApiPrice): PriceDraft {
+  const dollars = (micros: number): string => String(micros / MICROS);
+  return {
+    provider: row.provider,
+    model: row.model,
+    effectiveFrom: row.effectiveFrom,
+    inputMicros: dollars(row.inputMicros),
+    cacheWriteMicros: dollars(row.cacheWriteMicros),
+    cacheReadMicros: dollars(row.cacheReadMicros),
+    outputMicros: dollars(row.outputMicros),
+  };
+}
+
 /**
  * The row the form describes, or undefined while it does not describe one: a known provider, a lowercase model or
  * prefix, a date, four prices with input and output above 0 (a cache price left empty is 0).

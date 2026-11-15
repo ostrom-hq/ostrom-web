@@ -3,6 +3,7 @@ import type { ApiPrice } from '@gen/api/types.gen';
 import {
   draftPrice,
   formatPrice,
+  priceDraftOf,
   priceMicrosOf,
   sortPrices,
   utcDay,
@@ -65,6 +66,12 @@ describe('the API price table', () => {
     expect(withoutPrice(table, row('claude-opus-4', '2026-10-21'))).toEqual([
       row('claude-sonnet-4', '2026-10-21'),
     ]);
+  });
+
+  it('fills the form with a row, which reads back as the same row', () => {
+    const shown = row('claude-sonnet-4', '2026-10-21');
+    expect(priceDraftOf(shown)).toMatchObject({ inputMicros: '3', cacheReadMicros: '0.3' });
+    expect(draftPrice(priceDraftOf(shown))).toEqual(shown);
   });
 
   it('sorts by provider, model, then the latest date first', () => {

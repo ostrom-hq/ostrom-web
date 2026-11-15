@@ -29,6 +29,10 @@
   flex: none;
   margin-top: 0.2em;
 }
+.pl-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .pl-prices {
   width: 100%;
   border-collapse: collapse;
@@ -43,10 +47,7 @@
   text-align: start;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border);
-}
-/* No scrolling box (it would need a keyboard stop): on a phone the cells wrap, a long model at any character. */
-.pl-prices td {
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 .pl-prices .pl-num {
   text-align: end;

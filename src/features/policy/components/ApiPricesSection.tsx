@@ -10,6 +10,7 @@ import { LoadState, Section } from '@/shared/ui/Screen';
 import {
   draftPrice,
   formatPrice,
+  priceDraftOf,
   MAX_MODEL_LENGTH,
   PRICE_KINDS,
   PRICE_PROVIDERS,
@@ -31,6 +32,8 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
   const { t } = useTranslation();
   const shown = useAnnounced('capacity.apiprices.v1') && manages;
   const view = useApiPrices(shown);
+  // The row whose prices the form was filled with ("Edit"); none: a new row.
+  const [editing, setEditing] = useState<ApiPrice | undefined>(undefined);
   if (!shown) return null;
   return (
     <Section label={t('policy.prices.title')}>
@@ -41,13 +44,18 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
             {table.defaults === true ? (
               <Banner tag={t('policy.prices.defaultsTag')}>{t('policy.prices.defaults')}</Banner>
             ) : null}
-            <PriceTable table={table} view={view} />
+            <PriceTable table={table} view={view} edit={setEditing} />
             {view.saveFailure === undefined ? null : (
               <Banner tone="danger" tag={t('policy.errorTag')} live>
                 <FailureText failure={view.saveFailure} />
               </Banner>
             )}
-            <PriceForm table={table} view={view} />
+            <PriceForm
+              key={editing === undefined ? '' : rowKey(editing)}
+              table={table}
+              view={view}
+              from={editing}
+            />
             <div className="o-stack">
               <h3 className="o-label">{t('policy.prices.loadTitle')}</h3>
               <p className="o-row__meta">{t('policy.prices.loadLead')}</p>
@@ -64,64 +72,82 @@ export function ApiPricesSection({ manages }: { readonly manages: boolean }): Re
   );
 }
 
+function rowKey(row: ApiPrice): string {
+  return `${row.provider}:${row.model}:${row.effectiveFrom}`;
+}
+
 function PriceTable({
   table,
   view,
+  edit,
 }: {
   readonly table: ApiPriceTable;
   readonly view: ApiPricesViewModel;
+  readonly edit: (row: ApiPrice) => void;
 }): ReactElement {
   const { t, i18n } = useTranslation();
   if (table.prices.length === 0) return <p className="o-empty">{t('policy.prices.empty')}</p>;
   return (
-    <table className="pl-prices">
-      <caption className="o-row__meta">{t('policy.prices.caption')}</caption>
-      <thead>
-        <tr>
-          <th scope="col">{t('policy.prices.provider')}</th>
-          <th scope="col">{t('policy.prices.model')}</th>
-          <th scope="col">{t('policy.prices.from')}</th>
-          {PRICE_KINDS.map((kind) => (
-            <th key={kind} scope="col" className="pl-num">
-              {t(`policy.prices.kind.${kind}`)}
-            </th>
-          ))}
-          {table.defaults === true ? null : (
+    // Every row has a button, so the keyboard reaches the box that scrolls sideways on a phone.
+    <div className="pl-scroll">
+      <table className="pl-prices">
+        <caption className="o-row__meta">{t('policy.prices.caption')}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{t('policy.prices.provider')}</th>
+            <th scope="col">{t('policy.prices.model')}</th>
+            <th scope="col">{t('policy.prices.from')}</th>
+            {PRICE_KINDS.map((kind) => (
+              <th key={kind} scope="col" className="pl-num">
+                {t(`policy.prices.kind.${kind}`)}
+              </th>
+            ))}
             <th scope="col">
               <span className="o-visually-hidden">{t('policy.prices.actions')}</span>
             </th>
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        {sortPrices(table.prices).map((row) => (
-          <tr key={`${row.provider}:${row.model}:${row.effectiveFrom}`}>
-            <td>{row.provider}</td>
-            <td className="o-mono">{row.model}</td>
-            <td>{row.effectiveFrom}</td>
-            {PRICE_KINDS.map((kind) => (
-              <td key={kind} className="pl-num">
-                {formatPrice(row[kind], i18n.language)}
-              </td>
-            ))}
-            {table.defaults === true ? null : (
-              <td>
-                <Button
-                  variant="ghost"
-                  disabled={view.saving}
-                  aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
-                  onClick={() => {
-                    view.save(withoutPrice(table.prices, row), () => undefined);
-                  }}
-                >
-                  {t('policy.prices.remove')}
-                </Button>
-              </td>
-            )}
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {sortPrices(table.prices).map((row) => (
+            <tr key={rowKey(row)}>
+              <td>{row.provider}</td>
+              <td className="o-mono">{row.model}</td>
+              <td>{row.effectiveFrom}</td>
+              {PRICE_KINDS.map((kind) => (
+                <td key={kind} className="pl-num">
+                  {formatPrice(row[kind], i18n.language)}
+                </td>
+              ))}
+              <td>
+                <span className="o-inline">
+                  <Button
+                    variant="ghost"
+                    aria-label={t('policy.prices.editRow', { model: row.model, from: row.effectiveFrom })}
+                    onClick={() => {
+                      edit(row);
+                    }}
+                  >
+                    {t('policy.prices.edit')}
+                  </Button>
+                  {table.defaults === true ? null : (
+                    <Button
+                      variant="ghost"
+                      disabled={view.saving}
+                      aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
+                      onClick={() => {
+                        view.save(withoutPrice(table.prices, row), () => undefined);
+                      }}
+                    >
+                      {t('policy.prices.remove')}
+                    </Button>
+                  )}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -135,17 +161,18 @@ const EMPTY_PRICES: Pick<PriceDraft, PriceKind> = {
 function PriceForm({
   table,
   view,
+  from,
 }: {
   readonly table: ApiPriceTable;
   readonly view: ApiPricesViewModel;
+  readonly from: ApiPrice | undefined;
 }): ReactElement {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<PriceDraft>(() => ({
-    provider: 'anthropic',
-    model: '',
-    effectiveFrom: utcDay(new Date()),
-    ...EMPTY_PRICES,
-  }));
+  const [draft, setDraft] = useState<PriceDraft>(() =>
+    from === undefined
+      ? { provider: 'anthropic', model: '', effectiveFrom: utcDay(new Date()), ...EMPTY_PRICES }
+      : priceDraftOf(from),
+  );
   const ids = {
     provider: useId(),
     model: useId(),

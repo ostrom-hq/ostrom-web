@@ -43,6 +43,23 @@ describe('the API price editor', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(BUILT_IN_PRICES.length + 1);
     expect(within(table).getByRole('cell', { name: '$75.00' })).toBeInTheDocument();
     expect(within(box).queryByRole('button', { name: /^Remove/ })).toBeNull();
+
+    // Editing a built-in row fills the form with it; saving keeps the others.
+    await user.click(within(box).getByRole('button', { name: 'Edit claude-sonnet-4 from 2026-10-21' }));
+    const edit = within(box).getByRole('form', { name: 'Add or replace a price' });
+    expect(within(edit).getByRole('textbox', { name: 'Model or family prefix' })).toHaveValue(
+      'claude-sonnet-4',
+    );
+    const output = within(edit).getByRole('textbox', { name: 'Output $ / million' });
+    expect(output).toHaveValue('15');
+    await user.clear(output);
+    await user.type(output, '16');
+    await user.click(within(edit).getByRole('button', { name: 'Save the price' }));
+    await within(box).findByRole('cell', { name: '$16.00' });
+    expect(db.apiPrices.find((item) => item.model === 'claude-sonnet-4')?.outputMicros).toBe(16_000_000);
+    db.apiPrices = [];
+    await user.click(within(box).getByRole('button', { name: 'Load current Anthropic prices' }));
+    await within(box).findAllByRole('cell', { name: '$15.00' });
     const form = within(box).getByRole('form', { name: 'Add or replace a price' });
     expect(within(form).getByRole('button', { name: 'Save the price' })).toBeDisabled();
 
