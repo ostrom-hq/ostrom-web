@@ -109,6 +109,18 @@ function splitGenerated(): Plugin {
   };
 }
 
+/**
+ * The screens in the first download whose words no other screen shows (src/app/router.ts imports the yes screens
+ * eagerly): their sections go in the first wording of their own routes only, about 1.9 KB less, gzipped, before
+ * every other screen's first paint (e2e-real/vitals.spec.ts). The console loads the whole language once a screen is up.
+ */
+const FIRST_DOWNLOAD_SCREENS = {
+  /** Their modules. */
+  modules: /[\\/]src[\\/]features[\\/]yes[\\/]/,
+  /** Their routes, as src/app/router.ts writes them. */
+  routes: /^\/yes(?:\/|$)/,
+} as const;
+
 /** The wording chunk of each language, by the module it comes from (src/shared/i18n/locales/<language>.ts). */
 const LANGUAGE_MODULE = /[\\/]src[\\/]shared[\\/]i18n[\\/]locales[\\/]([a-z]{2})\.ts$/;
 
@@ -254,11 +266,35 @@ function preloadBoot(): Plugin {
         sectionsOf.set(file, found);
         return found;
       };
+      // The sections only the yes screens name in the first download (FIRST_DOWNLOAD_SCREENS), read module by module:
+      // left out of another route's first wording. A section any other module of it names stays.
+      const onlyTheirs = new Map<string, ReadonlySet<string>>();
+      const theirsAlone = (file: string): ReadonlySet<string> => {
+        const known = onlyTheirs.get(file);
+        if (known !== undefined) return known;
+        const theirs: string[] = [];
+        const others: string[] = [];
+        for (const [id, module] of Object.entries(byName.get(file)?.modules ?? {}))
+          (FIRST_DOWNLOAD_SCREENS.modules.test(id) ? theirs : others).push(module.code ?? '');
+        const elsewhere = sectionsIn(others.join('\n'), english);
+        const found = new Set(
+          [...sectionsIn(theirs.join('\n'), english)].filter((section) => !elsewhere.has(section)),
+        );
+        onlyTheirs.set(file, found);
+        return found;
+      };
       // One file per set of sections and language, however many routes share it.
       const emitted = new Map<string, string>();
-      const wordingsOf = (files: Iterable<string>): Record<string, string> => {
+      const wordingsOf = (
+        first: Iterable<string>,
+        own: Iterable<string>,
+        yes: boolean,
+      ): Record<string, string> => {
         const sections = new Set<string>();
-        for (const file of files) for (const section of named(file)) sections.add(section);
+        for (const file of first)
+          for (const section of named(file))
+            if (yes || !theirsAlone(file).has(section)) sections.add(section);
+        for (const file of own) for (const section of named(file)) sections.add(section);
         const urls: Record<string, string> = {};
         for (const [spoken, all] of words) {
           const source = JSON.stringify(screenWording(all, sections));
@@ -294,8 +330,9 @@ function preloadBoot(): Plugin {
             pattern: patternOf(route.path),
             chunks: own.map((file) => `${base}${file}`),
             styles: styles.map((file) => `${base}${file}`),
-            // What the first download and the screen's own chunks name: all its first paint can show.
-            wordings: wordingsOf([...entry, ...own]),
+            // What the first download and the screen's own chunks name: all its first paint can show. The yes screens'
+            // words only for their own routes (FIRST_DOWNLOAD_SCREENS).
+            wordings: wordingsOf(entry, own, FIRST_DOWNLOAD_SCREENS.routes.test(route.path)),
             // The screen's own reads first: on a slow link the six connections are taken, and the reads asked last wait
             // for one to come free. Who is signed in and their organizations show in the top bar, not in the screen's
             // first paint (its organization is `/orgs`, src/shared/org/useCurrentOrg.ts): they can wait their turn.

@@ -329,10 +329,8 @@
   .o-org-switch__viewer {
     max-width: 6rem;
   }
-  /* The bar has no room for every screen on a phone: the menu shows them. */
-  .o-nav {
-    display: none;
-  }
+  /* The bar has no room for every screen on a phone, and is not rendered there (src/app/usePhone.ts): the menu shows
+     them. */
   .o-nav-menu-toggle {
     display: inline-flex;
   }

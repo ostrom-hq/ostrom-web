@@ -13,6 +13,7 @@ import { needOf } from '@/app/navigation';
 import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
+import { usePhone } from '@/app/usePhone';
 import type * as AnalyticsModule from '@/app/AnalyticsLayer';
 
 // Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
@@ -53,6 +54,7 @@ export function AppShell(): ReactElement {
   const afterPaint = useAfterFirstPaint();
   const server = useServerStatus();
   const links = useNavLinks();
+  const phone = usePhone();
   const need = needOf(pathname);
   const screen = <Outlet key={organizationGeneration} />;
   // A server the console cannot speak to: nothing of the console is offered but the explanation and the sign-out.
@@ -68,13 +70,16 @@ export function AppShell(): ReactElement {
           <span>{t('app.name')}</span>
         </Link>
         <NavMenu />
-        <nav className="o-nav" aria-label={t('app.nav.label')}>
-          {links.map((link) => (
-            <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
-              <NavLabel label={link.label} />
-            </Link>
-          ))}
-        </nav>
+        {/* On a phone the menu shows the screens: the bar, hidden there, is not rendered (src/app/usePhone.ts). */}
+        {phone ? null : (
+          <nav className="o-nav" aria-label={t('app.nav.label')}>
+            {links.map((link) => (
+              <Link key={link.to} to={link.to} activeOptions={{ exact: link.to === '/' }}>
+                <NavLabel label={link.label} />
+              </Link>
+            ))}
+          </nav>
+        )}
         <div className="o-topbar__end">
           <OrgControls anonymousPage={anonymousPage} />
           <ThemeToggle />
