@@ -1,15 +1,6 @@
 import { Link, Outlet, useMatches, useRouterState } from '@tanstack/react-router';
-import type { ReactElement } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactElement } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import {
-  analytics,
-  analyticsConfig,
-  ConsentBanner,
-  PRIVACY_URL,
-  PrivacyChoices,
-  useConsentStore,
-  usePageViews,
-} from '@/shared/analytics';
 import { OrgControls } from '@/features/orgs';
 import { blocks, Feature, useServerStatus } from '@/shared/capabilities';
 import { useOrgStore } from '@/shared/org/orgStore';
@@ -22,6 +13,34 @@ import { needOf } from '@/app/navigation';
 import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
+import type * as AnalyticsModule from '@/app/AnalyticsLayer';
+
+// Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
+// (offline, blocked) leaves the console without it: nothing shows, nothing breaks.
+const NOTHING = (): ReactElement => <></>;
+type AnalyticsChunk = Pick<typeof AnalyticsModule, 'AnalyticsLayer' | 'FooterPrivacy'>;
+const analyticsChunk = async (): Promise<AnalyticsChunk> =>
+  import('@/app/AnalyticsLayer').catch(() => ({ AnalyticsLayer: NOTHING, FooterPrivacy: NOTHING }));
+const AnalyticsLayer = lazy(async () => analyticsChunk().then((m) => ({ default: m.AnalyticsLayer })));
+const FooterPrivacy = lazy(async () => analyticsChunk().then((m) => ({ default: m.FooterPrivacy })));
+
+/** True from the first frame after the first paint. */
+function useAfterFirstPaint(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      timer = setTimeout(() => {
+        setReady(true);
+      }, 0);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, []);
+  return ready;
+}
 
 export function AppShell(): ReactElement {
   const { t } = useTranslation();
@@ -31,8 +50,7 @@ export function AppShell(): ReactElement {
   const anonymousPage = useMatches({
     select: (matches) => matches.some((match) => match.staticData.anonymous === true),
   });
-  const consent = useConsentStore((state) => state.status);
-  usePageViews(analytics, pathname, consent);
+  const afterPaint = useAfterFirstPaint();
   const server = useServerStatus();
   const links = useNavLinks();
   const need = needOf(pathname);
@@ -76,9 +94,17 @@ export function AppShell(): ReactElement {
         )}
       </main>
       <footer className="o-footer">
-        <PrivacyChoices analytics={analytics} configured={analyticsConfig !== null} />
+        {afterPaint ? (
+          <Suspense fallback={null}>
+            <FooterPrivacy />
+          </Suspense>
+        ) : null}
       </footer>
-      <ConsentBanner analytics={analytics} configured={analyticsConfig !== null} privacyUrl={PRIVACY_URL} />
+      {afterPaint ? (
+        <Suspense fallback={null}>
+          <AnalyticsLayer pathname={pathname} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
