@@ -141,7 +141,7 @@ jobs:
             echo "$digest"
           }
           runner=docker.io/ostromhq/ostrom-runner@$(digest "$RUNNER_IMAGE")
-          # by its tag, the name the server's plan uses; the summary records the digest it held
+          # the sessions take it by its tag, the name the server's plan uses; the summary records the digest it holds now
           session_digest=$(digest "$SESSION_IMAGE")
           main=$(git -C server rev-parse HEAD)
           {
@@ -154,7 +154,7 @@ jobs:
             echo "### Real server"
             echo "- server: \`$image\` (main is at ${main:0:7})"
             echo "- machines and delivery: \`$runner\`"
-            echo "- cloud sessions: \`$SESSION_IMAGE\` (\`$session_digest\` when resolved)"
+            echo "- cloud sessions: \`$SESSION_IMAGE\` (its digest now: \`$session_digest\`)"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # The same console against the REAL server, as deployed (the owner role migrates, the server serves as `ostrom_app`,
@@ -196,7 +196,7 @@ jobs:
           path: .ostrom/server
           sparse-checkout: ci
           persist-credentials: false
-      - name: Images (the server's commit, the cloud sessions' image)
+      - name: Images (the server's commit, the machines' runner)
         run: |
           docker pull --quiet "$IMAGE"
           docker pull --quiet "$RUNNER_IMAGE"
