@@ -14,6 +14,8 @@ export interface ArtifactDetailProps {
   readonly artifact: Artifact;
   /** Present when the viewer owns the artifact. */
   readonly change: ArtifactChangeViewModel | undefined;
+  /** False on the reading page, which lists the versions itself. */
+  readonly withVersions?: boolean;
 }
 
 /** What the access says about who reads it, above the list of the members it is shared with. */
@@ -27,7 +29,7 @@ const ACCESS_NOTE = {
  * Its versions, newest first, and who reads it: what its access opens, then the members it is shared with (by id,
  * named from the organization's members when they could be read). Its owner adds and removes readers on any access.
  */
-export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): ReactElement {
+export function ArtifactDetail({ artifact, change, withVersions = true }: ArtifactDetailProps): ReactElement {
   const { t, i18n } = useTranslation();
   const detail = useArtifactDetail(artifact.id);
   const viewer = useViewer();
@@ -50,27 +52,31 @@ export function ArtifactDetail({ artifact, change }: ArtifactDetailProps): React
   const busy = change?.pending === artifact.id;
   return (
     <div className="o-stack">
-      <h4 className="sh-label">{t('sharing.artifacts.versions')}</h4>
-      {detail.versions.length === 0 ? (
-        <p className="o-row__meta">{t('sharing.artifacts.noVersion')}</p>
-      ) : (
-        <ol className="o-rows">
-          {detail.versions.map((version) => (
-            <li key={version.number} className="o-row">
-              <span className="o-row__main">
-                <span className="o-row__title">
-                  {t('sharing.artifacts.versionLine', {
-                    number: version.number,
-                    who: version.createdBy,
-                    when: formatAbsolute(version.createdAt, i18n.language),
-                  })}
-                </span>
-                <span className="o-row__meta o-mono">{version.files.join(', ')}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {withVersions ? (
+        <>
+          <h4 className="sh-label">{t('sharing.artifacts.versions')}</h4>
+          {detail.versions.length === 0 ? (
+            <p className="o-row__meta">{t('sharing.artifacts.noVersion')}</p>
+          ) : (
+            <ol className="o-rows">
+              {detail.versions.map((version) => (
+                <li key={version.number} className="o-row">
+                  <span className="o-row__main">
+                    <span className="o-row__title">
+                      {t('sharing.artifacts.versionLine', {
+                        number: version.number,
+                        who: version.createdBy,
+                        when: formatAbsolute(version.createdAt, i18n.language),
+                      })}
+                    </span>
+                    <span className="o-row__meta o-mono">{version.files.join(', ')}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      ) : null}
       <h4 className="sh-label">{t('sharing.artifacts.readers')}</h4>
       {isArtifactAccess(artifact.access) ? (
         <p className="o-row__meta">{t(ACCESS_NOTE[artifact.access], { owner: artifact.owner })}</p>

@@ -338,6 +338,24 @@ const artifactsRoute = createRoute({
   path: '/artifacts',
   component: lazyRouteComponent(async () => import('@/features/sharing'), 'ArtifactsScreen'),
 });
+/** An artifact's reading page; `?v=` pins one version (the latest, followed, without it or for anything else). */
+export const artifactSearchSchema = z.object({
+  v: z.optional(
+    z.pipe(
+      z.unknown(),
+      z.transform((value) => {
+        const number = Number(value);
+        return Number.isInteger(number) && number > 0 ? number : undefined;
+      }),
+    ),
+  ),
+});
+const artifactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/artifacts/$artifactId',
+  validateSearch: artifactSearchSchema,
+  component: lazyRouteComponent(async () => import('@/features/sharing'), 'ArtifactScreen'),
+});
 const webhooksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/webhooks',
@@ -537,6 +555,7 @@ export const routeTree = rootRoute.addChildren([
   adminSettingsRoute,
   automationsRoute,
   artifactsRoute,
+  artifactRoute,
   webhooksRoute,
   webhookRoute,
   accountsRoute,

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  createArtifactTicket,
   deleteArtifact,
+  getArtifact,
   enrollSharedAccount,
   handOverSharedAccount,
   listArtifactMembers,
@@ -10,13 +12,15 @@ import {
   removeSharedAccount,
   shareArtifact,
   unshareArtifact,
+  updateArtifact,
   updateSharedAccount,
 } from '@gen/api/sdk.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { configureApiClient } from '@/shared/api/apiClient';
 import { resetMockDb } from '@/mocks/handlers';
-import { MEMBER_IDS } from '@/mocks/fixtures/organization';
+import { MEMBER_IDS, otherOrganization } from '@/mocks/fixtures/organization';
 import { createMockServer } from '@/mocks/node';
+import { ORG_HEADER } from '@/shared/api/orgHeader';
 
 const { server, db } = createMockServer();
 
@@ -42,6 +46,81 @@ async function statusOf(call: () => Promise<unknown>): Promise<number | false | 
 }
 
 describe('mock artifacts', () => {
+  it('reads one artifact, changes its access for its owner only, and gives tickets for its versions', async () => {
+    expect((await getArtifact({ path: { id: 'art-5' }, throwOnError: true })).data.title).toBe(
+      'Release checklist',
+    );
+    expect(await statusOf(async () => getArtifact({ path: { id: 'nope' }, throwOnError: true }))).toBe(404);
+    const changed = await updateArtifact({
+      path: { id: 'art-7' },
+      body: { access: 'team' },
+      throwOnError: true,
+    });
+    expect(changed.data.access).toBe('team');
+    await updateArtifact({ path: { id: 'art-7' }, body: { title: 'Latency' }, throwOnError: true });
+    expect(db.artifacts.find((item) => item.id === 'art-7')).toMatchObject({
+      title: 'Latency',
+      access: 'team',
+    });
+    expect(
+      await statusOf(async () =>
+        updateArtifact({ path: { id: 'art-5' }, body: { access: 'team' }, throwOnError: true }),
+      ),
+    ).toBe(403);
+    expect(
+      await statusOf(async () =>
+        updateArtifact({ path: { id: 'nope' }, body: { access: 'team' }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    const refused = await fetch('http://ostrom.test/api/v1/artifacts/art-7', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: '{"access":7}',
+    });
+    expect(refused.status).toBe(400);
+    const latest = await createArtifactTicket({ path: { id: 'art-7' }, throwOnError: true });
+    expect(latest.data).toMatchObject({
+      version: 3,
+      url: 'https://artifacts.ostrom.test/a/art-7/t3/index.html',
+    });
+    const pinned = await createArtifactTicket({
+      path: { id: 'art-7' },
+      body: { version: 1 },
+      throwOnError: true,
+    });
+    expect(pinned.data.version).toBe(1);
+    // A version listed nowhere still opens its default page.
+    const unlisted = await createArtifactTicket({ path: { id: 'art-5' }, throwOnError: true });
+    expect(unlisted.data.url).toBe('https://artifacts.ostrom.test/a/art-5/t1/index.html');
+    expect(
+      await statusOf(async () =>
+        createArtifactTicket({ path: { id: 'art-7' }, body: { version: 9 }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    expect(
+      await statusOf(async () =>
+        createArtifactTicket({ path: { id: 'art-7' }, body: { version: 0 }, throwOnError: true }),
+      ),
+    ).toBe(404);
+    expect(
+      await statusOf(async () => createArtifactTicket({ path: { id: 'nope' }, throwOnError: true })),
+    ).toBe(404);
+  });
+
+  it('shows another organization neither an artifact nor a ticket', async () => {
+    const other = otherOrganization();
+    db.otherOrganizations = [other];
+    const headers = { [ORG_HEADER]: other.id };
+    expect(
+      await statusOf(async () => getArtifact({ path: { id: 'art-7' }, headers, throwOnError: true })),
+    ).toBe(404);
+    expect(
+      await statusOf(async () =>
+        createArtifactTicket({ path: { id: 'art-7' }, headers, throwOnError: true }),
+      ),
+    ).toBe(404);
+  });
+
   it('lists the artifacts, the versions and readers of one, and nothing for one without', async () => {
     expect((await listArtifacts({ throwOnError: true })).data.items.map((item) => item.id)).toEqual([
       'art-7',

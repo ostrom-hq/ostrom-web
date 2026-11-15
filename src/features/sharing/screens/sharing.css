@@ -51,3 +51,12 @@
   width: auto;
   flex: 0 0 auto;
 }
+
+/* An artifact's page, sandboxed in its frame: the width of the screen, most of its height. */
+.sh-frame {
+  inline-size: 100%;
+  block-size: max(480px, 75vh);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: Canvas;
+}

@@ -93,7 +93,8 @@ export interface ArtifactChangeViewModel {
   /** By member id (`Member.id`). `onDone` runs once the server took it: the picker clears then, not before. */
   readonly share: (id: string, memberId: string, onDone: () => void) => void;
   readonly unshare: (id: string, memberId: string) => void;
-  readonly remove: (id: string) => void;
+  /** `onDone` runs once the server deleted it (the reading page goes back to the list then). */
+  readonly remove: (id: string, onDone?: () => void) => void;
   /** The artifact being changed. */
   readonly pending: string | undefined;
   readonly failure: Error | undefined;
@@ -131,7 +132,7 @@ export function useArtifactChange(): ArtifactChangeViewModel {
   });
   const { mutateAsync: shareAsync, reset: resetShare } = shared;
   const { mutate: unshareMutate, reset: resetUnshare } = unshared;
-  const { mutate: dropMutate, reset: resetDrop } = dropped;
+  const { mutateAsync: dropAsync, reset: resetDrop } = dropped;
   const share = useCallback(
     (id: string, memberId: string, onDone: () => void) => {
       resetUnshare();
@@ -151,12 +152,12 @@ export function useArtifactChange(): ArtifactChangeViewModel {
     [unshareMutate, resetShare, resetDrop],
   );
   const remove = useCallback(
-    (id: string) => {
+    (id: string, onDone?: () => void) => {
       resetShare();
       resetUnshare();
-      dropMutate({ path: { id } });
+      dropAsync({ path: { id } }).then(onDone, () => undefined);
     },
-    [dropMutate, resetShare, resetUnshare],
+    [dropAsync, resetShare, resetUnshare],
   );
   return {
     share,

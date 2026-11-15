@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { Artifact } from '@gen/api/types.gen';
+import { Link } from '@tanstack/react-router';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { safeHref } from '@/shared/lib/safeHref';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
@@ -18,24 +18,19 @@ export interface ArtifactCardProps {
   readonly change: ArtifactChangeViewModel | undefined;
 }
 
-/** The title opens the page (only an http(s) link); versions and readers load on demand. */
+/** The title opens its reading page; versions and readers load on demand. */
 export function ArtifactCard({ artifact, now, change }: ArtifactCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const headingId = useId();
   const detailId = useId();
-  const href = safeHref(artifact.url);
   return (
     <article className="o-card o-stack" aria-labelledby={headingId}>
       <div className="o-inline sh-head">
         <h3 id={headingId} className="sh-name">
-          {href === undefined ? (
-            artifact.title
-          ) : (
-            <a href={href} target="_blank" rel="noreferrer noopener">
-              {artifact.title}
-            </a>
-          )}
+          <Link to="/artifacts/$artifactId" params={{ artifactId: artifact.id }}>
+            {artifact.title}
+          </Link>
         </h3>
         <Badge>
           {isArtifactAccess(artifact.access) ? t(`sharing.access.${artifact.access}`) : artifact.access}

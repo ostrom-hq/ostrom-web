@@ -48,6 +48,7 @@
     "/cloud/admin": 14.9,
     "/automations": 22.0,
     "/artifacts": 17.7,
+    "/artifacts/$artifactId": 17.7,
     "/webhooks": 12.2,
     "/webhooks/$webhookId": 12.2,
     "/accounts": 17.7,

@@ -49,6 +49,8 @@ const SCREENS = [
   '/forecasts',
   // Reached by the tab of the shared accounts, not the navigation (web#97).
   '/accounts/groups',
+  // Reached from an artifact's card, not the navigation.
+  '/artifacts/art-7',
   // Reached from the catalogs and a member's row, not the navigation.
   '/skills/review-pr',
   '/skills/maya-notes',

@@ -23,6 +23,22 @@ test('an owner shares an artifact with a member, then lends a subscription', asy
   await expect(lent).toContainText('Lent to theo');
 });
 
+test('a reader opens an artifact’s page, framed and sandboxed, and its owner pins an older version', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await openScreen(page, 'Artifacts');
+  await page.getByRole('link', { name: 'Billing API: latency study' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Billing API: latency study' })).toBeVisible();
+  const frame = page.locator('iframe[title="Billing API: latency study"]');
+  await expect(frame).toHaveAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+  await expect(frame).toHaveAttribute('src', /\/a\/art-7\/t3\/index\.html$/);
+  await page.getByText('Versions', { exact: true }).click();
+  await page.getByRole('link', { name: /^Version 1 / }).click();
+  await expect(frame).toHaveAttribute('src', /\/a\/art-7\/t1\/index\.html$/);
+  await expect(page.getByRole('link', { name: 'the latest is version 3' })).toBeVisible();
+});
+
 test('an admin hands an imported subscription over once TeamCode no longer renews it', async ({ page }) => {
   await page.goto('/');
   await openScreen(page, 'Shared subscriptions');

@@ -8,7 +8,9 @@ import {
   handleGetGateCatalog,
   handleCreateCloudSession,
   handleCreateMcpServer,
+  handleCreateArtifactTicket,
   handleDeleteArtifact,
+  handleGetArtifact,
   handleCreateSecret,
   handleDeleteMcpServer,
   handleDeleteSecret,
@@ -68,6 +70,7 @@ import {
   handleStopCloudSession,
   handleTestAutomation,
   handleUnshareArtifact,
+  handleUpdateArtifact,
   handleUpdateSharedAccount,
   handleVerifySignInEmail,
   handleVerifyReceipt,
@@ -118,6 +121,7 @@ import {
   zBudget,
   zBulkUpdateRulesBody,
   zCloudAgentKind,
+  zCreateArtifactTicketBody,
   zCreateCloudSessionBody,
   zRuleStatus,
   zRuleStrength,
@@ -130,6 +134,7 @@ import {
   zMcpServer,
   zRequestSignInEmailBody,
   zSaveWorkflowBody,
+  zUpdateArtifactBody,
   zSecretWrite,
   zTestAutomationBody,
   zUpdateRuleBody,
@@ -1603,6 +1608,43 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
     handleListArtifacts(({ request }) =>
       HttpResponse.json({ items: organizationOf(db, request).id === db.organization.id ? db.artifacts : [] }),
     ),
+    handleGetArtifact(({ params, request }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined || organizationOf(db, request).id !== db.organization.id)
+        return refusal(404, 'not_found', 'artifact not found');
+      return HttpResponse.json(artifact);
+    }),
+    handleUpdateArtifact(async ({ params, request }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
+      if (artifact.owner !== me.dev.login)
+        return refusal(403, 'forbidden', 'only its owner changes an artifact');
+      const body = zUpdateArtifactBody.safeParse(await readJson(request));
+      if (!body.success) return refusal(400, 'invalid_request', 'a title or an access');
+      const updated: Artifact = {
+        ...artifact,
+        ...(body.data.title === undefined ? {} : { title: body.data.title }),
+        ...(body.data.access === undefined ? {} : { access: body.data.access }),
+      };
+      db.artifacts = db.artifacts.map((item) => (item.id === params.id ? updated : item));
+      return HttpResponse.json(updated);
+    }),
+    // The demo's content origin: the frame's address, never loaded by the tests.
+    handleCreateArtifactTicket(async ({ params, request }) => {
+      const artifact = db.artifacts.find((item) => item.id === params.id);
+      if (artifact === undefined || organizationOf(db, request).id !== db.organization.id)
+        return refusal(404, 'not_found', 'artifact not found');
+      const body = zCreateArtifactTicketBody.safeParse(await readJson(request));
+      const version = (body.success ? body.data.version : undefined) ?? artifact.latestVersion;
+      const known = db.artifactVersions[params.id]?.find((item) => item.number === version);
+      if (version > artifact.latestVersion || version < 1)
+        return refusal(404, 'not_found', 'version not found');
+      const url = `https://artifacts.ostrom.test/a/${params.id}/t${String(version)}/${known?.entry ?? 'index.html'}`;
+      return HttpResponse.json(
+        { artifactId: params.id, version, url, contentUrl: url, expiresAt: '2026-11-15T20:00:00.000Z' },
+        { status: 201 },
+      );
+    }),
     handleDeleteArtifact(({ params }) => {
       const artifact = db.artifacts.find((item) => item.id === params.id);
       if (artifact === undefined) return refusal(404, 'not_found', 'artifact not found');
