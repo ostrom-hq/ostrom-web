@@ -549,6 +549,20 @@ describe('the Discord account', () => {
     expect(await within(box).findByText('discord is down')).toBeInTheDocument();
   });
 
+  it('says Discord is not set when it was unset since the page was read', async () => {
+    const user = userEvent.setup();
+    visit('/me/notifications');
+    const box = await region('Discord');
+    const link = await within(box).findByRole('button', { name: 'Link my Discord account' });
+    db.discordConfigured = false;
+    await user.click(link);
+    expect(
+      await within(box).findByText(
+        'Discord is not set up on this server. An administrator sets the Discord application first.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('points at the administrators while Discord is not set', async () => {
     db.discordConfigured = false;
     visit('/me/notifications');
