@@ -5363,7 +5363,7 @@ export type ModelPolicy = {
 };
 
 /**
- * The caller's budget this month, in millionths of a US dollar. Planned (`capacity.budgetoverrides.v1`): `override`, the temporary daily budget in force, and `baseLimitMicros`; the server does not send them yet
+ * The caller's budget this month, in millionths of a US dollar, with `override`, the temporary daily budget in force (`capacity.budgetoverrides.v1`), and `baseLimitMicros`
  */
 export type MyBudget = {
     /**
@@ -5383,7 +5383,7 @@ export type MyBudget = {
     exhaustedScope?: 'org' | 'member' | (string & {});
     override?: BudgetOverrideSummary;
     /**
-     * Planned (`capacity.budgetoverrides.v1`, with `override`, the temporary daily budget in force: while it lasts the caller's own daily limit that stops is its `usd`): the daily limit in force without it, absent when the caller had none
+     * With `override`, the temporary daily budget in force (`capacity.budgetoverrides.v1`: while it lasts the caller's own daily limit that stops is its `micros`): the daily limit that stops without it, absent when the caller had none
      */
     baseLimitMicros?: number;
     /**
@@ -5540,7 +5540,7 @@ export type NotificationPreferences = {
  */
 export type NotificationSetting = {
     /**
-     * `push` (later `slack`, `discord`); a client tolerates one it does not know
+     * `push`, `slack` (later `discord`); a client tolerates one it does not know
      */
     channel: string;
     /**

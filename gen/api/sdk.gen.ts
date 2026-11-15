@@ -3447,7 +3447,7 @@ export const sendTestPush = <ThrowOnError extends boolean = false>(options?: Opt
 /**
  * The caller's notification switches, per channel and kind
  *
- * What the caller is told about (`notifications.v1`): `waiting` (an agent or a wait needs them), `turn_completed`, `turn_failed` and `session_failed`, on each channel the server offers (`push`, later `slack` and `discord`). Every kind is on until the member turns it off; `channels` is empty while the server offers none. A member reads and changes only their own, with an interactive login (a browser session, the unlocked app or `ostrom login`); a service key has no person to notify (403).
+ * What the caller is told about (`notifications.v1`): `waiting` (an agent or a wait needs them), `turn_completed`, `turn_failed` and `session_failed`, on each channel the server offers (`push`, `slack`, later `discord`). Every kind is on until the member turns it off; `channels` is empty while the server offers none. A member reads and changes only their own, with an interactive login (a browser session, the unlocked app or `ostrom login`); a service key has no person to notify (403).
  */
 export const getNotificationSettings = <ThrowOnError extends boolean = false>(options?: Options<GetNotificationSettingsData, ThrowOnError>): RequestResult<GetNotificationSettingsResponses, GetNotificationSettingsErrors, ThrowOnError> => (options?.client ?? client).get<GetNotificationSettingsResponses, GetNotificationSettingsErrors, ThrowOnError>({
     requestValidator: async (data) => await z.object({
