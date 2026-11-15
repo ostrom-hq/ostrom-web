@@ -107,12 +107,6 @@ export function isKnownRunReason(value: string): value is KnownRunReason {
   return RUN_REASONS.some((reason) => reason === value);
 }
 
-/** An idempotency key for one gesture, from the random source every context has (randomUUID needs https). */
-export function idempotencyKey(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
-
 /** A dry run answers what it would do; a real run answers with the run it queued. */
 export function isDryRun(answer: AutomationRun | AutomationDryRun): answer is AutomationDryRun {
   return 'renderedPrompt' in answer;
