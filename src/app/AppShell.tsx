@@ -7,13 +7,13 @@ import { useOrgStore } from '@/shared/org/orgStore';
 import { useApplyTheme } from '@/shared/theme/useTheme';
 import { OstromMark } from '@/shared/ui/OstromMark';
 import { ThemeToggle } from '@/shared/ui/ThemeToggle';
+import { useMediaQuery } from '@/shared/ui/useMediaQuery';
 import { NavLabel } from '@/app/NavLabel';
 import { NavMenu } from '@/app/NavMenu';
 import { needOf } from '@/app/navigation';
 import { ServerBlockedScreen } from '@/app/ServerBlockedScreen';
 import { FeatureUnavailableScreen } from '@/app/StatusScreens';
 import { useNavLinks } from '@/app/useNavLinks';
-import { usePhone } from '@/app/usePhone';
 import type * as AnalyticsModule from '@/app/AnalyticsLayer';
 
 // Analytics is not needed to paint the console: it loads once the first paint is done. A chunk that does not load
@@ -54,7 +54,10 @@ export function AppShell(): ReactElement {
   const afterPaint = useAfterFirstPaint();
   const server = useServerStatus();
   const links = useNavLinks();
-  const phone = usePhone();
+  // A phone's screen, where shell.css shows the menu instead of the bar: the bar is then not rendered at all, rather
+  // than rendered and hidden, as its links cost a slow phone's CPU before the first paint (e2e-real/vitals.spec.ts).
+  // It comes back when the screen widens.
+  const phone = useMediaQuery('(max-width: 640px)');
   const need = needOf(pathname);
   const screen = <Outlet key={organizationGeneration} />;
   // A server the console cannot speak to: nothing of the console is offered but the explanation and the sign-out.
@@ -70,7 +73,6 @@ export function AppShell(): ReactElement {
           <span>{t('app.name')}</span>
         </Link>
         <NavMenu />
-        {/* On a phone the menu shows the screens: the bar, hidden there, is not rendered (src/app/usePhone.ts). */}
         {phone ? null : (
           <nav className="o-nav" aria-label={t('app.nav.label')}>
             {links.map((link) => (

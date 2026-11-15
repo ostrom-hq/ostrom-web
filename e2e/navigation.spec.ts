@@ -24,7 +24,7 @@ test('a phone opens every screen from the menu, its focus held until it closes',
   await button.click();
   const menu = page.getByRole('dialog', { name: 'Menu' });
   await expect(menu).toBeFocused();
-  // The same screens as the bar, which a phone does not render (src/app/usePhone.ts).
+  // The same screens as the bar, which a phone does not render (src/app/AppShell.tsx).
   await expect(page.locator('.o-nav')).toHaveCount(0);
   const screens = await menu.getByRole('link').count();
   await expect(menu.getByRole('link', { name: 'Requests' })).toHaveAttribute('aria-current', 'page');

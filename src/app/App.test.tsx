@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import '@/shared/i18n/i18n';
 import { App } from '@/app/App';
 import { createAppRouter } from '@/app/router';
-import { PHONE_QUERY } from '@/app/usePhone';
 
 describe('App', () => {
   it('renders the shell and the home screen', async () => {
@@ -22,7 +21,7 @@ describe('on a phone', () => {
     vi.spyOn(window, 'matchMedia').mockImplementation(
       (query: string) =>
         ({
-          matches: query === PHONE_QUERY,
+          matches: query === '(max-width: 640px)',
           media: query,
           addEventListener: () => undefined,
           removeEventListener: () => undefined,

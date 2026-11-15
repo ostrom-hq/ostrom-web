@@ -26,20 +26,10 @@ const ORG_FREE: readonly RegExp[] = [
   /^\/api\/v1\/automations\/[^/]+(?:\/v\/[^/]+)?\/trigger$/,
   // The cloud runtime and its clusters are the instance's, for a person who administers it.
   /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,
-  // An event wait's webhook: the secret is the proof (no sign-in); GitHub's link callback names the person's own link.
-  /^\/api\/v1\/waits\/[^/]+\/event$/,
-  /^\/api\/v1\/github\/link\/callback$/,
   // A launch's own agent token ends it (AUDIT-SECU-RUNNER-2 R2b) and reports that no hook ran: the token says the
   // launch, no organization is named.
   /^\/api\/v1\/launches\/[^/]+(?:\/hooks-missing)?$/,
   /^\/api\/v1\/cloud\/runner\/terminal$/,
-  // The instance's own administration, its cloud runtime and clusters, and a pinned version of an automation's webhook
-  // (the secret in its address says the organization): the contract gives them no `Ostrom-Org`.
-  /^\/api\/v1\/admin\/(?:instance-admins|settings)(?:\/[^/]+)?$/,
-  /^\/api\/v1\/cloud\/(?:runtime|clusters(?:\/[^/]+)?)$/,
-  /^\/api\/v1\/automations\/[^/]+\/v\/[^/]+\/trigger$/,
-  // The GitHub App the instance is wired to, entered by its administrator: the instance's, in no organization.
-  /^\/api\/v1\/github\/app\/configuration$/,
 ];
 
 /** Whether a route acts in the caller's organization, and so takes `Ostrom-Org`. */
