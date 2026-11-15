@@ -68,9 +68,7 @@ test('a person creates a token, sees its secret once, and revokes it', async ({ 
   await expect(row).toHaveCount(0);
 });
 
-test('the owner turns the memory curation on, and it stays on for this organization only', async ({
-  page,
-}) => {
+test('the owner turns the memory curation on, and it is still on after a reload', async ({ page }) => {
   await signIn(page, freshEmail('mia'));
   const run = Date.now().toString(36);
   const created = await callFromPage(page, 'POST', '/api/v1/orgs', { name: `Umbrella ${run}` });
