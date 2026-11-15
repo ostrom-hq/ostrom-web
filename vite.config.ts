@@ -266,23 +266,17 @@ function preloadBoot(): Plugin {
         sectionsOf.set(file, found);
         return found;
       };
-      // The sections only the yes screens name in the first download (FIRST_DOWNLOAD_SCREENS), read module by module:
-      // left out of another route's first wording. A section any other module of it names stays.
-      const onlyTheirs = new Map<string, ReadonlySet<string>>();
-      const theirsAlone = (file: string): ReadonlySet<string> => {
-        const known = onlyTheirs.get(file);
-        if (known !== undefined) return known;
-        const theirs: string[] = [];
-        const others: string[] = [];
+      // The sections only the yes screens name in the first download (FIRST_DOWNLOAD_SCREENS), read module by module
+      // over all its chunks: left out of another route's first wording. A section any other module of it names stays.
+      const theirs: string[] = [];
+      const others: string[] = [];
+      for (const file of entry)
         for (const [id, module] of Object.entries(byName.get(file)?.modules ?? {}))
           (FIRST_DOWNLOAD_SCREENS.modules.test(id) ? theirs : others).push(module.code ?? '');
-        const elsewhere = sectionsIn(others.join('\n'), english);
-        const found = new Set(
-          [...sectionsIn(theirs.join('\n'), english)].filter((section) => !elsewhere.has(section)),
-        );
-        onlyTheirs.set(file, found);
-        return found;
-      };
+      const elsewhere = sectionsIn(others.join('\n'), english);
+      const theirsAlone = new Set(
+        [...sectionsIn(theirs.join('\n'), english)].filter((section) => !elsewhere.has(section)),
+      );
       // One file per set of sections and language, however many routes share it.
       const emitted = new Map<string, string>();
       const wordingsOf = (
@@ -292,8 +286,7 @@ function preloadBoot(): Plugin {
       ): Record<string, string> => {
         const sections = new Set<string>();
         for (const file of first)
-          for (const section of named(file))
-            if (yes || !theirsAlone(file).has(section)) sections.add(section);
+          for (const section of named(file)) if (yes || !theirsAlone.has(section)) sections.add(section);
         for (const file of own) for (const section of named(file)) sections.add(section);
         const urls: Record<string, string> = {};
         for (const [spoken, all] of words) {
