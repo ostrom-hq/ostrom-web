@@ -29,28 +29,8 @@
   flex: none;
   margin-top: 0.2em;
 }
-.pl-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-}
-.pl-prices {
-  width: 100%;
-  border-collapse: collapse;
+.pl-figures {
   font-variant-numeric: tabular-nums;
-}
-.pl-prices caption {
-  text-align: start;
-  padding-bottom: var(--space-2);
-}
-.pl-prices th,
-.pl-prices td {
-  text-align: start;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-}
-.pl-prices .pl-num {
-  text-align: end;
 }
 .pl-price-form {
   display: grid;

@@ -42,8 +42,8 @@ test('an admin adds an API price over the built-in ones, then loads Anthropic’
   await form.getByRole('textbox', { name: 'Input $ / million tokens' }).fill('1.25');
   await form.getByRole('textbox', { name: 'Output $ / million' }).fill('10');
   await form.getByRole('button', { name: 'Save the price' }).click();
-  await expect(box.getByRole('cell', { name: 'gpt-5', exact: true })).toBeVisible();
+  await expect(box.getByText('gpt-5', { exact: true })).toBeVisible();
   await expect(box.getByText('Built-in prices')).toHaveCount(0);
   await box.getByRole('button', { name: 'Load current Anthropic prices' }).click();
-  await expect(box.getByRole('cell', { name: 'claude-sonnet-4', exact: true })).toBeVisible();
+  await expect(box.getByText('claude-sonnet-4', { exact: true })).toBeVisible();
 });

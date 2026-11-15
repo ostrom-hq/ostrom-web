@@ -87,67 +87,48 @@ function PriceTable({
 }): ReactElement {
   const { t, i18n } = useTranslation();
   if (table.prices.length === 0) return <p className="o-empty">{t('policy.prices.empty')}</p>;
+  // A list rather than a table: eight columns do not fit a phone, and a box that scrolls sideways widens its page.
   return (
-    // Every row has a button, so the keyboard reaches the box that scrolls sideways on a phone.
-    <div className="pl-scroll">
-      <table className="pl-prices">
-        <caption className="o-row__meta">{t('policy.prices.caption')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('policy.prices.provider')}</th>
-            <th scope="col">{t('policy.prices.model')}</th>
-            <th scope="col">{t('policy.prices.from')}</th>
-            {PRICE_KINDS.map((kind) => (
-              <th key={kind} scope="col" className="pl-num">
-                {t(`policy.prices.kind.${kind}`)}
-              </th>
-            ))}
-            <th scope="col">
-              <span className="o-visually-hidden">{t('policy.prices.actions')}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortPrices(table.prices).map((row) => (
-            <tr key={rowKey(row)}>
-              <td>{row.provider}</td>
-              <td className="o-mono">{row.model}</td>
-              <td>{row.effectiveFrom}</td>
-              {PRICE_KINDS.map((kind) => (
-                <td key={kind} className="pl-num">
-                  {formatPrice(row[kind], i18n.language)}
-                </td>
-              ))}
-              <td>
-                <span className="o-inline">
-                  <Button
-                    variant="ghost"
-                    aria-label={t('policy.prices.editRow', { model: row.model, from: row.effectiveFrom })}
-                    onClick={() => {
-                      edit(row);
-                    }}
-                  >
-                    {t('policy.prices.edit')}
-                  </Button>
-                  {table.defaults === true ? null : (
-                    <Button
-                      variant="ghost"
-                      disabled={view.saving}
-                      aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
-                      onClick={() => {
-                        view.save(withoutPrice(table.prices, row), () => undefined);
-                      }}
-                    >
-                      {t('policy.prices.remove')}
-                    </Button>
-                  )}
-                </span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ul className="o-card o-rows" aria-label={t('policy.prices.caption')}>
+      {sortPrices(table.prices).map((row) => (
+        <li key={rowKey(row)} className="o-row">
+          <span className="o-row__main">
+            <span className="o-row__title o-mono">{row.model}</span>
+            <span className="o-row__meta">
+              {t('policy.prices.rowMeta', { provider: row.provider, from: row.effectiveFrom })}
+            </span>
+            <span className="o-row__meta pl-figures">
+              {PRICE_KINDS.map(
+                (kind) => `${t(`policy.prices.kind.${kind}`)} ${formatPrice(row[kind], i18n.language)}`,
+              ).join(' · ')}
+            </span>
+          </span>
+          <span className="o-inline">
+            <Button
+              variant="ghost"
+              aria-label={t('policy.prices.editRow', { model: row.model, from: row.effectiveFrom })}
+              onClick={() => {
+                edit(row);
+              }}
+            >
+              {t('policy.prices.edit')}
+            </Button>
+            {table.defaults === true ? null : (
+              <Button
+                variant="ghost"
+                disabled={view.saving}
+                aria-label={t('policy.prices.removeRow', { model: row.model, from: row.effectiveFrom })}
+                onClick={() => {
+                  view.save(withoutPrice(table.prices, row), () => undefined);
+                }}
+              >
+                {t('policy.prices.remove')}
+              </Button>
+            )}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

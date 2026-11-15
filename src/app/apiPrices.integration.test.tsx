@@ -39,9 +39,10 @@ describe('the API price editor', () => {
     visit('/policy');
     const box = await section();
     expect(await within(box).findByText('Built-in prices')).toBeInTheDocument();
-    const table = within(box).getByRole('table');
-    expect(within(table).getAllByRole('row')).toHaveLength(BUILT_IN_PRICES.length + 1);
-    expect(within(table).getByRole('cell', { name: '$75.00' })).toBeInTheDocument();
+    const table = within(box).getByRole('list', { name: 'Dollars a million tokens.' });
+    expect(within(table).getAllByRole('listitem')).toHaveLength(BUILT_IN_PRICES.length);
+    expect(within(table).getByText(/Output \$75\.00/)).toBeInTheDocument();
+    expect(within(table).getAllByText('anthropic, from 2026-10-21')).toHaveLength(2);
     expect(within(box).queryByRole('button', { name: /^Remove/ })).toBeNull();
 
     // Editing a built-in row fills the form with it; saving keeps the others.
@@ -55,16 +56,16 @@ describe('the API price editor', () => {
     await user.clear(output);
     await user.type(output, '16');
     await user.click(within(edit).getByRole('button', { name: 'Save the price' }));
-    await within(box).findByRole('cell', { name: '$16.00' });
+    await within(box).findByText(/Output \$16\.00/);
     expect(db.apiPrices.find((item) => item.model === 'claude-sonnet-4')?.outputMicros).toBe(16_000_000);
     db.apiPrices = [];
     await user.click(within(box).getByRole('button', { name: 'Load current Anthropic prices' }));
-    await within(box).findAllByRole('cell', { name: '$15.00' });
+    await within(box).findByText(/Output \$15\.00/);
     const form = within(box).getByRole('form', { name: 'Add or replace a price' });
     expect(within(form).getByRole('button', { name: 'Save the price' })).toBeDisabled();
 
     await addRow(user, box, 'GPT-5');
-    expect(await within(box).findByRole('cell', { name: 'gpt-5' })).toBeInTheDocument();
+    expect(await within(box).findByText('gpt-5', { exact: true })).toBeInTheDocument();
     expect(within(box).queryByText('Built-in prices')).toBeNull();
     // The built-in rows shown are kept as the organization's own, with the new one.
     expect(db.apiPrices).toEqual([
@@ -86,7 +87,7 @@ describe('the API price editor', () => {
     expect(db.apiPrices).toHaveLength(3);
     await user.click(within(box).getByRole('button', { name: 'Remove claude-opus-4 from 2026-10-21' }));
     await within(box).findByRole('button', { name: 'Remove gpt-5 from 2026-11-01' });
-    expect(within(box).queryByRole('cell', { name: 'claude-opus-4' })).toBeNull();
+    expect(within(box).queryByText('claude-opus-4', { exact: true })).toBeNull();
     expect(db.apiPrices.map((row) => row.model).sort()).toEqual(['claude-sonnet-4', 'gpt-5']);
   }, 20_000);
 
@@ -104,7 +105,7 @@ describe('the API price editor', () => {
     db.signedInAt = Date.now() - FRESH_SIGN_IN_MS - 1_000;
     visit('/policy');
     const box = await section();
-    await within(box).findByRole('table');
+    await within(box).findByRole('list', { name: 'Dollars a million tokens.' });
     await user.click(within(box).getByRole('button', { name: 'Load current Anthropic prices' }));
     const said = await within(box).findByRole('alert');
     expect(said).toHaveTextContent('This change needs a sign-in less than five minutes old.');
