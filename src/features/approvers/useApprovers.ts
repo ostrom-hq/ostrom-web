@@ -16,7 +16,7 @@ import { useViewer } from '@/shared/auth/useViewer';
 import { type ApprovalPoint, approvalPoints, type SelfApprovalPolicy } from './model';
 import { sentInOrg, whenSameOrg } from '@/shared/org/sameOrg';
 import { useCurrentOrgMembers } from '@/shared/org/useCurrentOrgMembers';
-import { allWorkflowsOptions } from '@/features/workflows';
+import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 
 export interface ApproversViewModel {
   /** The steps, as soon as the workflows come: a slow graph never holds them. */

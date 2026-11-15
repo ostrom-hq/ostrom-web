@@ -644,7 +644,9 @@ describe('mock workflows and policy', () => {
     };
     // The client refuses a limit below 1 before sending it: sent as is, the demo server refuses it as the server does.
     expect((await fetch('http://ostrom.test/api/v1/workflows?limit=0')).status).toBe(400);
-    expect(await refused(async () => listWorkflows({ query: { after: 'nope' }, throwOnError: true }))).toBe(400);
+    expect(await refused(async () => listWorkflows({ query: { after: 'nope' }, throwOnError: true }))).toBe(
+      400,
+    );
   });
 
   it('reads and sets the self-approval policy, for owners and admins only', async () => {

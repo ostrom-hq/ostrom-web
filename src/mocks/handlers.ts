@@ -1906,13 +1906,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const limit = Math.min(Number(query.get('limit') ?? WORKFLOWS_DEFAULT_PAGE), WORKFLOWS_MAX_PAGE);
       if (!(limit >= 1)) return refusal(400, 'invalid_request', 'limit is 1 to 100.');
       const start = after === null ? 0 : db.workflows.findIndex((workflow) => workflow.id === after) + 1;
-      if (after !== null && start === 0) return refusal(400, 'invalid_request', 'after is not the next of a page.');
+      if (after !== null && start === 0)
+        return refusal(400, 'invalid_request', 'after is not the next of a page.');
       const items = db.workflows
         .slice(start)
         .filter((workflow) => status === null || workflow.status === status)
         .slice(0, limit);
       const last = items.at(-1);
-      return HttpResponse.json(items.length === limit && last !== undefined ? { items, next: last.id } : { items });
+      return HttpResponse.json(
+        items.length === limit && last !== undefined ? { items, next: last.id } : { items },
+      );
     }),
     handleGetWorkflow(({ params }) => {
       const workflow = db.workflows.find((item) => item.id === params.id);

@@ -15,7 +15,7 @@ import { applied } from '@/shared/api/applied';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useViewer } from '@/shared/auth/useViewer';
-import { allWorkflowsOptions } from './allWorkflows';
+import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 
 export interface WorkflowsViewModel {
   readonly workflows: readonly Workflow[] | undefined;

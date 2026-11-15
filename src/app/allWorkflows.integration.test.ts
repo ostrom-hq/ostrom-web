@@ -3,7 +3,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { resetMockDb } from '@/mocks/handlers';
 import { createMockServer } from '@/mocks/node';
-import { allWorkflowsOptions, MAX_WORKFLOW_PAGES, WORKFLOWS_PAGE } from '@/features/workflows';
+import { allWorkflowsOptions, MAX_WORKFLOW_PAGES, WORKFLOWS_PAGE } from '@/shared/api/allWorkflows';
 import { configureApiClient } from '@/shared/api/apiClient';
 
 const { server, db } = createMockServer();

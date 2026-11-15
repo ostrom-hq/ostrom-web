@@ -22,7 +22,7 @@ import { useOrgMembers } from '@/shared/org/members';
 import { useOrgStore } from '@/shared/org/orgStore';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
 import { originOf, type SetupStep, setupSteps } from './model';
-import { allWorkflowsOptions } from '@/features/workflows';
+import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 
 export interface HomeViewModel {
   /** Nobody is signed in: the server refused the person's list of organizations. */

@@ -40,7 +40,7 @@ import { useAnnounced } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
 import { createRefused, type PendingCreate, pressOf } from './createKey';
 import type { CloudAgent, GithubAccess, SessionMode } from './model';
-import { allWorkflowsOptions } from '@/features/workflows';
+import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 
 const POLL_MS = 10_000;
 
