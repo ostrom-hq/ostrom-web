@@ -6,15 +6,20 @@ import { isApiFailure } from '@/shared/api/ApiFailure';
 import { useAnnounced } from '@/shared/capabilities';
 import type { KnownAgent, TranscriptEvent } from './events';
 import { errorOf } from './pending';
-import { backgroundCommands, liveTasks, type RunningWork, subagentsOf } from './subagents';
+import { activeOf, backgroundCommands, liveTasks, type RunningWork, subagentsOf } from './subagents';
 
 /** A short message under the panel. */
 export type TaskNotice =
   { readonly kind: 'nothingRunning' } | { readonly kind: 'failure'; readonly error: Error };
 
 export interface RunningWorkViewModel {
-  /** The subagents (`runners.cloud.transcript.feeds.v1`) and background work (`runners.cloud.tasks.v1`) of the session. */
+  /**
+   * The subagents (`runners.cloud.transcript.feeds.v1`, or `runners.cloud.tasks.v1` for their tasks) and background work
+   * (`runners.cloud.tasks.v1`) of the session.
+   */
   readonly work: RunningWork;
+  /** Each subagent has its own thread (`runners.cloud.transcript.feeds.v1`): its row opens it. */
+  readonly threads: boolean;
   /** The clock the durations count to (epoch ms). */
   readonly now: number;
   /** The runner stops tasks, and the session runs. */
@@ -28,8 +33,7 @@ export interface RunningWorkViewModel {
 const EMPTY_WORK: RunningWork = { subagents: [], live: undefined, commands: [] };
 
 /** The clock, every second while something runs (durations count up), every 30 s otherwise. */
-function useTicking(active: boolean): number {
-  const [now, setNow] = useState(() => Date.now());
+function useTicking(active: boolean, setNow: (now: number) => void): void {
   useEffect(() => {
     const timer = setInterval(
       () => {
@@ -40,8 +44,7 @@ function useTicking(active: boolean): number {
     return () => {
       clearInterval(timer);
     };
-  }, [active]);
-  return now;
+  }, [active, setNow]);
 }
 
 /**
@@ -62,16 +65,18 @@ export function useRunningWork(
   /** The session's agent runs: only then has it background tasks. */
   const agentRuns = session?.status === 'running';
   const live = useMemo(() => (tasks ? liveTasks(events, agentRuns) : undefined), [tasks, events, agentRuns]);
-  const active = (live?.tasks.length ?? 0) > 0;
-  const now = useTicking(active);
+  const [now, setNow] = useState(() => Date.now());
   const work = useMemo((): RunningWork => {
     if (!feeds && !tasks) return EMPTY_WORK;
     return {
-      subagents: feeds ? subagentsOf(events, agentRuns, live?.tasks, now, agents) : [],
+      // Without feeds a subagent's steps show nested in the transcript; its task is still listed, to stop it.
+      subagents: subagentsOf(events, agentRuns, live?.tasks, now, agents),
       live,
       commands: live === undefined ? [] : backgroundCommands(live.tasks, events),
     };
   }, [feeds, tasks, events, agentRuns, live, now, agents]);
+  // A running subagent counts up as a task does, reported or not.
+  useTicking(work.commands.length > 0 || work.subagents.some(activeOf), setNow);
 
   const stop = useCallback(
     (taskId: string) => {
@@ -100,6 +105,7 @@ export function useRunningWork(
 
   return {
     work,
+    threads: feeds,
     now,
     canStop: tasks && live?.stoppable === true && agentRuns,
     // A task report drops the stops it no longer lists: they ended.

@@ -169,6 +169,11 @@ describe('the permission requests (TeamCode PermissionUseCasesTest)', () => {
       kind: 'closed',
       code: 'permission_request_expired',
     });
+    expect(failedOutcome(failure(409, 'nothing_to_answer'))).toEqual({
+      kind: 'refused',
+      code: 'nothing_to_answer',
+      reason: 'failed 409',
+    });
     expect(failedOutcome(failure(400, 'permission_input_unseen'))).toEqual({
       kind: 'invalid',
       code: 'permission_input_unseen',

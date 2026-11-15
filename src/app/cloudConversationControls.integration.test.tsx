@@ -467,6 +467,14 @@ describe('the standing approval of tool uses (runners.cloud.permissions.bypass.v
     });
     expect(bypassButton).not.toHaveClass('o-btn--primary');
     await user.click(bypassButton);
+    // A standing approval: confirmed by a second press that says so, or kept asking.
+    await user.click(within(card('The agent asks to use Bash')).getByRole('button', { name: 'Keep asking' }));
+    await user.click(within(card('The agent asks to use Bash')).getByRole('button', { name: 'Bypass' }));
+    await user.click(
+      within(card('The agent asks to use Bash')).getByRole('button', {
+        name: 'Approve every tool use from now on',
+      }),
+    );
     expect(await within(transcript).findByText('Deployed.')).toBeInTheDocument();
     expect(bypass).toEqual([{ enabled: true }]);
     expect(sent[0]?.body).toEqual({ requestId: 'a', behavior: 'allow' });
@@ -502,6 +510,11 @@ describe('the standing approval of tool uses (runners.cloud.permissions.bypass.v
     await opened();
     await user.click(
       await within(card('The agent asks to use Bash')).findByRole('button', { name: 'Bypass' }),
+    );
+    await user.click(
+      within(card('The agent asks to use Bash')).getByRole('button', {
+        name: 'Approve every tool use from now on',
+      }),
     );
     expect(await screen.findByText('bypass_owner_only')).toBeInTheDocument();
     expect(sent).toEqual([]);
@@ -539,6 +552,11 @@ describe('the standing approval of tool uses (runners.cloud.permissions.bypass.v
     await user.click(
       await within(card('The agent asks to use Bash')).findByRole('button', { name: 'Bypass' }),
     );
+    await user.click(
+      within(card('The agent asks to use Bash')).getByRole('button', {
+        name: 'Approve every tool use from now on',
+      }),
+    );
     await user.click(within(card('The agent asks to use Bash')).getByRole('button', { name: 'Deny' }));
     expect(await screen.findByText('Answer sent, waiting for the agent')).toBeInTheDocument();
     release();
@@ -568,6 +586,11 @@ describe('the standing approval of tool uses (runners.cloud.permissions.bypass.v
     await user.click(
       await within(card('The agent asks to use Bash')).findByRole('button', { name: 'Bypass' }),
     );
+    await user.click(
+      within(card('The agent asks to use Bash')).getByRole('button', {
+        name: 'Approve every tool use from now on',
+      }),
+    );
     await user.click(within(card('The agent asks to use Bash')).getByRole('button', { name: 'Allow' }));
     expect(await within(transcript).findByText('Deployed.')).toBeInTheDocument();
     release();
@@ -595,6 +618,11 @@ describe('the standing approval of tool uses (runners.cloud.permissions.bypass.v
       expect(within(settings).getByRole('button', { name: 'Change Model' })).toBeDisabled();
     });
     await user.click(within(card('The agent asks to use Bash')).getByRole('button', { name: 'Bypass' }));
+    await user.click(
+      within(card('The agent asks to use Bash')).getByRole('button', {
+        name: 'Approve every tool use from now on',
+      }),
+    );
     await new Promise((resolve) => {
       setTimeout(resolve, 100);
     });
@@ -772,6 +800,38 @@ describe('what runs in the session (TeamCode SubagentPanel)', () => {
       expect(within(panel).queryByText('pnpm test --watch')).toBeNull();
     });
     expect(sent).toEqual([{ taskId: 'task-tests' }]);
+  });
+
+  it('lists a subagent’s task to stop it where the server has no feeds, without threads', async () => {
+    const user = userEvent.setup();
+    const sent = bodies('/tasks/stop');
+    withoutFeatures('runners.cloud.transcript.feeds.v1');
+    withEvents(
+      started,
+      {
+        type: 'tool.call',
+        data: { id: 'tu-r', name: 'Agent', input: { description: 'Review it', subagent_type: 'reviewer' } },
+      },
+      tasksReport([
+        {
+          id: 'task-r',
+          type: 'local_agent',
+          description: 'Review it',
+          toolUseId: 'tu-r',
+          subagentType: 'reviewer',
+        },
+      ]),
+    );
+    await opened();
+    const panel = await screen.findByRole('complementary', { name: 'Running in this session' });
+    expect(within(panel).getByText('reviewer')).toBeInTheDocument();
+    expect(within(panel).queryByRole('button', { name: 'reviewer' })).toBeNull();
+    expect(within(panel).queryByRole('button', { name: 'Main conversation' })).toBeNull();
+    await user.click(within(panel).getByRole('button', { name: 'Stop' }));
+    await user.click(within(panel).getByRole('button', { name: 'Stop “Review it”' }));
+    await waitFor(() => {
+      expect(sent).toEqual([{ taskId: 'task-r' }]);
+    });
   });
 
   it('says a subagent parked on a wait is waiting, with its time in minutes', async () => {

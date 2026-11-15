@@ -3,6 +3,7 @@ import { type ReactElement, useId } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
+import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import type { AgentQuestion } from '../events';
 import { NO_CHOICE, type PermissionCard } from '../permissions';
 import type { PermissionNotice, PermissionsViewModel } from '../usePermissions';
@@ -101,9 +102,14 @@ export function PermissionCardView({
               {t('cloudConversation.permission.deny')}
             </Button>
             {bypassOffered ? (
-              <Button variant="ghost" disabled={!card.editable} onClick={view.bypass}>
-                {t('cloudConversation.permission.bypass')}
-              </Button>
+              <ConfirmButton
+                tone="secondary"
+                label={t('cloudConversation.permission.bypass')}
+                confirm={t('cloudConversation.controls.confirmBypass')}
+                keep={t('cloudConversation.controls.keep')}
+                disabled={!card.editable}
+                onConfirm={view.bypass}
+              />
             ) : null}
             {/* Garnet: the approve gesture, the only one here. */}
             <Button variant="primary" disabled={!card.editable} onClick={view.allow}>

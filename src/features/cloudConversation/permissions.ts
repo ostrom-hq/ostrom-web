@@ -25,7 +25,7 @@ export type AnswerOutcome =
   | { readonly kind: 'accepted'; readonly inputId: string }
   /** A network failure, a timeout, a 5xx or a 429: the answer may or may not have arrived. */
   | { readonly kind: 'retry'; readonly reason: string }
-  /** `409`: answered by someone else, expired, ended, or the session takes no answer now. */
+  /** `409`: answered by someone else, expired or ended (a session that takes no answer now refuses it instead). */
   | { readonly kind: 'closed'; readonly code: string | undefined }
   /** `400`: the server read the answer as invalid (an index, an unseen input); the draft stays to be corrected. */
   | { readonly kind: 'invalid'; readonly code: string | undefined }
@@ -127,7 +127,8 @@ export function failedOutcome(error: unknown): AnswerOutcome {
     return { kind: 'retry', reason: error instanceof Error ? error.message : String(error) };
   const { status, code, message } = error;
   if (status >= 500 || status === 408 || status === 429) return { kind: 'retry', reason: message };
-  if (status === 409) return { kind: 'closed', code };
+  // The session takes no answer now (pausing, resuming): the request stays, and can be answered once it runs again.
+  if (status === 409 && code !== 'nothing_to_answer') return { kind: 'closed', code };
   if (status === 400) return { kind: 'invalid', code };
   return { kind: 'refused', code, reason: message };
 }

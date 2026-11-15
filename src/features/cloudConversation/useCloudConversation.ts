@@ -89,8 +89,6 @@ export interface CloudConversationViewModel {
   readonly agents: readonly KnownAgent[];
   /** The subagent whose thread shows (its `Agent` call id), undefined for the main agent's. */
   readonly thread: string | undefined;
-  /** The thread's newest page was read (the main agent's once the first page is there). */
-  readonly threadLoaded: boolean;
   readonly openThread: (id: string) => void;
   readonly backToMain: () => void;
 }
@@ -165,8 +163,10 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
   const ended = useRef(false);
   const events = useRef<readonly TranscriptEvent[]>([]);
 
+  // A controller per mount: StrictMode's remount gets a fresh one, not the one its simulated unmount aborted.
   useEffect(() => {
-    const controller = unmounted.current;
+    const controller = new AbortController();
+    unmounted.current = controller;
     return () => {
       controller.abort();
     };
@@ -484,7 +484,6 @@ export function useCloudConversation(sessionId: string): CloudConversationViewMo
     feeds,
     agents,
     thread: shown,
-    threadLoaded: shown === undefined ? state.loaded : state.transcript.feeds.has(shown),
     openThread,
     backToMain,
   };

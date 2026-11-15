@@ -136,16 +136,18 @@ export function RunningPanel({
           <Badge tone="success">{t('cloudConversation.work.running', { count: running })}</Badge>
         ) : null}
       </h2>
-      <ul className="cc-work__list">
-        <Row
-          title={
-            <Button variant="ghost" aria-pressed={thread === undefined} onClick={onMain}>
-              {t('cloudConversation.work.main')}
-            </Button>
-          }
-          subtitle={t('cloudConversation.work.mainHint')}
-        />
-      </ul>
+      {view.threads ? (
+        <ul className="cc-work__list">
+          <Row
+            title={
+              <Button variant="ghost" aria-pressed={thread === undefined} onClick={onMain}>
+                {t('cloudConversation.work.main')}
+              </Button>
+            }
+            subtitle={t('cloudConversation.work.mainHint')}
+          />
+        </ul>
+      ) : null}
       {work.subagents.length === 0 ? null : (
         <>
           <h3 className="o-label">{`${t('cloudConversation.work.subagents')} · ${String(work.subagents.length)}`}</h3>
@@ -155,15 +157,19 @@ export function RunningPanel({
                 key={subagent.id}
                 depth={subagent.depth}
                 title={
-                  <Button
-                    variant="ghost"
-                    aria-pressed={thread === subagent.id}
-                    onClick={() => {
-                      onOpen(subagent.id);
-                    }}
-                  >
-                    {subagent.type}
-                  </Button>
+                  view.threads ? (
+                    <Button
+                      variant="ghost"
+                      aria-pressed={thread === subagent.id}
+                      onClick={() => {
+                        onOpen(subagent.id);
+                      }}
+                    >
+                      {subagent.type}
+                    </Button>
+                  ) : (
+                    subagent.type
+                  )
                 }
                 subtitle={subagent.description}
                 trailing={
