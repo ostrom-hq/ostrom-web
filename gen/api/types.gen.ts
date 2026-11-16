@@ -5727,6 +5727,7 @@ export type ForecastSnapshotResponse = {
 export type MemberPolicyResponse = {
     member: string;
     poolId?: string | null;
+    allowSharedOverflow: boolean;
 };
 
 /**
@@ -5734,6 +5735,16 @@ export type MemberPolicyResponse = {
  */
 export type UpdateMemberPolicyRequest = {
     poolId: string;
+    allowSharedOverflow?: boolean | null;
+};
+
+/**
+ * PoolBudgetDto
+ */
+export type PoolBudgetDto = {
+    poolId: string;
+    dailyMicros: number;
+    sharedOverflow?: boolean;
 };
 
 /**
@@ -31997,7 +32008,7 @@ export type GetMemberPolicyResponse = GetMemberPolicyResponses[keyof GetMemberPo
 
 export type UpdateMemberPolicyData = {
     /**
-     * The member's home pool, or an empty string for none.
+     * The member's home pool, or an empty string for none, and their overflow.
      */
     body: UpdateMemberPolicyRequest;
     headers?: {
@@ -32034,6 +32045,10 @@ export type UpdateMemberPolicyErrors = {
      */
     404: ApiError;
     /**
+     * The pool is a shared overflow pool (`overflow_primary_pool`).
+     */
+    409: ApiError;
+    /**
      * An unexpected server error (`internal_error`). Retry later.
      */
     500: ApiError;
@@ -32053,6 +32068,103 @@ export type UpdateMemberPolicyResponses = {
 };
 
 export type UpdateMemberPolicyResponse = UpdateMemberPolicyResponses[keyof UpdateMemberPolicyResponses];
+
+export type ListPoolBudgetsData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization.
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/pools/budgets';
+};
+
+export type ListPoolBudgetsErrors = {
+    /**
+     * No credential, or an unknown, expired or revoked one (`unauthorized`).
+     */
+    401: ApiError;
+    /**
+     * Not an owner or an admin of the organization, or a credential that may not read the accounts (`forbidden`). Also: the credential may not call this operation (`forbidden`).
+     */
+    403: ApiError;
+    /**
+     * An unexpected server error (`internal_error`). Retry later.
+     */
+    500: ApiError;
+    /**
+     * Any other error, in the same envelope.
+     */
+    default: ApiError;
+};
+
+export type ListPoolBudgetsError = ListPoolBudgetsErrors[keyof ListPoolBudgetsErrors];
+
+export type ListPoolBudgetsResponses = {
+    /**
+     * The pools, by identifier.
+     */
+    200: Array<PoolBudgetDto>;
+};
+
+export type ListPoolBudgetsResponse = ListPoolBudgetsResponses[keyof ListPoolBudgetsResponses];
+
+export type SavePoolBudgetData = {
+    /**
+     * The pool and its budget.
+     */
+    body: PoolBudgetDto;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization.
+         */
+        'Ostrom-Org'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/api/v1/pools/budgets';
+};
+
+export type SavePoolBudgetErrors = {
+    /**
+     * A pool identifier or a budget out of its form, or the home pool (`invalid_pool_budget`); the home pool shared (`invalid_overflow_pool`); no `poolId` or `dailyMicros` (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
+     */
+    400: ApiError;
+    /**
+     * No credential, or an unknown, expired or revoked one (`unauthorized`).
+     */
+    401: ApiError;
+    /**
+     * Not an owner or an admin of the organization, or a credential that may not write (`forbidden`). Also: the credential may not call this operation (`forbidden`).
+     */
+    403: ApiError;
+    /**
+     * A pool with primary members cannot be shared (`overflow_primary_pool`), or 16 pools are shared already (`overflow_pool_limit`).
+     */
+    409: ApiError;
+    /**
+     * An unexpected server error (`internal_error`). Retry later.
+     */
+    500: ApiError;
+    /**
+     * Any other error, in the same envelope.
+     */
+    default: ApiError;
+};
+
+export type SavePoolBudgetError = SavePoolBudgetErrors[keyof SavePoolBudgetErrors];
+
+export type SavePoolBudgetResponses = {
+    /**
+     * The saved pool.
+     */
+    200: PoolBudgetDto;
+};
+
+export type SavePoolBudgetResponse = SavePoolBudgetResponses[keyof SavePoolBudgetResponses];
 
 export type ImportTeamCodeData = {
     /**

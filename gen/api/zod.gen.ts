@@ -5722,14 +5722,25 @@ export const zForecastSnapshotResponse = z.object({
  */
 export const zMemberPolicyResponse = z.object({
     member: z.string(),
-    poolId: z.nullish(z.string())
+    poolId: z.nullish(z.string()),
+    allowSharedOverflow: z.boolean()
 });
 
 /**
  * UpdateMemberPolicyRequest
  */
 export const zUpdateMemberPolicyRequest = z.object({
-    poolId: z.string()
+    poolId: z.string(),
+    allowSharedOverflow: z.nullish(z.boolean())
+});
+
+/**
+ * PoolBudgetDto
+ */
+export const zPoolBudgetDto = z.object({
+    poolId: z.string(),
+    dailyMicros: z.int(),
+    sharedOverflow: z.optional(z.boolean())
 });
 
 /**
@@ -12276,7 +12287,7 @@ export const zGetMemberPolicyPath = z.object({
 export const zGetMemberPolicyResponse = zMemberPolicyResponse;
 
 /**
- * The member's home pool, or an empty string for none.
+ * The member's home pool, or an empty string for none, and their overflow.
  */
 export const zUpdateMemberPolicyBody = zUpdateMemberPolicyRequest;
 
@@ -12292,6 +12303,29 @@ export const zUpdateMemberPolicyPath = z.object({
  * The member's policy after the change.
  */
 export const zUpdateMemberPolicyResponse = zMemberPolicyResponse;
+
+export const zListPoolBudgetsHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
+    'Ostrom-Org': z.optional(z.string())
+}));
+
+/**
+ * The pools, by identifier.
+ */
+export const zListPoolBudgetsResponse = z.array(zPoolBudgetDto);
+
+/**
+ * The pool and its budget.
+ */
+export const zSavePoolBudgetBody = zPoolBudgetDto;
+
+export const zSavePoolBudgetHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
+    'Ostrom-Org': z.optional(z.string())
+}));
+
+/**
+ * The saved pool.
+ */
+export const zSavePoolBudgetResponse = zPoolBudgetDto;
 
 /**
  * The team as `ostrom import teamcode` read it: members, MCP servers, accounts, workflows, automations, profiles and catalogue, with the mapping of TeamCode members to members of this organization.
