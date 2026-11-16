@@ -591,6 +591,8 @@ export type CloudSessionResponse = {
     host?: CloudSessionHostDto | null;
     createdBy?: CloudAttributionDto | null;
     launchId?: string | null;
+    automationId?: string | null;
+    runId?: string | null;
 };
 
 /**
@@ -749,6 +751,8 @@ export type AuthSessionResponse = {
     createdAt: string;
     lastSeenAt: string;
     current: boolean;
+    name?: string | null;
+    deviceId?: string | null;
 };
 
 /**
@@ -1170,6 +1174,7 @@ export type ReceiptDecision = {
     at: string;
     result: string;
     selfApproved?: boolean | null;
+    note?: string | null;
 };
 
 /**
@@ -1313,6 +1318,7 @@ export type GateRequest = {
     askedVia?: Array<string> | null;
     selfApproved?: boolean | null;
     push?: GatePush | null;
+    note?: string | null;
 };
 
 /**
@@ -1429,6 +1435,7 @@ export type ApprovalViewResponse = {
     askedVia: Array<string>;
     you: ApprovalCallerView;
     receipt?: JsonElement | null;
+    note?: string | null;
 };
 
 /**
@@ -1438,6 +1445,7 @@ export type AnswerApprovalRequest = {
     answer: 'approve' | 'reject' | (string & {});
     shownDigest: string;
     comment?: string | null;
+    note?: string | null;
 };
 
 /**
@@ -1530,6 +1538,7 @@ export type SessionDto = {
     labels?: {
         [key: string]: string;
     } | null;
+    runId?: string | null;
 };
 
 /**
@@ -2349,6 +2358,7 @@ export type McpHostedProcessDto = {
     coldStartMs?: number | null;
     memoryBytes?: number | null;
     stderr?: string | null;
+    username?: string | null;
 };
 
 /**
@@ -5556,6 +5566,7 @@ export type SharedAccountResponse = {
     createdAt: string;
     dailyAllocationUsd?: number | null;
     refreshOwnership?: string | null;
+    poolId?: string | null;
 };
 
 /**
@@ -5589,6 +5600,7 @@ export type UpdateAccountRequest = {
         [key: string]: JsonElement;
     } | null;
     dailyAllocationUsd?: number | null;
+    poolId?: string | null;
 };
 
 /**
@@ -5707,6 +5719,21 @@ export type ForecastSnapshotResponse = {
     windows: Array<ForecastWindowResponse>;
     truncated: boolean;
     pressureThreshold: number;
+};
+
+/**
+ * MemberPolicyResponse
+ */
+export type MemberPolicyResponse = {
+    member: string;
+    poolId?: string | null;
+};
+
+/**
+ * UpdateMemberPolicyRequest
+ */
+export type UpdateMemberPolicyRequest = {
+    poolId: string;
 };
 
 /**
@@ -10453,7 +10480,7 @@ export type GetApprovalViewResponse = GetApprovalViewResponses[keyof GetApproval
 
 export type AnswerApprovalData = {
     /**
-     * The answer, the digest of what the approver was shown, and an optional comment.
+     * The answer, the digest of what the approver was shown, and an optional note to the agent.
      */
     body: AnswerApprovalRequest;
     headers?: {
@@ -10474,7 +10501,7 @@ export type AnswerApprovalData = {
 
 export type AnswerApprovalErrors = {
     /**
-     * A malformed id (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
+     * A malformed id (`invalid_request`), or a note longer than 4000 characters (`note_too_long`). Also: the body is not the expected JSON object (`invalid_request`).
      */
     400: ApiError;
     /**
@@ -20388,18 +20415,22 @@ export type ListCloudSessionsData = {
         /**
          * The kind of session to list, `cloud`, `remote` or `local`; repeat it to list several.
          */
-        kind?: string;
+        kind?: Array<string>;
         /**
          * The caller's member id; anything else is refused.
          */
         owner?: string;
+        /**
+         * A status of session to list, `creating`, `running`, `pausing`, `paused`, `resuming`, `transferring`, `terminated` or `failed`; repeat it to list several.
+         */
+        status?: Array<string>;
     };
     url: '/api/v1/cloud/sessions';
 };
 
 export type ListCloudSessionsErrors = {
     /**
-     * An unknown `kind` (`invalid_kind`), or `owner` sent more than once (`invalid_query`).
+     * An unknown `kind` (`invalid_kind`) or `status` (`invalid_state`), or `owner` sent more than once (`invalid_query`).
      */
     400: ApiError;
     /**
@@ -20481,7 +20512,7 @@ export type CreateCloudSessionErrors = {
      */
     404: ApiError;
     /**
-     * The profile's cluster is gone or its namespace is no longer allowed (`cluster_unavailable`, `namespace_not_allowed`).
+     * The profile's cluster is gone or its namespace is no longer allowed (`cluster_unavailable`, `namespace_not_allowed`), or the owner already keeps the instance's `maxRetainedSessionsPerMember` cloud sessions, paused ones included (`cloud_session_limit`).
      */
     409: ApiError;
     /**
@@ -21219,7 +21250,7 @@ export type TransferCloudSessionErrors = {
      */
     404: ApiError;
     /**
-     * The session already has an open transfer (`transfer_pending`), is still being created (`session_preparing`), is over (`session_not_running`), or is being transferred (`session_transferring`).
+     * The session already has an open transfer (`transfer_pending`), is still being created (`session_preparing`), is over (`session_not_running`), or is being transferred (`session_transferring`); or the recipient keeps as many cloud sessions as allowed (`cloud_session_limit`).
      */
     409: ApiError;
     /**
@@ -21294,7 +21325,7 @@ export type AcceptCloudTransferErrors = {
      */
     404: ApiError;
     /**
-     * The offer expired (`transfer_expired`), or the transfer is decided already (`transfer_not_open`).
+     * The offer expired (`transfer_expired`), the transfer is decided already (`transfer_not_open`), or the caller already keeps the instance's `maxRetainedSessionsPerMember` cloud sessions (`cloud_session_limit`, nothing is paused: delete one first).
      */
     409: ApiError;
     /**
@@ -31222,7 +31253,7 @@ export type UpdateSharedAccountErrors = {
      */
     401: ApiError;
     /**
-     * The credential may not call this operation (`forbidden`).
+     * A member who is not an owner or an admin moves the account to another pool (`account_pool_forbidden`). Also: the credential may not call this operation (`forbidden`).
      */
     403: ApiError;
     /**
@@ -31911,6 +31942,117 @@ export type GetForecastsResponses = {
 };
 
 export type GetForecastsResponse = GetForecastsResponses[keyof GetForecastsResponses];
+
+export type GetMemberPolicyData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization.
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The login of a member of the organization.
+         */
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{login}/policy';
+};
+
+export type GetMemberPolicyErrors = {
+    /**
+     * No credential, or an unknown, expired or revoked one (`unauthorized`).
+     */
+    401: ApiError;
+    /**
+     * A member asks for another member's policy, or a credential that may not read the accounts (`forbidden`). Also: the credential may not call this operation (`forbidden`).
+     */
+    403: ApiError;
+    /**
+     * No member of the organization has this login, asked by an owner or an admin (`not_found`).
+     */
+    404: ApiError;
+    /**
+     * An unexpected server error (`internal_error`). Retry later.
+     */
+    500: ApiError;
+    /**
+     * Any other error, in the same envelope.
+     */
+    default: ApiError;
+};
+
+export type GetMemberPolicyError = GetMemberPolicyErrors[keyof GetMemberPolicyErrors];
+
+export type GetMemberPolicyResponses = {
+    /**
+     * The member's policy; `poolId` is absent for a member in no pool.
+     */
+    200: MemberPolicyResponse;
+};
+
+export type GetMemberPolicyResponse = GetMemberPolicyResponses[keyof GetMemberPolicyResponses];
+
+export type UpdateMemberPolicyData = {
+    /**
+     * The member's home pool, or an empty string for none.
+     */
+    body: UpdateMemberPolicyRequest;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization.
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The login of a member of the organization.
+         */
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{login}/policy';
+};
+
+export type UpdateMemberPolicyErrors = {
+    /**
+     * A pool identifier out of its form (`invalid_policy`), or no `poolId` (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
+     */
+    400: ApiError;
+    /**
+     * No credential, or an unknown, expired or revoked one (`unauthorized`).
+     */
+    401: ApiError;
+    /**
+     * Not an owner or an admin of the organization, or a credential that may not write (`forbidden`). Also: the credential may not call this operation (`forbidden`).
+     */
+    403: ApiError;
+    /**
+     * No member of the organization has this login (`not_found`).
+     */
+    404: ApiError;
+    /**
+     * An unexpected server error (`internal_error`). Retry later.
+     */
+    500: ApiError;
+    /**
+     * Any other error, in the same envelope.
+     */
+    default: ApiError;
+};
+
+export type UpdateMemberPolicyError = UpdateMemberPolicyErrors[keyof UpdateMemberPolicyErrors];
+
+export type UpdateMemberPolicyResponses = {
+    /**
+     * The member's policy after the change.
+     */
+    200: MemberPolicyResponse;
+};
+
+export type UpdateMemberPolicyResponse = UpdateMemberPolicyResponses[keyof UpdateMemberPolicyResponses];
 
 export type ImportTeamCodeData = {
     /**
