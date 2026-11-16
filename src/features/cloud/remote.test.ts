@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import { createQuerySerializer } from '@gen/api/client/utils.gen';
 import type { CloudSessionResponse, DeviceResponse } from '@gen/api/types.gen';
 import { ApiFailure } from '@/shared/api/ApiFailure';
 import { hostName, hostNotice, refusalText } from '@/features/cloudHost';
@@ -27,15 +28,13 @@ describe('the kinds listed (TeamCode cloud list --kind)', () => {
   });
 
   it('repeats kind once per kind, keeps every other parameter, and names the kinds in the query key', () => {
-    const serialized = (options: ReturnType<typeof kindsQuery>): string | undefined => {
-      const serializer = options.querySerializer;
-      return typeof serializer === 'function' ? serializer({ ...options.query }) : undefined;
-    };
+    const serialized = (options: ReturnType<typeof kindsQuery>): string =>
+      createQuerySerializer()({ ...options.query });
     const both = kindsQuery(['cloud', 'remote']);
-    expect(both.query).toEqual({ kind: 'cloud,remote' });
+    expect(both.query).toEqual({ kind: ['cloud', 'remote'] });
     expect(serialized(both)).toBe('kind=cloud&kind=remote');
     const paged = kindsQuery(['remote'], { limit: 5, before: '2026-11-16T09:00:00Z' });
-    expect(paged.query).toEqual({ limit: 5, before: '2026-11-16T09:00:00Z', kind: 'remote' });
+    expect(paged.query).toEqual({ limit: 5, before: '2026-11-16T09:00:00Z', kind: ['remote'] });
     expect(serialized(paged)).toBe('limit=5&before=2026-11-16T09%3A00%3A00Z&kind=remote');
   });
 });
