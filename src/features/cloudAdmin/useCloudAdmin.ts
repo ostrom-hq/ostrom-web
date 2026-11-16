@@ -42,12 +42,20 @@ export interface Saving {
 
 // ---- The organization's settings: read by members, written by owners and admins ---------------------------------
 
+/** What a save sends: a field left out keeps what is stored, so another admin's value is not undone. */
+export interface SettingsWrite {
+  readonly minutes: number;
+  readonly automations?: number;
+  /** The idle pause of remote sessions (`runners.cloud.remote.v1`). */
+  readonly remoteIdle?: number;
+}
+
 export interface CloudSettingsViewModel {
   readonly settings: CloudSettingsResponse | undefined;
   readonly failure: Error | undefined;
   readonly canEdit: boolean;
   readonly reload: () => Promise<void>;
-  readonly save: (settings: { readonly minutes: number; readonly automations?: number }) => void;
+  readonly save: (settings: SettingsWrite) => void;
   readonly write: Saving;
 }
 
@@ -65,11 +73,12 @@ export function useCloudSettings(): CloudSettingsViewModel {
   const { mutate, reset } = mutation;
   const updatedAt = query.data?.updatedAt;
   const save = useCallback(
-    ({ minutes, automations }: { readonly minutes: number; readonly automations?: number }) => {
+    ({ minutes, automations, remoteIdle }: SettingsWrite) => {
       mutate({
         body: {
           backgroundWorkMaxMinutes: minutes,
           ...(automations === undefined ? {} : { maxRunningAutomationsPerMember: automations }),
+          ...(remoteIdle === undefined ? {} : { remoteIdleTimeoutMinutes: remoteIdle }),
           ...(updatedAt === undefined ? {} : { updatedAt }),
         },
       });

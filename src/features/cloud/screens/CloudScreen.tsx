@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ReactElement } from 'react';
+import { type ReactElement, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
 import { useNow } from '@/shared/lib/useNow';
-import { Feature } from '@/shared/capabilities';
+import { Feature, useAnnounced } from '@/shared/capabilities';
+import { Button } from '@/shared/ui/Button';
 import { Badge } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
@@ -12,6 +13,8 @@ import { SessionRow } from '../components/SessionRow';
 import { TransferControl } from '../components/TransferControl';
 import { TransfersSection } from '../components/TransfersSection';
 import { StartSessionForm } from '../components/StartSessionForm';
+import { deviceFailureText } from '../deviceWords';
+import { KIND_FILTERS, type KindFilter } from '../remote';
 import { isLive, mayChange, startRefusalOf } from '../model';
 import { mayTransfer, transferRefusalOf } from '../transfer';
 import { useCloud, useGithubAccess, useSessionChange, useStartProfiles } from '../useCloud';
@@ -21,7 +24,9 @@ import './cloud.css';
 /** Agents that run on the organization's runners, not on a laptop: start one, follow it, stop it. */
 export function CloudScreen(): ReactElement {
   const { t, i18n } = useTranslation();
-  const view = useCloud();
+  const remote = useAnnounced('runners.cloud.remote.v1');
+  const [filter, setFilter] = useState<KindFilter>('all');
+  const view = useCloud(filter);
   const change = useSessionChange();
   const github = useGithubAccess();
   const { profiles } = useStartProfiles();
@@ -35,7 +40,7 @@ export function CloudScreen(): ReactElement {
     <Screen title={t('cloud.title')} lead={t('cloud.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('cloud.errorTag')} live>
-          {refusal === undefined ? change.failure.message : t(`cloud.start.refusal.${refusal}`)}
+          {refusal === undefined ? deviceFailureText(t, change.failure) : t(`cloud.start.refusal.${refusal}`)}
         </Banner>
       )}
       {transferChange.failure === undefined ? null : (
@@ -47,6 +52,23 @@ export function CloudScreen(): ReactElement {
       )}
       <StartSessionForm change={change} />
       <Section label={t('cloud.sessions')}>
+        {remote ? (
+          // TeamCode's `teamcode cloud list --kind`: both kinds, or one.
+          <div className="o-inline cl-filters" role="group" aria-label={t('cloud.remote.kindFilter.label')}>
+            {KIND_FILTERS.map((option) => (
+              <Button
+                key={option}
+                variant="ghost"
+                aria-pressed={filter === option}
+                onClick={() => {
+                  setFilter(option);
+                }}
+              >
+                {t(`cloud.remote.kindFilter.${option}`)}
+              </Button>
+            ))}
+          </div>
+        ) : null}
         <LoadState data={view.sessions} failure={view.failure}>
           {(sessions) =>
             sessions.length === 0 ? (

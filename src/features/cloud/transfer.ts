@@ -34,7 +34,8 @@ export function transferTone(state: string): BadgeTone {
 
 /**
  * Who may give a session away: its owner, or an owner or an admin of the organization, while it runs or is paused (the
- * server refuses a session being prepared, being transferred or over).
+ * server refuses a session being prepared, being transferred or over). Only a cloud session: a remote one runs on its
+ * owner's own device and is never transferred (TeamCode's `canTransfer`).
  */
 export function mayTransfer(
   session: CloudSessionResponse,
@@ -42,7 +43,9 @@ export function mayTransfer(
   canManage: boolean,
 ): boolean {
   return (
-    (session.status === 'running' || session.status === 'paused') && (canManage || session.owner === viewer)
+    (session.kind ?? 'cloud') === 'cloud' &&
+    (session.status === 'running' || session.status === 'paused') &&
+    (canManage || session.owner === viewer)
   );
 }
 

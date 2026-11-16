@@ -168,6 +168,8 @@ export function createCloudAdminHandlers(
         backgroundWorkMaxMinutes: body.data.backgroundWorkMaxMinutes,
         maxRunningAutomationsPerMember:
           body.data.maxRunningAutomationsPerMember ?? state().cloudSettings.maxRunningAutomationsPerMember,
+        remoteIdleTimeoutMinutes:
+          body.data.remoteIdleTimeoutMinutes ?? state().cloudSettings.remoteIdleTimeoutMinutes ?? 60,
         updatedAt: now().toISOString(),
         updatedBy: 'maya',
       };

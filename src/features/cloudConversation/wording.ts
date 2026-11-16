@@ -4,6 +4,19 @@ import { registerWording } from '@/shared/i18n/i18n';
 /** What a conversation session's screen says (TeamCode's companion transcript): loaded with its screen alone. */
 export const cloudConversationEn = {
   cloudConversation: {
+    host: {
+      onlineChip: 'Online',
+      offlineChip: 'Offline',
+      detail: {
+        title: 'Runs on',
+        runsOn: 'Runs on',
+        system: 'System',
+        folder: 'Folder',
+        permissions: 'Permissions',
+      },
+      permissions: { ask: 'Asks before acting', bypass: 'Acts without asking' },
+      pausedDock: 'Paused on {{device}}. A message asks it to resume.',
+    },
     back: 'Cloud agents',
     notConversation: 'This session runs in a terminal: it has no conversation to show here.',
     unsupported: 'This server does not serve conversations.',
@@ -202,6 +215,19 @@ export const cloudConversationEn = {
 
 const cloudConversationFr = {
   cloudConversation: {
+    host: {
+      onlineChip: 'En ligne',
+      offlineChip: 'Hors ligne',
+      detail: {
+        title: 'Tourne sur',
+        runsOn: 'Tourne sur',
+        system: 'Système',
+        folder: 'Dossier',
+        permissions: 'Autorisations',
+      },
+      permissions: { ask: 'Demande avant d’agir', bypass: 'Agit sans demander' },
+      pausedDock: 'En pause sur {{device}}. Un message lui demande de reprendre.',
+    },
     back: 'Agents cloud',
     notConversation: 'Cette session tourne dans un terminal : elle n’a pas de conversation à montrer ici.',
     unsupported: 'Ce serveur ne sert pas les conversations.',

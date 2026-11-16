@@ -45,8 +45,11 @@ function asMember(): void {
   );
 }
 
+/** A session's row in the list: the transfers below name sessions too. */
 function row(text: string | RegExp): HTMLElement {
-  const found = screen.getByText(text).closest('li');
+  const found = within(screen.getByRole('region', { name: 'Sessions' }))
+    .getByText(text)
+    .closest('li');
   if (found === null) throw new Error(`no row ${String(text)}`);
   return found;
 }

@@ -69,3 +69,7 @@
 .cl-session__failure {
   display: block;
 }
+.cl-filters [aria-pressed='true'] {
+  background: var(--surface-sunken);
+  color: var(--text);
+}

@@ -155,6 +155,7 @@ import { createOrgDeletionHandlers } from '@/mocks/orgDeletion';
 import { createTodosHandlers, type TodosState } from '@/mocks/todos';
 import { initialTodos } from '@/mocks/fixtures/todos';
 import { createKeysAndDevicesHandlers, type KeysAndDevicesState } from '@/mocks/keysAndDevices';
+import { createRemoteSessionsHandlers, type RemoteSessionsState, startRemote } from '@/mocks/remoteSessions';
 import { createTokensHandlers, type TokensState } from '@/mocks/tokens';
 import { createAutomationWriteHandlers } from '@/mocks/automationWrites';
 import {
@@ -305,6 +306,7 @@ export interface MockDb
     OrgsState,
     TokensState,
     KeysAndDevicesState,
+    RemoteSessionsState,
     McpAccessState,
     McpHostedState,
     PolicyState,
@@ -519,6 +521,8 @@ export function createMockDb(): MockDb {
     tokens: initialTokens(),
     nextToken: 3,
     devices: initialDevices(),
+    deviceFolders: {},
+    resumable: {},
     serviceKeys: initialServiceKeys(),
     nextServiceKey: 2,
     billing: initialBilling(),
@@ -1118,6 +1122,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
     }),
+    ...createRemoteSessionsHandlers(() => db),
     ...createTodosHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       knows: (request, memberId) =>
@@ -1531,9 +1536,16 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       return HttpResponse.json(budget);
     }),
     handleListCloudSessions(({ request }) => {
-      const status = new URL(request.url).searchParams.get('status');
+      const search = new URL(request.url).searchParams;
+      const status = search.get('status');
+      // Without `kind`, cloud sessions only, as the server lists them for a client from before remote sessions.
+      const asked = search.getAll('kind');
+      const kinds = asked.length === 0 ? ['cloud'] : asked;
       return HttpResponse.json({
-        items: db.cloudSessions.filter((session) => status === null || session.status === status),
+        items: db.cloudSessions.filter(
+          (session) =>
+            (status === null || session.status === status) && kinds.includes(session.kind ?? 'cloud'),
+        ),
       });
     }),
     handleCreateCloudSession(async ({ request }) => {
@@ -1567,6 +1579,20 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
           'invalid_mode',
           'A conversation runs claude or codex; the mode is terminal or conversation.',
         );
+      // A session on one of the person's devices (`runners.cloud.remote.v1`): no profile, no repository.
+      if (sent.kind === 'remote') {
+        const id = `cs-${String(db.cloudSessions.length + 100)}`;
+        const started = startRemote(
+          db,
+          { ...sent, name: name === undefined || name === '' ? undefined : name },
+          me.dev.login,
+          id,
+          now().toISOString(),
+        );
+        if (started instanceof Response) return started;
+        db.cloudSessions.unshift(started);
+        return HttpResponse.json(started, { status: 201 });
+      }
       // The server clones the recipe's repositories or the older single one, never both (ostrom-server
       // `CreateCloudSessionUseCase`).
       if (repo !== undefined && (environment?.repositories ?? []).length > 0)

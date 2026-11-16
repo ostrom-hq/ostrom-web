@@ -10,6 +10,7 @@ import {
   isConflict,
   linesOf,
   minutesOf,
+  remoteIdleOf,
   needsCredentials,
   profileDraftOf,
   profileProblem,
@@ -64,6 +65,9 @@ describe('numbers and lists typed in a form', () => {
     for (const bad of ['', 'x', '1.5', '-1', '21', '0']) expect(wholeNumber(bad, 1, 20)).toBeUndefined();
     expect(minutesOf('240')).toBe(240);
     expect(minutesOf('1441')).toBeUndefined();
+    expect(remoteIdleOf('0')).toBe(0);
+    expect(remoteIdleOf('1440')).toBe(1440);
+    expect(remoteIdleOf('1441')).toBeUndefined();
   });
 
   it('splits lines and commas, dropping the empty ones', () => {
