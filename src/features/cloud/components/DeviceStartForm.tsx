@@ -124,7 +124,7 @@ export function DeviceStartForm({ view }: { readonly view: DeviceStartViewModel 
   const device = chosen?.name ?? t('cloudHost.host.fallback');
   return (
     <form
-      className="o-stack"
+      className="o-stack cl-form"
       aria-label={t('cloud.remote.start.target.device')}
       onSubmit={(event) => {
         event.preventDefault();

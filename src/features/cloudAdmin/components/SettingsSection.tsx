@@ -71,7 +71,7 @@ function SettingsForm({
           : undefined;
   return (
     <form
-      className="o-stack"
+      className="o-stack ca-settings"
       onSubmit={(event) => {
         event.preventDefault();
         setTouched(true);
