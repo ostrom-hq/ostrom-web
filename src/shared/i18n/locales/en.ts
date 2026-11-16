@@ -54,6 +54,7 @@ export const en = {
       settings: 'Settings',
       account: 'My account',
       webhooks: 'Webhooks',
+      capacity: 'Capacity',
       forecasts: 'Forecasts',
       usageReview: 'Usage review',
       poolSize: 'Pool size',
@@ -2336,6 +2337,14 @@ export const en = {
       handover: 'Hand over',
       handoverLabel: 'Hand over {{what}}',
       pool: 'pool {{pool}}',
+      poolField: 'Pool (empty = shared)',
+      poolSave: 'Save account',
+      refusal: {
+        invalid_pool:
+          'Use a pool identifier containing letters, digits, underscores or hyphens (up to 36 characters).',
+        account_pool_forbidden:
+          'Only the organization’s owners and admins put an account in a pool, not the member who shared it.',
+      },
       daily: '{{amount}} a day',
       noDaily: 'no daily limit',
       sharedWith: 'Lent to {{list}}',

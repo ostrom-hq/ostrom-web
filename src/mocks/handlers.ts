@@ -254,6 +254,7 @@ import { createRunHandlers } from '@/mocks/runs';
 import { createWorkflowSettingsHandlers } from '@/mocks/workflowSettings';
 import { createMemoryCurationHandlers, type MemoryCurationState } from '@/mocks/memoryCuration';
 import { createPoolSizeHandlers, initialPoolSizeState, type PoolSizeState } from '@/mocks/poolSize';
+import { createPoolsHandlers, initialPoolsState, type PoolsState } from '@/mocks/pools';
 import { type ApiPricesState, createApiPricesHandlers } from '@/mocks/apiPrices';
 import { type BudgetOverridesState, createBudgetOverridesHandlers } from '@/mocks/budgetOverrides';
 import { createUsageReviewHandlers, initialUsageReview, type UsageReviewState } from '@/mocks/usageReview';
@@ -299,6 +300,7 @@ export interface MockDb
     MemoryCurationState,
     ApiPricesState,
     PoolSizeState,
+    PoolsState,
     BudgetOverridesState,
     UsageReviewState,
     GithubState,
@@ -427,6 +429,7 @@ export function createMockDb(): MockDb {
     memoryCuration: { enabled: false },
     apiPrices: [],
     ...initialPoolSizeState(opened),
+    ...initialPoolsState(),
     budgetOverrides: [],
     ...initialUsageReview(),
     notificationChannels: ['push'],
@@ -1892,14 +1895,25 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       const index = db.sharedAccounts.findIndex((item) => item.id === params.id);
       const account = db.sharedAccounts[index];
       if (account === undefined) return refusal(404, 'not_found', 'shared account not found');
-      if (account.owner !== me.dev.login)
-        return refusal(403, 'forbidden', 'only its owner changes a subscription');
       const body = zUpdateSharedAccountBody.safeParse(await readJson(request));
       if (!body.success) return refusal(400, 'invalid_request', 'sharedWith, dailyAllocationUsd or paused');
       const sharedWith = body.data.sharedWith ?? undefined;
       const paused = body.data.paused ?? undefined;
+      const poolId = body.data.poolId ?? undefined;
+      // Only an owner or an admin moves an account to a pool (sending back its pool is no change); a member changes
+      // the rest of the accounts they shared.
+      const movesPool = poolId !== undefined && poolId !== (account.poolId ?? '');
+      const onlyPool =
+        sharedWith === undefined && paused === undefined && body.data.dailyAllocationUsd === undefined;
+      if (account.owner !== me.dev.login && !(onlyPool && canManage(db)))
+        return refusal(403, 'forbidden', 'only its owner changes a subscription');
+      if (poolId !== undefined && poolId !== '' && !/^[A-Za-z0-9_-]{1,36}$/.test(poolId))
+        return refusal(400, 'invalid_pool', 'a pool is 1 to 36 letters, digits, underscores or hyphens');
+      if (movesPool && !canManage(db))
+        return refusal(403, 'account_pool_forbidden', 'only an owner or an admin moves an account to a pool');
       const updated: SharedAccountResponse = {
         ...account,
+        ...(movesPool ? { poolId: poolId === '' ? null : poolId } : {}),
         ...(sharedWith === undefined ? {} : { sharedWith }),
         ...(body.data.dailyAllocationUsd === undefined
           ? {}
@@ -1954,6 +1968,12 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
       stale: () => now().getTime() - db.signedInAt > FRESH_SIGN_IN_MS,
       now,
+    }),
+    ...createPoolsHandlers(() => db, {
+      manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),
+      knows: (request, login) =>
+        membersIn(db, organizationOf(db, request), now).some((member) => member.login === login),
+      me: () => DEMO_LOGIN,
     }),
     ...createApiPricesHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),

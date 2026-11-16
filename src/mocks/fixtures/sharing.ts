@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { ArtifactResponse, ArtifactVersionResponse } from '@gen/api/types.gen';
-import type { SharedAccountRow } from '@/features/sharing/components/AccountCard';
+import type { ArtifactResponse, ArtifactVersionResponse, SharedAccountResponse } from '@gen/api/types.gen';
 import { groupId, type MockGroup } from '../groups';
 import { initialOrganization, MEMBER_IDS } from './organization';
 
@@ -76,7 +75,7 @@ const versions: Record<string, ArtifactVersionResponse[]> = {
 /** The members an artifact is shared with, by member id (`Member.id`), as the server lists them. */
 const members: Record<string, string[]> = { 'art-7': [MEMBER_IDS.maya, MEMBER_IDS.theo] };
 
-const accounts: SharedAccountRow[] = [
+const accounts: SharedAccountResponse[] = [
   {
     id: 'acc-1',
     mine: true,
@@ -103,6 +102,7 @@ const accounts: SharedAccountRow[] = [
     owner: 'theo',
     status: 'disabled',
     sharedWith: ['maya'],
+    poolId: 'reserve',
     paused: true,
   },
   // Brought in by the TeamCode import: TeamCode may still renew its tokens, so it waits for its handover.
@@ -131,7 +131,7 @@ export function initialArtifactVersions(): Record<string, ArtifactVersionRespons
 export function initialArtifactMembers(): Record<string, string[]> {
   return structuredClone(members);
 }
-export function initialSharedAccounts(): SharedAccountRow[] {
+export function initialSharedAccounts(): SharedAccountResponse[] {
   return structuredClone(accounts);
 }
 

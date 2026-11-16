@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ArtifactResponse, SharedAccountResponse } from '@gen/api/types.gen';
+import { isApiFailure } from '@/shared/api/ApiFailure';
 import type { BadgeTone } from '@/shared/ui/Badge';
 
 /**
@@ -90,4 +91,13 @@ export const ACCOUNT_TONES: Readonly<Record<AccountState, BadgeTone>> = {
 /** Whether an account waits for an administrator to hand its refresh over to Ostrom. */
 export function waitsForHandover(account: SharedAccountResponse): boolean {
   return account.paused !== true && account.status === 'pending_handover';
+}
+
+/** The refusals of an account's pool move the page words; any other failure says what the server said. */
+export const ACCOUNT_POOL_REFUSALS = ['invalid_pool', 'account_pool_forbidden'] as const;
+export type AccountPoolRefusal = (typeof ACCOUNT_POOL_REFUSALS)[number];
+
+export function accountPoolRefusalOf(failure: Error | undefined): AccountPoolRefusal | undefined {
+  if (!isApiFailure(failure)) return undefined;
+  return ACCOUNT_POOL_REFUSALS.find((code) => code === failure.code);
 }

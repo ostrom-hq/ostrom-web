@@ -1,0 +1,28 @@
+.cp-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.cp-title {
+  margin: 0;
+  font-size: var(--fs-16);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.cp-amount {
+  max-width: 12rem;
+}
+.cp-check {
+  align-items: flex-start;
+}
+.cp-check input {
+  flex: none;
+  margin-top: 0.2em;
+}
+.cp-pools {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+}
+.cp-pools > * {
+  min-width: 0;
+}
