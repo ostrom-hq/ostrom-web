@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { ArtifactResponse, SharedAccountResponse } from '@gen/api/types.gen';
+import { ApiFailure } from '@/shared/api/ApiFailure';
 import {
+  accountPoolRefusalOf,
   accountState,
   isArtifactAccess,
   isProvider,
@@ -84,5 +86,14 @@ describe('ownsArtifact', () => {
     expect(ownsArtifact(artifact, 'maya')).toBe(true);
     expect(ownsArtifact(artifact, 'samir')).toBe(false);
     expect(ownsArtifact(artifact, undefined)).toBe(false);
+  });
+});
+
+describe('the pools of the shared accounts', () => {
+  it('words only the refusals of a pool move', () => {
+    const refused = (code: string) => new ApiFailure('forbidden', code, 403, undefined, code);
+    expect(accountPoolRefusalOf(refused('account_pool_forbidden'))).toBe('account_pool_forbidden');
+    expect(accountPoolRefusalOf(refused('forbidden'))).toBeUndefined();
+    expect(accountPoolRefusalOf(new Error('down'))).toBeUndefined();
   });
 });

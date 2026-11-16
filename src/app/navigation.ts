@@ -49,6 +49,7 @@ export const NAV_LINKS = [
   { to: '/artifacts', label: 'artifacts', feature: 'artifacts.v1' },
   { to: '/webhooks', label: 'webhooks', feature: 'webhooks.v1', adminOnly: true },
   { to: '/accounts', label: 'accounts' },
+  { to: '/capacity', label: 'capacity' },
   { to: '/forecasts', label: 'forecasts', feature: 'capacity.forecasts.v1', adminOnly: true },
   { to: '/pool-size', label: 'poolSize', feature: 'capacity.poolsize.v1', adminOnly: true },
   { to: '/usage', label: 'usageReview', feature: 'capacity.usagereconciliation.v1', adminOnly: true },

@@ -9,7 +9,7 @@ import { LoadState, Screen } from '@/shared/ui/Screen';
 import { AccountCard } from '../components/AccountCard';
 import { EnrollForm } from '../components/EnrollForm';
 import { SharingTabs } from '../components/SharingTabs';
-import { waitsForHandover } from '../model';
+import { accountPoolRefusalOf, waitsForHandover } from '../model';
 import { useAccountChange, useAccounts } from '../useSharing';
 import './sharing.css';
 
@@ -21,13 +21,15 @@ export function AccountsScreen(): ReactElement {
   // TeamCode's « Refresh ownership »: only an administrator hands an imported account over, where the server can.
   const handoverServed = useFeature('sharing.handover.v1');
   const { role } = useCurrentOrg();
-  const handsOver = handoverServed && managesMembers(role);
+  const manages = managesMembers(role);
+  const handsOver = handoverServed && manages;
+  const refusal = accountPoolRefusalOf(change.failure);
   const waiting = view.accounts?.filter(waitsForHandover).length ?? 0;
   return (
     <Screen top={<SharingTabs />} title={t('sharing.accounts.title')} lead={t('sharing.accounts.lead')}>
       {change.failure === undefined ? null : (
         <Banner tone="danger" tag={t('sharing.errorTag')} live>
-          {change.failure.message}
+          {refusal === undefined ? change.failure.message : t(`sharing.accounts.refusal.${refusal}`)}
         </Banner>
       )}
       {waiting === 0 ? null : (
@@ -54,6 +56,13 @@ export function AccountsScreen(): ReactElement {
                   key={account.id}
                   account={account}
                   busy={change.pending !== undefined}
+                  movePool={
+                    manages
+                      ? (poolId) => {
+                          change.update(account.id, { poolId });
+                        }
+                      : undefined
+                  }
                   handover={
                     handsOver
                       ? () => {

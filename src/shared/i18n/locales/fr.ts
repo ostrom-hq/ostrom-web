@@ -58,6 +58,7 @@ export const fr = {
       settings: 'Réglages',
       account: 'Mon compte',
       webhooks: 'Webhooks',
+      capacity: 'Capacité',
       forecasts: 'Prévisions',
       usageReview: 'Revue de l’usage',
       poolSize: 'Taille du pool',
@@ -2378,7 +2379,15 @@ export const fr = {
       handoverConfirm: 'TeamCode, ni aucun autre outil, ne renouvelle plus ses jetons',
       handover: 'Transférer',
       handoverLabel: 'Transférer {{what}}',
-      pool: 'réserve {{pool}}',
+      pool: 'pool {{pool}}',
+      poolField: 'Pool (vide = partagé)',
+      poolSave: 'Enregistrer le compte',
+      refusal: {
+        invalid_pool:
+          'Utilisez un identifiant de pool fait de lettres, chiffres, tirets bas ou tirets (36 caractères au plus).',
+        account_pool_forbidden:
+          'Seuls les propriétaires et les admins de l’organisation mettent un compte dans un pool, pas le membre qui l’a partagé.',
+      },
       daily: '{{amount}} par jour',
       noDaily: 'sans limite par jour',
       sharedWith: 'Prêté à {{list}}',

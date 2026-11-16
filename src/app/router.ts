@@ -392,6 +392,12 @@ const poolSizeRoute = createRoute({
   path: '/pool-size',
   component: lazyRouteComponent(async () => import('@/features/poolSize'), 'PoolSizeScreen'),
 });
+/** TeamCode's capacity page, its pools: the pool budgets, shared overflow, and each member's pool. */
+const capacityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/capacity',
+  component: lazyRouteComponent(async () => import('@/features/capacity'), 'CapacityScreen'),
+});
 /** TeamCode's Usage review: `?view=history` for the corrections, `?member=` for one member's (`OrgMember.id`). */
 const usageReviewRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -588,6 +594,7 @@ export const routeTree = rootRoute.addChildren([
   accountsRoute,
   forecastsRoute,
   poolSizeRoute,
+  capacityRoute,
   usageReviewRoute,
   usageReservationRoute,
   groupsRoute,

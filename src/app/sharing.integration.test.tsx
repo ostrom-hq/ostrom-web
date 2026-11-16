@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 import { fireEvent, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { handleUpdateSharedAccount } from '@gen/api/msw.gen';
 import { delay, http, HttpResponse } from 'msw';
+import { setDemoRole } from '@/mocks/orgs';
 import { largeMembers } from '@/mocks/fixtures/large';
 import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setupMockApp, visit } from '@/test/mockApp';
@@ -410,9 +412,9 @@ describe('the shared subscriptions', () => {
     expect(within(max).getByRole('button', { name: 'Pause' })).toBeInTheDocument();
     const pro = await findCard('Theo’s ChatGPT Pro');
     expect(pro).toHaveTextContent('Paused');
-    expect(pro).toHaveTextContent('OpenAI · by theo · no daily limit');
+    expect(pro).toHaveTextContent('OpenAI · by theo · pool reserve · no daily limit');
     expect(pro).toHaveTextContent('Lent to maya');
-    expect(within(pro).queryByRole('button')).toBeNull();
+    expect(within(pro).queryByRole('button', { name: 'Pause' })).toBeNull();
   });
 
   it('shows a status and a provider it has no word for as is, an expired sign-in, and nobody to lend to', async () => {
@@ -741,5 +743,71 @@ describe('a team of more than a hundred people', () => {
     await user.click(within(study).getByRole('button', { name: 'Show more people' }));
     expect(await within(study).findByText(far.login)).toBeInTheDocument();
     expect(within(study).queryByText('The next people could not be read.')).toBeNull();
+  });
+});
+
+describe('the shared subscriptions’ pools (TeamCode’s account pool)', () => {
+  it('lets an administrator move an account to a pool, or out of it', async () => {
+    const user = userEvent.setup();
+    visit('/accounts');
+    const max = await findCard('Maya’s Claude Max');
+    const field = within(max).getByRole('textbox', { name: 'Pool (empty = shared)' });
+    expect(field).toHaveValue('billing');
+    const save = within(max).getByRole('button', { name: 'Save account' });
+    expect(save).toBeDisabled();
+    await user.clear(field);
+    await user.type(field, 'support');
+    await user.click(save);
+    expect(await within(max).findByText(/pool support/)).toBeVisible();
+    expect(db.sharedAccounts.find((account) => account.id === 'acc-1')?.poolId).toBe('support');
+    // Empty takes it out of its pool.
+    await user.clear(within(max).getByRole('textbox', { name: 'Pool (empty = shared)' }));
+    await user.click(within(max).getByRole('button', { name: 'Save account' }));
+    await vi.waitFor(() => {
+      expect(db.sharedAccounts.find((account) => account.id === 'acc-1')?.poolId).toBeNull();
+    });
+    // An administrator moves an account another member shared.
+    const pro = await findCard('Theo’s ChatGPT Pro');
+    await user.type(within(pro).getByRole('textbox', { name: 'Pool (empty = shared)' }), '-2');
+    await user.click(within(pro).getByRole('button', { name: 'Save account' }));
+    await vi.waitFor(() => {
+      expect(db.sharedAccounts.find((account) => account.id === 'acc-2')?.poolId).toBe('reserve-2');
+    });
+  });
+
+  it('words a pool out of its form and a move the server refuses', async () => {
+    const user = userEvent.setup();
+    visit('/accounts');
+    const max = await findCard('Maya’s Claude Max');
+    const field = within(max).getByRole('textbox', { name: 'Pool (empty = shared)' });
+    await user.clear(field);
+    await user.type(field, 'two words');
+    await user.click(within(max).getByRole('button', { name: 'Save account' }));
+    expect(
+      await screen.findByText(
+        'Use a pool identifier containing letters, digits, underscores or hyphens (up to 36 characters).',
+      ),
+    ).toBeVisible();
+    server.use(
+      handleUpdateSharedAccount(() =>
+        HttpResponse.json({ error: { type: 'account_pool_forbidden', message: 'no' } }, { status: 403 }),
+      ),
+    );
+    await user.clear(field);
+    await user.type(field, 'support');
+    await user.click(within(max).getByRole('button', { name: 'Save account' }));
+    expect(
+      await screen.findByText(
+        'Only the organization’s owners and admins put an account in a pool, not the member who shared it.',
+      ),
+    ).toBeVisible();
+  });
+
+  it('shows a member each account’s pool, and no pool field', async () => {
+    setDemoRole(db, 'member');
+    visit('/accounts');
+    const pro = await findCard('Theo’s ChatGPT Pro');
+    expect(pro).toHaveTextContent('pool reserve');
+    expect(screen.queryByRole('button', { name: 'Save account' })).toBeNull();
   });
 });

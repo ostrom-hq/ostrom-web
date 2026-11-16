@@ -47,6 +47,7 @@ const SCREENS = [
   '/artifacts',
   '/webhooks',
   '/accounts',
+  '/capacity',
   '/forecasts',
   '/pool-size',
   '/usage',

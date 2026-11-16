@@ -1,11 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 import type { SharedAccountResponse } from '@gen/api/types.gen';
-
-/**
- * A shared account as the card reads it: its `poolId` (TeamCode's `AccountView.poolId`) is not in the server's
- * document yet; the card names the pool once the server sends it.
- */
-export type SharedAccountRow = SharedAccountResponse & { readonly poolId?: string | null };
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -15,7 +9,7 @@ import { ConfirmButton } from '@/shared/ui/ConfirmButton';
 import { ACCOUNT_TONES, accountState, providerOf } from '../model';
 
 export interface AccountCardProps {
-  readonly account: SharedAccountRow;
+  readonly account: SharedAccountResponse;
   readonly busy: boolean;
   /** Present when the viewer owns the subscription. */
   readonly actions:
@@ -26,10 +20,12 @@ export interface AccountCardProps {
     | undefined;
   /** Present when the viewer may hand this waiting account's refresh over to Ostrom (an administrator). */
   readonly handover?: (() => void) | undefined;
+  /** Present when the viewer may move it to another pool (an owner or an admin): `''` takes it out of its pool. */
+  readonly movePool?: ((poolId: string) => void) | undefined;
 }
 
 /** Whose subscription, who it is lent to, and how much of it a day; the credential itself is never shown. */
-export function AccountCard({ account, busy, actions, handover }: AccountCardProps): ReactElement {
+export function AccountCard({ account, busy, actions, handover, movePool }: AccountCardProps): ReactElement {
   const { t, i18n } = useTranslation();
   const headingId = useId();
   const state = accountState(account);
@@ -49,7 +45,7 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
         {[
           provider === undefined ? account.provider : t(`sharing.provider.${provider}`),
           t('sharing.owner', { owner: account.owner }),
-          typeof account.poolId === 'string'
+          typeof account.poolId === 'string' && account.poolId !== ''
             ? t('sharing.accounts.pool', { pool: account.poolId })
             : undefined,
           account.dailyAllocationUsd === undefined || account.dailyAllocationUsd === null
@@ -70,6 +66,10 @@ export function AccountCard({ account, busy, actions, handover }: AccountCardPro
       {state === 'accessOnly' ? <p className="o-row__meta">{t('sharing.accounts.accessOnlyHint')}</p> : null}
       {handover === undefined || state !== 'pendingHandover' ? null : (
         <HandoverForm label={account.label} busy={busy} onHandover={handover} />
+      )}
+      {movePool === undefined ? null : (
+        // A saved pool starts the field again from it.
+        <PoolForm key={account.poolId ?? ''} pool={account.poolId ?? ''} busy={busy} onSave={movePool} />
       )}
       {actions === undefined ? null : (
         <div className="o-inline">
@@ -132,5 +132,44 @@ function HandoverForm({
         {t('sharing.accounts.handover')}
       </Button>
     </div>
+  );
+}
+
+/** TeamCode's « Pool (empty = shared) » of an account (`PATCH /accounts/{id}` `poolId`), for an administrator. */
+function PoolForm({
+  pool,
+  busy,
+  onSave,
+}: {
+  readonly pool: string;
+  readonly busy: boolean;
+  readonly onSave: (poolId: string) => void;
+}): ReactElement {
+  const { t } = useTranslation();
+  const [draft, setDraft] = useState(pool);
+  const fieldId = useId();
+  return (
+    <form
+      className="o-inline"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSave(draft.trim());
+      }}
+    >
+      <label htmlFor={fieldId}>{t('sharing.accounts.poolField')}</label>
+      <input
+        id={fieldId}
+        className="o-input sh-amount"
+        autoComplete="off"
+        maxLength={36}
+        value={draft}
+        onChange={(event) => {
+          setDraft(event.target.value);
+        }}
+      />
+      <Button type="submit" disabled={busy || draft.trim() === pool}>
+        {t('sharing.accounts.poolSave')}
+      </Button>
+    </form>
   );
 }

@@ -372,4 +372,45 @@ describe('mock shared subscriptions', () => {
       await statusOf(async () => handOverSharedAccount({ path: { id: 'acc-3' }, throwOnError: true })),
     ).toBe(403);
   });
+
+  it('moves an account to a pool for an administrator only, as its owner sends back its pool', async () => {
+    const moved = await updateSharedAccount({
+      path: { id: 'acc-2' },
+      body: { poolId: 'support' },
+      throwOnError: true,
+    });
+    expect(moved.data).toMatchObject({ poolId: 'support' });
+    const pooled = await updateSharedAccount({
+      path: { id: 'acc-3' },
+      body: { poolId: 'night' },
+      throwOnError: true,
+    });
+    expect(pooled.data).toMatchObject({ poolId: 'night' });
+    expect(
+      await statusOf(async () =>
+        updateSharedAccount({ path: { id: 'acc-1' }, body: { poolId: 'two words' }, throwOnError: true }),
+      ),
+    ).toBe(400);
+    db.members = db.members.map((member) =>
+      member.login === 'maya' ? { ...member, role: 'member' } : member,
+    );
+    const refused: unknown = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { poolId: 'support' },
+      throwOnError: true,
+    }).catch((error: unknown) => error);
+    expect(isApiFailure(refused) && refused.code).toBe('account_pool_forbidden');
+    expect(
+      await statusOf(async () =>
+        updateSharedAccount({ path: { id: 'acc-2' }, body: { poolId: 'other' }, throwOnError: true }),
+      ),
+    ).toBe(403);
+    // Its owner sends back its pool with a pause: no move.
+    const same = await updateSharedAccount({
+      path: { id: 'acc-1' },
+      body: { poolId: 'billing', paused: true },
+      throwOnError: true,
+    });
+    expect(same.data).toMatchObject({ poolId: 'billing', paused: true });
+  });
 });
