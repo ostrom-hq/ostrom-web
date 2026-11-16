@@ -78,6 +78,8 @@ export function PoolBudgetForm({ budget, members }: PoolBudgetFormProps): ReactE
         autoComplete="off"
         maxLength={36}
         required
+        // A saved pool's name is what the server keeps it by: another name would be another pool.
+        readOnly={saved}
         value={pool}
         aria-describedby={`${poolId}-hint`}
         onChange={(event) => {

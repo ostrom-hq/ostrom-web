@@ -16,6 +16,7 @@ describe('the capacity model', () => {
     expect(microsOfUsd(12.5)).toBe(12_500_000);
     expect(microsOfUsd(0.1 + 0.2)).toBe(300_000);
     expect(usdDraftOf(40_000_000)).toBe('40');
+    expect(usdDraftOf(12_345_678)).toBe('12.35');
   });
 
   it('words only TeamCode’s refusals of a pool write', () => {

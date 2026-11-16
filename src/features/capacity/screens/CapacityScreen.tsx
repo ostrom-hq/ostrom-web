@@ -65,7 +65,8 @@ function AdminCapacity(): ReactElement {
             <div className="cp-pools">
               {byPool(list).map((budget) => (
                 <PoolBudgetForm
-                  key={budget.poolId}
+                  // A saved budget starts its form again from it, whoever saved it.
+                  key={`${budget.poolId}:${String(budget.dailyMicros)}:${String(budget.sharedOverflow)}`}
                   budget={budget}
                   members={counts === undefined ? undefined : (counts.get(budget.poolId) ?? 0)}
                 />

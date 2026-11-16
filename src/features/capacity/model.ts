@@ -12,9 +12,12 @@ export function microsOfUsd(usd: number): number {
   return Math.round(usd * 1_000_000);
 }
 
-/** A budget in dollars as its field starts: `40`, `12.5`, never an exponent. */
+/**
+ * A budget in dollars as its field starts, to the cent as the field takes it: `40`, `12.5`. A budget the API saved
+ * finer than a cent starts rounded, so its form can still be saved.
+ */
 export function usdDraftOf(micros: number): string {
-  return String(usdOfMicros(micros));
+  return String(Math.round(micros / 10_000) / 100);
 }
 
 /**

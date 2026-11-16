@@ -35,6 +35,8 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     const billing = await findCard('Pool billing');
     expect(await within(billing).findByText('$40.00 a day · 2 members')).toBeVisible();
     expect(within(billing).getByRole('textbox', { name: 'Total daily budget (USD)' })).toHaveValue('40');
+    // A saved pool keeps its name: another one would be another pool.
+    expect(within(billing).getByRole('textbox', { name: 'Pool' })).toHaveAttribute('readonly');
     expect(within(billing).getByRole('checkbox', { name: /Shared overflow reserve/ })).not.toBeChecked();
     const reserve = await findCard('Pool reserve');
     expect(within(reserve).getByText('Shared overflow reserve')).toBeVisible();
@@ -69,7 +71,11 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     await user.clear(billingDaily);
     await user.type(billingDaily, '50');
     await user.click(within(billing).getByRole('button', { name: 'Save pool budget' }));
-    expect(await within(billing).findByText('$50.00 a day · 2 members')).toBeVisible();
+    // Saved, the form starts again from the budget the server answers.
+    expect(await screen.findByText('$50.00 a day · 2 members')).toBeVisible();
+    expect(
+      within(await findCard('Pool billing')).getByRole('textbox', { name: 'Total daily budget (USD)' }),
+    ).toHaveValue('50');
   });
 
   it('words TeamCode’s refusals of a pool budget, and says any other as the server does', async () => {
