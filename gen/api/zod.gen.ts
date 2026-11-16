@@ -600,7 +600,9 @@ export const zCloudSessionResponse = z.object({
     kind: z.nullish(z.string()),
     host: z.nullish(zCloudSessionHostDto),
     createdBy: z.nullish(zCloudAttributionDto),
-    launchId: z.nullish(z.string())
+    launchId: z.nullish(z.string()),
+    automationId: z.nullish(z.string()),
+    runId: z.nullish(z.string())
 });
 
 /**
@@ -754,7 +756,9 @@ export const zAuthSessionResponse = z.object({
     id: z.string(),
     createdAt: z.string(),
     lastSeenAt: z.string(),
-    current: z.boolean()
+    current: z.boolean(),
+    name: z.nullish(z.string()),
+    deviceId: z.nullish(z.string())
 });
 
 /**
@@ -1180,7 +1184,8 @@ export const zReceiptDecision = z.object({
     by: z.string(),
     at: z.string(),
     result: z.string(),
-    selfApproved: z.nullish(z.boolean())
+    selfApproved: z.nullish(z.boolean()),
+    note: z.nullish(z.string())
 });
 
 /**
@@ -1327,7 +1332,8 @@ export const zGateRequest = z.object({
     pr: z.nullish(zGatePullRequest),
     askedVia: z.nullish(z.array(z.string())),
     selfApproved: z.nullish(z.boolean()),
-    push: z.nullish(zGatePush)
+    push: z.nullish(zGatePush),
+    note: z.nullish(z.string())
 });
 
 /**
@@ -1443,7 +1449,8 @@ export const zApprovalViewResponse = z.object({
     pr: z.nullish(zGatePullRequest),
     askedVia: z.array(z.string()),
     you: zApprovalCallerView,
-    receipt: z.nullish(zJsonElement)
+    receipt: z.nullish(zJsonElement),
+    note: z.nullish(z.string())
 });
 
 /**
@@ -1452,7 +1459,8 @@ export const zApprovalViewResponse = z.object({
 export const zAnswerApprovalRequest = z.object({
     answer: z.union([z.enum(['approve', 'reject']), z.string()]),
     shownDigest: z.string(),
-    comment: z.nullish(z.string())
+    comment: z.nullish(z.string()),
+    note: z.nullish(z.string())
 });
 
 /**
@@ -1542,7 +1550,8 @@ export const zSessionDto = z.object({
     lost: z.nullish(z.boolean()),
     activity: z.nullish(z.string()),
     activitySince: z.nullish(z.string()),
-    labels: z.nullish(z.record(z.string(), z.string()))
+    labels: z.nullish(z.record(z.string(), z.string())),
+    runId: z.nullish(z.string())
 });
 
 /**
@@ -2353,7 +2362,8 @@ export const zMcpHostedProcessDto = z.object({
     lastExitCode: z.nullish(z.int()),
     coldStartMs: z.nullish(z.int()),
     memoryBytes: z.nullish(z.int()),
-    stderr: z.nullish(z.string())
+    stderr: z.nullish(z.string()),
+    username: z.nullish(z.string())
 });
 
 /**
@@ -5553,7 +5563,8 @@ export const zSharedAccountResponse = z.object({
     spentMicros: z.optional(z.int()),
     createdAt: z.string(),
     dailyAllocationUsd: z.nullish(z.number()),
-    refreshOwnership: z.nullish(z.string())
+    refreshOwnership: z.nullish(z.string()),
+    poolId: z.nullish(z.string())
 });
 
 /**
@@ -5584,7 +5595,8 @@ export const zUpdateAccountRequest = z.object({
     paused: z.nullish(z.boolean()),
     sharedWith: z.nullish(z.array(z.string())),
     limits: z.nullish(z.record(z.string(), zJsonElement)),
-    dailyAllocationUsd: z.nullish(z.number())
+    dailyAllocationUsd: z.nullish(z.number()),
+    poolId: z.nullish(z.string())
 });
 
 /**
@@ -5703,6 +5715,21 @@ export const zForecastSnapshotResponse = z.object({
     windows: z.array(zForecastWindowResponse),
     truncated: z.boolean(),
     pressureThreshold: z.number()
+});
+
+/**
+ * MemberPolicyResponse
+ */
+export const zMemberPolicyResponse = z.object({
+    member: z.string(),
+    poolId: z.nullish(z.string())
+});
+
+/**
+ * UpdateMemberPolicyRequest
+ */
+export const zUpdateMemberPolicyRequest = z.object({
+    poolId: z.string()
 });
 
 /**
@@ -7127,7 +7154,7 @@ export const zGetApprovalViewPath = z.object({
 export const zGetApprovalViewResponse = zApprovalViewResponse;
 
 /**
- * The answer, the digest of what the approver was shown, and an optional comment.
+ * The answer, the digest of what the approver was shown, and an optional note to the agent.
  */
 export const zAnswerApprovalBody = zAnswerApprovalRequest;
 
@@ -9513,8 +9540,9 @@ export const zListCloudSessionsHeaders = z.pipe(z.transform(fromHeaders(['Ostrom
 export const zListCloudSessionsQuery = z.object({
     before: z.optional(z.string()),
     limit: z.optional(z.int().check(z.gte(1), z.lte(50))),
-    kind: z.optional(z.string()),
-    owner: z.optional(z.string())
+    kind: z.optional(z.array(z.string())),
+    owner: z.optional(z.string()),
+    status: z.optional(z.array(z.string()))
 });
 
 /**
@@ -12233,6 +12261,37 @@ export const zGetForecastsQuery = z.object({
  * The account's windows with their readings and forecasts, and the accounts of the organization.
  */
 export const zGetForecastsResponse = zForecastSnapshotResponse;
+
+export const zGetMemberPolicyHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
+    'Ostrom-Org': z.optional(z.string())
+}));
+
+export const zGetMemberPolicyPath = z.object({
+    login: z.string()
+});
+
+/**
+ * The member's policy; `poolId` is absent for a member in no pool.
+ */
+export const zGetMemberPolicyResponse = zMemberPolicyResponse;
+
+/**
+ * The member's home pool, or an empty string for none.
+ */
+export const zUpdateMemberPolicyBody = zUpdateMemberPolicyRequest;
+
+export const zUpdateMemberPolicyHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
+    'Ostrom-Org': z.optional(z.string())
+}));
+
+export const zUpdateMemberPolicyPath = z.object({
+    login: z.string()
+});
+
+/**
+ * The member's policy after the change.
+ */
+export const zUpdateMemberPolicyResponse = zMemberPolicyResponse;
 
 /**
  * The team as `ostrom import teamcode` read it: members, MCP servers, accounts, workflows, automations, profiles and catalogue, with the mapping of TeamCode members to members of this organization.

@@ -5,7 +5,6 @@ import type {
   DeviceResponse,
   ListCloudSessionsData,
 } from '@gen/api/types.gen';
-import { createQuerySerializer } from '@gen/api/client/utils.gen';
 import type { Options } from '@gen/api/sdk.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 
@@ -28,19 +27,14 @@ export function listedKinds(filter: KindFilter): readonly ListedKind[] {
 }
 
 /**
- * The list request for `kinds`, with the rest of `query`. The document types `kind` as one value though the server
- * reads it repeated: the query key names the kinds, and the generated client's serializer writes the whole query with
- * each kind as its own `kind` (`kind=cloud&kind=remote`), every other parameter as it would.
+ * The list request for `kinds`, with the rest of `query`: the document declares `kind` a repeated list, so the
+ * generated client writes each kind as its own `kind` (`kind=cloud&kind=remote`).
  */
 export function kindsQuery(
   kinds: readonly ListedKind[],
   query: Omit<NonNullable<ListCloudSessionsData['query']>, 'kind'> = {},
 ): Options<ListCloudSessionsData> {
-  const serialize = createQuerySerializer();
-  return {
-    query: { ...query, kind: kinds.join(',') },
-    querySerializer: (sent) => serialize({ ...sent, kind: kinds }),
-  };
+  return { query: { ...query, kind: [...kinds] } };
 }
 
 /** Where the new session runs: a pod, or a folder of one of the member's online devices. */
