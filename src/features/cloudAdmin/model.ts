@@ -49,6 +49,15 @@ export function automationsOf(text: string): number | undefined {
   return wholeNumber(text, 1, AUTOMATIONS_MAX);
 }
 
+export const REMOTE_IDLE_MAX = 1440;
+/** What the server uses while no organization saved its own (TeamCode's `remoteIdleTimeoutMinutes`). */
+export const REMOTE_IDLE_DEFAULT = 60;
+
+/** The idle pause of remote sessions typed, when it is a number the server reads (0 never pauses them). */
+export function remoteIdleOf(text: string): number | undefined {
+  return wholeNumber(text, 0, REMOTE_IDLE_MAX);
+}
+
 // ---- The instance's runtime ---------------------------------------------------------------------------------------
 
 export const WORKSPACE_MODES = ['ReadWriteOncePod', 'ReadWriteOnce'] as const;

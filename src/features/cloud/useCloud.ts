@@ -27,18 +27,20 @@ import type {
   AutomationRequest,
   CloudEnvironmentDto,
   CloudSessionResponse,
+  CreateCloudSessionRequest,
   RunnerDto,
 } from '@gen/api/types.gen';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { failureOf } from '@/shared/api/failureOf';
 import { pollUnlessRefused } from '@/shared/api/poll';
 import { ready } from '@/shared/api/ready';
-import { useAnnounced } from '@/shared/capabilities';
+import { useAnnounced, useServerStatus } from '@/shared/capabilities';
 import { useViewer } from '@/shared/auth/useViewer';
 import { createRefused, type PendingCreate, pressOf } from './createKey';
 import type { CloudAgent, GithubAccess, SessionMode } from './model';
+import { type DeviceAgent, type KindFilter, kindsQuery, listedKinds, type PermissionMode } from './remote';
 import { allWorkflowsOptions } from '@/shared/api/allWorkflows';
 import type { Workflow } from '@/shared/api/workflowDocument';
 
@@ -52,10 +54,22 @@ export interface CloudViewModel {
   readonly canManage: boolean;
 }
 
-/** Sessions move on their own (queued, running, ended): the list follows them every ten seconds. */
-export function useCloud(): CloudViewModel {
+/**
+ * Sessions move on their own (queued, running, ended): the list follows them every ten seconds. With remote sessions
+ * (`runners.cloud.remote.v1`) it lists the kinds `filter` names, never `local` ones; without, the server lists cloud
+ * sessions only.
+ */
+export function useCloud(filter: KindFilter = 'all'): CloudViewModel {
+  const remote = useAnnounced('runners.cloud.remote.v1');
+  // Asked once the server said what it serves: the kinds it lists depend on it, and one request is enough.
+  const known = useServerStatus().kind !== 'loading';
   const sessions = useQuery(
-    ready(listCloudSessionsOptions(), { refetchInterval: pollUnlessRefused(POLL_MS) }),
+    ready(listCloudSessionsOptions(remote ? kindsQuery(listedKinds(filter)) : undefined), {
+      refetchInterval: pollUnlessRefused(POLL_MS),
+      enabled: known,
+      // Another kind filter keeps the rows shown until its own answer replaces them: no blank list between the two.
+      placeholderData: keepPreviousData,
+    }),
   );
   const runners = useQuery(ready(listRunnersOptions()));
   const viewer = useViewer();
@@ -82,9 +96,29 @@ export interface StartRequest {
   readonly mode?: SessionMode | undefined;
 }
 
+/** A session on one of the member's online devices (`runners.cloud.remote.daemon.v1`), always a conversation. */
+export interface DeviceStartRequest {
+  readonly agent: DeviceAgent;
+  readonly name: string;
+  readonly prompt: string;
+  readonly deviceId: string;
+  readonly folderId: string;
+  readonly permissionMode: PermissionMode;
+  readonly model: string;
+  readonly effort: string;
+  /** The Claude Code conversation of the folder it continues (`runners.cloud.remote.resume.v1`). */
+  readonly resumeSessionId?: string | undefined;
+}
+
 export interface SessionChangeViewModel {
   /** `onDone` runs once the server took it: the form clears then, not before. */
   readonly start: (request: StartRequest, onDone: () => void) => void;
+  /** `onRefused` runs with the server's refusal: the device form reads its devices or folders again. */
+  readonly startOnDevice: (
+    request: DeviceStartRequest,
+    onDone: () => void,
+    onRefused: (error: unknown) => void,
+  ) => void;
   readonly stop: (id: string) => void;
   readonly starting: boolean;
   /** The session being stopped. */
@@ -104,23 +138,9 @@ export function useSessionChange(): SessionChangeViewModel {
   const halt = useMutation({ ...stopCloudSessionMutation(), onSettled: refresh });
   const { mutate: createMutate, reset: resetCreate } = create;
   const { mutate: haltMutate, reset: resetHalt } = halt;
-  const start = useCallback(
-    (request: StartRequest, onDone: () => void) => {
+  const send = useCallback(
+    (body: CreateCloudSessionRequest, onDone: () => void, onRefused?: (error: unknown) => void) => {
       resetHalt();
-      const name = request.name.trim();
-      const repo = request.repo.trim();
-      const body = {
-        agent: request.agent,
-        prompt: request.prompt.trim(),
-        ...(name === '' ? {} : { name }),
-        ...(repo === '' ? {} : { repo }),
-        ...(request.environment === undefined ? {} : { environment: request.environment }),
-        ...(request.profileId === undefined ? {} : { profileId: request.profileId }),
-        ...(request.image === undefined || request.image.trim() === ''
-          ? {}
-          : { image: request.image.trim() }),
-        ...(request.mode === undefined ? {} : { mode: request.mode }),
-      };
       // One key per press, kept while its answer is unknown so that pressing again cannot create a second session.
       const press = pressOf(pending.current, body);
       pending.current = press;
@@ -135,11 +155,62 @@ export function useSessionChange(): SessionChangeViewModel {
           // flight, so this press owns the key it drops.
           onError: (error) => {
             if (createRefused(error)) pending.current = undefined;
+            onRefused?.(error);
           },
         },
       );
     },
     [createMutate, resetHalt],
+  );
+  const start = useCallback(
+    (request: StartRequest, onDone: () => void) => {
+      const name = request.name.trim();
+      const repo = request.repo.trim();
+      const body = {
+        agent: request.agent,
+        prompt: request.prompt.trim(),
+        ...(name === '' ? {} : { name }),
+        ...(repo === '' ? {} : { repo }),
+        ...(request.environment === undefined ? {} : { environment: request.environment }),
+        ...(request.profileId === undefined ? {} : { profileId: request.profileId }),
+        ...(request.image === undefined || request.image.trim() === ''
+          ? {}
+          : { image: request.image.trim() }),
+        ...(request.mode === undefined ? {} : { mode: request.mode }),
+      };
+      send(body, onDone);
+    },
+    [send],
+  );
+  const startOnDevice = useCallback(
+    (request: DeviceStartRequest, onDone: () => void, onRefused: (error: unknown) => void) => {
+      const prompt = request.prompt.trim();
+      const model = request.model.trim();
+      const effort = request.effort.trim();
+      // Built in a fixed order, as the key's request is named by its JSON.
+      send(
+        {
+          agent: request.agent,
+          name: request.name.trim(),
+          ...(prompt === '' ? {} : { prompt }),
+          kind: 'remote',
+          mode: 'conversation',
+          deviceId: request.deviceId,
+          folderId: request.folderId,
+          permissionMode: request.permissionMode,
+          ...(model === '' ? {} : { model }),
+          ...(effort === '' ? {} : { effort }),
+          ...(request.resumeSessionId === undefined ? {} : { resumeSessionId: request.resumeSessionId }),
+        },
+        onDone,
+        // The device form says the refusal itself, beside what it concerns: not again above the list.
+        (error) => {
+          resetCreate();
+          onRefused(error);
+        },
+      );
+    },
+    [send, resetCreate],
   );
   const stop = useCallback(
     (id: string) => {
@@ -150,6 +221,7 @@ export function useSessionChange(): SessionChangeViewModel {
   );
   return {
     start,
+    startOnDevice,
     stop,
     starting: create.isPending,
     stopping: halt.isPending ? halt.variables.path.id : undefined,

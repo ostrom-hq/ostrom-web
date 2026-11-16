@@ -2,6 +2,7 @@
 import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { Link, useParams } from '@tanstack/react-router';
 import { type ReactElement, useCallback, useMemo } from 'react';
+import { hostName, isPaused, isRemote } from '@/features/cloudHost';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { Badge, type BadgeTone } from '@/shared/ui/Badge';
 import { Banner } from '@/shared/ui/Banner';
@@ -10,6 +11,7 @@ import { Markdown } from '@/shared/ui/Markdown';
 import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { Composer, PendingBubble } from '../components/Composer';
 import { FileDropArea } from '../components/FileComponents';
+import { HostCard } from '../components/HostCard';
 import { PermissionCardView } from '../components/PermissionCardView';
 import { RunningPanel, ThreadBar } from '../components/RunningPanel';
 import { SessionControls } from '../components/SessionControls';
@@ -99,6 +101,7 @@ function SessionBody({
       title={title}
       lead={[session.owner, session.agent, session.model].filter((part) => part !== undefined).join(' · ')}
     >
+      {isRemote(session) ? <HostCard session={session} /> : null}
       {view.conversation ? (
         <Conversation session={session} view={view} />
       ) : (
@@ -205,6 +208,14 @@ function Conversation({
               )}
             </LoadState>
             <PermissionCardView view={permissions} bypassOffered={controls.bypassOffered} />
+            {isRemote(session) && isPaused(session) ? (
+              // No Resume for a remote session: a message wakes it on its device (TeamCode's `canResume`).
+              <p className="cc-meta" role="status">
+                {t('cloudConversation.host.pausedDock', {
+                  device: hostName(t, session.host),
+                })}
+              </p>
+            ) : null}
             <Composer view={view} />
           </Section>
           <RunningPanel

@@ -72,6 +72,70 @@ export const cloudEn = {
         recipient_ineligible: 'That member cannot own this session.',
       },
     },
+    remote: {
+      kind: { cloud: 'Cloud', remote: 'Remote · {{device}}' },
+      offlineChip: 'Offline',
+      waitingChip: 'Waiting for the device',
+      refusedChip: 'Refused by the device',
+      kindFilter: { label: 'Where the sessions run', all: 'All', cloud: 'Cloud', remote: 'Remote' },
+      start: {
+        target: { label: 'Where should it run?', cloud: 'Cloud', device: 'Online device' },
+        device: 'Device',
+        deviceThis: 'This device',
+        devicesLoading: 'Reading your online devices…',
+        noDevice:
+          'None of your devices is online. On a computer, sign the Ostrom CLI in (ostrom login) and start its service (ostrom service install), then refresh.',
+        refresh: 'Refresh',
+        folder: 'Folder',
+        foldersLoading: 'Reading the device’s folders…',
+        noFolder:
+          'This device offers no folder yet. On it, add one with ostrom folders add PATH, then refresh.',
+        folderHint: 'The folders this device’s owner allowed. Only their names reach the server.',
+        agent: 'Agent',
+        permissions: 'Permissions',
+        permissionModes: { ask: 'Ask', bypass: 'Bypass' },
+        askHint:
+          'Claude Code asks before acting, and you answer from any of your devices; Codex only writes in the folder. Kept for the next session.',
+        bypassWarning:
+          'The agent changes the folder’s files and runs commands on {{device}} without asking. Kept for the next session.',
+        resume: 'Resume a session',
+        resumeNone: 'None',
+        resumeNoneHint: 'A new conversation',
+        turns_one: '{{count}} message',
+        turns_other: '{{count}} messages',
+        resumeEmpty: 'No earlier Claude Code session in this folder.',
+        resumeMore: 'Show older sessions',
+        resumeHint:
+          'Continues a Claude Code conversation of this folder on {{device}}; the original stays as it was. Only its title, date and number of messages reach the server, and only you see them.',
+        resumeOldDaemon: 'Update Ostrom on {{device}} (ostrom update) to resume a session there.',
+        resumeLoading: 'Reading the folder’s sessions on the device…',
+        retry: 'Retry',
+        name: 'Name',
+        overrides: 'Overrides · optional',
+        model: 'Model',
+        effort: 'Effort',
+        agentDefault: 'Agent default',
+        message: 'First message',
+        messageHint: 'What should the agent do? Optional.',
+        startOn: 'Start on {{device}}',
+        create: 'Create the session',
+      },
+      deviceRefusal: {
+        device_offline:
+          'This device is offline: its Ostrom service is not connected. Start it on the device (ostrom service install), or choose another device.',
+        folder_not_published:
+          'This device no longer offers this folder. Add it on the device with ostrom folders add, or choose another folder.',
+        device_not_found: 'This device is not one of yours any more, or it was removed.',
+        remote_requires_login: 'Only the device’s owner, signed in with a password, starts a session on it.',
+        device_target_unsupported:
+          'This server does not start sessions on your devices. Update it to use them.',
+        invalid_folder: 'Choose one of the folders the device offers.',
+        resume_unsupported:
+          'Ostrom on this device is too old to resume a session. Update it on the device (ostrom update).',
+        device_no_answer: 'The device did not answer in time. Try again.',
+        resume_folder: 'The device could not read this folder’s sessions ({{code}}).',
+      },
+    },
     session: {
       profile: 'profile {{name}} v{{version}}',
       expires: 'deleted {{when}} unless resumed',
@@ -158,6 +222,72 @@ const cloudFr = {
         transfer_in_progress:
           'Le propriétaire est en train de changer : le transfert ne peut plus être annulé.',
         recipient_ineligible: 'Ce membre ne peut pas posséder cette session.',
+      },
+    },
+    remote: {
+      kind: { cloud: 'Cloud', remote: 'À distance · {{device}}' },
+      offlineChip: 'Hors ligne',
+      waitingChip: 'En attente de l’appareil',
+      refusedChip: 'Refusée par l’appareil',
+      kindFilter: { label: 'Où tournent les sessions', all: 'Toutes', cloud: 'Cloud', remote: 'À distance' },
+      start: {
+        target: { label: 'Où doit-elle tourner ?', cloud: 'Cloud', device: 'Appareil en ligne' },
+        device: 'Appareil',
+        deviceThis: 'Cet appareil',
+        devicesLoading: 'Lecture de vos appareils en ligne…',
+        noDevice:
+          'Aucun de vos appareils n’est en ligne. Sur un ordinateur, connectez la CLI Ostrom (ostrom login) et démarrez son service (ostrom service install), puis actualisez.',
+        refresh: 'Actualiser',
+        folder: 'Dossier',
+        foldersLoading: 'Lecture des dossiers de l’appareil…',
+        noFolder:
+          'Cet appareil ne propose encore aucun dossier. Sur celui-ci, ajoutez-en un avec ostrom folders add CHEMIN, puis actualisez.',
+        folderHint:
+          'Les dossiers autorisés par le propriétaire de cet appareil. Seuls leurs noms parviennent au serveur.',
+        agent: 'Agent',
+        permissions: 'Autorisations',
+        permissionModes: { ask: 'Demander', bypass: 'Ne pas demander' },
+        askHint:
+          'Claude Code demande avant d’agir, et vous répondez depuis n’importe lequel de vos appareils ; Codex n’écrit que dans le dossier. Conservé pour la prochaine session.',
+        bypassWarning:
+          'L’agent modifie les fichiers du dossier et exécute des commandes sur {{device}} sans demander. Conservé pour la prochaine session.',
+        resume: 'Reprendre une session',
+        resumeNone: 'Aucune',
+        resumeNoneHint: 'Une nouvelle conversation',
+        turns_one: '{{count}} message',
+        turns_other: '{{count}} messages',
+        resumeEmpty: 'Aucune session Claude Code antérieure dans ce dossier.',
+        resumeMore: 'Afficher les sessions plus anciennes',
+        resumeHint:
+          'Reprend une conversation Claude Code de ce dossier sur {{device}} ; l’originale reste telle quelle. Seuls son titre, sa date et son nombre de messages parviennent au serveur, et vous seul les voyez.',
+        resumeOldDaemon: 'Mettez à jour Ostrom sur {{device}} (ostrom update) pour y reprendre une session.',
+        resumeLoading: 'Lecture des sessions du dossier sur l’appareil…',
+        retry: 'Réessayer',
+        name: 'Nom',
+        overrides: 'Réglages · facultatif',
+        model: 'Modèle',
+        effort: 'Effort',
+        agentDefault: 'Agent par défaut',
+        message: 'Premier message',
+        messageHint: 'Que doit faire l’agent ? Facultatif.',
+        startOn: 'Démarrer sur {{device}}',
+        create: 'Créer la session',
+      },
+      deviceRefusal: {
+        device_offline:
+          'Cet appareil est hors ligne : son service Ostrom n’est pas connecté. Démarrez-le sur l’appareil (ostrom service install), ou choisissez un autre appareil.',
+        folder_not_published:
+          'Cet appareil ne propose plus ce dossier. Ajoutez-le sur l’appareil avec ostrom folders add, ou choisissez un autre dossier.',
+        device_not_found: 'Cet appareil n’est plus l’un des vôtres, ou il a été supprimé.',
+        remote_requires_login:
+          'Seul le propriétaire de l’appareil, connecté avec un mot de passe, peut y démarrer une session.',
+        device_target_unsupported:
+          'Ce serveur ne démarre pas de sessions sur vos appareils. Mettez-le à jour pour les utiliser.',
+        invalid_folder: 'Choisissez l’un des dossiers proposés par l’appareil.',
+        resume_unsupported:
+          'Ostrom sur cet appareil est trop ancien pour reprendre une session. Mettez-le à jour sur l’appareil (ostrom update).',
+        device_no_answer: 'L’appareil n’a pas répondu à temps. Réessayez.',
+        resume_folder: 'L’appareil n’a pas pu lire les sessions de ce dossier ({{code}}).',
       },
     },
     session: {

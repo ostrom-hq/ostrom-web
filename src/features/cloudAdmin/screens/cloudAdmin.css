@@ -1,0 +1,5 @@
+/* A fieldset is as wide as its widest content by default: on a phone, the remote sessions one overflowed its section
+   and covered the next one. */
+.ca-settings fieldset {
+  min-width: 0;
+}

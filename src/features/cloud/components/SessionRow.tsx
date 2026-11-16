@@ -3,6 +3,7 @@ import type { CloudSessionResponse } from '@gen/api/types.gen';
 import { Link } from '@tanstack/react-router';
 import type { ReactElement } from 'react';
 import { useAnnounced } from '@/shared/capabilities';
+import { hostNotice, hostOffline, hostRefused, isRemote, waitingForHost } from '@/features/cloudHost';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatRelative } from '@/shared/lib/time';
 import { Badge } from '@/shared/ui/Badge';
@@ -16,6 +17,7 @@ import {
   terminatedReasonOf,
 } from '../model';
 import { preparationAdvice, preparationOf } from '../recipe';
+import { whereOf } from '../deviceWords';
 
 /**
  * A cloud session as the row reads it: `automationId` (TeamCode's, the automation that started it) is not in the
@@ -41,6 +43,11 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
   const reason = terminatedReasonOf(session);
   const blocked = blockedDeletionOf(session);
   const conversation = useAnnounced('runners.cloud.conversation.v1') && session.mode === 'conversation';
+  // Where it runs shows once the server has remote sessions (TeamCode's companion `KindChips`).
+  const kinds = useAnnounced('runners.cloud.remote.v1');
+  const remote = isRemote(session);
+  // A remote session's failure is its device's: offline or refused, worded (TeamCode's banners).
+  const notice = session.failure && remote ? hostNotice(t, session) : undefined;
   return (
     <div className="o-row cl-session">
       <span className="o-row__main">
@@ -57,13 +64,15 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             session.owner,
             isCloudAgent(session.agent) ? t(`cloud.agent.${session.agent}`) : session.agent,
             session.model,
-            session.profile
+            // A remote session runs in a folder of its device, never on a profile or an image.
+            remote ? session.host?.directoryName : undefined,
+            !remote && session.profile
               ? t('cloud.session.profile', {
                   name: profileName ?? session.profile.id,
                   version: session.profile.version,
                 })
               : undefined,
-            session.image,
+            remote ? undefined : session.image,
             phase === undefined ? undefined : t(`cloud.phase.${phase}`),
             t('cloud.session.started', { when: formatRelative(session.createdAt, now, i18n.language) }),
             typeof session.automationId === 'string' ? t('cloud.session.byAutomation') : undefined,
@@ -80,7 +89,9 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
             .filter((part) => typeof part === 'string')
             .join(' · ')}
         </span>
-        {session.failure ? (
+        {notice !== undefined ? (
+          <span className="cl-session__failure">{notice.text}</span>
+        ) : session.failure ? (
           <span className="cl-session__failure">
             {[session.failure.message, advice === undefined ? undefined : t(`cloud.preparation.${advice}`)]
               .filter((part) => part !== undefined)
@@ -101,6 +112,10 @@ export function SessionRow({ session, now, busy, profileName, onStop }: SessionR
         )}
       </span>
       <span className="o-inline">
+        {kinds ? <Badge>{whereOf(t, session)}</Badge> : null}
+        {hostOffline(session) ? <Badge tone="warning">{t('cloud.remote.offlineChip')}</Badge> : null}
+        {waitingForHost(session) ? <Badge>{t('cloud.remote.waitingChip')}</Badge> : null}
+        {hostRefused(session) ? <Badge tone="danger">{t('cloud.remote.refusedChip')}</Badge> : null}
         <Badge tone={sessionTone(session.status)}>
           {isCloudStatus(session.status) ? t(`cloud.status.${session.status}`) : session.status}
         </Badge>
