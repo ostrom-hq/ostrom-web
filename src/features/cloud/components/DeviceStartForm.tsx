@@ -125,6 +125,7 @@ export function DeviceStartForm({ view }: { readonly view: DeviceStartViewModel 
   return (
     <form
       className="o-stack"
+      aria-label={t('cloud.remote.start.target.device')}
       onSubmit={(event) => {
         event.preventDefault();
         view.create();

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { getMeOptions } from '@gen/api/@tanstack/react-query.gen';
-import { handleListDeviceFolders, handleListResumableSessions } from '@gen/api/msw.gen';
+import { handleListDeviceFolders, handleListDevices, handleListResumableSessions } from '@gen/api/msw.gen';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { delay, HttpResponse } from 'msw';
@@ -190,11 +190,20 @@ describe('the device form, as a hook (TeamCode NewSessionViewModel)', () => {
     await waitFor(() => {
       expect(result.current.view.state.devices).toHaveLength(2);
     });
+    // Two at once: the first is dropped before it asks.
+    act(() => {
+      result.current.view.onDevice('dev-a');
+      result.current.view.onDevice('dev-b');
+    });
+    await delay(120);
     // A late success, then a late failure, for a device no longer chosen.
     for (const devices of [2, 3]) {
       if (devices === 3) db.devices = [...db.devices, { id: 'dev-c', name: 'Gamma' }];
       act(() => {
         result.current.view.onDevice('dev-a');
+      });
+      await delay(10);
+      act(() => {
         result.current.view.onDevice('dev-b');
       });
       await delay(120);
@@ -301,5 +310,89 @@ describe('the device form, as a hook (TeamCode NewSessionViewModel)', () => {
     });
     await delay(50);
     expect(seen).toHaveLength(before);
+  });
+  it('counts only the last devices read, and keeps the folders loading meanwhile', async () => {
+    const devicesSeen: string[] = [];
+    traffic.onRequest((request) => {
+      if (request.url.endsWith('/devices')) devicesSeen.push(request.url);
+    });
+    server.use(
+      handleListDevices(async () => {
+        await delay(40);
+        return HttpResponse.json({ items: db.devices });
+      }),
+      handleListDeviceFolders(async ({ params }) => {
+        await delay(40);
+        return HttpResponse.json({
+          deviceId: params.id,
+          daemon: ONLINE,
+          folders: db.deviceFolders[params.id] ?? [],
+        });
+      }),
+    );
+    const { result } = await form();
+    // The first read cancelled before any answer, then twice at once: the first of those is dropped before it asks.
+    act(() => {
+      result.current.view.loadDevices();
+    });
+    await delay(10);
+    act(() => {
+      result.current.view.loadDevices();
+      result.current.view.loadDevices();
+    });
+    await waitFor(() => {
+      expect(result.current.view.state.devices).toHaveLength(2);
+    });
+    expect(result.current.view.state.error).toBeUndefined();
+    expect(devicesSeen).toHaveLength(2);
+    act(() => {
+      result.current.view.onDevice('dev-b');
+    });
+    expect(result.current.view.state.loadingFolders).toBe(true);
+    // Read again while the folders and then the devices load: the read in flight is cancelled, its failure unsaid.
+    act(() => {
+      result.current.view.loadDevices();
+    });
+    expect(result.current.view.state.loadingFolders).toBe(true);
+    await delay(10);
+    act(() => {
+      result.current.view.loadDevices();
+    });
+    await waitFor(() => {
+      expect(result.current.view.state.folders).toHaveLength(2);
+    });
+    expect(devicesSeen).toHaveLength(4);
+    expect(result.current.view.state.deviceId).toBe('dev-b');
+    expect(result.current.view.state.error).toBeUndefined();
+    expect(result.current.view.state.loadingDevices).toBe(false);
+  });
+
+  it('drops the conversation chosen once a read from the first page no longer lists it', async () => {
+    db.devices = [{ id: 'dev-a', name: 'Alpha', daemon: ONLINE }];
+    const { result } = await form();
+    act(() => {
+      result.current.view.loadDevices();
+    });
+    await waitFor(() => {
+      expect(result.current.view.state.folderId).toBe('fa');
+    });
+    act(() => {
+      result.current.view.onResumeOpen();
+    });
+    await waitFor(() => {
+      expect(result.current.view.state.resumable).toHaveLength(1);
+    });
+    act(() => {
+      result.current.view.onResume('r1');
+    });
+    expect(result.current.view.state.resumeId).toBe('r1');
+    db.resumable['dev-a/fa'] = [{ id: 'r2', title: 'Two', lastActiveAt: AT, turns: 2 }];
+    act(() => {
+      result.current.view.onResumeRetry();
+    });
+    await waitFor(() => {
+      expect(result.current.view.state.resumable?.map((item) => item.id)).toEqual(['r2']);
+    });
+    expect(result.current.view.state.resumeId).toBeUndefined();
   });
 });

@@ -91,7 +91,14 @@ describe('the sessions of both kinds (TeamCode cloud list --kind, companion Kind
     expect(within(row('On the Mac')).queryByRole('button', { name: 'Transfer…' })).toBeNull();
 
     const filter = screen.getByRole('group', { name: 'Where the sessions run' });
+    // The rows shown stay until the other kinds' answer replaces them: no blank list between the two.
+    server.use(
+      http.get('*/api/v1/cloud/sessions', async () => {
+        await delay(100);
+      }),
+    );
     await user.click(within(filter).getByRole('button', { name: 'Remote' }));
+    expect(within(sessionsRegion()).getByText('In a pod')).toBeInTheDocument();
     await waitFor(() => {
       expect(within(sessionsRegion()).queryByText('In a pod')).toBeNull();
     });
@@ -316,11 +323,12 @@ describe('starting a session on an online device (TeamCode NewSessionViewModel)'
     db.resumable = { 'dev-mac/f-web': resumable(25) };
   }
 
+  /** The device form, once the target turned to it; the cloud form stays mounted, hidden, beside it. */
   async function startForm(): Promise<HTMLElement> {
-    const form = await screen.findByRole('region', { name: 'Start an agent' });
-    const target = await within(form).findByRole('group', { name: 'Where should it run?' });
+    const section = await screen.findByRole('region', { name: 'Start an agent' });
+    const target = await within(section).findByRole('group', { name: 'Where should it run?' });
     await userEvent.click(within(target).getByRole('button', { name: 'Online device' }));
-    return form;
+    return within(section).getByRole('form', { name: 'Online device' });
   }
 
   afterEach(() => {
@@ -531,9 +539,11 @@ describe('starting a session on an online device (TeamCode NewSessionViewModel)'
     // The folder is no longer offered by the time the start reaches the server.
     db.deviceFolders['dev-mac'] = [];
     await user.click(within(form).getByRole('button', { name: 'Start on Ada’s Mac' }));
-    expect((await screen.findAllByText(/This device no longer offers this folder/)).length).toBeGreaterThan(
-      0,
+    // Said in the form, by its code, and not again above the list.
+    expect(await within(form).findByRole('alert')).toHaveTextContent(
+      /This device no longer offers this folder/,
     );
+    expect(screen.getAllByText(/This device no longer offers this folder/)).toHaveLength(1);
     await waitFor(() => {
       expect(within(form).queryByRole('radio', { name: /web/ })).toBeNull();
     });
@@ -544,7 +554,7 @@ describe('starting a session on an online device (TeamCode NewSessionViewModel)'
     // The device goes offline before the start reaches the server.
     db.devices = [{ ...MAC, daemon: { online: false, lastSeenAt: AT } }, BOX];
     await user.click(within(form).getByRole('button', { name: 'Start on Ada’s Mac' }));
-    expect((await screen.findAllByText(/This device is offline/)).length).toBeGreaterThan(0);
+    expect(await within(form).findByRole('alert')).toHaveTextContent(/This device is offline/);
     await waitFor(() => {
       expect(within(form).queryByRole('radio', { name: /Ada’s Mac/ })).toBeNull();
     });
@@ -592,14 +602,17 @@ describe('starting a session on an online device (TeamCode NewSessionViewModel)'
       http.post('*/api/v1/cloud/sessions', async () => delay('infinite')),
     );
     visit('/cloud');
+    // What was typed in the cloud form is still there once back from the device form.
+    const section = await screen.findByRole('region', { name: 'Start an agent' });
+    await user.type(await within(section).findByRole('textbox', { name: 'What should it do?' }), 'Keep me');
     const form = await startForm();
     expect(await within(form).findByText('Reading your online devices…')).toBeInTheDocument();
     await within(form).findByRole('radio', { name: /web/ });
     await user.click(within(form).getByRole('button', { name: 'Start on Ada’s Mac' }));
     expect(await within(form).findByRole('button', { name: 'Starting…' })).toBeDisabled();
-    const target = within(form).getByRole('group', { name: 'Where should it run?' });
+    const target = within(section).getByRole('group', { name: 'Where should it run?' });
     await user.click(within(target).getByRole('button', { name: 'Cloud' }));
-    expect(within(form).getByLabelText('What should it do?')).toBeInTheDocument();
+    expect(within(section).getByRole('textbox', { name: 'What should it do?' })).toHaveValue('Keep me');
   });
 
   it('offers only the cloud form on a server that does not start sessions on devices', async () => {

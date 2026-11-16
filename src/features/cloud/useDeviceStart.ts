@@ -149,6 +149,9 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
   const [state, setState] = useState(initialState);
   // What the answers compare with: only the answer for the device and folder still chosen counts.
   const current = useRef(state);
+  // As TeamCode's `devicesJob` and `foldersJob`: a new read cancels the one in flight, whose answer no longer counts.
+  const devicesRead = useRef(0);
+  const foldersRead = useRef(0);
   const update = useCallback((next: (state: DeviceFormState) => DeviceFormState) => {
     current.current = next(current.current);
     setState(current.current);
@@ -164,12 +167,16 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
 
   const loadFolders = useCallback(
     async (deviceId: string, keepError: boolean) => {
+      foldersRead.current += 1;
+      const read = foldersRead.current;
       update((state) => ({ ...state, loadingFolders: true, error: keepError ? state.error : undefined }));
       try {
-        const found = await queryClient.query(
-          ready(listDeviceFoldersOptions({ path: { id: deviceId } }), { staleTime: 0, retry: false }),
-        );
-        if (current.current.deviceId !== deviceId) return;
+        const options = listDeviceFoldersOptions({ path: { id: deviceId } });
+        // A read of the same device in flight is cancelled, not joined: its answer may predate what changed since.
+        await queryClient.cancelQueries({ queryKey: options.queryKey });
+        if (read !== foldersRead.current) return;
+        const found = await queryClient.query(ready(options, { staleTime: 0, retry: false }));
+        if (read !== foldersRead.current) return;
         if (found.daemon?.online !== true) throw OFFLINE();
         const folders = sortedFolders(found.folders);
         const kept = folders.some((folder) => folder.id === current.current.folderId)
@@ -184,7 +191,7 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
           ),
         );
       } catch (error) {
-        if (current.current.deviceId !== deviceId) return;
+        if (read !== foldersRead.current) return;
         const failure = failureOf(error);
         // The device went offline or is gone: the list no longer offers it. Dropped here without reading the list
         // again, which could still name it (its presence lags) and lead back here.
@@ -210,14 +217,18 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
 
   const reloadDevices = useCallback(
     async (keepError: boolean) => {
-      update((state) => ({
-        ...state,
-        loadingDevices: true,
-        loadingFolders: false,
-        error: keepError ? state.error : undefined,
-      }));
+      devicesRead.current += 1;
+      const read = devicesRead.current;
+      // The folders follow the devices: a folder read in flight answers for a list being replaced. Still loading, they
+      // are read again once the devices answer.
+      foldersRead.current += 1;
+      update((state) => ({ ...state, loadingDevices: true, error: keepError ? state.error : undefined }));
       try {
-        const answer = await queryClient.query(ready(listDevicesOptions(), { staleTime: 0, retry: false }));
+        const options = listDevicesOptions();
+        await queryClient.cancelQueries({ queryKey: options.queryKey });
+        if (read !== devicesRead.current) return;
+        const answer = await queryClient.query(ready(options, { staleTime: 0, retry: false }));
+        if (read !== devicesRead.current) return;
         const devices = hostDevices(answer.items);
         const chosen = current.current.deviceId;
         const kept = devices.some((device) => device.id === chosen)
@@ -227,15 +238,28 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
             : undefined;
         update((state) =>
           kept === state.deviceId
-            ? { ...state, devices, loadingDevices: false }
+            ? { ...state, devices, loadingDevices: false, loadingFolders: false }
             : withFolder(
-                { ...state, devices, loadingDevices: false, deviceId: kept, folders: undefined },
+                {
+                  ...state,
+                  devices,
+                  loadingDevices: false,
+                  loadingFolders: false,
+                  deviceId: kept,
+                  folders: undefined,
+                },
                 undefined,
               ),
         );
         if (kept !== undefined) await loadFolders(kept, keepError);
       } catch (error) {
-        update((state) => ({ ...state, loadingDevices: false, error: failureOf(error) }));
+        if (read !== devicesRead.current) return;
+        update((state) => ({
+          ...state,
+          loadingDevices: false,
+          loadingFolders: false,
+          error: failureOf(error),
+        }));
       }
     },
     [queryClient, update, loadFolders],
@@ -289,6 +313,8 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
           const next = page.next ?? undefined;
           return {
             ...state,
+            // A conversation no longer listed (read again from the first page) is not sent: the picker says None.
+            resumeId: shown.find((item) => item.id === state.resumeId)?.id,
             resumable: shown,
             more: next === undefined ? undefined : { before: next, shown },
             loadingResumable: false,
@@ -362,8 +388,11 @@ export function useDeviceStart(change: SessionChangeViewModel): DeviceStartViewM
           withoutResume({ ...state, message: '', name: '', nameEdited: false, folderId: undefined }, true),
         );
       },
+      // Said in the form, by its code, as TeamCode's sheet does; the reads below keep it.
       (error) => {
-        const problem = deviceProblemOf(failureOf(error));
+        const failure = failureOf(error);
+        update((state) => ({ ...state, error: failure }));
+        const problem = deviceProblemOf(failure);
         if (deviceGone(problem)) void reloadDevices(true);
         else if (problem?.kind === 'refusal' && problem.code === 'folder_not_published')
           void loadFolders(deviceId, true);

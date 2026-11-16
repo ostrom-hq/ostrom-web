@@ -30,7 +30,7 @@ import type {
   CreateCloudSessionRequest,
   RunnerDto,
 } from '@gen/api/types.gen';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { idempotencyKey } from '@/shared/api/idempotencyKey';
 import { failureOf } from '@/shared/api/failureOf';
@@ -67,6 +67,8 @@ export function useCloud(filter: KindFilter = 'all'): CloudViewModel {
     ready(listCloudSessionsOptions(remote ? kindsQuery(listedKinds(filter)) : undefined), {
       refetchInterval: pollUnlessRefused(POLL_MS),
       enabled: known,
+      // Another kind filter keeps the rows shown until its own answer replaces them: no blank list between the two.
+      placeholderData: keepPreviousData,
     }),
   );
   const runners = useQuery(ready(listRunnersOptions()));
@@ -201,10 +203,14 @@ export function useSessionChange(): SessionChangeViewModel {
           ...(request.resumeSessionId === undefined ? {} : { resumeSessionId: request.resumeSessionId }),
         },
         onDone,
-        onRefused,
+        // The device form says the refusal itself, beside what it concerns: not again above the list.
+        (error) => {
+          resetCreate();
+          onRefused(error);
+        },
       );
     },
-    [send],
+    [send, resetCreate],
   );
   const stop = useCallback(
     (id: string) => {

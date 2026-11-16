@@ -50,11 +50,11 @@ export function StartSessionForm({ change }: { readonly change: SessionChangeVie
           ))}
         </div>
       ) : null}
-      {onDevices && target === 'device' ? (
-        <DeviceStartForm view={device} />
-      ) : (
+      {onDevices && target === 'device' ? <DeviceStartForm view={device} /> : null}
+      {/* Hidden, not unmounted, while the device form shows: what was typed in it is still there on the way back. */}
+      <div hidden={onDevices && target === 'device'}>
         <CloudStartForm change={change} />
-      )}
+      </div>
     </Section>
   );
 }
