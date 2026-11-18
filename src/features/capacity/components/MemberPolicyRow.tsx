@@ -68,7 +68,8 @@ export function MemberPolicyRow({
           {isViewer ? <span className="o-row__meta"> {t('capacity.members.you')}</span> : null}
         </h3>
       </div>
-      {policy === undefined ? (
+      {/* The form waits for the cap and the concurrency too: a late answer never starts it again under the typing. */}
+      {policy === undefined || limits?.settled === false ? (
         <Skeleton rows={1} />
       ) : (
         <>
@@ -81,11 +82,7 @@ export function MemberPolicyRow({
           {limits === undefined ? null : (
             <>
               <LimitsLine limits={limits} />
-              {limits.settled ? (
-                <PolicyForm key={formKey(policy, limits)} login={login} policy={policy} limits={limits} />
-              ) : (
-                <Skeleton rows={2} />
-              )}
+              <PolicyForm key={formKey(policy, limits)} login={login} policy={policy} limits={limits} />
             </>
           )}
         </>
