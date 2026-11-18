@@ -149,6 +149,9 @@ describe('the runtime form', () => {
       'failedWorkspaceRetentionDays',
     );
     expect(runtimeProblem({ ...draft, maxRunningSessionsPerMember: '' })).toBe('maxRunningSessionsPerMember');
+    expect(
+      runtimeProblem({ ...draft, maxRunningSessionsPerMember: '0', maxRetainedSessionsPerMember: '0' }),
+    ).toBe(undefined);
     expect(runtimeProblem({ ...draft, maxRetainedSessionsPerMember: 'x' })).toBe(
       'maxRetainedSessionsPerMember',
     );

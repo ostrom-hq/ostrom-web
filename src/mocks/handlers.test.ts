@@ -1136,8 +1136,12 @@ describe('mock spending and budgets', () => {
     ]);
   });
 
-  it('refuses a budget without an amount, with a wrong subject or scope, and from a member', async () => {
-    expect(await send({ scope: 'org', hardStop: false })).toBe(400);
+  it('removes the subject’s limits for a budget without an amount, as the server', async () => {
+    expect(await send({ scope: 'member', subject: MEMBER_IDS.theo, hardStop: true })).toBe(200);
+    expect(db.budgets).toEqual([{ scope: 'org', usdPerMonth: 1_200, hardStop: false }]);
+  });
+
+  it('refuses a budget with a wrong subject or scope, and from a member', async () => {
     expect(await send({ scope: 'org', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
     expect(await send({ scope: 'workflow', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);
     expect(await send({ scope: 'team', subject: 'x', usdPerDay: 1, hardStop: false })).toBe(400);

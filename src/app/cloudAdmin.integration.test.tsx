@@ -368,9 +368,12 @@ describe('the runtime and the clusters, the instance’s own', () => {
       within(runtime).getByText('An https origin without a path. Empty uses https://ostrom.acme.test.'),
     ).toBeVisible();
     const save = within(runtime).getByRole('button', { name: 'Save' });
-    await user.clear(within(runtime).getByLabelText('Sessions running per member'));
-    expect(within(runtime).getByText('Check “Sessions running per member” before saving.')).toBeVisible();
-    await user.type(within(runtime).getByLabelText('Sessions running per member'), '5');
+    await user.clear(within(runtime).getByLabelText('Running sessions per member (0: no limit)'));
+    expect(
+      within(runtime).getByText('Check “Running sessions per member (0: no limit)” before saving.'),
+    ).toBeVisible();
+    // 0 is no limit: a member's starts never wait (ostrom-server#669).
+    await user.type(within(runtime).getByLabelText('Running sessions per member (0: no limit)'), '0');
     await user.click(within(runtime).getByRole('checkbox', { name: 'Cloud sessions are on' }));
     await user.selectOptions(within(runtime).getByLabelText('Workspace access mode'), 'ReadWriteOnce');
     await user.selectOptions(
@@ -384,7 +387,7 @@ describe('the runtime and the clusters, the instance’s own', () => {
     expect(await within(runtime).findByText(/The runtime is saved\./)).toBeVisible();
     expect(db.cloudRuntime).toMatchObject({
       enabled: false,
-      maxRunningSessionsPerMember: 5,
+      maxRunningSessionsPerMember: 0,
       workspaceAccessMode: 'ReadWriteOnce',
       memberTransfers: 'disabled',
       pausedRetentionDays: 30,
@@ -607,7 +610,7 @@ describe('what the forms say while they work, and the fields that are seldom tou
     const failed = within(runtime).getByLabelText(/^Days a failed/);
     await user.clear(failed);
     await user.type(failed, '3');
-    const kept = within(runtime).getByLabelText(/^Sessions kept/);
+    const kept = within(runtime).getByLabelText(/^Retained sessions per member/);
     await user.clear(kept);
     await user.type(kept, '10');
     server.use(http.put('*/api/v1/cloud/runtime', async () => delay('infinite')));
@@ -641,7 +644,7 @@ describe('what the forms say while they work, and the fields that are seldom tou
     await user.click(await within(clusters).findByRole('button', { name: 'Connect a cluster' }));
     fireEvent.submit(await screen.findByRole('form', { name: 'Connect a cluster' }));
     const runtime = await section('Runtime of the instance');
-    const sessions = await within(runtime).findByLabelText('Sessions running per member');
+    const sessions = await within(runtime).findByLabelText('Running sessions per member (0: no limit)');
     await user.clear(sessions);
     fireEvent.submit(sessions);
     expect(db.cloudProfiles).toHaveLength(1);

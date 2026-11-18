@@ -2455,8 +2455,9 @@ export const fr = {
       workspaceAccessMode: 'Mode d’accès à l’espace de travail',
       pausedRetentionDays: 'Jours de conservation de l’espace d’une session en pause',
       failedWorkspaceRetentionDays: 'Jours de conservation d’un espace en échec',
-      maxRunningSessionsPerMember: 'Sessions en cours par membre',
-      maxRetainedSessionsPerMember: 'Sessions conservées par membre',
+      maxRunningSessionsPerMember: 'Sessions en cours par membre (0 : aucune limite)',
+      maxRetainedSessionsPerMember:
+        'Sessions conservées par membre, celles en pause comprises (0 : aucune limite)',
       transcriptRetentionDays: 'Jours de conservation des transcriptions',
       memberTransfers: 'Transferts entre membres',
       transfers: {
