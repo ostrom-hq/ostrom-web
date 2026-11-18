@@ -3216,6 +3216,23 @@ export type RevokeBudgetOverrideRequest = {
 };
 
 /**
+ * MemberCapacityResponse
+ */
+export type MemberCapacityResponse = {
+    member: string;
+    poolId?: string | null;
+    weight: number;
+    poolTotalWeight?: number | null;
+    poolDailyMicros?: number | null;
+    shareMicros?: number | null;
+    dailyLimitMicros?: number | null;
+    spentTodayMicros: number;
+    activeRequests: number;
+    waitingRequests: number;
+    resetsAt: string;
+};
+
+/**
  * PoolSizeWindowCapacityResponse
  */
 export type PoolSizeWindowCapacityResponse = {
@@ -5732,6 +5749,7 @@ export type MemberPolicyResponse = {
     member: string;
     poolId?: string | null;
     allowSharedOverflow: boolean;
+    weight: number;
 };
 
 /**
@@ -5740,6 +5758,7 @@ export type MemberPolicyResponse = {
 export type UpdateMemberPolicyRequest = {
     poolId: string;
     allowSharedOverflow?: boolean | null;
+    weight?: number | null;
 };
 
 /**
@@ -19816,6 +19835,58 @@ export type RevokeBudgetOverrideResponses = {
 
 export type RevokeBudgetOverrideResponse = RevokeBudgetOverrideResponses[keyof RevokeBudgetOverrideResponses];
 
+export type GetMemberCapacityData = {
+    body?: never;
+    headers?: {
+        /**
+         * The id of the organization the request acts in. Required when the signed-in person is a member of several organizations; without it, a person with exactly one active membership acts in that organization. Missing while several memberships are active, 409 `org_required` (`error.type`, the usual `ApiError` body); an organization the person is not a member of, 404, as for anything of another organization. A token bound to one organization (device, agent, runner, service key) acts in its own organization.
+         */
+        'Ostrom-Org'?: string;
+    };
+    path: {
+        /**
+         * The member's login.
+         */
+        login: string;
+    };
+    query?: never;
+    url: '/api/v1/members/{login}/capacity';
+};
+
+export type GetMemberCapacityErrors = {
+    /**
+     * No credential, or an unknown, expired or revoked one (`unauthorized`).
+     */
+    401: ApiError;
+    /**
+     * A member asks for another member's capacity, or a credential that may not read the budgets (`forbidden`). Also: the credential may not call this operation (`forbidden`).
+     */
+    403: ApiError;
+    /**
+     * No member of the organization has this login, asked by an owner or an admin (`not_found`).
+     */
+    404: ApiError;
+    /**
+     * An unexpected server error (`internal_error`). Retry later.
+     */
+    500: ApiError;
+    /**
+     * Any other error, in the same envelope.
+     */
+    default: ApiError;
+};
+
+export type GetMemberCapacityError = GetMemberCapacityErrors[keyof GetMemberCapacityErrors];
+
+export type GetMemberCapacityResponses = {
+    /**
+     * The member's share, daily limit, spend today and calls.
+     */
+    200: MemberCapacityResponse;
+};
+
+export type GetMemberCapacityResponse = GetMemberCapacityResponses[keyof GetMemberCapacityResponses];
+
 export type GetPoolSizeData = {
     body?: never;
     headers?: {
@@ -32016,7 +32087,7 @@ export type GetMemberPolicyResponse = GetMemberPolicyResponses[keyof GetMemberPo
 
 export type UpdateMemberPolicyData = {
     /**
-     * The member's home pool, or an empty string for none, and their overflow.
+     * The member's home pool, or an empty string for none, their overflow and their weight.
      */
     body: UpdateMemberPolicyRequest;
     headers?: {
@@ -32037,7 +32108,7 @@ export type UpdateMemberPolicyData = {
 
 export type UpdateMemberPolicyErrors = {
     /**
-     * A pool identifier out of its form (`invalid_policy`), or no `poolId` (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
+     * A pool identifier out of its form or a weight out of 0 to 1000 (`invalid_policy`), or no `poolId` (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
      */
     400: ApiError;
     /**
