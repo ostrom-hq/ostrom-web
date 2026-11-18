@@ -181,7 +181,11 @@ export const zExchangeSignInLinkRequest = z.object({
 export const zMobileTokenRequest = z.object({
     code: z.string(),
     codeVerifier: z.string(),
-    redirectUri: z.string()
+    redirectUri: z.string(),
+    installationId: z.nullish(z.string()),
+    deviceName: z.nullish(z.string()),
+    platform: z.nullish(z.string()),
+    osVersion: z.nullish(z.string())
 });
 
 /**

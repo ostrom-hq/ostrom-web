@@ -177,6 +177,10 @@ export type MobileTokenRequest = {
     code: string;
     codeVerifier: string;
     redirectUri: string;
+    installationId?: string | null;
+    deviceName?: string | null;
+    platform?: string | null;
+    osVersion?: string | null;
 };
 
 /**
@@ -6846,9 +6850,13 @@ export type MobileTokenData = {
 
 export type MobileTokenErrors = {
     /**
-     * The code is unknown, spent or expired, or the verifier is wrong (`invalid_request`). Also: the body is not the expected JSON object (`invalid_request`).
+     * The code is unknown, spent or expired, or the verifier is wrong (`invalid_request`); or the installation, device name, platform or system version is invalid (`invalid_installation`, `invalid_device_name`, `invalid_platform`, `invalid_os_version`), the code unspent. Also: the body is not the expected JSON object (`invalid_request`).
      */
     400: ApiError;
+    /**
+     * The installation is new and its person holds 50 devices already (`device_limit`).
+     */
+    409: ApiError;
     /**
      * Too many attempts lately (`rate_limited`): nothing was done. A sign-in step is limited per address or person over a window; wait, then try again.
      */
