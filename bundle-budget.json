@@ -53,7 +53,7 @@
     "/webhooks": 14.3,
     "/webhooks/$webhookId": 14.3,
     "/accounts": 21.3,
-    "/capacity": 16.0,
+    "/capacity": 17.5,
     "/forecasts": 13.4,
     "/pool-size": 14.4,
     "/usage": 14.6,
