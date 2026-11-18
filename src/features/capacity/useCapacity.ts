@@ -2,6 +2,7 @@
 import {
   getInferenceSettingsOptions,
   getInferenceSettingsQueryKey,
+  getMemberCapacityOptions,
   getMemberPolicyOptions,
   getMemberPolicyQueryKey,
   listBudgetsOptions,
@@ -14,6 +15,7 @@ import { setBudget, setInferenceSettings, updateMemberPolicy } from '@gen/api/sd
 import type {
   BudgetDto,
   InferenceSettingsDto,
+  MemberCapacityResponse,
   MemberPolicyResponse,
   PoolBudgetDto,
   UpdateMemberPolicyRequest,
@@ -22,6 +24,9 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useAnnounced } from '@/shared/capabilities';
+
+/** Every member's capacity (a key prefix): a weight or a pool's budget changes each share in the pool. */
+const EVERY_CAPACITY = [{ _id: 'getMemberCapacity' }];
 
 export interface PoolBudgetsViewModel {
   readonly budgets: readonly PoolBudgetDto[] | undefined;
@@ -46,7 +51,12 @@ export function usePoolBudgetSave(): SaveViewModel<PoolBudgetDto> {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     ...savePoolBudgetMutation(),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: listPoolBudgetsQueryKey() }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listPoolBudgetsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: EVERY_CAPACITY }),
+      ]);
+    },
   });
   const { mutate } = mutation;
   return {
@@ -78,6 +88,20 @@ export function useMemberPolicies(logins: readonly string[]): MemberPoliciesView
     complete: queries.every((query) => query.data !== undefined),
     failure: failureOf(queries.find((query) => query.error !== null)?.error),
   };
+}
+
+/**
+ * `GET /members/{login}/capacity` for each login (TeamCode's member capacity): their weight and pool share, their
+ * spend since midnight UTC against their daily limit, and their requests running and waiting. A member whose capacity
+ * could not be read has none in the map: their row leaves it out.
+ */
+export function useMemberCapacities(logins: readonly string[]): ReadonlyMap<string, MemberCapacityResponse> {
+  const queries = useQueries({
+    queries: logins.map((login) => ready(getMemberCapacityOptions({ path: { login } }), { retry: false })),
+  });
+  const capacities = new Map<string, MemberCapacityResponse>();
+  for (const query of queries) if (query.data !== undefined) capacities.set(query.data.member, query.data);
+  return capacities;
 }
 
 export interface MemberLimitsViewModel {
@@ -112,7 +136,7 @@ export interface MemberLimitsChange {
 }
 
 /**
- * TeamCode's « Save limits », one member's form: their pool (`PATCH /members/{login}/policy`), then their daily cap
+ * TeamCode's « Save limits », one member's form: their pool and weight (`PATCH /members/{login}/policy`), then their daily cap
  * (`PUT /budgets`), then their concurrent requests (`PUT /inference/settings`, written whole), each only if changed.
  * The first refusal stops the rest and is said.
  */
@@ -139,6 +163,8 @@ export function useMemberLimitsSave(login: string): SaveViewModel<MemberLimitsCh
         queryClient.invalidateQueries({ queryKey: getInferenceSettingsQueryKey() }),
       ]);
     },
+    // A policy saved before a later refusal already changed the pool's shares; the form does not depend on them.
+    onSettled: async () => queryClient.invalidateQueries({ queryKey: EVERY_CAPACITY }),
   });
   const { mutate } = mutation;
   return {

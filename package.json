@@ -6,7 +6,7 @@
   "type": "module",
   "packageManager": "pnpm@12.14.0",
   "ostrom": {
-    "openapi": "0.1.3661"
+    "openapi": "0.1.3673"
   },
   "engines": {
     "node": ">=24"

@@ -1976,6 +1976,7 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       knows: (request, login) =>
         membersIn(db, organizationOf(db, request), now).some((member) => member.login === login),
       me: () => DEMO_LOGIN,
+      now,
     }),
     ...createApiPricesHandlers(() => db, {
       manages: (request) => managesMembers(demoRoleIn(db, organizationOf(db, request), now)),

@@ -2,6 +2,7 @@
 import type {
   BudgetDto,
   InferenceSettingsDto,
+  MemberCapacityResponse,
   MemberPolicyResponse,
   PoolBudgetDto,
 } from '@gen/api/types.gen';
@@ -156,4 +157,60 @@ export function withConcurrency(
 export function concurrencyDraft(draft: string): number | undefined {
   const limit = /^\d{1,2}$/.test(draft.trim()) ? Number(draft.trim()) : MAX_MEMBER_CONCURRENCY + 1;
   return limit <= MAX_MEMBER_CONCURRENCY ? limit : undefined;
+}
+
+/** The heaviest weight of a member (TeamCode's: 0 to 1000, 1 by default). */
+export const MAX_WEIGHT = 1000;
+
+/** What a draft of the weight field says: a whole number from 0 to [MAX_WEIGHT], or undefined. */
+export function weightDraft(draft: string): number | undefined {
+  const weight = /^\d{1,4}$/.test(draft.trim()) ? Number(draft.trim()) : MAX_WEIGHT + 1;
+  return weight <= MAX_WEIGHT ? weight : undefined;
+}
+
+/** How full a member's day is, as TeamCode's meter colours it: amber from 80 %, red once spent. */
+export type DayLevel = 'calm' | 'near' | 'over';
+
+export function dayLevel(spent: number, limit: number): DayLevel {
+  if (spent >= limit) return 'over';
+  return spent >= limit * 0.8 ? 'near' : 'calm';
+}
+
+/** The meter's fill, in percent of the limit: 0 to 100 (a limit of 0 is full). */
+export function dayFill(spent: number, limit: number): number {
+  return limit === 0 ? 100 : Math.min(100, Math.round((spent / limit) * 100));
+}
+
+/** A member's share of their pool a day (TeamCode's budget × weight / the pool's total weight), in dollars. */
+export interface PoolShare {
+  readonly usd: number;
+  readonly weight: number;
+  readonly total: number;
+  readonly poolUsd: number;
+}
+
+/** The share, once the capacity is read and the pool has a daily budget; undefined when no share applies. */
+export function poolShareOf(capacity: MemberCapacityResponse | undefined): PoolShare | undefined {
+  const share = capacity?.shareMicros ?? undefined;
+  const pool = capacity?.poolDailyMicros ?? undefined;
+  const total = poolTotalOf(capacity);
+  if (capacity === undefined || share === undefined || pool === undefined || total === undefined)
+    return undefined;
+  return {
+    usd: usdOfMicros(share),
+    weight: capacity.weight,
+    total,
+    poolUsd: usdOfMicros(pool),
+  };
+}
+
+/** The pool's total weight, once read. */
+export function poolTotalOf(capacity: MemberCapacityResponse | undefined): number | undefined {
+  return capacity?.poolTotalWeight ?? undefined;
+}
+
+/** The daily limit in force (the share, the member's cap or an override), in dollars; undefined for none. */
+export function dailyLimitUsdOf(capacity: MemberCapacityResponse): number | undefined {
+  const limit = capacity.dailyLimitMicros ?? undefined;
+  return limit === undefined ? undefined : usdOfMicros(limit);
 }

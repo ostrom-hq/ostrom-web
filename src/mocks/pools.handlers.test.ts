@@ -92,6 +92,7 @@ describe('the mock pools', () => {
     expect((await call('GET', 'members/lena/policy')).body).toEqual({
       member: 'lena',
       allowSharedOverflow: false,
+      weight: 1,
     });
     expect((await call('GET', 'members/ghost/policy')).status).toBe(404);
     expect((await call('PATCH', 'members/ghost/policy', { poolId: '' })).status).toBe(404);
@@ -104,19 +105,91 @@ describe('the mock pools', () => {
     });
     expect(
       (await call('PATCH', 'members/lena/policy', { poolId: 'support', allowSharedOverflow: true })).body,
-    ).toEqual({ member: 'lena', poolId: 'support', allowSharedOverflow: true });
-    // Overflow left out keeps it; an empty pool takes them out of theirs.
+    ).toEqual({ member: 'lena', poolId: 'support', allowSharedOverflow: true, weight: 1 });
+    // TeamCode's weights: 0 to 1000.
+    for (const weight of [-1, 1001])
+      expect(codeOf(await call('PATCH', 'members/lena/policy', { poolId: 'support', weight }))).toMatchObject(
+        {
+          type: 'invalid_policy',
+        },
+      );
+    expect((await call('PATCH', 'members/lena/policy', { poolId: 'support', weight: 1.5 })).status).toBe(400);
+    expect((await call('PATCH', 'members/lena/policy', { poolId: 'support', weight: 5 })).body).toMatchObject(
+      {
+        weight: 5,
+      },
+    );
+    // Overflow and weight left out keep them; an empty pool takes them out of theirs.
     expect((await call('PATCH', 'members/lena/policy', { poolId: '' })).body).toEqual({
       member: 'lena',
       allowSharedOverflow: true,
+      weight: 5,
     });
     manager = false;
     expect((await call('GET', 'members/maya/policy')).body).toEqual({
       member: 'maya',
       poolId: 'billing',
       allowSharedOverflow: true,
+      weight: 1,
     });
     expect((await call('GET', 'members/theo/policy')).status).toBe(403);
     expect((await call('PATCH', 'members/maya/policy', { poolId: '' })).status).toBe(403);
+  });
+
+  it('gives a member’s weighted share of a named pool with their day, as ostrom-server does', async () => {
+    const resetsAt: unknown = expect.stringMatching(/T00:00:00\.000Z$/);
+    // Maya and Theo share billing's $40, weight 1 each.
+    expect((await call('GET', 'members/maya/capacity')).body).toEqual({
+      member: 'maya',
+      poolId: 'billing',
+      weight: 1,
+      poolTotalWeight: 2,
+      poolDailyMicros: 40_000_000,
+      shareMicros: 20_000_000,
+      dailyLimitMicros: 20_000_000,
+      spentTodayMicros: 18_500_000,
+      activeRequests: 1,
+      waitingRequests: 0,
+      resetsAt,
+    });
+    await call('PATCH', 'members/theo/policy', { poolId: 'billing', weight: 3 });
+    expect((await call('GET', 'members/maya/capacity')).body).toMatchObject({
+      poolTotalWeight: 4,
+      shareMicros: 10_000_000,
+    });
+    // Every weight at 0: no share.
+    await call('PATCH', 'members/theo/policy', { poolId: 'billing', weight: 0 });
+    await call('PATCH', 'members/maya/policy', { poolId: 'billing', weight: 0 });
+    expect((await call('GET', 'members/maya/capacity')).body).toMatchObject({
+      poolTotalWeight: 0,
+      shareMicros: 0,
+    });
+    // The shared home pool's budget is the organization's, which the mock does not keep; Lena did nothing today.
+    expect((await call('GET', 'members/lena/capacity')).body).toEqual({
+      member: 'lena',
+      weight: 1,
+      spentTodayMicros: 0,
+      activeRequests: 0,
+      waitingRequests: 0,
+      resetsAt,
+    });
+    expect((await call('GET', 'members/ghost/capacity')).status).toBe(404);
+    manager = false;
+    expect((await call('GET', 'members/maya/capacity')).status).toBe(200);
+    expect((await call('GET', 'members/theo/capacity')).status).toBe(403);
+  });
+
+  it('resets the day at the next midnight UTC of the clock it is given', async () => {
+    const clocked = createPoolsHandlers(() => initialPoolsState(), {
+      manages: () => true,
+      knows: () => true,
+      me: () => 'maya',
+      now: () => new Date('2026-11-18T17:30:00Z'),
+    });
+    const response = await getResponse(
+      clocked,
+      new Request('http://ostrom.test/api/v1/members/maya/capacity'),
+    );
+    expect(await response?.json()).toMatchObject({ resetsAt: '2026-11-19T00:00:00.000Z' });
   });
 });

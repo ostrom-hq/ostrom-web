@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
   handleCapabilities,
+  handleGetMemberCapacity,
   handleGetMemberPolicy,
   handleListBudgets,
   handleSavePoolBudget,
   handleSetBudget,
   handleUpdateMemberPolicy,
 } from '@gen/api/msw.gen';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, HttpResponse } from 'msw';
 import { fireEvent } from '@testing-library/react';
@@ -29,6 +30,7 @@ function writes(): string[] {
 }
 
 const CAP = 'Optional daily cap (USD, 0 = none)';
+const WEIGHT = 'Weight (0 = no allocation)';
 const CONCURRENCY = 'Concurrent requests (0 = unlimited)';
 
 /** A pool's form, or a member's card, by its heading. */
@@ -133,11 +135,13 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     const user = userEvent.setup();
     visit('/capacity');
     const maya = await findCard(/Maya Lind/);
-    expect(await within(maya).findByText('Pool billing · shared overflow allowed')).toBeVisible();
+    expect(
+      await within(maya).findByText('Pool billing · weight 1 / 2 · shared overflow allowed'),
+    ).toBeVisible();
     expect(within(maya).getByText('(you)')).toBeVisible();
     expect(screen.queryByRole('heading', { level: 3, name: /^jo/ })).toBeNull();
     const lena = await findCard('Lena Ortiz');
-    expect(await within(lena).findByText('Shared pool · no shared overflow')).toBeVisible();
+    expect(await within(lena).findByText('Shared pool · weight 1 · no shared overflow')).toBeVisible();
     expect(await within(lena).findByText('Currently Shared pool')).toBeVisible();
     const save = within(lena).getByRole('button', { name: 'Save limits' });
     expect(save).toBeDisabled();
@@ -157,8 +161,8 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     await user.type(field, 'support');
     await user.click(within(lena).getByRole('checkbox', { name: 'Allow shared overflow accounts' }));
     await user.click(within(lena).getByRole('button', { name: 'Save limits' }));
-    expect(await within(lena).findByText('Pool support · shared overflow allowed')).toBeVisible();
-    expect(db.memberPools['lena']).toEqual({ poolId: 'support', allowSharedOverflow: true });
+    expect(await within(lena).findByText('Pool support · weight 1 · shared overflow allowed')).toBeVisible();
+    expect(db.memberPools['lena']).toEqual({ poolId: 'support', allowSharedOverflow: true, weight: 1 });
     // The pool's count follows.
     const billing = await findCard('Pool billing');
     expect(await within(billing).findByText('$40.00 a day · 2 members')).toBeVisible();
@@ -270,7 +274,7 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     await user.type(within(lena).getByRole('textbox', { name: 'Pool (empty = shared)' }), 'support');
     await user.click(within(lena).getByRole('button', { name: 'Save limits' }));
     expect(await within(lena).findByText('Budgets are down.')).toBeVisible();
-    expect(db.memberPools['lena']).toEqual({ poolId: 'support', allowSharedOverflow: false });
+    expect(db.memberPools['lena']).toEqual({ poolId: 'support', allowSharedOverflow: false, weight: 1 });
     expect(within(lena).getByRole('textbox', { name: CAP })).toHaveValue('5');
     expect(within(lena).getByRole('textbox', { name: 'Pool (empty = shared)' })).toHaveValue('support');
   });
@@ -306,7 +310,14 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
   it('shows a member their own pool only, without forms', async () => {
     setDemoRole(db, 'member');
     visit('/capacity');
-    expect(await screen.findByText('Pool billing · shared overflow allowed')).toBeVisible();
+    expect(await screen.findByText('Pool billing · weight 1 / 2 · shared overflow allowed')).toBeVisible();
+    // TeamCode's row for a member: their share and their day.
+    expect(await screen.findByText('Pool share $20.00 a day')).toBeVisible();
+    expect(screen.getByRole('meter', { name: 'Today' })).toHaveAttribute(
+      'aria-valuetext',
+      '$18.50 of $20.00 today',
+    );
+    expect(screen.getByText('Requests running: 1 · waiting: 0')).toBeVisible();
     expect(screen.queryByText('Pool budgets')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save limits' })).toBeNull();
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1);
@@ -323,7 +334,7 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
       }),
       handleUpdateMemberPolicy(async () => {
         await delay('infinite');
-        return HttpResponse.json({ member: 'lena', allowSharedOverflow: true });
+        return HttpResponse.json({ member: 'lena', allowSharedOverflow: true, weight: 1 });
       }),
     );
     visit('/capacity');
@@ -372,4 +383,91 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     await findCard('Pool billing');
     expect(screen.queryByRole('link', { name: /automatic pool size/ })).toBeNull();
   });
+
+  it('shows each member’s day: spend against the daily limit in force, and requests running and waiting', async () => {
+    db.memberDays = {
+      ...db.memberDays,
+      theo: { spentTodayMicros: 25_000_000, activeRequests: 0, waitingRequests: 2 },
+    };
+    visit('/capacity');
+    const maya = await findCard(/Maya Lind/);
+    const mayaDay = await within(maya).findByRole('meter', { name: 'Today' });
+    expect(mayaDay).toHaveAttribute('aria-valuetext', '$18.50 of $20.00 today');
+    expect(mayaDay).toHaveClass('cp-meter--near');
+    expect(within(maya).getByText('$18.50 of $20.00 today')).toBeVisible();
+    expect(within(maya).getByText('Requests running: 1 · waiting: 0')).toBeVisible();
+    const theo = await findCard('theo');
+    const theoDay = await within(theo).findByRole('meter', { name: 'Today' });
+    expect(theoDay).toHaveClass('cp-meter--over');
+    expect(theoDay).toHaveAttribute('aria-valuenow', '20');
+    expect(within(theo).getByText('Requests running: 0 · waiting: 2')).toBeVisible();
+    const lena = await findCard('Lena Ortiz');
+    expect(await within(lena).findByText('$0.00 today · no daily limit')).toBeVisible();
+    expect(within(lena).queryByRole('meter')).toBeNull();
+    expect(within(lena).getByRole('spinbutton', { name: WEIGHT })).toHaveAccessibleDescription(
+      'Share of the pool relative to its other members. Its pool has no daily budget, so no share applies.',
+    );
+  });
+
+  it('sets a member’s weight (TeamCode’s 0 to 1000), and every share of the pool follows', async () => {
+    db.memberDays = {
+      ...db.memberDays,
+      maya: { spentTodayMicros: 1_000_000, activeRequests: 0, waitingRequests: 0 },
+    };
+    const user = userEvent.setup();
+    visit('/capacity');
+    const theo = await findCard('theo');
+    const weight = within(theo).getByRole('spinbutton', { name: WEIGHT });
+    expect(weight).toHaveValue(1);
+    await waitForDescription(weight, 'Pool share: $20.00 a day (1 of 2 × $40.00)');
+    await user.clear(weight);
+    await user.type(weight, '1001');
+    expect(within(theo).getByText('A weight is a whole number from 0 to 1000.')).toBeVisible();
+    expect(within(theo).getByRole('button', { name: 'Save limits' })).toBeDisabled();
+    await user.clear(weight);
+    await user.type(weight, '3');
+    await user.click(within(theo).getByRole('button', { name: 'Save limits' }));
+    expect(await within(theo).findByText('Pool billing · weight 3 / 4 · no shared overflow')).toBeVisible();
+    expect(db.memberPools['theo']).toEqual({ poolId: 'billing', allowSharedOverflow: false, weight: 3 });
+    await waitForDescription(
+      within(await findCard('theo')).getByRole('spinbutton', { name: WEIGHT }),
+      'Pool share: $30.00 a day (3 of 4 × $40.00)',
+    );
+    const maya = await findCard(/Maya Lind/);
+    expect(
+      await within(maya).findByText('Pool billing · weight 1 / 4 · shared overflow allowed'),
+    ).toBeVisible();
+    expect(await within(maya).findByText('$1.00 of $10.00 today')).toBeVisible();
+    expect(within(maya).getByRole('meter', { name: 'Today' })).toHaveClass('cp-meter--calm');
+  });
+
+  it('leaves the day and the share out when the capacity cannot be read', async () => {
+    server.use(
+      handleGetMemberCapacity(() =>
+        HttpResponse.json({ error: { type: 'internal_error', message: 'Down.' } }, { status: 500 }),
+      ),
+    );
+    visit('/capacity');
+    const maya = await findCard(/Maya Lind/);
+    expect(await within(maya).findByText('Pool billing · weight 1 · shared overflow allowed')).toBeVisible();
+    expect(within(maya).queryByRole('meter')).toBeNull();
+    expect(within(maya).getByRole('spinbutton', { name: WEIGHT })).toHaveAccessibleDescription(
+      'Share of the pool relative to its other members.',
+    );
+  });
+
+  it('shows a member no share where their pool has no budget', async () => {
+    setDemoRole(db, 'member');
+    db.memberPools = { ...db.memberPools, maya: { allowSharedOverflow: false } };
+    visit('/capacity');
+    expect(await screen.findByText('$18.50 today · no daily limit')).toBeVisible();
+    expect(screen.queryByText(/Pool share/)).toBeNull();
+  });
 });
+
+/** The capacity is read after the policy: the weight's hint says the share once it is. */
+async function waitForDescription(field: HTMLElement, share: string): Promise<void> {
+  await waitFor(() => {
+    expect(field).toHaveAccessibleDescription(`Share of the pool relative to its other members. ${share}.`);
+  });
+}

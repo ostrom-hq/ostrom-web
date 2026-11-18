@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  handleGetMemberCapacity,
   handleGetMemberPolicy,
   handleListPoolBudgets,
   handleSavePoolBudget,
   handleUpdateMemberPolicy,
 } from '@gen/api/msw.gen';
-import type { MemberPolicyResponse, PoolBudgetDto } from '@gen/api/types.gen';
+import type { MemberCapacityResponse, MemberPolicyResponse, PoolBudgetDto } from '@gen/api/types.gen';
 import { zSavePoolBudgetBody, zUpdateMemberPolicyBody } from '@gen/api/zod.gen';
 import { type HttpHandler, HttpResponse } from 'msw';
 import { readJson, refusal } from '@/mocks/http';
@@ -14,6 +15,15 @@ import { readJson, refusal } from '@/mocks/http';
 export interface MockPoolPolicy {
   readonly poolId?: string;
   readonly allowSharedOverflow: boolean;
+  /** The member's weight in their pool, 0 to 1000; 1 when not set. */
+  readonly weight?: number;
+}
+
+/** What a member has done since midnight UTC: their spend, USD millionths, and their inference requests. */
+export interface MockMemberDay {
+  readonly spentTodayMicros: number;
+  readonly activeRequests: number;
+  readonly waitingRequests: number;
 }
 
 export interface PoolsState {
@@ -21,6 +31,12 @@ export interface PoolsState {
   poolBudgets: PoolBudgetDto[];
   /** By login; a member not here is in the shared home pool, without overflow. */
   memberPools: Record<string, MockPoolPolicy>;
+  /** By login; a member not here has spent nothing today and has no request. */
+  memberDays: Record<string, MockMemberDay>;
+}
+
+function policyFields(policy: MemberPolicyResponse): Pick<MemberCapacityResponse, 'poolId' | 'weight'> {
+  return { ...(policy.poolId === undefined ? {} : { poolId: policy.poolId }), weight: policy.weight };
 }
 
 export function initialPoolsState(): PoolsState {
@@ -33,6 +49,10 @@ export function initialPoolsState(): PoolsState {
       maya: { poolId: 'billing', allowSharedOverflow: true },
       theo: { poolId: 'billing', allowSharedOverflow: false },
     },
+    memberDays: {
+      maya: { spentTodayMicros: 18_500_000, activeRequests: 1, waitingRequests: 0 },
+      theo: { spentTodayMicros: 2_250_000, activeRequests: 0, waitingRequests: 2 },
+    },
   };
 }
 
@@ -40,11 +60,15 @@ export function initialPoolsState(): PoolsState {
 const POOL_ID = /^[A-Za-z0-9_-]{1,36}$/;
 const MAX_DAILY_MICROS = 100_000_000_000;
 const MAX_OVERFLOW_POOLS = 16;
+const MAX_WEIGHT = 1000;
+const DAY_MS = 86_400_000;
 
 /**
  * `/pools/budgets` and `/members/{login}/policy`, as ostrom-server serves them: owners and admins read and write the
  * budgets and every member's policy, a member reads their own policy only; TeamCode's refusals
  * (`invalid_pool_budget`, `invalid_overflow_pool`, `overflow_primary_pool`, `overflow_pool_limit`, `invalid_policy`).
+ * `/members/{login}/capacity` gives a named pool's weighted share (budget × weight / the pool's total weight) with the
+ * member's day; the home pool's budget is the organization's daily limit, which this mock does not keep.
  */
 export function createPoolsHandlers(
   state: () => PoolsState,
@@ -52,6 +76,7 @@ export function createPoolsHandlers(
     readonly manages: (request: Request) => boolean;
     readonly knows: (request: Request, login: string) => boolean;
     readonly me: () => string;
+    readonly now?: () => Date;
   },
 ): HttpHandler[] {
   const policyOf = (login: string): MemberPolicyResponse => {
@@ -60,6 +85,31 @@ export function createPoolsHandlers(
       member: login,
       ...(pools?.poolId === undefined ? {} : { poolId: pools.poolId }),
       allowSharedOverflow: pools?.allowSharedOverflow === true,
+      weight: pools?.weight ?? 1,
+    };
+  };
+  const capacityOf = (login: string): MemberCapacityResponse => {
+    const policy = policyOf(login);
+    const day = state().memberDays[login] ?? { spentTodayMicros: 0, activeRequests: 0, waitingRequests: 0 };
+    const budget = state().poolBudgets.find(
+      (pool) => pool.poolId === policy.poolId && pool.sharedOverflow !== true,
+    );
+    const today = (access.now?.() ?? new Date()).getTime();
+    const resetsAt = new Date(today - (today % DAY_MS) + DAY_MS).toISOString();
+    if (budget === undefined) return { member: login, ...policyFields(policy), ...day, resetsAt };
+    const total = Object.entries(state().memberPools)
+      .filter(([other, pools]) => other !== login && pools.poolId === policy.poolId)
+      .reduce((sum, [, pools]) => sum + (pools.weight ?? 1), policy.weight);
+    const share = total === 0 ? 0 : Math.floor((budget.dailyMicros * policy.weight) / total);
+    return {
+      member: login,
+      ...policyFields(policy),
+      poolTotalWeight: total,
+      poolDailyMicros: budget.dailyMicros,
+      shareMicros: share,
+      dailyLimitMicros: share,
+      ...day,
+      resetsAt,
     };
   };
   const isHome = (pool: string): boolean =>
@@ -112,12 +162,21 @@ export function createPoolsHandlers(
         return refusal(400, 'invalid_policy', 'A pool is 1 to 36 letters, digits, underscores or hyphens.');
       if (state().poolBudgets.some((budget) => budget.poolId === poolId && budget.sharedOverflow === true))
         return refusal(409, 'overflow_primary_pool', 'A shared overflow pool is never a member’s home pool.');
+      const weight = body.data.weight ?? policyOf(params.login).weight;
+      if (weight < 0 || weight > MAX_WEIGHT)
+        return refusal(400, 'invalid_policy', 'Use a weight from 0 to 1000.');
       const allow = body.data.allowSharedOverflow ?? policyOf(params.login).allowSharedOverflow;
       state().memberPools = {
         ...state().memberPools,
-        [params.login]: { ...(poolId === '' ? {} : { poolId }), allowSharedOverflow: allow },
+        [params.login]: { ...(poolId === '' ? {} : { poolId }), allowSharedOverflow: allow, weight },
       };
       return HttpResponse.json(policyOf(params.login));
+    }),
+    handleGetMemberCapacity(({ request, params }) => {
+      if (!access.manages(request) && params.login !== access.me())
+        return refusal(403, 'forbidden', 'A member reads their own capacity only.');
+      if (!access.knows(request, params.login)) return refusal(404, 'not_found', 'No such member.');
+      return HttpResponse.json(capacityOf(params.login));
     }),
   ];
 }

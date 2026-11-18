@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BudgetDto, InferenceSettingsDto, MemberPolicyResponse } from '@gen/api/types.gen';
+import type {
+  BudgetDto,
+  InferenceSettingsDto,
+  MemberCapacityResponse,
+  MemberPolicyResponse,
+} from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
@@ -15,9 +20,17 @@ import {
   dailyCapDraft,
   dailyCapDraftOf,
   dailyCapOf,
+  dailyLimitUsdOf,
+  dayFill,
+  dayLevel,
   homePoolOf,
   MAX_MEMBER_CONCURRENCY,
+  MAX_WEIGHT,
   ownBudgetOf,
+  poolShareOf,
+  poolTotalOf,
+  usdOfMicros,
+  weightDraft,
   withConcurrency,
 } from '../model';
 import { type MemberLimitsChange, useMemberLimitsSave } from '../useCapacity';
@@ -45,6 +58,8 @@ export interface MemberPolicyRowProps {
    * else reads their own pool, without it.
    */
   readonly limits?: MemberLimits | undefined;
+  /** Their capacity today (weight, share, spend, requests); undefined, not read, leaves it out. */
+  readonly capacity?: MemberCapacityResponse | undefined;
 }
 
 /** A member's pool, as TeamCode's capacity row: the policy form for an administrator, the policy read for the others. */
@@ -54,6 +69,7 @@ export function MemberPolicyRow({
   isViewer,
   policy,
   limits,
+  capacity,
 }: MemberPolicyRowProps): ReactElement {
   const { t } = useTranslation();
   const headingId = useId();
@@ -72,15 +88,24 @@ export function MemberPolicyRow({
       ) : (
         <>
           <p className="o-row__meta">
-            {poolNameOf(policy, t)} ·{' '}
+            {poolNameOf(policy, t)} · {weightLabel(policy.weight, capacity, t)} ·{' '}
             {policy.allowSharedOverflow
               ? t('capacity.members.overflowOn')
               : t('capacity.members.overflowOff')}
           </p>
-          {limits === undefined ? null : (
+          {capacity === undefined ? null : <Today capacity={capacity} />}
+          {limits === undefined ? (
+            <ShareLine capacity={capacity} />
+          ) : (
             <>
               <LimitsLine limits={limits} />
-              <PolicyForm key={formKey(policy, limits)} login={login} policy={policy} limits={limits} />
+              <PolicyForm
+                key={formKey(policy, limits)}
+                login={login}
+                policy={policy}
+                limits={limits}
+                capacity={capacity}
+              />
             </>
           )}
         </>
@@ -106,6 +131,87 @@ function capLabel(cap: DailyCap, t: Translate, locale: string, where: 'cap' | 'c
     case 'none':
       return t(`capacity.members.${where}.none`);
   }
+}
+
+/** TeamCode's « weight 5 / 11 »: the pool's total once the capacity is read. */
+function weightLabel(weight: number, capacity: MemberCapacityResponse | undefined, t: Translate): string {
+  const total = poolTotalOf(capacity);
+  return total === undefined
+    ? t('capacity.members.weightOf', { weight })
+    : t('capacity.members.weightOfTotal', { weight, total });
+}
+
+/**
+ * TeamCode's « Today » column: what the member spent since midnight UTC against their daily limit in force (the share,
+ * their cap or an override), as a meter, and their requests running and waiting now.
+ */
+function Today({ capacity }: { readonly capacity: MemberCapacityResponse }): ReactElement {
+  const { t, i18n } = useTranslation();
+  const spent = usdOfMicros(capacity.spentTodayMicros);
+  const limit = dailyLimitUsdOf(capacity);
+  const spentText = formatUsd(spent, i18n.language);
+  return (
+    <div className="o-stack">
+      {limit === undefined ? (
+        <p className="o-row__meta">{t('capacity.members.today.noLimit', { spent: spentText })}</p>
+      ) : (
+        <>
+          <div
+            className={`cp-meter cp-meter--${dayLevel(spent, limit)}`}
+            role="meter"
+            aria-label={t('capacity.members.today.title')}
+            aria-valuemin={0}
+            aria-valuemax={limit}
+            aria-valuenow={Math.min(spent, limit)}
+            aria-valuetext={t('capacity.members.today.of', {
+              spent: spentText,
+              limit: formatUsd(limit, i18n.language),
+            })}
+          >
+            <span style={{ inlineSize: `${String(dayFill(spent, limit))}%` }} />
+          </div>
+          <p className="o-row__meta">
+            {t('capacity.members.today.of', { spent: spentText, limit: formatUsd(limit, i18n.language) })}
+          </p>
+        </>
+      )}
+      <p className="o-row__meta">
+        {t('capacity.members.today.requests', {
+          active: capacity.activeRequests,
+          waiting: capacity.waitingRequests,
+        })}
+      </p>
+    </div>
+  );
+}
+
+/** A member who does not administer reads their pool share, as TeamCode's row shows them. */
+function ShareLine({
+  capacity,
+}: {
+  readonly capacity: MemberCapacityResponse | undefined;
+}): ReactElement | null {
+  const { t, i18n } = useTranslation();
+  const share = poolShareOf(capacity);
+  return share === undefined ? null : (
+    <p className="o-row__meta">
+      {t('capacity.members.shareLine', { amount: formatUsd(share.usd, i18n.language) })}
+    </p>
+  );
+}
+
+/** The weight field's hint: the share it gives today, or why none applies, once the capacity is read. */
+function weightHint(capacity: MemberCapacityResponse | undefined, t: Translate, locale: string): string {
+  if (capacity === undefined) return t('capacity.members.weightHint.plain');
+  const share = poolShareOf(capacity);
+  return share === undefined
+    ? t('capacity.members.weightHint.none')
+    : t('capacity.members.weightHint.share', {
+        share: formatUsd(share.usd, locale),
+        weight: share.weight,
+        total: share.total,
+        pool: formatUsd(share.poolUsd, locale),
+      });
 }
 
 function concurrencyLabel(limit: number, t: Translate): string {
@@ -135,22 +241,24 @@ function formKey(policy: MemberPolicyResponse, limits: MemberLimits): string {
   const cap = limits.budgets === undefined ? '-' : dailyCapDraftOf(limits.budgets, limits.memberId);
   const concurrency =
     limits.settings === undefined ? '-' : String(concurrencyOf(limits.settings, limits.memberId));
-  return `${homePoolOf(policy)}:${String(policy.allowSharedOverflow)}:${cap}:${concurrency}`;
+  return `${homePoolOf(policy)}:${String(policy.allowSharedOverflow)}:${String(policy.weight)}:${cap}:${concurrency}`;
 }
 
 /**
  * TeamCode's member form (`POST /dashboard/capacity/{id}`): « Optional daily cap (0 = none) », here in dollars, the
  * member's own daily budget; « Concurrent requests (0 = unlimited) »; « Pool (empty = shared) » and « Allow shared
- * overflow accounts ». TeamCode's weight is not here: ostrom-server keeps none.
+ * overflow accounts »; and TeamCode's « Weight (0 = no allocation) », the member's part of their pool's daily budget.
  */
 function PolicyForm({
   login,
   policy,
   limits,
+  capacity,
 }: {
   readonly login: string;
   readonly policy: MemberPolicyResponse;
   readonly limits: MemberLimits;
+  readonly capacity: MemberCapacityResponse | undefined;
 }): ReactElement {
   const { t, i18n } = useTranslation();
   const view = useMemberLimitsSave(login);
@@ -159,6 +267,9 @@ function PolicyForm({
   const startConcurrency = settings === undefined ? 0 : concurrencyOf(settings, memberId);
   const [pool, setPool] = useState(homePoolOf(policy));
   const [overflow, setOverflow] = useState(policy.allowSharedOverflow);
+  const [weight, setWeight] = useState(String(policy.weight));
+  const weightId = useId();
+  const weightValue = weightDraft(weight);
   const [cap, setCap] = useState(startCap);
   const [concurrency, setConcurrency] = useState(String(startConcurrency));
   const poolId = useId();
@@ -168,12 +279,16 @@ function PolicyForm({
   const limit = concurrencyDraft(concurrency);
   // A field left out (its value unread) is never a reason not to save, nor sent.
   const valid =
-    (budgets === undefined || capUsd !== undefined) && (settings === undefined || limit !== undefined);
+    weightValue !== undefined &&
+    (budgets === undefined || capUsd !== undefined) &&
+    (settings === undefined || limit !== undefined);
   const change: MemberLimitsChange = {
     policy:
-      pool.trim() === homePoolOf(policy) && overflow === policy.allowSharedOverflow
+      pool.trim() === homePoolOf(policy) &&
+      overflow === policy.allowSharedOverflow &&
+      weightValue === policy.weight
         ? undefined
-        : { poolId: pool.trim(), allowSharedOverflow: overflow },
+        : { poolId: pool.trim(), allowSharedOverflow: overflow, weight: weightValue ?? policy.weight },
     budget:
       budgets === undefined || capUsd === undefined || capUsd === dailyCapDraft(startCap)
         ? undefined
@@ -192,6 +307,31 @@ function PolicyForm({
         if (valid && changed) view.save(change);
       }}
     >
+      <label htmlFor={weightId} className="o-field-label">
+        {t('capacity.members.weight')}
+      </label>
+      <input
+        id={weightId}
+        type="number"
+        className="o-input cp-amount"
+        min={0}
+        max={MAX_WEIGHT}
+        step={1}
+        required
+        value={weight}
+        aria-describedby={`${weightId}-hint`}
+        onChange={(event) => {
+          setWeight(event.target.value);
+        }}
+      />
+      <p id={`${weightId}-hint`} className="o-row__meta">
+        {weightHint(capacity, t, i18n.language)}
+      </p>
+      {weightValue === undefined ? (
+        <Banner tone="warning" tag={t('capacity.errorTag')} live>
+          {t('capacity.members.badWeight')}
+        </Banner>
+      ) : null}
       {budgets === undefined ? null : (
         <>
           <label htmlFor={capId} className="o-field-label">

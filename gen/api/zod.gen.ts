@@ -3203,6 +3203,23 @@ export const zRevokeBudgetOverrideRequest = z.object({
 });
 
 /**
+ * MemberCapacityResponse
+ */
+export const zMemberCapacityResponse = z.object({
+    member: z.string(),
+    poolId: z.nullish(z.string()),
+    weight: z.int(),
+    poolTotalWeight: z.nullish(z.int()),
+    poolDailyMicros: z.nullish(z.int()),
+    shareMicros: z.nullish(z.int()),
+    dailyLimitMicros: z.nullish(z.int()),
+    spentTodayMicros: z.int(),
+    activeRequests: z.int(),
+    waitingRequests: z.int(),
+    resetsAt: z.string()
+});
+
+/**
  * PoolSizeWindowCapacityResponse
  */
 export const zPoolSizeWindowCapacityResponse = z.object({
@@ -5727,7 +5744,8 @@ export const zForecastSnapshotResponse = z.object({
 export const zMemberPolicyResponse = z.object({
     member: z.string(),
     poolId: z.nullish(z.string()),
-    allowSharedOverflow: z.boolean()
+    allowSharedOverflow: z.boolean(),
+    weight: z.int()
 });
 
 /**
@@ -5735,7 +5753,8 @@ export const zMemberPolicyResponse = z.object({
  */
 export const zUpdateMemberPolicyRequest = z.object({
     poolId: z.string(),
-    allowSharedOverflow: z.nullish(z.boolean())
+    allowSharedOverflow: z.nullish(z.boolean()),
+    weight: z.nullish(z.int())
 });
 
 /**
@@ -9422,6 +9441,19 @@ export const zRevokeBudgetOverridePath = z.object({
  */
 export const zRevokeBudgetOverrideResponse = zBudgetOverrideDto;
 
+export const zGetMemberCapacityHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
+    'Ostrom-Org': z.optional(z.string())
+}));
+
+export const zGetMemberCapacityPath = z.object({
+    login: z.string()
+});
+
+/**
+ * The member's share, daily limit, spend today and calls.
+ */
+export const zGetMemberCapacityResponse = zMemberCapacityResponse;
+
 export const zGetPoolSizeHeaders = z.pipe(z.transform(fromHeaders(['Ostrom-Org'])), z.object({
     'Ostrom-Org': z.optional(z.string())
 }));
@@ -12291,7 +12323,7 @@ export const zGetMemberPolicyPath = z.object({
 export const zGetMemberPolicyResponse = zMemberPolicyResponse;
 
 /**
- * The member's home pool, or an empty string for none, and their overflow.
+ * The member's home pool, or an empty string for none, their overflow and their weight.
  */
 export const zUpdateMemberPolicyBody = zUpdateMemberPolicyRequest;
 

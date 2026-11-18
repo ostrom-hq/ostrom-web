@@ -8,13 +8,19 @@ import {
   dailyCapDraft,
   dailyCapDraftOf,
   dailyCapOf,
+  dailyLimitUsdOf,
+  dayFill,
+  dayLevel,
   homePoolOf,
   membersByPool,
   microsOfUsd,
   ownBudgetOf,
   poolRefusalOf,
+  poolShareOf,
+  poolTotalOf,
   usdDraftOf,
   usdOfMicros,
+  weightDraft,
   withConcurrency,
 } from './model';
 
@@ -40,9 +46,9 @@ describe('the capacity model', () => {
     expect(homePoolOf({})).toBe('');
     expect(homePoolOf({ poolId: null })).toBe('');
     const counts = membersByPool([
-      { member: 'a', poolId: 'billing', allowSharedOverflow: false },
-      { member: 'b', poolId: 'billing', allowSharedOverflow: true },
-      { member: 'c', allowSharedOverflow: false },
+      { member: 'a', poolId: 'billing', allowSharedOverflow: false, weight: 1 },
+      { member: 'b', poolId: 'billing', allowSharedOverflow: true, weight: 1 },
+      { member: 'c', allowSharedOverflow: false, weight: 1 },
     ]);
     expect([...counts]).toEqual([
       ['billing', 2],
@@ -145,5 +151,47 @@ describe('a member’s concurrent requests', () => {
   it('reads a whole number from 0 to 32 in the field, and nothing else', () => {
     expect(concurrencyDraft(' 32 ')).toBe(32);
     for (const draft of ['33', '', '1.5', 'x']) expect(concurrencyDraft(draft)).toBeUndefined();
+  });
+
+  it('reads a whole weight from 0 to 1000 in the field, and nothing else', () => {
+    expect(weightDraft(' 0 ')).toBe(0);
+    expect(weightDraft('1000')).toBe(1000);
+    for (const draft of ['1001', '', '1.5', '-1', 'x']) expect(weightDraft(draft)).toBeUndefined();
+  });
+
+  it('colours the day amber from 80 % and red once spent, and fills the meter up to its limit', () => {
+    expect(dayLevel(7.99, 10)).toBe('calm');
+    expect(dayLevel(8, 10)).toBe('near');
+    expect(dayLevel(10, 10)).toBe('over');
+    expect(dayLevel(0, 0)).toBe('over');
+    expect(dayFill(2.5, 10)).toBe(25);
+    expect(dayFill(30, 10)).toBe(100);
+    expect(dayFill(0, 0)).toBe(100);
+  });
+
+  it('reads the pool share, its total and the daily limit of a member’s capacity', () => {
+    const capacity = {
+      member: 'maya',
+      poolId: 'billing',
+      weight: 2,
+      poolTotalWeight: 3,
+      poolDailyMicros: 12_000_000,
+      shareMicros: 8_000_000,
+      dailyLimitMicros: 5_000_000,
+      spentTodayMicros: 0,
+      activeRequests: 0,
+      waitingRequests: 0,
+      resetsAt: '2026-11-19T00:00:00Z',
+    };
+    expect(poolShareOf(capacity)).toEqual({ usd: 8, weight: 2, total: 3, poolUsd: 12 });
+    expect(poolShareOf({ ...capacity, poolTotalWeight: null })).toBeUndefined();
+    expect(poolShareOf({ ...capacity, shareMicros: null })).toBeUndefined();
+    expect(poolShareOf({ ...capacity, poolDailyMicros: null })).toBeUndefined();
+    expect(poolShareOf(undefined)).toBeUndefined();
+    expect(poolTotalOf(capacity)).toBe(3);
+    expect(poolTotalOf({ ...capacity, poolTotalWeight: null })).toBeUndefined();
+    expect(poolTotalOf(undefined)).toBeUndefined();
+    expect(dailyLimitUsdOf(capacity)).toBe(5);
+    expect(dailyLimitUsdOf({ ...capacity, dailyLimitMicros: null })).toBeUndefined();
   });
 });
