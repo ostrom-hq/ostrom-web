@@ -325,7 +325,7 @@ export const exchangeSignInLink = <ThrowOnError extends boolean = false>(options
 /**
  * Exchange the one-time code of the mobile sign-in (PKCE) for a token.
  *
- * The code works once (a wrong verifier spends it), for 60 s, with the exact `redirectUri` of the start. The token (`osm_…`, 30 days) answers a gate only within 5 minutes of `unlockMobileApp`. A person keeps 5 phones: a sixth sign-in revokes the oldest app token.
+ * The code works once (a wrong verifier spends it), for 60 s, with the exact `redirectUri` of the start. The token (`osm_…`, 30 days) answers a gate only within 5 minutes of `unlockMobileApp`. A person keeps 5 phones: a sixth sign-in revokes the oldest app token. With `devices.v1`, an app that sends `installationId` signs in on that installation's device, registered if new (as `ostrom login`).
  *
  * **Authentication:** No authentication.
  */
@@ -6687,7 +6687,7 @@ export const pauseCloudSession = <ThrowOnError extends boolean = false>(options:
 /**
  * Resume a paused cloud session, within the plan's running cap and hours.
  *
- * The reconciler starts a new execution on the kept workspace. A session an accepted transfer is moving only resumes through that transfer. Past its owner's running cap (the instance's `maxRunningSessionsPerMember`, 0 for none), a start waits in `creating` or `resuming` with phase `waiting_capacity`, and the owner's waiting starts go oldest first as their running sessions pause. 404 and 409 are the organization's resolution (`Ostrom-Org`).
+ * The reconciler starts a new execution on the kept workspace. A session an accepted transfer is moving only resumes through that transfer. A remote session its device refused (`terminated`, `host_refused`) is reopened by resuming it: `paused`, wanted `running`, and its device's queue hands it out again; any other ended session answers 409 `conflict`. Past its owner's running cap (the instance's `maxRunningSessionsPerMember`, 0 for none), a start waits in `creating` or `resuming` with phase `waiting_capacity`, and the owner's waiting starts go oldest first as their running sessions pause. 404 and 409 are the organization's resolution (`Ostrom-Org`).
  *
  * **Authentication:** A bearer token (CLI, app, device, agent, runner or service key) or the console's session cookie.
  */
