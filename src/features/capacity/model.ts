@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { MemberPolicyResponse, PoolBudgetDto } from '@gen/api/types.gen';
+import type { BudgetDto, MemberPolicyResponse, PoolBudgetDto } from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
+import { parseUsd } from '@/shared/lib/money';
 
 /** USD millionths as dollars. */
 export function usdOfMicros(micros: number): number {
@@ -58,4 +59,60 @@ export function membersByPool(policies: readonly MemberPolicyResponse[]): Readon
 /** The pools by name, as TeamCode lists them. */
 export function byPool(budgets: readonly PoolBudgetDto[]): PoolBudgetDto[] {
   return budgets.toSorted((a, b) => a.poolId.localeCompare(b.poolId));
+}
+
+/** A member budget: `subject` the member's id, none for every member without one of their own. */
+function isMemberBudget(budget: BudgetDto): boolean {
+  return budget.scope === 'member';
+}
+
+/**
+ * A member's daily cap as the budgets set it (TeamCode's « Optional daily cap », here in dollars): their own daily
+ * limit, or else every member's, or none.
+ */
+export type DailyCap =
+  | { readonly kind: 'own'; readonly usd: number }
+  | { readonly kind: 'everyMember'; readonly usd: number }
+  | { readonly kind: 'none' };
+
+/** A member's own budget, the one their daily cap is written in. */
+export function ownBudgetOf(budgets: readonly BudgetDto[], memberId: string): BudgetDto | undefined {
+  return budgets.find((budget) => isMemberBudget(budget) && budget.subject === memberId);
+}
+
+export function dailyCapOf(budgets: readonly BudgetDto[], memberId: string): DailyCap {
+  const own = ownBudgetOf(budgets, memberId)?.usdPerDay;
+  if (own !== undefined && own !== null) return { kind: 'own', usd: own };
+  const every = budgets.find(
+    (budget) => isMemberBudget(budget) && (budget.subject === undefined || budget.subject === null),
+  )?.usdPerDay;
+  return every === undefined || every === null ? { kind: 'none' } : { kind: 'everyMember', usd: every };
+}
+
+/** The daily cap field as it starts: the member's own, `0` without one (TeamCode's « 0 = none »). */
+export function dailyCapDraftOf(budgets: readonly BudgetDto[], memberId: string): string {
+  const cap = dailyCapOf(budgets, memberId);
+  // To the cent, as the field takes it: a cap the API saved finer still starts saveable.
+  return cap.kind === 'own' ? String(Math.round(cap.usd * 100) / 100) : '0';
+}
+
+/** What the daily cap field says: dollars to the cent, `0` for none, or undefined when it is neither. */
+export function dailyCapDraft(draft: string): number | undefined {
+  return /^0+([.,]0{1,2})?$/.test(draft.trim()) ? 0 : parseUsd(draft);
+}
+
+/**
+ * The member's own budget with its daily cap changed (`PUT /budgets` replaces it whole): its monthly limit and whether
+ * it stops are kept, a new one stops the calls as TeamCode's cap does, and `0` leaves out the daily limit; with no
+ * limit left, the member has none of their own.
+ */
+export function budgetWithDailyCap(memberId: string, own: BudgetDto | undefined, usd: number): BudgetDto {
+  const month = own?.usdPerMonth;
+  return {
+    scope: 'member',
+    subject: memberId,
+    ...(month === undefined || month === null ? {} : { usdPerMonth: month }),
+    ...(usd > 0 ? { usdPerDay: usd } : {}),
+    hardStop: own?.hardStop ?? true,
+  };
 }

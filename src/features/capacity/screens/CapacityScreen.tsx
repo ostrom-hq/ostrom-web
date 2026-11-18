@@ -14,13 +14,14 @@ import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { MemberPolicyRow } from '../components/MemberPolicyRow';
 import { PoolBudgetForm } from '../components/PoolBudgetForm';
 import { byPool, membersByPool } from '../model';
-import { useMemberPolicies, usePoolBudgets } from '../useCapacity';
+import { useMemberLimits, useMemberPolicies, usePoolBudgets } from '../useCapacity';
 import '../capacity.css';
 
 /**
- * TeamCode's capacity page (`/dashboard/capacity`), its pools: for an owner or an admin the pool budgets with their
- * shared overflow switch and each member's pool and overflow; for anyone else their own pool. TeamCode's weights,
- * daily credits and concurrency are not here: Ostrom keeps budgets in dollars and concurrency on the members page.
+ * TeamCode's capacity page (`/dashboard/capacity`): for an owner or an admin the pool budgets with their shared
+ * overflow switch, and each member's daily cap (in dollars), concurrent requests, pool and overflow; for anyone else
+ * their own pool. Not here, as ostrom-server serves none of them: TeamCode's weights and pool shares, the daily
+ * credits meter and each member's active and waiting requests.
  */
 export function CapacityScreen(): ReactElement {
   const { t } = useTranslation();
@@ -51,6 +52,7 @@ function AdminCapacity(): ReactElement {
   const members = (people.members ?? []).filter((member) => orgRoleOf(member.role) !== undefined);
   const view = useMemberPolicies(members.map((member) => member.login));
   const budgets = usePoolBudgets(true);
+  const limits = useMemberLimits();
   const counts = view.complete ? membersByPool([...view.policies.values()]) : undefined;
   return (
     <>
@@ -92,7 +94,7 @@ function AdminCapacity(): ReactElement {
                   name={nameOf(member)}
                   isViewer={member.login === viewer.login}
                   policy={view.policies.get(member.login)}
-                  editable
+                  limits={{ memberId: member.id, budgets: limits.budgets, settings: limits.settings }}
                 />
               ))}
             </div>
@@ -114,9 +116,7 @@ function OwnCapacity(): ReactElement {
   return (
     <Section label={t('capacity.members.title')}>
       <LoadState data={policy} failure={view.failure} rows={1}>
-        {(own) => (
-          <MemberPolicyRow login={own.member} name={own.member} isViewer policy={own} editable={false} />
-        )}
+        {(own) => <MemberPolicyRow login={own.member} name={own.member} isViewer policy={own} />}
       </LoadState>
     </Section>
   );

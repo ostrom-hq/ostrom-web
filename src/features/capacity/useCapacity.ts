@@ -1,16 +1,27 @@
 // SPDX-License-Identifier: Apache-2.0
 import {
+  getInferenceSettingsOptions,
+  getInferenceSettingsQueryKey,
   getMemberPolicyOptions,
   getMemberPolicyQueryKey,
+  listBudgetsOptions,
+  listBudgetsQueryKey,
   listPoolBudgetsOptions,
   listPoolBudgetsQueryKey,
   savePoolBudgetMutation,
-  updateMemberPolicyMutation,
 } from '@gen/api/@tanstack/react-query.gen';
-import type { MemberPolicyResponse, PoolBudgetDto, UpdateMemberPolicyRequest } from '@gen/api/types.gen';
+import { setBudget, setInferenceSettings, updateMemberPolicy } from '@gen/api/sdk.gen';
+import type {
+  BudgetDto,
+  InferenceSettingsDto,
+  MemberPolicyResponse,
+  PoolBudgetDto,
+  UpdateMemberPolicyRequest,
+} from '@gen/api/types.gen';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
+import { useAnnounced } from '@/shared/capabilities';
 
 export interface PoolBudgetsViewModel {
   readonly budgets: readonly PoolBudgetDto[] | undefined;
@@ -69,19 +80,63 @@ export function useMemberPolicies(logins: readonly string[]): MemberPoliciesView
   };
 }
 
-/** `PATCH /members/{login}/policy`, one member's form: the whole pool policy, its home pool always sent. */
-export function useMemberPolicySave(login: string): SaveViewModel<UpdateMemberPolicyRequest> {
+export interface MemberLimitsViewModel {
+  /** The organization's budgets, once read: the members' daily caps. */
+  readonly budgets: readonly BudgetDto[] | undefined;
+  /** The inference settings, once read where the server has the admission queue: the members' concurrency. */
+  readonly settings: InferenceSettingsDto | undefined;
+}
+
+/**
+ * What TeamCode's member row adds to the pool, for an owner or an admin: the daily cap (`GET /budgets`, in dollars)
+ * and the concurrent requests (`GET /inference/settings`). A value that could not be read leaves its field out.
+ */
+export function useMemberLimits(): MemberLimitsViewModel {
+  const queued = useAnnounced('inference.queue.v1');
+  const budgets = useQuery(ready(listBudgetsOptions(), { retry: false }));
+  const settings = useQuery(ready(getInferenceSettingsOptions(), { enabled: queued, retry: false }));
+  return { budgets: budgets.data?.items, settings: settings.data };
+}
+
+/** What one « Save limits » writes: only the parts that changed. */
+export interface MemberLimitsChange {
+  readonly policy?: UpdateMemberPolicyRequest | undefined;
+  readonly budget?: BudgetDto | undefined;
+  readonly settings?: InferenceSettingsDto | undefined;
+}
+
+/**
+ * TeamCode's « Save limits », one member's form: their pool (`PATCH /members/{login}/policy`), then their daily cap
+ * (`PUT /budgets`), then their concurrent requests (`PUT /inference/settings`, written whole), each only if changed.
+ * The first refusal stops the rest and is said.
+ */
+export function useMemberLimitsSave(login: string): SaveViewModel<MemberLimitsChange> {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    ...updateMemberPolicyMutation(),
-    onSuccess: (policy) => {
-      queryClient.setQueryData(getMemberPolicyQueryKey({ path: { login } }), policy);
+    mutationFn: async (change: MemberLimitsChange) => {
+      if (change.policy !== undefined) {
+        const { data } = await updateMemberPolicy({
+          path: { login },
+          body: change.policy,
+          throwOnError: true,
+        });
+        queryClient.setQueryData(getMemberPolicyQueryKey({ path: { login } }), data);
+      }
+      if (change.budget !== undefined) await setBudget({ body: change.budget, throwOnError: true });
+      if (change.settings !== undefined)
+        await setInferenceSettings({ body: change.settings, throwOnError: true });
     },
+    onSettled: async () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getInferenceSettingsQueryKey() }),
+      ]),
   });
   const { mutate } = mutation;
   return {
-    save: (body, onDone) => {
-      mutate({ path: { login }, body }, { onSuccess: () => onDone?.() });
+    // The form starts again from what the server saved: no `onDone` is needed.
+    save: (change) => {
+      mutate(change);
     },
     saving: mutation.isPending,
     failure: failureOf(mutation.error),

@@ -2,7 +2,9 @@
 import {
   handleCapabilities,
   handleGetMemberPolicy,
+  handleListBudgets,
   handleSavePoolBudget,
+  handleSetBudget,
   handleUpdateMemberPolicy,
 } from '@gen/api/msw.gen';
 import { screen, within } from '@testing-library/react';
@@ -10,11 +12,24 @@ import userEvent from '@testing-library/user-event';
 import { delay, HttpResponse } from 'msw';
 import { fireEvent } from '@testing-library/react';
 import { demoCapabilities } from '@/mocks/capabilities';
+import { MEMBER_IDS } from '@/mocks/fixtures/organization';
 import { setDemoRole } from '@/mocks/orgs';
 import { FEATURES } from '@/shared/capabilities/model';
 import { setupMockApp, visit } from '@/test/mockApp';
 
-const { server, db } = setupMockApp();
+const { server, db, traffic } = setupMockApp();
+
+/** The writes the console sends from now on, `METHOD path`. */
+function writes(): string[] {
+  const sent: string[] = [];
+  traffic.onRequest((request) => {
+    if (request.method !== 'GET') sent.push(`${request.method} ${new URL(request.url).pathname}`);
+  });
+  return sent;
+}
+
+const CAP = 'Optional daily cap (USD, 0 = none)';
+const CONCURRENCY = 'Concurrent requests (0 = unlimited)';
 
 /** A pool's form, or a member's card, by its heading. */
 async function findCard(name: string | RegExp): Promise<HTMLElement> {
@@ -147,6 +162,141 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     // The pool's count follows.
     const billing = await findCard('Pool billing');
     expect(await within(billing).findByText('$40.00 a day · 2 members')).toBeVisible();
+  });
+
+  it('shows each member’s daily cap and concurrent requests, and saves them with the pool (TeamCode’s « Save limits »)', async () => {
+    const user = userEvent.setup();
+    visit('/capacity');
+    const theo = await findCard('theo');
+    expect(
+      await within(theo).findByText('Personal cap $25.00 · unlimited concurrent requests'),
+    ).toBeVisible();
+    expect(within(theo).getByRole('textbox', { name: CAP })).toHaveValue('25');
+    expect(within(theo).getByRole('textbox', { name: CAP })).toHaveAccessibleDescription(
+      /Currently \$25\.00 a day\./,
+    );
+    expect(within(theo).getByRole('spinbutton', { name: CONCURRENCY })).toHaveValue(0);
+    expect(within(theo).getByRole('spinbutton', { name: CONCURRENCY })).toHaveAccessibleDescription(
+      'Requests that may run at once; more requests wait in the queue. Currently unlimited.',
+    );
+
+    const lena = await findCard('Lena Ortiz');
+    expect(await within(lena).findByText('No personal cap · unlimited concurrent requests')).toBeVisible();
+    const cap = within(lena).getByRole('textbox', { name: CAP });
+    await user.clear(cap);
+    await user.type(cap, '12.5');
+    const concurrency = within(lena).getByRole('spinbutton', { name: CONCURRENCY });
+    await user.clear(concurrency);
+    await user.type(concurrency, '3');
+    await user.click(within(lena).getByRole('button', { name: 'Save limits' }));
+    expect(await within(lena).findByText('Personal cap $12.50 · 3 concurrent requests')).toBeVisible();
+    expect(db.budgets).toContainEqual({
+      scope: 'member',
+      subject: MEMBER_IDS.lena,
+      usdPerDay: 12.5,
+      hardStop: true,
+    });
+    expect(db.inferenceSettings[db.organization.id]?.memberConcurrency).toEqual({ [MEMBER_IDS.lena]: 3 });
+    // The rest of the inference settings is written back as it was read.
+    expect(db.inferenceSettings[db.organization.id]?.anthropicKeySecret).toBe('ANTHROPIC_API_KEY');
+    // Only the cap and the concurrency changed: the pool is not written.
+    expect(db.memberPools['lena']).toBeUndefined();
+
+    // 0 is no cap of their own.
+    const theoCap = within(theo).getByRole('textbox', { name: CAP });
+    await user.clear(theoCap);
+    await user.type(theoCap, '0');
+    await user.click(within(theo).getByRole('button', { name: 'Save limits' }));
+    expect(await within(theo).findByText('No personal cap · unlimited concurrent requests')).toBeVisible();
+    expect(db.budgets.some((budget) => budget.subject === MEMBER_IDS.theo)).toBe(false);
+  });
+
+  it('reads every member’s cap where a member has none of their own', async () => {
+    db.budgets = [...db.budgets, { scope: 'member', usdPerDay: 10, hardStop: true }];
+    visit('/capacity');
+    const lena = await findCard('Lena Ortiz');
+    expect(
+      await within(lena).findByText('Every member’s cap $10.00 · unlimited concurrent requests'),
+    ).toBeVisible();
+    expect(within(lena).getByRole('textbox', { name: CAP })).toHaveValue('0');
+    expect(within(lena).getByRole('textbox', { name: CAP })).toHaveAccessibleDescription(
+      /Currently every member’s, \$10\.00 a day\./,
+    );
+  });
+
+  it('never sends a cap or a concurrency that is not one, nor a form that changed nothing', async () => {
+    const user = userEvent.setup();
+    visit('/capacity');
+    const lena = await findCard('Lena Ortiz');
+    // Both read: the form no longer starts again.
+    await within(lena).findByText('No personal cap · unlimited concurrent requests');
+    const cap = within(lena).getByRole('textbox', { name: CAP });
+    const save = within(lena).getByRole('button', { name: 'Save limits' });
+    const form = save.closest('form');
+    if (!(form instanceof HTMLElement)) throw new Error('no form');
+    const sent = writes();
+    fireEvent.submit(form);
+    await user.clear(cap);
+    await user.type(cap, 'abc');
+    expect(within(lena).getByText('A daily cap is an amount like 25 or 12.50, or 0 for none.')).toBeVisible();
+    expect(save).toBeDisabled();
+    fireEvent.submit(form);
+    await user.clear(cap);
+    await user.type(cap, '5');
+    const concurrency = within(lena).getByRole('spinbutton', { name: CONCURRENCY });
+    await user.clear(concurrency);
+    await user.type(concurrency, '40');
+    expect(save).toBeDisabled();
+    fireEvent.submit(form);
+    expect(sent).toEqual([]);
+  });
+
+  it('says why a cap was not saved', async () => {
+    const user = userEvent.setup();
+    server.use(
+      handleSetBudget(() =>
+        HttpResponse.json(
+          { error: { type: 'internal_error', message: 'Budgets are down.' } },
+          { status: 500 },
+        ),
+      ),
+    );
+    visit('/capacity');
+    const lena = await findCard('Lena Ortiz');
+    await within(lena).findByText('No personal cap · unlimited concurrent requests');
+    const cap = within(lena).getByRole('textbox', { name: CAP });
+    await user.clear(cap);
+    await user.type(cap, '5');
+    await user.click(within(lena).getByRole('button', { name: 'Save limits' }));
+    expect(await within(lena).findByText('Budgets are down.')).toBeVisible();
+  });
+
+  it('leaves out the concurrency without the admission queue', async () => {
+    server.use(
+      handleCapabilities(() =>
+        HttpResponse.json(demoCapabilities(FEATURES.filter((key) => key !== 'inference.queue.v1'))),
+      ),
+    );
+    visit('/capacity');
+    const theo = await findCard('theo');
+    expect(await within(theo).findByText('Personal cap $25.00')).toBeVisible();
+    expect(within(theo).queryByRole('spinbutton', { name: CONCURRENCY })).toBeNull();
+  });
+
+  it('leaves out the cap, and the line, when neither can be read', async () => {
+    server.use(
+      handleCapabilities(() =>
+        HttpResponse.json(demoCapabilities(FEATURES.filter((key) => key !== 'inference.queue.v1'))),
+      ),
+      handleListBudgets(() =>
+        HttpResponse.json({ error: { type: 'forbidden', message: 'No.' } }, { status: 403 }),
+      ),
+    );
+    visit('/capacity');
+    const theo = await findCard('theo');
+    await within(theo).findByRole('textbox', { name: 'Pool (empty = shared)' });
+    expect(within(theo).queryByRole('textbox', { name: CAP })).toBeNull();
+    expect(within(theo).queryByText(/Personal cap|concurrent requests/)).toBeNull();
   });
 
   it('shows a member their own pool only, without forms', async () => {

@@ -565,10 +565,7 @@ const zBudgetWrite = z
     usdPerMonth: z.optional(z.number().check(z.positive())),
     usdPerDay: z.optional(z.number().check(z.positive())),
   })
-  .check(
-    z.refine((budget) => budget.scope === 'member' || (budget.subject ?? undefined) === undefined),
-    z.refine((budget) => budget.usdPerMonth !== undefined || budget.usdPerDay !== undefined),
-  );
+  .check(z.refine((budget) => budget.scope === 'member' || (budget.subject ?? undefined) === undefined));
 // The body as the server reads it: any agent name parses, and an unknown one is refused in the server's words below.
 const SENT_CLOUD_SESSION = z.extend(zCreateCloudSessionBody, { agent: z.string() });
 /** A recipe as the server stores it: the fields sent, none left `undefined` (the body's parse keeps them so). */
@@ -1533,9 +1530,14 @@ export function createHandlers(db: MockDb, now: () => Date = () => new Date()): 
       };
       const same = (item: BudgetDto): boolean =>
         item.scope === budget.scope && item.subject === budget.subject;
-      db.budgets = db.budgets.some(same)
-        ? db.budgets.map((item) => (same(item) ? budget : item))
-        : [...db.budgets, budget];
+      // As the server: no amount removes the subject's limits.
+      const others = db.budgets.filter((item) => !same(item));
+      const removed = budget.usdPerMonth === undefined && budget.usdPerDay === undefined;
+      db.budgets = removed
+        ? others
+        : db.budgets.some(same)
+          ? db.budgets.map((item) => (same(item) ? budget : item))
+          : [...db.budgets, budget];
       return HttpResponse.json(budget);
     }),
     handleListCloudSessions(({ request }) => {

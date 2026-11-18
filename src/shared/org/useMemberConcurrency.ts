@@ -11,7 +11,7 @@ import { failureOf } from '@/shared/api/failureOf';
 import { ready } from '@/shared/api/ready';
 import { useAnnounced } from '@/shared/capabilities';
 import { managesMembers, type OrgRole } from '@/shared/org/roles';
-import { concurrencyOf, withConcurrency } from './model';
+import { concurrencyOf, withConcurrency } from './memberConcurrency';
 
 /** The members' concurrent requests, once the organization's inference settings are read. */
 export interface MemberConcurrencyLimits {

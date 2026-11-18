@@ -107,8 +107,9 @@ export function runtimeDraftOf(runtime: CloudRuntimeResponse): RuntimeDraft {
 
 const RUNTIME_NUMBERS = [
   ['failedWorkspaceRetentionDays', 1, 3650],
-  ['maxRunningSessionsPerMember', 1, 1000],
-  ['maxRetainedSessionsPerMember', 1, 10000],
+  // 0 means no limit (ostrom-server#663, #669, as TeamCode).
+  ['maxRunningSessionsPerMember', 0, 1000],
+  ['maxRetainedSessionsPerMember', 0, 10000],
 ] as const;
 const RUNTIME_OPTIONAL_NUMBERS = [
   ['pausedRetentionDays', 1, 3650],
