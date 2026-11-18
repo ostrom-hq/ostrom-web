@@ -40,7 +40,7 @@ test('an owner adds a reserve and lets a member borrow it; the member reads thei
   const card = page.getByRole('article').filter({ hasNotText: '(you)' });
   await card.getByRole('checkbox', { name: 'Allow shared overflow accounts' }).check();
   await card.getByRole('button', { name: 'Save limits' }).click();
-  await expect(card.getByText('Shared pool · shared overflow allowed')).toBeVisible();
+  await expect(card.getByText(/^Shared pool · weight 1( \/ \d+)? · shared overflow allowed$/)).toBeVisible();
   // A reserve is never a member's home pool.
   await card.getByRole('textbox', { name: 'Pool (empty = shared)' }).fill(pool);
   await card.getByRole('button', { name: 'Save limits' }).click();
@@ -48,7 +48,7 @@ test('an owner adds a reserve and lets a member borrow it; the member reads thei
 
   // The member reads their own pool, without the budgets; the server refuses them the budgets.
   await other.goto('/capacity');
-  await expect(other.getByText('Shared pool · shared overflow allowed')).toBeVisible();
+  await expect(other.getByText(/^Shared pool · weight 1( \/ \d+)? · shared overflow allowed$/)).toBeVisible();
   await expect(other.getByText(pool)).toHaveCount(0);
   await expect(other.getByRole('button', { name: 'Save limits' })).toHaveCount(0);
   expect((await callFromPage(other, 'GET', '/api/v1/pools/budgets', undefined, org)).status).toBe(403);

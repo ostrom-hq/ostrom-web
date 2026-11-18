@@ -14,14 +14,13 @@ import { LoadState, Screen, Section } from '@/shared/ui/Screen';
 import { MemberPolicyRow } from '../components/MemberPolicyRow';
 import { PoolBudgetForm } from '../components/PoolBudgetForm';
 import { byPool, membersByPool } from '../model';
-import { useMemberLimits, useMemberPolicies, usePoolBudgets } from '../useCapacity';
+import { useMemberCapacities, useMemberLimits, useMemberPolicies, usePoolBudgets } from '../useCapacity';
 import '../capacity.css';
 
 /**
  * TeamCode's capacity page (`/dashboard/capacity`): for an owner or an admin the pool budgets with their shared
- * overflow switch, and each member's daily cap (in dollars), concurrent requests, pool and overflow; for anyone else
- * their own pool. Not here, as ostrom-server serves none of them: TeamCode's weights and pool shares, the daily
- * credits meter and each member's active and waiting requests.
+ * overflow switch, and each member's weight and pool share, today's spend against their daily limit, their active and
+ * waiting requests, daily cap (in dollars), concurrent requests, pool and overflow; for anyone else their own row.
  */
 export function CapacityScreen(): ReactElement {
   const { t } = useTranslation();
@@ -50,7 +49,9 @@ function AdminCapacity(): ReactElement {
   const people = useCurrentOrgMembers({ all: true });
   // Someone invited has no policy yet: only the members who joined.
   const members = (people.members ?? []).filter((member) => orgRoleOf(member.role) !== undefined);
-  const view = useMemberPolicies(members.map((member) => member.login));
+  const logins = members.map((member) => member.login);
+  const view = useMemberPolicies(logins);
+  const capacities = useMemberCapacities(logins);
   const budgets = usePoolBudgets(true);
   const limits = useMemberLimits();
   const counts = view.complete ? membersByPool([...view.policies.values()]) : undefined;
@@ -95,6 +96,7 @@ function AdminCapacity(): ReactElement {
                   isViewer={member.login === viewer.login}
                   policy={view.policies.get(member.login)}
                   limits={{ memberId: member.id, ...limits }}
+                  capacity={capacities.get(member.login)}
                 />
               ))}
             </div>
@@ -112,11 +114,20 @@ function OwnCapacity(): ReactElement {
   // Known once signed in, which a screen of an organization is.
   const logins = [viewer.login].filter((login): login is string => login !== undefined);
   const view = useMemberPolicies(logins);
+  const capacities = useMemberCapacities(logins);
   const policy = view.policies.values().next().value;
   return (
     <Section label={t('capacity.members.title')}>
       <LoadState data={policy} failure={view.failure} rows={1}>
-        {(own) => <MemberPolicyRow login={own.member} name={own.member} isViewer policy={own} />}
+        {(own) => (
+          <MemberPolicyRow
+            login={own.member}
+            name={own.member}
+            isViewer
+            policy={own}
+            capacity={capacities.get(own.member)}
+          />
+        )}
       </LoadState>
     </Section>
   );

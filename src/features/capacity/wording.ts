@@ -8,7 +8,7 @@ export const capacityEn = {
     lead: 'Pools keep subscription accounts for the members who call them home, and shared overflow reserves lend theirs to the members allowed to borrow them.',
     help: {
       title: 'How pools work',
-      body: 'Daily budgets reset at midnight UTC. Assign the same named pool to a member and dedicated accounts to protect their subscription capacity; other pools cannot use those accounts unless their pool is explicitly marked as shared overflow. Overflow requires member opt-in, has no primary members, and consumes both the home and source budgets. It never increases a member’s allowance.',
+      body: 'Daily budgets reset at midnight UTC. Each member receives the pool’s daily budget × their weight / the total weight of the pool’s members, optionally capped individually: two developers weighted 5 and one support member weighted 1 receive 5/11, 5/11 and 1/11. The shared home pool’s budget is the organization’s daily budget. Weight changes never erase existing spend. Assign the same named pool to a member and dedicated accounts to protect their subscription capacity; other pools cannot use those accounts unless their pool is explicitly marked as shared overflow. Overflow requires member opt-in, has no primary members, and consumes both the home and source budgets. It never increases a member’s allowance.',
     },
     pools: {
       title: 'Pool budgets',
@@ -36,6 +36,23 @@ export const capacityEn = {
       pool: 'Pool (empty = shared)',
       poolHint: 'Currently {{pool}}',
       overflow: 'Allow shared overflow accounts',
+      weight: 'Weight (0 = no allocation)',
+      weightHint: {
+        share:
+          'Share of the pool relative to its other members. Pool share: {{share}} a day ({{weight}} of {{total}} × {{pool}}).',
+        none: 'Share of the pool relative to its other members. Its pool has no daily budget, so no share applies.',
+        plain: 'Share of the pool relative to its other members.',
+      },
+      badWeight: 'A weight is a whole number from 0 to 1000.',
+      weightOf: 'weight {{weight}}',
+      weightOfTotal: 'weight {{weight}} / {{total}}',
+      shareLine: 'Pool share {{amount}} a day',
+      today: {
+        title: 'Today',
+        of: '{{spent}} of {{limit}} today',
+        noLimit: '{{spent}} today · no daily limit',
+        requests: 'Requests running: {{active}} · waiting: {{waiting}}',
+      },
       dailyCap: 'Optional daily cap (USD, 0 = none)',
       dailyCapHint:
         'Upper limit on the member’s daily spend; with none of their own, every member’s applies. Currently {{cap}}.',
@@ -65,7 +82,7 @@ export const capacityEn = {
     errorTag: 'Not saved',
     refusal: {
       invalid_policy:
-        'Use a pool name of 1 to 36 letters, digits, underscores or hyphens, or leave it empty for the shared pool.',
+        'Use a pool name of 1 to 36 letters, digits, underscores or hyphens (or leave it empty for the shared pool), and a weight from 0 to 1000.',
       invalid_pool_budget:
         'Name the pool with 1 to 36 letters, digits, underscores or hyphens, and give it a daily budget of at most $100,000. The shared home pool’s budget is the organization’s daily budget.',
       invalid_overflow_pool: 'Shared overflow requires a named pool.',
@@ -91,7 +108,7 @@ registerWording({
       lead: 'Les pools réservent des comptes d’abonnement aux membres qui en font leur pool d’origine, et les réserves de débordement partagées prêtent les leurs aux membres autorisés à les emprunter.',
       help: {
         title: 'Comment fonctionnent les pools',
-        body: 'Les budgets quotidiens repartent à zéro à minuit UTC. Donnez le même pool nommé à un membre et à des comptes dédiés pour protéger leur capacité d’abonnement ; les autres pools ne peuvent pas utiliser ces comptes, sauf si leur pool est explicitement marqué comme débordement partagé. Le débordement exige l’accord du membre, n’a aucun membre principal et consomme à la fois le budget du pool d’origine et celui de la source. Il n’augmente jamais l’allocation d’un membre.',
+        body: 'Les budgets quotidiens repartent à zéro à minuit UTC. Chaque membre reçoit le budget quotidien du pool × son poids / le poids total des membres du pool, avec un plafond individuel facultatif : deux développeurs de poids 5 et un membre du support de poids 1 reçoivent 5/11, 5/11 et 1/11. Le budget du pool partagé d’origine est le budget quotidien de l’organisation. Changer les poids n’efface jamais la dépense déjà faite. Donnez le même pool nommé à un membre et à des comptes dédiés pour protéger leur capacité d’abonnement ; les autres pools ne peuvent pas utiliser ces comptes, sauf si leur pool est explicitement marqué comme débordement partagé. Le débordement exige l’accord du membre, n’a aucun membre principal et consomme à la fois le budget du pool d’origine et celui de la source. Il n’augmente jamais l’allocation d’un membre.',
       },
       pools: {
         title: 'Budgets des pools',
@@ -119,6 +136,23 @@ registerWording({
         pool: 'Pool (vide = partagé)',
         poolHint: 'Actuellement {{pool}}',
         overflow: 'Autoriser les comptes de débordement partagés',
+        weight: 'Poids (0 = aucune allocation)',
+        weightHint: {
+          share:
+            'Part du pool par rapport à ses autres membres. Part du pool : {{share}} par jour ({{weight}} sur {{total}} × {{pool}}).',
+          none: 'Part du pool par rapport à ses autres membres. Son pool n’a pas de budget quotidien : aucune part ne s’applique.',
+          plain: 'Part du pool par rapport à ses autres membres.',
+        },
+        badWeight: 'Un poids est un nombre entier de 0 à 1000.',
+        weightOf: 'poids {{weight}}',
+        weightOfTotal: 'poids {{weight}} / {{total}}',
+        shareLine: 'Part du pool {{amount}} par jour',
+        today: {
+          title: 'Aujourd’hui',
+          of: '{{spent}} sur {{limit}} aujourd’hui',
+          noLimit: '{{spent}} aujourd’hui · aucune limite quotidienne',
+          requests: 'Requêtes en cours : {{active}} · en attente : {{waiting}}',
+        },
         dailyCap: 'Plafond quotidien facultatif (USD, 0 = aucun)',
         dailyCapHint:
           'Limite haute de la dépense quotidienne du membre ; sans plafond à lui, celui de chaque membre s’applique. Actuellement {{cap}}.',
@@ -149,7 +183,7 @@ registerWording({
       errorTag: 'Non enregistré',
       refusal: {
         invalid_policy:
-          'Utilisez un nom de pool de 1 à 36 lettres, chiffres, tirets bas ou tirets, ou laissez-le vide pour le pool partagé.',
+          'Utilisez un nom de pool de 1 à 36 lettres, chiffres, tirets bas ou tirets (ou laissez-le vide pour le pool partagé), et un poids de 0 à 1000.',
         invalid_pool_budget:
           'Nommez le pool avec 1 à 36 lettres, chiffres, tirets bas ou tirets, et donnez-lui un budget quotidien d’au plus 100 000 $. Le budget du pool partagé d’origine est le budget quotidien de l’organisation.',
         invalid_overflow_pool: 'Le débordement partagé exige un pool nommé.',

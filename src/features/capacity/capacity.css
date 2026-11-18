@@ -26,3 +26,22 @@
 .cp-pools > * {
   min-width: 0;
 }
+.cp-meter {
+  display: block;
+  block-size: 8px;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  overflow: hidden;
+}
+.cp-meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--text-muted);
+}
+.cp-meter--near > span {
+  background: var(--warning);
+}
+.cp-meter--over > span {
+  background: var(--danger);
+}
