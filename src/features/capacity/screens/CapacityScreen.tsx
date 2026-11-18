@@ -94,7 +94,7 @@ function AdminCapacity(): ReactElement {
                   name={nameOf(member)}
                   isViewer={member.login === viewer.login}
                   policy={view.policies.get(member.login)}
-                  limits={{ memberId: member.id, budgets: limits.budgets, settings: limits.settings }}
+                  limits={{ memberId: member.id, ...limits }}
                 />
               ))}
             </div>

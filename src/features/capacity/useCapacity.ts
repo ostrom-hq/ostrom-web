@@ -85,6 +85,8 @@ export interface MemberLimitsViewModel {
   readonly budgets: readonly BudgetDto[] | undefined;
   /** The inference settings, once read where the server has the admission queue: the members' concurrency. */
   readonly settings: InferenceSettingsDto | undefined;
+  /** Both answered (or not asked): the forms wait for it, so a late answer never starts one again under the typing. */
+  readonly settled: boolean;
 }
 
 /**
@@ -95,7 +97,11 @@ export function useMemberLimits(): MemberLimitsViewModel {
   const queued = useAnnounced('inference.queue.v1');
   const budgets = useQuery(ready(listBudgetsOptions(), { retry: false }));
   const settings = useQuery(ready(getInferenceSettingsOptions(), { enabled: queued, retry: false }));
-  return { budgets: budgets.data?.items, settings: settings.data };
+  return {
+    budgets: budgets.data?.items,
+    settings: settings.data,
+    settled: !budgets.isPending && (!queued || !settings.isPending),
+  };
 }
 
 /** What one « Save limits » writes: only the parts that changed. */
@@ -114,23 +120,25 @@ export function useMemberLimitsSave(login: string): SaveViewModel<MemberLimitsCh
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (change: MemberLimitsChange) => {
-      if (change.policy !== undefined) {
-        const { data } = await updateMemberPolicy({
-          path: { login },
-          body: change.policy,
-          throwOnError: true,
-        });
-        queryClient.setQueryData(getMemberPolicyQueryKey({ path: { login } }), data);
-      }
+      const policy =
+        change.policy === undefined
+          ? undefined
+          : (await updateMemberPolicy({ path: { login }, body: change.policy, throwOnError: true })).data;
       if (change.budget !== undefined) await setBudget({ body: change.budget, throwOnError: true });
       if (change.settings !== undefined)
         await setInferenceSettings({ body: change.settings, throwOnError: true });
+      return policy;
     },
-    onSettled: async () =>
-      Promise.all([
+    // Only once everything is saved: the form starts again from what is read, so a refusal halfway keeps the form, the
+    // values typed and the refusal on screen (a retry sends the policy again, which is the same).
+    onSuccess: async (policy) => {
+      if (policy !== undefined)
+        queryClient.setQueryData(getMemberPolicyQueryKey({ path: { login } }), policy);
+      await Promise.all([
         queryClient.invalidateQueries({ queryKey: listBudgetsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: getInferenceSettingsQueryKey() }),
-      ]),
+      ]);
+    },
   });
   const { mutate } = mutation;
   return {

@@ -32,6 +32,8 @@ export interface MemberLimits {
   readonly budgets: readonly BudgetDto[] | undefined;
   /** The inference settings; undefined leaves the concurrent requests out. */
   readonly settings: InferenceSettingsDto | undefined;
+  /** Both answered: the form waits for it, so a late answer never starts it again under the typing. */
+  readonly settled: boolean;
 }
 
 export interface MemberPolicyRowProps {
@@ -79,7 +81,11 @@ export function MemberPolicyRow({
           {limits === undefined ? null : (
             <>
               <LimitsLine limits={limits} />
-              <PolicyForm key={formKey(policy, limits)} login={login} policy={policy} limits={limits} />
+              {limits.settled ? (
+                <PolicyForm key={formKey(policy, limits)} login={login} policy={policy} limits={limits} />
+              ) : (
+                <Skeleton rows={2} />
+              )}
             </>
           )}
         </>

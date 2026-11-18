@@ -81,8 +81,13 @@ export function ownBudgetOf(budgets: readonly BudgetDto[], memberId: string): Bu
 }
 
 export function dailyCapOf(budgets: readonly BudgetDto[], memberId: string): DailyCap {
-  const own = ownBudgetOf(budgets, memberId)?.usdPerDay;
-  if (own !== undefined && own !== null) return { kind: 'own', usd: own };
+  // Every member's limits apply only to a member without limits of their own (`setBudget`): a member whose own
+  // budget is monthly only has no daily cap.
+  const own = ownBudgetOf(budgets, memberId);
+  if (own !== undefined) {
+    const day = own.usdPerDay;
+    return day === undefined || day === null ? { kind: 'none' } : { kind: 'own', usd: day };
+  }
   const every = budgets.find(
     (budget) => isMemberBudget(budget) && (budget.subject === undefined || budget.subject === null),
   )?.usdPerDay;

@@ -67,7 +67,9 @@ describe('a member’s daily cap', () => {
 
   it('is their own daily limit, or else every member’s, or none', () => {
     expect(dailyCapOf(budgets, 'm1')).toEqual({ kind: 'own', usd: 12.345 });
-    expect(dailyCapOf(budgets, 'm2')).toEqual({ kind: 'everyMember', usd: 10 });
+    // An own budget, monthly only, puts the member out of every member's limits.
+    expect(dailyCapOf(budgets, 'm2')).toEqual({ kind: 'none' });
+    expect(dailyCapOf(budgets, 'm3')).toEqual({ kind: 'everyMember', usd: 10 });
     expect(dailyCapOf(budgets.slice(2), 'm3')).toEqual({ kind: 'none' });
     expect(
       dailyCapOf(
@@ -78,6 +80,9 @@ describe('a member’s daily cap', () => {
         'm3',
       ),
     ).toEqual({ kind: 'none' });
+    expect(dailyCapOf([{ scope: 'member', usdPerMonth: 5, usdPerDay: null }], 'm3')).toEqual({
+      kind: 'none',
+    });
     expect(ownBudgetOf(budgets, 'm2')).toEqual(budgets[3]);
     expect(ownBudgetOf(budgets, 'm3')).toBeUndefined();
   });

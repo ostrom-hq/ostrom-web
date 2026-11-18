@@ -138,7 +138,7 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     expect(screen.queryByRole('heading', { level: 3, name: /^jo/ })).toBeNull();
     const lena = await findCard('Lena Ortiz');
     expect(await within(lena).findByText('Shared pool · no shared overflow')).toBeVisible();
-    expect(within(lena).getByText('Currently Shared pool')).toBeVisible();
+    expect(await within(lena).findByText('Currently Shared pool')).toBeVisible();
     const save = within(lena).getByRole('button', { name: 'Save limits' });
     expect(save).toBeDisabled();
     await user.type(within(lena).getByRole('textbox', { name: 'Pool (empty = shared)' }), 'reserve');
@@ -251,7 +251,7 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     expect(sent).toEqual([]);
   });
 
-  it('says why a cap was not saved', async () => {
+  it('says why a cap was not saved, and keeps what was typed when the pool was saved before it', async () => {
     const user = userEvent.setup();
     server.use(
       handleSetBudget(() =>
@@ -267,8 +267,12 @@ describe('the capacity page (TeamCode’s pool budgets and member pools)', () =>
     const cap = within(lena).getByRole('textbox', { name: CAP });
     await user.clear(cap);
     await user.type(cap, '5');
+    await user.type(within(lena).getByRole('textbox', { name: 'Pool (empty = shared)' }), 'support');
     await user.click(within(lena).getByRole('button', { name: 'Save limits' }));
     expect(await within(lena).findByText('Budgets are down.')).toBeVisible();
+    expect(db.memberPools['lena']).toEqual({ poolId: 'support', allowSharedOverflow: false });
+    expect(within(lena).getByRole('textbox', { name: CAP })).toHaveValue('5');
+    expect(within(lena).getByRole('textbox', { name: 'Pool (empty = shared)' })).toHaveValue('support');
   });
 
   it('leaves out the concurrency without the admission queue', async () => {
