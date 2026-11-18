@@ -610,7 +610,7 @@ describe('what the forms say while they work, and the fields that are seldom tou
     const failed = within(runtime).getByLabelText(/^Days a failed/);
     await user.clear(failed);
     await user.type(failed, '3');
-    const kept = within(runtime).getByLabelText(/^Sessions kept/);
+    const kept = within(runtime).getByLabelText(/^Retained sessions per member/);
     await user.clear(kept);
     await user.type(kept, '10');
     server.use(http.put('*/api/v1/cloud/runtime', async () => delay('infinite')));
