@@ -3,24 +3,22 @@ import type { BudgetDto, InferenceSettingsDto, MemberPolicyResponse } from '@gen
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
 import { formatUsd } from '@/shared/lib/money';
-import {
-  concurrencyDraft,
-  concurrencyOf,
-  MAX_MEMBER_CONCURRENCY,
-  withConcurrency,
-} from '@/shared/org/memberConcurrency';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import {
   budgetWithDailyCap,
+  concurrencyDraft,
+  concurrencyOf,
   type DailyCap,
   dailyCapDraft,
   dailyCapDraftOf,
   dailyCapOf,
   homePoolOf,
+  MAX_MEMBER_CONCURRENCY,
   ownBudgetOf,
+  withConcurrency,
 } from '../model';
 import { type MemberLimitsChange, useMemberLimitsSave } from '../useCapacity';
 import { SaveFailure } from './SaveFailure';

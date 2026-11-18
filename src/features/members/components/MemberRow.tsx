@@ -2,12 +2,11 @@
 import type { MemberResponse } from '@gen/api/types.gen';
 import { type ReactElement, useId, useState } from 'react';
 import { useTranslation } from '@/shared/i18n/useTranslation';
-import { concurrencyDraft, MAX_MEMBER_CONCURRENCY } from '@/shared/org/memberConcurrency';
 import { type OrgRole, orgRoleOf } from '@/shared/org/roles';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Badge } from '@/shared/ui/Badge';
 import { ConfirmButton } from '@/shared/ui/ConfirmButton';
-import { displayName } from '../model';
+import { concurrencyDraft, displayName, MAX_MEMBER_CONCURRENCY } from '../model';
 
 export interface MemberRowProps {
   readonly member: MemberResponse;

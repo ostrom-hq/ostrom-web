@@ -12,7 +12,7 @@ import { InvitationRow } from '../components/InvitationRow';
 import { InviteForm } from '../components/InviteForm';
 import { InviteLink } from '../components/InviteLink';
 import { MemberRow } from '../components/MemberRow';
-import { useMemberConcurrency } from '@/shared/org/useMemberConcurrency';
+import { useMemberConcurrency } from '../useMemberConcurrency';
 import { useTodoStopHook } from '../useTodoStopHook';
 import { useInvite, useInviteLink, useMembers, useRevokeInvitation, useRoleChange } from '../useMembers';
 import { FailureText } from '@/shared/ui/FailureText';

@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-import type { BudgetDto, MemberPolicyResponse, PoolBudgetDto } from '@gen/api/types.gen';
+import type {
+  BudgetDto,
+  InferenceSettingsDto,
+  MemberPolicyResponse,
+  PoolBudgetDto,
+} from '@gen/api/types.gen';
 import { isApiFailure } from '@/shared/api/ApiFailure';
 import { parseUsd } from '@/shared/lib/money';
 
@@ -120,4 +125,35 @@ export function budgetWithDailyCap(memberId: string, own: BudgetDto | undefined,
     ...(usd > 0 ? { usdPerDay: usd } : {}),
     hardStop: own?.hardStop ?? true,
   };
+}
+
+/**
+ * The most concurrent requests a member may be given (the contract's `maximum`). The members page has the same field
+ * and helpers (features/members/model.ts): kept apart on purpose, as any module under src/shared goes into the chunk
+ * every route downloads (src/shared/build/bootChunk.ts).
+ */
+export const MAX_MEMBER_CONCURRENCY = 32;
+
+/** A member's concurrent requests in the inference settings: 0, the default, for unlimited (TeamCode's member policy). */
+export function concurrencyOf(settings: InferenceSettingsDto, memberId: string): number {
+  return settings.memberConcurrency?.[memberId] ?? 0;
+}
+
+/** The settings with a member's concurrent requests changed, every other setting kept; 0 drops the member's entry. */
+export function withConcurrency(
+  settings: InferenceSettingsDto,
+  memberId: string,
+  limit: number,
+): InferenceSettingsDto {
+  const others = Object.entries(settings.memberConcurrency ?? {}).filter(([id]) => id !== memberId);
+  return {
+    ...settings,
+    memberConcurrency: Object.fromEntries(limit === 0 ? others : [...others, [memberId, limit]]),
+  };
+}
+
+/** What a draft of the concurrency field says: a whole number from 0 to the maximum, or undefined. */
+export function concurrencyDraft(draft: string): number | undefined {
+  const limit = /^\d{1,2}$/.test(draft.trim()) ? Number(draft.trim()) : MAX_MEMBER_CONCURRENCY + 1;
+  return limit <= MAX_MEMBER_CONCURRENCY ? limit : undefined;
 }
